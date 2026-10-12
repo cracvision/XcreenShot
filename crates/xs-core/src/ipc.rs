@@ -91,11 +91,47 @@ fn platform_endpoint() -> String {
 
 #[cfg(not(windows))]
 fn platform_endpoint() -> String {
-    // $TMPDIR is per-user on macOS; fall back to the config dir elsewhere.
-    let dir = std::env::var_os("TMPDIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    dir.join("xcreenshot.sock").to_string_lossy().into_owned()
+    "xcreenshot.sock".to_string()
+}
+
+/// Folder only this user can enter (0700). macOS cannot set a mode on the socket
+/// itself, so access is enforced by the folder: connecting needs search permission on it.
+#[cfg(unix)]
+fn private_dir() -> std::path::PathBuf {
+    // SAFETY: getuid never fails.
+    let uid = unsafe { libc::getuid() };
+    std::env::temp_dir().join(format!("xcreenshot-{uid}"))
+}
+
+#[cfg(unix)]
+fn socket_path(endpoint: &str) -> std::path::PathBuf {
+    if endpoint.starts_with('/') {
+        std::path::PathBuf::from(endpoint)
+    } else {
+        private_dir().join(endpoint)
+    }
+}
+
+/// Creates the private folder, or refuses one that another user owns or others can open.
+#[cfg(unix)]
+fn ensure_private_dir(path: &std::path::Path) -> io::Result<()> {
+    use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
+    let Some(dir) = path.parent() else { return Ok(()) };
+    if !dir.exists() {
+        std::fs::DirBuilder::new().mode(0o700).create(dir)?;
+    }
+    let meta = std::fs::symlink_metadata(dir)?;
+    // SAFETY: getuid never fails.
+    if !meta.is_dir() || meta.uid() != unsafe { libc::getuid() } {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "socket folder is not ours",
+        ));
+    }
+    if meta.permissions().mode() & 0o077 != 0 {
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
 }
 
 fn name(endpoint: &str) -> io::Result<Name<'_>> {
@@ -105,16 +141,9 @@ fn name(endpoint: &str) -> io::Result<Name<'_>> {
     }
     #[cfg(not(windows))]
     {
-        if endpoint.starts_with('/') {
-            endpoint.to_fs_name::<interprocess::local_socket::GenericFilePath>()
-        } else {
-            std::env::temp_dir()
-                .join(endpoint)
-                .to_string_lossy()
-                .into_owned()
-                .leak()
-                .to_fs_name::<interprocess::local_socket::GenericFilePath>()
-        }
+        socket_path(endpoint)
+            .into_os_string()
+            .to_fs_name::<interprocess::local_socket::GenericFilePath>()
     }
 }
 
@@ -179,9 +208,9 @@ pub fn serve(endpoint: &str, handler: RequestHandler) -> io::Result<JoinHandle<(
     };
     #[cfg(unix)]
     let opts = {
-        use interprocess::os::unix::local_socket::ListenerOptionsExt;
+        ensure_private_dir(&socket_path(endpoint))?;
         // Nobody is listening (checked above), so a leftover socket file is stale.
-        opts.mode(0o600).try_overwrite(true)
+        opts.try_overwrite(true)
     };
     let listener = opts.create_sync()?;
     std::thread::Builder::new().name("xs-ipc".into()).spawn(move || {
