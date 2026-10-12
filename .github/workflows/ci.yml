@@ -17,6 +17,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # Windows first (decision 2026-10-12): macOS still builds on every PR but does not
+    # block until its manual tests start. Remove this line to make it blocking again.
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
