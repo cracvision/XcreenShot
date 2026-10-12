@@ -81,6 +81,9 @@ export const useApp = create<State>((set, get) => ({
     await listen("xs://shortcuts", () => void get().refreshShortcuts());
     await listen("xs://permissions", () => void get().refreshPermissions());
     await listen<CommandEvent>("xs://command", (e) => {
+      // Show what proves the wiring (test command, CLI, shortcuts), not the UI's own
+      // background refreshes.
+      if (e.payload.id !== "app.ping" && e.payload.source === "ui") return;
       set((s) => ({ activity: [{ ...e.payload, seq: ++seq }, ...s.activity].slice(0, 20) }));
     });
   },
