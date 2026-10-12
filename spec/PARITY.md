@@ -341,38 +341,38 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| APP-001 | Proceso en segundo plano e instancia única | M0 | Must | — |
-| APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | — |
-| APP-003 | Iniciar al iniciar sesión | M0 | Must | — |
-| APP-004 | Cerrar ventanas y salir | M0 | Must | — |
+| APP-001 | Proceso en segundo plano e instancia única | M0 | Must | En curso |
+| APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | En curso |
+| APP-003 | Iniciar al iniciar sesión | M0 | Must | En curso |
+| APP-004 | Cerrar ventanas y salir | M0 | Must | En curso |
 | APP-005 | Primer arranque | M1 | Should | — |
-| APP-006 | Ventana de Preferencias | M0 | Must | — |
-| APP-007 | Sección General | M0 | Must | — |
+| APP-006 | Ventana de Preferencias | M0 | Must | En curso |
+| APP-007 | Sección General | M0 | Must | En curso |
 | APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |
 | APP-009 | Sección Avanzado | M1 | Should | — |
 | APP-010 | Restablecer ajustes y avisos | M1 | Should | — |
 | APP-011 | Exportar e importar ajustes | M2 | Should | — |
-| APP-012 | Tema de la interfaz | M0 | Must | — |
-| APP-013 | Idioma de la interfaz | M0 | Must | — |
+| APP-012 | Tema de la interfaz | M0 | Must | En curso |
+| APP-013 | Idioma de la interfaz | M0 | Must | En curso |
 | APP-014 | Tooltips y pistas | M1 | Should | — |
 | APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | — |
 | APP-016 | Notificaciones | M1 | Must | — |
-| APP-017 | Ámbitos y reglas de los atajos | M0 | Must | — |
-| APP-018 | Sección Atajos | M0 | Must | — |
-| APP-019 | Detección de conflictos | M0 | Must | — |
-| APP-020 | Tomar atajos ocupados | M0 | Must | — |
-| APP-021 | Perfiles de atajos | M0 | Must | — |
+| APP-017 | Ámbitos y reglas de los atajos | M0 | Must | En curso |
+| APP-018 | Sección Atajos | M0 | Must | En curso |
+| APP-019 | Detección de conflictos | M0 | Must | En curso |
+| APP-020 | Tomar atajos ocupados | M0 | Must | En curso |
+| APP-021 | Perfiles de atajos | M0 | Must | En curso |
 | APP-022 | Atajos de presets, destinos y otros comandos | M1 | Should | — |
 | APP-023 | Hoja de atajos | M2 | Could | — |
-| APP-024 | Permisos de macOS y Reparar permisos | M0 | Must | — |
+| APP-024 | Permisos de macOS y Reparar permisos | M0 | Must | En curso |
 | APP-025 | Aviso periódico de acceso a la pantalla (macOS) | M1 | Should | — |
 | APP-026 | Privilegios y privacidad en Windows | M1 | Should | — |
-| APP-027 | Registro de comandos | M0 | Must | — |
-| APP-028 | CLI `xcreenshot` | M0 | Must | — |
+| APP-027 | Registro de comandos | M0 | Must | En curso |
+| APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
 | APP-029 | Servidor MCP | M2 | Should | — |
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | — |
 | APP-031 | Eventos | M1 | Should | — |
-| APP-032 | Seguridad de la automatización | M0 | Must | — |
+| APP-032 | Seguridad de la automatización | M0 | Must | En curso |
 | APP-033 | `AGENTS.md` | M2 | Should | — |
 | APP-034 | Funciones en prueba | M1 | Should | — |
 | APP-035 | Configuración administrada | M6 | Should | — |
@@ -380,13 +380,13 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-037 | Instalador de Windows | M6 | Must | — |
 | APP-038 | Modo portable (Windows) | M6 | Could | — |
 | APP-039 | Paquete de macOS | M6 | Must | — |
-| APP-040 | Requisitos del sistema | M0 | Must | — |
+| APP-040 | Requisitos del sistema | M0 | Must | En curso |
 | APP-041 | Windows en ARM | M6 | Should | — |
 | APP-042 | Desinstalación | M6 | Must | — |
 | APP-043 | Navegación con teclado | M1 | Must | — |
 | APP-044 | Lectores de pantalla | M1 | Must | — |
 | APP-045 | Contraste, escalado y movimiento | M1 | Should | — |
-| APP-046 | Registros e información de diagnóstico | M0 | Must | — |
+| APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | — |
 | APP-048 | Del atajo a la cruceta | M1 | Must | — |
 | APP-049 | De la captura al editor | M1 | Must | — |
@@ -394,7 +394,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-051 | Consumo en reposo y arranque | M1 | Should | — |
 | APP-052 | Escala de la biblioteca | M2 | Must | — |
 | APP-053 | Cruceta con varios monitores 4K | M1 | Must | — |
-| APP-054 | Local y privado | M0 | Must | — |
+| APP-054 | Local y privado | M0 | Must | En curso |
 | APP-055 | Portabilidad de datos y migración entre equipos | M2 | Should | — |
 
 ## 06-inteligentes.md

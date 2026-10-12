@@ -1,0 +1,373 @@
+{
+  "app": {
+    "name": "XcreenShot"
+  },
+  "commands": {
+    "app_ping": {
+      "title": "Comando de prueba (ping)",
+      "description": "Devuelve la versión, la plataforma y el estado de XcreenShot. Sirve para comprobar que la interfaz, los atajos y el CLI llegan a la app."
+    },
+    "app_commands": {
+      "title": "Listar comandos",
+      "description": "Lista todos los comandos registrados con los esquemas de sus parámetros y resultados."
+    },
+    "app_show": {
+      "title": "Abrir editor",
+      "description": "Muestra la ventana principal."
+    },
+    "app_close_window": {
+      "title": "Cerrar ventana",
+      "description": "Cierra la ventana activa de XcreenShot. La app sigue en segundo plano."
+    },
+    "app_quit": {
+      "title": "Salir de XcreenShot",
+      "description": "Cierra la app, libera los atajos globales y quita el ícono."
+    },
+    "app_diagnostics": {
+      "title": "Información de diagnóstico",
+      "description": "Reúne la versión, el sistema, los monitores, los permisos, los atajos en conflicto y las últimas líneas del registro. Con copy, copia el texto al portapapeles."
+    },
+    "app_open_logs": {
+      "title": "Abrir la carpeta de registros",
+      "description": "Abre la carpeta con los archivos de registro locales."
+    },
+    "app_permissions": {
+      "title": "Estado de los permisos",
+      "description": "Lista los permisos del sistema que usa XcreenShot y si están concedidos."
+    },
+    "app_request_permission": {
+      "title": "Pedir permiso",
+      "description": "Muestra la solicitud del sistema para un permiso, si el sistema todavía permite pedirlo."
+    },
+    "app_open_permission_settings": {
+      "title": "Abrir los ajustes del permiso",
+      "description": "Abre la página exacta de Ajustes del Sistema para un permiso (macOS)."
+    },
+    "settings_open": {
+      "title": "Preferencias",
+      "description": "Abre la ventana de Preferencias, opcionalmente en una sección o en un ajuste."
+    },
+    "settings_get": {
+      "title": "Leer ajuste",
+      "description": "Devuelve el valor actual de una clave de ajuste."
+    },
+    "settings_set": {
+      "title": "Cambiar ajuste",
+      "description": "Cambia un ajuste. Los ajustes de automatización solo se cambian en Preferencias."
+    },
+    "settings_list": {
+      "title": "Listar ajustes",
+      "description": "Lista todas las claves de ajuste con su tipo, valor por defecto, valor actual y si están bloqueadas."
+    },
+    "settings_schema": {
+      "title": "Esquema de ajustes",
+      "description": "Devuelve la definición de cada clave de ajuste."
+    },
+    "shortcuts_list": {
+      "title": "Listar atajos",
+      "description": "Lista todos los atajos asignables con su combinación actual y su estado."
+    },
+    "shortcuts_set": {
+      "title": "Asignar atajo",
+      "description": "Asigna una combinación de teclas a un comando, o la quita con un valor vacío."
+    },
+    "shortcuts_reset": {
+      "title": "Restaurar atajos",
+      "description": "Devuelve un atajo, o todos, al valor del perfil activo."
+    },
+    "shortcuts_pause": {
+      "title": "Pausar atajos globales",
+      "description": "Pausa o reanuda todos los atajos globales de XcreenShot."
+    },
+    "shortcuts_set_profile": {
+      "title": "Cambiar perfil de atajos",
+      "description": "Cambia entre los perfiles Coexistencia y Compatibilidad. Los atajos personalizados se conservan salvo con resetCustom."
+    },
+    "shortcuts_retry": {
+      "title": "Reintentar atajos",
+      "description": "Vuelve a intentar activar los atajos globales que no se pudieron registrar."
+    },
+    "shortcuts_open_system_settings": {
+      "title": "Abrir los ajustes de teclado del sistema",
+      "description": "Abre la página del sistema donde se cambian sus propios atajos de teclado."
+    },
+    "shortcuts_recording": {
+      "title": "Grabando un atajo",
+      "description": "Suspende los atajos globales mientras el usuario graba una combinación nueva."
+    }
+  },
+  "settings": {
+    "general_launchAtLogin": {
+      "label": "Iniciar XcreenShot al iniciar sesión",
+      "description": "Arranca en segundo plano, solo con el ícono y los atajos."
+    },
+    "general_showIcon": {
+      "label": "Mostrar el ícono",
+      "description": "Muestra el ícono de XcreenShot en el área de notificación o en la barra de menús."
+    },
+    "general_monochromeIcon": {
+      "label": "Ícono monocromo",
+      "description": "Dibuja el ícono en un solo color que se adapta a una barra clara u oscura."
+    },
+    "general_iconClickAction": {
+      "label": "Clic en el ícono",
+      "description": "Qué hace un clic izquierdo en el ícono.",
+      "options": {
+        "capturePanel": "Abrir el panel de captura",
+        "universalCapture": "Captura universal",
+        "editor": "Abrir el editor"
+      }
+    },
+    "general_keepRunning": {
+      "label": "Seguir en segundo plano al cerrar todas las ventanas",
+      "description": "Si se desactiva, cerrar la última ventana cierra XcreenShot."
+    },
+    "general_theme": {
+      "label": "Tema",
+      "description": "Aspecto de todas las ventanas de XcreenShot.",
+      "options": {
+        "system": "Sistema",
+        "light": "Claro",
+        "dark": "Oscuro"
+      }
+    },
+    "general_language": {
+      "label": "Idioma",
+      "description": "Idioma de la interfaz. Sistema usa español si el idioma del sistema es cualquier variante de español.",
+      "options": {
+        "system": "Sistema",
+        "en": "English",
+        "es": "Español"
+      }
+    },
+    "shortcuts_profile": {
+      "label": "Perfil",
+      "description": "Conjunto de atajos por defecto.",
+      "options": {
+        "coexistence": "Coexistencia",
+        "compatibility": "Compatibilidad"
+      }
+    },
+    "shortcuts_takeOver": {
+      "label": "Tomar los atajos ocupados por otras apps mientras XcreenShot esté abierto",
+      "description": "Solo donde el sistema lo permite. Las otras apps los recuperan al salir de XcreenShot."
+    },
+    "advanced_keepEditorLoaded": {
+      "label": "Mantener el editor cargado en segundo plano",
+      "description": "La siguiente captura se abre más rápido. Desactívalo para usar menos memoria."
+    },
+    "automation_enabled": {
+      "label": "Permitir el control por CLI y agentes (MCP)",
+      "description": "Si se desactiva, se rechazan los comandos que llegan desde la terminal o desde agentes."
+    },
+    "automation_notifyOnCapture": {
+      "label": "Avisar cuando la automatización capture o grabe",
+      "description": "Muestra una notificación por cada captura o grabación que empieza desde el CLI o un agente."
+    },
+    "automation_allowOnlineShare": {
+      "label": "Permitir que la automatización envíe a destinos en línea",
+      "description": "Los destinos locales están siempre permitidos."
+    },
+    "diagnostics_verbose": {
+      "label": "Registro detallado",
+      "description": "Añade información de depuración a los registros. Se desactiva solo a las 24 horas."
+    }
+  },
+  "errors": {
+    "unknown_command": "Comando desconocido \"{{id}}\".",
+    "scope_not_allowed": "El comando \"{{id}}\" no se puede usar desde aquí.",
+    "invalid_param": "Parámetro no válido \"{{param}}\": {{reason}}.",
+    "unknown_setting": "Ajuste desconocido \"{{key}}\".",
+    "setting_other_platform": "El ajuste \"{{key}}\" no existe en esta plataforma.",
+    "setting_preferences_only": "El ajuste \"{{key}}\" solo se cambia en Preferencias.",
+    "invalid_value": "Valor no válido para \"{{key}}\": {{reason}}.",
+    "automation_disabled": "La automatización está desactivada. Activa \"Permitir el control por CLI y agentes (MCP)\" en Preferencias > Avanzado.",
+    "no_shortcut_slot": "El comando \"{{command}}\" no admite atajo.",
+    "macos_only": "Solo está disponible en macOS."
+  },
+  "shortcuts": {
+    "in_use": "Esta combinación ya la usa \"{{command}}\".",
+    "reject": {
+      "forbidden_key": "Esc, Tab y Enter no se pueden usar en atajos.",
+      "modifier_only": "Un atajo necesita una tecla además de los modificadores.",
+      "needs_modifier": "Un atajo global necesita Ctrl, Alt, Shift o Win/Cmd, salvo que sea una tecla de función o Imprimir pantalla.",
+      "reserved": "El sistema reserva esta combinación; ninguna app puede usarla.",
+      "unparsable": "No se pudo leer el atajo: {{detail}}."
+    },
+    "status": {
+      "active": "Activo",
+      "unassigned": "Sin atajo",
+      "paused": "En pausa",
+      "duplicate": "En conflicto: también lo usa {{command}}",
+      "reserved": "Reservado por el sistema",
+      "system_assigned": "En conflicto: el sistema lo usa para una función propia",
+      "other_app": "En conflicto: lo usa otra app",
+      "taken_over": "Tomado de otra app"
+    },
+    "group": {
+      "app": "App"
+    }
+  },
+  "tray": {
+    "recent": "Recientes",
+    "recent_empty": "Todavía no hay capturas",
+    "open_editor": "Abrir editor",
+    "pause_shortcuts": "Pausar atajos globales",
+    "preferences": "Preferencias…",
+    "help": "Ayuda",
+    "quit": "Salir de XcreenShot",
+    "tooltip": "XcreenShot",
+    "tooltip_paused": "XcreenShot · Atajos en pausa",
+    "tooltip_attention": "XcreenShot · Necesita atención"
+  },
+  "menu": {
+    "file": "Archivo",
+    "edit": "Edición",
+    "window": "Ventana",
+    "help": "Ayuda",
+    "preferences": "Preferencias…",
+    "settings_mac": "Ajustes…",
+    "close_window": "Cerrar ventana",
+    "quit": "Salir de XcreenShot",
+    "open_logs": "Abrir la carpeta de registros",
+    "copy_diagnostics": "Copiar información de diagnóstico"
+  },
+  "notify": {
+    "ping_title": "XcreenShot funciona",
+    "ping_body": "El comando de prueba se ejecutó desde {{source}}.",
+    "shortcuts_failed_title": "Algunos atajos no se pudieron activar",
+    "shortcuts_failed_body": "{{list}}. Abre Preferencias > Atajos para resolverlo.",
+    "diagnostics_copied": "Información de diagnóstico copiada al portapapeles."
+  },
+  "source": {
+    "ui": "la interfaz",
+    "shortcut": "un atajo",
+    "cli": "el CLI",
+    "mcp": "un agente (MCP)",
+    "scheduled": "una programación"
+  },
+  "cli": {
+    "not_running": "XcreenShot no está en marcha y no se pudo arrancar.",
+    "launching": "Arrancando XcreenShot en segundo plano…",
+    "needs_yes": "Este comando cambia o borra datos. Añade --yes para confirmar.",
+    "unknown_area": "Área o comando desconocido \"{{name}}\". Ejecuta \"xcreenshot --help\" para ver los comandos.",
+    "about": "Captura de pantalla, anotación y grabación. Controla la app XcreenShot en marcha.",
+    "params_json": "Parámetros en JSON, o - para leerlos de la entrada estándar",
+    "opt_json": "Escribe un único objeto JSON en la salida estándar",
+    "opt_quiet": "No escribe nada si todo va bien",
+    "opt_timeout": "Se rinde tras estos segundos",
+    "opt_no_launch": "No arranca XcreenShot si no está en marcha",
+    "opt_lang": "Idioma de los mensajes legibles (en o es)",
+    "opt_yes": "Confirma los comandos que cambian o borran datos",
+    "run_about": "Ejecuta un comando por su ID completo",
+    "help_about": "Muestra la ayuda de un comando",
+    "ok": "Hecho.",
+    "positional": "posicional"
+  },
+  "system": {
+    "unsupported_title": "Sistema no compatible",
+    "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
+  },
+  "ui": {
+    "home": {
+      "title": "XcreenShot",
+      "subtitle": "Versión de fundaciones (M0). La captura y el editor llegan en M1.",
+      "test_title": "Comando de prueba",
+      "test_help": "Ejecuta app.ping. El mismo comando responde desde este botón, desde el atajo global de prueba y desde el CLI.",
+      "run_ping": "Ejecutar comando de prueba",
+      "shortcut_hint": "Atajo global de prueba: {{shortcut}}",
+      "cli_hint": "Desde una terminal:",
+      "activity": "Comandos recientes",
+      "activity_empty": "Todavía nada.",
+      "result": "Resultado",
+      "open_preferences": "Abrir Preferencias"
+    },
+    "prefs": {
+      "title": "Preferencias",
+      "search": "Buscar ajustes",
+      "no_results": "Ningún ajuste coincide.",
+      "empty_section": "Todavía no hay nada que configurar aquí. Estos ajustes llegan con sus funciones.",
+      "copy_key": "Copiar clave",
+      "key_copied": "Clave copiada",
+      "locked": "Lo gestiona tu organización",
+      "restart_needed": "Reinicia para aplicar este cambio.",
+      "restart_now": "Reiniciar ahora",
+      "section": {
+        "general": "General",
+        "capture": "Captura",
+        "video": "Video",
+        "editor": "Editor",
+        "library": "Biblioteca",
+        "share": "Compartir",
+        "shortcuts": "Atajos",
+        "advanced": "Avanzado",
+        "experimental": "Funciones en prueba"
+      }
+    },
+    "permissions": {
+      "title": "Permisos",
+      "none_needed": "XcreenShot no necesita permisos especiales en este sistema.",
+      "fix": "Reparar permisos",
+      "request": "Pedir",
+      "open_settings": "Abrir Ajustes del Sistema",
+      "help": "Activa XcreenShot en la lista. Si ya aparece activado pero la captura no funciona, quítalo de la lista y vuelve a añadirlo.",
+      "state": {
+        "granted": "Concedido",
+        "denied": "Denegado",
+        "not_determined": "Sin pedir"
+      },
+      "name": {
+        "screen_recording": "Grabación de pantalla",
+        "accessibility": "Accesibilidad",
+        "camera": "Cámara",
+        "microphone": "Micrófono"
+      },
+      "purpose": {
+        "screen_recording": "Toda captura de pantalla o ventana y toda grabación, incluido el audio del sistema.",
+        "accessibility": "Desplazamiento automático, captura de menús, grabador de pasos y teclas pulsadas en video.",
+        "camera": "La cámara en las grabaciones y en las capturas de cámara.",
+        "microphone": "El audio del micrófono en grabaciones y diapositivas narradas."
+      }
+    },
+    "shortcuts": {
+      "filter": "Mostrar",
+      "filter_all": "Todos",
+      "filter_global": "Globales",
+      "filter_app": "De la app",
+      "filter_conflict": "Con conflicto",
+      "filter_custom": "Personalizados",
+      "search": "Buscar por comando o combinación",
+      "col_command": "Comando",
+      "col_shortcut": "Atajo",
+      "col_status": "Estado",
+      "scope_global": "Global",
+      "scope_app": "De la app",
+      "record_prompt": "Pulsa la combinación…",
+      "record_hint": "Esc cancela · Retroceso lo quita",
+      "none": "Ninguno",
+      "restore": "Restaurar valor por defecto",
+      "remove": "Quitar atajo",
+      "retry": "Reintentar",
+      "reassign_title": "Combinación en uso",
+      "reassign_body": "{{shortcut}} lo usa \"{{command}}\". ¿Reasignarlo? Ese comando quedará sin atajo.",
+      "reassign": "Reasignar",
+      "cancel": "Cancelar",
+      "open_system_settings": "Abrir el ajuste del sistema",
+      "choose_other": "Elegir otro",
+      "profile_title": "Cambiar perfil de atajos",
+      "profile_changes": "Cambiarán estos atajos:",
+      "profile_no_changes": "No cambia ningún atajo.",
+      "profile_conflicts": "Estos atajos personalizados chocarán con los nuevos valores por defecto:",
+      "profile_apply": "Cambiar",
+      "profile_apply_reset": "Cambiar y restablecer mis atajos",
+      "profile_help_coexistence": "Por defecto. Atajos que no chocan con otras apps de captura ni con el sistema.",
+      "profile_help_compatibility": "Los mismos atajos por defecto que la app de captura más habitual en cada plataforma.",
+      "contextual_note": "Las teclas que solo funcionan durante una selección o una grabación aparecen en la hoja de atajos."
+    },
+    "common": {
+      "on": "Activado",
+      "off": "Desactivado",
+      "close": "Cerrar"
+    }
+  }
+}

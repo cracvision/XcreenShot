@@ -1,0 +1,373 @@
+{
+  "app": {
+    "name": "XcreenShot"
+  },
+  "commands": {
+    "app_ping": {
+      "title": "Test command (ping)",
+      "description": "Returns the version, platform and state of XcreenShot. Used to check that the UI, shortcuts and the CLI reach the app."
+    },
+    "app_commands": {
+      "title": "List commands",
+      "description": "Lists every registered command with its parameter and result schemas."
+    },
+    "app_show": {
+      "title": "Open editor",
+      "description": "Shows the main window."
+    },
+    "app_close_window": {
+      "title": "Close window",
+      "description": "Closes the active XcreenShot window. The app keeps running in the background."
+    },
+    "app_quit": {
+      "title": "Quit XcreenShot",
+      "description": "Quits the app, releases global shortcuts and removes the icon."
+    },
+    "app_diagnostics": {
+      "title": "Diagnostic information",
+      "description": "Collects version, system, monitors, permissions, shortcut conflicts and the last log lines. With copy, puts the text on the clipboard."
+    },
+    "app_open_logs": {
+      "title": "Open logs folder",
+      "description": "Opens the folder with the local log files."
+    },
+    "app_permissions": {
+      "title": "Permission status",
+      "description": "Lists the system permissions XcreenShot uses and whether they are granted."
+    },
+    "app_request_permission": {
+      "title": "Request permission",
+      "description": "Shows the system request for a permission, if the system still allows asking."
+    },
+    "app_open_permission_settings": {
+      "title": "Open permission settings",
+      "description": "Opens the exact System Settings page for a permission (macOS)."
+    },
+    "settings_open": {
+      "title": "Preferences",
+      "description": "Opens the Preferences window, optionally at a section or setting."
+    },
+    "settings_get": {
+      "title": "Get setting",
+      "description": "Returns the current value of a setting key."
+    },
+    "settings_set": {
+      "title": "Change setting",
+      "description": "Changes a setting. Automation settings can only be changed in Preferences."
+    },
+    "settings_list": {
+      "title": "List settings",
+      "description": "Lists every setting key with its type, default value, current value and lock state."
+    },
+    "settings_schema": {
+      "title": "Settings schema",
+      "description": "Returns the definition of every setting key."
+    },
+    "shortcuts_list": {
+      "title": "List shortcuts",
+      "description": "Lists every assignable shortcut with its current combination and status."
+    },
+    "shortcuts_set": {
+      "title": "Set shortcut",
+      "description": "Assigns a key combination to a command, or removes it with an empty value."
+    },
+    "shortcuts_reset": {
+      "title": "Restore shortcuts",
+      "description": "Restores one shortcut, or all of them, to the active profile's default."
+    },
+    "shortcuts_pause": {
+      "title": "Pause global shortcuts",
+      "description": "Pauses or resumes every global shortcut of XcreenShot."
+    },
+    "shortcuts_set_profile": {
+      "title": "Change shortcut profile",
+      "description": "Switches between the Coexistence and Compatibility profiles. Custom shortcuts are kept unless resetCustom is set."
+    },
+    "shortcuts_retry": {
+      "title": "Retry shortcuts",
+      "description": "Tries again to activate the global shortcuts that could not be registered."
+    },
+    "shortcuts_open_system_settings": {
+      "title": "Open system keyboard settings",
+      "description": "Opens the system page where its own keyboard shortcuts are changed."
+    },
+    "shortcuts_recording": {
+      "title": "Recording a shortcut",
+      "description": "Suspends global shortcuts while the user records a new combination."
+    }
+  },
+  "settings": {
+    "general_launchAtLogin": {
+      "label": "Start XcreenShot when you sign in",
+      "description": "Starts in the background, with only the icon and shortcuts."
+    },
+    "general_showIcon": {
+      "label": "Show the icon",
+      "description": "Shows the XcreenShot icon in the notification area or the menu bar."
+    },
+    "general_monochromeIcon": {
+      "label": "Monochrome icon",
+      "description": "Draws the icon in a single color that adapts to a light or dark bar."
+    },
+    "general_iconClickAction": {
+      "label": "Clicking the icon",
+      "description": "What a left click on the icon does.",
+      "options": {
+        "capturePanel": "Open the capture panel",
+        "universalCapture": "Universal Capture",
+        "editor": "Open the editor"
+      }
+    },
+    "general_keepRunning": {
+      "label": "Keep running in the background when all windows are closed",
+      "description": "If off, closing the last window quits XcreenShot."
+    },
+    "general_theme": {
+      "label": "Theme",
+      "description": "Appearance of every XcreenShot window.",
+      "options": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "general_language": {
+      "label": "Language",
+      "description": "Language of the interface. System uses Spanish for any Spanish system language.",
+      "options": {
+        "system": "System",
+        "en": "English",
+        "es": "Español"
+      }
+    },
+    "shortcuts_profile": {
+      "label": "Profile",
+      "description": "Set of default shortcuts.",
+      "options": {
+        "coexistence": "Coexistence",
+        "compatibility": "Compatibility"
+      }
+    },
+    "shortcuts_takeOver": {
+      "label": "Take shortcuts used by other apps while XcreenShot is open",
+      "description": "Only where the system allows it. Other apps get them back when XcreenShot quits."
+    },
+    "advanced_keepEditorLoaded": {
+      "label": "Keep the editor loaded in the background",
+      "description": "The next capture opens faster. Turn off to use less memory."
+    },
+    "automation_enabled": {
+      "label": "Allow control from the CLI and agents (MCP)",
+      "description": "If off, commands from the terminal or agents are refused."
+    },
+    "automation_notifyOnCapture": {
+      "label": "Notify when automation captures or records",
+      "description": "Shows a notification for every capture or recording started by the CLI or an agent."
+    },
+    "automation_allowOnlineShare": {
+      "label": "Allow automation to send to online destinations",
+      "description": "Local destinations are always allowed."
+    },
+    "diagnostics_verbose": {
+      "label": "Detailed logging",
+      "description": "Adds debugging information to the logs. Turns itself off after 24 hours."
+    }
+  },
+  "errors": {
+    "unknown_command": "Unknown command \"{{id}}\".",
+    "scope_not_allowed": "The command \"{{id}}\" cannot be used from here.",
+    "invalid_param": "Invalid parameter \"{{param}}\": {{reason}}.",
+    "unknown_setting": "Unknown setting \"{{key}}\".",
+    "setting_other_platform": "The setting \"{{key}}\" does not exist on this platform.",
+    "setting_preferences_only": "The setting \"{{key}}\" can only be changed in Preferences.",
+    "invalid_value": "Invalid value for \"{{key}}\": {{reason}}.",
+    "automation_disabled": "Automation is turned off. Turn on \"Allow control from the CLI and agents (MCP)\" in Preferences > Advanced.",
+    "no_shortcut_slot": "The command \"{{command}}\" cannot have a shortcut.",
+    "macos_only": "This is only available on macOS."
+  },
+  "shortcuts": {
+    "in_use": "This combination is already used by \"{{command}}\".",
+    "reject": {
+      "forbidden_key": "Esc, Tab and Enter cannot be used in shortcuts.",
+      "modifier_only": "A shortcut needs a key besides the modifiers.",
+      "needs_modifier": "A global shortcut needs Ctrl, Alt, Shift or Win/Cmd, unless it is a function key or Print Screen.",
+      "reserved": "The system reserves this combination; no app can use it.",
+      "unparsable": "Could not read the shortcut: {{detail}}."
+    },
+    "status": {
+      "active": "Active",
+      "unassigned": "No shortcut",
+      "paused": "Paused",
+      "duplicate": "Conflict: also used by {{command}}",
+      "reserved": "Reserved by the system",
+      "system_assigned": "Conflict: the system uses it for its own feature",
+      "other_app": "Conflict: used by another app",
+      "taken_over": "Taken from another app"
+    },
+    "group": {
+      "app": "App"
+    }
+  },
+  "tray": {
+    "recent": "Recent",
+    "recent_empty": "No captures yet",
+    "open_editor": "Open editor",
+    "pause_shortcuts": "Pause global shortcuts",
+    "preferences": "Preferences…",
+    "help": "Help",
+    "quit": "Quit XcreenShot",
+    "tooltip": "XcreenShot",
+    "tooltip_paused": "XcreenShot · Shortcuts paused",
+    "tooltip_attention": "XcreenShot · Needs attention"
+  },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "window": "Window",
+    "help": "Help",
+    "preferences": "Preferences…",
+    "settings_mac": "Settings…",
+    "close_window": "Close window",
+    "quit": "Quit XcreenShot",
+    "open_logs": "Open logs folder",
+    "copy_diagnostics": "Copy diagnostic information"
+  },
+  "notify": {
+    "ping_title": "XcreenShot is working",
+    "ping_body": "The test command ran from {{source}}.",
+    "shortcuts_failed_title": "Some shortcuts could not be activated",
+    "shortcuts_failed_body": "{{list}}. Open Preferences > Shortcuts to fix them.",
+    "diagnostics_copied": "Diagnostic information copied to the clipboard."
+  },
+  "source": {
+    "ui": "the interface",
+    "shortcut": "a shortcut",
+    "cli": "the CLI",
+    "mcp": "an agent (MCP)",
+    "scheduled": "a schedule"
+  },
+  "cli": {
+    "not_running": "XcreenShot is not running and could not be started.",
+    "launching": "Starting XcreenShot in the background…",
+    "needs_yes": "This command changes or deletes data. Add --yes to confirm.",
+    "unknown_area": "Unknown area or command \"{{name}}\". Run \"xcreenshot --help\" to see the commands.",
+    "about": "Screen capture, annotation and recording. Controls the running XcreenShot app.",
+    "params_json": "Parameters as JSON, or - to read them from standard input",
+    "opt_json": "Print a single JSON object on standard output",
+    "opt_quiet": "Print nothing on success",
+    "opt_timeout": "Give up after this many seconds",
+    "opt_no_launch": "Do not start XcreenShot if it is not running",
+    "opt_lang": "Language of readable messages (en or es)",
+    "opt_yes": "Confirm commands that change or delete data",
+    "run_about": "Run a command by its full ID",
+    "help_about": "Show help for a command",
+    "ok": "Done.",
+    "positional": "positional"
+  },
+  "system": {
+    "unsupported_title": "Unsupported system",
+    "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
+  },
+  "ui": {
+    "home": {
+      "title": "XcreenShot",
+      "subtitle": "Foundations build (M0). Capture and the editor arrive in M1.",
+      "test_title": "Test command",
+      "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
+      "run_ping": "Run test command",
+      "shortcut_hint": "Global test shortcut: {{shortcut}}",
+      "cli_hint": "From a terminal:",
+      "activity": "Recent commands",
+      "activity_empty": "Nothing yet.",
+      "result": "Result",
+      "open_preferences": "Open Preferences"
+    },
+    "prefs": {
+      "title": "Preferences",
+      "search": "Search settings",
+      "no_results": "No settings match.",
+      "empty_section": "Nothing to set here yet. These settings arrive with their features.",
+      "copy_key": "Copy key",
+      "key_copied": "Key copied",
+      "locked": "Managed by your organization",
+      "restart_needed": "Restart to apply this change.",
+      "restart_now": "Restart now",
+      "section": {
+        "general": "General",
+        "capture": "Capture",
+        "video": "Video",
+        "editor": "Editor",
+        "library": "Library",
+        "share": "Share",
+        "shortcuts": "Shortcuts",
+        "advanced": "Advanced",
+        "experimental": "Experimental features"
+      }
+    },
+    "permissions": {
+      "title": "Permissions",
+      "none_needed": "XcreenShot needs no special permissions on this system.",
+      "fix": "Fix permissions",
+      "request": "Request",
+      "open_settings": "Open System Settings",
+      "help": "Turn XcreenShot on in the list. If it already looks on but capture does not work, remove it from the list and add it again.",
+      "state": {
+        "granted": "Granted",
+        "denied": "Denied",
+        "not_determined": "Not requested"
+      },
+      "name": {
+        "screen_recording": "Screen Recording",
+        "accessibility": "Accessibility",
+        "camera": "Camera",
+        "microphone": "Microphone"
+      },
+      "purpose": {
+        "screen_recording": "Every screen or window capture and every recording, including system audio.",
+        "accessibility": "Auto-scroll, menu capture, the Step Recorder and showing keystrokes in video.",
+        "camera": "The camera in recordings and camera captures.",
+        "microphone": "Microphone audio in recordings and narrated slides."
+      }
+    },
+    "shortcuts": {
+      "filter": "Show",
+      "filter_all": "All",
+      "filter_global": "Global",
+      "filter_app": "In the app",
+      "filter_conflict": "In conflict",
+      "filter_custom": "Custom",
+      "search": "Search by command or combination",
+      "col_command": "Command",
+      "col_shortcut": "Shortcut",
+      "col_status": "Status",
+      "scope_global": "Global",
+      "scope_app": "In the app",
+      "record_prompt": "Press the combination…",
+      "record_hint": "Esc cancels · Backspace removes",
+      "none": "None",
+      "restore": "Restore default",
+      "remove": "Remove shortcut",
+      "retry": "Retry",
+      "reassign_title": "Combination already in use",
+      "reassign_body": "{{shortcut}} is used by \"{{command}}\". Reassign it? That command will have no shortcut.",
+      "reassign": "Reassign",
+      "cancel": "Cancel",
+      "open_system_settings": "Open system setting",
+      "choose_other": "Choose another",
+      "profile_title": "Change shortcut profile",
+      "profile_changes": "These shortcuts will change:",
+      "profile_no_changes": "No shortcut changes.",
+      "profile_conflicts": "These custom shortcuts will collide with the new defaults:",
+      "profile_apply": "Change",
+      "profile_apply_reset": "Change and reset my shortcuts",
+      "profile_help_coexistence": "Default. Shortcuts that do not collide with other capture apps or the system.",
+      "profile_help_compatibility": "Same default shortcuts as the most common capture app on each platform.",
+      "contextual_note": "Keys that only work during a selection or a recording appear in the shortcut sheet."
+    },
+    "common": {
+      "on": "On",
+      "off": "Off",
+      "close": "Close"
+    }
+  }
+}
