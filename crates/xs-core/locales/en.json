@@ -280,7 +280,6 @@
       "activity": "Recent commands",
       "activity_empty": "Nothing yet.",
       "result": "Result",
-      "change_shortcut": "Change this shortcut in Preferences > Shortcuts",
       "open_preferences": "Open Preferences"
     },
     "prefs": {

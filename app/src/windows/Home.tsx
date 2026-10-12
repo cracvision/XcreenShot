@@ -52,13 +52,7 @@ export function Home() {
           </button>
           <span>
             {t("ui.home.shortcut_hint", { shortcut: "" })}
-            <button
-              className="btn small"
-              title={t("ui.home.change_shortcut")}
-              onClick={() => void run("settings.open", { section: "shortcuts" })}
-            >
-              <kbd>{pingShortcut}</kbd>
-            </button>
+            <kbd>{pingShortcut}</kbd>
           </span>
         </div>
         <div className="row">

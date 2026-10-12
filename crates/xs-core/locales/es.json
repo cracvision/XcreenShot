@@ -280,7 +280,6 @@
       "activity": "Comandos recientes",
       "activity_empty": "Todavía nada.",
       "result": "Resultado",
-      "change_shortcut": "Cambiar este atajo en Preferencias > Atajos",
       "open_preferences": "Abrir Preferencias"
     },
     "prefs": {
