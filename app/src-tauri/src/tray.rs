@@ -58,6 +58,18 @@ pub fn render(v: Visual) -> Image<'static> {
     }
     let glyph: [u8; 3] = if v.monochrome { mono_color } else { [14, 140, 127] };
     let size = w as f32;
+    if v.paused {
+        // Paused: the X goes away (the brackets stay) so the slash drawn below reads
+        // as a different shape, not as one more stroke of the X.
+        for y in 0..h {
+            for x in 0..w {
+                let (fx, fy) = (x as f32 / size, y as f32 / size);
+                if (0.2..0.8).contains(&fx) && (0.2..0.8).contains(&fy) {
+                    px[((y * w + x) * 4 + 3) as usize] = 0;
+                }
+            }
+        }
+    }
     let mut paint = |x: u32, y: u32, color: [u8; 3], alpha: f32| {
         let i = ((y * w + x) * 4) as usize;
         let a = alpha.clamp(0.0, 1.0);
@@ -70,16 +82,18 @@ pub fn render(v: Visual) -> Image<'static> {
         px[i + 3] = (out_a * 255.0).round() as u8;
     };
     if v.paused {
-        // Cross the glyph with a diagonal bar; it is dimmed below.
-        let thickness = size * 0.09;
+        // One slash from bottom-left to top-right; the whole icon is dimmed below.
+        let thickness = size * 0.11;
         for y in 0..h {
             for x in 0..w {
                 let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
-                let d = (fx - fy).abs() / std::f32::consts::SQRT_2;
-                let inside = fx > size * 0.08 && fx < size * 0.92;
-                if inside {
-                    paint(x, y, glyph, thickness / 2.0 - d + 0.5);
-                }
+                // Distance to the segment (0.3, 0.7)-(0.7, 0.3): a slash with round ends.
+                let (ax, ay, bx, by) = (size * 0.3, size * 0.7, size * 0.7, size * 0.3);
+                let t = (((fx - ax) * (bx - ax) + (fy - ay) * (by - ay))
+                    / ((bx - ax).powi(2) + (by - ay).powi(2)))
+                .clamp(0.0, 1.0);
+                let d = ((fx - ax - t * (bx - ax)).powi(2) + (fy - ay - t * (by - ay)).powi(2)).sqrt();
+                paint(x, y, glyph, thickness / 2.0 - d + 0.5);
             }
         }
     }
@@ -332,5 +346,36 @@ mod tests {
         assert_ne!(shapes(&normal), shapes(&attention));
         assert_ne!(shapes(&paused), shapes(&attention));
         assert!(alpha_sum(&attention) > alpha_sum(&normal));
+    }
+}
+
+/// `XS_DUMP_ICONS=<dir> cargo test -p xcreenshot-app dump_icons` writes raw RGBA files
+/// of every state, for visual review (`node scripts/raw-to-png.mjs <dir>`).
+#[cfg(test)]
+#[test]
+fn dump_icons() {
+    let Some(dir) = std::env::var_os("XS_DUMP_ICONS") else {
+        return;
+    };
+    let dir = std::path::PathBuf::from(dir);
+    for mono in [false, true] {
+        for (name, paused, attention) in [
+            ("normal", false, false),
+            ("paused", true, false),
+            ("attention", false, true),
+        ] {
+            let img = render(Visual {
+                paused,
+                attention,
+                monochrome: mono,
+            });
+            let file = dir.join(format!(
+                "{name}-{}-{}x{}.rgba",
+                if mono { "mono" } else { "color" },
+                img.width(),
+                img.height()
+            ));
+            std::fs::write(file, img.rgba()).unwrap();
+        }
     }
 }
