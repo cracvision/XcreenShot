@@ -115,6 +115,7 @@ fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
 }
 
 pub fn run() {
+    let started = std::time::Instant::now();
     let background = std::env::args().any(|a| a == "--background");
     let paths = Paths::standard();
     let log = logging::init(&paths.logs_dir(), false);
@@ -187,7 +188,7 @@ pub fn run() {
                 let _ = std::fs::create_dir_all(&core.paths.config_dir);
                 let _ = std::fs::write(&first_run_marker, b"");
             }
-            if let Ok(enabled) = handle.autolaunch().is_enabled() {
+            if let Some(enabled) = host::login_item_enabled(&handle) {
                 core.settings
                     .sync_external("general.launchAtLogin", json!(enabled));
             }
@@ -200,6 +201,11 @@ pub fn run() {
             global::apply(&handle);
             tray::create(&handle)?;
             global::startup_notice(&handle);
+            // Time from process start to "icon and shortcuts work" (APP-003, APP-051).
+            tracing::info!(
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                "ready: icon and shortcuts active"
+            );
             if !background {
                 windows::show_main(&handle)?;
             }

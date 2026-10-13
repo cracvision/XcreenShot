@@ -23,6 +23,17 @@ fn internal(e: impl std::fmt::Display) -> CommandError {
     CommandError::internal(e.to_string())
 }
 
+/// Real state of the login item (APP-003): registered, and on Windows not turned off
+/// in Settings > Apps > Startup.
+pub fn login_item_enabled(app: &AppHandle) -> Option<bool> {
+    let registered = app.autolaunch().is_enabled().ok()?;
+    #[cfg(windows)]
+    if registered && xs_core::winreg::login_item_turned_off(&app.package_info().name) {
+        return Some(false);
+    }
+    Some(registered)
+}
+
 pub fn notify(app: &AppHandle, title: &str, body: &str) {
     if let Err(e) = app.notification().builder().title(title).body(body).show() {
         tracing::warn!(error = %e, "notification failed");
@@ -66,6 +77,9 @@ impl Host for TauriHost {
             "general.launchAtLogin" => {
                 let auto = self.app.autolaunch();
                 let r = if value.as_bool().unwrap_or(false) {
+                    // A previous "off" in Windows Settings would otherwise keep it disabled.
+                    #[cfg(windows)]
+                    xs_core::winreg::clear_login_item_override(&self.app.package_info().name);
                     auto.enable()
                 } else {
                     auto.disable()
@@ -132,7 +146,7 @@ impl Host for TauriHost {
     }
 
     fn launch_at_login(&self) -> Option<bool> {
-        self.app.autolaunch().is_enabled().ok()
+        login_item_enabled(&self.app)
     }
 
     fn command_finished(&self, ctx: &Context, spec: &CommandSpec, result: &CommandResult) {

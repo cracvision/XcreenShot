@@ -63,7 +63,11 @@ export function Preferences() {
   useEffect(() => {
     void invoke<Navigation | null>("xs_take_navigation").then((nav) => nav && go(nav));
     const un = listen<Navigation>("xs://navigate", (e) => go(e.payload));
-    const refreshOnFocus = () => void useApp.getState().refreshPermissions();
+    // Permissions and the login item can change in system settings (APP-003, APP-024).
+    const refreshOnFocus = () => {
+      void useApp.getState().refreshPermissions();
+      void useApp.getState().refreshSettings();
+    };
     window.addEventListener("focus", refreshOnFocus);
     return () => {
       void un.then((f) => f());
