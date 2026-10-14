@@ -1,0 +1,31 @@
+[package]
+name = "xs-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "XcreenShot core: command registry, settings, shortcuts, IPC and logging"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+directories = "6"
+interprocess = "2"
+sys-locale = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+widestring = "1"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_RemoteDesktop", "Win32_System_Threading", "Win32_System_Registry"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSCameraUsageDescription</key>
+  <string>XcreenShot uses the camera only when you turn it on for a recording or a camera capture.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>XcreenShot uses the microphone only when you turn it on for a recording.</string>
+  <key>LSUIElement</key>
+  <false/>
+</dict>
+</plist>

@@ -32,3 +32,18 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | SMT-010 | Redacción automática: URLs y fechas desactivadas por defecto; documentos de identidad de EE. UU., España y Brasil | Aceptar | Abierta |
 | 05-app.md | Referencia otras funciones por nombre, no por ID | Pasada de enlaces antes de M1 | Abierta |
 | 02 / 04 | Faltan tablas de cierre en `02-editor.md` y el marco de compartir y destinos en `04-biblioteca-compartir.md` | Completar antes de M2 | Abierta |
+
+## Dudas del equipo de construcción (M0)
+
+| ID | Pregunta | Propuesta (implementada como provisional) | Estado |
+|---|---|---|---|
+| SPEC §4 (M0) | El criterio de salida pide "un atajo global que ejecute un comando de prueba", pero el spec no fija cuál | `app.ping` con `Ctrl+Alt+Shift+K` (Windows) y `⌃⌥⇧K` (macOS) en ambos perfiles: familia Coexistencia y una letra que CAP-065 no usa. Se puede quitar o cambiar en Preferencias > Atajos | Abierta |
+| APP-020 | Sin ganchos de teclado de bajo nivel (que el propio spec prohíbe), Windows no deja registrar una combinación que ya registró otra app. No sabemos si `PrtScn` se puede tomar con la Herramienta Recortes activa | La opción y su estado "Tomado de otra app" existen; si el sistema no lo permite, el atajo queda "En conflicto" con el botón para abrir el ajuste del sistema. Probarlo en el equipo de Carlos (`tests/manual/APP-020.md`) | Abierta |
+| APP-021 | El aviso "la otra app de captura está en marcha" necesita su nombre de proceso, y CLAUDE.md no permite esa marca en el código ni investigarlo en su instalación | No implementar el aviso hasta que Carlos dé el nombre del proceso (se puede ver en el Administrador de tareas). El perfil se llama "Compatibilidad" en la interfaz, según la propuesta ya anotada sobre APP-021 | Abierta |
+| APP-002 | El clic izquierdo (Windows) abre el panel de captura o la captura universal, que llegan en M1 | Hasta M1, todas las opciones abren la ventana principal | Provisional |
+| APP-003 | En macOS, el arranque al iniciar sesión usa un LaunchAgent; las versiones recientes lo muestran en "Permitir en segundo plano" y no en "Abrir al iniciar sesión" | Pasar a `SMAppService` en M6, junto con la firma | Abierta |
+| APP-017 | El spec pide mostrar los atajos con el carácter de la distribución de teclado activa. WebView2 (Windows) ofrece esa información; WKWebView (macOS) no | En macOS se muestran con la etiqueta de la distribución estadounidense; los atajos funcionan igual, porque se guardan por tecla física | Abierta |
+| APP-017 | Re-registro automático de los atajos tras suspender o cambiar de sesión | No hecho en M0: los registros del sistema suelen sobrevivir a la suspensión. Se comprueba con `tests/manual/APP-017.md` y se implementa si falla | Abierta |
+| APP-024 | macOS no distingue "denegado" de "nunca pedido" para Grabación de pantalla y Accesibilidad | XcreenShot recuerda qué permisos pidió y muestra "Denegado" solo después de pedirlo | Provisional |
+| APP-040 | Identificador de paquete (necesario para firma y permisos de macOS) | `com.cracvision.xcreenshot` | Abierta |
+| APP-042 | El instalador de Windows pone la app en `%LOCALAPPDATA%\XcreenShot` y los registros de la app viven en `%LOCALAPPDATA%\XcreenShot\data`, dentro de la misma carpeta. Al desinstalar puede quedar la carpeta a medias, o borrarse los registros sin preguntar | Separar los datos de la carpeta de instalación y decidir qué borra el desinstalador (preguntar si conservar ajustes y registros) al implementar APP-037/APP-042 en M6 | Abierta |

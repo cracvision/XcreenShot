@@ -114,7 +114,26 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ## Comandos de desarrollo
 
-Se definen en M0. Mantén esta sección al día.
+Requisitos: Rust estable (rustup), Node 22, y en Windows las Build Tools de Visual Studio (C++).
+
+| Qué | Comando (desde la raíz salvo indicación) |
+|---|---|
+| Instalar dependencias de la UI | `npm ci` en `app/` |
+| App en desarrollo (Vite + Tauri, recarga en caliente) | `npm run tauri dev` en `app/` |
+| Compilar app y CLI | `cargo build --workspace` (el CLI queda en `target/debug/xcreenshot`) |
+| Probar el CLI contra la app en marcha | `target/debug/xcreenshot app ping --json` |
+| Pruebas Rust | `cargo test --workspace` |
+| Formato y lint Rust | `cargo fmt --all` · `cargo clippy --workspace --all-targets -- -D warnings` |
+| UI: lint, formato, tipos, pruebas | `npm run lint` · `npm run format:check` · `npm run typecheck` · `npm test` en `app/` |
+| Sin telemetría (APP-054) | `node scripts/check-no-telemetry.mjs` |
+| Regenerar el ícono | `node scripts/make-icon.mjs` y después `npx tauri icon src-tauri/icons/app-icon.png -o src-tauri/icons` en `app/` |
+| Paquete instalable | `npm run tauri build` en `app/` |
+
+Dónde vive cada cosa:
+- Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs`.
+- Textos EN/ES: `crates/xs-core/locales/{en,es}.json` (los comparten Rust y React).
+- Datos del usuario: `%APPDATA%\XcreenShot\config` y `%LOCALAPPDATA%\XcreenShot\data` (Windows); `~/Library/Application Support/XcreenShot` (macOS). `XCREENSHOT_DATA_DIR` y `XCREENSHOT_IPC_NAME` aíslan una instancia para pruebas.
+- Un comando nuevo exige: entrada en el catálogo, manejador, textos en los dos idiomas y fila en `AGENTS.md` (hay pruebas que fallan si falta alguno).
 
 ## Cómo trabajar con Carlos
 
