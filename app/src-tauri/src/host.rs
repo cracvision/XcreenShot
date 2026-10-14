@@ -56,6 +56,7 @@ impl Host for TauriHost {
 
     fn quit(&self) {
         tracing::info!("quit requested");
+        crate::overlay::cancel(&self.app);
         let app = self.app.clone();
         // Let the caller (e.g. the CLI) receive its answer first.
         std::thread::spawn(move || {
@@ -165,6 +166,14 @@ impl Host for TauriHost {
             // One or two compositor frames for the change to reach the screen.
             std::thread::sleep(std::time::Duration::from_millis(34));
         }
+    }
+
+    fn select_on_screen(
+        &self,
+        request: Value,
+        frames: Vec<xs_core::host::Frame>,
+    ) -> Result<Value, CommandError> {
+        crate::overlay::select(&self.app, request, frames)
     }
 
     fn notify(&self, _category: &str, title: &str, body: &str) {

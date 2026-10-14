@@ -14,16 +14,16 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | CAP-006 | Atajo global Capturar | M1 | Must | — |
 | CAP-007 | Repetir última captura | M1 | Should | — |
 | CAP-008 | Comandos de captura (CLI y MCP) | M1 | Should | En curso |
-| CAP-009 | Flujo de captura universal | M1 | Must | — |
+| CAP-009 | Flujo de captura universal | M1 | Must | En curso |
 | CAP-010 | Opciones de la pestaña Universal | M1 | Must | — |
-| CAP-011 | Ajustar la selección y barra de captura | M1 | Must | — |
-| CAP-012 | Rehacer la selección y cambiar de tipo | M1 | Should | — |
-| CAP-013 | Pantalla congelada y cruceta | M1 | Must | — |
+| CAP-011 | Ajustar la selección y barra de captura | M1 | Must | En curso |
+| CAP-012 | Rehacer la selección y cambiar de tipo | M1 | Should | En curso |
+| CAP-013 | Pantalla congelada y cruceta | M1 | Must | En curso |
 | CAP-014 | Cruceta simplificada | M1 | Could | — |
-| CAP-015 | Lupa | M1 | Must | — |
-| CAP-016 | Detección automática de ventanas y subáreas | M1 | Must | — |
-| CAP-017 | Teclado durante la selección | M1 | Must | — |
-| CAP-018 | Bloqueo de proporción | M1 | Should | — |
+| CAP-015 | Lupa | M1 | Must | En curso |
+| CAP-016 | Detección automática de ventanas y subáreas | M1 | Must | En curso |
+| CAP-017 | Teclado durante la selección | M1 | Must | En curso |
+| CAP-018 | Bloqueo de proporción | M1 | Should | En curso |
 | CAP-019 | Guías de tamaño estándar | M1 | Could | — |
 | CAP-020 | Ayuda en pantalla durante la captura | M1 | Could | — |
 | CAP-021 | Varios monitores y DPI mixto | M1 | Must | En curso |
@@ -388,7 +388,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-045 | Contraste, escalado y movimiento | M1 | Should | — |
 | APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | — |
-| APP-048 | Del atajo a la cruceta | M1 | Must | — |
+| APP-048 | Del atajo a la cruceta | M1 | Must | En curso |
 | APP-049 | De la captura al editor | M1 | Must | — |
 | APP-050 | Editor con imágenes muy grandes | M2 | Must | — |
 | APP-051 | Consumo en reposo y arranque | M1 | Should | — |

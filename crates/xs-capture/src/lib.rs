@@ -7,6 +7,7 @@
 //! on-screen selection arrives in build 2.
 
 pub mod compose;
+pub mod interactive;
 pub mod platform;
 
 use std::path::{Path, PathBuf};
@@ -249,6 +250,8 @@ pub enum WindowTarget {
     Active,
     Point(i32, i32),
     Title(String),
+    /// Window picked in the on-screen selection.
+    Id(u32),
 }
 
 /// A whole window, even if another one covers it (CAP-027).
@@ -277,6 +280,15 @@ pub fn capture_window(target: &WindowTarget, lang: Lang) -> Result<Shot, Command
                 CommandError::new(
                     ErrorCode::NotFound,
                     tr(lang, "errors.window_not_found", &[("title", &format!("{x},{y}"))]),
+                )
+            })?,
+        WindowTarget::Id(id) => windows
+            .into_iter()
+            .find(|w| w.id().ok() == Some(*id))
+            .ok_or_else(|| {
+                CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(lang, "errors.window_not_found", &[("title", &id.to_string())]),
                 )
             })?,
         WindowTarget::Title(needle) => {
@@ -582,11 +594,17 @@ fn run_capture(
     finish(&core, ctx, shot?, &opts)
 }
 
-fn interactive_later(lang: Lang) -> CommandError {
-    CommandError::new(
-        ErrorCode::InvalidParams,
-        tr(lang, "errors.capture_interactive_later", &[]),
-    )
+/// Interactive capture (CAP-009, CAP-025, CAP-027): one at a time, after the delay.
+fn run_interactive(weak: &Weak<Core>, ctx: &Context, p: &Value, mode: &str) -> CommandResult {
+    let core: Arc<Core> = weak
+        .upgrade()
+        .ok_or_else(|| CommandError::internal("shutting down"))?;
+    let _busy = Busy::take(ctx.lang)?;
+    let opts = Options::from_params(p, ctx.source);
+    if opts.delay > 0.0 {
+        std::thread::sleep(Duration::from_secs_f64(opts.delay));
+    }
+    interactive::run(&core, ctx, &opts, mode)
 }
 
 /// Handlers for the `capture.*` commands, for `Core::with_extensions`.
@@ -611,7 +629,7 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.region", move |ctx, p| {
             let Some(r) = p.get("rect") else {
-                return Err(interactive_later(ctx.lang));
+                return run_interactive(&w, ctx, &p, "region");
             };
             let area = Rect {
                 x: r["x"].as_i64().unwrap_or(0) as i32,
@@ -620,6 +638,10 @@ pub fn extension() -> Extension {
                 height: r["height"].as_u64().unwrap_or(1) as u32,
             };
             run_capture(&w, ctx, &p, |lang| capture_region(area, lang))
+        });
+        let w = weak.clone();
+        reg.handle("capture.universal", move |ctx, p| {
+            run_interactive(&w, ctx, &p, "universal")
         });
         let w = weak;
         reg.handle("capture.window", move |ctx, p| {
@@ -635,7 +657,7 @@ pub fn extension() -> Extension {
                         .unwrap_or_default()
                         .to_string(),
                 ),
-                _ => return Err(interactive_later(ctx.lang)),
+                _ => return run_interactive(&w, ctx, &p, "window"),
             };
             run_capture(&w, ctx, &p, |lang| capture_window(&target, lang))
         });
@@ -683,15 +705,6 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .starts_with("XcreenShot_"));
-    }
-
-    #[test]
-    fn interactive_capture_is_not_available_yet() {
-        let core = Core::for_tests_with(Platform::current(), vec![extension()]);
-        let e = core
-            .call(Source::Cli, "capture.region", json!({}), Some(Lang::En))
-            .unwrap_err();
-        assert_eq!(e.code, ErrorCode::InvalidParams);
     }
 
     #[test]

@@ -25,6 +25,9 @@ use crate::shortcuts::{Accelerator, Profile, ShortcutScope, ShortcutStore, Slot,
 struct AppState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     verbose_since: Option<DateTime<Utc>>,
+    /// Small UI memory that is not a preference (e.g. the last magnifier zoom, CAP-015).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    memory: std::collections::BTreeMap<String, Value>,
 }
 
 pub struct Core {
@@ -103,6 +106,16 @@ impl Core {
 
     pub fn registry(&self) -> Arc<Registry> {
         self.registry.read().unwrap().clone().expect("registry built")
+    }
+
+    /// Remembers a small UI value across sessions (not a preference).
+    pub fn remember(&self, key: &str, value: Value) {
+        self.state.write().unwrap().memory.insert(key.to_string(), value);
+        self.save_state();
+    }
+
+    pub fn recall(&self, key: &str) -> Option<Value> {
+        self.state.read().unwrap().memory.get(key).cloned()
     }
 
     pub fn lang(&self) -> Lang {

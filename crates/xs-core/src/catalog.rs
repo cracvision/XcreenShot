@@ -54,6 +54,10 @@ impl B {
         self.0.scopes = s;
         self
     }
+    fn interactive(mut self) -> B {
+        self.0.interactive = true;
+        self
+    }
     fn mutates(mut self) -> B {
         self.0.mutates = true;
         self
@@ -213,6 +217,13 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(capture_params(json!({
                 "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"}
             })))
+            .result(capture_result()),
+        B::new("capture.universal", &["CAP-009", "CAP-011", "CAP-012", "CAP-013"])
+            .scopes(ALL)
+            .interactive()
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
             .result(capture_result()),
         B::new("capture.region", &["CAP-025", "CAP-008"])
             .scopes(ALL)

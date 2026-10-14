@@ -81,7 +81,8 @@ xcreenshot app ping --json
 | `shortcuts.recording` | (UI only) | Suspends global shortcuts while the user records one. |
 | `capture.monitors` | `xcreenshot capture monitors --json` | Monitors with position and size in physical pixels, scale, name and which is primary. |
 | `capture.fullscreen` | `xcreenshot capture fullscreen [--monitor pointer\|primary\|all\|<name>]` | Captures a monitor (under the pointer by default), the primary one, or the whole desktop (gaps between monitors are transparent). |
-| `capture.region` | `xcreenshot capture region --rect '{"x":0,"y":0,"width":800,"height":600}'` | Captures a rectangle in physical desktop pixels. Without `--rect` it will show the on-screen selection (next build; for now it fails with `invalid_params`). |
+| `capture.universal` | `xcreenshot capture universal` | Interactive: freezes the screen and shows the crosshair; the user drags a region, clicks a window or presses F, then Image (`I`). Esc cancels (exit 4, `cancelled`). |
+| `capture.region` | `xcreenshot capture region --rect '{"x":0,"y":0,"width":800,"height":600}'` | Captures a rectangle in physical desktop pixels. Without `--rect` the user selects on screen (interactive; Esc gives exit 4). `--target interactive` on `capture.window` lets the user click a window. |
 | `capture.window` | `xcreenshot capture window [--target active\|point\|title] [--x N --y N] [--title text]` | Captures a whole window, even if covered: the active one, the one at a point, or the first whose title or process matches. |
 
 Shortcut combinations are written like `Ctrl+Alt+Shift+K`, `Cmd+Shift+5`, `PrtScn`.

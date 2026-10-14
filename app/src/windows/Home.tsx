@@ -74,6 +74,12 @@ export function Home() {
         </p>
         <div className="row">
           <button
+            className="btn primary"
+            onClick={() => void run("capture.universal").catch(() => undefined)}
+          >
+            {t("ui.home.capture_universal")}
+          </button>
+          <button
             className="btn"
             onClick={() => void run("capture.fullscreen", { delay: 3 }).catch(() => undefined)}
           >

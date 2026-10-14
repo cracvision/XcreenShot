@@ -178,6 +178,14 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-023",
         ),
         def(
+            "capture.showMagnifier",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-015",
+        ),
+        def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        def(
             "capture.metadata.windowTitle",
             "capture",
             boolean(),

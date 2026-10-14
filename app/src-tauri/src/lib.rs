@@ -1,8 +1,11 @@
 //! XcreenShot desktop shell (Tauri 2). Owns the background process, the icon,
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
+#[cfg(windows)]
+mod freeze_win;
 mod global;
 mod host;
+mod overlay;
 mod permissions;
 mod tray;
 mod windows;
@@ -26,6 +29,8 @@ pub struct AppState {
     pub shortcut_map: Mutex<HashMap<u32, String>>,
     /// Section/key to show when the Preferences window finishes loading.
     pub pending_navigation: Mutex<Option<Value>>,
+    /// On-screen selection session (CAP-013).
+    pub overlays: overlay::Overlays,
 }
 
 /// The single entry point from the webviews: run a registered command.
@@ -46,6 +51,35 @@ async fn xs_run(
     tauri::async_runtime::spawn_blocking(move || core.call(source, &id, params, None))
         .await
         .map_err(|e| CommandError::internal(e.to_string()))?
+}
+
+/// A selection window drew its frozen frame (CAP-013).
+#[tauri::command]
+fn xs_overlay_ready(app: AppHandle, seq: u64, index: usize, timings: Option<Value>) {
+    if let Some(t) = timings {
+        tracing::info!(index, timings = %t, "selection frame drawn");
+    }
+    overlay::ready(&app, seq, index);
+}
+
+/// Raw pixels around the pointer for the magnifier (CAP-015).
+#[tauri::command]
+fn xs_frame_patch(
+    app: AppHandle,
+    seq: u64,
+    index: usize,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+) -> tauri::ipc::Response {
+    tauri::ipc::Response::new(overlay::patch(&app, seq, index, x, y, w, h))
+}
+
+/// The user finished or cancelled the on-screen selection.
+#[tauri::command]
+fn xs_overlay_finish(app: AppHandle, seq: u64, outcome: Value) {
+    overlay::finish(&app, seq, outcome);
 }
 
 /// Preferences window: where to go after loading (APP-006 deep links).
@@ -169,8 +203,19 @@ pub fn run() {
             actions: Mutex::new(HashMap::new()),
             shortcut_map: Mutex::new(HashMap::new()),
             pending_navigation: Mutex::new(None),
+            overlays: overlay::Overlays::default(),
         })
-        .invoke_handler(tauri::generate_handler![xs_run, xs_take_navigation])
+        .invoke_handler(tauri::generate_handler![
+            xs_run,
+            xs_take_navigation,
+            xs_overlay_ready,
+            xs_overlay_finish,
+            xs_frame_patch
+        ])
+        .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || responder.respond(overlay::serve_frame(&app, &request)));
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
             core.set_host(Arc::new(host::TauriHost { app: handle.clone() }));
@@ -209,6 +254,8 @@ pub fn run() {
             if !background {
                 windows::show_main(&handle)?;
             }
+            // Selection windows wait hidden so the crosshair appears fast (APP-048).
+            overlay::prewarm(&handle, xs_capture::monitors().map(|m| m.len()).unwrap_or(1));
 
             // Verbose logging expires after 24 h even if the app never restarts (APP-046).
             let ticker = core.clone();

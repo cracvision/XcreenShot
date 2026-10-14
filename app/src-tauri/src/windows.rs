@@ -99,6 +99,10 @@ pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str
 /// still shows XcreenShot.
 pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
     for w in app.webview_windows().values() {
+        // Selection windows are always excluded.
+        if w.label().starts_with(crate::overlay::LABEL_PREFIX) {
+            continue;
+        }
         let _ = w.set_content_protected(exclude);
     }
 }

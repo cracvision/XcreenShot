@@ -110,6 +110,10 @@
     "capture_window": {
       "title": "Window capture",
       "description": "Captures a whole window, even if another window covers it: the active one, the one at a point, or the first whose title or process matches."
+    },
+    "capture_universal": {
+      "title": "Universal Capture",
+      "description": "Freezes the screen and shows the crosshair: drag a region, click a window, or press F for a full monitor; then choose Image."
     }
   },
   "settings": {
@@ -203,6 +207,14 @@
     "capture_metadata_userAndMachine": {
       "label": "Save the user and computer name",
       "description": "Stores your account name and the computer name in the capture details."
+    },
+    "capture_showMagnifier": {
+      "label": "Show the magnifier at the start",
+      "description": "A zoomed view of the pixels around the pointer. M shows or hides it during a capture."
+    },
+    "capture_autoDetect": {
+      "label": "Automatic detection",
+      "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
     }
   },
   "errors": {
@@ -223,7 +235,8 @@
     "window_not_found": "No window matches \"{{title}}\".",
     "no_active_window": "There is no active window to capture.",
     "region_outside": "The rectangle is outside every monitor.",
-    "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved."
+    "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved.",
+    "capture_cancelled": "The capture was cancelled."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -245,7 +258,8 @@
       "taken_over": "Taken from another app"
     },
     "group": {
-      "app": "App"
+      "app": "App",
+      "capture": "Capture"
     }
   },
   "tray": {
@@ -328,7 +342,8 @@
       "no_capture": "No captures yet. Try the button above or the CLI.",
       "capture_fullscreen": "Capture full screen in 3 s",
       "saved_in": "Saved in",
-      "capture_help": "Build 1 of M1: capture engine. The on-screen selection, the capture panel and the editor come next."
+      "capture_help": "M1: on-screen selection is here. Ctrl+Alt+Shift+O or the button: drag a region, click a window or press F; then Image (I). Esc cancels. The capture panel and the editor come next.",
+      "capture_universal": "Universal Capture"
     },
     "prefs": {
       "title": "Preferences",
@@ -416,6 +431,22 @@
       "on": "On",
       "off": "Off",
       "close": "Close"
+    },
+    "overlay": {
+      "fullscreen": "Full screen",
+      "all_monitors": "All monitors",
+      "image": "Image",
+      "redo": "Redo",
+      "cancel": "Cancel",
+      "hint": "Drag to select · Click a window · F full screen · M magnifier · Esc cancel",
+      "hint_window": "Click a window · Esc cancel",
+      "color_copied": "Color {{color}} copied",
+      "x": "X",
+      "y": "Y",
+      "width": "Width",
+      "height": "Height",
+      "bar": "Capture bar",
+      "clamped": "Adjusted to the screen"
     }
   }
 }

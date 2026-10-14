@@ -110,6 +110,10 @@
     "capture_window": {
       "title": "Captura de ventana",
       "description": "Captura una ventana entera, aunque otra la tape: la activa, la que está en un punto o la primera cuyo título o proceso coincida."
+    },
+    "capture_universal": {
+      "title": "Captura universal",
+      "description": "Congela la pantalla y muestra la cruceta: arrastra una región, haz clic en una ventana o pulsa F para un monitor entero; luego elige Imagen."
     }
   },
   "settings": {
@@ -203,6 +207,14 @@
     "capture_metadata_userAndMachine": {
       "label": "Guardar el usuario y el nombre del equipo",
       "description": "Guarda el nombre de tu cuenta y el del equipo en los detalles de la captura."
+    },
+    "capture_showMagnifier": {
+      "label": "Mostrar la lupa al empezar",
+      "description": "Vista ampliada de los píxeles alrededor del puntero. M la muestra u oculta durante la captura."
+    },
+    "capture_autoDetect": {
+      "label": "Detección automática",
+      "description": "Resalta la ventana bajo el puntero para seleccionarla con un clic. Arrastrar funciona siempre."
     }
   },
   "errors": {
@@ -223,7 +235,8 @@
     "window_not_found": "Ninguna ventana coincide con \"{{title}}\".",
     "no_active_window": "No hay ninguna ventana activa que capturar.",
     "region_outside": "El rectángulo está fuera de todos los monitores.",
-    "clipboard_failed": "No se pudo copiar la captura al portapapeles. Sigue guardada."
+    "clipboard_failed": "No se pudo copiar la captura al portapapeles. Sigue guardada.",
+    "capture_cancelled": "La captura se canceló."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -245,7 +258,8 @@
       "taken_over": "Tomado de otra app"
     },
     "group": {
-      "app": "App"
+      "app": "App",
+      "capture": "Captura"
     }
   },
   "tray": {
@@ -328,7 +342,8 @@
       "no_capture": "Todavía no hay capturas. Prueba el botón de arriba o el CLI.",
       "capture_fullscreen": "Capturar pantalla completa en 3 s",
       "saved_in": "Guardada en",
-      "capture_help": "Entrega 1 de M1: motor de captura. La selección en pantalla, el panel de captura y el editor llegan después."
+      "capture_help": "M1: ya está la selección en pantalla. Ctrl+Alt+Shift+O o el botón: arrastra una región, haz clic en una ventana o pulsa F; luego Imagen (I). Esc cancela. El panel de captura y el editor llegan después.",
+      "capture_universal": "Captura universal"
     },
     "prefs": {
       "title": "Preferencias",
@@ -416,6 +431,22 @@
       "on": "Activado",
       "off": "Desactivado",
       "close": "Cerrar"
+    },
+    "overlay": {
+      "fullscreen": "Pantalla completa",
+      "all_monitors": "Todos los monitores",
+      "image": "Imagen",
+      "redo": "Rehacer",
+      "cancel": "Cancelar",
+      "hint": "Arrastra para seleccionar · Clic en una ventana · F pantalla completa · M lupa · Esc cancela",
+      "hint_window": "Haz clic en una ventana · Esc cancela",
+      "color_copied": "Color {{color}} copiado",
+      "x": "X",
+      "y": "Y",
+      "width": "Ancho",
+      "height": "Alto",
+      "bar": "Barra de captura",
+      "clamped": "Ajustado a la pantalla"
     }
   }
 }

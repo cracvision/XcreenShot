@@ -178,7 +178,7 @@ fn filter(verbose: bool) -> EnvFilter {
     let base = if verbose { "debug" } else { "info" };
     // Keep third-party crates quiet in normal mode.
     EnvFilter::new(format!(
-        "warn,xs_core={base},xs_cli={base},xcreenshot_app={base},xcreenshot_app_lib={base}"
+        "warn,xs_core={base},xs_cli={base},xcreenshot_app={base},xcreenshot_app_lib={base},xs_capture={base}"
     ))
 }
 
