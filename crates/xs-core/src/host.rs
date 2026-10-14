@@ -118,6 +118,13 @@ pub trait Host: Send + Sync {
     }
     /// Called after every command (UI events, notifications for shortcut-triggered tests).
     fn command_finished(&self, ctx: &Context, spec: &CommandSpec, result: &CommandResult) {}
+    /// System notification (APP-016). Categories: `captures`, `share`, `problems`,
+    /// `updates`, `automation`.
+    fn notify(&self, category: &str, title: &str, body: &str) {}
+    /// A capture finished; `open_editor` asks to show it (CAP-045, CAP-054).
+    fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {}
+    /// Hide XcreenShot windows before a capture, and show them again after (CAP-023).
+    fn hide_for_capture(&self, hide: bool) {}
 }
 
 pub struct NullHost;

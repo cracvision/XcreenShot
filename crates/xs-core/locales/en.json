@@ -94,6 +94,22 @@
     "shortcuts_recording": {
       "title": "Recording a shortcut",
       "description": "Suspends global shortcuts while the user records a new combination."
+    },
+    "capture_monitors": {
+      "title": "List monitors",
+      "description": "Lists the monitors with their position, size in physical pixels, scale and name."
+    },
+    "capture_fullscreen": {
+      "title": "Full screen capture",
+      "description": "Captures a monitor (under the pointer by default), the primary one, all of them, or one by name."
+    },
+    "capture_region": {
+      "title": "Region capture",
+      "description": "Captures a rectangle of the desktop in physical pixels. Without a rectangle, shows the on-screen selection."
+    },
+    "capture_window": {
+      "title": "Window capture",
+      "description": "Captures a whole window, even if another window covers it: the active one, the one at a point, or the first whose title or process matches."
     }
   },
   "settings": {
@@ -171,6 +187,22 @@
     "diagnostics_verbose": {
       "label": "Detailed logging",
       "description": "Adds debugging information to the logs. Turns itself off after 24 hours."
+    },
+    "capture_hideOnCapture": {
+      "label": "Hide XcreenShot when capturing",
+      "description": "Hides the capture panel, the editor and notifications before taking the image."
+    },
+    "capture_metadata_windowTitle": {
+      "label": "Save the window title",
+      "description": "Stores the title of the captured window in the capture details."
+    },
+    "capture_metadata_url": {
+      "label": "Save the web address",
+      "description": "Stores the address of the page when the capture comes from a browser."
+    },
+    "capture_metadata_userAndMachine": {
+      "label": "Save the user and computer name",
+      "description": "Stores your account name and the computer name in the capture details."
     }
   },
   "errors": {
@@ -183,7 +215,15 @@
     "invalid_value": "Invalid value for \"{{key}}\": {{reason}}.",
     "automation_disabled": "Automation is turned off. Turn on \"Allow control from the CLI and agents (MCP)\" in Preferences > Advanced.",
     "no_shortcut_slot": "The command \"{{command}}\" cannot have a shortcut.",
-    "macos_only": "This is only available on macOS."
+    "macos_only": "This is only available on macOS.",
+    "capture_busy": "Another capture is in progress.",
+    "capture_interactive_later": "On-screen selection arrives in the next build. Pass a rectangle, or use full screen or the active window.",
+    "capture_failed": "The capture failed: {{reason}}.",
+    "monitor_not_found": "There is no monitor named \"{{name}}\". Using the primary monitor.",
+    "window_not_found": "No window matches \"{{title}}\".",
+    "no_active_window": "There is no active window to capture.",
+    "region_outside": "The rectangle is outside every monitor.",
+    "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -237,7 +277,10 @@
     "ping_body": "The test command ran from {{source}}.",
     "shortcuts_failed_title": "Some shortcuts could not be activated",
     "shortcuts_failed_body": "{{list}}. Open Preferences > Shortcuts to fix them.",
-    "diagnostics_copied": "Diagnostic information copied to the clipboard."
+    "diagnostics_copied": "Diagnostic information copied to the clipboard.",
+    "capture_copied": "Capture copied",
+    "capture_saved": "Capture saved in {{folder}}",
+    "automation_capture": "Screen captured at the request of {{source}}"
   },
   "source": {
     "ui": "the interface",
@@ -280,7 +323,12 @@
       "activity": "Recent commands",
       "activity_empty": "Nothing yet.",
       "result": "Result",
-      "open_preferences": "Open Preferences"
+      "open_preferences": "Open Preferences",
+      "last_capture": "Last capture",
+      "no_capture": "No captures yet. Try the button above or the CLI.",
+      "capture_fullscreen": "Capture full screen in 3 s",
+      "saved_in": "Saved in",
+      "capture_help": "Build 1 of M1: capture engine. The on-screen selection, the capture panel and the editor come next."
     },
     "prefs": {
       "title": "Preferences",

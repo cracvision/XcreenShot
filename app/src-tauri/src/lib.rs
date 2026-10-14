@@ -136,7 +136,7 @@ pub fn run() {
         return;
     }
 
-    let core = Core::new(paths.clone(), Some(log));
+    let core = Core::with_extensions(paths.clone(), Some(log), vec![xs_capture::extension()]);
     #[cfg(windows)]
     if !check_windows_version(core.lang()) {
         return;

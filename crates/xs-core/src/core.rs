@@ -2,7 +2,7 @@
 //! The shell creates one [`Core`], installs its [`Host`], and routes every action
 //! (UI, shortcuts, tray, CLI) through [`Core::call`].
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
@@ -42,6 +42,12 @@ const VERBOSE_FOR_HOURS: i64 = 24;
 
 impl Core {
     pub fn new(paths: Paths, log: Option<LogControl>) -> Arc<Core> {
+        Core::with_extensions(paths, log, Vec::new())
+    }
+
+    /// Like [`Core::new`], plus handlers contributed by other crates (capture, library…)
+    /// for commands declared in the catalog. Commands are still declared once, here.
+    pub fn with_extensions(paths: Paths, log: Option<LogControl>, extensions: Vec<Extension>) -> Arc<Core> {
         let state = std::fs::read(paths.state_file())
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
@@ -56,6 +62,7 @@ impl Core {
             registry: RwLock::new(None),
         });
         let registry = build_registry(&core);
+        let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core.expire_verbose();
         if let Some(log) = &core.log {
@@ -66,6 +73,11 @@ impl Core {
 
     /// In-memory core for tests.
     pub fn for_tests(platform: Platform) -> Arc<Core> {
+        Core::for_tests_with(platform, Vec::new())
+    }
+
+    /// In-memory core for tests, with extensions.
+    pub fn for_tests_with(platform: Platform, extensions: Vec<Extension>) -> Arc<Core> {
         let core = Arc::new(Core {
             settings: SettingsStore::in_memory(),
             shortcuts: ShortcutStore::in_memory(platform),
@@ -76,6 +88,7 @@ impl Core {
             registry: RwLock::new(None),
         });
         let registry = build_registry(&core);
+        let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core
     }
@@ -348,6 +361,17 @@ fn resolve_slot(core: &Core, command: &str, scope: Option<&str>, lang: Lang) -> 
     })
 }
 
+/// Adds handlers from another crate. Receives a weak handle so handlers do not keep
+/// the core alive.
+pub type Extension = Box<dyn FnOnce(&mut Registry, Weak<Core>) + Send>;
+
+fn apply_extensions(mut registry: Registry, core: &Arc<Core>, extensions: Vec<Extension>) -> Registry {
+    for extension in extensions {
+        extension(&mut registry, Arc::downgrade(core));
+    }
+    registry
+}
+
 fn build_registry(core: &Arc<Core>) -> Registry {
     let mut reg = Registry::new(catalog::specs());
     let weak = Arc::downgrade(core);
@@ -611,7 +635,9 @@ mod tests {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
         for spec in reg.specs() {
-            assert!(reg.has_handler(spec.id), "{} has no handler", spec.id);
+            if !catalog::EXTERNAL_AREAS.contains(&spec.area()) {
+                assert!(reg.has_handler(spec.id), "{} has no handler", spec.id);
+            }
             assert_eq!(spec.params["type"], "object", "{}", spec.id);
             assert!(spec.result.is_object(), "{}", spec.id);
             assert!(spec.id.contains('.'), "{}", spec.id);

@@ -149,6 +149,51 @@ impl Host for TauriHost {
         login_item_enabled(&self.app)
     }
 
+    fn hide_for_capture(&self, hide: bool) {
+        // Apply on the UI thread and wait until it is done, so the capture never
+        // races a busy event loop (seen right after the app starts).
+        let (tx, rx) = std::sync::mpsc::channel();
+        let app = self.app.clone();
+        let queued = self.app.run_on_main_thread(move || {
+            windows::exclude_from_capture(&app, hide);
+            let _ = tx.send(());
+        });
+        if queued.is_ok() {
+            let _ = rx.recv_timeout(std::time::Duration::from_millis(500));
+        }
+        if hide {
+            // One or two compositor frames for the change to reach the screen.
+            std::thread::sleep(std::time::Duration::from_millis(34));
+        }
+    }
+
+    fn notify(&self, _category: &str, title: &str, body: &str) {
+        // Per-category switches arrive with Preferences > Notifications (APP-016).
+        notify(&self.app, title, body);
+    }
+
+    fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {
+        use base64::Engine as _;
+        let thumbnail = thumbnail_png.map(|png| {
+            format!(
+                "data:image/png;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(png)
+            )
+        });
+        let _ = self.app.emit(
+            "xs://capture",
+            json!({ "result": result, "thumbnail": thumbnail }),
+        );
+        // Until the editor exists (EDT-, M1), "open in editor" shows the main window
+        // with the capture (CAP-045, provisional).
+        if open_editor {
+            let app = self.app.clone();
+            let _ = self.app.run_on_main_thread(move || {
+                let _ = windows::show_main(&app);
+            });
+        }
+    }
+
     fn command_finished(&self, ctx: &Context, spec: &CommandSpec, result: &CommandResult) {
         let payload = json!({
             "id": spec.id,

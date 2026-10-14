@@ -11,7 +11,7 @@ import { useApp } from "../store";
 export function Home() {
   const { t } = useTranslation();
   useAppShortcuts();
-  const { ping, shortcuts, activity, layout } = useApp();
+  const { ping, shortcuts, activity, layout, lastCapture } = useApp();
   const [result, setResult] = useState<string | null>(null);
 
   const pingRow = shortcuts?.rows.find((r) => r.command === "app.ping" && r.scope === "global");
@@ -64,6 +64,44 @@ export function Home() {
             <div className="muted">{t("ui.home.result")}</div>
             <pre>{result}</pre>
           </div>
+        )}
+      </section>
+
+      <section className="card" aria-labelledby="capture-title">
+        <h2 id="capture-title">{t("ui.home.last_capture")}</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          {t("ui.home.capture_help")}
+        </p>
+        <div className="row">
+          <button
+            className="btn"
+            onClick={() => void run("capture.fullscreen", { delay: 3 }).catch(() => undefined)}
+          >
+            {t("ui.home.capture_fullscreen")}
+          </button>
+          <code>xcreenshot capture fullscreen</code>
+        </div>
+        {lastCapture ? (
+          <figure className="capture-preview">
+            {lastCapture.thumbnail && (
+              <img
+                src={lastCapture.thumbnail}
+                alt={`${t("ui.home.last_capture")} ${lastCapture.result.width}×${lastCapture.result.height}`}
+              />
+            )}
+            <figcaption className="muted">
+              {lastCapture.result.width}×{lastCapture.result.height} px
+              {lastCapture.result.metadata?.app?.name
+                ? ` · ${lastCapture.result.metadata.app.name}`
+                : ""}
+              <br />
+              {t("ui.home.saved_in")} <code>{lastCapture.result.path}</code>
+            </figcaption>
+          </figure>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            {t("ui.home.no_capture")}
+          </p>
         )}
       </section>
 

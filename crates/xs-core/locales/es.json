@@ -94,6 +94,22 @@
     "shortcuts_recording": {
       "title": "Grabando un atajo",
       "description": "Suspende los atajos globales mientras el usuario graba una combinación nueva."
+    },
+    "capture_monitors": {
+      "title": "Listar monitores",
+      "description": "Lista los monitores con su posición, tamaño en píxeles físicos, escala y nombre."
+    },
+    "capture_fullscreen": {
+      "title": "Captura de pantalla completa",
+      "description": "Captura un monitor (por defecto, el que está bajo el puntero), el principal, todos o uno por su nombre."
+    },
+    "capture_region": {
+      "title": "Captura de región",
+      "description": "Captura un rectángulo del escritorio en píxeles físicos. Sin rectángulo, muestra la selección en pantalla."
+    },
+    "capture_window": {
+      "title": "Captura de ventana",
+      "description": "Captura una ventana entera, aunque otra la tape: la activa, la que está en un punto o la primera cuyo título o proceso coincida."
     }
   },
   "settings": {
@@ -171,6 +187,22 @@
     "diagnostics_verbose": {
       "label": "Registro detallado",
       "description": "Añade información de depuración a los registros. Se desactiva solo a las 24 horas."
+    },
+    "capture_hideOnCapture": {
+      "label": "Ocultar XcreenShot al capturar",
+      "description": "Oculta el panel de captura, el editor y las notificaciones antes de tomar la imagen."
+    },
+    "capture_metadata_windowTitle": {
+      "label": "Guardar el título de la ventana",
+      "description": "Guarda el título de la ventana capturada en los detalles de la captura."
+    },
+    "capture_metadata_url": {
+      "label": "Guardar la dirección web",
+      "description": "Guarda la dirección de la página cuando la captura viene de un navegador."
+    },
+    "capture_metadata_userAndMachine": {
+      "label": "Guardar el usuario y el nombre del equipo",
+      "description": "Guarda el nombre de tu cuenta y el del equipo en los detalles de la captura."
     }
   },
   "errors": {
@@ -183,7 +215,15 @@
     "invalid_value": "Valor no válido para \"{{key}}\": {{reason}}.",
     "automation_disabled": "La automatización está desactivada. Activa \"Permitir el control por CLI y agentes (MCP)\" en Preferencias > Avanzado.",
     "no_shortcut_slot": "El comando \"{{command}}\" no admite atajo.",
-    "macos_only": "Solo está disponible en macOS."
+    "macos_only": "Solo está disponible en macOS.",
+    "capture_busy": "Ya hay otra captura en curso.",
+    "capture_interactive_later": "La selección en pantalla llega en la próxima versión. Indica un rectángulo, o usa pantalla completa o la ventana activa.",
+    "capture_failed": "La captura falló: {{reason}}.",
+    "monitor_not_found": "No hay ningún monitor llamado \"{{name}}\". Se usa el principal.",
+    "window_not_found": "Ninguna ventana coincide con \"{{title}}\".",
+    "no_active_window": "No hay ninguna ventana activa que capturar.",
+    "region_outside": "El rectángulo está fuera de todos los monitores.",
+    "clipboard_failed": "No se pudo copiar la captura al portapapeles. Sigue guardada."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -237,7 +277,10 @@
     "ping_body": "El comando de prueba se ejecutó desde {{source}}.",
     "shortcuts_failed_title": "Algunos atajos no se pudieron activar",
     "shortcuts_failed_body": "{{list}}. Abre Preferencias > Atajos para resolverlo.",
-    "diagnostics_copied": "Información de diagnóstico copiada al portapapeles."
+    "diagnostics_copied": "Información de diagnóstico copiada al portapapeles.",
+    "capture_copied": "Captura copiada",
+    "capture_saved": "Captura guardada en {{folder}}",
+    "automation_capture": "Pantalla capturada a petición de {{source}}"
   },
   "source": {
     "ui": "la interfaz",
@@ -280,7 +323,12 @@
       "activity": "Comandos recientes",
       "activity_empty": "Todavía nada.",
       "result": "Resultado",
-      "open_preferences": "Abrir Preferencias"
+      "open_preferences": "Abrir Preferencias",
+      "last_capture": "Última captura",
+      "no_capture": "Todavía no hay capturas. Prueba el botón de arriba o el CLI.",
+      "capture_fullscreen": "Capturar pantalla completa en 3 s",
+      "saved_in": "Guardada en",
+      "capture_help": "Entrega 1 de M1: motor de captura. La selección en pantalla, el panel de captura y el editor llegan después."
     },
     "prefs": {
       "title": "Preferencias",

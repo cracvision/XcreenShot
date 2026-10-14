@@ -47,3 +47,13 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-024 | macOS no distingue "denegado" de "nunca pedido" para Grabación de pantalla y Accesibilidad | XcreenShot recuerda qué permisos pidió y muestra "Denegado" solo después de pedirlo | Provisional |
 | APP-040 | Identificador de paquete (necesario para firma y permisos de macOS) | `com.cracvision.xcreenshot` | Abierta |
 | APP-042 | El instalador de Windows pone la app en `%LOCALAPPDATA%\XcreenShot` y los registros de la app viven en `%LOCALAPPDATA%\XcreenShot\data`, dentro de la misma carpeta. Al desinstalar puede quedar la carpeta a medias, o borrarse los registros sin preguntar | Separar los datos de la carpeta de instalación y decidir qué borra el desinstalador (preguntar si conservar ajustes y registros) al implementar APP-037/APP-042 en M6 | Abierta |
+
+## Dudas del equipo de construcción (M1)
+
+| ID | Pregunta | Propuesta (implementada como provisional) | Estado |
+|---|---|---|---|
+| CAP-054 / LIB-020 | La ruta de la captura empieza guardando en la biblioteca, que llega en la parte 3 de M1 | Hasta entonces cada captura se guarda como PNG en la ubicación por defecto de la biblioteca (`Documentos\XcreenShot`; en tu equipo, Documentos está en OneDrive). Al llegar la biblioteca se guardará como `.xshot` con índice | Provisional |
+| CAP-045 | "Abrir en = Editor" necesita el editor (parte 2 de M1) | Hasta entonces muestra la ventana principal con la última captura | Provisional |
+| CAP-008 | Valores por defecto de las capturas lanzadas por CLI o agentes | Los del panel (copiar al portapapeles = sí), pero sin abrir ventanas salvo `--open editor` (APP-030 pide anotar y exportar "sin abrir ninguna ventana"). Avisan con la notificación de automatización | Provisional |
+| CAP-023 | Excluir las ventanas de XcreenShot de las capturas de forma permanente también las ocultaría al compartir pantalla en Teams o Zoom | La exclusión se activa solo durante cada captura | Decidido |
+| CAP-047 | El cursor es un objeto del documento, que llega con el editor | `--cursor` se acepta y avisa en `warnings`; se implementa con el editor | Abierta |

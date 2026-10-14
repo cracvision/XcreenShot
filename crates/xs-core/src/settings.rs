@@ -170,6 +170,34 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "APP-046",
         ),
+        def(
+            "capture.hideOnCapture",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-023",
+        ),
+        def(
+            "capture.metadata.windowTitle",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-056",
+        ),
+        def(
+            "capture.metadata.url",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-056",
+        ),
+        def(
+            "capture.metadata.userAndMachine",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-056",
+        ),
     ]
 }
 

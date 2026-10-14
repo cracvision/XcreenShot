@@ -13,7 +13,7 @@ export function SettingRow({ setting, highlighted }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const id = `setting-${setting.key}`;
-  const optionsBase = `settings.${setting.key.replace(".", "_")}.options`;
+  const optionsBase = `settings.${setting.key.replaceAll(".", "_")}.options`;
 
   const change = async (value: unknown) => {
     setError(null);
