@@ -343,7 +343,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 |---|---|---|---|---|
 | APP-001 | Proceso en segundo plano e instancia única | M0 | Must | En curso |
 | APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | En curso |
-| APP-003 | Iniciar al iniciar sesión | M0 | Must | En curso |
+| APP-003 | Iniciar al iniciar sesión | M0 | Must | Win |
 | APP-004 | Cerrar ventanas y salir | M0 | Must | En curso |
 | APP-005 | Primer arranque | M1 | Should | — |
 | APP-006 | Ventana de Preferencias | M0 | Must | En curso |
@@ -367,7 +367,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-024 | Permisos de macOS y Reparar permisos | M0 | Must | En curso |
 | APP-025 | Aviso periódico de acceso a la pantalla (macOS) | M1 | Should | — |
 | APP-026 | Privilegios y privacidad en Windows | M1 | Should | — |
-| APP-027 | Registro de comandos | M0 | Must | En curso |
+| APP-027 | Registro de comandos | M0 | Must | Win |
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
 | APP-029 | Servidor MCP | M2 | Should | — |
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | — |
