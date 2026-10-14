@@ -27,7 +27,7 @@ Con la app en marcha (`npm run tauri dev` en `app/`):
 - [ ] Mientras compartes pantalla en Teams o Zoom, XcreenShot se ve normal en la reunión (la exclusión solo dura lo que dura la captura).
 
 ## CAP-046 · Portapapeles
-- [ ] Botón **Capturar pantalla completa en 3 s** de la ventana principal y pegar en Paint o Word: la imagen pegada tiene el tamaño del monitor.
+- [x] Botón **Capturar pantalla completa en 3 s** de la ventana principal y pegar en Paint o Word: la imagen pegada tiene el tamaño del monitor. (Carlos, Word, 2026-10-13: se pega completa y sin la ventana de XcreenShot.)
 
 ## CAP-054 · Ruta de la captura
 - [x] Cada captura queda en `Documentos\XcreenShot` (biblioteca provisional, en PNG) y, con `--out`, también en esa ruta.
