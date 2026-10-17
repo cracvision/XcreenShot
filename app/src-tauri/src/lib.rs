@@ -197,7 +197,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Remembers size and position of normal windows (APP-004, APP-006). Selection
+        // windows are left out: the plugin shows any window it has no saved state for,
+        // which made a hidden selection window appear at startup.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_filter(|label| !label.starts_with(overlay::LABEL_PREFIX))
+                .build(),
+        )
         .manage(AppState {
             core: core.clone(),
             actions: Mutex::new(HashMap::new()),
