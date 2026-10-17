@@ -345,6 +345,12 @@ pub fn slots() -> Vec<Slot> {
         group: "app",
     };
     vec![
+        // Capture actions (CAP-065); the others arrive with the capture panel.
+        Slot {
+            command: "capture.universal",
+            scope: Global,
+            group: "capture",
+        },
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),
@@ -364,6 +370,9 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
     let s = match (slot.command, slot.scope, profile, platform) {
         // M0 test shortcut for the exit criterion. Provisional: Coexistence family
         // with a letter CAP-065 does not use (see spec/QUESTIONS.md).
+        // CAP-065: Universal Capture. Compatibility on macOS uses Control+Shift.
+        ("capture.universal", Global, Compatibility, Macos) => "Ctrl+Shift+KeyO",
+        ("capture.universal", Global, _, _) => "Ctrl+Alt+Shift+KeyO",
         ("app.ping", Global, _, _) => "Ctrl+Alt+Shift+KeyK",
         ("app.quit", Global, Compatibility, Windows) => "Ctrl+Shift+KeyX",
         ("app.quit", App, _, Windows) => "Ctrl+KeyQ",

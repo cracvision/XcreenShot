@@ -93,6 +93,20 @@ pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str
     Ok(())
 }
 
+/// "Hide XcreenShot when capturing" (CAP-023): while a capture is taken the OS leaves
+/// our windows out of it (Windows display affinity, macOS sharing type), without
+/// hiding them on screen. Only during the capture, so screen sharing in meeting apps
+/// still shows XcreenShot.
+pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
+    for w in app.webview_windows().values() {
+        // Selection windows are always excluded.
+        if w.label().starts_with(crate::overlay::LABEL_PREFIX) {
+            continue;
+        }
+        let _ = w.set_content_protected(exclude);
+    }
+}
+
 pub fn apply_theme(app: &AppHandle) {
     let t = theme(app);
     for w in app.webview_windows().values() {

@@ -79,12 +79,37 @@ xcreenshot app ping --json
 | `shortcuts.retry` | `xcreenshot shortcuts retry` | Retries global shortcuts that failed to register. |
 | `shortcuts.open_system_settings` | `xcreenshot shortcuts open-system-settings` | Opens the OS keyboard shortcut settings. |
 | `shortcuts.recording` | (UI only) | Suspends global shortcuts while the user records one. |
+| `capture.monitors` | `xcreenshot capture monitors --json` | Monitors with position and size in physical pixels, scale, name and which is primary. |
+| `capture.fullscreen` | `xcreenshot capture fullscreen [--monitor pointer\|primary\|all\|<name>]` | Captures a monitor (under the pointer by default), the primary one, or the whole desktop (gaps between monitors are transparent). |
+| `capture.universal` | `xcreenshot capture universal` | Interactive: freezes the screen and shows the crosshair; the user drags a region, clicks a window or presses F, then Image (`I`). Esc cancels (exit 4, `cancelled`). |
+| `capture.region` | `xcreenshot capture region --rect '{"x":0,"y":0,"width":800,"height":600}'` | Captures a rectangle in physical desktop pixels. Without `--rect` the user selects on screen (interactive; Esc gives exit 4). `--target interactive` on `capture.window` lets the user click a window. |
+| `capture.window` | `xcreenshot capture window [--target active\|point\|title] [--x N --y N] [--title text]` | Captures a whole window, even if covered: the active one, the one at a point, or the first whose title or process matches. |
 
 Shortcut combinations are written like `Ctrl+Alt+Shift+K`, `Cmd+Shift+5`, `PrtScn`.
 They are stored by physical key (`Ctrl+Alt+Shift+KeyK`), so they survive keyboard
 layout changes.
 
+## Capture options
+
+Every `capture.*` command (except `monitors`) accepts:
+
+| Option | Default from the CLI or MCP | Effect |
+|---|---|---|
+| `--copy true\|false` | `true` | Copy the image to the clipboard (PNG and bitmap). |
+| `--open editor\|none` | `none` | Show the capture in XcreenShot. Agents never open windows unless they ask. |
+| `--out <path>` | — | Also write a PNG there (folders are created). |
+| `--delay <s>` | `0` | Wait before capturing (0–60). |
+| `--cursor true` | `false` | Include the pointer. Not yet: it arrives with the editor and is reported in `warnings`. |
+
+Every capture is also kept in the library folder (`Documents\XcreenShot` on Windows, `~/Pictures/XcreenShot` on macOS). The result has `status` (`completed`), `path`, `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings`. A second capture while one is running fails at once with `busy` (exit 5).
+
 ## Recipes
+
+Capture the active window to a file, without touching the clipboard:
+
+```sh
+xcreenshot capture window --target active --copy false --out C:/temp/window.png --json
+```
 
 Check that the app answers and automation is on:
 

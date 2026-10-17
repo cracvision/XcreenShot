@@ -94,6 +94,26 @@
     "shortcuts_recording": {
       "title": "Recording a shortcut",
       "description": "Suspends global shortcuts while the user records a new combination."
+    },
+    "capture_monitors": {
+      "title": "List monitors",
+      "description": "Lists the monitors with their position, size in physical pixels, scale and name."
+    },
+    "capture_fullscreen": {
+      "title": "Full screen capture",
+      "description": "Captures a monitor (under the pointer by default), the primary one, all of them, or one by name."
+    },
+    "capture_region": {
+      "title": "Region capture",
+      "description": "Captures a rectangle of the desktop in physical pixels. Without a rectangle, shows the on-screen selection."
+    },
+    "capture_window": {
+      "title": "Window capture",
+      "description": "Captures a whole window, even if another window covers it: the active one, the one at a point, or the first whose title or process matches."
+    },
+    "capture_universal": {
+      "title": "Universal Capture",
+      "description": "Freezes the screen and shows the crosshair: drag a region, click a window, or press F for a full monitor; then choose Image."
     }
   },
   "settings": {
@@ -171,6 +191,30 @@
     "diagnostics_verbose": {
       "label": "Detailed logging",
       "description": "Adds debugging information to the logs. Turns itself off after 24 hours."
+    },
+    "capture_hideOnCapture": {
+      "label": "Hide XcreenShot when capturing",
+      "description": "Hides the capture panel, the editor and notifications before taking the image."
+    },
+    "capture_metadata_windowTitle": {
+      "label": "Save the window title",
+      "description": "Stores the title of the captured window in the capture details."
+    },
+    "capture_metadata_url": {
+      "label": "Save the web address",
+      "description": "Stores the address of the page when the capture comes from a browser."
+    },
+    "capture_metadata_userAndMachine": {
+      "label": "Save the user and computer name",
+      "description": "Stores your account name and the computer name in the capture details."
+    },
+    "capture_showMagnifier": {
+      "label": "Show the magnifier at the start",
+      "description": "A zoomed view of the pixels around the pointer. M shows or hides it during a capture."
+    },
+    "capture_autoDetect": {
+      "label": "Automatic detection",
+      "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
     }
   },
   "errors": {
@@ -183,7 +227,16 @@
     "invalid_value": "Invalid value for \"{{key}}\": {{reason}}.",
     "automation_disabled": "Automation is turned off. Turn on \"Allow control from the CLI and agents (MCP)\" in Preferences > Advanced.",
     "no_shortcut_slot": "The command \"{{command}}\" cannot have a shortcut.",
-    "macos_only": "This is only available on macOS."
+    "macos_only": "This is only available on macOS.",
+    "capture_busy": "Another capture is in progress.",
+    "capture_interactive_later": "On-screen selection arrives in the next build. Pass a rectangle, or use full screen or the active window.",
+    "capture_failed": "The capture failed: {{reason}}.",
+    "monitor_not_found": "There is no monitor named \"{{name}}\". Using the primary monitor.",
+    "window_not_found": "No window matches \"{{title}}\".",
+    "no_active_window": "There is no active window to capture.",
+    "region_outside": "The rectangle is outside every monitor.",
+    "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved.",
+    "capture_cancelled": "The capture was cancelled."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -205,7 +258,8 @@
       "taken_over": "Taken from another app"
     },
     "group": {
-      "app": "App"
+      "app": "App",
+      "capture": "Capture"
     }
   },
   "tray": {
@@ -237,7 +291,10 @@
     "ping_body": "The test command ran from {{source}}.",
     "shortcuts_failed_title": "Some shortcuts could not be activated",
     "shortcuts_failed_body": "{{list}}. Open Preferences > Shortcuts to fix them.",
-    "diagnostics_copied": "Diagnostic information copied to the clipboard."
+    "diagnostics_copied": "Diagnostic information copied to the clipboard.",
+    "capture_copied": "Capture copied",
+    "capture_saved": "Capture saved in {{folder}}",
+    "automation_capture": "Screen captured at the request of {{source}}"
   },
   "source": {
     "ui": "the interface",
@@ -271,7 +328,7 @@
   "ui": {
     "home": {
       "title": "XcreenShot",
-      "subtitle": "Foundations build (M0). Capture and the editor arrive in M1.",
+      "subtitle": "Development build of M1: capture and on-screen selection. The editor and the library come next.",
       "test_title": "Test command",
       "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
       "run_ping": "Run test command",
@@ -280,7 +337,13 @@
       "activity": "Recent commands",
       "activity_empty": "Nothing yet.",
       "result": "Result",
-      "open_preferences": "Open Preferences"
+      "open_preferences": "Open Preferences",
+      "last_capture": "Last capture",
+      "no_capture": "No captures yet. Try the button above or the CLI.",
+      "capture_fullscreen": "Capture full screen in 3 s",
+      "saved_in": "Saved in",
+      "capture_help": "M1: on-screen selection is here. Ctrl+Alt+Shift+O or the button: drag a region, click a window or press F; then Image (I). Esc cancels. The capture panel and the editor come next.",
+      "capture_universal": "Universal Capture"
     },
     "prefs": {
       "title": "Preferences",
@@ -368,6 +431,22 @@
       "on": "On",
       "off": "Off",
       "close": "Close"
+    },
+    "overlay": {
+      "fullscreen": "Full screen",
+      "all_monitors": "All monitors",
+      "image": "Image",
+      "redo": "Redo",
+      "cancel": "Cancel",
+      "hint": "Drag to select · Click a window · F full screen · M magnifier · Esc cancel",
+      "hint_window": "Click a window · Esc cancel",
+      "color_copied": "Color {{color}} copied",
+      "x": "X",
+      "y": "Y",
+      "width": "Width",
+      "height": "Height",
+      "bar": "Capture bar",
+      "clamped": "Adjusted to the screen"
     }
   }
 }

@@ -118,7 +118,7 @@ fn action_command(spec: &CommandSpec, lang: Lang) -> Command {
 
 fn build_cli(lang: Lang, specs: &[CommandSpec]) -> Command {
     let mut root = Command::new("xcreenshot")
-        .version(xs_core::platform::VERSION)
+        .version(xs_core::platform::VERSION_FULL)
         .about(tr(lang, "cli.about", &[]))
         .subcommand_required(true)
         .arg(

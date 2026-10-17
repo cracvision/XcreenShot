@@ -543,3 +543,189 @@ table.shortcuts td {
   color: var(--danger);
   font-size: 13px;
 }
+
+.capture-preview {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.capture-preview img {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: repeating-conic-gradient(var(--bg-sunken) 0% 25%, var(--bg) 0% 50%) 50% / 16px 16px;
+}
+
+.capture-preview code {
+  word-break: break-all;
+}
+
+/* On-screen selection (CAP-013). */
+html.overlay-root,
+html.overlay-root body,
+html.overlay-root #root {
+  background: #000;
+  overflow: hidden;
+  user-select: none;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+}
+
+.overlay-layer {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+.overlay-input {
+  cursor: crosshair;
+}
+
+.overlay-mag {
+  position: absolute;
+  display: grid;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.overlay-mag canvas {
+  display: none;
+  border: 2px solid #2ec4b6;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.45);
+}
+
+.overlay-mag-info:empty {
+  display: none;
+}
+
+.overlay-mag-info,
+.overlay-hint {
+  font:
+    12px "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgb(20 24 28 / 0.88);
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.overlay-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.overlay-top {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.overlay-btn {
+  font:
+    13px "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgb(20 24 28 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.overlay-btn:hover,
+.overlay-btn:focus-visible {
+  border-color: #2ec4b6;
+  outline: none;
+}
+
+.overlay-btn.primary {
+  background: #0b7469;
+  border-color: #2ec4b6;
+}
+
+.overlay-btn kbd {
+  background: rgb(255 255 255 / 0.15);
+  border-color: rgb(255 255 255 / 0.3);
+  color: #fff;
+  margin-left: 4px;
+}
+
+.overlay-bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgb(20 24 28 / 0.94);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 10px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 0.5);
+  font:
+    12px "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #fff;
+}
+
+.overlay-grip {
+  cursor: grab;
+  opacity: 0.7;
+  padding: 0 2px;
+}
+
+.overlay-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.overlay-field input {
+  width: 64px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  background: rgb(0 0 0 / 0.35);
+  color: #fff;
+  font: inherit;
+}
+
+.overlay-field input.overlay-clamped {
+  border-color: #ff8a80;
+  animation: overlay-flash 0.6s ease-out 2;
+}
+
+@keyframes overlay-flash {
+  50% {
+    background: rgb(255 138 128 / 0.35);
+  }
+}
+
+.overlay-warn {
+  color: #ffb3ab;
+}
+
+/* Windows: the frozen screen is a native window underneath; keep this one see-through. */
+html.overlay-root.overlay-native,
+html.overlay-root.overlay-native body,
+html.overlay-root.overlay-native #root {
+  background: transparent;
+}

@@ -24,6 +24,7 @@ export async function run<T = unknown>(
 
 export interface Ping {
   version: string;
+  build: string;
   platform: "windows" | "macos";
   arch: string;
   state: string;

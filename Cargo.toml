@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "app/src-tauri"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "UNLICENSED"
 publish = false
@@ -26,3 +26,11 @@ all = { level = "warn", priority = -1 }
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# Image and capture code is far too slow unoptimized; keep debug builds usable for
+# timing the crosshair (APP-048) without slowing our own crates' compile cycle.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.xs-capture]
+opt-level = 2
