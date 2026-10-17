@@ -328,7 +328,7 @@
   "ui": {
     "home": {
       "title": "XcreenShot",
-      "subtitle": "Versión de fundaciones (M0). La captura y el editor llegan en M1.",
+      "subtitle": "Versión en desarrollo de M1: captura y selección en pantalla. El editor y la biblioteca llegan después.",
       "test_title": "Comando de prueba",
       "test_help": "Ejecuta app.ping. El mismo comando responde desde este botón, desde el atajo global de prueba y desde el CLI.",
       "run_ping": "Ejecutar comando de prueba",

@@ -6285,7 +6285,7 @@ dependencies = [
 
 [[package]]
 name = "xcreenshot-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "block2",
@@ -6323,7 +6323,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xs-capture"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arboard",
  "chrono",
@@ -6342,7 +6342,7 @@ dependencies = [
 
 [[package]]
 name = "xs-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -6352,7 +6352,7 @@ dependencies = [
 
 [[package]]
 name = "xs-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "directories",
@@ -6371,23 +6371,23 @@ dependencies = [
 
 [[package]]
 name = "xs-image"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "xs-library"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "xs-ocr"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "xs-share"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "xs-video"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "yoke"

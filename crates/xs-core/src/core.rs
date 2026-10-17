@@ -251,7 +251,7 @@ impl Core {
         let monitors = host.monitors();
         let log_tail = logging::tail(&self.paths.logs_dir(), 200);
         let mut text = String::new();
-        text.push_str(&format!("XcreenShot {}\n", platform::VERSION));
+        text.push_str(&format!("XcreenShot {}\n", platform::VERSION_FULL));
         text.push_str(&format!(
             "Build: {} · Channel: dev · Arch: {}\n",
             if cfg!(debug_assertions) {
@@ -405,6 +405,7 @@ fn build_registry(core: &Arc<Core>) -> Registry {
 
     on!("app.ping", |core, ctx, _p| Ok(json!({
         "version": platform::VERSION,
+        "build": platform::BUILD,
         "platform": Platform::current(),
         "arch": platform::arch(),
         "state": "idle",

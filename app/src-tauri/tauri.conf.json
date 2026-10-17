@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "XcreenShot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.cracvision.xcreenshot",
   "build": {
     "beforeDevCommand": "npm run dev",

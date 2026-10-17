@@ -123,6 +123,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 "type": "object",
                 "properties": {
                     "version": {"type": "string"},
+                    "build": {"type": "string"},
                     "platform": {"type": "string", "enum": ["windows", "macos"]},
                     "arch": {"type": "string"},
                     "state": {"type": "string", "enum": ["idle", "capturing", "recording", "busy"]},

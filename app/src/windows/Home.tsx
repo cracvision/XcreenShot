@@ -127,7 +127,7 @@ export function Home() {
       </section>
       {ping && (
         <div className="muted" style={{ fontSize: 12 }}>
-          XcreenShot {ping.version} · {ping.platform} · {ping.arch}
+          XcreenShot {ping.version} ({ping.build}) · {ping.platform} · {ping.arch}
         </div>
       )}
     </div>

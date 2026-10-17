@@ -328,7 +328,7 @@
   "ui": {
     "home": {
       "title": "XcreenShot",
-      "subtitle": "Foundations build (M0). Capture and the editor arrive in M1.",
+      "subtitle": "Development build of M1: capture and on-screen selection. The editor and the library come next.",
       "test_title": "Test command",
       "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
       "run_ping": "Run test command",
