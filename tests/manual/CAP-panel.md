@@ -5,6 +5,8 @@ Pruebas automáticas:
 - `crates/xs-capture/src/lib.rs`: `panel_settings_configure_and_reset` (CAP-001, CAP-003) y `repeat_last_without_history_opens_the_panel` (CAP-007).
 - `crates/xs-core`: perfil de compatibilidad (Capturar pasa a `PrtScn` en Windows) y nombres propios de los atajos (`shortcut_rows_with_their_own_name_are_translated`).
 
+Carlos marcó como PASS (2026-10-18, instalador 0.2.0 `9c46348`) las casillas [x] de las secciones de abajo.
+
 Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, un monitor 5120×2160 al 150 %:
 - [x] `capture panel --show true` abre el panel; su alto sigue al contenido (ampliado y compacto, sin barra de desplazamiento).
 - [x] Un cambio desde el CLI (`capture configure`) se ve al momento en el panel abierto.
@@ -15,9 +17,9 @@ Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, u
 - [x] `capture repeat-last` repite la última captura con el mismo modo y ajustes.
 
 ## Panel (CAP-001, CAP-002, CAP-010) — Carlos
-- [ ] Clic izquierdo en el ícono de la bandeja abre el panel (Preferencias > General > Clic en el ícono = Abrir el panel de captura).
+- [x] Clic izquierdo en el ícono de la bandeja abre el panel (Preferencias > General > Clic en el ícono = Abrir el panel de captura).
 - [ ] Pestañas **Universal** e **Imagen**; con el teclado: `Tab` hasta las pestañas, flechas para cambiar, `Tab` a las opciones, `Enter` en **Capturar**.
-- [ ] Imagen, Selección = Ventana → **Capturar** inicia una captura de ventana (clic sobre una ventana).
+- [x] Imagen, Selección = Ventana → **Capturar** inicia una captura de ventana (clic sobre una ventana).
 - [ ] La flecha ▴/▾ alterna entre vista compacta y ampliada; el panel lo recuerda.
 - [ ] Cerrar XcreenShot (Salir) y volver a abrirlo: se conservan la pestaña activa, los ajustes de cada pestaña y la posición del panel.
 - [ ] **Capturar cursor** aparece desactivado y su tooltip explica que llega con el editor.
@@ -28,13 +30,13 @@ Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, u
 - [ ] **Restablecer ajustes de captura…** pide confirmación; **Cancelar** no cambia nada; **Restablecer** deja todo como al principio (Región, Editor, Copiar sí, Retardo 5 s).
 
 ## Retardo (CAP-048)
-- [ ] Imagen, Tiempo = Retardo, 3 s: la cruceta aparece 3 s después de **Capturar**.
-- [ ] Durante la cuenta atrás se puede abrir un menú (por ejemplo el menú Inicio o un menú de una app) y sigue abierto cuando termina; sale en la captura.
-- [ ] El botón **Cancelar** del contador cancela sin robar el foco a lo que estabas haciendo.
+- [x] Imagen, Tiempo = Retardo, 3 s: la cruceta aparece 3 s después de **Capturar**.
+- [x] Durante la cuenta atrás se puede abrir un menú (por ejemplo el menú Inicio o un menú de una app) y sigue abierto cuando termina; sale en la captura.
+- [x] El botón **Cancelar** del contador cancela sin robar el foco a lo que estabas haciendo.
 - [ ] Universal con **Retardo de 5 s**: la cruceta aparece a los 5 s.
 
 ## Menú del ícono (CAP-005) y atajos (CAP-006, CAP-007, CAP-065)
-- [ ] Clic derecho en el ícono: arriba aparecen Captura universal, Captura de imagen, Repetir última captura y Abrir panel de captura, cada una con su atajo.
+- [x] Clic derecho en el ícono: arriba aparecen Captura universal, Captura de imagen, Repetir última captura y Abrir panel de captura, cada una con su atajo.
 - [ ] **Captura universal** desde el menú muestra la cruceta enseguida.
 - [ ] `Ctrl+Shift+PrtScn` con el panel cerrado captura con la pestaña activa.
 - [ ] `Ctrl+Alt+Shift+P` muestra el panel; pulsado otra vez con el panel delante, lo oculta.

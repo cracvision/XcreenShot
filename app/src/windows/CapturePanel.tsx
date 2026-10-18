@@ -462,7 +462,8 @@ function MoreMenu({ onReset }: { onReset: () => void }) {
     if (!open) return;
     menu.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
     const close = (e: MouseEvent) => {
-      if (!menu.current?.contains(e.target as Node) && e.target !== button.current) setOpen(false);
+      const target = e.target as Node;
+      if (!menu.current?.contains(target) && !button.current?.contains(target)) setOpen(false);
     };
     window.addEventListener("mousedown", close);
     return () => window.removeEventListener("mousedown", close);

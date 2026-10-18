@@ -796,9 +796,13 @@ html.overlay-root.overlay-native #root {
   gap: 12px;
 }
 
-/* Room for a dialog, also in the compact view. */
+/* Room for a dialog or the More menu, also in the compact view. */
 .panel:has(.backdrop) {
   min-height: 300px;
+}
+
+.panel:has(.menu) {
+  min-height: 190px;
 }
 
 .panel-top {
@@ -926,7 +930,7 @@ html.overlay-root.overlay-native #root {
   right: 0;
   top: calc(100% + 4px);
   z-index: 10;
-  min-width: 240px;
+  width: max-content;
   display: grid;
   padding: 4px;
   background: var(--bg-raised);
@@ -937,6 +941,7 @@ html.overlay-root.overlay-native #root {
 
 .menu [role="menuitem"] {
   text-align: left;
+  white-space: nowrap;
   border: 0;
   background: none;
   padding: 7px 10px;
