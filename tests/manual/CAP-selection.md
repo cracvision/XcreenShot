@@ -21,16 +21,16 @@ Pruebas con entrada simulada (SendInput) contra la app en marcha: `xcreenshot ca
 - [x] `capture window --target interactive` y clic sobre una ventana: la captura completa de esa ventana (2551×2088, Claude).
 
 ## Visual (Carlos)
-- [ ] La cruceta (líneas finas a todo lo ancho y alto) se ve sobre fondo blanco y sobre fondo negro.
-- [ ] Fuera de la selección la pantalla se oscurece; la ventana bajo el puntero se resalta con borde discontinuo.
+- [x] La cruceta (líneas finas a todo lo ancho y alto) se ve sobre fondo blanco y sobre fondo negro.
+- [x] Fuera de la selección la pantalla se oscurece; la ventana bajo el puntero se resalta con borde discontinuo.
 - [ ] El rótulo junto al puntero muestra la posición y, al arrastrar, el tamaño en píxeles.
-- [ ] La lupa muestra la zona ampliada con rejilla, posición y color; `M` la oculta/muestra, `+`/`-` cambian el aumento y `C` copia el color.
-- [ ] En Universal, la barra de captura aparece bajo la selección, con X, Y, Ancho y Alto editables; escribir Ancho = 1280 y Alto = 720 + `Enter` produce 1280×720.
-- [ ] Tiradores: cambiar el tamaño por las esquinas y mover la selección arrastrando dentro.
-- [ ] `Shift` al arrastrar da un cuadrado; `Alt` 16:9; `Alt+Shift` 4:3.
+- [x] La lupa muestra la zona ampliada con rejilla, posición y color; `M` la oculta/muestra, `+`/`-` cambian el aumento y `C` copia el color.
+- [x] En Universal, la barra de captura aparece bajo la selección, con X, Y, Ancho y Alto editables; escribir Ancho = 1280 y Alto = 720 + `Enter` produce 1280×720.
+- [x] Tiradores: cambiar el tamaño por las esquinas y mover la selección arrastrando dentro.
+- [x] `Shift` al arrastrar da un cuadrado; `Alt` 16:9; `Alt+Shift` 4:3.
 - [ ] Flechas mueven la selección 1 px (`Shift` 10 px); `Alt` + flechas cambian el tamaño.
-- [ ] `F` o el botón **Pantalla completa** seleccionan el monitor entero.
-- [ ] **Rehacer** (o `Retroceso`) vuelve a la cruceta sin cerrar la captura.
+- [x] `F` o el botón **Pantalla completa** seleccionan el monitor entero.
+- [x] **Rehacer** (o `Retroceso`) vuelve a la cruceta sin cerrar la captura.
 
 ## Pendiente en esta entrega
 - Subáreas (contenido del navegador, paneles) en la detección (CAP-016): hoy solo ventanas.
@@ -39,3 +39,5 @@ Pruebas con entrada simulada (SendInput) contra la app en marcha: `xcreenshot ca
 
 ## Resultados
 - Windows 11 (26200), modo desarrollo, 2026-10-13: lo marcado arriba. Fallos encontrados y corregidos: desfase de 1 px por redondeo al 150 %; clic sobre una ventana sin mover antes el ratón no la detectaba; tiempo de aparición de ~370 ms (rehecho con ventana nativa, ADR 0003).
+- Windows 11 (26200), versión instalada 0.2.0 (ee7382a), 2026-10-18 · Carlos: aspecto (cruceta, oscurecido, borde de la ventana detectada, lupa), lupa (`M`, `+`/`-`, `C`), barra de captura (mover, tiradores, Ancho 1280 × Alto 720 → captura de 1280×720), proporciones con `Shift`/`Alt`/`Alt+Shift`, `F`, Rehacer y `Esc`: todo pasa. Peticiones: confirmación visible al copiar el color, botón "Capturar" en vez de "Imagen", selector rápido de idioma.
+- Fallo encontrado en la versión instalada y corregido (ee7382a): una ventana de selección aparecía al arrancar como un cuadrado negro.

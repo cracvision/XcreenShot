@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
@@ -157,6 +158,9 @@ export function Preferences() {
             {t(`ui.prefs.section.${s}`)}
           </button>
         ))}
+        <div className="nav-footer">
+          <LanguageToggle />
+        </div>
       </nav>
       <main>
         <h1>{results ? t("ui.prefs.search") : t(`ui.prefs.section.${section}`)}</h1>

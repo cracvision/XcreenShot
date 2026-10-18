@@ -430,12 +430,13 @@
     "common": {
       "on": "On",
       "off": "Off",
-      "close": "Close"
+      "close": "Close",
+      "language": "Language"
     },
     "overlay": {
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
-      "image": "Image",
+      "image": "Capture",
       "redo": "Redo",
       "cancel": "Cancel",
       "hint": "Drag to select · Click a window · F full screen · M magnifier · Esc cancel",

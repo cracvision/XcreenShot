@@ -101,6 +101,7 @@ export function Overlay() {
   const [phase, setPhase] = useState<Phase>("aiming");
   const [sel, setSel] = useState<Rect | null>(null);
   const [clamped, setClamped] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const bg = useRef<HTMLCanvasElement>(null);
   const fg = useRef<HTMLCanvasElement>(null);
   const mag = useRef<HTMLCanvasElement>(null);
@@ -625,7 +626,13 @@ export function Overlay() {
       } else if (e.key === "-") {
         st.zoom = nextZoom(st.zoom, false);
       } else if (key === "c" && st.phase === "aiming") {
-        if (st.color) void navigator.clipboard.writeText(st.color);
+        if (st.color) {
+          const color = st.color;
+          void navigator.clipboard.writeText(color).then(() => {
+            setToast(t("ui.overlay.color_copied", { color }));
+            window.setTimeout(() => setToast(null), 1500);
+          });
+        }
       } else if (key === "f" && st.phase === "aiming" && start.request.mode !== "window") {
         chooseRect(monitor.rect);
       } else if (key === "a" && st.phase === "aiming" && start.request.mode !== "window") {
@@ -668,6 +675,7 @@ export function Overlay() {
     toLocal,
     broadcast,
     schedule,
+    t,
   ]);
 
   // ---------------------------------------------------------------- render
@@ -695,6 +703,11 @@ export function Overlay() {
         <canvas ref={mag} style={{ width: MAG_CSS, height: MAG_CSS }} />
         <div data-info className="overlay-mag-info" />
       </div>
+      {toast && (
+        <div className="overlay-toast" role="status">
+          {toast}
+        </div>
+      )}
       {showButtons && (
         <div className="overlay-top" role="toolbar" aria-label={t("ui.overlay.bar")}>
           <button className="overlay-btn" onClick={() => monitor && chooseRect(monitor.rect)}>
@@ -857,7 +870,7 @@ function CaptureBar({
       {field("width", t("ui.overlay.width"))}
       {field("height", t("ui.overlay.height"))}
       <button className="overlay-btn primary" onClick={onImage} autoFocus>
-        {t("ui.overlay.image")} <kbd>I</kbd>
+        {t("ui.overlay.image")} <kbd>Enter</kbd>
       </button>
       <button className="overlay-btn" onClick={onRedo} title="Backspace">
         {t("ui.overlay.redo")}

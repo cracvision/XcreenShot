@@ -2,6 +2,7 @@
 // exit criterion: the same test command answers the UI, the global shortcut and the CLI.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "../components/LanguageToggle";
 import logo from "../../src-tauri/icons/128x128.png";
 import { display } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
@@ -36,6 +37,7 @@ export function Home() {
           <h1>{t("ui.home.title")}</h1>
           <div className="muted">{t("ui.home.subtitle")}</div>
         </div>
+        <LanguageToggle />
         <button className="btn" onClick={() => void run("settings.open")}>
           {t("ui.home.open_preferences")}
         </button>

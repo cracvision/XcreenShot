@@ -430,12 +430,13 @@
     "common": {
       "on": "Activado",
       "off": "Desactivado",
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "language": "Idioma"
     },
     "overlay": {
       "fullscreen": "Pantalla completa",
       "all_monitors": "Todos los monitores",
-      "image": "Imagen",
+      "image": "Capturar",
       "redo": "Rehacer",
       "cancel": "Cancelar",
       "hint": "Arrastra para seleccionar · Clic en una ventana · F pantalla completa · M lupa · Esc cancela",
