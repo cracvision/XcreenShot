@@ -87,6 +87,7 @@ xcreenshot app ping --json
 | `capture.capture` | `xcreenshot capture capture` | Captures with the settings of the capture panel's active tab (the "Capture" button and shortcut). May be interactive. |
 | `capture.image` | `xcreenshot capture image` | Captures with the Image tab settings, whatever tab is active. May be interactive. |
 | `capture.repeat_last` | `xcreenshot capture repeat-last` | Runs the last capture again with the same mode and settings. With none yet it opens the capture panel and returns `status: none`. |
+| `capture.repeat_last_area` | `xcreenshot capture repeat-last-area` | Captures at once, without the crosshair, the rectangle of the last region or window capture (a window still open is taken where it is now). With none yet it opens the capture panel and returns `status: none`. |
 | `capture.panel` | `xcreenshot capture panel [--show true\|false]` | Shows or hides the capture panel; without `--show` it toggles. Returns `visible`. |
 | `capture.settings` | `xcreenshot capture settings --json` | The capture panel settings: active `tab`, `expanded`, and the `universal` and `image` tabs. |
 | `capture.configure` | `xcreenshot capture configure --params '{"image":{"selection":"window"}}'` | Changes some panel settings and keeps the rest. Invalid values fail with `invalid_params` and change nothing. |

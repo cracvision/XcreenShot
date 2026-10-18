@@ -383,6 +383,8 @@ pub fn slots() -> Vec<Slot> {
             r#"{"target":"active"}"#,
         ),
         capture("capture.repeat_last", "capture.repeat_last", ""),
+        // No default in any profile (CAP-065); assignable in Preferences > Shortcuts.
+        capture("capture.repeat_last_area", "capture.repeat_last_area", ""),
         capture("capture.panel", "capture.panel", ""),
         s("app.ping", Global),
         s("app.show", Global),

@@ -142,6 +142,10 @@
     "capture_reset_settings": {
       "title": "Restablecer ajustes de captura",
       "description": "Devuelve las pestañas Universal e Imagen a sus valores por defecto. No cambian los presets, los atajos ni las preferencias."
+    },
+    "capture_repeat_last_area": {
+      "title": "Repetir última área",
+      "description": "Captura al instante, sin cruceta, el mismo rectángulo de pantalla de la última captura de región o de ventana; si la ventana sigue abierta, la captura donde esté ahora. Si no hay ninguna, abre el panel de captura."
     }
   },
   "settings": {

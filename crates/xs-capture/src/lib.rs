@@ -84,6 +84,8 @@ pub struct Shot {
     pub monitor: String,
     pub app: Option<platform::AppInfo>,
     pub window_title: Option<String>,
+    /// The window it shows, for "Repeat last area" (CAP-007).
+    pub window_id: Option<u32>,
     pub warnings: Vec<String>,
 }
 
@@ -208,6 +210,7 @@ pub fn capture_fullscreen(which: &str, lang: Lang) -> Result<Shot, CommandError>
         monitor: name,
         app,
         window_title,
+        window_id: None,
         warnings,
     })
 }
@@ -243,6 +246,7 @@ pub fn capture_region(area: Rect, lang: Lang) -> Result<Shot, CommandError> {
         monitor: main.map(|m| m.name).unwrap_or_default(),
         app: window.as_ref().map(window_app),
         window_title: window.and_then(|w| w.title().ok()),
+        window_id: None,
         warnings: Vec::new(),
     })
 }
@@ -329,6 +333,7 @@ pub fn capture_window(target: &WindowTarget, lang: Lang) -> Result<Shot, Command
             .unwrap_or_default(),
         app: Some(window_app(&window)),
         window_title: window.title().ok(),
+        window_id: window.id().ok(),
         warnings: Vec::new(),
     })
 }
@@ -497,6 +502,13 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         source = ?ctx.source,
         "capture completed"
     );
+    // "Repeat last area" (CAP-007): the rectangle of the last region or window.
+    if matches!(shot.mode, "region" | "universal" | "window") {
+        core.remember(
+            LAST_AREA_KEY,
+            json!({ "rect": shot.rect, "windowId": shot.window_id }),
+        );
+    }
     let result = json!({
         "status": "completed",
         "path": files.last(),
@@ -610,6 +622,7 @@ fn run_interactive(core: &Core, ctx: &Context, p: &Value, mode: &str, extra: Val
 }
 
 const LAST_KEY: &str = "capture.last";
+const LAST_AREA_KEY: &str = "capture.lastArea";
 
 /// Runs one capture command with resolved parameters, one at a time, and remembers
 /// it for "Repeat last capture" (CAP-007). The capture panel steps aside meanwhile
@@ -661,6 +674,8 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
                     p.get("x").and_then(Value::as_i64).unwrap_or(0) as i32,
                     p.get("y").and_then(Value::as_i64).unwrap_or(0) as i32,
                 ),
+                // Internal: a window still open from "Repeat last area" (CAP-007).
+                "id" => WindowTarget::Id(p.get("id").and_then(Value::as_u64).unwrap_or(0) as u32),
                 "title" => WindowTarget::Title(
                     p.get("title")
                         .and_then(Value::as_str)
@@ -673,6 +688,38 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
         }
         other => Err(CommandError::internal(format!("not a capture command: {other}"))),
     }
+}
+
+/// "Repeat last area" (CAP-007): the same screen rectangle at once, without the
+/// crosshair. A window that is still open is taken where it is now. Options come
+/// from the Image tab when started from the app, like the other single-mode actions.
+fn repeat_last_area(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let Some(last) = core.recall(LAST_AREA_KEY).filter(|l| l["rect"].is_object()) else {
+        // Nothing to repeat yet: open the capture panel.
+        let _ = core.host().show_capture_panel(Some(true));
+        return Ok(json!({ "status": "none", "panel": true }));
+    };
+    let window = last["windowId"].as_u64().filter(|id| {
+        app_windows()
+            .iter()
+            .any(|w| w.id().ok().map(u64::from) == Some(*id))
+    });
+    let (command, target) = match window {
+        Some(id) => ("capture.window", json!({ "target": "id", "id": id })),
+        None => ("capture.region", json!({ "rect": last["rect"] })),
+    };
+    let options = if ctx.source.is_automation() {
+        p.clone()
+    } else {
+        panel::with_overrides(panel::load(core).image_options(), p)
+    };
+    dispatch(
+        core,
+        ctx,
+        command,
+        &panel::with_overrides(options, &target),
+        json!({}),
+    )
 }
 
 /// "Capture" with a tab's settings (CAP-006, CAP-065); explicit parameters win.
@@ -741,6 +788,10 @@ pub fn extension() -> Extension {
             }
         });
         let w = weak.clone();
+        reg.handle("capture.repeat_last_area", move |ctx, p| {
+            repeat_last_area(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
         reg.handle("capture.panel", move |_ctx, p| {
             let core = upgrade(&w)?;
             let visible = core
@@ -799,6 +850,16 @@ mod tests {
         let core = Core::for_tests_with(Platform::current(), vec![extension()]);
         let r = core
             .call(Source::Ui, "capture.repeat_last", json!({}), None)
+            .unwrap();
+        assert_eq!(r, json!({"status": "none", "panel": true}));
+    }
+
+    /// CAP-007: Repeat last area without history opens the panel too.
+    #[test]
+    fn repeat_last_area_without_history_opens_the_panel() {
+        let core = Core::for_tests_with(Platform::current(), vec![extension()]);
+        let r = core
+            .call(Source::Ui, "capture.repeat_last_area", json!({}), None)
             .unwrap();
         assert_eq!(r, json!({"status": "none", "panel": true}));
     }
@@ -878,6 +939,7 @@ mod tests {
                 id: None,
             }),
             window_title: Some("notes.txt".into()),
+            window_id: None,
             warnings: vec![],
         };
         let m = metadata(&core, &shot, chrono::Local::now());

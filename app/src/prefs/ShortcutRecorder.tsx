@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { display, fromEvent, type LayoutMap } from "../lib/accelerator";
+import { display, fromEvent, releasedCombination, type LayoutMap } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp } from "../store";
 
@@ -55,8 +55,8 @@ export function ShortcutRecorder({ value, platform, layout, conflict, label, onC
     };
     const onUp = (e: KeyboardEvent) => {
       e.preventDefault();
-      if (candidate.current) {
-        const accel = candidate.current;
+      const accel = releasedCombination(candidate.current, e);
+      if (accel) {
         stop();
         commit.current(accel);
       }

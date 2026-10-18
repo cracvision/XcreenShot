@@ -240,6 +240,12 @@ pub fn specs() -> Vec<CommandSpec> {
             .mutates()
             .interactive()
             .result(capture_result()),
+        B::new("capture.repeat_last_area", &["CAP-007"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
         B::new("capture.panel", &["CAP-001", "CAP-065"])
             .scopes(UI_SHORTCUT_CLI)
             .assignable()

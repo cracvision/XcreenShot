@@ -142,6 +142,10 @@
     "capture_reset_settings": {
       "title": "Reset capture settings",
       "description": "Returns the Universal and Image tabs to their defaults. Presets, shortcuts and preferences do not change."
+    },
+    "capture_repeat_last_area": {
+      "title": "Repeat Last Area",
+      "description": "Captures at once, without the crosshair, the same screen rectangle as the last region or window capture; a window that is still open is captured where it is now. With no previous capture, opens the capture panel."
     }
   },
   "settings": {

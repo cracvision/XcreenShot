@@ -18,12 +18,14 @@ Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, u
 
 ## Panel (CAP-001, CAP-002, CAP-010) — Carlos
 - [x] Clic izquierdo en el ícono de la bandeja abre el panel (Preferencias > General > Clic en el ícono = Abrir el panel de captura).
-- [ ] Pestañas **Universal** e **Imagen**; con el teclado: `Tab` hasta las pestañas, flechas para cambiar, `Tab` a las opciones, `Enter` en **Capturar**.
+- [x] Pestañas **Universal** e **Imagen**; con el teclado: `Tab` hasta las pestañas, flechas para cambiar, `Tab` a las opciones, `Enter` en **Capturar**.
 - [x] Imagen, Selección = Ventana → **Capturar** inicia una captura de ventana (clic sobre una ventana).
-- [ ] La flecha ▴/▾ alterna entre vista compacta y ampliada; el panel lo recuerda.
-- [ ] Cerrar XcreenShot (Salir) y volver a abrirlo: se conservan la pestaña activa, los ajustes de cada pestaña y la posición del panel.
-- [ ] **Capturar cursor** aparece desactivado y su tooltip explica que llega con el editor.
-- [ ] El campo **Atajo** muestra `Ctrl+Shift+PrtScn`; al cambiarlo, la combinación nueva funciona al instante y la anterior deja de funcionar.
+- [x] La flecha ▴/▾ alterna entre vista compacta y ampliada; el panel lo recuerda.
+- [x] Cerrar XcreenShot (Salir) y volver a abrirlo: se conservan la pestaña activa, los ajustes de cada pestaña y la posición del panel.
+- [x] **Capturar cursor** aparece desactivado y su tooltip explica que llega con el editor.
+- [x] El campo **Atajo** muestra `Ctrl+Shift+PrtScn`; al cambiarlo, la combinación nueva funciona al instante y la anterior deja de funcionar.
+- [ ] Volver a grabar `Ctrl+Shift+PrtScn` en el campo Atajo (y en Preferencias > Atajos). Fallaba: Windows solo avisa de `PrtScn` al soltarla; corregido, falta confirmarlo.
+- [ ] Al cambiar de pestaña con las flechas, el anillo de foco queda dentro de la pestaña (antes asomaba un pedacito turquesa en la vecina).
 
 ## Más (⋯) y restablecer (CAP-003)
 - [ ] **Preferencias de captura…** abre Preferencias en la sección Captura.
@@ -39,7 +41,8 @@ Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, u
 ## Menú del ícono (CAP-005) y atajos (CAP-006, CAP-007, CAP-065)
 - [x] Clic derecho en el ícono: arriba aparecen Captura universal, Captura de imagen, Repetir última captura y Abrir panel de captura, cada una con su atajo.
 - [ ] **Captura universal** desde el menú muestra la cruceta enseguida.
-- [ ] `Ctrl+Shift+PrtScn` con el panel cerrado captura con la pestaña activa.
-- [ ] `Ctrl+Alt+Shift+P` muestra el panel; pulsado otra vez con el panel delante, lo oculta.
-- [ ] `Ctrl+Alt+Shift+W` (Captura de ventana) y `Ctrl+Alt+Shift+A` (Ventana activa) usan las opciones de la pestaña Imagen (por ejemplo, Abrir en = Nada no abre la ventana principal).
-- [ ] `Ctrl+Alt+Shift+R` repite la última captura.
+- [x] `Ctrl+Shift+PrtScn` con el panel cerrado captura con la pestaña activa.
+- [x] `Ctrl+Alt+Shift+P` muestra el panel; pulsado otra vez con el panel delante, lo oculta.
+- [x] `Ctrl+Alt+Shift+W` (Captura de ventana) y `Ctrl+Alt+Shift+A` (Ventana activa) usan las opciones de la pestaña Imagen (por ejemplo, Abrir en = Nada no abre la ventana principal).
+- [x] `Ctrl+Alt+Shift+R` repite la última captura (mismo tipo y ajustes; en región se vuelve a elegir el área).
+- [ ] **Repetir última área** (sin atajo por defecto; se asigna en Preferencias > Atajos): tras una captura de región, captura al instante el mismo rectángulo, sin cruceta. Tras una de ventana, captura esa ventana donde esté ahora.

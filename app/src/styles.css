@@ -838,6 +838,18 @@ html.overlay-root.overlay-native #root {
   color: var(--accent-text);
 }
 
+/* Segmented controls draw the focus ring inside each button: outside, it spilled
+   onto the neighbour as a coloured sliver. */
+.panel-tabs button:focus-visible,
+.lang-toggle button:focus-visible {
+  outline-offset: -4px;
+}
+
+.panel-tabs button[aria-selected="true"]:focus-visible,
+.lang-toggle button[aria-pressed="true"]:focus-visible {
+  outline-color: var(--accent-text);
+}
+
 .panel-options {
   display: grid;
   gap: 10px;

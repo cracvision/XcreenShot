@@ -185,6 +185,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
                 monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
                 app: window.map(|w| platform::app_info(w.pid, &w.app)),
                 window_title: window.map(|w| w.title.clone()),
+                window_id: None,
                 warnings: Vec::new(),
             };
             finish(core, ctx, shot, opts)
