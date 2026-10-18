@@ -1,6 +1,7 @@
 //! XcreenShot desktop shell (Tauri 2). Owns the background process, the icon,
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
+mod countdown;
 #[cfg(windows)]
 mod freeze_win;
 mod global;
@@ -11,6 +12,7 @@ mod tray;
 mod windows;
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -25,12 +27,16 @@ pub struct AppState {
     pub core: Arc<Core>,
     /// Native menu id -> (command, params).
     pub actions: Mutex<tray::Actions>,
-    /// OS shortcut id -> command.
-    pub shortcut_map: Mutex<HashMap<u32, String>>,
+    /// OS shortcut id -> (command, params).
+    pub shortcut_map: Mutex<HashMap<u32, (String, Value)>>,
     /// Section/key to show when the Preferences window finishes loading.
     pub pending_navigation: Mutex<Option<Value>>,
     /// On-screen selection session (CAP-013).
     pub overlays: overlay::Overlays,
+    /// Delay countdown (CAP-048).
+    pub countdown: countdown::Countdown,
+    /// The capture panel was hidden for the capture in progress (CAP-001).
+    pub panel_stepped_aside: AtomicBool,
 }
 
 /// The single entry point from the webviews: run a registered command.
@@ -80,6 +86,24 @@ fn xs_frame_patch(
 #[tauri::command]
 fn xs_overlay_finish(app: AppHandle, seq: u64, outcome: Value) {
     overlay::finish(&app, seq, outcome);
+}
+
+/// Cancel button of the delay countdown (CAP-048).
+#[tauri::command]
+fn xs_countdown_cancel(app: AppHandle) {
+    countdown::cancel(&app);
+}
+
+/// The countdown window asks what to show when it loads (CAP-048).
+#[tauri::command]
+fn xs_countdown_current(app: AppHandle) -> Option<Value> {
+    countdown::current(&app)
+}
+
+/// The capture panel fits its content (CAP-001).
+#[tauri::command]
+fn xs_panel_fit(app: AppHandle, height: f64) {
+    windows::fit_capture_panel(&app, height);
 }
 
 /// Preferences window: where to go after loading (APP-006 deep links).
@@ -198,11 +222,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
-        // windows are left out: the plugin shows any window it has no saved state for,
-        // which made a hidden selection window appear at startup.
+        // windows and the countdown are left out: the plugin shows any window it has no
+        // saved state for, which made a hidden selection window appear at startup.
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_filter(|label| !label.starts_with(overlay::LABEL_PREFIX))
+                .with_filter(|label| !label.starts_with(overlay::LABEL_PREFIX) && label != countdown::LABEL)
                 .build(),
         )
         .manage(AppState {
@@ -211,13 +235,18 @@ pub fn run() {
             shortcut_map: Mutex::new(HashMap::new()),
             pending_navigation: Mutex::new(None),
             overlays: overlay::Overlays::default(),
+            countdown: countdown::Countdown::default(),
+            panel_stepped_aside: AtomicBool::new(false),
         })
         .invoke_handler(tauri::generate_handler![
             xs_run,
             xs_take_navigation,
             xs_overlay_ready,
             xs_overlay_finish,
-            xs_frame_patch
+            xs_frame_patch,
+            xs_countdown_cancel,
+            xs_countdown_current,
+            xs_panel_fit
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
@@ -263,6 +292,7 @@ pub fn run() {
             }
             // Selection windows wait hidden so the crosshair appears fast (APP-048).
             overlay::prewarm(&handle, xs_capture::monitors().map(|m| m.len()).unwrap_or(1));
+            countdown::prewarm(&handle);
 
             // Verbose logging expires after 24 h even if the app never restarts (APP-046).
             let ticker = core.clone();

@@ -113,7 +113,35 @@
     },
     "capture_universal": {
       "title": "Universal Capture",
-      "description": "Freezes the screen and shows the crosshair: drag a region, click a window, or press F for a full monitor; then choose Image."
+      "description": "Captures with the Universal tab settings: freezes the screen and shows the crosshair; drag a region, click a window or press F, then choose Capture."
+    },
+    "capture_capture": {
+      "title": "Capture",
+      "description": "Starts a capture with the settings of the active tab of the capture panel, even if the panel is closed."
+    },
+    "capture_image": {
+      "title": "Image Capture",
+      "description": "Starts a capture with the Image tab settings, whatever tab is active."
+    },
+    "capture_repeat_last": {
+      "title": "Repeat Last Capture",
+      "description": "Runs the last capture again with the same mode and settings. With no previous capture, opens the capture panel."
+    },
+    "capture_panel": {
+      "title": "Show or Hide Capture Panel",
+      "description": "Shows or hides the capture panel. Without show, it hides when it is in front and comes to the front otherwise."
+    },
+    "capture_settings": {
+      "title": "Capture panel settings",
+      "description": "Returns the active tab and the Universal and Image tab settings."
+    },
+    "capture_configure": {
+      "title": "Change capture panel settings",
+      "description": "Changes some capture panel settings; the rest stay as they are."
+    },
+    "capture_reset_settings": {
+      "title": "Reset capture settings",
+      "description": "Returns the Universal and Image tabs to their defaults. Presets, shortcuts and preferences do not change."
     }
   },
   "settings": {
@@ -260,6 +288,10 @@
     "group": {
       "app": "App",
       "capture": "Capture"
+    },
+    "slot": {
+      "capture_window": "Window Capture",
+      "capture_active_window": "Active Window"
     }
   },
   "tray": {
@@ -272,7 +304,11 @@
     "quit": "Quit XcreenShot",
     "tooltip": "XcreenShot",
     "tooltip_paused": "XcreenShot · Shortcuts paused",
-    "tooltip_attention": "XcreenShot · Needs attention"
+    "tooltip_attention": "XcreenShot · Needs attention",
+    "capture_universal": "Universal Capture",
+    "capture_image": "Image Capture",
+    "capture_repeat_last": "Repeat Last Capture",
+    "capture_panel": "Open Capture Panel"
   },
   "menu": {
     "file": "File",
@@ -328,7 +364,7 @@
   "ui": {
     "home": {
       "title": "XcreenShot",
-      "subtitle": "Development build of M1: capture and on-screen selection. The editor and the library come next.",
+      "subtitle": "Development build of M1: capture panel, on-screen selection and delay. The editor and the library come next.",
       "test_title": "Test command",
       "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
       "run_ping": "Run test command",
@@ -340,10 +376,10 @@
       "open_preferences": "Open Preferences",
       "last_capture": "Last capture",
       "no_capture": "No captures yet. Try the button above or the CLI.",
-      "capture_fullscreen": "Capture full screen in 3 s",
       "saved_in": "Saved in",
-      "capture_help": "M1: on-screen selection is here. Ctrl+Alt+Shift+O or the button: drag a region, click a window or press F; then Image (I). Esc cancels. The capture panel and the editor come next.",
-      "capture_universal": "Universal Capture"
+      "capture_help": "Open the capture panel from the icon. In the selection: drag a region, click a window or press F, then Capture (Enter). Esc cancels. The editor comes next.",
+      "capture_universal": "Universal Capture",
+      "open_panel": "Open capture panel"
     },
     "prefs": {
       "title": "Preferences",
@@ -448,6 +484,44 @@
       "height": "Height",
       "bar": "Capture bar",
       "clamped": "Adjusted to the screen"
+    },
+    "panel": {
+      "title": "XcreenShot · Capture",
+      "tabs": "Capture type",
+      "tab_universal": "Universal",
+      "tab_image": "Image",
+      "selection": "Selection",
+      "sel_region": "Region",
+      "sel_window": "Window",
+      "sel_fullscreen": "Full screen",
+      "open_in": "Open in",
+      "open_editor": "Editor",
+      "open_none": "Nothing (save only)",
+      "copy": "Copy to clipboard",
+      "cursor": "Capture cursor",
+      "cursor_later": "Arrives with the editor, where the cursor is an object you can move or delete.",
+      "delay5": "5-second delay",
+      "timing": "Timing",
+      "timing_none": "None",
+      "timing_delay": "Delay",
+      "seconds": "Seconds",
+      "seconds_range": "From 1 to 60 seconds",
+      "capture": "Capture",
+      "shortcut": "Shortcut",
+      "show_options": "Show options",
+      "hide_options": "Hide options",
+      "more": "More",
+      "capture_prefs": "Capture preferences…",
+      "reset": "Reset capture settings…",
+      "reset_title": "Reset capture settings?",
+      "reset_body": "The Universal and Image tabs go back to their default values. Presets, shortcuts and preferences do not change.",
+      "reset_confirm": "Reset",
+      "cancel": "Cancel"
+    },
+    "countdown": {
+      "label": "Capture in {{seconds}} s",
+      "cancel": "Cancel",
+      "hint": "Esc cancels"
     }
   }
 }

@@ -259,13 +259,19 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     Ok(tray)
 }
 
-/// Windows left click (APP-002). The capture panel and Universal Capture arrive in M1;
-/// until then every choice opens the main window (provisional).
+/// Windows left click: the action chosen in Preferences > General (APP-002).
 fn left_click(app: &AppHandle) {
     let core = &app.state::<AppState>().core;
     let action = core.settings.get_str("general.iconClickAction");
     tracing::debug!(action, "tray left click");
-    let _ = core.call(Source::Ui, "app.show", serde_json::json!({}), None);
+    let (command, params) = match action.as_str() {
+        "universalCapture" => ("capture.universal", serde_json::json!({})),
+        "editor" => ("app.show", serde_json::json!({})),
+        _ => ("capture.panel", serde_json::json!({ "show": true })),
+    };
+    if let Err(e) = core.call(Source::Ui, command, params, None) {
+        tracing::warn!(command, code = e.code.as_str(), "icon click command failed");
+    }
 }
 
 fn tooltip(core: &Core, v: Visual) -> String {

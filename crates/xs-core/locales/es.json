@@ -113,7 +113,35 @@
     },
     "capture_universal": {
       "title": "Captura universal",
-      "description": "Congela la pantalla y muestra la cruceta: arrastra una región, haz clic en una ventana o pulsa F para un monitor entero; luego elige Imagen."
+      "description": "Captura con los ajustes de la pestaña Universal: congela la pantalla y muestra la cruceta; arrastra una región, haz clic en una ventana o pulsa F, y luego elige Capturar."
+    },
+    "capture_capture": {
+      "title": "Capturar",
+      "description": "Inicia una captura con los ajustes de la pestaña activa del panel de captura, aunque el panel esté cerrado."
+    },
+    "capture_image": {
+      "title": "Captura de imagen",
+      "description": "Inicia una captura con los ajustes de la pestaña Imagen, sea cual sea la pestaña activa."
+    },
+    "capture_repeat_last": {
+      "title": "Repetir última captura",
+      "description": "Vuelve a lanzar la última captura con el mismo modo y los mismos ajustes. Si no hay ninguna, abre el panel de captura."
+    },
+    "capture_panel": {
+      "title": "Mostrar u ocultar el panel de captura",
+      "description": "Muestra u oculta el panel de captura. Sin show, se oculta si está delante y, si no, pasa al frente."
+    },
+    "capture_settings": {
+      "title": "Ajustes del panel de captura",
+      "description": "Devuelve la pestaña activa y los ajustes de las pestañas Universal e Imagen."
+    },
+    "capture_configure": {
+      "title": "Cambiar ajustes del panel de captura",
+      "description": "Cambia algunos ajustes del panel de captura; el resto se queda igual."
+    },
+    "capture_reset_settings": {
+      "title": "Restablecer ajustes de captura",
+      "description": "Devuelve las pestañas Universal e Imagen a sus valores por defecto. No cambian los presets, los atajos ni las preferencias."
     }
   },
   "settings": {
@@ -260,6 +288,10 @@
     "group": {
       "app": "App",
       "capture": "Captura"
+    },
+    "slot": {
+      "capture_window": "Captura de ventana",
+      "capture_active_window": "Ventana activa"
     }
   },
   "tray": {
@@ -272,7 +304,11 @@
     "quit": "Salir de XcreenShot",
     "tooltip": "XcreenShot",
     "tooltip_paused": "XcreenShot · Atajos en pausa",
-    "tooltip_attention": "XcreenShot · Necesita atención"
+    "tooltip_attention": "XcreenShot · Necesita atención",
+    "capture_universal": "Captura universal",
+    "capture_image": "Captura de imagen",
+    "capture_repeat_last": "Repetir última captura",
+    "capture_panel": "Abrir panel de captura"
   },
   "menu": {
     "file": "Archivo",
@@ -294,7 +330,7 @@
     "diagnostics_copied": "Información de diagnóstico copiada al portapapeles.",
     "capture_copied": "Captura copiada",
     "capture_saved": "Captura guardada en {{folder}}",
-    "automation_capture": "Pantalla capturada a petición de {{source}}"
+    "automation_capture": "Pantalla capturada desde {{source}}"
   },
   "source": {
     "ui": "la interfaz",
@@ -328,7 +364,7 @@
   "ui": {
     "home": {
       "title": "XcreenShot",
-      "subtitle": "Versión en desarrollo de M1: captura y selección en pantalla. El editor y la biblioteca llegan después.",
+      "subtitle": "Versión en desarrollo de M1: panel de captura, selección en pantalla y retardo. El editor y la biblioteca llegan después.",
       "test_title": "Comando de prueba",
       "test_help": "Ejecuta app.ping. El mismo comando responde desde este botón, desde el atajo global de prueba y desde el CLI.",
       "run_ping": "Ejecutar comando de prueba",
@@ -340,10 +376,10 @@
       "open_preferences": "Abrir Preferencias",
       "last_capture": "Última captura",
       "no_capture": "Todavía no hay capturas. Prueba el botón de arriba o el CLI.",
-      "capture_fullscreen": "Capturar pantalla completa en 3 s",
       "saved_in": "Guardada en",
-      "capture_help": "M1: ya está la selección en pantalla. Ctrl+Alt+Shift+O o el botón: arrastra una región, haz clic en una ventana o pulsa F; luego Imagen (I). Esc cancela. El panel de captura y el editor llegan después.",
-      "capture_universal": "Captura universal"
+      "capture_help": "Abre el panel de captura desde el ícono. En la selección: arrastra una región, haz clic en una ventana o pulsa F; luego Capturar (Enter). Esc cancela. El editor llega después.",
+      "capture_universal": "Captura universal",
+      "open_panel": "Abrir panel de captura"
     },
     "prefs": {
       "title": "Preferencias",
@@ -448,6 +484,44 @@
       "height": "Alto",
       "bar": "Barra de captura",
       "clamped": "Ajustado a la pantalla"
+    },
+    "panel": {
+      "title": "XcreenShot · Captura",
+      "tabs": "Tipo de captura",
+      "tab_universal": "Universal",
+      "tab_image": "Imagen",
+      "selection": "Selección",
+      "sel_region": "Región",
+      "sel_window": "Ventana",
+      "sel_fullscreen": "Pantalla completa",
+      "open_in": "Abrir en",
+      "open_editor": "Editor",
+      "open_none": "Nada (solo guardar)",
+      "copy": "Copiar al portapapeles",
+      "cursor": "Capturar cursor",
+      "cursor_later": "Llega con el editor, donde el cursor es un objeto que puedes mover o borrar.",
+      "delay5": "Retardo de 5 s",
+      "timing": "Tiempo",
+      "timing_none": "Ninguno",
+      "timing_delay": "Retardo",
+      "seconds": "Segundos",
+      "seconds_range": "De 1 a 60 segundos",
+      "capture": "Capturar",
+      "shortcut": "Atajo",
+      "show_options": "Mostrar opciones",
+      "hide_options": "Ocultar opciones",
+      "more": "Más",
+      "capture_prefs": "Preferencias de captura…",
+      "reset": "Restablecer ajustes de captura…",
+      "reset_title": "¿Restablecer ajustes de captura?",
+      "reset_body": "Las pestañas Universal e Imagen vuelven a sus valores por defecto. No cambian los presets, los atajos ni las preferencias.",
+      "reset_confirm": "Restablecer",
+      "cancel": "Cancelar"
+    },
+    "countdown": {
+      "label": "Captura en {{seconds}} s",
+      "cancel": "Cancelar",
+      "hint": "Esc cancela"
     }
   }
 }

@@ -83,9 +83,9 @@ export function Home() {
           </button>
           <button
             className="btn"
-            onClick={() => void run("capture.fullscreen", { delay: 3 }).catch(() => undefined)}
+            onClick={() => void run("capture.panel", { show: true }).catch(() => undefined)}
           >
-            {t("ui.home.capture_fullscreen")}
+            {t("ui.home.open_panel")}
           </button>
           <code>xcreenshot capture fullscreen</code>
         </div>

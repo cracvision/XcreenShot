@@ -52,10 +52,26 @@ fn cmd(id: &'static str, label: &'static str, command: &'static str) -> MenuEntr
     }
 }
 
-/// Quick menu of the XcreenShot icon (APP-002). Capture entries (CAP-005), the status
-/// block and Recent items arrive with their features.
+/// Quick menu of the XcreenShot icon (APP-002) with its capture entries (CAP-005).
+/// The status block, video, quick annotation, presets and Recent items arrive with
+/// their features.
 pub fn tray_menu() -> Vec<MenuEntry> {
     vec![
+        cmd("capture_universal", "tray.capture_universal", "capture.universal"),
+        cmd("capture_image", "tray.capture_image", "capture.image"),
+        cmd(
+            "capture_repeat_last",
+            "tray.capture_repeat_last",
+            "capture.repeat_last",
+        ),
+        MenuEntry::Command {
+            id: "capture_panel",
+            label: "tray.capture_panel",
+            command: "capture.panel",
+            params: json!({ "show": true }),
+            checked: None,
+        },
+        MenuEntry::Separator,
         MenuEntry::Submenu {
             label: "tray.recent",
             items: vec![MenuEntry::Placeholder {

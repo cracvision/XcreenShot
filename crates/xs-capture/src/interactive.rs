@@ -123,7 +123,7 @@ fn rect_from(v: &Value) -> Option<Rect> {
 }
 
 /// Runs an interactive capture: `mode` is `region`, `window` or `universal`.
-pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str) -> CommandResult {
+pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value) -> CommandResult {
     let lang = ctx.lang;
     let host = core.host();
     let hide = core.settings.get_bool("capture.hideOnCapture");
@@ -135,7 +135,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str) -> CommandRes
         host.hide_for_capture(false);
     }
     let frozen = frozen?;
-    let request = json!({
+    let mut request = json!({
         "mode": mode,
         "monitors": frozen.monitors,
         "windows": frozen.windows,
@@ -144,6 +144,9 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str) -> CommandRes
         "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
         "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
     });
+    if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
+        r.extend(e.clone());
+    }
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
     if let Some(zoom) = outcome.get("magnifierZoom").filter(|z| z.is_u64()) {
         core.remember("capture.magnifierZoom", zoom.clone());

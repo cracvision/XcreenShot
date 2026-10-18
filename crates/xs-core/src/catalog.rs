@@ -99,7 +99,8 @@ fn capture_result() -> Value {
     json!({
         "type": "object",
         "properties": {
-            "status": {"type": "string", "enum": ["completed", "cancelled", "failed", "busy"]},
+            "status": {"type": "string", "enum": ["completed", "cancelled", "failed", "busy", "none"], "description": "none: nothing to repeat yet (CAP-007)"},
+            "panel": {"type": "boolean", "description": "The capture panel was opened instead"},
             "path": {"type": "string"},
             "files": {"type": "array", "items": {"type": "string"}},
             "width": {"type": "integer"},
@@ -219,6 +220,48 @@ pub fn specs() -> Vec<CommandSpec> {
                 "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"}
             })))
             .result(capture_result()),
+        B::new("capture.capture", &["CAP-006", "CAP-001"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.image", &["CAP-065", "CAP-002"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.repeat_last", &["CAP-007"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .result(capture_result()),
+        B::new("capture.panel", &["CAP-001", "CAP-065"])
+            .scopes(UI_SHORTCUT_CLI)
+            .assignable()
+            .params(params(json!({"show": {"type": "boolean"}}), &[]))
+            .result(json!({"type": "object", "properties": {"visible": {"type": "boolean"}}})),
+        B::new("capture.settings", &["CAP-001", "CAP-002", "CAP-010"]).result(json!({"type": "object"})),
+        B::new("capture.configure", &["CAP-001", "CAP-002", "CAP-010"])
+            .mutates()
+            .params(params(
+                json!({
+                    "tab": {"type": "string", "enum": ["universal", "image"]},
+                    "expanded": {"type": "boolean"},
+                    "universal": {"type": "object"},
+                    "image": {"type": "object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("capture.reset_settings", &["CAP-003"])
+            .scopes(UI_CLI)
+            .destructive()
+            .result(json!({"type": "object"})),
         B::new("capture.universal", &["CAP-009", "CAP-011", "CAP-012", "CAP-013"])
             .scopes(ALL)
             .interactive()

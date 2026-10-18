@@ -133,6 +133,20 @@ pub trait Host: Send + Sync {
     fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {}
     /// Hide XcreenShot windows before a capture, and show them again after (CAP-023).
     fn hide_for_capture(&self, hide: bool) {}
+    /// A capture starts (`true`) or ends: the capture panel steps aside meanwhile and
+    /// comes back afterwards (CAP-001).
+    fn capture_session(&self, active: bool) {}
+    /// Shows the delay countdown and blocks until it ends (CAP-048). Returns `false` if
+    /// the user cancelled it. Without a UI it simply waits.
+    fn countdown(&self, seconds: f64) -> bool {
+        std::thread::sleep(std::time::Duration::from_secs_f64(seconds.max(0.0)));
+        true
+    }
+    /// Shows, hides or (with `None`) toggles the capture panel (CAP-001, CAP-065).
+    /// Returns whether it is visible afterwards.
+    fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
+        Err(unsupported())
+    }
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

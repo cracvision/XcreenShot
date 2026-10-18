@@ -57,8 +57,16 @@ interface Start {
     autoDetect: boolean;
     showMagnifier: boolean;
     magnifierZoom: number;
+    /** Universal with Selection = Window: windows only, no dragging (CAP-010). */
+    windowsOnly?: boolean;
+    /** Universal with Selection = Full screen: start adjusting a whole monitor (CAP-010). */
+    startFullscreen?: boolean;
   };
 }
+
+/** Only windows can be picked: window capture, or Universal set to Window. */
+const windowsOnly = (start: Start) =>
+  start.request.mode === "window" || start.request.windowsOnly === true;
 
 interface Sync {
   seq: number;
@@ -417,6 +425,18 @@ export function Overlay() {
       st.hover = st.pointer ? windowAt(payload, st.pointer) : null;
       setSel(null);
       setPhase("aiming");
+      if (payload.request.startFullscreen) {
+        const ms = payload.request.monitors;
+        const p = st.pointer;
+        const target =
+          (p && ms.find((x) => contains(x.rect, p))) ?? ms.find((x) => x.primary) ?? ms[0];
+        if (target) {
+          st.sel = target.rect;
+          st.phase = "adjusting";
+          setSel(target.rect);
+          setPhase("adjusting");
+        }
+      }
       const m = payload.request.monitors[payload.index];
       const canvas = bg.current;
       if (!m || !canvas) return;
@@ -574,7 +594,7 @@ export function Overlay() {
         else if (h) st.interaction = { kind: "resize", handle: h, orig: st.sel };
         return;
       }
-      if (start.request.mode === "window") return;
+      if (windowsOnly(start)) return;
       st.interaction = { kind: "draw", anchor: p };
     },
     [start, toDesktop, hitHandle],
@@ -633,9 +653,9 @@ export function Overlay() {
             window.setTimeout(() => setToast(null), 1500);
           });
         }
-      } else if (key === "f" && st.phase === "aiming" && start.request.mode !== "window") {
+      } else if (key === "f" && st.phase === "aiming" && !windowsOnly(start)) {
         chooseRect(monitor.rect);
-      } else if (key === "a" && st.phase === "aiming" && start.request.mode !== "window") {
+      } else if (key === "a" && st.phase === "aiming" && !windowsOnly(start)) {
         chooseRect(desktop);
       } else if (e.key === "Enter" && st.phase === "aiming" && st.hover) {
         chooseWindow(st.hover);
@@ -679,7 +699,7 @@ export function Overlay() {
   ]);
 
   // ---------------------------------------------------------------- render
-  const showButtons = start && phase === "aiming" && start.request.mode !== "window";
+  const showButtons = start && phase === "aiming" && !windowsOnly(start);
   const barHere =
     sel &&
     monitor &&
@@ -722,7 +742,7 @@ export function Overlay() {
       )}
       {start && phase === "aiming" && (
         <div className="overlay-hint">
-          {start.request.mode === "window" ? t("ui.overlay.hint_window") : t("ui.overlay.hint")}
+          {windowsOnly(start) ? t("ui.overlay.hint_window") : t("ui.overlay.hint")}
         </div>
       )}
       {barHere && sel && monitor && desktop && (
@@ -754,7 +774,7 @@ export function Overlay() {
 
 /** Topmost detected window under the pointer, if detection applies (CAP-016). */
 function windowAt(start: Start, p: Pt): Win | null {
-  if (!start.request.autoDetect && start.request.mode !== "window") return null;
+  if (!start.request.autoDetect && !windowsOnly(start)) return null;
   return start.request.windows.find((w) => contains(w.rect, p)) ?? null;
 }
 

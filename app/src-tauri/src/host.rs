@@ -168,6 +168,27 @@ impl Host for TauriHost {
         }
     }
 
+    fn capture_session(&self, active: bool) {
+        windows::panel_capture_session(&self.app, active);
+    }
+
+    fn countdown(&self, seconds: f64) -> bool {
+        crate::countdown::run(&self.app, seconds)
+    }
+
+    fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let app = self.app.clone();
+        self.app
+            .run_on_main_thread(move || {
+                let _ = tx.send(windows::capture_panel(&app, show));
+            })
+            .map_err(internal)?;
+        rx.recv_timeout(Duration::from_secs(5))
+            .map_err(internal)?
+            .map_err(internal)
+    }
+
     fn select_on_screen(
         &self,
         request: Value,
@@ -198,6 +219,8 @@ impl Host for TauriHost {
         if open_editor {
             let app = self.app.clone();
             let _ = self.app.run_on_main_thread(move || {
+                // The panel comes back first, so the editor ends up in front of it.
+                windows::restore_capture_panel(&app);
                 let _ = windows::show_main(&app);
             });
         }

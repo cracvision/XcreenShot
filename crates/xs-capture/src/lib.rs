@@ -8,6 +8,7 @@
 
 pub mod compose;
 pub mod interactive;
+pub mod panel;
 pub mod platform;
 
 use std::path::{Path, PathBuf};
@@ -568,20 +569,27 @@ impl Drop for Busy {
     }
 }
 
+pub(crate) fn cancelled(lang: Lang) -> CommandError {
+    CommandError::new(ErrorCode::Cancelled, tr(lang, "errors.capture_cancelled", &[]))
+        .with_details(json!({ "status": "cancelled" }))
+}
+
+/// The delay countdown (CAP-048); `Esc` or Cancel ends the capture.
+fn wait_delay(core: &Core, opts: &Options, lang: Lang) -> Result<(), CommandError> {
+    if opts.delay > 0.0 && !core.host().countdown(opts.delay) {
+        return Err(cancelled(lang));
+    }
+    Ok(())
+}
+
 fn run_capture(
-    weak: &Weak<Core>,
+    core: &Core,
     ctx: &Context,
     p: &Value,
     take: impl FnOnce(Lang) -> Result<Shot, CommandError>,
 ) -> CommandResult {
-    let core: Arc<Core> = weak
-        .upgrade()
-        .ok_or_else(|| CommandError::internal("shutting down"))?;
-    let _busy = Busy::take(ctx.lang)?;
     let opts = Options::from_params(p, ctx.source);
-    if opts.delay > 0.0 {
-        std::thread::sleep(Duration::from_secs_f64(opts.delay));
-    }
+    wait_delay(core, &opts, ctx.lang)?;
     // CAP-023: keep XcreenShot's own windows out of the image.
     let hide = core.settings.get_bool("capture.hideOnCapture");
     if hide {
@@ -591,60 +599,62 @@ fn run_capture(
     if hide {
         core.host().hide_for_capture(false);
     }
-    finish(&core, ctx, shot?, &opts)
+    finish(core, ctx, shot?, &opts)
 }
 
-/// Interactive capture (CAP-009, CAP-025, CAP-027): one at a time, after the delay.
-fn run_interactive(weak: &Weak<Core>, ctx: &Context, p: &Value, mode: &str) -> CommandResult {
-    let core: Arc<Core> = weak
-        .upgrade()
-        .ok_or_else(|| CommandError::internal("shutting down"))?;
-    let _busy = Busy::take(ctx.lang)?;
+/// Interactive capture (CAP-009, CAP-025, CAP-027), after the delay.
+fn run_interactive(core: &Core, ctx: &Context, p: &Value, mode: &str, extra: Value) -> CommandResult {
     let opts = Options::from_params(p, ctx.source);
-    if opts.delay > 0.0 {
-        std::thread::sleep(Duration::from_secs_f64(opts.delay));
-    }
-    interactive::run(&core, ctx, &opts, mode)
+    wait_delay(core, &opts, ctx.lang)?;
+    interactive::run(core, ctx, &opts, mode, extra)
 }
 
-/// Handlers for the `capture.*` commands, for `Core::with_extensions`.
-pub fn extension() -> Extension {
-    Box::new(|reg, weak| {
-        reg.handle("capture.monitors", move |ctx, _p| {
-            let list = monitors().map_err(|e| failed(ctx.lang, e))?;
-            Ok(
-                serde_json::to_value(list.into_iter().map(|(_, i)| i).collect::<Vec<_>>())
-                    .unwrap_or_default(),
-            )
-        });
-        let w = weak.clone();
-        reg.handle("capture.fullscreen", move |ctx, p| {
+const LAST_KEY: &str = "capture.last";
+
+/// Runs one capture command with resolved parameters, one at a time, and remembers
+/// it for "Repeat last capture" (CAP-007). The capture panel steps aside meanwhile
+/// (CAP-001, CAP-023).
+fn dispatch(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
+    let _busy = Busy::take(ctx.lang)?;
+    core.remember(
+        LAST_KEY,
+        json!({ "command": command, "params": p, "extra": extra }),
+    );
+    let step_aside = core.settings.get_bool("capture.hideOnCapture");
+    if step_aside {
+        core.host().capture_session(true);
+    }
+    let result = run_command(core, ctx, command, p, extra);
+    if step_aside {
+        core.host().capture_session(false);
+    }
+    result
+}
+
+fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
+    match command {
+        "capture.universal" => run_interactive(core, ctx, p, "universal", extra),
+        "capture.fullscreen" => {
             let which = p
                 .get("monitor")
                 .and_then(Value::as_str)
                 .unwrap_or("pointer")
                 .to_string();
-            run_capture(&w, ctx, &p, |lang| capture_fullscreen(&which, lang))
-        });
-        let w = weak.clone();
-        reg.handle("capture.region", move |ctx, p| {
-            let Some(r) = p.get("rect") else {
-                return run_interactive(&w, ctx, &p, "region");
-            };
-            let area = Rect {
-                x: r["x"].as_i64().unwrap_or(0) as i32,
-                y: r["y"].as_i64().unwrap_or(0) as i32,
-                width: r["width"].as_u64().unwrap_or(1) as u32,
-                height: r["height"].as_u64().unwrap_or(1) as u32,
-            };
-            run_capture(&w, ctx, &p, |lang| capture_region(area, lang))
-        });
-        let w = weak.clone();
-        reg.handle("capture.universal", move |ctx, p| {
-            run_interactive(&w, ctx, &p, "universal")
-        });
-        let w = weak;
-        reg.handle("capture.window", move |ctx, p| {
+            run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))
+        }
+        "capture.region" => match p.get("rect") {
+            None => run_interactive(core, ctx, p, "region", extra),
+            Some(r) => {
+                let area = Rect {
+                    x: r["x"].as_i64().unwrap_or(0) as i32,
+                    y: r["y"].as_i64().unwrap_or(0) as i32,
+                    width: r["width"].as_u64().unwrap_or(1) as u32,
+                    height: r["height"].as_u64().unwrap_or(1) as u32,
+                };
+                run_capture(core, ctx, p, |lang| capture_region(area, lang))
+            }
+        },
+        "capture.window" => {
             let target = match p.get("target").and_then(Value::as_str).unwrap_or("active") {
                 "active" => WindowTarget::Active,
                 "point" => WindowTarget::Point(
@@ -657,9 +667,114 @@ pub fn extension() -> Extension {
                         .unwrap_or_default()
                         .to_string(),
                 ),
-                _ => return run_interactive(&w, ctx, &p, "window"),
+                _ => return run_interactive(core, ctx, p, "window", extra),
             };
-            run_capture(&w, ctx, &p, |lang| capture_window(&target, lang))
+            run_capture(core, ctx, p, |lang| capture_window(&target, lang))
+        }
+        other => Err(CommandError::internal(format!("not a capture command: {other}"))),
+    }
+}
+
+/// "Capture" with a tab's settings (CAP-006, CAP-065); explicit parameters win.
+fn capture_with_tab(core: &Core, ctx: &Context, tab: &str, p: &Value) -> CommandResult {
+    let settings = panel::load(core);
+    let (command, base, extra) = settings.plan(tab);
+    dispatch(core, ctx, command, &panel::with_overrides(base, p), extra)
+}
+
+fn upgrade(weak: &Weak<Core>) -> Result<Arc<Core>, CommandError> {
+    weak.upgrade()
+        .ok_or_else(|| CommandError::internal("shutting down"))
+}
+
+/// Handlers for the `capture.*` commands, for `Core::with_extensions`.
+pub fn extension() -> Extension {
+    Box::new(|reg, weak| {
+        reg.handle("capture.monitors", move |ctx, _p| {
+            let list = monitors().map_err(|e| failed(ctx.lang, e))?;
+            Ok(
+                serde_json::to_value(list.into_iter().map(|(_, i)| i).collect::<Vec<_>>())
+                    .unwrap_or_default(),
+            )
+        });
+        for id in ["capture.fullscreen", "capture.region", "capture.window"] {
+            let w = weak.clone();
+            reg.handle(id, move |ctx, p| {
+                let core = upgrade(&w)?;
+                // From the app (shortcuts, menus) the rest comes from the Image tab
+                // (CAP-065); automation keeps fixed defaults so scripts stay repeatable.
+                let p = if ctx.source.is_automation() {
+                    p
+                } else {
+                    panel::with_overrides(panel::load(&core).image_options(), &p)
+                };
+                dispatch(&core, ctx, id, &p, json!({}))
+            });
+        }
+        let w = weak.clone();
+        reg.handle("capture.universal", move |ctx, p| {
+            capture_with_tab(&*upgrade(&w)?, ctx, "universal", &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.image", move |ctx, p| {
+            capture_with_tab(&*upgrade(&w)?, ctx, "image", &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.capture", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let tab = panel::load(&core).tab;
+            capture_with_tab(&core, ctx, &tab, &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.repeat_last", move |ctx, _p| {
+            let core = upgrade(&w)?;
+            match core.recall(LAST_KEY) {
+                Some(last) => {
+                    let command = last["command"].as_str().unwrap_or_default().to_string();
+                    dispatch(&core, ctx, &command, &last["params"], last["extra"].clone())
+                }
+                // Nothing to repeat yet: open the capture panel (CAP-007).
+                None => {
+                    let _ = core.host().show_capture_panel(Some(true));
+                    Ok(json!({ "status": "none", "panel": true }))
+                }
+            }
+        });
+        let w = weak.clone();
+        reg.handle("capture.panel", move |_ctx, p| {
+            let core = upgrade(&w)?;
+            let visible = core
+                .host()
+                .show_capture_panel(p.get("show").and_then(Value::as_bool))?;
+            Ok(json!({ "visible": visible }))
+        });
+        let w = weak.clone();
+        reg.handle("capture.settings", move |_ctx, _p| {
+            Ok(serde_json::to_value(panel::load(&*upgrade(&w)?)).unwrap_or_default())
+        });
+        let w = weak.clone();
+        reg.handle("capture.configure", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let next = panel::load(&core).patched(&p).map_err(|e| {
+                let param = e.split(':').next().unwrap_or("").to_string();
+                CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", &param), ("reason", &e)],
+                    ),
+                )
+            })?;
+            panel::save(&core, &next);
+            Ok(serde_json::to_value(next).unwrap_or_default())
+        });
+        let w = weak;
+        reg.handle("capture.reset_settings", move |_ctx, _p| {
+            let core = upgrade(&w)?;
+            let defaults = panel::PanelSettings::default();
+            panel::save(&core, &defaults);
+            Ok(serde_json::to_value(defaults).unwrap_or_default())
         });
     })
 }
@@ -676,6 +791,42 @@ mod tests {
         for spec in reg.specs().iter().filter(|s| s.area() == "capture") {
             assert!(reg.has_handler(spec.id), "{} has no handler", spec.id);
         }
+    }
+
+    /// CAP-007: with no previous capture, Repeat opens the panel and is not an error.
+    #[test]
+    fn repeat_last_without_history_opens_the_panel() {
+        let core = Core::for_tests_with(Platform::current(), vec![extension()]);
+        let r = core
+            .call(Source::Ui, "capture.repeat_last", json!({}), None)
+            .unwrap();
+        assert_eq!(r, json!({"status": "none", "panel": true}));
+    }
+
+    /// CAP-001, CAP-003: settings persist per tab, bad values change nothing, and
+    /// reset brings back every default, including Selection and the delay seconds.
+    #[test]
+    fn panel_settings_configure_and_reset() {
+        let core = Core::for_tests_with(Platform::current(), vec![extension()]);
+        let call = |id: &str, p: Value| core.call(Source::Ui, id, p, None);
+        call(
+            "capture.configure",
+            json!({"tab": "universal", "expanded": false, "image": {"selection": "window", "timing": "delay", "delay": 9}, "universal": {"delay5": true}}),
+        )
+        .unwrap();
+        let before = call("capture.settings", json!({})).unwrap();
+        assert_eq!(before["image"]["selection"], "window");
+        assert_eq!(before["tab"], "universal");
+        let bad = call("capture.configure", json!({"image": {"delay": 99}})).unwrap_err();
+        assert_eq!(bad.code, ErrorCode::InvalidParams);
+        assert_eq!(call("capture.settings", json!({})).unwrap(), before);
+        let reset = call("capture.reset_settings", json!({})).unwrap();
+        assert_eq!(
+            reset,
+            serde_json::to_value(panel::PanelSettings::default()).unwrap()
+        );
+        assert_eq!(reset["image"]["delay"], 5);
+        assert_eq!(reset["image"]["selection"], "region");
     }
 
     #[test]

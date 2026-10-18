@@ -189,11 +189,26 @@ impl Core {
         self.host().settings_changed(key, value);
     }
 
+    /// Name of a shortcut row: its own when it runs a command with fixed parameters
+    /// (CAP-065), otherwise the command's title.
+    pub fn slot_title(&self, slot: &crate::shortcuts::Slot, lang: Lang) -> String {
+        if slot.has_own_title() {
+            return tr(
+                lang,
+                &format!("shortcuts.slot.{}", slot.id.replace('.', "_")),
+                &[],
+            );
+        }
+        self.registry()
+            .spec(slot.command)
+            .map(|s| s.title(lang))
+            .unwrap_or_else(|| slot.command.to_string())
+    }
+
     /// Rows for Preferences > Shortcuts and `shortcuts.list` (APP-018).
     pub fn shortcut_rows(&self, lang: Lang) -> Value {
         let profile = self.profile();
         let platform = self.shortcuts.platform();
-        let registry = self.registry();
         let rows: Vec<Value> = self
             .shortcuts
             .slots()
@@ -202,12 +217,12 @@ impl Core {
                 let binding = self.shortcuts.binding(slot, profile);
                 let default = crate::shortcuts::default_for(slot, profile, platform);
                 let status = self.shortcuts.status(slot, profile);
-                let title = registry
-                    .spec(slot.command)
-                    .map(|s| s.title(lang))
-                    .unwrap_or_else(|| slot.command.to_string());
+                let title = self.slot_title(slot, lang);
                 json!({
-                    "command": slot.command,
+                    // The row id; the command it runs is `runs`.
+                    "command": slot.id,
+                    "runs": slot.command,
+                    "params": slot.params_value(),
                     "scope": slot.scope,
                     "group": slot.group,
                     "title": title,
@@ -241,7 +256,7 @@ impl Core {
             .iter()
             .map(|s| {
                 json!({
-                    "command": s.command,
+                    "command": s.id,
                     "shortcut": self.shortcuts.binding(s, profile).map(|a| a.to_string()),
                     "status": self.shortcuts.status(s, profile),
                 })
@@ -532,7 +547,7 @@ fn build_registry(core: &Arc<Core>) -> Registry {
             .as_array()
             .and_then(|rows| {
                 rows.iter()
-                    .find(|r| r["command"] == slot.command && r["scope"] == json!(slot.scope))
+                    .find(|r| r["command"] == slot.id && r["scope"] == json!(slot.scope))
                     .cloned()
             })
             .unwrap_or_default();
@@ -681,6 +696,28 @@ mod tests {
         }
     }
 
+    /// CAP-065: rows that run a command with fixed parameters have their own name.
+    #[test]
+    fn shortcut_rows_with_their_own_name_are_translated() {
+        for platform in [Platform::Windows, Platform::Macos] {
+            let core = Core::for_tests(platform);
+            for slot in core.shortcuts.slots() {
+                for lang in [Lang::En, Lang::Es] {
+                    let title = core.slot_title(slot, lang);
+                    assert!(!title.starts_with("shortcuts.slot."), "{} has no name", slot.id);
+                }
+            }
+            let es = core.slot_title(
+                &core
+                    .shortcuts
+                    .find_slot("capture.active_window", ShortcutScope::Global)
+                    .unwrap(),
+                Lang::Es,
+            );
+            assert_eq!(es, "Ventana activa");
+        }
+    }
+
     #[test]
     fn every_command_and_setting_is_translated() {
         let core = Core::for_tests(Platform::Windows);
@@ -801,7 +838,14 @@ mod tests {
             json!({"profile": "compatibility", "dryRun": true}),
         )
         .unwrap();
-        assert_eq!(preview["changes"][0]["command"], "app.quit");
+        // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X.
+        let changed: Vec<&str> = preview["changes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|c| c["command"].as_str())
+            .collect();
+        assert_eq!(changed, ["capture.capture", "app.quit"]);
         assert_eq!(core.profile(), Profile::Coexistence);
         call(
             &core,

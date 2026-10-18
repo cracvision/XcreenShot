@@ -779,3 +779,201 @@ html.overlay-root.overlay-native #root {
   margin-top: auto;
   padding-top: 12px;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Capture panel (CAP-001). The window follows the height of .panel. */
+.panel {
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 12px;
+}
+
+/* Room for a dialog, also in the compact view. */
+.panel:has(.backdrop) {
+  min-height: 300px;
+}
+
+.panel-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-tabs {
+  display: inline-flex;
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.panel-tabs button {
+  flex: 1;
+  border: 0;
+  background: var(--bg-raised);
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.panel-tabs button + button {
+  border-left: 1px solid var(--border);
+}
+
+.panel-tabs button[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.panel-options {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel-field {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.panel-row .panel-field:first-child {
+  flex: 1;
+}
+
+.panel-field.narrow {
+  grid-template-columns: auto 64px;
+}
+
+.panel-field input[type="number"] {
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  border-radius: var(--radius);
+  padding: 5px 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.panel-check.disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.panel-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-capture {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel-shortcut {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.panel-shortcut-error,
+.panel-status {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+  max-width: 220px;
+}
+
+.panel-status {
+  max-width: none;
+}
+
+.panel-more {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  min-width: 240px;
+  display: grid;
+  padding: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+
+.menu [role="menuitem"] {
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu [role="menuitem"]:hover,
+.menu [role="menuitem"]:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+
+/* Delay countdown (CAP-048). */
+.countdown {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  user-select: none;
+}
+
+.countdown-number {
+  font-size: 34px;
+  font-weight: 700;
+  min-width: 1.4em;
+  text-align: center;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.3;
+}

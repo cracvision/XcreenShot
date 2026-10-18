@@ -2,7 +2,6 @@
 
 use std::str::FromStr;
 
-use serde_json::json;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 use xs_core::platform::Platform;
@@ -43,7 +42,7 @@ pub fn apply(app: &AppHandle) {
     for (slot, acc) in core.shortcuts.global_bindings(profile) {
         let conflict = system_conflict(&acc, platform, print_screen);
         if conflict == Some(SystemConflict::Reserved) || (conflict.is_some() && !take_over) {
-            tracing::warn!(command = slot.command, shortcut = %acc, "shortcut assigned by the system");
+            tracing::warn!(slot = slot.id, shortcut = %acc, "shortcut assigned by the system");
             core.shortcuts.set_status(
                 &slot,
                 Status::System(conflict.unwrap_or(SystemConflict::Reserved)),
@@ -53,7 +52,7 @@ pub fn apply(app: &AppHandle) {
         let status = match Shortcut::from_str(&acc.to_string()) {
             Ok(shortcut) => match gs.register(shortcut) {
                 Ok(()) => {
-                    map.insert(shortcut.id(), slot.command.to_string());
+                    map.insert(shortcut.id(), (slot.command.to_string(), slot.params_value()));
                     if conflict.is_some() {
                         Status::TakenOver
                     } else {
@@ -61,7 +60,7 @@ pub fn apply(app: &AppHandle) {
                     }
                 }
                 Err(e) => {
-                    tracing::warn!(command = slot.command, shortcut = %acc, error = %e, "could not register global shortcut");
+                    tracing::warn!(slot = slot.id, shortcut = %acc, error = %e, "could not register global shortcut");
                     match conflict {
                         Some(c) => Status::System(c),
                         None => Status::OtherApp,
@@ -83,13 +82,13 @@ pub fn on_shortcut(app: &AppHandle, shortcut: &Shortcut, event: ShortcutEvent) {
         return;
     }
     let state = app.state::<AppState>();
-    let command = state.shortcut_map.lock().unwrap().get(&shortcut.id()).cloned();
-    if let Some(command) = command {
+    let action = state.shortcut_map.lock().unwrap().get(&shortcut.id()).cloned();
+    if let Some((command, params)) = action {
         tracing::info!(command, "global shortcut pressed");
         let core = state.core.clone();
         // Off the event loop: commands may create windows.
         std::thread::spawn(move || {
-            if let Err(e) = core.call(Source::Shortcut, &command, json!({}), None) {
+            if let Err(e) = core.call(Source::Shortcut, &command, params, None) {
                 tracing::warn!(command, code = e.code.as_str(), "shortcut command failed");
             }
         });
@@ -104,14 +103,10 @@ pub fn startup_notice(app: &AppHandle) {
         return;
     }
     let lang = core.lang();
-    let registry = core.registry();
     let list = failed
         .iter()
         .map(|s| {
-            let title = registry
-                .spec(s.command)
-                .map(|c| c.title(lang))
-                .unwrap_or_default();
+            let title = core.slot_title(s, lang);
             let shortcut = core
                 .shortcuts
                 .binding(s, core.profile())
