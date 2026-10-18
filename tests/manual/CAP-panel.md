@@ -27,7 +27,8 @@ Pruebas con la app en marcha (CLI y entrada simulada), 2026-10-18, Windows 11, u
 
 ## Más (⋯) y restablecer (CAP-003)
 - [ ] **Preferencias de captura…** abre Preferencias en la sección Captura.
-- [ ] **Restablecer ajustes de captura…** pide confirmación; **Cancelar** no cambia nada; **Restablecer** deja todo como al principio (Región, Editor, Copiar sí, Retardo 5 s).
+- [x] El menú ⋯ se ve entero en la vista ampliada y en la compacta, y se cierra al pulsar ⋯ otra vez (`f7906cf`).
+- [x] **Restablecer ajustes de captura…** pide confirmación; **Cancelar** no cambia nada; **Restablecer** deja todo como al principio (Región, Editor, Copiar sí, Capturar cursor no, Retardo de 5 s no, Tiempo Ninguno con 5 s guardados).
 
 ## Retardo (CAP-048)
 - [x] Imagen, Tiempo = Retardo, 3 s: la cruceta aparece 3 s después de **Capturar**.
