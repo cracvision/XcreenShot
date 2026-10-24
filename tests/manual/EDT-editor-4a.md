@@ -26,6 +26,10 @@ Pruebas con la app en marcha (instancia aislada, CLI y entrada simulada en la ve
 - [x] `Ctrl+Alt+P` oculta y muestra el panel lateral; su borde izquierdo lo ensancha de 260 a 480 px.
 - [x] Interfaz en español: los textos caben en la barra, el panel y la barra de estado.
 
+## Fallo encontrado por Carlos (2026-10-24, instalador `d16fdce`)
+
+- Paso 1 de la tanda 1: el editor se abría con el damero en lugar de la captura, y la miniatura de la tira salía rota. Causa: la política de seguridad (CSP) de la app instalada no permitía las imágenes del protocolo `xsdoc`; el servidor de desarrollo no aplica la CSP, por eso no salió en las pruebas. Corregido en `tauri.conf.json`, con una prueba (`app/src/editor/csp.test.ts`). Verificado con una compilación que empaqueta la interfaz como la instalada (`npx tauri build --debug --no-bundle`): la captura, la miniatura y el dibujo funcionan.
+
 ## Tanda 1 · Captura y editor — Carlos
 
 Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `d16fdce` (aparece junto a la versión con `xcreenshot app ping`).
