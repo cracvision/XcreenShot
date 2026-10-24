@@ -70,11 +70,17 @@ export function layout(view: View, image: Size, viewport: Size, dpr: number): La
   const scale = scaleFor(view.zoom, dpr);
   const w = image.width * scale;
   const h = image.height * scale;
-  // Small images sit centered; large ones keep a margin all around.
-  const originX = Math.max(MARGIN, (viewport.width - w) / 2);
-  const originY = Math.max(MARGIN, (viewport.height - h) / 2);
-  const contentWidth = Math.max(viewport.width, w + 2 * originX);
-  const contentHeight = Math.max(viewport.height, h + 2 * originY);
+  // Scroll only when the image and its margins clearly do not fit. A content box a
+  // fraction of a pixel too big shows a scroll bar, the bar shrinks the area, the
+  // content fits again and the bar goes: the canvas trembled at some window sizes.
+  const scrollX = w + 2 * MARGIN > viewport.width + 1;
+  const scrollY = h + 2 * MARGIN > viewport.height + 1;
+  // Images that fit sit centered; larger ones keep a margin all around.
+  const originX = scrollX ? MARGIN : (viewport.width - w) / 2;
+  const originY = scrollY ? MARGIN : (viewport.height - h) / 2;
+  // Whole pixels, and nothing to scroll (0) when the image fits.
+  const contentWidth = scrollX ? Math.ceil(w + 2 * MARGIN) : 0;
+  const contentHeight = scrollY ? Math.ceil(h + 2 * MARGIN) : 0;
   const clamp = (v: number, max: number) => Math.min(Math.max(0, v), Math.max(0, max));
   return {
     scale,

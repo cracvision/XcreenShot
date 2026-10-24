@@ -26,21 +26,25 @@ Pruebas con la app en marcha (instancia aislada, CLI y entrada simulada en la ve
 - [x] `Ctrl+Alt+P` oculta y muestra el panel lateral; su borde izquierdo lo ensancha de 260 a 480 px.
 - [x] Interfaz en español: los textos caben en la barra, el panel y la barra de estado.
 
-## Fallo encontrado por Carlos (2026-10-24, instalador `d16fdce`)
+## Fallos encontrados por Carlos (2026-10-24)
 
-- Paso 1 de la tanda 1: el editor se abría con el damero en lugar de la captura, y la miniatura de la tira salía rota. Causa: la política de seguridad (CSP) de la app instalada no permitía las imágenes del protocolo `xsdoc`; el servidor de desarrollo no aplica la CSP, por eso no salió en las pruebas. Corregido en `tauri.conf.json`, con una prueba (`app/src/editor/csp.test.ts`). Verificado con una compilación que empaqueta la interfaz como la instalada (`npx tauri build --debug --no-bundle`): la captura, la miniatura y el dibujo funcionan.
+- Paso 1 de la tanda 1 (instalador `d16fdce`): el editor se abría con el damero en lugar de la captura, y la miniatura de la tira salía rota. Causa: la política de seguridad (CSP) de la app instalada no permitía las imágenes del protocolo `xsdoc`; el servidor de desarrollo no aplica la CSP, por eso no salió en las pruebas. Corregido en `tauri.conf.json`, con una prueba (`app/src/editor/csp.test.ts`). Verificado con una compilación que empaqueta la interfaz como la instalada (`npx tauri build --debug --no-bundle`): la captura, la miniatura y el dibujo funcionan.
+
+- Durante la tanda 1 (instalador `582df5a`): con la ventana acoplada a media pantalla arrastrándola al borde izquierdo o derecho, la captura "temblaba". Causa: con la imagen ajustada a la ventana y un ancho fraccionario (escala 150 %), el área de contenido sobresalía una fracción de píxel; aparecía una barra de desplazamiento, el área se encogía, la barra sobraba y desaparecía, en cada fotograma. Reproducido con la instancia aislada cambiando el tamaño de la ventana (unos 160 cambios de tamaño en 1,5 s); corregido en `app/src/editor/view.ts` (solo hay desplazamiento si la imagen no cabe por más de un píxel, y en píxeles enteros), con prueba en `view.test.ts`. Tras la corrección, ningún ancho probado cambia de tamaño (al 100 % y al 150 %).
 
 ## Tanda 1 · Captura y editor — Carlos
 
+Carlos marcó PASS (2026-10-24, instalador `582df5a`) los siete pasos.
+
 Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `582df5a` o posterior (aparece junto a la versión con `xcreenshot app ping`).
 
-1. [ ] Haz una captura de región con tu atajo (`Ctrl+Shift+PrtScn`). Se abre el editor con la captura, al 100 % si cabe en la ventana.
-2. [ ] En `Documentos\XcreenShot` hay una carpeta del mes (por ejemplo `2026-10`) con un archivo `.xshot` con el nombre de la app y la hora.
-3. [ ] Elige **Flecha** (botón o tecla `A`) y arrastra sobre la imagen: aparece la flecha y queda seleccionada con dos rombos en los extremos.
-4. [ ] Arrastra un rombo: cambia ese extremo. Arrastra la flecha por el medio: se mueve entera.
-5. [ ] En el panel de la derecha cambia color, grosor, extremos, tipo de línea y opacidad: la flecha cambia. La siguiente flecha que dibujes sale con ese estilo.
-6. [ ] `Ctrl+Z` deshace y `Ctrl+Y` rehace, paso a paso. Arrastrar el deslizador de opacidad y soltar se deshace de una vez.
-7. [ ] La pestaña de la tira de abajo y el título de la ventana indican "Editado" mientras hay cambios.
+1. [x] Haz una captura de región con tu atajo (`Ctrl+Shift+PrtScn`). Se abre el editor con la captura, al 100 % si cabe en la ventana.
+2. [x] En `Documentos\XcreenShot` hay una carpeta del mes (por ejemplo `2026-10`) con un archivo `.xshot` con el nombre de la app y la hora.
+3. [x] Elige **Flecha** (botón o tecla `A`) y arrastra sobre la imagen: aparece la flecha y queda seleccionada con dos rombos en los extremos.
+4. [x] Arrastra un rombo: cambia ese extremo. Arrastra la flecha por el medio: se mueve entera.
+5. [x] En el panel de la derecha cambia color, grosor, extremos, tipo de línea y opacidad: la flecha cambia. La siguiente flecha que dibujes sale con ese estilo.
+6. [x] `Ctrl+Z` deshace y `Ctrl+Y` rehace, paso a paso. Arrastrar el deslizador de opacidad y soltar se deshace de una vez.
+7. [x] La pestaña de la tira de abajo y el título de la ventana indican "Editado" mientras hay cambios.
 
 ## Tanda 2 · Zoom y vista — Carlos
 

@@ -57,6 +57,27 @@ describe("zoom (EDT-007)", () => {
     expect(after[1]).toBeCloseTo(before[1]);
   });
 
+  it("never scrolls an image that fits, whatever the fraction of a pixel", () => {
+    // Snapping the window to half the screen gave fractional sizes; a content box a
+    // fraction too big made a scroll bar come and go every frame (Carlos, 2026-10-24).
+    const image = { width: 2560, height: 1600 };
+    for (const width of [1194.33, 1194.67, 1211, 1426.5]) {
+      const vp = { width, height: 1058.67 };
+      const zoom = fitZoom(image, vp, 1.5);
+      const l = layout({ zoom, cx: 1280, cy: 800 }, image, vp, 1.5);
+      expect(l.contentWidth).toBe(0);
+      expect(l.contentHeight).toBe(0);
+      expect(l.scrollLeft).toBe(0);
+    }
+  });
+
+  it("scrolls large images with whole-pixel content", () => {
+    const l = layout({ zoom: 100, cx: 2000, cy: 1500 }, { width: 4000, height: 3000 }, viewport, 1);
+    expect(Number.isInteger(l.contentWidth)).toBe(true);
+    expect(l.contentWidth).toBeGreaterThan(viewport.width);
+    expect(l.scrollLeft).toBeGreaterThan(0);
+  });
+
   it("reads typed values", () => {
     expect(parseZoom("250")).toBe(250);
     expect(parseZoom("33,5 %")).toBe(33.5);
