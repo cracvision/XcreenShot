@@ -63,6 +63,14 @@ export interface RecoveryItem {
   savedAt: string;
 }
 
+/** A zoom asked for one document: applied once, by that document's canvas. */
+export interface ZoomRequest {
+  mode: string;
+  value: number | null;
+  seq: number;
+  documentId: string | null;
+}
+
 interface EditorState {
   ready: boolean;
   tool: Tool;
@@ -75,7 +83,7 @@ interface EditorState {
   /** Last view of each document in this session. */
   views: Record<string, View>;
   /** A zoom asked by a command (CLI, menu) for the canvas to apply. */
-  zoomRequest: { mode: string; value: number | null; seq: number } | null;
+  zoomRequest: ZoomRequest | null;
   recovery: RecoveryItem[];
   /** Documents to decide on before closing or quitting. */
   decision: { kind: "close" | "quit"; pending: Pending[] } | null;
@@ -155,6 +163,7 @@ export const useEditor = create<EditorState>((set, get) => ({
               mode: payload.mode as string,
               value: (payload.value as number | null) ?? null,
               seq: ++zoomSeq,
+              documentId: (payload.documentId as string | null) ?? null,
             },
           });
           break;
@@ -196,7 +205,18 @@ export const useEditor = create<EditorState>((set, get) => ({
 /** Asks the canvas for a zoom: `actual`, `fit`, `original`, `in`, `out` or `percent`
  * with a value (EDT-007). Commands from the CLI arrive the same way. */
 export function requestZoom(mode: string, value: number | null = null): void {
-  useEditor.setState({ zoomRequest: { mode, value, seq: ++zoomSeq } });
+  useEditor.setState((s) => ({
+    zoomRequest: { mode, value, seq: ++zoomSeq, documentId: s.active },
+  }));
+}
+
+/** The pending zoom for document `id`, removed so it is applied only once. A request
+ * kept after use was applied again to every document shown next (Carlos, 2026-10-24). */
+export function takeZoomRequest(id: string): ZoomRequest | null {
+  const r = useEditor.getState().zoomRequest;
+  if (!r || (r.documentId !== null && r.documentId !== id)) return null;
+  useEditor.setState({ zoomRequest: null });
+  return r;
 }
 
 /** Side panel layout (EDT-005): shown or hidden, width (260–480 px) and tab. A view

@@ -13,7 +13,14 @@ import {
   type Geometry,
   type Point,
 } from "./geometry";
-import { docUrl, useEditor, usePointer, type ArrowObject, type DocDetails } from "./state";
+import {
+  docUrl,
+  takeZoomRequest,
+  useEditor,
+  usePointer,
+  type ArrowObject,
+  type DocDetails,
+} from "./state";
 import {
   fitZoom,
   imagePoint,
@@ -228,14 +235,13 @@ export function Canvas({ doc }: Props) {
     setView(doc.documentId, zoomAround(view, zoom, p, image, viewport, dpr));
   };
 
-  // Zoom asked by a command, a key or the status bar.
-  const lastRequest = useRef(0);
+  // Zoom asked by a command, a key or the status bar, for this document.
   useEffect(() => {
-    if (!zoomRequest || zoomRequest.seq === lastRequest.current || !view || !viewport) return;
+    if (!zoomRequest || !view || !viewport) return;
+    const request = takeZoomRequest(doc.documentId);
     // Only a percentage needs a value; in and out step from the current zoom.
-    if (zoomRequest.mode === "percent" && zoomRequest.value === null) return;
-    lastRequest.current = zoomRequest.seq;
-    switch (zoomRequest.mode) {
+    if (!request || (request.mode === "percent" && request.value === null)) return;
+    switch (request.mode) {
       case "fit":
         setView(doc.documentId, {
           zoom: fitZoom(image, viewport, dpr),
@@ -248,10 +254,10 @@ export function Canvas({ doc }: Props) {
         break;
       case "in":
       case "out":
-        applyZoom(stepZoom(view.zoom, zoomRequest.mode === "in"));
+        applyZoom(stepZoom(view.zoom, request.mode === "in"));
         break;
       default:
-        if (zoomRequest.value !== null) applyZoom(zoomRequest.value);
+        if (request.value !== null) applyZoom(request.value);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoomRequest, view, viewport]);

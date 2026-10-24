@@ -32,6 +32,8 @@ Pruebas con la app en marcha (instancia aislada, CLI y entrada simulada en la ve
 
 - Durante la tanda 1 (instalador `582df5a`): con la ventana acoplada a media pantalla arrastrándola al borde izquierdo o derecho, la captura "temblaba". Causa: con la imagen ajustada a la ventana y un ancho fraccionario (escala 150 %), el área de contenido sobresalía una fracción de píxel; aparecía una barra de desplazamiento, el área se encogía, la barra sobraba y desaparecía, en cada fotograma. Reproducido con la instancia aislada cambiando el tamaño de la ventana (unos 160 cambios de tamaño en 1,5 s); corregido en `app/src/editor/view.ts` (solo hay desplazamiento si la imagen no cabe por más de un píxel, y en píxeles enteros), con prueba en `view.test.ts`. Tras la corrección, ningún ancho probado cambia de tamaño (al 100 % y al 150 %).
 
+- Tanda 2, paso 5 (instalador `2d581d1`): al alternar entre dos documentos, el zoom no se conservaba. Un zoom escrito o elegido en el menú pasaba al otro documento, y uno con + o − se aplicaba otra vez en cada vuelta (150 → 200 → 300 %). Causa: la última orden de zoom quedaba guardada y la volvía a aplicar cada documento que se mostraba. Corregido: la orden lleva el documento al que va y se aplica una sola vez (`takeZoomRequest` en `app/src/editor/state.ts`, con prueba en `state.test.ts`). Verificado en la instancia aislada: cada documento conserva su zoom y su posición al alternar varias veces.
+
 ## Tanda 1 · Captura y editor — Carlos
 
 Carlos marcó PASS (2026-10-24, instalador `582df5a`) los siete pasos.
@@ -48,10 +50,12 @@ Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compila
 
 ## Tanda 2 · Zoom y vista — Carlos
 
-1. [ ] `Ctrl`+rueda acerca y aleja manteniendo bajo el puntero el mismo punto de la imagen.
-2. [ ] `Ctrl+0` = 100 %; `Ctrl+Shift+0` = ajustar a la ventana; el menú ˅ de la barra de estado ofrece los pasos fijos.
-3. [ ] Escribe `250` en el campo de zoom y pulsa `Enter`: la vista queda al 250 %.
-4. [ ] Mantén `Espacio` y arrastra (o arrastra con la rueda pulsada): la vista se desplaza sin dibujar.
+Carlos marcó PASS (2026-10-24, instalador `2d581d1`) los pasos 1 a 4. El 5 falló (abajo); corregido, falta que lo confirme.
+
+1. [x] `Ctrl`+rueda acerca y aleja manteniendo bajo el puntero el mismo punto de la imagen.
+2. [x] `Ctrl+0` = 100 %; `Ctrl+Shift+0` = ajustar a la ventana; el menú ˅ de la barra de estado ofrece los pasos fijos.
+3. [x] Escribe `250` en el campo de zoom y pulsa `Enter`: la vista queda al 250 %.
+4. [x] Mantén `Espacio` y arrastra (o arrastra con la rueda pulsada): la vista se desplaza sin dibujar.
 5. [ ] Con dos documentos en la tira, cambia de uno a otro: cada uno conserva su zoom y su posición.
 
 ## Tanda 3 · Guardar, exportar y cerrar — Carlos
