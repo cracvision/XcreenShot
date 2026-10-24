@@ -78,7 +78,7 @@ impl B {
 }
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture"];
+pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor"];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -101,7 +101,8 @@ fn capture_result() -> Value {
         "properties": {
             "status": {"type": "string", "enum": ["completed", "cancelled", "failed", "busy", "none"], "description": "none: nothing to repeat yet (CAP-007)"},
             "panel": {"type": "boolean", "description": "The capture panel was opened instead"},
-            "path": {"type": "string"},
+            "documentId": {"type": "string", "description": "The capture as an open document, for document.* commands"},
+            "path": {"type": "string", "description": "The .xshot in the library, or the --out file"},
             "files": {"type": "array", "items": {"type": "string"}},
             "width": {"type": "integer"},
             "height": {"type": "integer"},
@@ -138,7 +139,20 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("app.commands", &["APP-027"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("app.show", &["APP-001"]).scopes(ALL).assignable(),
         B::new("app.close_window", &["APP-004"]).scopes(UI_SHORTCUT).assignable(),
-        B::new("app.quit", &["APP-004"]).scopes(ALL).assignable(),
+        B::new("app.quit", &["APP-004"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({"force": {"type": "boolean", "default": false, "description": "Quit without asking about unsaved documents (they stay recoverable)"}}),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["quitting", "needs_decision"]},
+                    "pending": {"type": "array", "items": {"type": "object"}}
+                }
+            })),
         B::new("app.diagnostics", &["APP-046"])
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
@@ -303,8 +317,240 @@ pub fn specs() -> Vec<CommandSpec> {
                 "title": {"type": "string", "description": "Part of the window title or process name (first match)"}
             })))
             .result(capture_result()),
+        // Editor and documents (EDT-119). Handlers live in xs-editor.
+        B::new("document.open", &["EDT-105", "EDT-119"])
+            .scopes(ALL)
+            .mutates()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "A .xshot, PNG or JPG file"},
+                    "show": {"type": "boolean", "description": "Show it in the editor (default: false from the CLI and MCP)"}
+                }),
+                &["path"],
+            ))
+            .result(document_summary()),
+        B::new("document.list", &["EDT-001", "TRY-002"]).result(json!({
+            "type": "object",
+            "properties": {
+                "active": {"type": ["string", "null"]},
+                "documents": {"type": "array", "items": document_summary()}
+            }
+        })),
+        B::new("document.info", &["EDT-119"])
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("document.annotate", &["EDT-119", "EDT-024"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objects": {"type": "array", "items": {"type": "object"}, "description": "Objects to add: type, geometry and style. All or none are created."}
+                }),
+                &["objects"],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.update_object", &["EDT-119", "EDT-014", "EDT-042"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "set": {"type": "object", "description": "Geometry to replace and style properties to change"}
+                }),
+                &["set"],
+            ))
+            .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
+        B::new("document.delete_object", &["EDT-119", "EDT-042"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "array"}}})),
+        B::new("document.undo", &["EDT-092"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(history_result()),
+        B::new("document.redo", &["EDT-092"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(history_result()),
+        B::new("document.save", &["EDT-107", "EDT-106", "LIB-021"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "Save as: another file. Omit to save in its own file"},
+                    "format": {"type": "string", "enum": ["xshot", "png", "jpg"], "description": "Default: from the path extension"},
+                    "confirmFlatten": {"type": "boolean", "default": false, "description": "The user accepted that a PNG or JPG keeps the objects flattened (UI)"},
+                    "dontAskAgain": {"type": "boolean", "default": false, "description": "Do not warn about flattening again (UI)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["saved", "needs_decision"]},
+                    "reason": {"type": "string", "enum": ["flatten"]},
+                    "path": {"type": "string"},
+                    "linked": {"type": "boolean"}
+                }
+            })),
+        B::new("document.export", &["EDT-107", "EDT-110"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "format": {"type": "string", "enum": ["png", "jpg"]},
+                    "path": {"type": "string"},
+                    "quality": {"type": "integer", "minimum": 1, "maximum": 100, "description": "JPG quality (default 90)"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "fail"], "default": "keepBoth"}
+                }),
+                &["format", "path"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "bytes": {"type": "integer"}
+                }
+            })),
+        B::new("document.copy_all", &["EDT-090", "SHR-019"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(json!({"documentId": document_id()}), &[])),
+        B::new("document.close", &["EDT-108", "EDT-012"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "all": {"type": "boolean", "default": false},
+                    "save": {"type": "array", "items": {"type": "string"}, "description": "Documents with unsaved changes to save first"},
+                    "discard": {"type": "array", "items": {"type": "string"}, "description": "Documents whose unsaved changes may be lost"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["closed", "needs_decision"]},
+                    "closed": {"type": "array", "items": {"type": "string"}},
+                    "pending": {"type": "array", "items": {"type": "object"}}
+                }
+            })),
+        B::new("editor.show", &["EDT-001", "EDT-119"])
+            .scopes(ALL)
+            .params(params(
+                json!({
+                    "view": {"type": "string", "enum": ["editor"], "default": "editor"},
+                    "documentId": document_id()
+                }),
+                &[],
+            )),
+        B::new("editor.state", &["EDT-014", "EDT-003"]).result(json!({"type": "object"})),
+        B::new("editor.select_tool", &["EDT-003", "EDT-119"])
+            .scopes(ALL)
+            .positional(&["tool"])
+            .params(params(json!({"tool": {"type": "string", "enum": TOOLS}}), &["tool"]))
+            .result(json!({"type": "object", "properties": {"tool": {"type": "string"}}})),
+        B::new("editor.set_style", &["EDT-014"])
+            .mutates()
+            .params(params(
+                json!({"tool": {"type": "string", "enum": TOOLS}, "style": {"type": "object"}}),
+                &["tool", "style"],
+            ))
+            .result(json!({"type": "object", "properties": {"style": {"type": "object"}}})),
+        B::new("editor.zoom", &["EDT-007", "EDT-119"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({
+                    "mode": {"type": "string", "enum": ["actual", "fit", "original", "in", "out", "percent"]},
+                    "value": {"type": "number", "minimum": 10, "maximum": 3200, "description": "Percent, with mode percent"},
+                    "documentId": document_id()
+                }),
+                &["mode"],
+            ))
+            .result(json!({"type": "object", "properties": {"zoom": {"type": "number"}}})),
+        B::new("editor.view", &["EDT-007"])
+            .scopes(UI)
+            .params(params(
+                json!({
+                    "documentId": {"type": "string"},
+                    "zoom": {"type": "number"},
+                    "x": {"type": "number"},
+                    "y": {"type": "number"},
+                    "viewportWidth": {"type": "number"},
+                    "viewportHeight": {"type": "number"},
+                    "dpr": {"type": "number"}
+                }),
+                &["documentId", "zoom", "x", "y", "viewportWidth", "viewportHeight", "dpr"],
+            )),
+        B::new("editor.recovery_list", &["APP-047", "EDT-012"]).result(json!({
+            "type": "object",
+            "properties": {"items": {"type": "array", "items": {"type": "object"}}}
+        })),
+        B::new("editor.recovery_restore", &["APP-047", "EDT-012"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"]))
+            .result(json!({"type": "object", "properties": {"documents": {"type": "array"}}})),
+        B::new("editor.recovery_discard", &["APP-047", "EDT-012"])
+            .scopes(UI_CLI)
+            .destructive()
+            .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"])),
     ]
     .into_iter()
     .map(|b| b.0)
     .collect()
+}
+
+/// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
+pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
+
+fn document_id() -> Value {
+    json!({"type": "string", "description": "Default: the document shown in the editor"})
+}
+
+fn document_summary() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "documentId": {"type": "string"},
+            "name": {"type": "string"},
+            "path": {"type": ["string", "null"]},
+            "kind": {"type": "string", "enum": ["library", "external"]},
+            "width": {"type": "integer"},
+            "height": {"type": "integer"},
+            "objects": {"type": "integer"},
+            "dirty": {"type": "boolean"}
+        }
+    })
+}
+
+fn history_result() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "label": {"type": ["string", "null"], "description": "Name of the step undone or redone"},
+            "canUndo": {"type": "boolean"},
+            "canRedo": {"type": "boolean"}
+        }
+    })
 }

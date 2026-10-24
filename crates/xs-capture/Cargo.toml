@@ -8,6 +8,8 @@ description = "Screen and window capture (CAP-)"
 
 [dependencies]
 xs-core.workspace = true
+xs-editor = { path = "../xs-editor" }
+xs-image = { path = "../xs-image" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -15,7 +17,6 @@ tracing.workspace = true
 xcap = "0.9"
 image = { version = "0.25", default-features = false, features = ["png"] }
 arboard = { version = "3", default-features = false, features = ["image-data"] }
-directories = "6"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [target.'cfg(windows)'.dependencies]

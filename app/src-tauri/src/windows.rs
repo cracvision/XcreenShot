@@ -60,8 +60,9 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
     #[allow(unused_mut)]
     let mut builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App("index.html".into()))
         .title(title)
-        .inner_size(960.0, 640.0)
-        .min_inner_size(640.0, 420.0)
+        .inner_size(1280.0, 800.0)
+        // EDT-001: the editor stays usable down to 900 × 600.
+        .min_inner_size(900.0, 600.0)
         .theme(theme(app));
     #[cfg(windows)]
     {
@@ -79,6 +80,13 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
     let w = builder.build()?;
     focus(&w);
     Ok(())
+}
+
+/// Title of the main window: the document shown and its unsaved state (EDT-012).
+pub fn set_main_title(app: &AppHandle, title: &str) {
+    if let Some(w) = app.get_webview_window(MAIN) {
+        let _ = w.set_title(title);
+    }
 }
 
 pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str>) -> tauri::Result<()> {
@@ -228,7 +236,11 @@ pub fn after_window_gone(app: &AppHandle, closing_label: &str) {
             .get_bool("general.keepRunning")
     {
         tracing::info!("last window closed and keepRunning is off: quitting");
-        app.exit(0);
+        // Through the command, so unsaved documents are asked about first (APP-004).
+        let core = app.state::<AppState>().core.clone();
+        std::thread::spawn(move || {
+            let _ = core.call(xs_core::Source::Ui, "app.quit", json!({}), None);
+        });
     }
 }
 

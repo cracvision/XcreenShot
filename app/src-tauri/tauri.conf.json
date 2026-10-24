@@ -13,7 +13,7 @@
     "windows": [],
     "withGlobalTauri": false,
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src ipc: http://ipc.localhost xsframe: http://xsframe.localhost; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: xsdoc: http://xsdoc.localhost; connect-src ipc: http://ipc.localhost xsframe: http://xsframe.localhost; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     }
   },
   "bundle": {

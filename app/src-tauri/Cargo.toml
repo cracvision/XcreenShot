@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 xs-core.workspace = true
 xs-capture = { path = "../../crates/xs-capture" }
+xs-editor = { path = "../../crates/xs-editor" }
+xs-image = { path = "../../crates/xs-image" }
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde.workspace = true
@@ -28,6 +30,7 @@ tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-dialog = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_System_LibraryLoader"] }

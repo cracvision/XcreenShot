@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "XcreenShot windows only call the command registry and listen to app events.",
+  "description": "XcreenShot windows only call the command registry, listen to app events and show the system Open and Save dialogs.",
   "windows": ["main", "preferences", "capture-panel", "countdown", "overlay-*"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-save"]
 }

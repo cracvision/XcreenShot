@@ -21,7 +21,7 @@
     },
     "app_quit": {
       "title": "Salir de XcreenShot",
-      "description": "Cierra la app, libera los atajos globales y quita el ícono."
+      "description": "Cierra la app, libera los atajos globales y quita el ícono. Si hay documentos de fuera de la biblioteca con cambios sin guardar, pregunta antes y devuelve el estado needs_decision, salvo con --force."
     },
     "app_diagnostics": {
       "title": "Información de diagnóstico",
@@ -146,6 +146,90 @@
     "capture_repeat_last_area": {
       "title": "Repetir última área",
       "description": "Captura al instante, sin cruceta, el mismo rectángulo de pantalla de la última captura de región o de ventana; si la ventana sigue abierta, la captura donde esté ahora. Si no hay ninguna, abre el panel de captura."
+    },
+    "document_open": {
+      "title": "Abrir documento",
+      "description": "Abre un archivo .xshot, PNG o JPG como documento. Devuelve su documentId para los demás comandos de documento."
+    },
+    "document_list": {
+      "title": "Documentos abiertos",
+      "description": "Los documentos abiertos en el editor, en orden, con cuál se está mostrando y cuáles tienen cambios sin guardar."
+    },
+    "document_info": {
+      "title": "Detalles del documento",
+      "description": "Tamaño, resolución, objetos (id, tipo, geometría y estilo), metadatos de captura y si tiene cambios sin guardar."
+    },
+    "document_annotate": {
+      "title": "Anotar",
+      "description": "Añade objetos (por ahora, flechas) a un documento, en píxeles de la imagen. Se crean todos o ninguno, en un solo paso de deshacer."
+    },
+    "document_update_object": {
+      "title": "Cambiar objeto",
+      "description": "Cambia la geometría o el estilo de uno o varios objetos, en un solo paso de deshacer."
+    },
+    "document_delete_object": {
+      "title": "Eliminar objeto",
+      "description": "Elimina uno o varios objetos, en un solo paso de deshacer."
+    },
+    "document_undo": {
+      "title": "Deshacer",
+      "description": "Deshace el último cambio de un documento."
+    },
+    "document_redo": {
+      "title": "Rehacer",
+      "description": "Rehace el último cambio deshecho de un documento."
+    },
+    "document_save": {
+      "title": "Guardar",
+      "description": "Guarda un documento en su propio archivo. Con una ruta, guarda como: una copia si el documento es de la biblioteca, o el nuevo archivo vinculado si se abrió desde otra carpeta."
+    },
+    "document_export": {
+      "title": "Exportar",
+      "description": "Escribe la imagen final (píxeles y objetos, aplanados) en PNG o JPG sin cambiar el archivo del documento."
+    },
+    "document_copy_all": {
+      "title": "Copiar todo",
+      "description": "Copia al portapapeles la imagen final de un documento. Los objetos del documento siguen siendo editables."
+    },
+    "document_close": {
+      "title": "Cerrar documento",
+      "description": "Cierra un documento (o todos). Los de la biblioteca se guardan antes; los de otras carpetas con cambios sin guardar necesitan save o discard; si no, no se cierra nada y el estado es needs_decision."
+    },
+    "editor_show": {
+      "title": "Mostrar el editor",
+      "description": "Muestra la ventana principal en la vista Editor, si se indica, con un documento concreto."
+    },
+    "editor_state": {
+      "title": "Estado del editor",
+      "description": "Herramienta activa, el estilo actual de cada herramienta y el documento que se muestra."
+    },
+    "editor_select_tool": {
+      "title": "Elegir herramienta",
+      "description": "Activa una herramienta del editor."
+    },
+    "editor_set_style": {
+      "title": "Cambiar el estilo de una herramienta",
+      "description": "Cambia el estilo actual de una herramienta: las propiedades de los próximos objetos que dibuje. Se recuerda entre sesiones."
+    },
+    "editor_zoom": {
+      "title": "Zoom",
+      "description": "Cambia el zoom del editor: tamaño real, ajustar a la ventana, tamaño original en pantalla, acercar, alejar o un porcentaje (10-3200)."
+    },
+    "editor_view": {
+      "title": "Vista del editor",
+      "description": "El editor informa del zoom y la posición del documento que muestra."
+    },
+    "editor_recovery_list": {
+      "title": "Trabajo recuperable",
+      "description": "Documentos con cambios sin guardar que se conservaron de una sesión que terminó de forma inesperada."
+    },
+    "editor_recovery_restore": {
+      "title": "Recuperar trabajo",
+      "description": "Abre documentos recuperables con sus cambios."
+    },
+    "editor_recovery_discard": {
+      "title": "Descartar trabajo recuperable",
+      "description": "Borra para siempre copias de recuperación."
     }
   },
   "settings": {
@@ -268,7 +352,19 @@
     "no_active_window": "No hay ninguna ventana activa que capturar.",
     "region_outside": "El rectángulo está fuera de todos los monitores.",
     "clipboard_failed": "No se pudo copiar la captura al portapapeles. Sigue guardada.",
-    "capture_cancelled": "La captura se canceló."
+    "capture_cancelled": "La captura se canceló.",
+    "no_document": "No hay ningún documento abierto en el editor.",
+    "document_not_found": "El documento \"{{id}}\" no está abierto.",
+    "object_not_found": "No hay ningún objeto \"{{id}}\" en este documento.",
+    "cannot_open": "No se puede abrir \"{{name}}\": {{reason}}.",
+    "unsupported_format": "Este tipo de archivo todavía no se puede abrir. Abre un archivo .xshot, PNG o JPG.",
+    "newer_format": "Este archivo se creó con una versión más reciente de XcreenShot. Actualiza XcreenShot para abrirlo.",
+    "invalid_object": "Objeto {{index}}: {{reason}}.",
+    "tool_later": "Esa herramienta llega en una entrega posterior.",
+    "save_failed": "No se pudo guardar \"{{name}}\": {{reason}}.",
+    "file_exists": "\"{{name}}\" ya existe.",
+    "recovery_not_found": "No hay ningún elemento recuperable \"{{id}}\".",
+    "copy_failed": "No se pudo copiar la imagen al portapapeles. Inténtalo de nuevo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -366,25 +462,6 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
-    "home": {
-      "title": "XcreenShot",
-      "subtitle": "Versión en desarrollo de M1: panel de captura, selección en pantalla y retardo. El editor y la biblioteca llegan después.",
-      "test_title": "Comando de prueba",
-      "test_help": "Ejecuta app.ping. El mismo comando responde desde este botón, desde el atajo global de prueba y desde el CLI.",
-      "run_ping": "Ejecutar comando de prueba",
-      "shortcut_hint": "Atajo global de prueba: {{shortcut}}",
-      "cli_hint": "Desde una terminal:",
-      "activity": "Comandos recientes",
-      "activity_empty": "Todavía nada.",
-      "result": "Resultado",
-      "open_preferences": "Abrir Preferencias",
-      "last_capture": "Última captura",
-      "no_capture": "Todavía no hay capturas. Prueba el botón de arriba o el CLI.",
-      "saved_in": "Guardada en",
-      "capture_help": "Abre el panel de captura desde el ícono. En la selección: arrastra una región, haz clic en una ventana o pulsa F; luego Capturar (Enter). Esc cancela. El editor llega después.",
-      "capture_universal": "Captura universal",
-      "open_panel": "Abrir panel de captura"
-    },
     "prefs": {
       "title": "Preferencias",
       "search": "Buscar ajustes",
@@ -526,6 +603,126 @@
       "label": "Captura en {{seconds}} s",
       "cancel": "Cancelar",
       "hint": "Esc cancela"
+    },
+    "editor": {
+      "toolbar": "Barra de herramientas del editor",
+      "tools": "Herramientas",
+      "capture": "Capturar",
+      "tool": {
+        "move": "Mover",
+        "arrow": "Flecha",
+        "text": "Texto",
+        "shape": "Forma",
+        "blur": "Desenfocar",
+        "crop": "Recortar"
+      },
+      "undo": "Deshacer",
+      "undo_named": "Deshacer {{label}}",
+      "redo": "Rehacer",
+      "redo_named": "Rehacer {{label}}",
+      "open": "Abrir…",
+      "save": "Guardar",
+      "save_all": "Guardar todos",
+      "save_as": "Guardar como…",
+      "share_area": "Compartir",
+      "copy_all": "Copiar todo",
+      "share": "Compartir",
+      "share_file": "Archivo…",
+      "share_clipboard": "Portapapeles",
+      "preferences": "Preferencias",
+      "format_xshot": "Documento de XcreenShot",
+      "open_filter": "Imágenes y documentos de XcreenShot",
+      "exported": "Imagen exportada",
+      "copied": "Imagen copiada",
+      "canvas_label": "Lienzo de {{name}}. Arrastra para dibujar con la herramienta activa.",
+      "side_panel": "Panel lateral",
+      "tab_styles": "Estilos",
+      "tab_properties": "Propiedades",
+      "styles_soon": "Los estilos guardados estarán disponibles próximamente.",
+      "props_selected_one": "Flecha seleccionada",
+      "props_selected_other": "{{count}} flechas seleccionadas",
+      "props_tool": "{{tool}}: próximos objetos",
+      "props_document": "Documento",
+      "no_document": "No hay ningún documento abierto.",
+      "prop": {
+        "color": "Color",
+        "hex": "Color hexadecimal",
+        "width": "Grosor",
+        "start_cap": "Extremo inicial",
+        "end_cap": "Extremo final",
+        "line_style": "Tipo de línea",
+        "opacity": "Opacidad",
+        "size": "Tamaño de la imagen",
+        "resolution": "Resolución",
+        "canvas_color": "Color del lienzo",
+        "file": "Archivo"
+      },
+      "cap": {
+        "none": "Ninguno",
+        "filled": "Punta rellena",
+        "open": "Punta abierta",
+        "thin": "Punta fina",
+        "concave": "Punta cóncava",
+        "circle": "Círculo",
+        "circleHollow": "Círculo vacío",
+        "square": "Cuadrado",
+        "diamond": "Rombo",
+        "bar": "Barra"
+      },
+      "line": {
+        "solid": "Sólida",
+        "dash": "Discontinua",
+        "dot": "Punteada",
+        "dashDot": "Guion y punto"
+      },
+      "dpi": "{{dpi}} PPP",
+      "transparent": "Transparente",
+      "pointer": "Posición del puntero en píxeles de la imagen",
+      "zoom": "Zoom",
+      "zoom_in": "Acercar",
+      "zoom_out": "Alejar",
+      "zoom_menu": "Niveles de zoom",
+      "zoom_actual": "Tamaño real",
+      "zoom_fit": "Ajustar a la ventana",
+      "zoom_original": "Tamaño original en pantalla",
+      "strip": "Documentos abiertos",
+      "strip_open": "{{name}}, abierto",
+      "unsaved": "Cambios sin guardar",
+      "close": "Cerrar",
+      "close_named": "Cerrar {{name}}",
+      "unsaved_title_one": "¿Guardar los cambios de «{{name}}»?",
+      "unsaved_title_many": "¿Guardar los cambios de estos documentos?",
+      "unsaved_close": "Si no los guardas, perderás los cambios.",
+      "unsaved_quit": "XcreenShot se va a cerrar. Si no guardas, perderás los cambios.",
+      "dont_save": "No guardar",
+      "cancel": "Cancelar",
+      "flatten_title": "¿Guardar con las anotaciones integradas en la imagen?",
+      "flatten_body": "«{{name}}» es un archivo PNG o JPG. Al guardarlo, sus anotaciones pasan a formar parte de la imagen y ya no se podrán editar en ese archivo. Para conservarlas editables, usa Guardar como… y elige Documento de XcreenShot.",
+      "dont_ask_again": "No volver a preguntar",
+      "recover_title": "Recuperar trabajo",
+      "recover_body": "XcreenShot se cerró de forma inesperada. Estos documentos tenían cambios sin guardar:",
+      "recover": "Recuperar",
+      "discard": "Descartar",
+      "later": "Más tarde",
+      "error_title": "Algo salió mal",
+      "empty_title": "Todavía no hay nada abierto",
+      "empty_help": "Haz una captura, abre una imagen o un documento .xshot, o suelta archivos aquí.",
+      "drop_hint": "Suelta para abrirlos como documentos",
+      "panel_width": "Anchura del panel lateral"
     }
+  },
+  "history": {
+    "annotate": "Anotar",
+    "draw_arrow": "Dibujar flecha",
+    "draw_objects": "Dibujar objetos",
+    "move_arrow": "Mover flecha",
+    "move_objects": "Mover objetos",
+    "change_arrow": "Cambiar flecha",
+    "change_objects": "Cambiar objetos",
+    "delete_arrow": "Eliminar flecha",
+    "delete_objects": "Eliminar objetos"
+  },
+  "editor": {
+    "edited": "{{name}} — Editado"
   }
 }
