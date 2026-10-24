@@ -4,6 +4,16 @@ XcreenShot es una app de captura de pantalla, anotación y grabación de video p
 
 Toda la definición del producto está en [`spec/`](spec/). Empieza por [`spec/SPEC.md`](spec/SPEC.md).
 
+## Continuidad entre sesiones
+
+- **Al empezar cada sesión, lee [`docs/ESTADO.md`](docs/ESTADO.md) antes de nada.** Es el traspaso de la sesión anterior: qué está hecho, qué falta, qué decisiones se tomaron y cuál es el siguiente paso. Sigue desde ahí sin preguntarle a Carlos "¿qué hacemos ahora?".
+- Mantenlo al día. Actualízalo al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Haz commit junto con el trabajo. Guarda en él solo el resumen: el detalle va en `spec/PARITY.md`, `spec/QUESTIONS.md` y `tests/manual/`.
+- Cuando Carlos pida pasar a una sesión nueva ("muévete a un nuevo chat", "genera el handoff"):
+  1. Actualiza `docs/ESTADO.md`.
+  2. Haz commit y push.
+  3. Dile que abra una sesión nueva en esta carpeta y escriba: **"Lee docs/ESTADO.md y continúa"**.
+- Las conversaciones anteriores se guardan en este equipo. Búscalas solo si falta un detalle que no está en el repositorio.
+
 ---
 
 ## Regla 1 — Clean room (no negociable)
@@ -69,6 +79,8 @@ crates/xs-cli       binario `xcreenshot` (CLI + MCP)
 app/src-tauri       shell, bandeja / barra de menú, atajos globales
 app/src             React
 docs/adr/           decisiones de arquitectura
+docs/ESTADO.md      estado del proyecto: traspaso entre sesiones
+scripts/dev/        ayudas para probar en Windows
 tests/manual/       pruebas manuales por ID
 AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 ```
