@@ -317,10 +317,14 @@ impl Profile {
     }
 }
 
-/// One assignable (command, scope) pair, shown as a row in Preferences > Shortcuts.
+/// One row of Preferences > Shortcuts (APP-018). `id` is stable and names the row; the
+/// shortcut runs `command` with `params` (JSON object text, empty for none), so one
+/// command can have several rows, e.g. "Window capture" and "Active window" (CAP-065).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Slot {
+    pub id: &'static str,
     pub command: &'static str,
+    pub params: &'static str,
     pub scope: ShortcutScope,
     /// Group in the Shortcuts table (APP-018).
     pub group: &'static str,
@@ -332,19 +336,56 @@ impl Slot {
             ShortcutScope::Global => "global",
             ShortcutScope::App => "app",
         };
-        format!("{}@{scope}", self.command)
+        format!("{}@{scope}", self.id)
+    }
+
+    /// Parameters the shortcut passes to its command.
+    pub fn params_value(&self) -> Value {
+        if self.params.is_empty() {
+            json!({})
+        } else {
+            serde_json::from_str(self.params).unwrap_or_else(|_| json!({}))
+        }
+    }
+
+    /// The row has its own title (`shortcuts.slot.<id>`) instead of its command's.
+    pub fn has_own_title(&self) -> bool {
+        self.id != self.command || !self.params.is_empty()
     }
 }
 
 /// Assignable slots that exist in this build. Owners add theirs as features land.
 pub fn slots() -> Vec<Slot> {
     use ShortcutScope::*;
-    let s = |command, scope| Slot {
+    let capture = |id, command, params| Slot {
+        id,
         command,
+        params,
+        scope: Global,
+        group: "capture",
+    };
+    let s = |command, scope| Slot {
+        id: command,
+        command,
+        params: "",
         scope,
         group: "app",
     };
     vec![
+        // Capture actions (CAP-065), in the spec's order.
+        capture("capture.capture", "capture.capture", ""),
+        capture("capture.universal", "capture.universal", ""),
+        capture("capture.image", "capture.image", ""),
+        capture("capture.window", "capture.window", r#"{"target":"interactive"}"#),
+        capture(
+            "capture.active_window",
+            "capture.window",
+            r#"{"target":"active"}"#,
+        ),
+        capture("capture.repeat_last", "capture.repeat_last", ""),
+        // No default in any profile (CAP-065); assignable in Preferences > Shortcuts.
+        capture("capture.repeat_last_area", "capture.repeat_last_area", ""),
+        capture("capture.panel", "capture.panel", ""),
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),
@@ -356,12 +397,30 @@ pub fn slots() -> Vec<Slot> {
     ]
 }
 
-/// Default shortcut of a slot in a profile (APP-021, CAP-065 for capture commands).
+/// Default shortcut of a slot in a profile (APP-021; capture actions: CAP-065, CAP-066).
 pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<Accelerator> {
     use Platform::*;
     use Profile::*;
     use ShortcutScope::*;
-    let s = match (slot.command, slot.scope, profile, platform) {
+    let s = match (slot.id, slot.scope, profile, platform) {
+        // CAP-065. Coexistence: Ctrl+Alt+Shift (Windows) or Control+Option+Shift (macOS)
+        // plus a letter; Capture on Windows is Ctrl+Shift+PrtScn (D-08). Compatibility
+        // (CAP-066): Capture = PrtScn on Windows; Control+Shift + letter on macOS for the
+        // actions that have one there. The rest keep their Coexistence value.
+        ("capture.capture", Global, Coexistence, Windows) => "Ctrl+Shift+PrintScreen",
+        ("capture.capture", Global, Compatibility, Windows) => "PrintScreen",
+        ("capture.capture", Global, Coexistence, Macos) => "Ctrl+Alt+Shift+KeyC",
+        ("capture.capture", Global, Compatibility, Macos) => "Ctrl+Shift+KeyC",
+        ("capture.universal", Global, Compatibility, Macos) => "Ctrl+Shift+KeyO",
+        ("capture.universal", Global, _, _) => "Ctrl+Alt+Shift+KeyO",
+        ("capture.image", Global, Compatibility, Macos) => "Ctrl+Shift+KeyS",
+        ("capture.image", Global, _, _) => "Ctrl+Alt+Shift+KeyS",
+        ("capture.window", Global, Compatibility, Macos) => "Ctrl+Shift+KeyW",
+        ("capture.window", Global, _, _) => "Ctrl+Alt+Shift+KeyW",
+        ("capture.active_window", Global, _, _) => "Ctrl+Alt+Shift+KeyA",
+        ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
+        ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
+        ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",
         // M0 test shortcut for the exit criterion. Provisional: Coexistence family
         // with a letter CAP-065 does not use (see spec/QUESTIONS.md).
         ("app.ping", Global, _, _) => "Ctrl+Alt+Shift+KeyK",
@@ -604,11 +663,11 @@ impl ShortcutStore {
         &self.slots
     }
 
-    pub fn find_slot(&self, command: &str, scope: ShortcutScope) -> Option<Slot> {
+    pub fn find_slot(&self, id: &str, scope: ShortcutScope) -> Option<Slot> {
         self.slots
             .iter()
             .copied()
-            .find(|s| s.command == command && s.scope == scope)
+            .find(|s| s.id == id && s.scope == scope)
     }
 
     pub fn is_custom(&self, slot: &Slot) -> bool {
@@ -678,10 +737,10 @@ impl ShortcutStore {
                 if !reassign {
                     return Err(CommandError::new(
                         ErrorCode::Busy,
-                        tr(lang, "shortcuts.in_use", &[("command", other.command)]),
+                        tr(lang, "shortcuts.in_use", &[("command", other.id)]),
                     )
                     .with_details(
-                        json!({ "conflict": "duplicate", "command": other.command, "slot": other.key() }),
+                        json!({ "conflict": "duplicate", "command": other.id, "slot": other.key() }),
                     ));
                 }
                 self.stored.write().unwrap().overrides.insert(other.key(), None);
@@ -728,7 +787,7 @@ impl ShortcutStore {
             };
             if before != after {
                 changes.push(json!({
-                    "slot": slot.key(), "command": slot.command,
+                    "slot": slot.key(), "command": slot.id,
                     "from": before.as_ref().map(|a| a.display(self.platform)),
                     "to": after.as_ref().map(|a| a.display(self.platform)),
                 }));
@@ -778,7 +837,7 @@ impl ShortcutStore {
         {
             if winner != *slot {
                 return Status::Duplicate {
-                    command: winner.command.to_string(),
+                    command: winner.id.to_string(),
                 };
             }
         }
@@ -983,7 +1042,8 @@ mod tests {
             Some(acc("Ctrl+Alt+Shift+J"))
         );
         let preview = store.preview_profile(Profile::Coexistence, Profile::Compatibility, false);
-        assert_eq!(preview["changes"].as_array().unwrap().len(), 1);
+        // Only the defaults that differ (Capture and Quit); the custom one stays.
+        assert_eq!(preview["changes"].as_array().unwrap().len(), 2);
         store.reset(None);
         assert_eq!(
             store.binding(&ping, Profile::Compatibility),

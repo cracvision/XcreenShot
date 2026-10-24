@@ -1,12 +1,19 @@
 //! Windows are created on demand and can close without ending the process (APP-001, APP-004).
 
+use std::sync::atomic::Ordering;
+
 use serde_json::json;
-use tauri::{AppHandle, Emitter, Manager, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Emitter, LogicalSize, Manager, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+};
 
 use crate::AppState;
 
 pub const MAIN: &str = "main";
 pub const PREFERENCES: &str = "preferences";
+pub const CAPTURE_PANEL: &str = "capture-panel";
+/// Logical width of the capture panel; its height follows the content.
+const PANEL_WIDTH: f64 = 400.0;
 
 pub fn theme(app: &AppHandle) -> Option<Theme> {
     match app
@@ -93,6 +100,94 @@ pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str
     Ok(())
 }
 
+/// Capture panel (CAP-001): a normal window with the native title bar that remembers
+/// its position. `None` toggles it (its shortcut, CAP-065): it hides when it is the
+/// window in front, and otherwise comes to the front.
+pub fn capture_panel(app: &AppHandle, show: Option<bool>) -> tauri::Result<bool> {
+    let existing = app.get_webview_window(CAPTURE_PANEL);
+    let show = show.unwrap_or_else(|| {
+        !existing.as_ref().is_some_and(|w| {
+            w.is_visible().unwrap_or(false)
+                && !w.is_minimized().unwrap_or(false)
+                && w.is_focused().unwrap_or(false)
+        })
+    });
+    match (existing, show) {
+        (Some(w), true) => focus(&w),
+        (Some(w), false) => w.hide()?,
+        (None, true) => {
+            let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.panel.title", &[]);
+            let w = WebviewWindowBuilder::new(app, CAPTURE_PANEL, WebviewUrl::App("index.html".into()))
+                .title(title)
+                .inner_size(PANEL_WIDTH, 460.0)
+                .resizable(false)
+                .maximizable(false)
+                .theme(theme(app))
+                .build()?;
+            focus(&w);
+        }
+        (None, false) => {}
+    }
+    Ok(show)
+}
+
+/// The panel fits its content (compact or expanded view, CAP-001).
+pub fn fit_capture_panel(app: &AppHandle, height: f64) {
+    if let Some(w) = app.get_webview_window(CAPTURE_PANEL) {
+        let _ = w.set_size(LogicalSize::new(PANEL_WIDTH, height.clamp(120.0, 900.0)));
+    }
+}
+
+/// While a capture runs the panel steps aside, and comes back afterwards in the state
+/// it had (CAP-001). Runs on the UI thread and waits, so it is gone before the screen
+/// is frozen.
+pub fn panel_capture_session(app: &AppHandle, active: bool) {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = app.clone();
+    let queued = app.run_on_main_thread(move || {
+        let state = handle.state::<AppState>();
+        if active {
+            let shown = handle
+                .get_webview_window(CAPTURE_PANEL)
+                .filter(|w| w.is_visible().unwrap_or(false) && !w.is_minimized().unwrap_or(false));
+            if let Some(w) = shown {
+                let _ = w.hide();
+                state.panel_stepped_aside.store(true, Ordering::SeqCst);
+            }
+        } else {
+            restore_capture_panel(&handle);
+        }
+        let _ = tx.send(());
+    });
+    if queued.is_ok() {
+        let _ = rx.recv_timeout(std::time::Duration::from_millis(500));
+    }
+}
+
+/// Brings back the panel if a capture had put it aside (UI thread).
+pub fn restore_capture_panel(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    if state.panel_stepped_aside.swap(false, Ordering::SeqCst) {
+        if let Some(w) = app.get_webview_window(CAPTURE_PANEL) {
+            let _ = w.show();
+        }
+    }
+}
+
+/// "Hide XcreenShot when capturing" (CAP-023): while a capture is taken the OS leaves
+/// our windows out of it (Windows display affinity, macOS sharing type), without
+/// hiding them on screen. Only during the capture, so screen sharing in meeting apps
+/// still shows XcreenShot.
+pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
+    for w in app.webview_windows().values() {
+        // Selection windows and the countdown are always excluded.
+        if w.label().starts_with(crate::overlay::LABEL_PREFIX) || w.label() == crate::countdown::LABEL {
+            continue;
+        }
+        let _ = w.set_content_protected(exclude);
+    }
+}
+
 pub fn apply_theme(app: &AppHandle) {
     let t = theme(app);
     for w in app.webview_windows().values() {
@@ -108,6 +203,9 @@ pub fn retitle(app: &AppHandle) {
     }
     if let Some(w) = app.get_webview_window(PREFERENCES) {
         let _ = w.set_title(&xs_core::i18n::tr(lang, "ui.prefs.title", &[]));
+    }
+    if let Some(w) = app.get_webview_window(CAPTURE_PANEL) {
+        let _ = w.set_title(&xs_core::i18n::tr(lang, "ui.panel.title", &[]));
     }
 }
 

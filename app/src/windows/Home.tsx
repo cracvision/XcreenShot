@@ -2,6 +2,7 @@
 // exit criterion: the same test command answers the UI, the global shortcut and the CLI.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "../components/LanguageToggle";
 import logo from "../../src-tauri/icons/128x128.png";
 import { display } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
@@ -11,7 +12,7 @@ import { useApp } from "../store";
 export function Home() {
   const { t } = useTranslation();
   useAppShortcuts();
-  const { ping, shortcuts, activity, layout } = useApp();
+  const { ping, shortcuts, activity, layout, lastCapture } = useApp();
   const [result, setResult] = useState<string | null>(null);
 
   const pingRow = shortcuts?.rows.find((r) => r.command === "app.ping" && r.scope === "global");
@@ -36,6 +37,7 @@ export function Home() {
           <h1>{t("ui.home.title")}</h1>
           <div className="muted">{t("ui.home.subtitle")}</div>
         </div>
+        <LanguageToggle />
         <button className="btn" onClick={() => void run("settings.open")}>
           {t("ui.home.open_preferences")}
         </button>
@@ -67,6 +69,50 @@ export function Home() {
         )}
       </section>
 
+      <section className="card" aria-labelledby="capture-title">
+        <h2 id="capture-title">{t("ui.home.last_capture")}</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          {t("ui.home.capture_help")}
+        </p>
+        <div className="row">
+          <button
+            className="btn primary"
+            onClick={() => void run("capture.universal").catch(() => undefined)}
+          >
+            {t("ui.home.capture_universal")}
+          </button>
+          <button
+            className="btn"
+            onClick={() => void run("capture.panel", { show: true }).catch(() => undefined)}
+          >
+            {t("ui.home.open_panel")}
+          </button>
+          <code>xcreenshot capture fullscreen</code>
+        </div>
+        {lastCapture ? (
+          <figure className="capture-preview">
+            {lastCapture.thumbnail && (
+              <img
+                src={lastCapture.thumbnail}
+                alt={`${t("ui.home.last_capture")} ${lastCapture.result.width}×${lastCapture.result.height}`}
+              />
+            )}
+            <figcaption className="muted">
+              {lastCapture.result.width}×{lastCapture.result.height} px
+              {lastCapture.result.metadata?.app?.name
+                ? ` · ${lastCapture.result.metadata.app.name}`
+                : ""}
+              <br />
+              {t("ui.home.saved_in")} <code>{lastCapture.result.path}</code>
+            </figcaption>
+          </figure>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            {t("ui.home.no_capture")}
+          </p>
+        )}
+      </section>
+
       <section className="card" aria-labelledby="activity-title">
         <h2 id="activity-title">{t("ui.home.activity")}</h2>
         <ul className="activity" aria-live="polite">
@@ -83,7 +129,7 @@ export function Home() {
       </section>
       {ping && (
         <div className="muted" style={{ fontSize: 12 }}>
-          XcreenShot {ping.version} · {ping.platform} · {ping.arch}
+          XcreenShot {ping.version} ({ping.build}) · {ping.platform} · {ping.arch}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 // In-app shortcuts (APP-017 "de la app" scope) are data from shortcuts.list: a key
-// press that matches an app-scope row runs that row's command.
+// press that matches an app-scope row runs that row's command with its parameters.
 import { useEffect } from "react";
 import { useApp } from "../store";
 import { fromEvent } from "./accelerator";
@@ -15,7 +15,7 @@ export function useAppShortcuts(): void {
       const row = shortcuts.rows.find((r) => r.scope === "app" && r.shortcut === accel);
       if (!row) return;
       e.preventDefault();
-      void run(row.command, {}, "shortcut");
+      void run(row.runs, row.params, "shortcut");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

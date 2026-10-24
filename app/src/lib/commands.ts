@@ -24,6 +24,7 @@ export async function run<T = unknown>(
 
 export interface Ping {
   version: string;
+  build: string;
   platform: "windows" | "macos";
   arch: string;
   state: string;
@@ -54,7 +55,11 @@ export interface ShortcutStatus {
 }
 
 export interface ShortcutRow {
+  /** Row id (a command id, or its own id when it runs a command with fixed parameters). */
   command: string;
+  /** The command it runs, and with which parameters (CAP-065). */
+  runs: string;
+  params: Record<string, unknown>;
   scope: "global" | "app";
   group: string;
   title: string;
@@ -89,4 +94,25 @@ export interface CommandEvent {
   result: unknown;
   error: CommandError | null;
   at: number;
+}
+
+/** Capture panel settings (CAP-001, CAP-002, CAP-010), as `capture.settings` returns them. */
+export interface PanelSettings {
+  tab: "universal" | "image";
+  expanded: boolean;
+  universal: {
+    selection: "region" | "window" | "fullscreen";
+    copy: boolean;
+    cursor: boolean;
+    open: "editor" | "none";
+    delay5: boolean;
+  };
+  image: {
+    selection: "region" | "window" | "fullscreen";
+    copy: boolean;
+    cursor: boolean;
+    open: "editor" | "none";
+    timing: "none" | "delay";
+    delay: number;
+  };
 }

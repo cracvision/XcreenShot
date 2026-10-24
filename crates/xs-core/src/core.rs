@@ -2,7 +2,7 @@
 //! The shell creates one [`Core`], installs its [`Host`], and routes every action
 //! (UI, shortcuts, tray, CLI) through [`Core::call`].
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak};
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,9 @@ use crate::shortcuts::{Accelerator, Profile, ShortcutScope, ShortcutStore, Slot,
 struct AppState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     verbose_since: Option<DateTime<Utc>>,
+    /// Small UI memory that is not a preference (e.g. the last magnifier zoom, CAP-015).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    memory: std::collections::BTreeMap<String, Value>,
 }
 
 pub struct Core {
@@ -42,6 +45,12 @@ const VERBOSE_FOR_HOURS: i64 = 24;
 
 impl Core {
     pub fn new(paths: Paths, log: Option<LogControl>) -> Arc<Core> {
+        Core::with_extensions(paths, log, Vec::new())
+    }
+
+    /// Like [`Core::new`], plus handlers contributed by other crates (capture, library…)
+    /// for commands declared in the catalog. Commands are still declared once, here.
+    pub fn with_extensions(paths: Paths, log: Option<LogControl>, extensions: Vec<Extension>) -> Arc<Core> {
         let state = std::fs::read(paths.state_file())
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
@@ -56,6 +65,7 @@ impl Core {
             registry: RwLock::new(None),
         });
         let registry = build_registry(&core);
+        let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core.expire_verbose();
         if let Some(log) = &core.log {
@@ -66,6 +76,11 @@ impl Core {
 
     /// In-memory core for tests.
     pub fn for_tests(platform: Platform) -> Arc<Core> {
+        Core::for_tests_with(platform, Vec::new())
+    }
+
+    /// In-memory core for tests, with extensions.
+    pub fn for_tests_with(platform: Platform, extensions: Vec<Extension>) -> Arc<Core> {
         let core = Arc::new(Core {
             settings: SettingsStore::in_memory(),
             shortcuts: ShortcutStore::in_memory(platform),
@@ -76,6 +91,7 @@ impl Core {
             registry: RwLock::new(None),
         });
         let registry = build_registry(&core);
+        let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core
     }
@@ -90,6 +106,16 @@ impl Core {
 
     pub fn registry(&self) -> Arc<Registry> {
         self.registry.read().unwrap().clone().expect("registry built")
+    }
+
+    /// Remembers a small UI value across sessions (not a preference).
+    pub fn remember(&self, key: &str, value: Value) {
+        self.state.write().unwrap().memory.insert(key.to_string(), value);
+        self.save_state();
+    }
+
+    pub fn recall(&self, key: &str) -> Option<Value> {
+        self.state.read().unwrap().memory.get(key).cloned()
     }
 
     pub fn lang(&self) -> Lang {
@@ -163,11 +189,26 @@ impl Core {
         self.host().settings_changed(key, value);
     }
 
+    /// Name of a shortcut row: its own when it runs a command with fixed parameters
+    /// (CAP-065), otherwise the command's title.
+    pub fn slot_title(&self, slot: &crate::shortcuts::Slot, lang: Lang) -> String {
+        if slot.has_own_title() {
+            return tr(
+                lang,
+                &format!("shortcuts.slot.{}", slot.id.replace('.', "_")),
+                &[],
+            );
+        }
+        self.registry()
+            .spec(slot.command)
+            .map(|s| s.title(lang))
+            .unwrap_or_else(|| slot.command.to_string())
+    }
+
     /// Rows for Preferences > Shortcuts and `shortcuts.list` (APP-018).
     pub fn shortcut_rows(&self, lang: Lang) -> Value {
         let profile = self.profile();
         let platform = self.shortcuts.platform();
-        let registry = self.registry();
         let rows: Vec<Value> = self
             .shortcuts
             .slots()
@@ -176,12 +217,12 @@ impl Core {
                 let binding = self.shortcuts.binding(slot, profile);
                 let default = crate::shortcuts::default_for(slot, profile, platform);
                 let status = self.shortcuts.status(slot, profile);
-                let title = registry
-                    .spec(slot.command)
-                    .map(|s| s.title(lang))
-                    .unwrap_or_else(|| slot.command.to_string());
+                let title = self.slot_title(slot, lang);
                 json!({
-                    "command": slot.command,
+                    // The row id; the command it runs is `runs`.
+                    "command": slot.id,
+                    "runs": slot.command,
+                    "params": slot.params_value(),
                     "scope": slot.scope,
                     "group": slot.group,
                     "title": title,
@@ -215,7 +256,7 @@ impl Core {
             .iter()
             .map(|s| {
                 json!({
-                    "command": s.command,
+                    "command": s.id,
                     "shortcut": self.shortcuts.binding(s, profile).map(|a| a.to_string()),
                     "status": self.shortcuts.status(s, profile),
                 })
@@ -225,7 +266,7 @@ impl Core {
         let monitors = host.monitors();
         let log_tail = logging::tail(&self.paths.logs_dir(), 200);
         let mut text = String::new();
-        text.push_str(&format!("XcreenShot {}\n", platform::VERSION));
+        text.push_str(&format!("XcreenShot {}\n", platform::VERSION_FULL));
         text.push_str(&format!(
             "Build: {} · Channel: dev · Arch: {}\n",
             if cfg!(debug_assertions) {
@@ -348,6 +389,17 @@ fn resolve_slot(core: &Core, command: &str, scope: Option<&str>, lang: Lang) -> 
     })
 }
 
+/// Adds handlers from another crate. Receives a weak handle so handlers do not keep
+/// the core alive.
+pub type Extension = Box<dyn FnOnce(&mut Registry, Weak<Core>) + Send>;
+
+fn apply_extensions(mut registry: Registry, core: &Arc<Core>, extensions: Vec<Extension>) -> Registry {
+    for extension in extensions {
+        extension(&mut registry, Arc::downgrade(core));
+    }
+    registry
+}
+
 fn build_registry(core: &Arc<Core>) -> Registry {
     let mut reg = Registry::new(catalog::specs());
     let weak = Arc::downgrade(core);
@@ -368,6 +420,7 @@ fn build_registry(core: &Arc<Core>) -> Registry {
 
     on!("app.ping", |core, ctx, _p| Ok(json!({
         "version": platform::VERSION,
+        "build": platform::BUILD,
         "platform": Platform::current(),
         "arch": platform::arch(),
         "state": "idle",
@@ -494,7 +547,7 @@ fn build_registry(core: &Arc<Core>) -> Registry {
             .as_array()
             .and_then(|rows| {
                 rows.iter()
-                    .find(|r| r["command"] == slot.command && r["scope"] == json!(slot.scope))
+                    .find(|r| r["command"] == slot.id && r["scope"] == json!(slot.scope))
                     .cloned()
             })
             .unwrap_or_default();
@@ -611,7 +664,9 @@ mod tests {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
         for spec in reg.specs() {
-            assert!(reg.has_handler(spec.id), "{} has no handler", spec.id);
+            if !catalog::EXTERNAL_AREAS.contains(&spec.area()) {
+                assert!(reg.has_handler(spec.id), "{} has no handler", spec.id);
+            }
             assert_eq!(spec.params["type"], "object", "{}", spec.id);
             assert!(spec.result.is_object(), "{}", spec.id);
             assert!(spec.id.contains('.'), "{}", spec.id);
@@ -638,6 +693,28 @@ mod tests {
         }
         for label in menus::labels_in(&all) {
             assert_ne!(tr(Lang::Es, label, &[]), label, "missing label {label}");
+        }
+    }
+
+    /// CAP-065: rows that run a command with fixed parameters have their own name.
+    #[test]
+    fn shortcut_rows_with_their_own_name_are_translated() {
+        for platform in [Platform::Windows, Platform::Macos] {
+            let core = Core::for_tests(platform);
+            for slot in core.shortcuts.slots() {
+                for lang in [Lang::En, Lang::Es] {
+                    let title = core.slot_title(slot, lang);
+                    assert!(!title.starts_with("shortcuts.slot."), "{} has no name", slot.id);
+                }
+            }
+            let es = core.slot_title(
+                &core
+                    .shortcuts
+                    .find_slot("capture.active_window", ShortcutScope::Global)
+                    .unwrap(),
+                Lang::Es,
+            );
+            assert_eq!(es, "Ventana activa");
         }
     }
 
@@ -761,7 +838,14 @@ mod tests {
             json!({"profile": "compatibility", "dryRun": true}),
         )
         .unwrap();
-        assert_eq!(preview["changes"][0]["command"], "app.quit");
+        // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X.
+        let changed: Vec<&str> = preview["changes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|c| c["command"].as_str())
+            .collect();
+        assert_eq!(changed, ["capture.capture", "app.quit"]);
         assert_eq!(core.profile(), Profile::Coexistence);
         call(
             &core,

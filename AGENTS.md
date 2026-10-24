@@ -79,12 +79,47 @@ xcreenshot app ping --json
 | `shortcuts.retry` | `xcreenshot shortcuts retry` | Retries global shortcuts that failed to register. |
 | `shortcuts.open_system_settings` | `xcreenshot shortcuts open-system-settings` | Opens the OS keyboard shortcut settings. |
 | `shortcuts.recording` | (UI only) | Suspends global shortcuts while the user records one. |
+| `capture.monitors` | `xcreenshot capture monitors --json` | Monitors with position and size in physical pixels, scale, name and which is primary. |
+| `capture.fullscreen` | `xcreenshot capture fullscreen [--monitor pointer\|primary\|all\|<name>]` | Captures a monitor (under the pointer by default), the primary one, or the whole desktop (gaps between monitors are transparent). |
+| `capture.universal` | `xcreenshot capture universal` | Interactive, with the Universal tab settings: freezes the screen and shows the crosshair; the user drags a region, clicks a window or presses F, then Capture (`Enter`). Esc cancels (exit 4, `cancelled`). |
+| `capture.region` | `xcreenshot capture region --rect '{"x":0,"y":0,"width":800,"height":600}'` | Captures a rectangle in physical desktop pixels. Without `--rect` the user selects on screen (interactive; Esc gives exit 4). `--target interactive` on `capture.window` lets the user click a window. |
+| `capture.window` | `xcreenshot capture window [--target active\|point\|title] [--x N --y N] [--title text]` | Captures a whole window, even if covered: the active one, the one at a point, or the first whose title or process matches. |
+| `capture.capture` | `xcreenshot capture capture` | Captures with the settings of the capture panel's active tab (the "Capture" button and shortcut). May be interactive. |
+| `capture.image` | `xcreenshot capture image` | Captures with the Image tab settings, whatever tab is active. May be interactive. |
+| `capture.repeat_last` | `xcreenshot capture repeat-last` | Runs the last capture again with the same mode and settings. With none yet it opens the capture panel and returns `status: none`. |
+| `capture.repeat_last_area` | `xcreenshot capture repeat-last-area` | Captures at once, without the crosshair, the rectangle of the last region or window capture (a window still open is taken where it is now). With none yet it opens the capture panel and returns `status: none`. |
+| `capture.panel` | `xcreenshot capture panel [--show true\|false]` | Shows or hides the capture panel; without `--show` it toggles. Returns `visible`. |
+| `capture.settings` | `xcreenshot capture settings --json` | The capture panel settings: active `tab`, `expanded`, and the `universal` and `image` tabs. |
+| `capture.configure` | `xcreenshot capture configure --params '{"image":{"selection":"window"}}'` | Changes some panel settings and keeps the rest. Invalid values fail with `invalid_params` and change nothing. |
+| `capture.reset_settings` | `xcreenshot capture reset-settings --yes` | Returns the Universal and Image tabs to their defaults (presets, shortcuts and preferences stay). |
 
 Shortcut combinations are written like `Ctrl+Alt+Shift+K`, `Cmd+Shift+5`, `PrtScn`.
 They are stored by physical key (`Ctrl+Alt+Shift+KeyK`), so they survive keyboard
 layout changes.
 
+## Capture options
+
+The commands that take a capture (`fullscreen`, `region`, `window`, `universal`, `image`, `capture`) accept:
+
+| Option | Default from the CLI or MCP | Effect |
+|---|---|---|
+| `--copy true\|false` | `true` | Copy the image to the clipboard (PNG and bitmap). |
+| `--open editor\|none` | `none` | Show the capture in XcreenShot. Agents never open windows unless they ask. |
+| `--out <path>` | — | Also write a PNG there (folders are created). |
+| `--delay <s>` | `0` | Wait before capturing (0–60). The app shows a countdown; Esc or its Cancel button ends the capture with `cancelled`. |
+| `--cursor true` | `false` | Include the pointer. Not yet: it arrives with the editor and is reported in `warnings`. |
+
+`universal`, `image` and `capture` start from the capture panel settings (read them with `capture.settings`; Open in is usually `editor`) and these options override them, so pass `--open none` to keep windows closed. `fullscreen`, `region` and `window` always use the defaults above when called from the CLI or MCP.
+
+Every capture is also kept in the library folder (`Documents\XcreenShot` on Windows, `~/Pictures/XcreenShot` on macOS). The result has `status` (`completed`), `path`, `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings`. A second capture while one is running fails at once with `busy` (exit 5).
+
 ## Recipes
+
+Capture the active window to a file, without touching the clipboard:
+
+```sh
+xcreenshot capture window --target active --copy false --out C:/temp/window.png --json
+```
 
 Check that the app answers and automation is on:
 

@@ -41,6 +41,15 @@ export function fromEvent(e: KeyLike): string | null {
   return parts.join("+");
 }
 
+/**
+ * What a recorder takes when a key is released: the combination seen while pressing,
+ * or, for PrtScn, the release itself (Windows only reports PrtScn on key-up).
+ */
+export function releasedCombination(candidate: string | null, e: KeyLike): string | null {
+  if (candidate) return candidate;
+  return e.code === "PrintScreen" ? fromEvent(e) : null;
+}
+
 const KEY_LABELS: Record<string, string> = {
   PrintScreen: "PrtScn",
   Comma: ",",

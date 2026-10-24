@@ -54,6 +54,10 @@ impl B {
         self.0.scopes = s;
         self
     }
+    fn interactive(mut self) -> B {
+        self.0.interactive = true;
+        self
+    }
     fn mutates(mut self) -> B {
         self.0.mutates = true;
         self
@@ -73,6 +77,40 @@ impl B {
     }
 }
 
+/// Command areas whose handlers another crate registers through `Core::with_extensions`.
+pub const EXTERNAL_AREAS: &[&str] = &["capture"];
+
+/// Options shared by every capture command (CAP-008), plus the mode's own.
+fn capture_params(own: Value) -> Value {
+    let mut props = json!({
+        "cursor": {"type": "boolean", "description": "Include the pointer (CAP-047)"},
+        "copy": {"type": "boolean", "description": "Copy to the clipboard (CAP-046)"},
+        "open": {"type": "string", "enum": ["editor", "none"], "description": "Open in (CAP-045)"},
+        "out": {"type": "string", "description": "Also write a PNG to this path"},
+        "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"}
+    });
+    if let (Some(p), Some(o)) = (props.as_object_mut(), own.as_object()) {
+        p.extend(o.clone());
+    }
+    params(props, &[])
+}
+
+fn capture_result() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "enum": ["completed", "cancelled", "failed", "busy", "none"], "description": "none: nothing to repeat yet (CAP-007)"},
+            "panel": {"type": "boolean", "description": "The capture panel was opened instead"},
+            "path": {"type": "string"},
+            "files": {"type": "array", "items": {"type": "string"}},
+            "width": {"type": "integer"},
+            "height": {"type": "integer"},
+            "metadata": {"type": "object"}
+        },
+        "required": ["status"]
+    })
+}
+
 const PERMISSIONS: [&str; 4] = ["screen_recording", "accessibility", "camera", "microphone"];
 
 pub fn specs() -> Vec<CommandSpec> {
@@ -86,6 +124,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 "type": "object",
                 "properties": {
                     "version": {"type": "string"},
+                    "build": {"type": "string"},
                     "platform": {"type": "string", "enum": ["windows", "macos"]},
                     "arch": {"type": "string"},
                     "state": {"type": "string", "enum": ["idle", "capturing", "recording", "busy"]},
@@ -171,6 +210,99 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("shortcuts.recording", &["APP-018"])
             .scopes(UI)
             .params(params(json!({"active": {"type": "boolean"}}), &["active"])),
+        // Capture (CAP-008). Handlers live in xs-capture.
+        B::new("capture.monitors", &["CAP-021", "CAP-008"]).result(json!({"type": "array", "items": {"type": "object"}})),
+        B::new("capture.fullscreen", &["CAP-028", "CAP-021", "CAP-008"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"}
+            })))
+            .result(capture_result()),
+        B::new("capture.capture", &["CAP-006", "CAP-001"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.image", &["CAP-065", "CAP-002"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.repeat_last", &["CAP-007"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .result(capture_result()),
+        B::new("capture.repeat_last_area", &["CAP-007"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.panel", &["CAP-001", "CAP-065"])
+            .scopes(UI_SHORTCUT_CLI)
+            .assignable()
+            .params(params(json!({"show": {"type": "boolean"}}), &[]))
+            .result(json!({"type": "object", "properties": {"visible": {"type": "boolean"}}})),
+        B::new("capture.settings", &["CAP-001", "CAP-002", "CAP-010"]).result(json!({"type": "object"})),
+        B::new("capture.configure", &["CAP-001", "CAP-002", "CAP-010"])
+            .mutates()
+            .params(params(
+                json!({
+                    "tab": {"type": "string", "enum": ["universal", "image"]},
+                    "expanded": {"type": "boolean"},
+                    "universal": {"type": "object"},
+                    "image": {"type": "object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("capture.reset_settings", &["CAP-003"])
+            .scopes(UI_CLI)
+            .destructive()
+            .result(json!({"type": "object"})),
+        B::new("capture.universal", &["CAP-009", "CAP-011", "CAP-012", "CAP-013"])
+            .scopes(ALL)
+            .interactive()
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.region", &["CAP-025", "CAP-008"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "rect": {
+                    "type": "object",
+                    "description": "Physical pixels on the virtual desktop. Omit for an interactive selection.",
+                    "properties": {
+                        "x": {"type": "integer"}, "y": {"type": "integer"},
+                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}
+                    },
+                    "required": ["x", "y", "width", "height"],
+                    "additionalProperties": false
+                }
+            })))
+            .result(capture_result()),
+        B::new("capture.window", &["CAP-027", "CAP-008"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "target": {"type": "string", "enum": ["active", "interactive", "point", "title"], "default": "active"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "title": {"type": "string", "description": "Part of the window title or process name (first match)"}
+            })))
+            .result(capture_result()),
     ]
     .into_iter()
     .map(|b| b.0)

@@ -6,34 +6,34 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| CAP-001 | Panel de captura | M1 | Must | — |
-| CAP-002 | Pestaña Imagen y lista Selección | M1 | Must | — |
-| CAP-003 | Restablecer ajustes de captura | M1 | Should | — |
+| CAP-001 | Panel de captura | M1 | Must | En curso |
+| CAP-002 | Pestaña Imagen y lista Selección | M1 | Must | En curso |
+| CAP-003 | Restablecer ajustes de captura | M1 | Should | En curso |
 | CAP-004 | Lanzador de borde | M3 | Should | — |
-| CAP-005 | Menú de captura del ícono de bandeja o barra de menús | M1 | Must | — |
-| CAP-006 | Atajo global Capturar | M1 | Must | — |
-| CAP-007 | Repetir última captura | M1 | Should | — |
-| CAP-008 | Comandos de captura (CLI y MCP) | M1 | Should | — |
-| CAP-009 | Flujo de captura universal | M1 | Must | — |
-| CAP-010 | Opciones de la pestaña Universal | M1 | Must | — |
-| CAP-011 | Ajustar la selección y barra de captura | M1 | Must | — |
-| CAP-012 | Rehacer la selección y cambiar de tipo | M1 | Should | — |
-| CAP-013 | Pantalla congelada y cruceta | M1 | Must | — |
+| CAP-005 | Menú de captura del ícono de bandeja o barra de menús | M1 | Must | En curso |
+| CAP-006 | Atajo global Capturar | M1 | Must | En curso |
+| CAP-007 | Repetir última captura | M1 | Should | En curso |
+| CAP-008 | Comandos de captura (CLI y MCP) | M1 | Should | En curso |
+| CAP-009 | Flujo de captura universal | M1 | Must | En curso |
+| CAP-010 | Opciones de la pestaña Universal | M1 | Must | En curso |
+| CAP-011 | Ajustar la selección y barra de captura | M1 | Must | En curso |
+| CAP-012 | Rehacer la selección y cambiar de tipo | M1 | Should | En curso |
+| CAP-013 | Pantalla congelada y cruceta | M1 | Must | En curso |
 | CAP-014 | Cruceta simplificada | M1 | Could | — |
-| CAP-015 | Lupa | M1 | Must | — |
-| CAP-016 | Detección automática de ventanas y subáreas | M1 | Must | — |
-| CAP-017 | Teclado durante la selección | M1 | Must | — |
-| CAP-018 | Bloqueo de proporción | M1 | Should | — |
+| CAP-015 | Lupa | M1 | Must | En curso |
+| CAP-016 | Detección automática de ventanas y subáreas | M1 | Must | En curso |
+| CAP-017 | Teclado durante la selección | M1 | Must | En curso |
+| CAP-018 | Bloqueo de proporción | M1 | Should | En curso |
 | CAP-019 | Guías de tamaño estándar | M1 | Could | — |
 | CAP-020 | Ayuda en pantalla durante la captura | M1 | Could | — |
-| CAP-021 | Varios monitores y DPI mixto | M1 | Must | — |
+| CAP-021 | Varios monitores y DPI mixto | M1 | Must | En curso |
 | CAP-022 | Pantallas HDR | M3 | Should | — |
-| CAP-023 | Ocultar XcreenShot al capturar | M1 | Must | — |
+| CAP-023 | Ocultar XcreenShot al capturar | M1 | Must | En curso |
 | CAP-024 | Permisos que faltan al capturar | M1 | Must | — |
-| CAP-025 | Región | M1 | Must | — |
+| CAP-025 | Región | M1 | Must | En curso |
 | CAP-026 | Región fija y posición | M3 | Should | — |
-| CAP-027 | Ventana | M1 | Must | — |
-| CAP-028 | Pantalla completa | M1 | Must | — |
+| CAP-027 | Ventana | M1 | Must | En curso |
+| CAP-028 | Pantalla completa | M1 | Must | En curso |
 | CAP-029 | Ventanas como objetos | M3 | Could | — |
 | CAP-030 | Selector de ventanas | M3 | Should | — |
 | CAP-031 | Menú | M3 | Should | — |
@@ -50,18 +50,18 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | CAP-042 | Capturas del sistema | M3 | Should | — |
 | CAP-043 | AirDrop y carpeta de recepción | M3 | Could | — |
 | CAP-044 | iPhone o iPad | M3 | Could | — |
-| CAP-045 | Abrir en | M1 | Must | — |
-| CAP-046 | Copiar al portapapeles | M1 | Must | — |
+| CAP-045 | Abrir en | M1 | Must | En curso |
+| CAP-046 | Copiar al portapapeles | M1 | Must | En curso |
 | CAP-047 | Capturar cursor | M1 | Must | — |
-| CAP-048 | Retardo | M1 | Must | — |
+| CAP-048 | Retardo | M1 | Must | En curso |
 | CAP-049 | Intervalo | M3 | Should | — |
 | CAP-050 | Programada | M3 | Should | — |
 | CAP-051 | Efectos al capturar | M3 | Should | — |
 | CAP-052 | Compartir al capturar | M3 | Should | — |
 | CAP-053 | Nombre, formato y carpeta del destino Archivo | M3 | Should | — |
-| CAP-054 | Ruta de la captura | M1 | Must | — |
+| CAP-054 | Ruta de la captura | M1 | Must | En curso |
 | CAP-055 | Confirmación de captura | M1 | Should | — |
-| CAP-056 | Metadatos de captura | M1 | Must | — |
+| CAP-056 | Metadatos de captura | M1 | Must | En curso |
 | CAP-057 | Anotación rápida de imagen | M3 | Should | — |
 | CAP-058 | Lista de presets | M3 | Must | — |
 | CAP-059 | Crear un preset | M3 | Must | — |
@@ -70,7 +70,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | CAP-062 | Atajo por preset | M3 | Must | — |
 | CAP-063 | Exportar e importar `.xpreset` | M3 | Should | — |
 | CAP-064 | Presets incorporados | M3 | Should | — |
-| CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | — |
+| CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | En curso |
 | CAP-066 | Perfil de compatibilidad | M1 | Should | — |
 
 ## 02-editor.md
@@ -388,7 +388,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-045 | Contraste, escalado y movimiento | M1 | Should | — |
 | APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | — |
-| APP-048 | Del atajo a la cruceta | M1 | Must | — |
+| APP-048 | Del atajo a la cruceta | M1 | Must | En curso |
 | APP-049 | De la captura al editor | M1 | Must | — |
 | APP-050 | Editor con imágenes muy grandes | M2 | Must | — |
 | APP-051 | Consumo en reposo y arranque | M1 | Should | — |

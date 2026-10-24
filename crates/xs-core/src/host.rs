@@ -71,6 +71,14 @@ pub struct PermissionStatus {
     pub can_request: bool,
 }
 
+/// Frozen image of one monitor, RGBA, row by row (CAP-013).
+#[derive(Clone)]
+pub struct Frame {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: std::sync::Arc<Vec<u8>>,
+}
+
 fn unsupported() -> CommandError {
     CommandError::new(ErrorCode::NotSupportedOnPlatform, "not available in this context")
 }
@@ -118,6 +126,34 @@ pub trait Host: Send + Sync {
     }
     /// Called after every command (UI events, notifications for shortcut-triggered tests).
     fn command_finished(&self, ctx: &Context, spec: &CommandSpec, result: &CommandResult) {}
+    /// System notification (APP-016). Categories: `captures`, `share`, `problems`,
+    /// `updates`, `automation`.
+    fn notify(&self, category: &str, title: &str, body: &str) {}
+    /// A capture finished; `open_editor` asks to show it (CAP-045, CAP-054).
+    fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {}
+    /// Hide XcreenShot windows before a capture, and show them again after (CAP-023).
+    fn hide_for_capture(&self, hide: bool) {}
+    /// A capture starts (`true`) or ends: the capture panel steps aside meanwhile and
+    /// comes back afterwards (CAP-001).
+    fn capture_session(&self, active: bool) {}
+    /// Shows the delay countdown and blocks until it ends (CAP-048). Returns `false` if
+    /// the user cancelled it. Without a UI it simply waits.
+    fn countdown(&self, seconds: f64) -> bool {
+        std::thread::sleep(std::time::Duration::from_secs_f64(seconds.max(0.0)));
+        true
+    }
+    /// Shows, hides or (with `None`) toggles the capture panel (CAP-001, CAP-065).
+    /// Returns whether it is visible afterwards.
+    fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
+        Err(unsupported())
+    }
+    /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
+    /// the order of `request.monitors`) and blocks until the user finishes or cancels
+    /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,
+    /// `{"kind": "window", "id": …}` or `{"kind": "cancelled"}`.
+    fn select_on_screen(&self, request: Value, frames: Vec<Frame>) -> Result<Value, CommandError> {
+        Err(unsupported())
+    }
 }
 
 pub struct NullHost;

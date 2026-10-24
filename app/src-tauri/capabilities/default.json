@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "XcreenShot windows only call the command registry and listen to app events.",
-  "windows": ["main", "preferences"],
+  "windows": ["main", "preferences", "capture-panel", "countdown", "overlay-*"],
   "permissions": ["core:default"]
 }

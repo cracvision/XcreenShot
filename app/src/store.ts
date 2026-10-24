@@ -14,6 +14,11 @@ import { loadLayoutMap, type LayoutMap } from "./lib/accelerator";
 import { resolveLanguage, setLanguage } from "./i18n";
 import { applyTheme } from "./theme";
 
+export interface LastCapture {
+  result: { path: string; width: number; height: number; metadata?: { app?: { name?: string } } };
+  thumbnail: string | null;
+}
+
 interface State {
   ready: boolean;
   ping: Ping | null;
@@ -23,6 +28,7 @@ interface State {
   permissions: PermissionStatus[];
   activity: (CommandEvent & { seq: number })[];
   layout: LayoutMap | undefined;
+  lastCapture: LastCapture | null;
   /** Disables in-app shortcut handling while a shortcut is being recorded. */
   recording: boolean;
   setRecording: (recording: boolean) => void;
@@ -47,6 +53,7 @@ export const useApp = create<State>((set, get) => ({
   permissions: [],
   activity: [],
   layout: undefined,
+  lastCapture: null,
   recording: false,
   setRecording: (recording) => set({ recording }),
 
@@ -78,6 +85,7 @@ export const useApp = create<State>((set, get) => ({
         void get().refreshShortcuts();
       }
     });
+    await listen<LastCapture>("xs://capture", (e) => set({ lastCapture: e.payload }));
     await listen("xs://shortcuts", () => void get().refreshShortcuts());
     await listen("xs://permissions", () => void get().refreshPermissions());
     await listen<CommandEvent>("xs://command", (e) => {

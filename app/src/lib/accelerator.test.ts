@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { display, fromEvent } from "./accelerator";
+import { display, fromEvent, releasedCombination } from "./accelerator";
 
 const key = (
   code: string,
@@ -22,6 +22,23 @@ describe("fromEvent", () => {
 
   it("waits while only modifiers are held", () => {
     expect(fromEvent(key("ShiftLeft", { shift: true }))).toBeNull();
+  });
+});
+
+describe("releasedCombination", () => {
+  it("keeps what was pressed", () => {
+    expect(releasedCombination("Ctrl+KeyK", key("KeyK", { ctrl: true }))).toBe("Ctrl+KeyK");
+  });
+
+  it("takes PrtScn on release, where Windows reports it", () => {
+    expect(releasedCombination(null, key("PrintScreen", { ctrl: true, shift: true }))).toBe(
+      "Ctrl+Shift+PrintScreen",
+    );
+    expect(releasedCombination(null, key("PrintScreen"))).toBe("PrintScreen");
+  });
+
+  it("ignores releasing only modifiers", () => {
+    expect(releasedCombination(null, key("ShiftLeft", { ctrl: true }))).toBeNull();
   });
 });
 

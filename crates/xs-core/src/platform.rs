@@ -31,3 +31,9 @@ pub fn arch() -> &'static str {
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Short commit of this build, with "+" if it had uncommitted changes.
+pub const BUILD: &str = env!("XCREENSHOT_BUILD");
+
+/// "0.2.0 (670038c)": what the user sees in the app, diagnostics and `--version`.
+pub const VERSION_FULL: &str = concat!(env!("CARGO_PKG_VERSION"), " (", env!("XCREENSHOT_BUILD"), ")");
