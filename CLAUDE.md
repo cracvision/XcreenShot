@@ -9,9 +9,10 @@ Toda la definición del producto está en [`spec/`](spec/). Empieza por [`spec/S
 - **Al empezar cada sesión, lee [`docs/ESTADO.md`](docs/ESTADO.md) antes de nada.** Es el traspaso de la sesión anterior: qué está hecho, qué falta, qué decisiones se tomaron y cuál es el siguiente paso. Sigue desde ahí sin preguntarle a Carlos "¿qué hacemos ahora?".
 - Mantenlo al día. Actualízalo al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Haz commit junto con el trabajo. Guarda en él solo el resumen: el detalle va en `spec/PARITY.md`, `spec/QUESTIONS.md` y `tests/manual/`.
 - Cuando Carlos pida pasar a una sesión nueva ("muévete a un nuevo chat", "genera el handoff"):
-  1. Actualiza `docs/ESTADO.md`.
+  1. Actualiza `docs/ESTADO.md`, incluida la sección "Cambios de la última sesión" (el changelog).
   2. Haz commit y push.
-  3. Dile que abra una sesión nueva en esta carpeta y escriba: **"Lee docs/ESTADO.md y continúa"**.
+  3. Crea tú la sesión nueva con la herramienta de sesiones de la app: en esta misma carpeta, contexto nuevo, con el mensaje **"Lee docs/ESTADO.md y continúa"**. Dile a Carlos que la abra desde la barra lateral; no tiene que copiar ni pegar nada.
+  4. Si prefiere crearla él: botón **+** junto al grupo **XcreenShot** de la barra lateral, con la carpeta `C:\Projects\XcreenShot`, y escribir esa misma frase.
 - Las conversaciones anteriores se guardan en este equipo. Búscalas solo si falta un detalle que no está en el repositorio.
 
 ---

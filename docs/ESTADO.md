@@ -36,6 +36,27 @@ En `spec/QUESTIONS.md` el editor aparece como "parte 2 de M1" y la biblioteca co
 
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
+## Cambios de la última sesión
+
+Sesión "M0 startup según spec" (2026-10-12 a 2026-10-24). El detalle está en `git log`.
+
+- **M0 completo:**
+  - Registro de comandos, CLI, ícono en la bandeja, atajos globales, preferencias, EN/ES y CI.
+  - Fusionado en el PR #1.
+- **M1, entrega 1:** motor de captura.
+- **M1, entrega 2:**
+  - Selección en pantalla rápida (~105 ms en 5120×2160).
+  - Lupa con copia del color y botón **Capturar**.
+  - Selector EN | ES.
+- **M1, entrega 3:**
+  - Panel de captura y cuenta atrás que no roba el foco.
+  - Entradas de captura en el menú del ícono.
+  - Repetir última captura y Repetir última área.
+  - Corregidos: el menú ⋯ cortado en la vista compacta, la grabación de `PrtScn` en los atajos y el anillo de foco de las pestañas.
+- **Continuidad:**
+  - Se creó este archivo y la regla en `CLAUDE.md`.
+  - Los scripts de prueba pasaron a `scripts/dev/`.
+
 ## Pendiente inmediato
 
 1. **Pruebas de Carlos con el instalador `c97ce05`** ([`tests/manual/CAP-panel.md`](../tests/manual/CAP-panel.md)):
