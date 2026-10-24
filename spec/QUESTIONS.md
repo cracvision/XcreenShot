@@ -52,8 +52,8 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 
 | ID | Pregunta | Propuesta (implementada como provisional) | Estado |
 |---|---|---|---|
-| CAP-054 / LIB-020 | La ruta de la captura empieza guardando en la biblioteca, que llega en la parte 3 de M1 | Hasta entonces cada captura se guarda como PNG en la ubicación por defecto de la biblioteca (`Documentos\XcreenShot`; en tu equipo, Documentos está en OneDrive). Al llegar la biblioteca se guardará como `.xshot` con índice | Provisional |
-| CAP-045 | "Abrir en = Editor" necesita el editor (parte 2 de M1) | Hasta entonces muestra la ventana principal con la última captura | Provisional |
+| CAP-054 / LIB-020 | La ruta de la captura empieza guardando en la biblioteca, que llega en la parte 3 de M1 | Desde la entrega 4a (decisión A del plan, Carlos, 2026-10-24) cada captura se guarda como `.xshot` en `Documentos\XcreenShot\AAAA-MM\` antes de abrirse. El índice, la vista Biblioteca y la bandeja completa siguen en la entrega 5. Las capturas PNG anteriores se quedan donde están | Decidido |
+| CAP-045 | "Abrir en = Editor" necesita el editor (parte 2 de M1) | Desde la entrega 4a abre la captura en el editor | Decidido |
 | CAP-008 | Valores por defecto de las capturas lanzadas por CLI o agentes | Los del panel (copiar al portapapeles = sí), pero sin abrir ventanas salvo `--open editor` (APP-030 pide anotar y exportar "sin abrir ninguna ventana"). Avisan con la notificación de automatización | Provisional |
 | CAP-023 | Excluir las ventanas de XcreenShot de las capturas de forma permanente también las ocultaría al compartir pantalla en Teams o Zoom | La exclusión se activa solo durante cada captura | Decidido |
 | CAP-047 | El cursor es un objeto del documento, que llega con el editor | `--cursor` se acepta y avisa en `warnings`; se implementa con el editor | Abierta |
@@ -69,3 +69,19 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | CAP-045 | Opciones de "Abrir en" antes de la biblioteca y el editor | Editor (por ahora, la ventana principal con la última captura) y Nada (solo guardar) | Provisional |
 | CAP-048 | `Esc` cancela la cuenta atrás aunque XcreenShot no tenga el foco | Mientras corre el contador, `Esc` queda reservado para XcreenShot: no llega a las demás apps (un menú abierto no se cierra con `Esc`, se cierra con un clic). Al terminar se libera | Provisional |
 | CAP-048 | Propiedad "Mostrar la cuenta atrás" y cancelar desde el menú del ícono | Pendiente: llega con el resto de propiedades de Tiempo. Por ahora el contador siempre se ve y se cancela con su botón o con `Esc` | Abierta |
+
+## Dudas del equipo de construcción (M1, entrega 4: editor)
+
+| ID | Pregunta | Propuesta (implementada como provisional) | Estado |
+|---|---|---|---|
+| EDT-106 / EDT-110 | Cómo conseguir que la imagen exportada sea idéntica en Windows y macOS y que el CLI anote y exporte sin ventanas | Un único motor de dibujo en Rust para la imagen final; Konva solo dibuja en pantalla con la misma geometría (ADR 0004). Librerías nuevas: `tiny-skia`, `zip`, `png`, `cosmic-text` (4b), `konva`, `react-konva` y `@tauri-apps/plugin-dialog`. Rust mínimo 1.88 | Decidido (Carlos, 2026-10-24) |
+| LIB-020 / SHR-006 | Nombre de los archivos de la biblioteca: SHR-006 aún no está escrito | `<App> AAAA-MM-DD HH.MM.SS.xshot` (el ejemplo de LIB-020), con ` (2)`… si existe; sin app conocida, `XcreenShot` | Provisional |
+| EDT-108 / APP-004 | `Ctrl+W` es "Cerrar ventana" en toda la app, y EDT-116 lo usa para "Cerrar documento" | En la ventana del editor cierra el documento; en las demás ventanas, la ventana. Hasta la entrega 4c los atajos del editor son fijos; entonces pasan a Preferencias > Atajos | Provisional |
+| EDT-003 | Sin los menús (entrega 4c), no hay forma de deshacer con el ratón | Botones Deshacer y Rehacer en la barra de herramientas hasta que lleguen los menús | Provisional |
+| EDT-005 | El panel lateral recuerda visibilidad, anchura y pestaña; el spec pide que viaje en la exportación de ajustes (APP-011) | Por ahora se recuerda en la propia ventana. Pasa al estado del editor cuando llegue APP-011 | Provisional |
+| EDT-107 / LIB-021 | Al guardar un PNG o JPG de fuera de la biblioteca con anotaciones, LIB-021 pide guardar también una copia `.xshot` editable en la biblioteca | Llega con la entrega 5 (biblioteca). En la 4a se avisa antes de integrar las anotaciones en la imagen, con "No volver a preguntar" | Abierta |
+| EDT-110 | El spec pide guardar el perfil de color en PNG y JPG | PNG lleva la marca sRGB y la resolución. JPG lleva la resolución, sin perfil incrustado (los visores lo tratan como sRGB). Incrustar un perfil sRGB compacto cuando lleguen las opciones de formato (EDT-112, M2) | Abierta |
+| APP-047 | "Más tarde" debe dejar los elementos en Ayuda > Recuperar trabajo | Los elementos se conservan y se ofrecen en el siguiente arranque; la entrada de Ayuda llega con los menús (entrega 4c) | Provisional |
+| EDT-012 / EDT-118 | `Esc` cierra el editor y el resto de Preferencias > Editor | Llegan en la entrega 4c. Mientras tanto valen los valores por defecto del spec (reducir para ajustar, recordar la vista, seleccionar al terminar de dibujar) | Provisional |
+| EDT-119 | `document.update_object` y `document.delete_object` son M2 en la tabla, pero el editor los necesita para mover y borrar | Se adelantan a la 4a, con los parámetros de la tabla (`documentId`, `objectId` u `objectIds`, `set`) | Decidido |
+| EDT-002 | La ventana principal de Windows aún tiene el menú de M0 (Archivo: Preferencias, Cerrar, Salir; Ayuda) | Se sustituye por los menús completos del editor en la entrega 4c | Provisional |

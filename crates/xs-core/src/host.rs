@@ -97,6 +97,12 @@ pub trait Host: Send + Sync {
     }
     /// Starts the quit sequence (APP-004).
     fn quit(&self) {}
+    /// Shows what needs a decision before quitting (APP-004), in the main window.
+    /// Without a UI nothing is asked.
+    fn confirm_quit(&self, pending: &[Value]) {}
+    /// The editor view must reflect a change (`document`, `documents`, `tool`, `zoom`,
+    /// `recovery`…), whoever made it: UI, shortcut or CLI (EDT-119).
+    fn editor_event(&self, kind: &str, payload: Value) {}
     /// A setting changed; apply it (theme, language, icon, login item…).
     fn settings_changed(&self, key: &str, value: &Value) {}
     /// Shortcuts or their pause state changed; re-register global shortcuts.

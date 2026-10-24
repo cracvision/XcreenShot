@@ -72,7 +72,8 @@ Para cambiar una dependencia importante, proponlo primero en `spec/QUESTIONS.md`
 crates/xs-core      comandos, modelo de documento (.xshot), preferencias
 crates/xs-capture   selección y captura de imagen
 crates/xs-video     grabación y codificación
-crates/xs-image     píxeles y efectos
+crates/xs-image     píxeles, efectos y la imagen final de un documento (ADR 0004)
+crates/xs-editor    documentos abiertos, deshacer, guardado y comandos document.* y editor.*
 crates/xs-ocr       reconocimiento de texto
 crates/xs-library   biblioteca e índice
 crates/xs-share     destinos de compartir
@@ -143,7 +144,8 @@ Requisitos: Rust estable (rustup), Node 22, y en Windows las Build Tools de Visu
 | Paquete instalable | `npm run tauri build` en `app/` |
 
 Dónde vive cada cosa:
-- Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs`.
+- Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs` (los de captura en `xs-capture`, los del editor en `xs-editor`).
+- Editor: modelo y formato `.xshot` en `crates/xs-core/src/document.rs` (esquema en `docs/formats/`); la geometría de cada objeto está en `crates/xs-image/src/geometry.rs` y su copia en `app/src/editor/geometry.ts`, comprobadas con `tests/fixtures/` (regenerar con `XS_REGEN_FIXTURES=1 cargo test -p xs-image`).
 - Textos EN/ES: `crates/xs-core/locales/{en,es}.json` (los comparten Rust y React).
 - Datos del usuario: `%APPDATA%\XcreenShot\config` y `%LOCALAPPDATA%\XcreenShot\data` (Windows); `~/Library/Application Support/XcreenShot` (macOS). `XCREENSHOT_DATA_DIR` y `XCREENSHOT_IPC_NAME` aíslan una instancia para pruebas.
 - Un comando nuevo exige: entrada en el catálogo, manejador, textos en los dos idiomas y fila en `AGENTS.md` (hay pruebas que fallan si falta alguno).

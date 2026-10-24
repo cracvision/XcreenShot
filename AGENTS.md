@@ -5,8 +5,9 @@ Every action is a **command** with a stable ID, typed parameters and a typed res
 Agents and scripts drive the running app through the `xcreenshot` CLI. An MCP server
 (`xcreenshot mcp`, stdio only) arrives in milestone M2.
 
-> Status: milestone M0 (foundations). Capture, editing, library and sharing commands
-> arrive from M1. This file is hand-written for now; from M2 it is generated from the
+> Status: milestone M1, build 4a. Capture works, and documents can be opened,
+> annotated with arrows, saved and exported (`document.*`, `editor.*`). More tools,
+> the library and sharing arrive with the next builds. This file is hand-written for now; from M2 it is generated from the
 > command registry (APP-033). A test fails if a registered command is missing here.
 
 ## Connecting
@@ -60,7 +61,7 @@ xcreenshot app ping --json
 | `app.commands` | `xcreenshot app commands --json` | Every command with JSON Schemas for params and result, scopes, and flags (`mutates`, `network`, `destructive`, `interactive`). |
 | `app.show` | `xcreenshot app show` | Shows the main window. |
 | `app.close_window` | (UI and shortcuts only) | Closes the focused XcreenShot window. |
-| `app.quit` | `xcreenshot app quit` | Quits the app. |
+| `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
 | `app.open_logs` | `xcreenshot app open-logs` | Opens the logs folder. |
 | `app.permissions` | `xcreenshot app permissions --json` | OS permission states (macOS: screen recording, accessibility, camera, microphone). |
@@ -92,6 +93,27 @@ xcreenshot app ping --json
 | `capture.settings` | `xcreenshot capture settings --json` | The capture panel settings: active `tab`, `expanded`, and the `universal` and `image` tabs. |
 | `capture.configure` | `xcreenshot capture configure --params '{"image":{"selection":"window"}}'` | Changes some panel settings and keeps the rest. Invalid values fail with `invalid_params` and change nothing. |
 | `capture.reset_settings` | `xcreenshot capture reset-settings --yes` | Returns the Universal and Image tabs to their defaults (presets, shortcuts and preferences stay). |
+| `document.open` | `xcreenshot document open <path> [--show true]` | Opens a `.xshot`, PNG or JPG file as a document and returns its `documentId`. Opening a file that is already open returns the same id. Without `--show` no window opens. |
+| `document.list` | `xcreenshot document list --json` | Open documents in order, with `active` (the one in the editor), `dirty` (unsaved changes), `kind` (`library` or `external`) and size. |
+| `document.info` | `xcreenshot document info [--document-id <id>] --json` | Size, resolution (`dpi`), crop, objects with their geometry and style, capture metadata, `dirty`, and the undo and redo state. |
+| `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (arrows in this build), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
+| `document.update_object` | `xcreenshot document update-object --document-id <id> --object-id o1 --set '{"to":[300,120]}'` | Changes the geometry or style of one or more objects (`--object-ids`). Style properties not given keep their value. One undo step. |
+| `document.delete_object` | `xcreenshot document delete-object --document-id <id> --object-id o1` | Deletes one or more objects. One undo step. |
+| `document.undo` | `xcreenshot document undo [--document-id <id>]` | Undoes the last change; `label` names it. At least 100 steps per document, kept while it is open. |
+| `document.redo` | `xcreenshot document redo [--document-id <id>]` | Redoes the last undone change. |
+| `document.save` | `xcreenshot document save [--document-id <id>] [--path <file> [--format xshot\|png\|jpg]]` | Saves in the document's own file. With `--path`: a copy for library documents (they stay linked to their `.xshot`), or the new linked file for documents opened from elsewhere. Saving a PNG or JPG flattens the objects into it. |
+| `document.export` | `xcreenshot document export --format png\|jpg --path <file> [--quality 1-100] [--on-conflict keepBoth\|replace\|fail]` | Writes the final image (pixels, objects, crop) without changing the document's file. PNG keeps transparency and declares the resolution and sRGB; JPG fills transparency with white (quality 90). An existing file is never overwritten unless `--on-conflict replace`: by default the copy gets ` (2)`. |
+| `document.copy_all` | `xcreenshot document copy-all [--document-id <id>]` | Puts the final image on the clipboard (PNG and bitmap). The document keeps its objects. |
+| `document.close` | `xcreenshot document close [--document-id <id> \| --all true] [--save <ids>] [--discard <ids>]` | Closes documents. Library documents are saved first. Documents from elsewhere with unsaved changes must be listed in `save` or `discard`; otherwise nothing closes and the result is `status: needs_decision` with them in `pending`. Files are never deleted. |
+| `editor.show` | `xcreenshot editor show [--document-id <id>]` | Shows the editor window, optionally with that document in front. The document shown before is saved if it is in the library. |
+| `editor.state` | `xcreenshot editor state --json` | Active tool, available tools, the current style of each tool, the open documents and how many recoverable items there are. |
+| `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow>` | Makes a tool active. Tools of later builds (`text`, `shape`, `blur`, `crop`) answer `not_found`. |
+| `editor.set_style` | `xcreenshot editor set-style --tool arrow --style '{"color":"#2D7FF9","width":4}'` | Changes the tool's current style: what the next objects drawn by the user or added without a style look like. |
+| `editor.zoom` | `xcreenshot editor zoom --mode actual\|fit\|original\|in\|out\|percent [--value 250]` | Changes the editor zoom (percent of physical pixels, 10–3200). The result is the expected zoom, or `null` for `fit` and `original`, which the window works out. |
+| `editor.view` | (UI only) | The editor reports the zoom and position of the document it shows, so they are remembered. |
+| `editor.recovery_list` | `xcreenshot editor recovery-list --json` | Documents with unsaved changes kept from a session that ended unexpectedly (recovery copies are written every 30 s). |
+| `editor.recovery_restore` | `xcreenshot editor recovery-restore --ids '["<id>"]'` | Opens recoverable documents with their changes, linked to their original files and still unsaved. |
+| `editor.recovery_discard` | `xcreenshot editor recovery-discard --ids '["<id>"]' --yes` | Deletes recovery copies for good. |
 
 Shortcut combinations are written like `Ctrl+Alt+Shift+K`, `Cmd+Shift+5`, `PrtScn`.
 They are stored by physical key (`Ctrl+Alt+Shift+KeyK`), so they survive keyboard
@@ -111,9 +133,47 @@ The commands that take a capture (`fullscreen`, `region`, `window`, `universal`,
 
 `universal`, `image` and `capture` start from the capture panel settings (read them with `capture.settings`; Open in is usually `editor`) and these options override them, so pass `--open none` to keep windows closed. `fullscreen`, `region` and `window` always use the defaults above when called from the CLI or MCP.
 
-Every capture is also kept in the library folder (`Documents\XcreenShot` on Windows, `~/Pictures/XcreenShot` on macOS). The result has `status` (`completed`), `path`, `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings`. A second capture while one is running fails at once with `busy` (exit 5).
+Every capture is saved in the library as an editable `.xshot` document, in a folder per month: `Documents\XcreenShot\2026-10\Chrome 2026-10-12 14.03.22.xshot` on Windows, `~/Pictures/XcreenShot/…` on macOS. The result has `status` (`completed`), `documentId` (for the `document.*` commands), `path` (the `.xshot`, or the `--out` file when given), `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings`. A second capture while one is running fails at once with `busy` (exit 5).
+
+## Documents and objects
+
+Coordinates and sizes are image pixels, with the origin at the top-left corner of the
+canvas (after any crop). `documentId` defaults to the document shown in the editor.
+
+An arrow:
+
+```json
+{"type": "arrow", "from": [40, 40], "to": [200, 120],
+ "style": {"color": "#F2545B", "width": 6, "startCap": "none", "endCap": "filled",
+           "lineStyle": "solid", "opacity": 100}}
+```
+
+| Style property | Values |
+|---|---|
+| `color` | `#RRGGBB` or `#RRGGBBAA` |
+| `width` | 1–100 px, decimals allowed |
+| `startCap`, `endCap` | `none`, `filled`, `open`, `thin`, `concave`, `circle`, `circleHollow`, `square`, `diamond`, `bar` |
+| `lineStyle` | `solid`, `dash`, `dot`, `dashDot` |
+| `opacity` | 0–100 % |
+
+Missing style properties take the tool's current style (`editor.state`). Unknown
+properties or types fail with `invalid_params`. Other object types (`text`, `shape`,
+`blur`…) arrive in build 4b.
+
+`.xshot` is a ZIP with `manifest.json`, `document.json`, `base.png` (the original
+pixels, never cropped), `meta.json` and `thumb.png`. The schema of `document.json` is
+in `docs/formats/xshot-document.schema.json`.
 
 ## Recipes
+
+Capture, annotate and export without opening any window:
+
+```sh
+id=$(xcreenshot capture fullscreen --copy false --json | jq -r .result.documentId)
+xcreenshot document annotate --document-id "$id" \
+  --params '{"objects":[{"type":"arrow","from":[40,40],"to":[200,120],"style":{"color":"#F2545B","width":6}}]}'
+xcreenshot document export --document-id "$id" --format png --path C:/temp/annotated.png
+```
 
 Capture the active window to a file, without touching the clipboard:
 

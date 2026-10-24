@@ -2,6 +2,7 @@
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
 mod countdown;
+mod docs;
 #[cfg(windows)]
 mod freeze_win;
 mod global;
@@ -194,7 +195,11 @@ pub fn run() {
         return;
     }
 
-    let core = Core::with_extensions(paths.clone(), Some(log), vec![xs_capture::extension()]);
+    let core = Core::with_extensions(
+        paths.clone(),
+        Some(log),
+        vec![xs_capture::extension(), xs_editor::extension()],
+    );
     #[cfg(windows)]
     if !check_windows_version(core.lang()) {
         return;
@@ -221,6 +226,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
         // windows and the countdown are left out: the plugin shows any window it has no
         // saved state for, which made a hidden selection window appear at startup.
@@ -252,10 +258,17 @@ pub fn run() {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || responder.respond(overlay::serve_frame(&app, &request)));
         })
+        // Document pixels for the editor canvas (ADR 0004).
+        .register_asynchronous_uri_scheme_protocol("xsdoc", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || responder.respond(docs::serve(&app, &request)));
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
             core.set_host(Arc::new(host::TauriHost { app: handle.clone() }));
             permissions::init(core.paths.config_dir.clone());
+            // Recovery copies of unsaved documents every 30 s (EDT-012).
+            xs_editor::start_background(&core);
 
             if let Err(e) = serve_ipc(core.clone()) {
                 tracing::error!(error = %e, "could not open the local automation channel");
@@ -318,11 +331,13 @@ pub fn run() {
             let app = window.app_handle();
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
-                    let keep_loaded = app
-                        .state::<AppState>()
-                        .core
-                        .settings
-                        .get_bool("advanced.keepEditorLoaded");
+                    let core = app.state::<AppState>().core.clone();
+                    if window.label() == windows::MAIN {
+                        // Library documents save themselves when the editor closes (EDT-012).
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_editor::save_library_documents(&core));
+                    }
+                    let keep_loaded = core.settings.get_bool("advanced.keepEditorLoaded");
                     if window.label() == windows::MAIN && keep_loaded {
                         api.prevent_close();
                         let _ = window.hide();

@@ -12,6 +12,21 @@ Scripts de PowerShell para comprobar la app en marcha sin depender de que Carlos
 | `esc-runs.ps1` | Lanza varias capturas de región y cancela cada una con `Esc`. |
 | `esc-countdown.ps1` | Lanza una captura con retardo y pulsa `Esc` durante la cuenta atrás. |
 | `enter-universal.ps1` | Lanza una captura universal y pulsa `Enter` cuando aparece la selección. |
+| `cdp.mjs` | Maneja la ventana principal de una instancia aislada por el protocolo de DevTools: clics, arrastres, teclas, rueda, capturas de la página y evaluar código. **No mueve el ratón ni el teclado reales.** |
+
+## Instancia aislada con DevTools (para `cdp.mjs`)
+
+En Git Bash, desde `app/`, con su propia carpeta de datos, biblioteca y perfil de WebView2 (si comparte el perfil con la app instalada, WebView2 no arranca):
+
+```sh
+S=<carpeta temporal>
+export XCREENSHOT_IPC_NAME=xs-dev XCREENSHOT_DATA_DIR="$S/data" XCREENSHOT_LIBRARY_DIR="$S/lib"
+export WEBVIEW2_USER_DATA_FOLDER="<misma carpeta, con barras de Windows>\wv2"
+export WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9333"
+npx tauri dev
+```
+
+El CLI habla con esa instancia con `XCREENSHOT_IPC_NAME=xs-dev target/debug/xcreenshot.exe …`. Para cerrarla: `… app quit --force`.
 
 Antes de usarlos:
 - Mueven el ratón y pulsan teclas de verdad: avisa a Carlos antes si está usando el equipo.

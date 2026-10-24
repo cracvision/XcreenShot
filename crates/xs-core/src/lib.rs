@@ -3,10 +3,12 @@
 //!
 //! Implements M0 foundations: APP-017–APP-021 (shortcuts), APP-027 (command
 //! registry), APP-028 (CLI protocol), APP-032 (automation safety), APP-046 (logs).
+//! M1 adds the editable document model and its `.xshot` container (EDT-106).
 
 pub mod catalog;
 pub mod command;
 pub mod core;
+pub mod document;
 pub mod error;
 pub mod host;
 pub mod i18n;

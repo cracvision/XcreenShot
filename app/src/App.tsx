@@ -1,7 +1,7 @@
 import { Overlay } from "./overlay/Overlay";
+import { Editor } from "./editor/Editor";
 import { CapturePanel } from "./windows/CapturePanel";
 import { Countdown } from "./windows/Countdown";
-import { Home } from "./windows/Home";
 import { Preferences } from "./windows/Preferences";
 import { isOverlay, windowLabel } from "./windowKind";
 
@@ -16,6 +16,6 @@ export function App() {
     case "countdown":
       return <Countdown />;
     default:
-      return <Home />;
+      return <Editor />;
   }
 }
