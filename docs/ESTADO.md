@@ -61,7 +61,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24). El detalle está en `git 
    - cambiar de pestaña con las flechas sin que asome el turquesa en la pestaña vecina;
    - **Repetir última área** con un atajo asignado en Preferencias > Atajos.
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
-2. **Pruebas de Carlos de la entrega 4a** con el instalador `d16fdce`: tres tandas cortas en [`tests/manual/EDT-editor-4a.md`](../tests/manual/EDT-editor-4a.md). El instalador de la 4a sustituye al de la entrega 3, así que las pruebas de la entrega 3 se pueden hacer con él.
+2. **Pruebas de Carlos de la entrega 4a** con el instalador `582df5a`: tres tandas cortas en [`tests/manual/EDT-editor-4a.md`](../tests/manual/EDT-editor-4a.md). El instalador de la 4a sustituye al de la entrega 3, así que las pruebas de la entrega 3 se pueden hacer con él.
 3. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
 4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el PR del editor pasa a apuntar a `main`.
 
