@@ -38,7 +38,7 @@ Pruebas con la app en marcha (instancia aislada, CLI y entrada simulada en la ve
 
 Carlos marcó PASS (2026-10-24, instalador `582df5a`) los siete pasos.
 
-Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `2d581d1` o posterior (aparece junto a la versión con `xcreenshot app ping`).
+Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `9ddb1ba` o posterior (aparece junto a la versión con `xcreenshot app ping`).
 
 1. [x] Haz una captura de región con tu atajo (`Ctrl+Shift+PrtScn`). Se abre el editor con la captura, al 100 % si cabe en la ventana.
 2. [x] En `Documentos\XcreenShot` hay una carpeta del mes (por ejemplo `2026-10`) con un archivo `.xshot` con el nombre de la app y la hora.
