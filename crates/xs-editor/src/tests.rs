@@ -388,12 +388,12 @@ fn tools_and_styles() {
 
 #[test]
 fn history_labels_are_translated() {
-    for kind in ["arrow", "objects"] {
+    // One arrow names the kind; several objects use the general name.
+    let one: &[&str] = &["arrow"];
+    let several: &[&str] = &["arrow", "arrow"];
+    for kinds in [one, several] {
         for action in ["draw", "move", "change", "delete"] {
-            let key = objects::label(
-                action,
-                &[if kind == "arrow" { "arrow" } else { "a" }, "b"][..if kind == "arrow" { 1 } else { 2 }],
-            );
+            let key = objects::label(action, kinds);
             for lang in [Lang::En, Lang::Es] {
                 assert_ne!(tr(lang, &key, &[]), key, "missing {key}");
             }
