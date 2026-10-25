@@ -91,7 +91,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-010 | Área de trabajo | M2 | Could | — |
 | EDT-011 | Barra de estado | M1 | Should | Win |
 | EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | En curso |
-| EDT-013 | Accesibilidad del lienzo | M1 | Should | — |
+| EDT-013 | Accesibilidad del lienzo | M1 | Should | En curso |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
 | EDT-015 | Estilos guardados | M2 | Must | — |
 | EDT-016 | Favoritos | M2 | Should | — |
@@ -104,10 +104,10 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
 | EDT-024 | Flecha | M1 | Must | Win |
 | EDT-025 | Línea | M2 | Should | — |
-| EDT-026 | Texto | M1 | Must | — |
+| EDT-026 | Texto | M1 | Must | En curso |
 | EDT-027 | Corrector ortográfico | M2 | Should | — |
 | EDT-028 | Globo | M2 | Must | — |
-| EDT-029 | Forma: rectángulo y elipse | M1 | Must | — |
+| EDT-029 | Forma: rectángulo y elipse | M1 | Must | En curso |
 | EDT-030 | Forma: rectángulo redondeado, polígono y otras formas | M2 | Should | — |
 | EDT-031 | Sello | M2 | Should | — |
 | EDT-032 | Sellos propios y Guardar como sello | M2 | Should | — |
@@ -118,7 +118,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-037 | Lápiz | M2 | Should | — |
 | EDT-038 | Lupa | M2 | Should | — |
 | EDT-039 | Foco | M2 | Should | — |
-| EDT-040 | Desenfocar | M1 | Must | — |
+| EDT-040 | Desenfocar | M1 | Must | En curso |
 | EDT-041 | Simplificar | M2 | Should | — |
 | EDT-042 | Mover | M1 | Must | En curso |
 | EDT-043 | Selección | M2 | Must | — |
@@ -127,8 +127,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-046 | Varita mágica | M2 | Should | — |
 | EDT-047 | Relleno | M2 | Should | — |
 | EDT-048 | Borrador | M2 | Should | — |
-| EDT-049 | Recortar | M1 | Must | — |
-| EDT-050 | Recorte no destructivo | M1 | Must | — |
+| EDT-049 | Recortar | M1 | Must | En curso |
+| EDT-050 | Recorte no destructivo | M1 | Must | En curso |
 | EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | — |
 | EDT-052 | Quitar franja y añadir espacio | M2 | Should | — |
 | EDT-053 | Panel Efectos | M2 | Must | — |
@@ -167,7 +167,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-086 | Posición y tamaño numéricos | M2 | Must | — |
 | EDT-087 | Mover con el teclado | M2 | Should | — |
 | EDT-088 | Duplicar objetos | M2 | Should | — |
-| EDT-089 | Cortar, copiar y pegar | M1 | Must | — |
+| EDT-089 | Cortar, copiar y pegar | M1 | Must | En curso |
 | EDT-090 | Copiar todo | M1 | Must | Win |
 | EDT-091 | Aplanar y desaplanar | M2 | Should | — |
 | EDT-092 | Deshacer y rehacer | M1 | Must | Win |

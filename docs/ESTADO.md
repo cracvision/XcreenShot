@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-10-25, con la entrega 4a probada por Carlos.
+**Última actualización:** 2026-10-25, con la entrega 4b terminada y pendiente de las pruebas de Carlos.
 
 ## Fuentes
 
@@ -32,8 +32,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 2 · Selección en pantalla | Pantallas congeladas, cruceta, lupa, detección de ventanas, barra de captura con **Capturar** | Hecha y probada por Carlos |
 | 3 · Panel de captura | Pestañas Universal e Imagen, retardo con cuenta atrás, menú del ícono, Repetir última captura y Repetir última área, restablecer ajustes | Hecha; faltan 3 pruebas de Carlos (abajo) |
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
-| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Siguiente |
-| 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Pendiente |
+| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha; faltan las pruebas de Carlos (cuatro tandas) |
+| 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Siguiente |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Pendiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
@@ -42,7 +42,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
-Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24). El detalle está en `git log`.
+Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en `git log`.
 
 - **Plan de la entrega 4** propuesto y aprobado (tres partes, decisiones A, B y C). ADR 0004.
 - **Entrega 4a:**
@@ -58,6 +58,15 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24). El detalle está en `git 
   - la captura temblaba con la ventana acoplada a media pantalla (barra de desplazamiento que aparecía y desaparecía por fracciones de píxel);
   - al alternar documentos el zoom se copiaba o se volvía a aplicar.
 - **Lección:** antes de dar un instalador, probar con `npx tauri build --debug --no-bundle`, que empaqueta la interfaz como la app instalada (el servidor de desarrollo no aplica la política de seguridad).
+- **Entrega 4b** (2026-10-25):
+  - Texto con `cosmic-text` y fuentes del sistema: Rust lo dibuja también en pantalla; mientras se escribe, un campo encima con la misma medida.
+  - Forma (rectángulo y elipse) y Desenfocar (desenfoque, pixelado y sólido), calculados en Rust sobre lo que hay debajo.
+  - Tiradores para redimensionar y girar, con `Shift` y `Alt`.
+  - Recortar sin perder lo recortado (se recupera volviendo a recortar) y aviso de objetos fuera del lienzo. La preferencia `editor.deleteCroppedContent` recorta de verdad al guardar.
+  - Selector de color completo, con cuentagotas de pantalla (Windows) y `I` sobre el lienzo.
+  - Cortar, copiar y pegar objetos: editables dentro de la app, PNG con transparencia para las demás; texto e imágenes de otras apps.
+  - Teclas de herramienta, `Tab`, `Ctrl+Enter`, `[` y `]`. 2 comandos nuevos (`document.copy_objects`, `document.paste`).
+  - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (tamaño del texto en puntos, intensidad del desenfoque, cuentagotas en macOS, huella del portapapeles, pegar imágenes con un documento abierto, tamaño de `Ctrl+Enter`).
 
 ## Pendiente inmediato
 
@@ -68,14 +77,17 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24). El detalle está en `git 
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-3. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entrega 4a, probada y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4b sigue en la rama `m1-editor`.
+3. **Pruebas de Carlos de la entrega 4b:** cuatro tandas en [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (texto; formas y desenfoque; recortar y color; copiar, pegar y teclado), con el instalador nuevo.
+4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entrega 4a, probada y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4b ya está en el mismo PR #3 (rama `m1-editor`).
 
 ## Siguiente paso
 
-Entrega 4b, las demás herramientas:
-1. Leer los bloques de EDT-003, EDT-014, EDT-019, EDT-022, EDT-026, EDT-029, EDT-040, EDT-049, EDT-050, EDT-089, EDT-115 y EDT-117 en `spec/02-editor.md`.
-2. Texto con `cosmic-text`: Rust dibuja el texto también en pantalla, salvo mientras se escribe (ADR 0004, punto 4). Es la pieza de más riesgo: empezar por ahí.
-3. Después Forma, Desenfocar (con el mismo desenfoque y pixelado en Rust y en pantalla), Recortar no destructivo, selector de color, cortar/copiar/pegar.
+Mientras Carlos prueba la 4b, corregir lo que reporte y empezar la entrega 4c, menús, teclado y accesibilidad:
+1. Leer los bloques de EDT-002, EDT-012, EDT-013, EDT-116 y EDT-118 en `spec/02-editor.md`.
+2. Barra de menús del editor y menú contextual (EDT-002); sustituyen al menú de M0 y a los botones provisionales de Deshacer y Rehacer.
+3. Tabla completa de atajos del editor, asignables en Preferencias > Atajos (EDT-116). Hoy están fijos en `app/src/editor/keys.ts`.
+4. Accesibilidad del lienzo (EDT-013): etiquetas para el lector de pantalla y anuncio del objeto seleccionado.
+5. Preferencias > Editor (EDT-118) y `Esc` para cerrar el editor (EDT-012).
 
 ## Decisiones vigentes que conviene recordar
 
@@ -86,7 +98,7 @@ El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
 - **Atajo de prueba:** Carlos cambió el de `app.ping` a `Ctrl+P` a propósito. No tocarlo.
 - **Barra de captura:** el botón se llama **Capturar** (`Enter`; `I` también funciona). El selector rápido **EN | ES** está en la ventana principal y en Preferencias.
 - **Dónde se guardan las capturas:** como `.xshot` en `Documentos\XcreenShot\AAAA-MM\`, con el nombre `<App> AAAA-MM-DD HH.MM.SS` (provisional hasta SHR-006). En el equipo de Carlos esa carpeta está en OneDrive. Las PNG de antes se quedan donde estaban.
-- **Editor (ADR 0004):** el documento vive en Rust; la interfaz es una vista que manda comandos. Cada gesto es un solo comando al soltar. La imagen final la dibuja solo Rust; la geometría está duplicada en `geometry.ts` y la vigila `tests/fixtures/arrow-geometry.json`.
+- **Editor (ADR 0004):** el documento vive en Rust; la interfaz es una vista que manda comandos. Cada gesto es un solo comando al soltar. La imagen final la dibuja solo Rust; la geometría está duplicada en `geometry.ts` y `boxes.ts` y la vigilan `tests/fixtures/arrow-geometry.json` y `shape-geometry.json`. El texto y el desenfoque los dibuja Rust también en pantalla (protocolo `xsdoc`).
 - **Atajos del editor:** fijos hasta la 4c. En la ventana del editor `Ctrl+W` cierra el documento, no la ventana.
 - **Valores por defecto según quién lanza la captura:**
   - Desde atajos y menús, las acciones de un solo modo (ventana, ventana activa, región, pantalla completa) toman de la pestaña Imagen lo que no es el modo.
@@ -104,7 +116,7 @@ El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
   - Nunca la versión de release aislada: al primer arranque se registra para iniciar con Windows y pisa su entrada.
   - Sus atajos los tiene la app instalada, así que la copia aislada avisa de que no pudo activarlos.
   - Para probar la ventana sin mover su ratón: arrancarla además con `WEBVIEW2_USER_DATA_FOLDER` propio y la depuración remota, y usar `scripts/dev/cdp.mjs` (instrucciones en `scripts/dev/README.md`).
-  - No usar Copiar todo en las pruebas automáticas: pisa el portapapeles de Carlos.
+  - No usar Copiar todo, copiar o cortar objetos en las pruebas automáticas: pisan el portapapeles de Carlos.
 - **Herramientas:**
   - `gh` está en `C:\Program Files\GitHub CLI\gh.exe` (no está en el PATH de Git Bash).
   - Rust está en `~/.cargo/bin` (en Git Bash: `export PATH="$HOME/.cargo/bin:$PATH"`). Mínimo 1.88.
