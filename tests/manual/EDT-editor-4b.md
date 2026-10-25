@@ -19,7 +19,7 @@ Copiar y pegar no se probó en la instancia aislada para no tocar el portapapele
 
 ## Tanda 1 · Texto — Carlos
 
-Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `ea5d8b5` o posterior (aparece junto a la versión con `xcreenshot app ping`).
+Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `46cbb30` o posterior (aparece junto a la versión con `xcreenshot app ping`).
 
 1. [ ] Haz una captura de región. En el editor elige **Texto** (botón o tecla `T`), haz clic sobre la imagen y escribe "Hola mundo". `Enter` añade una línea.
 2. [ ] Haz clic fuera del texto: queda en la imagen, seleccionado, con el mismo aspecto que mientras escribías.
