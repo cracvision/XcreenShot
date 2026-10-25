@@ -48,6 +48,17 @@ pub struct Editor {
     recovery_dir: Mutex<PathBuf>,
     /// One file write at a time (autosave in the background, saves, recovery).
     writing: Mutex<()>,
+    /// Objects copied last, to paste them editable (EDT-089).
+    copied: Mutex<Option<Copied>>,
+}
+
+/// What `document.copy_objects` put on the clipboard.
+struct Copied {
+    objects: Vec<Object>,
+    from_document: String,
+    /// Of the image written to the system clipboard: if the clipboard still holds it,
+    /// pasting gives back the editable objects.
+    fingerprint: u64,
 }
 
 impl Editor {
@@ -68,6 +79,7 @@ impl Editor {
             library: Mutex::new(xs_library::location()),
             recovery_dir: Mutex::new(recovery::dir(&core.paths.local_dir)),
             writing: Mutex::new(()),
+            copied: Mutex::new(None),
         }
     }
 
@@ -436,6 +448,17 @@ pub fn open(core: &Arc<Core>, lang: Lang, path: &Path, show: bool) -> Result<Str
 /// Saves a new capture in the library as `.xshot` (LIB-020) and keeps it open, not
 /// yet shown. Returns its document id and file.
 pub fn add_capture(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+) -> Result<(String, PathBuf), String> {
+    add_image(core, image, meta, scale, app)
+}
+
+/// A new library document from pixels (a capture, a pasted image).
+fn add_image(
     core: &Core,
     image: &image::RgbaImage,
     meta: Value,
@@ -1054,6 +1077,155 @@ pub fn extension() -> Extension {
             })?;
             Ok(json!({}))
         });
+        on!("document.copy_objects", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let oids = object_ids(&p, ctx.lang)?;
+            let kinds = kinds_of(&core, ctx.lang, &id, &oids)?;
+            let ed = editor(&core);
+            let snap = ed.store.snapshot(&id).map_err(|e| internal(ctx.lang, "", e))?;
+            let objects: Vec<Object> = snap
+                .document
+                .objects
+                .iter()
+                .filter(|o| oids.contains(&o.id))
+                .cloned()
+                .collect();
+            // Editable objects for XcreenShot and, at the same time, a PNG with
+            // transparency for other apps (EDT-089).
+            let image = objects_image(&snap, &oids);
+            if let Some(img) = &image {
+                copy_image(img).map_err(|_| {
+                    CommandError::new(ErrorCode::Internal, tr(ctx.lang, "errors.copy_failed", &[]))
+                })?;
+            }
+            *ed.copied.lock().unwrap() = Some(Copied {
+                objects,
+                from_document: id.clone(),
+                fingerprint: image.as_ref().map(fingerprint).unwrap_or(0),
+            });
+            if p.get("cut").and_then(Value::as_bool).unwrap_or(false) {
+                let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+                ed.store
+                    .mutate(&id, &objects::label("cut", &kind_refs), |doc| {
+                        doc.objects.retain(|o| !oids.contains(&o.id));
+                        Ok::<_, CommandError>(())
+                    })
+                    .ok_or_else(|| CommandError::internal("document closed"))??;
+                changed(&core, ctx, &id);
+            }
+            Ok(json!({ "count": oids.len() }))
+        });
+        on!("document.paste", |core, ctx, p| {
+            let ed = editor(&core);
+            let target = match p.get("documentId").and_then(Value::as_str) {
+                Some(_) => Some(resolve(&core, ctx.lang, &p)?),
+                None => ed.store.active(),
+            };
+            let center = p
+                .get("center")
+                .and_then(Value::as_array)
+                .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]));
+            let in_place = p.get("inPlace").and_then(Value::as_bool).unwrap_or(false);
+            let (image, text) = read_clipboard();
+            let ours = {
+                let copied = ed.copied.lock().unwrap();
+                copied
+                    .as_ref()
+                    .filter(|c| image.as_ref().map(fingerprint) == Some(c.fingerprint))
+                    .map(|c| (c.objects.clone(), c.from_document.clone()))
+            };
+            // An image from elsewhere with nothing open: a new document (EDT-089).
+            let Some(id) = target else {
+                let img = image.ok_or_else(|| {
+                    CommandError::new(ErrorCode::NotFound, tr(ctx.lang, "errors.nothing_to_paste", &[]))
+                })?;
+                let (doc_id, _) = add_image(
+                    &core,
+                    &img,
+                    json!({ "source": "clipboard" }),
+                    1.0,
+                    Some("Clipboard"),
+                )
+                .map_err(|e| internal(ctx.lang, "", e))?;
+                activate(&core, &doc_id);
+                let _ = core.host().show_main_window();
+                return Ok(json!({ "pasted": "document", "documentId": doc_id, "ids": [] }));
+            };
+            let (mut objects, kind) = if let Some((objects, from)) = ours {
+                // Shifted 10 px when the originals are still there, centered in the view
+                // otherwise; in place with Ctrl+Shift+V (EDT-089).
+                let originals_here = from == id
+                    && ed
+                        .store
+                        .with(&id, |d| {
+                            objects.iter().all(|o| d.document.object(&o.id).is_some())
+                        })
+                        .unwrap_or(false);
+                let (dx, dy) = if in_place {
+                    (0.0, 0.0)
+                } else if originals_here {
+                    (10.0, 10.0)
+                } else if let (Some(c), Some(e)) = (center, extent(&objects)) {
+                    (c[0] - (e[0] + e[2]) / 2.0, c[1] - (e[1] + e[3]) / 2.0)
+                } else {
+                    (0.0, 0.0)
+                };
+                let objects = objects
+                    .into_iter()
+                    .map(|mut o| {
+                        objects::translate(&mut o, dx, dy);
+                        o
+                    })
+                    .collect::<Vec<_>>();
+                (objects, "objects")
+            } else if let Some(text) = text {
+                // Plain text: a text object with the current style (EDT-089).
+                let at = center.unwrap_or([20.0, 20.0]);
+                let (k, props) =
+                    objects::new_object(&json!({"type": "text", "at": at, "text": text}), &ed.styles())
+                        .map_err(|r| {
+                            invalid(tr(
+                                ctx.lang,
+                                "errors.invalid_object",
+                                &[("index", "1"), ("reason", &r)],
+                            ))
+                        })?;
+                (
+                    vec![Object {
+                        id: String::new(),
+                        kind: k,
+                        props,
+                    }],
+                    "text",
+                )
+            } else if image.is_some() {
+                return Err(CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(ctx.lang, "errors.paste_image_later", &[]),
+                ));
+            } else {
+                return Err(CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(ctx.lang, "errors.nothing_to_paste", &[]),
+                ));
+            };
+            let kinds: Vec<String> = objects.iter().map(|o| o.kind.clone()).collect();
+            let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+            let ids = ed
+                .store
+                .mutate(&id, &objects::label("paste", &kind_refs), |doc| {
+                    let mut ids = Vec::new();
+                    for o in objects.iter_mut() {
+                        o.id = doc.next_object_id();
+                        ids.push(o.id.clone());
+                        doc.objects.push(o.clone());
+                    }
+                    Ok::<_, CommandError>(ids)
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "pasted": kind, "documentId": id, "ids": ids }))
+        });
         on!("document.close", |core, ctx, p| close(&core, ctx, &p));
         on!("editor.show", |core, ctx, p| {
             if p.get("documentId").is_some() {
@@ -1220,6 +1392,79 @@ fn restore(core: &Core, rid: &str) -> Option<String> {
         ed.store.mark_unsaved(&id);
     }
     Some(id)
+}
+
+fn fingerprint(image: &image::RgbaImage) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    image.dimensions().hash(&mut h);
+    image.as_raw().hash(&mut h);
+    h.finish()
+}
+
+/// The objects alone, on a transparent background, cut to what they cover: what other
+/// apps get when objects are copied (EDT-089).
+fn objects_image(snap: &store::Snapshot, ids: &[String]) -> Option<image::RgbaImage> {
+    let mut doc = snap.document.clone();
+    doc.objects.retain(|o| ids.contains(&o.id));
+    doc.canvas.color = None;
+    let (w, h) = (doc.canvas.width, doc.canvas.height);
+    doc.crop = xs_core::document::PixelRect {
+        x: 0,
+        y: 0,
+        width: w,
+        height: h,
+    };
+    let clear = Base::from_image(image::RgbaImage::new(w, h));
+    let img = xs_image::render(&doc, &clear);
+    let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0, 0);
+    for (x, y, p) in img.enumerate_pixels() {
+        if p.0[3] > 0 {
+            x0 = x0.min(x);
+            y0 = y0.min(y);
+            x1 = x1.max(x + 1);
+            y1 = y1.max(y + 1);
+        }
+    }
+    (x1 > x0 && y1 > y0).then(|| image::imageops::crop_imm(&img, x0, y0, x1 - x0, y1 - y0).to_image())
+}
+
+fn read_clipboard() -> (Option<image::RgbaImage>, Option<String>) {
+    let Ok(mut cb) = arboard::Clipboard::new() else {
+        return (None, None);
+    };
+    let image = cb
+        .get_image()
+        .ok()
+        .and_then(|i| image::RgbaImage::from_raw(i.width as u32, i.height as u32, i.bytes.into_owned()));
+    let text = cb.get_text().ok().filter(|t| !t.trim().is_empty());
+    (image, text)
+}
+
+/// Canvas extent of objects: `[x0, y0, x1, y1]` from their points and rectangles.
+fn extent(objects: &[Object]) -> Option<[f64; 4]> {
+    let mut e: Option<[f64; 4]> = None;
+    let mut add = |x: f64, y: f64| {
+        let b = e.get_or_insert([x, y, x, y]);
+        *b = [b[0].min(x), b[1].min(y), b[2].max(x), b[3].max(y)];
+    };
+    for o in objects {
+        for key in ["from", "to", "at"] {
+            if let Some([x, y]) = o
+                .props
+                .get(key)
+                .and_then(|v| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]))
+            {
+                add(x, y);
+            }
+        }
+        if let Some(r) = o.props.get("rect") {
+            let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+            add(n("x"), n("y"));
+            add(n("x") + n("w"), n("y") + n("h"));
+        }
+    }
+    e
 }
 
 /// Copies an image to the clipboard, retrying while another app holds it (EDT-090).

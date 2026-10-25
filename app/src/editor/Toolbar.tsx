@@ -17,8 +17,7 @@ import {
 } from "./actions";
 import { Icon } from "./icons";
 import { useEditor, type Tool } from "./state";
-
-const TOOL_KEYS: Record<string, string> = { move: "V", arrow: "A" };
+import { TOOL_KEYS } from "./tools";
 
 export function Toolbar() {
   const { t } = useTranslation();
@@ -47,7 +46,7 @@ export function Toolbar() {
               title={hint(name, TOOL_KEYS[id])}
               onClick={() => selectTool(id)}
             >
-              <Icon name={id as "move" | "arrow"} />
+              <Icon name={id} />
               <span className="tb-label">{name}</span>
             </button>
           );

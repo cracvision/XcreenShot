@@ -2,6 +2,7 @@
 import { useTranslation } from "react-i18next";
 import { MenuButton } from "../components/MenuButton";
 import { Icon } from "./icons";
+import { outside } from "./objects";
 import { requestZoom, useEditor, usePointer } from "./state";
 import { useDraft } from "./useDraft";
 import { parseZoom, ZOOM_STEPS } from "./view";
@@ -16,6 +17,27 @@ function PointerPosition({ width, height }: { width: number; height: number }) {
   return (
     <span className="status-item" title={t("ui.editor.pointer")}>
       {x}, {y}
+    </span>
+  );
+}
+
+/** Objects left outside the canvas, e.g. after cropping, with Select (EDT-049). */
+function OutsideObjects() {
+  const { t } = useTranslation();
+  const doc = useEditor((s) => s.doc);
+  if (!doc) return null;
+  const ids = outside(doc.objects, doc.canvas.width, doc.canvas.height);
+  if (ids.length === 0) return null;
+  return (
+    <span className="status-item status-outside">
+      {t("ui.editor.outside", { count: ids.length })}{" "}
+      <button
+        type="button"
+        className="btn small"
+        onClick={() => useEditor.getState().setSelection(ids)}
+      >
+        {t("ui.editor.select_outside")}
+      </button>
     </span>
   );
 }
@@ -39,6 +61,7 @@ export function StatusBar() {
         {doc.canvas.width} × {doc.canvas.height} px
       </span>
       <PointerPosition width={doc.canvas.width} height={doc.canvas.height} />
+      <OutsideObjects />
       <span className="grow" />
       <div className="zoom-control" role="group" aria-label={t("ui.editor.zoom")}>
         <button

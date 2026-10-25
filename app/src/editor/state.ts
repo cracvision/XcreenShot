@@ -4,7 +4,8 @@
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { isCommandError, run } from "../lib/commands";
-import type { ArrowStyle, Point } from "./geometry";
+import type { Rect } from "./boxes";
+import type { ArrowStyle, LineStyle, Point } from "./geometry";
 import type { View } from "./view";
 
 export type Tool = "move" | "arrow" | "text" | "shape" | "blur" | "crop";
@@ -31,8 +32,91 @@ export interface ArrowObject {
   style: ArrowStyle;
 }
 
+export type TextAlign = "left" | "center" | "right" | "justify";
+
+/** Text properties of M1 (EDT-026). Sizes are points at the document's resolution. */
+export interface TextStyle {
+  font: string;
+  size: number;
+  bold: boolean;
+  italic: boolean;
+  color: string;
+  align: TextAlign;
+  opacity: number;
+}
+
+export interface TextObject {
+  id: string;
+  type: "text";
+  at: Point;
+  /** Fixed width (wraps), or null: the box grows with the text. */
+  width: number | null;
+  text: string;
+  rotation: number;
+  style: TextStyle;
+  /** Laid-out size, computed by the core. */
+  layout: { width: number; height: number };
+}
+
+export type ShapeKind = "rectangle" | "ellipse";
+
+/** Shape properties of M1 (EDT-029). */
+export interface ShapeStyle {
+  shapeType: ShapeKind;
+  /** null = transparent: only the outline. */
+  fill: string | null;
+  outline: string;
+  outlineWidth: number;
+  lineStyle: LineStyle;
+  opacity: number;
+}
+
+export interface ShapeObject {
+  id: string;
+  type: "shape";
+  rect: Rect;
+  rotation: number;
+  style: ShapeStyle;
+}
+
+export type BlurType = "blur" | "pixelate" | "solid";
+
+/** Blur properties of M1 (EDT-040). */
+export interface BlurStyle {
+  blurType: BlurType;
+  color: string;
+  intensity: number;
+  shapeType: ShapeKind;
+}
+
+export interface BlurObject {
+  id: string;
+  type: "blur";
+  rect: Rect;
+  rotation: number;
+  style: BlurStyle;
+}
+
 /** Objects of later builds are kept and drawn by the core, not edited here. */
-export type DocObject = ArrowObject | { id: string; type: string };
+export type DocObject =
+  ArrowObject | TextObject | ShapeObject | BlurObject | { id: string; type: "other" };
+
+export interface Styles {
+  arrow: ArrowStyle;
+  text: TextStyle;
+  shape: ShapeStyle;
+  blur: BlurStyle;
+}
+
+/** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
+export interface TextEdit {
+  id: string | null;
+  at: Point;
+  width: number | null;
+  text: string;
+  rotation: number;
+  style: TextStyle;
+}
 
 /** What `document.info` returns (EDT-119). */
 export interface DocDetails extends Omit<DocSummary, "objects"> {
@@ -75,7 +159,7 @@ interface EditorState {
   ready: boolean;
   tool: Tool;
   tools: Tool[];
-  styles: { arrow: ArrowStyle } | null;
+  styles: Styles | null;
   documents: DocSummary[];
   active: string | null;
   doc: DocDetails | null;
@@ -87,6 +171,12 @@ interface EditorState {
   recovery: RecoveryItem[];
   /** Documents to decide on before closing or quitting. */
   decision: { kind: "close" | "quit"; pending: Pending[] } | null;
+  /** The text box being typed, if any (EDT-026). */
+  textEdit: TextEdit | null;
+  /** The crop being adjusted, in canvas pixels (EDT-049). */
+  cropRect: Rect | null;
+  /** Installed font families, loaded when first needed. */
+  fonts: string[];
   /** Document waiting for the "objects will be flattened" confirmation (EDT-107). */
   flatten: string | null;
   toast: string | null;
@@ -124,6 +214,9 @@ export const useEditor = create<EditorState>((set, get) => ({
   recovery: [],
   decision: null,
   flatten: null,
+  textEdit: null,
+  cropRect: null,
+  fonts: [],
   toast: null,
   error: null,
 
@@ -136,7 +229,7 @@ export const useEditor = create<EditorState>((set, get) => ({
           const changed = active !== get().active;
           set({ documents: payload.documents as DocSummary[], active });
           if (changed) {
-            set({ selection: [] });
+            set({ selection: [], cropRect: null, textEdit: null });
             void loadDoc(active).then((doc) => {
               if (get().active === active) set({ doc });
             });
@@ -151,11 +244,23 @@ export const useEditor = create<EditorState>((set, get) => ({
           set((s) => ({ doc, selection: s.selection.filter((id) => ids.has(id)) }));
           break;
         }
-        case "tool":
-          set({ tool: payload.tool as Tool });
+        case "tool": {
+          const tool = payload.tool as Tool;
+          const doc = get().doc;
+          // The crop box starts on the whole canvas; leaving the tool cancels it (EDT-049).
+          set({
+            tool,
+            cropRect:
+              tool === "crop" && doc
+                ? { x: 0, y: 0, w: doc.canvas.width, h: doc.canvas.height }
+                : null,
+            // Cropping works on the image, not on objects.
+            ...(tool === "crop" ? { selection: [] } : {}),
+          });
           break;
+        }
         case "styles":
-          set({ styles: payload as unknown as { arrow: ArrowStyle } });
+          set({ styles: payload as unknown as Styles });
           break;
         case "zoom":
           set({
@@ -175,7 +280,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const state = await run<{
       tool: Tool;
       tools: Tool[];
-      styles: { arrow: ArrowStyle };
+      styles: Styles;
       active: string | null;
       documents: DocSummary[];
     }>("editor.state");
@@ -256,7 +361,19 @@ export const usePanel = create<PanelLayout & { set: (p: Partial<PanelLayout>) =>
 
 /** Image pixel under the pointer, for the status bar (EDT-011). Kept apart so moving
  * the mouse does not redraw the whole editor. */
-export const usePointer = create<{ point: Point | null }>(() => ({ point: null }));
+export const usePointer = create<{
+  point: Point | null;
+  /** The same place in the canvas area, in CSS pixels (the `I` color picker). */
+  screen: { x: number; y: number } | null;
+}>(() => ({ point: null, screen: null }));
+
+/** URL of an object Rust draws for the canvas (text, blur); `version` busts caches. */
+export function objectUrl(documentId: string, objectId: string, version: string): string {
+  const path = `${documentId}/object/${objectId}?v=${version}`;
+  return navigator.userAgent.includes("Windows")
+    ? `http://xsdoc.localhost/${path}`
+    : `xsdoc://localhost/${path}`;
+}
 
 /** URL of a document's pixels for the canvas (`xsdoc` protocol, ADR 0004). */
 export function docUrl(id: string, part: "base" | "thumb", version = 0): string {

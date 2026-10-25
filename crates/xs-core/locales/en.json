@@ -238,6 +238,14 @@
     "editor_fonts": {
       "title": "Installed fonts",
       "description": "Font families installed on this computer, for text objects."
+    },
+    "document_copy_objects": {
+      "title": "Copy objects",
+      "description": "Copies objects so they paste editable in XcreenShot, and as a PNG with transparency for other apps. With cut, also deletes them."
+    },
+    "document_paste": {
+      "title": "Paste",
+      "description": "Pastes what the clipboard holds: objects copied in XcreenShot (editable, shifted 10 px if the originals are still there, or in place), plain text as a text object, or an image as a new document when nothing is open."
     }
   },
   "settings": {
@@ -376,7 +384,9 @@
     "save_failed": "Could not save \"{{name}}\": {{reason}}.",
     "file_exists": "\"{{name}}\" already exists.",
     "recovery_not_found": "There is no recoverable item \"{{id}}\".",
-    "copy_failed": "Could not copy the image to the clipboard. Try again."
+    "copy_failed": "Could not copy the image to the clipboard. Try again.",
+    "nothing_to_paste": "The clipboard holds nothing XcreenShot can paste.",
+    "paste_image_later": "Pasting an image into an open document arrives in M2. Close the documents to paste it as a new one."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -667,7 +677,19 @@
         "size": "Image size",
         "resolution": "Resolution",
         "canvas_color": "Canvas color",
-        "file": "File"
+        "file": "File",
+        "font": "Font",
+        "font_size": "Size",
+        "text_style": "Style",
+        "bold": "Bold",
+        "italic": "Italic",
+        "align": "Alignment",
+        "fill": "Fill",
+        "outline": "Outline",
+        "outline_width": "Outline thickness",
+        "shape_type": "Shape",
+        "blur_type": "Type",
+        "intensity": "Intensity"
       },
       "cap": {
         "none": "None",
@@ -720,7 +742,43 @@
       "empty_title": "Nothing open yet",
       "empty_help": "Take a capture, open an image or a .xshot document, or drop files here.",
       "drop_hint": "Drop to open as documents",
-      "panel_width": "Side panel width"
+      "panel_width": "Side panel width",
+      "accept": "OK",
+      "mixed": "Mixed",
+      "objects_count_one": "{{count}} object",
+      "objects_count_other": "{{count}} objects",
+      "props_selection": "Selected: {{what}}",
+      "text_field": "Text",
+      "crop_help": "Drag the edges or corners, or drag a new box. Enter or double-click applies; Esc puts it back. What is cut stays in the document and can be recovered by cropping again.",
+      "crop_apply": "Crop",
+      "outside_one": "{{count}} object outside the canvas",
+      "outside_other": "{{count}} objects outside the canvas",
+      "select_outside": "Select",
+      "align": {
+        "left": "Left",
+        "center": "Center",
+        "right": "Right",
+        "justify": "Justified"
+      },
+      "shape": {
+        "rectangle": "Rectangle",
+        "ellipse": "Ellipse"
+      },
+      "blur": {
+        "blur": "Blur",
+        "pixelate": "Pixelate",
+        "solid": "Solid",
+        "solid_hint": "Best for confidential data: blur and pixelation can sometimes be reversed with outside tools.",
+        "security": "Exported images and copies never keep what a blur hides. A .xshot does, until the blur is flattened."
+      },
+      "color": {
+        "theme": "Theme colors",
+        "palette": "Palette",
+        "area": "Saturation and brightness",
+        "hue": "Hue",
+        "brightness_short": "Br",
+        "eyedropper": "Eyedropper"
+      }
     }
   },
   "history": {
@@ -745,7 +803,17 @@
     "move_blur": "Move blur",
     "change_blur": "Change blur",
     "delete_blur": "Delete blur",
-    "crop": "Crop"
+    "crop": "Crop",
+    "cut_arrow": "Cut arrow",
+    "cut_text": "Cut text",
+    "cut_shape": "Cut shape",
+    "cut_blur": "Cut blur",
+    "cut_objects": "Cut objects",
+    "paste_arrow": "Paste arrow",
+    "paste_text": "Paste text",
+    "paste_shape": "Paste shape",
+    "paste_blur": "Paste blur",
+    "paste_objects": "Paste objects"
   },
   "editor": {
     "edited": "{{name}} — Edited"

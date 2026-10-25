@@ -38,6 +38,58 @@ const ICONS = {
       <path d="M8.5 4.5H15.5V11.5" />
     </Svg>
   ),
+  text: (
+    <Svg>
+      <path d="M4.5 5V3.5h11V5M10 3.5v13M7.5 16.5h5" />
+    </Svg>
+  ),
+  shape: (
+    <Svg>
+      <rect x="3" y="5" width="14" height="10" rx="1" />
+    </Svg>
+  ),
+  blur: (
+    <Svg>
+      <rect x="3" y="3" width="14" height="14" rx="1.5" strokeDasharray="2 2" />
+      <path d="M6.5 7h2v2h-2zM11.5 7h2v2h-2zM9 11h2v2H9z" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  crop: (
+    <Svg>
+      <path d="M6 2.5V14h11.5" />
+      <path d="M2.5 6H14v11.5" />
+    </Svg>
+  ),
+  bold: (
+    <Svg>
+      <path d="M6 4h5a3 3 0 010 6H6zM6 10h6a3 3 0 010 6H6z" strokeWidth="2" />
+    </Svg>
+  ),
+  italic: (
+    <Svg>
+      <path d="M9 4h6M5 16h6M12 4l-4 12" />
+    </Svg>
+  ),
+  alignLeft: (
+    <Svg>
+      <path d="M3 5h14M3 9h9M3 13h14M3 17h9" />
+    </Svg>
+  ),
+  alignCenter: (
+    <Svg>
+      <path d="M3 5h14M5.5 9h9M3 13h14M5.5 17h9" />
+    </Svg>
+  ),
+  alignRight: (
+    <Svg>
+      <path d="M3 5h14M8 9h9M3 13h14M8 17h9" />
+    </Svg>
+  ),
+  alignJustify: (
+    <Svg>
+      <path d="M3 5h14M3 9h14M3 13h14M3 17h14" />
+    </Svg>
+  ),
   undo: (
     <Svg>
       <path d="M7 5L3.5 8.5 7 12" />

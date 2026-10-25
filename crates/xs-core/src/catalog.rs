@@ -457,6 +457,38 @@ pub fn specs() -> Vec<CommandSpec> {
                     "outside": {"type": "integer", "description": "Objects now partly or wholly outside the canvas"}
                 }
             })),
+        B::new("document.copy_objects", &["EDT-089"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "cut": {"type": "boolean", "default": false, "description": "Cut: copy and delete them"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"count": {"type": "integer"}}})),
+        B::new("document.paste", &["EDT-089"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "inPlace": {"type": "boolean", "default": false, "description": "Paste copied objects at their original place"},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "Canvas point [x, y] to center what is pasted on (the middle of the view)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "pasted": {"type": "string", "enum": ["objects", "text", "document"]},
+                    "documentId": {"type": "string"},
+                    "ids": {"type": "array", "items": {"type": "string"}}
+                }
+            })),
         B::new("document.copy_all", &["EDT-090", "SHR-019"])
             .scopes(ALL)
             .assignable()

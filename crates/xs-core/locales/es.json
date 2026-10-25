@@ -238,6 +238,14 @@
     "editor_fonts": {
       "title": "Fuentes instaladas",
       "description": "Familias de fuentes instaladas en este equipo, para los objetos de texto."
+    },
+    "document_copy_objects": {
+      "title": "Copiar objetos",
+      "description": "Copia objetos para pegarlos editables en XcreenShot y, a la vez, como PNG con transparencia para otras apps. Con cut, además los elimina."
+    },
+    "document_paste": {
+      "title": "Pegar",
+      "description": "Pega lo que hay en el portapapeles: objetos copiados en XcreenShot (editables, desplazados 10 px si los originales siguen ahí, o en el mismo sitio), texto plano como objeto de texto, o una imagen como documento nuevo si no hay nada abierto."
     }
   },
   "settings": {
@@ -376,7 +384,9 @@
     "save_failed": "No se pudo guardar \"{{name}}\": {{reason}}.",
     "file_exists": "\"{{name}}\" ya existe.",
     "recovery_not_found": "No hay ningún elemento recuperable \"{{id}}\".",
-    "copy_failed": "No se pudo copiar la imagen al portapapeles. Inténtalo de nuevo."
+    "copy_failed": "No se pudo copiar la imagen al portapapeles. Inténtalo de nuevo.",
+    "nothing_to_paste": "El portapapeles no tiene nada que XcreenShot pueda pegar.",
+    "paste_image_later": "Pegar una imagen en un documento abierto llega en M2. Cierra los documentos para pegarla como uno nuevo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -667,7 +677,19 @@
         "size": "Tamaño de la imagen",
         "resolution": "Resolución",
         "canvas_color": "Color del lienzo",
-        "file": "Archivo"
+        "file": "Archivo",
+        "font": "Fuente",
+        "font_size": "Tamaño",
+        "text_style": "Estilo",
+        "bold": "Negrita",
+        "italic": "Cursiva",
+        "align": "Alineación",
+        "fill": "Relleno",
+        "outline": "Contorno",
+        "outline_width": "Grosor del contorno",
+        "shape_type": "Forma",
+        "blur_type": "Tipo",
+        "intensity": "Intensidad"
       },
       "cap": {
         "none": "Ninguno",
@@ -720,7 +742,43 @@
       "empty_title": "Todavía no hay nada abierto",
       "empty_help": "Haz una captura, abre una imagen o un documento .xshot, o suelta archivos aquí.",
       "drop_hint": "Suelta para abrirlos como documentos",
-      "panel_width": "Anchura del panel lateral"
+      "panel_width": "Anchura del panel lateral",
+      "accept": "Aceptar",
+      "mixed": "Mixto",
+      "objects_count_one": "{{count}} objeto",
+      "objects_count_other": "{{count}} objetos",
+      "props_selection": "Selección: {{what}}",
+      "text_field": "Texto",
+      "crop_help": "Arrastra los bordes o las esquinas, o dibuja un recuadro nuevo. Enter o doble clic recorta; Esc lo deja como estaba. Lo recortado sigue en el documento y se recupera volviendo a recortar.",
+      "crop_apply": "Recortar",
+      "outside_one": "{{count}} objeto fuera del lienzo",
+      "outside_other": "{{count}} objetos fuera del lienzo",
+      "select_outside": "Seleccionar",
+      "align": {
+        "left": "Izquierda",
+        "center": "Centro",
+        "right": "Derecha",
+        "justify": "Justificado"
+      },
+      "shape": {
+        "rectangle": "Rectángulo",
+        "ellipse": "Elipse"
+      },
+      "blur": {
+        "blur": "Desenfoque",
+        "pixelate": "Pixelado",
+        "solid": "Sólido",
+        "solid_hint": "El más seguro para datos confidenciales: el desenfoque y el pixelado a veces se pueden revertir con herramientas externas.",
+        "security": "Las imágenes exportadas y las copias nunca conservan lo que un desenfoque oculta. Un .xshot sí, hasta que el desenfoque se aplana."
+      },
+      "color": {
+        "theme": "Colores del tema",
+        "palette": "Paleta",
+        "area": "Saturación y brillo",
+        "hue": "Tono",
+        "brightness_short": "Br",
+        "eyedropper": "Cuentagotas"
+      }
     }
   },
   "history": {
@@ -745,7 +803,17 @@
     "move_blur": "Mover desenfoque",
     "change_blur": "Cambiar desenfoque",
     "delete_blur": "Eliminar desenfoque",
-    "crop": "Recortar"
+    "crop": "Recortar",
+    "cut_arrow": "Cortar flecha",
+    "cut_text": "Cortar texto",
+    "cut_shape": "Cortar forma",
+    "cut_blur": "Cortar desenfoque",
+    "cut_objects": "Cortar objetos",
+    "paste_arrow": "Pegar flecha",
+    "paste_text": "Pegar texto",
+    "paste_shape": "Pegar forma",
+    "paste_blur": "Pegar desenfoque",
+    "paste_objects": "Pegar objetos"
   },
   "editor": {
     "edited": "{{name}} — Editado"

@@ -4,7 +4,9 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import i18next from "i18next";
 import { run } from "../lib/commands";
-import { useEditor, type Pending, type Tool } from "./state";
+import type { Rect } from "./boxes";
+import type { Point } from "./geometry";
+import { useEditor, type Pending, type TextObject, type Tool } from "./state";
 
 const t = (key: string) => i18next.t(key);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -187,6 +189,17 @@ export function selectTool(tool: Tool): void {
   if (useEditor.getState().tool !== tool) run("editor.select_tool", { tool }).catch(fail);
 }
 
+/** Loads the installed fonts the first time the font list is needed (EDT-026). */
+export async function loadFonts(): Promise<void> {
+  if (useEditor.getState().fonts.length > 0) return;
+  try {
+    const r = await run<{ fonts: string[] }>("editor.fonts");
+    useEditor.setState({ fonts: r.fonts });
+  } catch (e) {
+    fail(e);
+  }
+}
+
 export function deleteSelection(): void {
   const { active, selection } = useEditor.getState();
   if (!active || selection.length === 0) return;
@@ -208,4 +221,119 @@ export async function recover(ids: string[], restore: boolean): Promise<void> {
     fail(e);
   }
   useEditor.setState((s) => ({ recovery: s.recovery.filter((r) => !ids.includes(r.id)) }));
+}
+
+/** Starts typing a new text box at `at`, with a fixed `width` or growing (EDT-026). */
+export function startNewText(at: Point, width: number | null): void {
+  const { styles } = useEditor.getState();
+  if (!styles) return;
+  useEditor.setState({
+    selection: [],
+    textEdit: { id: null, at, width, text: "", rotation: 0, style: styles.text },
+  });
+}
+
+/** Types into an existing text object (double click, Enter). */
+export function startTextEdit(o: TextObject): void {
+  useEditor.setState({
+    selection: [o.id],
+    textEdit: {
+      id: o.id,
+      at: o.at,
+      width: o.width,
+      text: o.text,
+      rotation: o.rotation,
+      style: o.style,
+    },
+  });
+}
+
+/** Ends typing: a new box becomes a text object; an empty box is removed (EDT-026). */
+export async function finishTextEdit(text: string): Promise<void> {
+  const { textEdit: edit, active } = useEditor.getState();
+  useEditor.setState({ textEdit: null });
+  if (!edit || !active) return;
+  try {
+    if (edit.id === null) {
+      if (!text.trim()) return;
+      const r = await run<{ ids: string[] }>("document.annotate", {
+        documentId: active,
+        objects: [{ type: "text", at: edit.at, width: edit.width, text }],
+      });
+      if (r.ids[0]) useEditor.setState({ selection: [r.ids[0]] });
+    } else if (!text.trim()) {
+      await run("document.delete_object", { documentId: active, objectId: edit.id });
+    } else if (text !== edit.text) {
+      await run("document.update_object", { documentId: active, objectId: edit.id, set: { text } });
+    }
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Applies the crop being adjusted (EDT-049). The view keeps the image in place. */
+export async function applyCrop(): Promise<void> {
+  const { active, cropRect, views, doc } = useEditor.getState();
+  if (!active || !cropRect || !doc) return;
+  const rect: Rect = {
+    x: Math.round(cropRect.x),
+    y: Math.round(cropRect.y),
+    w: Math.round(cropRect.w),
+    h: Math.round(cropRect.h),
+  };
+  // Nothing to crop: no undo step.
+  if (rect.x === 0 && rect.y === 0 && rect.w === doc.canvas.width && rect.h === doc.canvas.height)
+    return;
+  try {
+    const r = await run<{ width: number; height: number }>("document.crop", {
+      documentId: active,
+      rect,
+    });
+    const view = views[active];
+    if (view)
+      useEditor.getState().setView(active, { ...view, cx: view.cx - rect.x, cy: view.cy - rect.y });
+    useEditor.setState({ cropRect: { x: 0, y: 0, w: r.width, h: r.height } });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Puts the crop box back on the whole canvas (Esc, EDT-049). */
+export function resetCrop(): void {
+  const { doc, tool } = useEditor.getState();
+  useEditor.setState({
+    cropRect:
+      tool === "crop" && doc ? { x: 0, y: 0, w: doc.canvas.width, h: doc.canvas.height } : null,
+  });
+}
+
+/** Copies the selected objects (EDT-089): editable here, a PNG for other apps. */
+export async function copyObjects(cut = false): Promise<void> {
+  const { active, selection } = useEditor.getState();
+  if (!active || selection.length === 0) return;
+  try {
+    await run("document.copy_objects", { documentId: active, objectIds: selection, cut });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+export async function cutObjects(): Promise<void> {
+  await copyObjects(true);
+}
+
+/** Pastes the clipboard (EDT-089); `inPlace` keeps the copied objects' place. */
+export async function pasteObjects(inPlace: boolean): Promise<void> {
+  const { active, views } = useEditor.getState();
+  const view = active ? views[active] : undefined;
+  try {
+    const r = await run<{ ids: string[] }>("document.paste", {
+      ...(active ? { documentId: active } : {}),
+      inPlace,
+      ...(view ? { center: [view.cx, view.cy] } : {}),
+    });
+    if (r.ids.length > 0) useEditor.setState({ selection: r.ids });
+  } catch (e) {
+    fail(e);
+  }
 }
