@@ -12,6 +12,8 @@ Pruebas con la app en marcha (instancia aislada y entrada simulada en la ventana
 - [x] Recortar: oscurece lo que queda fuera, tiene tiradores y panel; `Enter` recorta; los objetos se quedan sobre la misma parte de la imagen; la barra de estado avisa de los objetos que quedan fuera, con **Seleccionar**.
 - [x] El selector de color se abre entero aunque el panel tenga poco alto; elegir un color de la paleta y **Aceptar** cambia el estilo de la herramienta.
 - [x] Con la ventana estrecha, la barra muestra solo los íconos de las herramientas (nombre y tecla en la información emergente) y no se corta nada.
+- [x] Con la interfaz empaquetada como en la app instalada (`npx tauri build --debug --no-bundle`, compilación `01bab3e`): pixelado, texto, elipse y flecha se ven en el editor igual que en el PNG exportado; `Enter` sobre el texto abre el campo de escritura y `Esc` lo cierra; `I` sobre una forma azul toma #4682B4.
+- [x] `I` fuera de la imagen tomaba negro (el lienzo está vacío ahí). Corregido: fuera de la imagen no hace nada.
 
 Copiar y pegar no se probó en la instancia aislada para no tocar el portapapeles de Carlos: se prueba en la tanda 4.
 

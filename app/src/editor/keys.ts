@@ -121,6 +121,8 @@ function pickCanvasColor(): void {
   } catch {
     return;
   }
+  // Outside the image the canvas is empty: nothing to take.
+  if ((data[3] ?? 0) === 0) return;
   const hex =
     `#${[data[0], data[1], data[2]].map((v) => (v ?? 0).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
   const selected = doc?.objects.find((o) => o.id === selection[0]);
