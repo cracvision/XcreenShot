@@ -50,20 +50,22 @@ Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compila
 
 ## Tanda 2 · Zoom y vista — Carlos
 
-Carlos marcó PASS (2026-10-24, instalador `2d581d1`) los pasos 1 a 4. El 5 falló (abajo); corregido, falta que lo confirme.
+Carlos marcó PASS (2026-10-24, instalador `2d581d1`) los pasos 1 a 4. El 5 falló (arriba) y pasó tras la corrección (2026-10-25, instalador `9ddb1ba`).
 
 1. [x] `Ctrl`+rueda acerca y aleja manteniendo bajo el puntero el mismo punto de la imagen.
 2. [x] `Ctrl+0` = 100 %; `Ctrl+Shift+0` = ajustar a la ventana; el menú ˅ de la barra de estado ofrece los pasos fijos.
 3. [x] Escribe `250` en el campo de zoom y pulsa `Enter`: la vista queda al 250 %.
 4. [x] Mantén `Espacio` y arrastra (o arrastra con la rueda pulsada): la vista se desplaza sin dibujar.
-5. [ ] Con dos documentos en la tira, cambia de uno a otro: cada uno conserva su zoom y su posición.
+5. [x] Con dos documentos en la tira, cambia de uno a otro: cada uno conserva su zoom y su posición.
 
 ## Tanda 3 · Guardar, exportar y cerrar — Carlos
 
-1. [ ] **Compartir ▾ > Archivo…**: guarda un PNG; ábrelo con el visor de Windows y tiene las flechas.
-2. [ ] Repite con JPG: el archivo se abre en el visor de Windows.
-3. [ ] **Copiar todo** y pega en Word o Paint: la imagen lleva las flechas; en el editor siguen siendo editables.
-4. [ ] **Abrir…** un PNG de tu escritorio, dibuja una flecha y `Ctrl+W`: pregunta Guardar / No guardar / Cancelar. Cancelar lo deja abierto.
-5. [ ] Arrastra dos PNG desde el Explorador a la ventana: se abren los dos y queda visible el último.
-6. [ ] Con una captura modificada, cambia a otro documento y vuelve: la captura se guardó sola (sin punto de cambios).
-7. [ ] Cierra la ventana del editor y vuelve a abrirla desde el ícono: los documentos siguen en la tira.
+Carlos marcó PASS (2026-10-25, instalador `9ddb1ba`) los siete pasos.
+
+1. [x] **Compartir ▾ > Archivo…**: guarda un PNG; ábrelo con el visor de Windows y tiene las flechas.
+2. [x] Repite con JPG: el archivo se abre en el visor de Windows.
+3. [x] **Copiar todo** y pega en Word o Paint: la imagen lleva las flechas; en el editor siguen siendo editables.
+4. [x] **Abrir…** un PNG de tu escritorio, dibuja una flecha y `Ctrl+W`: pregunta Guardar / No guardar / Cancelar. Cancelar lo deja abierto.
+5. [x] Arrastra dos PNG desde el Explorador a la ventana: se abren los dos y queda visible el último.
+6. [x] Con una captura modificada, cambia a otro documento y vuelve: la captura se guardó sola (sin punto de cambios).
+7. [x] Cierra la ventana del editor y vuelve a abrirla desde el ícono: los documentos siguen en la tira.

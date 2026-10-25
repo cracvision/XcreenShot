@@ -2,6 +2,8 @@
 
 Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataforma · `Hecho` verificado en ambas.
 
+Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … En M2: …"), `Win`, `Mac` y `Hecho` se refieren a la parte de su hito; lo demás se sigue en la prueba manual del ID.
+
 ## 01-captura.md
 
 | ID | Función | Hito | Prioridad | Estado |
@@ -83,11 +85,11 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-004 | Personalizar la barra de herramientas | M2 | Should | — |
 | EDT-005 | Panel lateral | M1 | Must | En curso |
 | EDT-006 | Barra de edición rápida | M2 | Should | — |
-| EDT-007 | Zoom y vista | M1 | Must | En curso |
+| EDT-007 | Zoom y vista | M1 | Must | Win |
 | EDT-008 | Cuadrícula de píxeles | M2 | Could | — |
 | EDT-009 | Pantalla completa | M2 | Could | — |
 | EDT-010 | Área de trabajo | M2 | Could | — |
-| EDT-011 | Barra de estado | M1 | Should | En curso |
+| EDT-011 | Barra de estado | M1 | Should | Win |
 | EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | En curso |
 | EDT-013 | Accesibilidad del lienzo | M1 | Should | — |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
@@ -100,7 +102,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-021 | Sombra de los objetos | M2 | Should | — |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | En curso |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
-| EDT-024 | Flecha | M1 | Must | En curso |
+| EDT-024 | Flecha | M1 | Must | Win |
 | EDT-025 | Línea | M2 | Should | — |
 | EDT-026 | Texto | M1 | Must | — |
 | EDT-027 | Corrector ortográfico | M2 | Should | — |
@@ -166,9 +168,9 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-087 | Mover con el teclado | M2 | Should | — |
 | EDT-088 | Duplicar objetos | M2 | Should | — |
 | EDT-089 | Cortar, copiar y pegar | M1 | Must | — |
-| EDT-090 | Copiar todo | M1 | Must | En curso |
+| EDT-090 | Copiar todo | M1 | Must | Win |
 | EDT-091 | Aplanar y desaplanar | M2 | Should | — |
-| EDT-092 | Deshacer y rehacer | M1 | Must | En curso |
+| EDT-092 | Deshacer y rehacer | M1 | Must | Win |
 | EDT-093 | Cursor como objeto | M2 | Should | — |
 | EDT-094 | Medición en vivo | M5 | Could | — |
 | EDT-095 | Nuevo desde plantilla | M2 | Should | — |
@@ -182,8 +184,8 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-103 | Nueva imagen | M2 | Should | — |
 | EDT-104 | Nueva desde el portapapeles | M2 | Should | — |
 | EDT-105 | Abrir, arrastrar y soltar archivos | M1 | Must | En curso |
-| EDT-106 | Formato `.xshot` | M1 | Must | En curso |
-| EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | En curso |
+| EDT-106 | Formato `.xshot` | M1 | Must | Win |
+| EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | Win |
 | EDT-108 | Cerrar y Cerrar todo | M1 | Must | En curso |
 | EDT-109 | Renombrar, duplicar, eliminar y mostrar | M2 | Should | — |
 | EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
