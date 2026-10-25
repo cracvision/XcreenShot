@@ -230,6 +230,14 @@
     "editor_recovery_discard": {
       "title": "Discard recoverable work",
       "description": "Deletes recovery copies for good."
+    },
+    "document_crop": {
+      "title": "Crop",
+      "description": "Crops the document to a rectangle in canvas pixels. Nothing is lost: the original pixels stay in the .xshot and a later crop can grow back to the original edges. Objects keep their place on the image. One undo step."
+    },
+    "editor_fonts": {
+      "title": "Installed fonts",
+      "description": "Font families installed on this computer, for text objects."
     }
   },
   "settings": {
@@ -331,6 +339,10 @@
     "capture_autoDetect": {
       "label": "Automatic detection",
       "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
+    },
+    "editor_deleteCroppedContent": {
+      "label": "Delete cropped content when saving",
+      "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
     }
   },
   "errors": {
@@ -720,7 +732,20 @@
     "change_arrow": "Change arrow",
     "change_objects": "Change objects",
     "delete_arrow": "Delete arrow",
-    "delete_objects": "Delete objects"
+    "delete_objects": "Delete objects",
+    "draw_text": "Add text",
+    "move_text": "Move text",
+    "change_text": "Change text",
+    "delete_text": "Delete text",
+    "draw_shape": "Draw shape",
+    "move_shape": "Move shape",
+    "change_shape": "Change shape",
+    "delete_shape": "Delete shape",
+    "draw_blur": "Blur",
+    "move_blur": "Move blur",
+    "change_blur": "Change blur",
+    "delete_blur": "Delete blur",
+    "crop": "Crop"
   },
   "editor": {
     "edited": "{{name}} — Edited"

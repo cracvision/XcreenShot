@@ -429,6 +429,34 @@ pub fn specs() -> Vec<CommandSpec> {
                     "bytes": {"type": "integer"}
                 }
             })),
+        B::new("document.crop", &["EDT-049", "EDT-050", "EDT-119"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "rect": {
+                        "type": "object",
+                        "description": "New canvas in canvas pixels. It may reach past the canvas, up to the edges of the original image (EDT-050)",
+                        "properties": {
+                            "x": {"type": "number"}, "y": {"type": "number"},
+                            "w": {"type": "number", "minimum": 1}, "h": {"type": "number", "minimum": 1}
+                        },
+                        "required": ["x", "y", "w", "h"],
+                        "additionalProperties": false
+                    },
+                    "trim": {"type": "boolean", "description": "Trim plain borders (EDT-051, M2)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "outside": {"type": "integer", "description": "Objects now partly or wholly outside the canvas"}
+                }
+            })),
         B::new("document.copy_all", &["EDT-090", "SHR-019"])
             .scopes(ALL)
             .assignable()
@@ -464,6 +492,10 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             )),
         B::new("editor.state", &["EDT-014", "EDT-003"]).result(json!({"type": "object"})),
+        B::new("editor.fonts", &["EDT-026"]).result(json!({
+            "type": "object",
+            "properties": {"fonts": {"type": "array", "items": {"type": "string"}}}
+        })),
         B::new("editor.select_tool", &["EDT-003", "EDT-119"])
             .scopes(ALL)
             .positional(&["tool"])

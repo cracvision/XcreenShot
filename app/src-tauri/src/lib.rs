@@ -269,6 +269,8 @@ pub fn run() {
             permissions::init(core.paths.config_dir.clone());
             // Recovery copies of unsaved documents every 30 s (EDT-012).
             xs_editor::start_background(&core);
+            // System fonts load in the background, so the first text does not wait.
+            xs_image::text::warm_up();
 
             if let Err(e) = serve_ipc(core.clone()) {
                 tracing::error!(error = %e, "could not open the local automation channel");

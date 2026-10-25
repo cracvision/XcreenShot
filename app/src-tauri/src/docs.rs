@@ -4,6 +4,7 @@
 //! - `/<documentId>/base` returns the original pixels as encoded in the file (PNG/JPG).
 //! - `/<documentId>/thumb` returns a small PNG of the final image, for the strip of
 //!   open documents.
+//! - `/<documentId>/object/<objectId>` returns a text or blur object as Rust draws it.
 
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager};
@@ -21,6 +22,13 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         [id, "base"] => editor
             .store
             .with(id, |d| (d.base_source.bytes.clone(), d.base_source.mime)),
+        // Text and blur as Rust draws them (ADR 0004); the canvas places them.
+        [id, "object", object] => editor.store.snapshot(id).ok().and_then(|snap| {
+            let (image, _, _) = xs_image::render::object_image(&snap.document, &snap.base, object)?;
+            xs_image::encode::png(&image, 0.0, true)
+                .ok()
+                .map(|png| (std::sync::Arc::new(png), "image/png"))
+        }),
         [id, "thumb"] => editor.store.snapshot(id).ok().and_then(|snap| {
             let small = xs_image::encode::thumbnail(&snap.render(), THUMB);
             xs_image::encode::png(&small, 0.0, true)

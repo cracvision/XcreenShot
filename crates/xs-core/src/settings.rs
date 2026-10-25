@@ -136,6 +136,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "APP-020",
         ),
         def(
+            "editor.deleteCroppedContent",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-050",
+        ),
+        def(
             "advanced.keepEditorLoaded",
             "advanced",
             boolean(),

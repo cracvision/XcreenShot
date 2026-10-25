@@ -25,7 +25,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 2] = ["move", "arrow"];
+pub const AVAILABLE_TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 /// Zoom steps in percent (EDT-007).
 pub const ZOOM_STEPS: [f64; 16] = [
     10.0, 25.0, 33.0, 50.0, 67.0, 100.0, 150.0, 200.0, 300.0, 400.0, 600.0, 800.0, 1200.0, 1600.0, 2400.0,
@@ -205,26 +205,32 @@ fn encode(snap: &Snapshot, format: Format, quality: u8) -> Result<Vec<u8>, Strin
         ),
         Format::Xshot => {
             let mut buf = std::io::Cursor::new(Vec::new());
-            snap.to_xshot()?.to_writer(&mut buf).map_err(|e| e.to_string())?;
+            snap.to_xshot(false)?
+                .to_writer(&mut buf)
+                .map_err(|e| e.to_string())?;
             Ok(buf.into_inner())
         }
     }
 }
 
-/// Writes `snap` to `path` in `format`. `.xshot` files go through their safe writer.
+/// Writes `snap` to `path` in `format`. `.xshot` files go through their safe writer,
+/// leaving out cropped pixels with `drop_cropped` (EDT-050).
 fn write_snapshot(
     ed: &Editor,
     snap: &Snapshot,
     path: &Path,
     format: Format,
     quality: u8,
+    drop_cropped: bool,
 ) -> Result<u64, String> {
     let _guard = ed.writing.lock().unwrap();
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     if format == Format::Xshot {
-        snap.to_xshot()?.write(path).map_err(|e| e.to_string())?;
+        snap.to_xshot(drop_cropped)?
+            .write(path)
+            .map_err(|e| e.to_string())?;
         return Ok(std::fs::metadata(path).map(|m| m.len()).unwrap_or(0));
     }
     let bytes = encode(snap, format, quality)?;
@@ -232,12 +238,17 @@ fn write_snapshot(
     Ok(bytes.len() as u64)
 }
 
+/// "Delete cropped content when saving" (EDT-050).
+fn drop_cropped(core: &Core) -> bool {
+    core.settings.get_bool("editor.deleteCroppedContent")
+}
+
 /// Saves a document in its own file and clears its unsaved state (EDT-107).
 fn save_own(core: &Core, id: &str) -> Result<PathBuf, String> {
     let ed = editor(core);
     let snap = ed.store.snapshot(id)?;
     let path = snap.path.clone().ok_or("no file")?;
-    write_snapshot(&ed, &snap, &path, snap.format, 90)?;
+    write_snapshot(&ed, &snap, &path, snap.format, 90, drop_cropped(core))?;
     ed.store.mark_saved(id, snap.version);
     drop_recovery(core, id);
     Ok(path)
@@ -317,6 +328,8 @@ pub fn write_recovery_copies(core: &Core) {
             &recovery::document_path(&dir, &rid),
             Format::Xshot,
             90,
+            // A recovery copy keeps everything: it is the document as it was.
+            false,
         )
         .and_then(|_| recovery::write_entry(&dir, &entry).map_err(|e| e.to_string()));
         match written {
@@ -635,27 +648,21 @@ fn set_tool_style(
     lang: Lang,
 ) -> Result<Value, CommandError> {
     let ed = editor(core);
-    if tool != "arrow" {
-        return Err(CommandError::new(
-            ErrorCode::NotFound,
-            tr(lang, "errors.tool_later", &[]),
-        ));
-    }
-    let styles = {
+    let (style, styles) = {
         let mut styles = ed.styles.lock().unwrap();
-        styles.arrow = xs_image::geometry::ArrowStyle::merged(&styles.arrow, changes).map_err(|r| {
+        let style = styles.set(tool, changes).map_err(|r| {
             invalid(tr(
                 lang,
                 "errors.invalid_param",
                 &[("param", "style"), ("reason", &r)],
             ))
         })?;
-        styles.clone()
+        (style, styles.clone())
     };
-    core.remember(STYLES_KEY, serde_json::to_value(&styles).unwrap_or_default());
-    core.host()
-        .editor_event("styles", serde_json::to_value(&styles).unwrap_or_default());
-    Ok(serde_json::to_value(&styles.arrow).unwrap_or_default())
+    let all = serde_json::to_value(&styles).unwrap_or_default();
+    core.remember(STYLES_KEY, all.clone());
+    core.host().editor_event("styles", all);
+    Ok(style)
 }
 
 fn zoom_step(current: f64, up: bool) -> f64 {
@@ -770,11 +777,27 @@ pub fn extension() -> Extension {
             let oids = object_ids(&p, ctx.lang)?;
             let kinds = kinds_of(&core, ctx.lang, &id, &oids)?;
             let set = p["set"].as_object().cloned().unwrap_or_default();
-            let action = if set.contains_key("style") {
-                "change"
-            } else {
-                "move"
-            };
+            // Try the change on copies first: it names the undo step and finds errors.
+            let mut moved_only = true;
+            let copies = editor(&core)
+                .store
+                .with(&id, |d| {
+                    oids.iter()
+                        .filter_map(|o| d.document.object(o).cloned())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            for mut o in copies {
+                let change = objects::update(&mut o, &set).map_err(|r| {
+                    invalid(tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", "set"), ("reason", &r)],
+                    ))
+                })?;
+                moved_only &= change == objects::Change::Move;
+            }
+            let action = if moved_only { "move" } else { "change" };
             let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
             let updated = editor(&core)
                 .store
@@ -800,8 +823,12 @@ pub fn extension() -> Extension {
             // current style. Agents do not change the user's styles.
             if ctx.source == Source::Ui {
                 if let Some(style) = set.get("style").and_then(Value::as_object) {
-                    for kind in kinds.iter().filter(|k| k.as_str() == "arrow") {
-                        let _ = set_tool_style(&core, kind, style, ctx.lang);
+                    let mut seen: Vec<&String> = Vec::new();
+                    for kind in &kinds {
+                        if !seen.contains(&kind) {
+                            seen.push(kind);
+                            let _ = set_tool_style(&core, kind, style, ctx.lang);
+                        }
                     }
                 }
             }
@@ -896,7 +923,8 @@ pub fn extension() -> Extension {
                 target
             };
             let snap = ed.store.snapshot(&id).map_err(|e| internal(ctx.lang, &name, e))?;
-            write_snapshot(&ed, &snap, &target, format, 90).map_err(|e| internal(ctx.lang, &name, e))?;
+            write_snapshot(&ed, &snap, &target, format, 90, drop_cropped(&core))
+                .map_err(|e| internal(ctx.lang, &name, e))?;
             // LIB-021: a library document stays linked to its library file (Save as
             // writes a copy). A file from elsewhere follows the new file (EDT-107).
             let linked = snap.kind == Kind::External;
@@ -947,7 +975,7 @@ pub fn extension() -> Extension {
             }
             let quality = p.get("quality").and_then(Value::as_u64).unwrap_or(90) as u8;
             let snap = ed.store.snapshot(&id).map_err(|e| internal(ctx.lang, &name, e))?;
-            let bytes = write_snapshot(&ed, &snap, &target, format, quality)
+            let bytes = write_snapshot(&ed, &snap, &target, format, quality, false)
                 .map_err(|e| internal(ctx.lang, &name, e))?;
             Ok(json!({
                 "path": target,
@@ -955,6 +983,65 @@ pub fn extension() -> Extension {
                 "height": snap.document.canvas.height,
                 "bytes": bytes,
             }))
+        });
+        on!("document.crop", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            if p.get("trim").and_then(Value::as_bool).unwrap_or(false) {
+                return Err(invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "trim"), ("reason", "trimming borders arrives in M2")],
+                )));
+            }
+            let r = p.get("rect").ok_or_else(|| {
+                invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "rect"), ("reason", "rect is required")],
+                ))
+            })?;
+            let num = |k: &str| r[k].as_f64().unwrap_or(0.0);
+            let (x0, y0) = (num("x").floor() as i64, num("y").floor() as i64);
+            let (x1, y1) = (
+                (num("x") + num("w")).ceil() as i64,
+                (num("y") + num("h")).ceil() as i64,
+            );
+            let base = editor(&core).store.with(&id, |d| d.base_size).unwrap_or((1, 1));
+            let result = editor(&core)
+                .store
+                .mutate(&id, "history.crop", |doc| {
+                    // Non-destructive (EDT-050): the canvas is a window over the original
+                    // pixels, and can grow back up to their edges.
+                    let old = doc.crop;
+                    let nx0 = (old.x + x0).clamp(0, base.0 as i64);
+                    let ny0 = (old.y + y0).clamp(0, base.1 as i64);
+                    let nx1 = (old.x + x1).clamp(0, base.0 as i64);
+                    let ny1 = (old.y + y1).clamp(0, base.1 as i64);
+                    if nx1 - nx0 < 1 || ny1 - ny0 < 1 {
+                        return Err(invalid(tr(
+                            ctx.lang,
+                            "errors.invalid_param",
+                            &[("param", "rect"), ("reason", "the crop leaves no image")],
+                        )));
+                    }
+                    let (dx, dy) = ((nx0 - old.x) as f64, (ny0 - old.y) as f64);
+                    for o in &mut doc.objects {
+                        objects::translate(o, -dx, -dy);
+                    }
+                    doc.crop_history.push(old);
+                    doc.crop = xs_core::document::PixelRect {
+                        x: nx0,
+                        y: ny0,
+                        width: (nx1 - nx0) as u32,
+                        height: (ny1 - ny0) as u32,
+                    };
+                    doc.canvas.width = doc.crop.width;
+                    doc.canvas.height = doc.crop.height;
+                    Ok::<_, CommandError>((doc.canvas.width, doc.canvas.height))
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "width": result.0, "height": result.1 }))
         });
         on!("document.copy_all", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
@@ -976,6 +1063,9 @@ pub fn extension() -> Extension {
             core.host().show_main_window()?;
             Ok(json!({}))
         });
+        on!("editor.fonts", |_core, ctx, _p| Ok(
+            json!({ "fonts": xs_image::text::families() })
+        ));
         on!("editor.state", |core, ctx, _p| {
             let ed = editor(&core);
             let recoverable = recoverable(&core).len();

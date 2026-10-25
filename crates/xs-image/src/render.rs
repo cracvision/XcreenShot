@@ -5,12 +5,15 @@ use std::sync::Arc;
 
 use image::RgbaImage;
 use tiny_skia::{
-    FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, PixmapPaint, Stroke, StrokeDash, Transform,
+    FillRule, LineCap, LineJoin, Mask, Paint, PathBuilder, Pixmap, PixmapPaint, Stroke, StrokeDash, Transform,
 };
 use xs_core::document::{Document, Object};
 
 use crate::color::Rgba;
-use crate::geometry::{Arrow, Geometry, Shape};
+use crate::effects;
+use crate::geometry::{dash, Arrow, Geometry, Shape};
+use crate::shapes::{inner_rect, pixel_bounds, BlurObject, BlurType, Rect, ShapeKind, ShapeObject};
+use crate::text::{self, Text};
 
 /// Original pixels of a document, straight RGBA, shared between renders.
 #[derive(Clone)]
@@ -156,29 +159,17 @@ fn draw_geometry(pm: &mut Pixmap, g: &Geometry, color: Rgba) {
     }
 }
 
-/// Draws one object. Kinds this build does not know are skipped (a newer file).
-fn draw_object(pm: &mut Pixmap, object: &Object) {
-    let (geometry, color, opacity) = match object.kind.as_str() {
-        "arrow" => match Arrow::from_props(&object.props) {
-            Ok(a) => (
-                a.geometry(),
-                Rgba::parse(&a.style.color).unwrap_or(Rgba::WHITE),
-                a.style.opacity,
-            ),
-            Err(_) => return,
-        },
-        _ => return,
-    };
+/// Draws `layer` over `pm` at `opacity` %: translucent objects are drawn whole first,
+/// so their own parts (head and shaft, fill and outline) do not darken each other.
+fn blend_layer(pm: &mut Pixmap, opacity: f64, draw: impl FnOnce(&mut Pixmap)) {
     if opacity >= 100.0 {
-        draw_geometry(pm, &geometry, color);
+        draw(pm);
         return;
     }
-    // Translucent objects are drawn whole and then blended, so the head and the shaft
-    // do not darken where they overlap.
     let Some(mut layer) = Pixmap::new(pm.width(), pm.height()) else {
         return;
     };
-    draw_geometry(&mut layer, &geometry, color);
+    draw(&mut layer);
     let blend = PixmapPaint {
         opacity: (opacity / 100.0).clamp(0.0, 1.0) as f32,
         ..PixmapPaint::default()
@@ -186,8 +177,164 @@ fn draw_object(pm: &mut Pixmap, object: &Object) {
     pm.draw_pixmap(0, 0, layer.as_ref(), &blend, Transform::identity(), None);
 }
 
-/// The final image of `doc` over `base`, straight RGBA.
-pub fn render(doc: &Document, base: &Base) -> RgbaImage {
+/// Rotation around the center of `r`, in the canvas.
+fn turned(r: Rect, rotation: f64) -> Transform {
+    Transform::from_rotate_at(
+        rotation as f32,
+        (r.x + r.w / 2.0) as f32,
+        (r.y + r.h / 2.0) as f32,
+    )
+}
+
+/// Path of a rectangle or ellipse filling `r` (before rotation).
+fn outline_path(kind: ShapeKind, r: Rect) -> Option<tiny_skia::Path> {
+    let rect =
+        tiny_skia::Rect::from_xywh(r.x as f32, r.y as f32, r.w.max(0.01) as f32, r.h.max(0.01) as f32)?;
+    match kind {
+        ShapeKind::Rectangle => Some(PathBuilder::from_rect(rect)),
+        ShapeKind::Ellipse => PathBuilder::from_oval(rect),
+    }
+}
+
+fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
+    let t = turned(s.rect, s.rotation);
+    blend_layer(pm, s.style.opacity, |pm| {
+        if let Some(fill) = s.style.fill.as_deref().and_then(Rgba::parse) {
+            if let Some(path) = outline_path(s.style.shape_type, s.rect) {
+                pm.fill_path(&path, &paint(fill), FillRule::Winding, t, None);
+            }
+        }
+        let w = s.style.outline_width;
+        if w > 0.0 {
+            let inner = inner_rect(s.rect, w);
+            if let (Some(path), Some(color)) = (
+                outline_path(s.style.shape_type, inner),
+                Rgba::parse(&s.style.outline),
+            ) {
+                let dash = dash(s.style.line_style, w);
+                let mut st = stroke(w, dash.as_deref());
+                st.line_join = LineJoin::Miter;
+                pm.stroke_path(&path, &paint(color), &st, t, None);
+            }
+        }
+    });
+}
+
+/// The blur, pixelation or solid cover of `b` over what `below` shows, transparent
+/// outside its shape, with where it goes: `(patch, x, y)`.
+fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
+    let [x, y, w, h] = pixel_bounds(b.rect, b.rotation, below.width(), below.height())?;
+    let (x, y, w, h) = (x as i32, y as i32, w as u32, h as u32);
+    let mut mask = Mask::new(w, h)?;
+    let path = outline_path(b.style.shape_type, b.rect)?;
+    let t = turned(b.rect, b.rotation).post_translate(-x as f32, -y as f32);
+    mask.fill_path(&path, FillRule::Winding, true, t);
+    let mut out = Pixmap::new(w, h)?;
+    if b.style.blur_type == BlurType::Solid {
+        let c = Rgba::parse(&b.style.color).unwrap_or(Rgba {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 255,
+        });
+        out.fill(tiny_skia::Color::from_rgba8(c.r, c.g, c.b, c.a));
+    } else {
+        // Blur reads around the area too; pixelation only inside it.
+        let pad = if b.style.blur_type == BlurType::Blur {
+            3 * b.style.radius() as i32
+        } else {
+            0
+        };
+        let (ex0, ey0) = ((x - pad).max(0), (y - pad).max(0));
+        let ex1 = (x + w as i32 + pad).min(below.width() as i32);
+        let ey1 = (y + h as i32 + pad).min(below.height() as i32);
+        let (ew, eh) = ((ex1 - ex0) as usize, (ey1 - ey0) as usize);
+        let src = below.data();
+        let stride = below.width() as usize * 4;
+        let mut area = Vec::with_capacity(ew * eh * 4);
+        for row in ey0 as usize..ey1 as usize {
+            let start = row * stride + ex0 as usize * 4;
+            area.extend_from_slice(&src[start..start + ew * 4]);
+        }
+        match b.style.blur_type {
+            BlurType::Blur => effects::blur(&mut area, ew, eh, b.style.radius() as usize),
+            _ => effects::pixelate(
+                &mut area,
+                ew,
+                eh,
+                b.style.block() as usize,
+                b.rect.x.floor() as i64 - ex0 as i64,
+                b.rect.y.floor() as i64 - ey0 as i64,
+            ),
+        }
+        let dst = out.data_mut();
+        for row in 0..h as usize {
+            let from = ((row + (y - ey0) as usize) * ew + (x - ex0) as usize) * 4;
+            dst[row * w as usize * 4..(row + 1) * w as usize * 4]
+                .copy_from_slice(&area[from..from + w as usize * 4]);
+        }
+    }
+    out.apply_mask(&mask);
+    Some((out, x, y))
+}
+
+/// Draws one object. Kinds this build does not know are skipped (a newer file).
+fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64) {
+    match object.kind.as_str() {
+        "arrow" => {
+            let Ok(a) = Arrow::from_props(&object.props) else {
+                return;
+            };
+            let color = Rgba::parse(&a.style.color).unwrap_or(Rgba::WHITE);
+            let g = a.geometry();
+            blend_layer(pm, a.style.opacity, |pm| draw_geometry(pm, &g, color));
+        }
+        "text" => {
+            let Ok(t) = Text::from_props(&object.props) else {
+                return;
+            };
+            let Some((raster, laid)) = text::rasterize(&t, dpi) else {
+                return;
+            };
+            let r = Rect {
+                x: t.at[0],
+                y: t.at[1],
+                w: laid.width as f64,
+                h: laid.height as f64,
+            };
+            let paint = PixmapPaint {
+                opacity: (t.style.opacity / 100.0).clamp(0.0, 1.0) as f32,
+                quality: tiny_skia::FilterQuality::Bilinear,
+                ..PixmapPaint::default()
+            };
+            let at = turned(r, t.rotation).pre_translate(r.x as f32, r.y as f32);
+            pm.draw_pixmap(0, 0, raster.as_ref(), &paint, at, None);
+        }
+        "shape" => {
+            if let Ok(s) = ShapeObject::from_props(&object.props) {
+                draw_shape(pm, &s);
+            }
+        }
+        "blur" => {
+            let Ok(b) = BlurObject::from_props(&object.props) else {
+                return;
+            };
+            if let Some((patch, x, y)) = blur_patch(pm, &b) {
+                pm.draw_pixmap(
+                    x,
+                    y,
+                    patch.as_ref(),
+                    &PixmapPaint::default(),
+                    Transform::identity(),
+                    None,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn canvas(doc: &Document, base: &Base) -> Pixmap {
     let (w, h) = (doc.canvas.width.max(1), doc.canvas.height.max(1));
     let mut pm = Pixmap::new(w, h).expect("canvas size");
     if let Some(color) = doc.canvas.color.as_deref().and_then(Rgba::parse) {
@@ -203,15 +350,53 @@ pub fn render(doc: &Document, base: &Base) -> RgbaImage {
             None,
         );
     }
-    for object in &doc.objects {
-        draw_object(&mut pm, object);
-    }
-    let mut out = Vec::with_capacity((w * h * 4) as usize);
+    pm
+}
+
+fn straight(pm: &Pixmap) -> RgbaImage {
+    let mut out = Vec::with_capacity(pm.data().len());
     for px in pm.pixels() {
         let c = px.demultiply();
         out.extend_from_slice(&[c.red(), c.green(), c.blue(), c.alpha()]);
     }
-    RgbaImage::from_raw(w, h, out).expect("buffer size")
+    RgbaImage::from_raw(pm.width(), pm.height(), out).expect("buffer size")
+}
+
+/// The final image of `doc` over `base`, straight RGBA.
+pub fn render(doc: &Document, base: &Base) -> RgbaImage {
+    let mut pm = canvas(doc, base);
+    for object in &doc.objects {
+        draw_object(&mut pm, object, doc.dpi);
+    }
+    straight(&pm)
+}
+
+/// What the editor canvas shows for objects Rust draws (ADR 0004), with its top-left
+/// corner in canvas pixels: text (unrotated; the canvas turns it) and blur or
+/// pixelation (as it looks over what is below it). `None` for other objects.
+pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage, i32, i32)> {
+    let index = doc.objects.iter().position(|o| o.id == id)?;
+    let object = &doc.objects[index];
+    match object.kind.as_str() {
+        "text" => {
+            let t = Text::from_props(&object.props).ok()?;
+            let (raster, _) = text::rasterize(&t, doc.dpi)?;
+            Some((straight(&raster), t.at[0].floor() as i32, t.at[1].floor() as i32))
+        }
+        "blur" => {
+            let b = BlurObject::from_props(&object.props).ok()?;
+            if b.style.blur_type == BlurType::Solid {
+                return None;
+            }
+            let mut pm = canvas(doc, base);
+            for below in &doc.objects[..index] {
+                draw_object(&mut pm, below, doc.dpi);
+            }
+            let (patch, x, y) = blur_patch(&pm, &b)?;
+            Some((straight(&patch), x, y))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -284,6 +469,119 @@ mod tests {
         let out = render(&doc, &base);
         assert_eq!(out.dimensions(), (4, 4));
         assert_eq!(out.get_pixel(1, 2).0, [255, 0, 0, 255]);
+    }
+
+    fn object(kind: &str, props: serde_json::Value) -> Object {
+        Object {
+            id: format!("{kind}1"),
+            kind: kind.into(),
+            props: props.as_object().unwrap().clone(),
+        }
+    }
+
+    /// White image with black text-like stripes in 100..200 × 50..90.
+    fn striped() -> Base {
+        let mut img = RgbaImage::from_pixel(300, 150, image::Rgba([255, 255, 255, 255]));
+        for y in 50..90 {
+            for x in (100..200).step_by(4) {
+                img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]));
+            }
+        }
+        Base::from_image(img)
+    }
+
+    #[test]
+    fn solid_blur_leaves_no_trace_of_what_it_covers() {
+        let base = striped();
+        let mut doc = Document::new(300, 150, 96.0);
+        doc.objects.push(object(
+            "blur",
+            json!({"rect": {"x": 90, "y": 40, "w": 120, "h": 60}, "style": {"blurType": "solid"}}),
+        ));
+        let img = render(&doc, &base);
+        for y in 41..99 {
+            for x in 91..209 {
+                assert_eq!(img.get_pixel(x, y).0, [0, 0, 0, 255], "at {x},{y}");
+            }
+        }
+        assert_eq!(img.get_pixel(50, 20).0, [255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn blur_and_pixelate_hide_detail_and_bigger_intensity_makes_bigger_blocks() {
+        let base = striped();
+        let blurred = |kind: &str, intensity: f64| {
+            let mut doc = Document::new(300, 150, 96.0);
+            doc.objects.push(object(
+                "blur",
+                json!({"rect": {"x": 100, "y": 50, "w": 100, "h": 40}, "style": {"blurType": kind, "intensity": intensity}}),
+            ));
+            render(&doc, &base)
+        };
+        let b = blurred("blur", 60.0);
+        // A stripe and its gap become close grays.
+        let (on, off) = (b.get_pixel(148, 70).0[0] as i32, b.get_pixel(150, 70).0[0] as i32);
+        assert!((on - off).abs() < 30, "{on} vs {off}");
+        // Over a gradient, each pixelation block is one flat step.
+        let mut ramp = RgbaImage::new(300, 150);
+        for (x, _, p) in ramp.enumerate_pixels_mut() {
+            *p = image::Rgba([x as u8, x as u8, x as u8, 255]);
+        }
+        let ramp = Base::from_image(ramp);
+        let pixelated = |intensity: f64| {
+            let mut doc = Document::new(300, 150, 96.0);
+            doc.objects.push(object(
+                "blur",
+                json!({"rect": {"x": 100, "y": 50, "w": 100, "h": 40}, "style": {"blurType": "pixelate", "intensity": intensity}}),
+            ));
+            render(&doc, &ramp)
+        };
+        let run = |img: &RgbaImage| {
+            (101..200)
+                .take_while(|x| img.get_pixel(*x, 60) == img.get_pixel(100, 60))
+                .count()
+                + 1
+        };
+        let (small, big) = (run(&pixelated(20.0)), run(&pixelated(100.0)));
+        assert!(big > small && small > 1, "{big} vs {small}");
+    }
+
+    #[test]
+    fn shape_outline_stays_inside_its_size() {
+        let base = white(300, 150);
+        let mut doc = Document::new(300, 150, 96.0);
+        doc.objects.push(object(
+            "shape",
+            json!({"rect": {"x": 50, "y": 20, "w": 200, "h": 100}, "style": {"outline": "#FF0000", "outlineWidth": 10}}),
+        ));
+        let img = render(&doc, &base);
+        assert_eq!(img.get_pixel(50, 70).0, [255, 0, 0, 255], "outer edge is outline");
+        assert_eq!(img.get_pixel(249, 70).0, [255, 0, 0, 255]);
+        assert_eq!(img.get_pixel(49, 70).0, [255, 255, 255, 255], "nothing outside");
+        assert_eq!(img.get_pixel(250, 70).0, [255, 255, 255, 255]);
+        assert_eq!(img.get_pixel(150, 70).0, [255, 255, 255, 255], "transparent fill");
+    }
+
+    #[test]
+    fn text_is_drawn_where_it_is_and_has_its_own_image() {
+        let base = white(300, 150);
+        let mut doc = Document::new(300, 150, 96.0);
+        doc.objects.push(object(
+            "text",
+            json!({"at": [20, 30], "text": "XXXX", "style": {"color": "#0000FF", "size": 30}}),
+        ));
+        let img = render(&doc, &base);
+        let blue = |x0: u32, x1: u32| {
+            (x0..x1)
+                .flat_map(|x| (0..150).map(move |y| (x, y)))
+                .filter(|(x, y)| img.get_pixel(*x, *y).0 == [0, 0, 255, 255])
+                .count()
+        };
+        assert!(blue(20, 200) > 20);
+        assert_eq!(blue(0, 19), 0);
+        let (own, x, y) = object_image(&doc, &base, "text1").unwrap();
+        assert_eq!((x, y), (20, 30));
+        assert!(own.width() > 40);
     }
 
     #[test]

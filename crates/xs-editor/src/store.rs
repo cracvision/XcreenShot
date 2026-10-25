@@ -86,6 +86,8 @@ pub struct Doc {
     pub document: Document,
     pub meta: Value,
     pub base_source: BaseSource,
+    /// Size of the original pixels, known without decoding them.
+    pub base_size: (u32, u32),
     base: Option<Base>,
     /// Parts of the `.xshot` this build only carries along.
     manifest_extra: Map<String, Value>,
@@ -114,6 +116,8 @@ impl Doc {
         meta: Value,
         base_source: BaseSource,
     ) -> Doc {
+        let base_size = xs_image::encode::png_size(&base_source.bytes)
+            .unwrap_or((document.crop.width, document.crop.height));
         Doc {
             id: String::new(),
             path,
@@ -122,6 +126,7 @@ impl Doc {
             document,
             meta,
             base_source,
+            base_size,
             base: None,
             manifest_extra: Map::new(),
             images: BTreeMap::new(),
@@ -197,9 +202,30 @@ impl Snapshot {
         xs_image::render(&self.document, &self.base)
     }
 
-    /// The `.xshot` of this state (EDT-106).
-    pub fn to_xshot(&self) -> Result<Xshot, String> {
-        let base_png = if self.base_source.mime == "image/png" {
+    /// The `.xshot` of this state (EDT-106). With `drop_cropped`, the original pixels
+    /// outside the crop are left out of the file (`editor.deleteCroppedContent`, EDT-050).
+    pub fn to_xshot(&self, drop_cropped: bool) -> Result<Xshot, String> {
+        let c = self.document.crop;
+        let whole = c.x == 0 && c.y == 0 && (c.width, c.height) == (self.base.width, self.base.height);
+        let mut document = self.document.clone();
+        let base_png = if drop_cropped && !whole {
+            let kept = image::imageops::crop_imm(
+                &self.base.to_image(),
+                c.x.max(0) as u32,
+                c.y.max(0) as u32,
+                c.width,
+                c.height,
+            )
+            .to_image();
+            document.crop = xs_core::document::PixelRect {
+                x: 0,
+                y: 0,
+                width: kept.width(),
+                height: kept.height(),
+            };
+            document.crop_history.clear();
+            xs_image::encode::png(&kept, self.document.dpi, true)?
+        } else if self.base_source.mime == "image/png" {
             self.base_source.bytes.as_ref().clone()
         } else {
             xs_image::encode::png(&self.base.to_image(), self.document.dpi, true)?
@@ -209,7 +235,7 @@ impl Snapshot {
         manifest.extra = self.manifest_extra.clone();
         Ok(Xshot {
             manifest,
-            document: self.document.clone(),
+            document,
             base_png,
             meta: self.meta.clone(),
             thumb_png: xs_image::encode::png(&thumb, 0.0, true)?,
@@ -324,7 +350,7 @@ impl DocStore {
                 } else {
                     ("image/jpeg", 96.0)
                 };
-                Ok(Doc::new(
+                let mut doc = Doc::new(
                     Some(path.to_path_buf()),
                     Kind::External,
                     format,
@@ -334,7 +360,9 @@ impl DocStore {
                         bytes: Arc::new(bytes),
                         mime,
                     },
-                ))
+                );
+                doc.base_size = (w, h);
+                Ok(doc)
             }
         }
     }
@@ -571,9 +599,20 @@ impl DocStore {
     pub fn info(&self, id: &str) -> Option<Value> {
         let inner = self.inner.lock().unwrap();
         let d = inner.docs.iter().find(|d| d.id == id)?;
-        let (bw, bh) = xs_image::encode::png_size(&d.base_source.bytes)
-            .unwrap_or((d.document.crop.width, d.document.crop.height));
+        let (bw, bh) = d.base_size;
         let mut v = serde_json::to_value(&d.document).unwrap_or_default();
+        // Text boxes: their laid-out size, for the canvas's handles (EDT-026).
+        if let Some(objects) = v.get_mut("objects").and_then(Value::as_array_mut) {
+            for o in objects.iter_mut().filter(|o| o["type"] == "text") {
+                if let Some(t) = o
+                    .as_object()
+                    .and_then(|m| xs_image::text::Text::from_props(m).ok())
+                {
+                    let laid = xs_image::text::layout(&t, d.document.dpi);
+                    o["layout"] = json!({ "width": laid.width, "height": laid.height });
+                }
+            }
+        }
         let extra = json!({
             "documentId": d.id,
             "name": d.name(),

@@ -7,6 +7,8 @@ struct Env {
     core: Arc<Core>,
     library: tempfile::TempDir,
     _recovery: tempfile::TempDir,
+    /// A folder outside the library, of this test only.
+    outside: tempfile::TempDir,
 }
 
 fn env() -> Env {
@@ -18,6 +20,7 @@ fn env() -> Env {
         core,
         library,
         _recovery: recovery,
+        outside: tempfile::tempdir().unwrap(),
     }
 }
 
@@ -196,14 +199,7 @@ fn ui_style_changes_also_become_the_tool_style() {
 }
 
 fn external_png(e: &Env) -> PathBuf {
-    let dir = e
-        .library
-        .path()
-        .parent()
-        .unwrap()
-        .join(format!("ext-{}", std::process::id()));
-    let _ = std::fs::create_dir_all(&dir);
-    let path = xs_library::unique(&dir, "outside", "png");
+    let path = xs_library::unique(e.outside.path(), "outside", "png");
     std::fs::write(
         &path,
         xs_image::encode::png(&white(100, 50), 96.0, false).unwrap(),
@@ -361,14 +357,18 @@ fn tools_and_styles() {
         cli(&e.core, "editor.select_tool", json!({"tool": "arrow"}))["tool"],
         "arrow"
     );
-    let later = call(
+    assert_eq!(
+        cli(&e.core, "editor.select_tool", json!({"tool": "crop"}))["tool"],
+        "crop"
+    );
+    let no_style = call(
         &e.core,
         Source::Cli,
-        "editor.select_tool",
-        json!({"tool": "crop"}),
+        "editor.set_style",
+        json!({"tool": "crop", "style": {}}),
     )
     .unwrap_err();
-    assert_eq!(later.code, ErrorCode::NotFound);
+    assert_eq!(no_style.code, ErrorCode::InvalidParams);
     let r = cli(
         &e.core,
         "editor.set_style",
@@ -457,4 +457,122 @@ fn saved_documents_follow_the_published_schema() {
     for o in value["objects"].as_array().unwrap() {
         xs_core::schema::validate(&arrow_schema, o).unwrap();
     }
+}
+
+#[test]
+fn annotates_text_shapes_and_blur() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let r = cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "text", "at": [20, 30], "text": "Hola", "style": {"size": 20}},
+            {"type": "shape", "rect": {"x": 10, "y": 10, "w": 100, "h": 50}, "style": {"shapeType": "ellipse"}},
+            {"type": "blur", "rect": {"x": 200, "y": 100, "w": 80, "h": 40}, "style": {"blurType": "solid", "color": "#000000"}}
+        ]}),
+    );
+    assert_eq!(r["ids"].as_array().unwrap().len(), 3);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let text = &info["objects"][0];
+    assert!(text["layout"]["width"].as_f64().unwrap() > 10.0, "{text}");
+    assert_eq!(info["objects"][1]["style"]["shapeType"], "ellipse");
+    let out = e.library.path().join("objects.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    let png = image::open(&out).unwrap().to_rgba8();
+    assert_eq!(
+        png.get_pixel(240, 120).0,
+        [0, 0, 0, 255],
+        "solid blur covers its area"
+    );
+}
+
+#[test]
+fn crop_is_non_destructive_and_keeps_objects_on_the_image() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([100, 100], [300, 100])]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.crop",
+        json!({"documentId": doc, "rect": {"x": 50, "y": 20, "w": 200, "h": 150}}),
+    );
+    assert_eq!(
+        (r["width"].as_u64(), r["height"].as_u64()),
+        (Some(200), Some(150))
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"][0]["from"],
+        json!([50.0, 80.0]),
+        "the arrow stays on the image"
+    );
+    // Exported images are exactly the crop (EDT-050).
+    let out = e.library.path().join("cropped.png");
+    let r = cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    assert_eq!(
+        (r["width"].as_u64(), r["height"].as_u64()),
+        (Some(200), Some(150))
+    );
+    // Saved, closed and opened again, the crop grows back to the original edges.
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let again = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let r = cli(
+        &e.core,
+        "document.crop",
+        json!({"documentId": again, "rect": {"x": -500, "y": -500, "w": 5000, "h": 5000}}),
+    );
+    assert_eq!(
+        (r["width"].as_u64(), r["height"].as_u64()),
+        (Some(400), Some(200))
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": again}));
+    assert_eq!(info["objects"][0]["from"], json!([100.0, 100.0]));
+    // Undo puts the crop back.
+    cli(&e.core, "document.undo", json!({"documentId": again}));
+    assert_eq!(
+        cli(&e.core, "document.info", json!({"documentId": again}))["width"],
+        200
+    );
+}
+
+#[test]
+fn deleting_cropped_content_saves_only_the_crop() {
+    let e = env();
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.deleteCroppedContent", "value": true}),
+    );
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.crop",
+        json!({"documentId": doc, "rect": {"x": 10, "y": 10, "w": 120, "h": 80}}),
+    );
+    let file = xs_core::document::Xshot::read(&path).unwrap();
+    assert_eq!(xs_image::encode::png_size(&file.base_png), Some((120, 80)));
+    assert_eq!(file.document.crop.x, 0);
+}
+
+#[test]
+fn lists_installed_fonts() {
+    let e = env();
+    let fonts = cli(&e.core, "editor.fonts", json!({}))["fonts"].clone();
+    assert!(!fonts.as_array().unwrap().is_empty());
 }

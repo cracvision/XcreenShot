@@ -5,8 +5,11 @@
 //! `tests/fixtures/arrow-geometry.json` keeps both copies in step.
 
 pub mod color;
+pub mod effects;
 pub mod encode;
 pub mod geometry;
 pub mod render;
+pub mod shapes;
+pub mod text;
 
 pub use render::{render, Base};

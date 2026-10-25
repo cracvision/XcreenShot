@@ -230,6 +230,14 @@
     "editor_recovery_discard": {
       "title": "Descartar trabajo recuperable",
       "description": "Borra para siempre copias de recuperación."
+    },
+    "document_crop": {
+      "title": "Recortar",
+      "description": "Recorta el documento a un rectángulo en píxeles del lienzo. No se pierde nada: los píxeles originales siguen en el .xshot y un recorte posterior puede volver a ampliarse hasta los bordes originales. Los objetos conservan su sitio sobre la imagen. Un solo paso de deshacer."
+    },
+    "editor_fonts": {
+      "title": "Fuentes instaladas",
+      "description": "Familias de fuentes instaladas en este equipo, para los objetos de texto."
     }
   },
   "settings": {
@@ -331,6 +339,10 @@
     "capture_autoDetect": {
       "label": "Detección automática",
       "description": "Resalta la ventana bajo el puntero para seleccionarla con un clic. Arrastrar funciona siempre."
+    },
+    "editor_deleteCroppedContent": {
+      "label": "Eliminar el contenido recortado al guardar",
+      "description": "Los documentos guardados conservan solo la imagen recortada, así que un .xshot compartido no contiene nada oculto. Sin esta opción, un recorte posterior puede recuperar lo que se cortó."
     }
   },
   "errors": {
@@ -720,7 +732,20 @@
     "change_arrow": "Cambiar flecha",
     "change_objects": "Cambiar objetos",
     "delete_arrow": "Eliminar flecha",
-    "delete_objects": "Eliminar objetos"
+    "delete_objects": "Eliminar objetos",
+    "draw_text": "Añadir texto",
+    "move_text": "Mover texto",
+    "change_text": "Cambiar texto",
+    "delete_text": "Eliminar texto",
+    "draw_shape": "Dibujar forma",
+    "move_shape": "Mover forma",
+    "change_shape": "Cambiar forma",
+    "delete_shape": "Eliminar forma",
+    "draw_blur": "Desenfocar",
+    "move_blur": "Mover desenfoque",
+    "change_blur": "Cambiar desenfoque",
+    "delete_blur": "Eliminar desenfoque",
+    "crop": "Recortar"
   },
   "editor": {
     "edited": "{{name}} — Editado"
