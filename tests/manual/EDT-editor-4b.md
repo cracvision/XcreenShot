@@ -26,7 +26,7 @@ Copiar y pegar no se probó en la instancia aislada para no tocar el portapapele
 
 Carlos marcó PASS (2026-10-27, instalador `72386c7`) las cuatro tandas, salvo el paso 3 de la tanda 4 (arriba).
 
-Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `46cbb30` o posterior (aparece junto a la versión con `xcreenshot app ping`).
+Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `46cbb30` o posterior (el paso 3 de la tanda 4 se repite con `9528c37` o posterior) (aparece junto a la versión con `xcreenshot app ping`).
 
 1. [x] Haz una captura de región. En el editor elige **Texto** (botón o tecla `T`), haz clic sobre la imagen y escribe "Hola mundo". `Enter` añade una línea.
 2. [x] Haz clic fuera del texto: queda en la imagen, seleccionado, con el mismo aspecto que mientras escribías.

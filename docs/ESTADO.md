@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-10-25, con la entrega 4b terminada y pendiente de las pruebas de Carlos.
+**Última actualización:** 2026-10-27, con la entrega 4b probada por Carlos (falta repetir un paso).
 
 ## Fuentes
 
@@ -32,7 +32,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 2 · Selección en pantalla | Pantallas congeladas, cruceta, lupa, detección de ventanas, barra de captura con **Capturar** | Hecha y probada por Carlos |
 | 3 · Panel de captura | Pestañas Universal e Imagen, retardo con cuenta atrás, menú del ícono, Repetir última captura y Repetir última área, restablecer ajustes | Hecha; faltan 3 pruebas de Carlos (abajo) |
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
-| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha; faltan las pruebas de Carlos (cuatro tandas) |
+| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (2026-10-27); falta repetir el paso 3 de la tanda 4 |
 | 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Siguiente |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Pendiente |
 
@@ -66,6 +66,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
   - Selector de color completo, con cuentagotas de pantalla (Windows) y `I` sobre el lienzo.
   - Cortar, copiar y pegar objetos: editables dentro de la app, PNG con transparencia para las demás; texto e imágenes de otras apps.
   - Teclas de herramienta, `Tab`, `Ctrl+Enter`, `[` y `]`. 2 comandos nuevos (`document.copy_objects`, `document.paste`).
+  - Tras las pruebas de Carlos (2026-10-27): el selector de color se cierra con cualquier clic fuera y un cuadrito aplica su color al momento; el clic derecho ya no muestra el menú del motor web (salvo en campos de texto).
   - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (tamaño del texto en puntos, intensidad del desenfoque, cuentagotas en macOS, huella del portapapeles, pegar imágenes con un documento abierto, tamaño de `Ctrl+Enter`).
 
 ## Pendiente inmediato
@@ -77,7 +78,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-3. **Pruebas de Carlos de la entrega 4b:** cuatro tandas en [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (texto; formas y desenfoque; recortar y color; copiar, pegar y teclado), con el instalador nuevo.
+3. **Entrega 4b:** Carlos marcó PASS las cuatro tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) salvo el paso 3 de la tanda 4 (pegar en Word). Reportó dos fallos, ya corregidos: el selector de color no se cerraba al hacer clic fuera, y el clic derecho mostraba el menú del motor web, cuyo "Copiar imagen" copiaba solo los tiradores. Falta que repita ese paso con `Ctrl+C` y el instalador nuevo.
 4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entrega 4a, probada y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4b ya está en el mismo PR #3 (rama `m1-editor`).
 
 ## Siguiente paso
