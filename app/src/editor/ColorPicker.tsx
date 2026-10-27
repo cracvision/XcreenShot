@@ -1,6 +1,7 @@
 // The color selector (EDT-019): theme colors, a palette of 40, a hue and saturation
 // area with a brightness bar, Hex, RGB and HSB fields, opacity, the eyedropper and,
-// where it makes sense, Transparent. Enter accepts and Esc cancels.
+// where it makes sense, Transparent. A swatch applies at once; Enter or a click
+// outside accepts the rest, and Esc cancels.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { hsbToRgb, PALETTE, parseHex, rgbToHsb, THEME_COLORS, toHex, type Hsb } from "./color";
@@ -74,21 +75,32 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
     setHexDraft(null);
   };
 
-  const close = (accept: boolean) => {
+  const close = (accept: boolean, refocus = true) => {
     setOpen(false);
-    button.current?.focus();
+    if (refocus) button.current?.focus();
     if (accept && draftValue !== value) onCommit(draftValue);
   };
 
-  // A click outside accepts what is chosen.
+  // A click anywhere outside accepts what is chosen. Pointer events, in the capture
+  // phase: the canvas cancels the mouse events of its clicks.
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!anchor.current?.contains(e.target as Node)) close(true);
+    const onDown = (e: PointerEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) close(true, false);
     };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
+    window.addEventListener("pointerdown", onDown, true);
+    return () => window.removeEventListener("pointerdown", onDown, true);
   });
+
+  /** A swatch: that color, at once. */
+  const choose = (text: string) => {
+    const c = parseHex(text);
+    if (!c) return;
+    setOpen(false);
+    button.current?.focus();
+    const chosen = toHex(c);
+    if (chosen !== value) onCommit(chosen);
+  };
 
   const pick = (text: string) => {
     const c = parseHex(text);
@@ -191,13 +203,13 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
           <div className="cp-label">{t("ui.editor.color.theme")}</div>
           <div className="swatches">
             {THEME_COLORS.map((c) => (
-              <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
+              <Swatch key={c} color={c} label={c} onPick={() => choose(c)} />
             ))}
           </div>
           <div className="cp-label">{t("ui.editor.color.palette")}</div>
           <div className="cp-palette">
             {PALETTE.map((c) => (
-              <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
+              <Swatch key={c} color={c} label={c} onPick={() => choose(c)} />
             ))}
           </div>
           <div
