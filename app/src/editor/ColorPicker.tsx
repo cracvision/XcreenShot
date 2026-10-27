@@ -1,7 +1,6 @@
 // The color selector (EDT-019): theme colors, a palette of 40, a hue and saturation
 // area with a brightness bar, Hex, RGB and HSB fields, opacity, the eyedropper and,
-// where it makes sense, Transparent. A swatch applies at once; Enter or a click
-// outside accepts the rest, and Esc cancels.
+// where it makes sense, Transparent. Enter, OK or a click outside accepts; Esc cancels.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { hsbToRgb, PALETTE, parseHex, rgbToHsb, THEME_COLORS, toHex, type Hsb } from "./color";
@@ -91,16 +90,6 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
     window.addEventListener("pointerdown", onDown, true);
     return () => window.removeEventListener("pointerdown", onDown, true);
   });
-
-  /** A swatch: that color, at once. */
-  const choose = (text: string) => {
-    const c = parseHex(text);
-    if (!c) return;
-    setOpen(false);
-    button.current?.focus();
-    const chosen = toHex(c);
-    if (chosen !== value) onCommit(chosen);
-  };
 
   const pick = (text: string) => {
     const c = parseHex(text);
@@ -203,13 +192,13 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
           <div className="cp-label">{t("ui.editor.color.theme")}</div>
           <div className="swatches">
             {THEME_COLORS.map((c) => (
-              <Swatch key={c} color={c} label={c} onPick={() => choose(c)} />
+              <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
             ))}
           </div>
           <div className="cp-label">{t("ui.editor.color.palette")}</div>
           <div className="cp-palette">
             {PALETTE.map((c) => (
-              <Swatch key={c} color={c} label={c} onPick={() => choose(c)} />
+              <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
             ))}
           </div>
           <div
