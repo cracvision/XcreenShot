@@ -73,7 +73,7 @@ xcreenshot app ping --json
 | `settings.list` | `xcreenshot settings list --json` | Every setting with type, default, current value and lock state. |
 | `settings.schema` | `xcreenshot settings schema --json` | Setting definitions. |
 | `shortcuts.list` | `xcreenshot shortcuts list --json` | Every assignable shortcut, its combination and status. |
-| `shortcuts.set` | `xcreenshot shortcuts set <command> <combination> [--scope global\|app] [--reassign]` | Assigns a shortcut; an empty combination removes it. |
+| `shortcuts.set` | `xcreenshot shortcuts set <command> <combination> [--scope global\|app\|editor] [--reassign]` | Assigns a shortcut; an empty combination removes it. Editor shortcuts (`editor.*` rows) work in the editor window and win there over an app shortcut with the same keys. |
 | `shortcuts.reset` | `xcreenshot shortcuts reset [<command>] [--scope …] --yes` | Restores one or all shortcuts to the profile default. |
 | `shortcuts.pause` | `xcreenshot shortcuts pause [--paused true\|false]` | Pauses or resumes global shortcuts (toggles without a value). |
 | `shortcuts.set_profile` | `xcreenshot shortcuts set-profile <coexistence\|compatibility> [--reset-custom] [--dry-run]` | Switches the shortcut profile; `--dry-run` lists the changes. |
@@ -112,6 +112,8 @@ xcreenshot app ping --json
 | `editor.state` | `xcreenshot editor state --json` | Active tool, available tools, the current style of each tool, the open documents and how many recoverable items there are. |
 | `editor.fonts` | `xcreenshot editor fonts --json` | Font families installed on this computer, for the `font` of text objects. |
 | `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|text\|shape\|blur\|crop>` | Makes a tool active. |
+| `editor.action` | `xcreenshot editor action <open\|save\|save_as\|export\|close\|close_all\|undo\|redo\|cut\|copy\|paste\|paste_in_place\|copy_all\|delete\|deselect\|side_panel\|toolbar_labels\|recover>` | Does in the editor window what its menu entry does, with the window's selection, view and dialogs. Menus and editor shortcuts run it. To change documents without the window, use the `document.*` commands. |
+| `editor.menu_state` | (UI only) | The editor window reports which menu entries can be used now and which are ticked. |
 | `editor.set_style` | `xcreenshot editor set-style --tool arrow --style '{"color":"#2D7FF9","width":4}'` | Changes the tool's current style: what the next objects drawn by the user or added without a style look like. |
 | `editor.zoom` | `xcreenshot editor zoom --mode actual\|fit\|original\|in\|out\|percent [--value 250]` | Changes the editor zoom (percent of physical pixels, 10–3200). The result is the expected zoom, or `null` for `fit` and `original`, which the window works out. |
 | `editor.view` | (UI only) | The editor reports the zoom and position of the document it shows, so they are remembered. |

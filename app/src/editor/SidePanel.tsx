@@ -58,6 +58,14 @@ function NumberField(props: {
           value={sliding ?? value}
           aria-label={label}
           onChange={(e) => setSliding(Number(e.target.value))}
+          onKeyDown={(e) => {
+            // Shift + arrows: ten steps at once (EDT-013); alone, the slider's own step.
+            const dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+            if (!e.shiftKey || dir === undefined) return;
+            e.preventDefault();
+            commit((sliding ?? value) + dir * step * 10);
+            setSliding(null);
+          }}
           onPointerUp={() => {
             if (sliding !== null) commit(sliding);
             setSliding(null);

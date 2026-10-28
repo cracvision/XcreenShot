@@ -116,7 +116,7 @@ const PERMISSIONS: [&str; 4] = ["screen_recording", "accessibility", "camera", "
 
 pub fn specs() -> Vec<CommandSpec> {
     let section = json!({"type": "string", "enum": crate::settings::SECTIONS});
-    let shortcut_scope = json!({"type": "string", "enum": ["global", "app"]});
+    let shortcut_scope = json!({"type": "string", "enum": ["global", "app", "editor"]});
     vec![
         B::new("app.ping", &["APP-027"])
             .scopes(ALL)
@@ -533,6 +533,24 @@ pub fn specs() -> Vec<CommandSpec> {
             .positional(&["tool"])
             .params(params(json!({"tool": {"type": "string", "enum": TOOLS}}), &["tool"]))
             .result(json!({"type": "object", "properties": {"tool": {"type": "string"}}})),
+        B::new("editor.action", &["EDT-002", "EDT-116", "EDT-119"])
+            .scopes(ALL)
+            .assignable()
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": EDITOR_ACTIONS}}),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("editor.menu_state", &["EDT-002"])
+            .scopes(UI)
+            .params(params(
+                json!({
+                    "enabled": {"type": "object", "description": "Menu entry id -> whether it can be used now"},
+                    "checked": {"type": "object", "description": "Menu entry id -> whether it is ticked"}
+                }),
+                &[],
+            )),
         B::new("editor.set_style", &["EDT-014"])
             .mutates()
             .params(params(
@@ -587,6 +605,29 @@ pub fn specs() -> Vec<CommandSpec> {
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
 pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
+
+/// What `editor.action` can do in the editor window: the entries of its menus and
+/// shortcuts that act on what the window shows (EDT-002, EDT-116).
+pub const EDITOR_ACTIONS: [&str; 18] = [
+    "open",
+    "save",
+    "save_as",
+    "export",
+    "close",
+    "close_all",
+    "undo",
+    "redo",
+    "cut",
+    "copy",
+    "paste",
+    "paste_in_place",
+    "copy_all",
+    "delete",
+    "deselect",
+    "side_panel",
+    "toolbar_labels",
+    "recover",
+];
 
 fn document_id() -> Value {
     json!({"type": "string", "description": "Default: the document shown in the editor"})

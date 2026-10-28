@@ -1,5 +1,6 @@
-// Editor toolbar (EDT-001, EDT-003): Capture, the tools of this build, and the share
-// area (Copy all, Share ▾). Undo and Redo are here until the menus arrive (build 4c).
+// Editor toolbar (EDT-001, EDT-003): Capture, the tools of this build, Undo and Redo
+// (they stay with the menus: Carlos, 2026-10-28), and the share area (Copy all,
+// Share ▾). Tooltips show the current shortcut (APP-014).
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { MenuButton } from "../components/MenuButton";
@@ -17,7 +18,27 @@ import {
 } from "./actions";
 import { Icon } from "./icons";
 import { useEditor, type Tool } from "./state";
-import { TOOL_KEYS } from "./tools";
+import { toolbarMenu } from "./menus";
+import { useSetting } from "../store";
+import { hint, useShortcut } from "./tools";
+
+function ToolButton({ id, active }: { id: Tool; active: boolean }) {
+  const { t } = useTranslation();
+  const name = t(`ui.editor.tool.${id}`);
+  const shortcut = useShortcut(`editor.tool_${id}`);
+  return (
+    <button
+      type="button"
+      className="tb-tool"
+      aria-pressed={active}
+      title={hint(name, shortcut)}
+      onClick={() => selectTool(id)}
+    >
+      <Icon name={id} />
+      <span className="tb-label">{name}</span>
+    </button>
+  );
+}
 
 export function Toolbar() {
   const { t } = useTranslation();
@@ -25,43 +46,45 @@ export function Toolbar() {
   const tools = useEditor((s) => s.tools);
   const doc = useEditor((s) => s.doc);
   const hasDoc = doc !== null;
-
-  const hint = (label: string, key?: string) => (key ? `${label} (${key})` : label);
+  const labels = useSetting("editor.toolbarLabels", true);
+  const keys = {
+    undo: useShortcut("editor.undo"),
+    redo: useShortcut("editor.redo"),
+    open: useShortcut("editor.open"),
+    save: useShortcut("editor.save"),
+    copyAll: useShortcut("editor.copy_all"),
+  };
 
   return (
-    <div className="editor-toolbar" role="toolbar" aria-label={t("ui.editor.toolbar")}>
+    <div
+      className={`editor-toolbar${labels ? "" : " icons-only"}`}
+      role="toolbar"
+      aria-label={t("ui.editor.toolbar")}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        void toolbarMenu();
+      }}
+    >
       <button type="button" className="btn primary tb-btn" onClick={openCapturePanel}>
         <Icon name="capture" />
         <span className="tb-label">{t("ui.editor.capture")}</span>
       </button>
       <div className="tb-group" role="group" aria-label={t("ui.editor.tools")}>
-        {tools.map((id: Tool) => {
-          const name = t(`ui.editor.tool.${id}`);
-          return (
-            <button
-              key={id}
-              type="button"
-              className="tb-tool"
-              aria-pressed={tool === id}
-              title={hint(name, TOOL_KEYS[id])}
-              onClick={() => selectTool(id)}
-            >
-              <Icon name={id} />
-              <span className="tb-label">{name}</span>
-            </button>
-          );
-        })}
+        {tools.map((id: Tool) => (
+          <ToolButton key={id} id={id} active={tool === id} />
+        ))}
       </div>
       <div className="tb-group">
         <button
           type="button"
           className="btn icon"
           disabled={!doc?.canUndo}
-          title={
+          title={hint(
             doc?.undoLabel
               ? t("ui.editor.undo_named", { label: doc.undoLabel })
-              : t("ui.editor.undo")
-          }
+              : t("ui.editor.undo"),
+            keys.undo,
+          )}
           aria-label={t("ui.editor.undo")}
           onClick={undo}
         >
@@ -71,11 +94,12 @@ export function Toolbar() {
           type="button"
           className="btn icon"
           disabled={!doc?.canRedo}
-          title={
+          title={hint(
             doc?.redoLabel
               ? t("ui.editor.redo_named", { label: doc.redoLabel })
-              : t("ui.editor.redo")
-          }
+              : t("ui.editor.redo"),
+            keys.redo,
+          )}
           aria-label={t("ui.editor.redo")}
           onClick={redo}
         >
@@ -87,7 +111,7 @@ export function Toolbar() {
         <button
           type="button"
           className="btn tb-btn"
-          title={t("ui.editor.open")}
+          title={hint(t("ui.editor.open"), keys.open)}
           onClick={() => void openFiles()}
         >
           <Icon name="open" />
@@ -97,7 +121,7 @@ export function Toolbar() {
           type="button"
           className="btn tb-btn"
           disabled={!hasDoc}
-          title={t("ui.editor.save")}
+          title={hint(t("ui.editor.save"), keys.save)}
           onClick={() => void saveActive()}
         >
           <Icon name="save" />
@@ -109,7 +133,7 @@ export function Toolbar() {
           type="button"
           className="btn tb-btn"
           disabled={!hasDoc}
-          title={t("ui.editor.copy_all")}
+          title={hint(t("ui.editor.copy_all"), keys.copyAll)}
           onClick={() => void copyAll()}
         >
           <Icon name="copy" />

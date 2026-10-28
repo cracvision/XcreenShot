@@ -171,6 +171,8 @@ interface EditorState {
   /** A zoom asked by a command (CLI, menu) for the canvas to apply. */
   zoomRequest: ZoomRequest | null;
   recovery: RecoveryItem[];
+  /** Recover work is on screen: at start, or from Help (APP-047). */
+  recoveryShown: boolean;
   /** Documents to decide on before closing or quitting. */
   decision: { kind: "close" | "quit"; pending: Pending[] } | null;
   /** The text box being typed, if any (EDT-026). */
@@ -214,6 +216,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   views: {},
   zoomRequest: null,
   recovery: [],
+  recoveryShown: true,
   decision: null,
   flatten: null,
   textEdit: null,

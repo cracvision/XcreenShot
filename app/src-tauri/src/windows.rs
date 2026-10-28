@@ -72,9 +72,10 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
             app,
             &state.core,
             &xs_core::menus::app_menu(xs_core::platform::Platform::Windows),
-            false,
+            crate::tray::Shortcuts::Text,
             &mut actions,
         )?;
+        *state.window_menu.lock().unwrap() = Some(menu.clone());
         builder = builder.menu(menu);
     }
     let w = builder.build()?;

@@ -412,17 +412,11 @@ fn str_param<'a>(p: &'a Value, name: &str) -> Option<&'a str> {
 }
 
 fn resolve_slot(core: &Core, command: &str, scope: Option<&str>, lang: Lang) -> Result<Slot, CommandError> {
-    let scope = match scope {
-        Some("app") => Some(ShortcutScope::App),
-        Some("global") => Some(ShortcutScope::Global),
-        _ => None,
-    };
-    let found = match scope {
+    let found = match scope.and_then(ShortcutScope::parse) {
         Some(s) => core.shortcuts.find_slot(command, s),
-        None => core
-            .shortcuts
-            .find_slot(command, ShortcutScope::Global)
-            .or_else(|| core.shortcuts.find_slot(command, ShortcutScope::App)),
+        None => [ShortcutScope::Global, ShortcutScope::App, ShortcutScope::Editor]
+            .into_iter()
+            .find_map(|s| core.shortcuts.find_slot(command, s)),
     };
     found.ok_or_else(|| {
         CommandError::new(

@@ -246,6 +246,14 @@
     "document_paste": {
       "title": "Paste",
       "description": "Pastes what the clipboard holds: objects copied in XcreenShot (editable, shifted 10 px if the originals are still there, or in place), plain text as a text object, or an image as a new document when nothing is open."
+    },
+    "editor_action": {
+      "title": "Editor action",
+      "description": "Does what an editor menu entry does, in the editor window: open, save, export, close, undo, cut, copy, paste, delete, show the side panel… For automation, the document.* commands work without the window."
+    },
+    "editor_menu_state": {
+      "title": "Editor menu state",
+      "description": "The editor window reports which of its menu entries can be used now and which are ticked."
     }
   },
   "settings": {
@@ -355,6 +363,26 @@
     "editor_autoExpandCanvas": {
       "label": "Expand the canvas automatically",
       "description": "When an object sticks out of the image, the canvas grows just enough to show it, and shrinks back when it returns. What a crop leaves outside stays outside."
+    },
+    "editor_shrinkToFit": {
+      "label": "Shrink to fit when opening",
+      "description": "An image larger than the window opens fitted to it; a smaller one opens at 100 %."
+    },
+    "editor_rememberView": {
+      "label": "Remember each document's zoom and position",
+      "description": "Opening a document again shows it as you left it."
+    },
+    "editor_escClosesEditor": {
+      "label": "Esc closes the editor",
+      "description": "With nothing to cancel (no drawing, selection or text being typed), Esc closes the editor window. The documents stay open."
+    },
+    "editor_toolbarLabels": {
+      "label": "Toolbar labels",
+      "description": "Shows each tool's name next to its icon when the window is wide enough. Also in View > Toolbar and with a right click on the toolbar."
+    },
+    "editor_autoSelectAfterDraw": {
+      "label": "Select an annotation after drawing it",
+      "description": "The object you just drew stays selected, ready to change."
     }
   },
   "errors": {
@@ -417,7 +445,36 @@
     },
     "slot": {
       "capture_window": "Window Capture",
-      "capture_active_window": "Active Window"
+      "capture_active_window": "Active Window",
+      "editor_open": "Open…",
+      "editor_save": "Save",
+      "editor_save_as": "Save as…",
+      "editor_export": "Export…",
+      "editor_close": "Close",
+      "editor_close_all": "Close all",
+      "editor_undo": "Undo",
+      "editor_redo": "Redo",
+      "editor_redo_alt": "Redo (second shortcut)",
+      "editor_cut": "Cut",
+      "editor_copy": "Copy",
+      "editor_paste": "Paste",
+      "editor_paste_in_place": "Paste in place",
+      "editor_copy_all": "Copy all",
+      "editor_delete": "Delete",
+      "editor_delete_alt": "Delete (second shortcut)",
+      "editor_deselect": "Deselect",
+      "editor_zoom_in": "Zoom in",
+      "editor_zoom_out": "Zoom out",
+      "editor_zoom_actual": "Actual size",
+      "editor_zoom_fit": "Fit to window",
+      "editor_zoom_original": "Original size on screen",
+      "editor_side_panel": "Side panel",
+      "editor_tool_move": "Move tool",
+      "editor_tool_arrow": "Arrow tool",
+      "editor_tool_text": "Text tool",
+      "editor_tool_shape": "Shape tool",
+      "editor_tool_blur": "Blur tool",
+      "editor_tool_crop": "Crop tool"
     }
   },
   "tray": {
@@ -437,16 +494,42 @@
     "capture_panel": "Open Capture Panel"
   },
   "menu": {
-    "file": "File",
-    "edit": "Edit",
+    "file": "&File",
+    "edit": "&Edit",
     "window": "Window",
-    "help": "Help",
+    "help": "&Help",
     "preferences": "Preferences…",
     "settings_mac": "Settings…",
     "close_window": "Close window",
     "quit": "Quit XcreenShot",
     "open_logs": "Open logs folder",
-    "copy_diagnostics": "Copy diagnostic information"
+    "copy_diagnostics": "Copy diagnostic information",
+    "view": "&View",
+    "open": "Open…",
+    "save": "Save",
+    "save_as": "Save as…",
+    "export": "Export…",
+    "close": "Close",
+    "close_all": "Close all",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "copy_all": "Copy all",
+    "paste": "Paste",
+    "paste_in_place": "Paste in place",
+    "delete": "Delete",
+    "deselect": "Deselect",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_actual": "Actual size",
+    "zoom_fit": "Fit to window",
+    "zoom_original": "Original size on screen",
+    "side_panel": "Side panel",
+    "toolbar": "Toolbar",
+    "toolbar_labels": "Show labels",
+    "recover": "Recover work…",
+    "icons_only": "Icons only"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -540,6 +623,7 @@
       "filter_all": "All",
       "filter_global": "Global",
       "filter_app": "In the app",
+      "filter_editor": "Editor",
       "filter_conflict": "In conflict",
       "filter_custom": "Custom",
       "search": "Search by command or combination",
@@ -548,6 +632,7 @@
       "col_status": "Status",
       "scope_global": "Global",
       "scope_app": "In the app",
+      "scope_editor": "Editor",
       "record_prompt": "Press the combination…",
       "record_hint": "Esc cancels · Backspace removes",
       "none": "None",
@@ -742,6 +827,7 @@
       "recover": "Recover",
       "discard": "Discard",
       "later": "Later",
+      "nothing_to_recover": "There is no work to recover.",
       "error_title": "Something went wrong",
       "empty_title": "Nothing open yet",
       "empty_help": "Take a capture, open an image or a .xshot document, or drop files here.",
@@ -782,6 +868,11 @@
         "hue": "Hue",
         "brightness_short": "Br",
         "eyedropper": "Eyedropper"
+      },
+      "a11y": {
+        "object": "{{what}}, at {{x}}, {{y}}, {{w}} by {{h}} pixels",
+        "tool": "Tool: {{tool}}",
+        "zoom": "Zoom {{zoom}} %"
       }
     }
   },

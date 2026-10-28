@@ -80,7 +80,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
 | EDT-001 | Ventana principal | M1 | Must | En curso |
-| EDT-002 | Menús del editor | M1 | Must | — |
+| EDT-002 | Menús del editor | M1 | Must | En curso |
 | EDT-003 | Barra de herramientas y menú Más | M1 | Must | En curso |
 | EDT-004 | Personalizar la barra de herramientas | M2 | Should | — |
 | EDT-005 | Panel lateral | M1 | Must | En curso |
@@ -196,7 +196,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-115 | Atajos de herramientas | M1 | Must | En curso |
 | EDT-116 | Atajos de edición, vista y archivo | M1 | Must | En curso |
 | EDT-117 | Teclas del lienzo y modificadores | M1 | Must | En curso |
-| EDT-118 | Preferencias del editor | M1 | Should | — |
+| EDT-118 | Preferencias del editor | M1 | Should | En curso |
 | EDT-119 | Comandos del editor (CLI y MCP) | M1 | Must | En curso |
 
 ## 03-video.md

@@ -1,17 +1,17 @@
-// The editor's tools (EDT-003, EDT-115).
-import type { Tool } from "./state";
+// The editor's tools and the shortcut each button shows (EDT-003, EDT-115, APP-014).
+import { display } from "../lib/accelerator";
+import { useApp } from "../store";
 
-/** One key per tool, the same in English and Spanish (EDT-115). */
-export const TOOL_KEYS: Record<Tool, string> = {
-  move: "V",
-  arrow: "A",
-  text: "T",
-  shape: "U",
-  blur: "B",
-  crop: "R",
-};
+/** The current shortcut of a row of Preferences > Shortcuts, as the user sees it. */
+export function useShortcut(id: string): string | undefined {
+  return useApp((s) => {
+    const row = s.shortcuts?.rows.find((r) => r.command === id);
+    if (!row?.shortcut) return undefined;
+    return display(row.shortcut, s.shortcuts?.platform ?? "windows", s.layout);
+  });
+}
 
-/** The tool a key activates, by physical key. */
-export const TOOL_BY_CODE: Record<string, Tool> = Object.fromEntries(
-  Object.entries(TOOL_KEYS).map(([tool, key]) => [`Key${key}`, tool as Tool]),
-);
+/** "Name (shortcut)", for tooltips. */
+export function hint(label: string, shortcut: string | undefined): string {
+  return shortcut ? `${label} (${shortcut})` : label;
+}

@@ -1307,6 +1307,26 @@ pub fn extension() -> Extension {
             let style = set_tool_style(&core, tool, &changes, ctx.lang)?;
             Ok(json!({ "style": style }))
         });
+        on!("editor.action", |core, ctx, p| {
+            // The editor window does it, with its selection, view and dialogs: what its
+            // menus and shortcuts do (EDT-002, EDT-116).
+            let action = p["action"].as_str().unwrap_or_default();
+            if !xs_core::catalog::EDITOR_ACTIONS.contains(&action) {
+                return Err(invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "action"), ("reason", action)],
+                )));
+            }
+            core.host().editor_event("action", json!({ "action": action }));
+            Ok(json!({}))
+        });
+        // The editor window says which menu entries apply now (EDT-002): they are
+        // greyed out, never hidden.
+        on!("editor.menu_state", |core, _ctx, p| {
+            core.host().editor_event("menu_state", p);
+            Ok(json!({}))
+        });
         on!("editor.zoom", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
             let mode = p["mode"].as_str().unwrap_or("actual").to_string();

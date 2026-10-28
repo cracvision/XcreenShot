@@ -246,6 +246,14 @@
     "document_paste": {
       "title": "Pegar",
       "description": "Pega lo que hay en el portapapeles: objetos copiados en XcreenShot (editables, desplazados 10 px si los originales siguen ahí, o en el mismo sitio), texto plano como objeto de texto, o una imagen como documento nuevo si no hay nada abierto."
+    },
+    "editor_action": {
+      "title": "Acción del editor",
+      "description": "Hace lo que una entrada de los menús del editor, en su ventana: abrir, guardar, exportar, cerrar, deshacer, cortar, copiar, pegar, eliminar, mostrar el panel lateral… Para automatizar, los comandos document.* funcionan sin la ventana."
+    },
+    "editor_menu_state": {
+      "title": "Estado de los menús del editor",
+      "description": "La ventana del editor indica qué entradas de sus menús se pueden usar ahora y cuáles están marcadas."
     }
   },
   "settings": {
@@ -355,6 +363,26 @@
     "editor_autoExpandCanvas": {
       "label": "Ampliar el lienzo automáticamente",
       "description": "Cuando un objeto sobresale de la imagen, el lienzo crece lo justo para mostrarlo y se encoge cuando vuelve dentro. Lo que un recorte deja fuera se queda fuera."
+    },
+    "editor_shrinkToFit": {
+      "label": "Reducir para ajustar al abrir",
+      "description": "Una imagen más grande que la ventana se abre ajustada a ella; una más pequeña, al 100 %."
+    },
+    "editor_rememberView": {
+      "label": "Recordar el zoom y la posición de cada documento",
+      "description": "Al volver a abrir un documento, se ve como lo dejaste."
+    },
+    "editor_escClosesEditor": {
+      "label": "Esc cierra el editor",
+      "description": "Sin nada que cancelar (ni dibujo, ni selección, ni texto a medio escribir), Esc cierra la ventana del editor. Los documentos siguen abiertos."
+    },
+    "editor_toolbarLabels": {
+      "label": "Etiquetas de la barra de herramientas",
+      "description": "Muestra el nombre de cada herramienta junto a su ícono cuando la ventana es lo bastante ancha. También en Ver > Barra de herramientas y con clic derecho en la barra."
+    },
+    "editor_autoSelectAfterDraw": {
+      "label": "Seleccionar la anotación al terminar de dibujarla",
+      "description": "El objeto que acabas de dibujar queda seleccionado, listo para cambiarlo."
     }
   },
   "errors": {
@@ -417,7 +445,36 @@
     },
     "slot": {
       "capture_window": "Captura de ventana",
-      "capture_active_window": "Ventana activa"
+      "capture_active_window": "Ventana activa",
+      "editor_open": "Abrir…",
+      "editor_save": "Guardar",
+      "editor_save_as": "Guardar como…",
+      "editor_export": "Exportar…",
+      "editor_close": "Cerrar",
+      "editor_close_all": "Cerrar todo",
+      "editor_undo": "Deshacer",
+      "editor_redo": "Rehacer",
+      "editor_redo_alt": "Rehacer (segundo atajo)",
+      "editor_cut": "Cortar",
+      "editor_copy": "Copiar",
+      "editor_paste": "Pegar",
+      "editor_paste_in_place": "Pegar en el mismo sitio",
+      "editor_copy_all": "Copiar todo",
+      "editor_delete": "Eliminar",
+      "editor_delete_alt": "Eliminar (segundo atajo)",
+      "editor_deselect": "Deseleccionar",
+      "editor_zoom_in": "Acercar",
+      "editor_zoom_out": "Alejar",
+      "editor_zoom_actual": "Tamaño real",
+      "editor_zoom_fit": "Ajustar a la ventana",
+      "editor_zoom_original": "Tamaño original en pantalla",
+      "editor_side_panel": "Panel lateral",
+      "editor_tool_move": "Herramienta Mover",
+      "editor_tool_arrow": "Herramienta Flecha",
+      "editor_tool_text": "Herramienta Texto",
+      "editor_tool_shape": "Herramienta Forma",
+      "editor_tool_blur": "Herramienta Desenfocar",
+      "editor_tool_crop": "Herramienta Recortar"
     }
   },
   "tray": {
@@ -437,16 +494,42 @@
     "capture_panel": "Abrir panel de captura"
   },
   "menu": {
-    "file": "Archivo",
-    "edit": "Edición",
+    "file": "&Archivo",
+    "edit": "&Edición",
     "window": "Ventana",
-    "help": "Ayuda",
+    "help": "Ay&uda",
     "preferences": "Preferencias…",
     "settings_mac": "Ajustes…",
     "close_window": "Cerrar ventana",
     "quit": "Salir de XcreenShot",
     "open_logs": "Abrir la carpeta de registros",
-    "copy_diagnostics": "Copiar información de diagnóstico"
+    "copy_diagnostics": "Copiar información de diagnóstico",
+    "view": "&Ver",
+    "open": "Abrir…",
+    "save": "Guardar",
+    "save_as": "Guardar como…",
+    "export": "Exportar…",
+    "close": "Cerrar",
+    "close_all": "Cerrar todo",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "cut": "Cortar",
+    "copy": "Copiar",
+    "copy_all": "Copiar todo",
+    "paste": "Pegar",
+    "paste_in_place": "Pegar en el mismo sitio",
+    "delete": "Eliminar",
+    "deselect": "Deseleccionar",
+    "zoom_in": "Acercar",
+    "zoom_out": "Alejar",
+    "zoom_actual": "Tamaño real",
+    "zoom_fit": "Ajustar a la ventana",
+    "zoom_original": "Tamaño original en pantalla",
+    "side_panel": "Panel lateral",
+    "toolbar": "Barra de herramientas",
+    "toolbar_labels": "Mostrar etiquetas",
+    "recover": "Recuperar trabajo…",
+    "icons_only": "Solo íconos"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -540,6 +623,7 @@
       "filter_all": "Todos",
       "filter_global": "Globales",
       "filter_app": "De la app",
+      "filter_editor": "Del editor",
       "filter_conflict": "Con conflicto",
       "filter_custom": "Personalizados",
       "search": "Buscar por comando o combinación",
@@ -548,6 +632,7 @@
       "col_status": "Estado",
       "scope_global": "Global",
       "scope_app": "De la app",
+      "scope_editor": "Del editor",
       "record_prompt": "Pulsa la combinación…",
       "record_hint": "Esc cancela · Retroceso lo quita",
       "none": "Ninguno",
@@ -742,6 +827,7 @@
       "recover": "Recuperar",
       "discard": "Descartar",
       "later": "Más tarde",
+      "nothing_to_recover": "No hay trabajo que recuperar.",
       "error_title": "Algo salió mal",
       "empty_title": "Todavía no hay nada abierto",
       "empty_help": "Haz una captura, abre una imagen o un documento .xshot, o suelta archivos aquí.",
@@ -782,6 +868,11 @@
         "hue": "Tono",
         "brightness_short": "Br",
         "eyedropper": "Cuentagotas"
+      },
+      "a11y": {
+        "object": "{{what}}, en {{x}}, {{y}}, {{w}} por {{h}} píxeles",
+        "tool": "Herramienta: {{tool}}",
+        "zoom": "Zoom {{zoom}} %"
       }
     }
   },

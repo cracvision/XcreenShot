@@ -1017,6 +1017,11 @@ html.overlay-root.overlay-native #root {
   }
 }
 
+/* Toolbar labels off (EDT-003, editor.toolbarLabels): icons only; tooltips keep names. */
+.editor-toolbar.icons-only .tb-label {
+  display: none;
+}
+
 .editor-toolbar .lang-toggle,
 .editor-toolbar .btn {
   flex-shrink: 0;

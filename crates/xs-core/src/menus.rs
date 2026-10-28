@@ -98,6 +98,114 @@ pub fn tray_menu() -> Vec<MenuEntry> {
     ]
 }
 
+/// An entry of the editor menus. Its id is the row of Preferences > Shortcuts whose
+/// shortcut it shows, when it has one (EDT-002, EDT-116).
+fn action(id: &'static str, label: &'static str, action: &str) -> MenuEntry {
+    MenuEntry::Command {
+        id,
+        label,
+        command: "editor.action",
+        params: json!({ "action": action }),
+        checked: None,
+    }
+}
+
+fn zoom(id: &'static str, label: &'static str, params: Value) -> MenuEntry {
+    MenuEntry::Command {
+        id,
+        label,
+        command: "editor.zoom",
+        params,
+        checked: None,
+    }
+}
+
+/// The editor menus (EDT-002), with only what works in this build. Image and Object
+/// arrive with their first entries (M2). The window keeps each entry's enabled and
+/// ticked state up to date (`editor.menu_state`).
+fn editor_menus() -> Vec<MenuEntry> {
+    use MenuEntry::{Separator, Submenu};
+    vec![
+        Submenu {
+            label: "menu.file",
+            items: vec![
+                action("editor.open", "menu.open", "open"),
+                Separator,
+                action("editor.save", "menu.save", "save"),
+                action("editor.save_as", "menu.save_as", "save_as"),
+                action("editor.export", "menu.export", "export"),
+                Separator,
+                cmd("file_preferences", "menu.preferences", "settings.open"),
+                Separator,
+                action("editor.close", "menu.close", "close"),
+                action("editor.close_all", "menu.close_all", "close_all"),
+                Separator,
+                cmd("file_exit", "menu.quit", "app.quit"),
+            ],
+        },
+        Submenu {
+            label: "menu.edit",
+            items: vec![
+                action("editor.undo", "menu.undo", "undo"),
+                action("editor.redo", "menu.redo", "redo"),
+                Separator,
+                action("editor.cut", "menu.cut", "cut"),
+                action("editor.copy", "menu.copy", "copy"),
+                action("editor.copy_all", "menu.copy_all", "copy_all"),
+                action("editor.paste", "menu.paste", "paste"),
+                action("editor.paste_in_place", "menu.paste_in_place", "paste_in_place"),
+                Separator,
+                action("editor.delete", "menu.delete", "delete"),
+                action("editor.deselect", "menu.deselect", "deselect"),
+            ],
+        },
+        Submenu {
+            label: "menu.view",
+            items: vec![
+                zoom("editor.zoom_in", "menu.zoom_in", json!({ "mode": "in" })),
+                zoom("editor.zoom_out", "menu.zoom_out", json!({ "mode": "out" })),
+                zoom(
+                    "editor.zoom_actual",
+                    "menu.zoom_actual",
+                    json!({ "mode": "percent", "value": 100 }),
+                ),
+                zoom("editor.zoom_fit", "menu.zoom_fit", json!({ "mode": "fit" })),
+                zoom(
+                    "editor.zoom_original",
+                    "menu.zoom_original",
+                    json!({ "mode": "original" }),
+                ),
+                Separator,
+                MenuEntry::Command {
+                    id: "editor.side_panel",
+                    label: "menu.side_panel",
+                    command: "editor.action",
+                    params: json!({ "action": "side_panel" }),
+                    checked: Some("editor.side_panel"),
+                },
+                Submenu {
+                    label: "menu.toolbar",
+                    items: vec![MenuEntry::Command {
+                        id: "editor.toolbar_labels",
+                        label: "menu.toolbar_labels",
+                        command: "editor.action",
+                        params: json!({ "action": "toolbar_labels" }),
+                        checked: Some("editor.toolbar_labels"),
+                    }],
+                },
+            ],
+        },
+        Submenu {
+            label: "menu.help",
+            items: {
+                let mut items = vec![action("editor.recover", "menu.recover", "recover"), Separator];
+                items.extend(help_items());
+                items
+            },
+        },
+    ]
+}
+
 fn help_items() -> Vec<MenuEntry> {
     vec![
         cmd("open_logs", "menu.open_logs", "app.open_logs"),
@@ -151,21 +259,8 @@ pub fn app_menu(platform: Platform) -> Vec<MenuEntry> {
                 items: help_items(),
             },
         ],
-        Platform::Windows => vec![
-            MenuEntry::Submenu {
-                label: "menu.file",
-                items: vec![
-                    cmd("file_preferences", "menu.preferences", "settings.open"),
-                    MenuEntry::Separator,
-                    cmd("file_close", "menu.close_window", "app.close_window"),
-                    cmd("file_exit", "menu.quit", "app.quit"),
-                ],
-            },
-            MenuEntry::Submenu {
-                label: "menu.help",
-                items: help_items(),
-            },
-        ],
+        // The main window is the editor: its menu bar, under the title bar (EDT-002).
+        Platform::Windows => editor_menus(),
     }
 }
 

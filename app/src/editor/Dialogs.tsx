@@ -86,14 +86,16 @@ function Flatten() {
 function Recovery() {
   const { t, i18n } = useTranslation();
   const items = useEditor((s) => s.recovery);
-  const [later, setLater] = useState(false);
-  if (items.length === 0 || later) return null;
+  const shown = useEditor((s) => s.recoveryShown);
+  // "Later" keeps the items: Help > Recover work shows them again (APP-047).
+  const later = () => useEditor.setState({ recoveryShown: false });
+  if (items.length === 0 || !shown) return null;
   return (
     <Dialog
       title={t("ui.editor.recover_title")}
-      onCancel={() => setLater(true)}
+      onCancel={later}
       actions={
-        <button type="button" className="btn" onClick={() => setLater(true)}>
+        <button type="button" className="btn" onClick={later}>
           {t("ui.editor.later")}
         </button>
       }

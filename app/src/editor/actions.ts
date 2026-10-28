@@ -6,7 +6,15 @@ import i18next from "i18next";
 import { run } from "../lib/commands";
 import type { Rect } from "./boxes";
 import type { Point } from "./geometry";
-import { useEditor, type Pending, type TextObject, type Tool } from "./state";
+import {
+  usePanel,
+  useEditor,
+  type Pending,
+  type RecoveryItem,
+  type TextObject,
+  type Tool,
+} from "./state";
+import { setting, useApp } from "../store";
 
 const t = (key: string) => i18next.t(key);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -214,6 +222,95 @@ export function openCapturePanel(): void {
   run("capture.panel", { show: true }).catch(fail);
 }
 
+/** Help > Recover work (APP-047): what a session that ended unexpectedly left. */
+export async function showRecovery(): Promise<void> {
+  try {
+    const { items } = await run<{ items: RecoveryItem[] }>("editor.recovery_list");
+    if (items.length === 0) useEditor.getState().showToast(t("ui.editor.nothing_to_recover"));
+    useEditor.setState({ recovery: items, recoveryShown: true });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Icons only, or icons and names, in the toolbar (EDT-003, EDT-118). */
+export function toggleToolbarLabels(): void {
+  const current = useApp.getState().settings.find((s) => s.key === "editor.toolbarLabels");
+  run("settings.set", { key: "editor.toolbarLabels", value: current?.value === false }).catch(fail);
+}
+
+/** What an editor menu entry or shortcut does (`editor.action`, EDT-002, EDT-116).
+ * False when it does not apply now, so the key goes on to the page. */
+export function performAction(action: string): boolean {
+  const { selection, setSelection, doc } = useEditor.getState();
+  const selected = selection.length > 0;
+  switch (action) {
+    case "open":
+      void openFiles();
+      return true;
+    case "save":
+      if (!doc) return false;
+      void saveActive();
+      return true;
+    case "save_as":
+      if (!doc) return false;
+      void saveAs();
+      return true;
+    case "export":
+      if (!doc) return false;
+      void exportImage();
+      return true;
+    case "close":
+      if (!doc) return false;
+      void closeDocument();
+      return true;
+    case "close_all":
+      void closeAll();
+      return true;
+    case "undo":
+      undo();
+      return true;
+    case "redo":
+      redo();
+      return true;
+    case "cut":
+      if (!selected) return false;
+      void cutObjects();
+      return true;
+    case "copy":
+      if (!selected) return false;
+      void copyObjects();
+      return true;
+    case "paste":
+    case "paste_in_place":
+      void pasteObjects(action === "paste_in_place");
+      return true;
+    case "copy_all":
+      if (!doc) return false;
+      void copyAll();
+      return true;
+    case "delete":
+      if (!selected) return false;
+      deleteSelection();
+      return true;
+    case "deselect":
+      if (!selected) return false;
+      setSelection([]);
+      return true;
+    case "side_panel":
+      usePanel.getState().set({ visible: !usePanel.getState().visible });
+      return true;
+    case "toolbar_labels":
+      toggleToolbarLabels();
+      return true;
+    case "recover":
+      void showRecovery();
+      return true;
+    default:
+      return false;
+  }
+}
+
 export async function recover(ids: string[], restore: boolean): Promise<void> {
   try {
     await run(restore ? "editor.recovery_restore" : "editor.recovery_discard", { ids });
@@ -260,7 +357,8 @@ export async function finishTextEdit(text: string): Promise<void> {
         documentId: active,
         objects: [{ type: "text", at: edit.at, width: edit.width, text }],
       });
-      if (r.ids[0]) useEditor.setState({ selection: [r.ids[0]] });
+      if (r.ids[0] && setting("editor.autoSelectAfterDraw", true))
+        useEditor.setState({ selection: [r.ids[0]] });
     } else if (!text.trim()) {
       await run("document.delete_object", { documentId: active, objectId: edit.id });
     } else if (text !== edit.text) {

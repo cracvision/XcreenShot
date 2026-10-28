@@ -1,33 +1,45 @@
-// Editor keys (EDT-115, EDT-116, EDT-117), with the Coexistence values. They become
-// assignable shortcuts with the rest of the table in build 4c. They only act on the
-// editor window and never while typing in a field (EDT-116).
+// Editor keys. The assignable ones come from Preferences > Shortcuts, scope Editor
+// (EDT-115, EDT-116); the canvas keys are fixed (EDT-013, EDT-117). They only act on
+// the editor window and never while typing in a field (EDT-116).
 import { useEffect } from "react";
-import { run } from "../lib/commands";
+import { fromEvent } from "../lib/accelerator";
+import { run, type ShortcutRow } from "../lib/commands";
+import { setting, useApp } from "../store";
 import {
   applyCrop,
-  closeAll,
-  closeDocument,
-  copyAll,
-  copyObjects,
-  cutObjects,
-  deleteSelection,
-  exportImage,
-  openFiles,
-  pasteObjects,
-  redo,
+  performAction,
   resetCrop,
-  saveActive,
-  saveAs,
   selectTool,
   startNewText,
   startTextEdit,
-  undo,
 } from "./actions";
 import { moved } from "./objects";
-import { requestZoom, useEditor, usePanel, usePointer, type Tool } from "./state";
-import { TOOL_BY_CODE } from "./tools";
+import { requestZoom, useEditor, usePointer, type Tool } from "./state";
 
 const isMac = navigator.userAgent.includes("Mac");
+
+/** Number pad keys work like the main ones (`Ctrl`+numpad `+` zooms in). */
+const NUMPAD: Record<string, string> = {
+  NumpadAdd: "Equal",
+  NumpadSubtract: "Minus",
+  ...Object.fromEntries([..."0123456789"].map((d) => [`Numpad${d}`, `Digit${d}`])),
+};
+
+/** The editor shortcut row of a key press, if any. */
+function editorRow(e: KeyboardEvent): ShortcutRow | null {
+  const { shortcuts, recording } = useApp.getState();
+  if (recording || !shortcuts) return null;
+  // Not `{ ...e }`: the modifier flags are getters of the event, not its own fields.
+  const accel = fromEvent({
+    code: NUMPAD[e.code] ?? e.code,
+    ctrlKey: e.ctrlKey,
+    altKey: e.altKey,
+    shiftKey: e.shiftKey,
+    metaKey: e.metaKey,
+  });
+  if (!accel) return null;
+  return shortcuts.rows.find((r) => r.scope === "editor" && r.shortcut === accel) ?? null;
+}
 /** Holding V longer than this is a temporary Move (EDT-042). */
 const HOLD_MS = 300;
 /** Size of objects inserted from the keyboard (EDT-013), in canvas pixels. */
@@ -46,6 +58,27 @@ const onCanvas = () => document.activeElement?.classList.contains("canvas-stage"
 
 function fail(e: unknown): void {
   useEditor.getState().showError(e);
+}
+
+/** The zones `F6` goes through, in order (EDT-013). */
+const ZONES = [".editor-toolbar", ".canvas-stage", ".side-panel", ".strip", ".status-bar"];
+
+/** `F6` / `Shift+F6`: the focus to the next or previous zone of the window. */
+function nextZone(back: boolean): void {
+  const zones = ZONES.map((z) => document.querySelector<HTMLElement>(z)).filter(
+    (z): z is HTMLElement => z !== null,
+  );
+  if (zones.length === 0) return;
+  const at = zones.findIndex((z) => z.contains(document.activeElement));
+  const next = zones[(at + (back ? zones.length - 1 : 1) + zones.length) % zones.length];
+  if (!next) return;
+  const target =
+    next.tabIndex >= 0
+      ? next
+      : next.querySelector<HTMLElement>(
+          "button:not(:disabled), input, select, [tabindex]:not([tabindex='-1'])",
+        );
+  target?.focus();
 }
 
 /** Arrow keys move the selection 1 px, 10 with Shift (EDT-087, EDT-117). */
@@ -159,161 +192,128 @@ function resizeStroke(up: boolean): void {
 
 export function useEditorKeys(): void {
   useEffect(() => {
-    let vDown: { at: number; previous: Tool } | null = null;
+    // A tool key held down: Move or the tool is temporary (EDT-042).
+    let held: { code: string; at: number; previous: Tool } | null = null;
+
+    /** Runs an editor shortcut; false when it does not apply now. */
+    const runRow = (row: ShortcutRow, e: KeyboardEvent): boolean => {
+      const params = row.params as { action?: string; tool?: Tool; mode?: string; value?: number };
+      switch (row.runs) {
+        case "editor.action":
+          return performAction(params.action ?? "");
+        case "editor.select_tool": {
+          const tool = params.tool;
+          if (!tool) return false;
+          if (!e.repeat && tool === "move") {
+            held = { code: e.code, at: Date.now(), previous: useEditor.getState().tool };
+          }
+          if (!e.repeat) selectTool(tool);
+          return true;
+        }
+        case "editor.zoom":
+          requestZoom(params.mode ?? "actual", params.value ?? null);
+          return true;
+        default:
+          run(row.runs, row.params, "shortcut").catch(() => undefined);
+          return true;
+      }
+    };
 
     const down = (e: KeyboardEvent) => {
+      if (e.code === "F6" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (document.querySelector(".backdrop")) return;
+        e.preventDefault();
+        nextZone(e.shiftKey);
+        return;
+      }
       if (typing(e.target) || document.querySelector(".backdrop")) return;
+      const done = () => {
+        e.preventDefault();
+        // Before the app-wide shortcuts (Ctrl+W there closes the window).
+        e.stopImmediatePropagation();
+      };
+      const row = editorRow(e);
+      if (row) {
+        if (runRow(row, e)) done();
+        return;
+      }
       const primary = isMac ? e.metaKey : e.ctrlKey;
       const other = isMac ? e.ctrlKey : e.metaKey;
       const { shiftKey: shift, altKey: alt } = e;
       const state = useEditor.getState();
       let handled = true;
-      if (primary && !other) {
-        const digit = /^Digit([1-9])$/.exec(e.code);
-        if (digit && !alt && !shift) {
+      if (primary && !other && !alt && !shift) {
+        const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
+        if (digit) {
           // Ctrl+1…9: the tool in that place of the bar (EDT-115).
           const tool = state.tools[Number(digit[1]) - 1];
           if (tool) selectTool(tool);
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
+        } else if (e.code === "Enter" || e.code === "NumpadEnter") {
+          insert();
+        } else {
+          handled = false;
         }
+      } else if (!primary && !other && !alt) {
+        const step = shift ? 10 : 1;
         switch (e.code) {
-          case "KeyZ":
-            if (shift) redo();
-            else undo();
-            break;
-          case "KeyY":
-            if (!isMac) redo();
-            else handled = false;
-            break;
-          case "KeyS":
-            if (alt && shift) void exportImage();
-            else if (shift) void saveAs();
-            else if (!alt) void saveActive();
-            else handled = false;
-            break;
-          case "KeyO":
-            void openFiles();
-            break;
-          case "KeyW":
-            // In the editor, Ctrl+W closes the document, not the window (EDT-108).
-            if (alt && !shift) void closeAll();
-            else if (!alt && !shift) void closeDocument();
-            else handled = false;
-            break;
-          case "KeyC":
-            if (shift && !alt) void copyAll();
-            else if (!shift && !alt && state.selection.length > 0) void copyObjects();
-            else handled = false;
-            break;
-          case "KeyX":
-            if (!shift && !alt && state.selection.length > 0) void cutObjects();
-            else handled = false;
-            break;
-          case "KeyV":
-            if (!alt) void pasteObjects(shift);
-            else handled = false;
-            break;
-          case "KeyP":
-            // Show or hide the side panel (EDT-005, EDT-116).
-            if (alt && !shift) usePanel.getState().set({ visible: !usePanel.getState().visible });
+          case "Escape":
+            // Cancels the crop, else deselects (EDT-117); with nothing to cancel, closes
+            // the editor if the user asked for it (EDT-012). Documents stay open.
+            if (state.tool === "crop" && state.cropRect) resetCrop();
+            else if (state.selection.length > 0) state.setSelection([]);
+            else if (setting("editor.escClosesEditor", false))
+              run("app.close_window").catch(() => undefined);
             else handled = false;
             break;
           case "Enter":
-          case "NumpadEnter":
-            insert();
+          case "NumpadEnter": {
+            // Applies the crop; on a selected text, types into it (EDT-117).
+            const selected = state.doc?.objects.find((o) => o.id === state.selection[0]);
+            if (state.tool === "crop") void applyCrop();
+            else if (selected?.type === "text") startTextEdit(selected);
+            else handled = false;
             break;
-          case "Digit0":
-          case "Numpad0":
-            requestZoom(alt ? "original" : shift ? "fit" : "percent", alt || shift ? null : 100);
+          }
+          case "Tab":
+            if (onCanvas()) cycle(shift);
+            else handled = false;
             break;
-          case "Equal":
-          case "NumpadAdd":
-            requestZoom("in");
+          case "KeyI":
+            if (shift) handled = false;
+            else pickCanvasColor();
             break;
-          case "Minus":
-          case "NumpadSubtract":
-            requestZoom("out");
+          case "BracketLeft":
+            resizeStroke(false);
+            break;
+          case "BracketRight":
+            resizeStroke(true);
+            break;
+          case "ArrowLeft":
+            nudge(-step, 0);
+            break;
+          case "ArrowRight":
+            nudge(step, 0);
+            break;
+          case "ArrowUp":
+            nudge(0, -step);
+            break;
+          case "ArrowDown":
+            nudge(0, step);
             break;
           default:
             handled = false;
         }
-      } else if (!primary && !other && !alt) {
-        const step = shift ? 10 : 1;
-        const tool = TOOL_BY_CODE[e.code];
-        if (tool && tool !== "move" && !shift) {
-          selectTool(tool);
-        } else {
-          switch (e.code) {
-            case "Delete":
-            case "Backspace":
-              deleteSelection();
-              break;
-            case "Escape":
-              // Cancels the crop, else deselects (EDT-117).
-              if (state.tool === "crop" && state.cropRect) resetCrop();
-              else if (state.selection.length > 0) state.setSelection([]);
-              else handled = false;
-              break;
-            case "Enter":
-            case "NumpadEnter": {
-              // Applies the crop; on a selected text, types into it (EDT-117).
-              const selected = state.doc?.objects.find((o) => o.id === state.selection[0]);
-              if (state.tool === "crop") void applyCrop();
-              else if (selected?.type === "text") startTextEdit(selected);
-              else handled = false;
-              break;
-            }
-            case "Tab":
-              if (onCanvas()) cycle(shift);
-              else handled = false;
-              break;
-            case "KeyV":
-              if (shift || e.repeat) break;
-              vDown = { at: Date.now(), previous: state.tool };
-              selectTool("move");
-              break;
-            case "KeyI":
-              pickCanvasColor();
-              break;
-            case "BracketLeft":
-              resizeStroke(false);
-              break;
-            case "BracketRight":
-              resizeStroke(true);
-              break;
-            case "ArrowLeft":
-              nudge(-step, 0);
-              break;
-            case "ArrowRight":
-              nudge(step, 0);
-              break;
-            case "ArrowUp":
-              nudge(0, -step);
-              break;
-            case "ArrowDown":
-              nudge(0, step);
-              break;
-            default:
-              handled = false;
-          }
-        }
       } else {
         handled = false;
       }
-      if (handled) {
-        e.preventDefault();
-        // Before the app-wide shortcuts (Ctrl+W there closes the window).
-        e.stopImmediatePropagation();
-      }
+      if (handled) done();
     };
 
     const up = (e: KeyboardEvent) => {
-      if (e.code !== "KeyV" || !vDown) return;
+      if (!held || e.code !== held.code) return;
       // Held: Move was temporary, the previous tool comes back.
-      if (Date.now() - vDown.at > HOLD_MS && vDown.previous !== "move") selectTool(vDown.previous);
-      vDown = null;
+      if (Date.now() - held.at > HOLD_MS && held.previous !== "move") selectTool(held.previous);
+      held = null;
     };
 
     window.addEventListener("keydown", down, true);

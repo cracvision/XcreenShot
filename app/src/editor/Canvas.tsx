@@ -5,8 +5,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
-import { useApp } from "../store";
+import { setting, useSetting } from "../store";
 import { applyCrop, startNewText, startTextEdit } from "./actions";
+import { canvasMenu } from "./menus";
 import {
   contains,
   corners,
@@ -152,9 +153,7 @@ export function Canvas({ doc }: Props) {
   const zoomRequest = useEditor((s) => s.zoomRequest);
   const textEdit = useEditor((s) => s.textEdit);
   const cropState = useEditor((s) => s.cropRect);
-  const autoExpand = useApp(
-    (s) => s.settings.find((x) => x.key === "editor.autoExpandCanvas")?.value !== false,
-  );
+  const autoExpand = useSetting("editor.autoExpandCanvas", true);
   const { setSelection, setView, showError } = useEditor.getState();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -201,10 +200,12 @@ export function Canvas({ doc }: Props) {
   const view: View | null = useMemo(() => {
     if (storedView) return storedView;
     if (!viewport) return null;
-    if (doc.view?.zoom && doc.view.x !== undefined && doc.view.y !== undefined)
-      return { zoom: doc.view.zoom, cx: doc.view.x, cy: doc.view.y };
+    // EDT-007, EDT-118: the remembered view, and shrinking big images to fit.
+    const remembered = setting("editor.rememberView", true) ? doc.view : null;
+    if (remembered?.zoom && remembered.x !== undefined && remembered.y !== undefined)
+      return { zoom: remembered.zoom, cx: remembered.x, cy: remembered.y };
     return {
-      zoom: openingZoom(canvasSize, viewport, dpr),
+      zoom: setting("editor.shrinkToFit", true) ? openingZoom(canvasSize, viewport, dpr) : 100,
       cx: canvasSize.width / 2,
       cy: canvasSize.height / 2,
     };
@@ -558,7 +559,7 @@ export function Canvas({ doc }: Props) {
           objects: [object],
         });
         // The new object stays selected to adjust it (EDT-022, editor.autoSelectAfterDraw).
-        if (r.ids[0]) setSelection([r.ids[0]]);
+        if (r.ids[0] && setting("editor.autoSelectAfterDraw", true)) setSelection([r.ids[0]]);
       } else if (d.kind === "move" && d.moved) {
         const o = committed.get(d.id);
         if (o) {
@@ -607,6 +608,16 @@ export function Canvas({ doc }: Props) {
       if (Math.hypot(s.x - sx, s.y - sy) < DRAG_THRESHOLD) return;
     }
     void finish(d);
+  };
+
+  // Right click: the menu of the object under the pointer, which it selects, or of the
+  // image (EDT-002).
+  const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!lay || cropping) return;
+    const hit = hitObject(toCanvas(local(e)));
+    if (hit && !selection.includes(hit.id)) setSelection([hit.id]);
+    void canvasMenu(hit !== null);
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -798,6 +809,7 @@ export function Canvas({ doc }: Props) {
           onPointerCancel={() => setDrag(null)}
           onPointerLeave={() => usePointer.setState({ point: null, screen: null })}
           onDoubleClick={onDoubleClick}
+          onContextMenu={onContextMenu}
           onWheel={onWheel}
           onAuxClick={(e) => e.preventDefault()}
         >

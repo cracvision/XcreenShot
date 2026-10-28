@@ -7,6 +7,8 @@ import { openCapturePanel, openFiles } from "./actions";
 import { Canvas } from "./Canvas";
 import { Dialogs } from "./Dialogs";
 import { useEditorKeys } from "./keys";
+import { useMenuBar } from "./menus";
+import { useAnnouncement } from "./announce";
 import { SidePanel } from "./SidePanel";
 import { useEditor } from "./state";
 import { StatusBar } from "./StatusBar";
@@ -35,6 +37,8 @@ export function Editor() {
   const { t } = useTranslation();
   useAppShortcuts();
   useEditorKeys();
+  useMenuBar();
+  const announcement = useAnnouncement();
   const ready = useEditor((s) => s.ready);
   const doc = useEditor((s) => s.doc);
   const toast = useEditor((s) => s.toast);
@@ -79,6 +83,9 @@ export function Editor() {
       )}
       {dropping && doc && <div className="drop-hint">{t("ui.editor.drop_hint")}</div>}
       <Dialogs />
+      <div className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </div>
     </div>
   );
 }

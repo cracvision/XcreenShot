@@ -34,6 +34,20 @@ function settingValue(settings: SettingEntry[], key: string): unknown {
   return settings.find((s) => s.key === key)?.value;
 }
 
+/** A yes/no preference as it is now; `fallback` until the settings arrive. */
+export function setting(key: string, fallback: boolean): boolean {
+  const value = settingValue(useApp.getState().settings, key);
+  return typeof value === "boolean" ? value : fallback;
+}
+
+/** The same, for components: they update when it changes. */
+export function useSetting(key: string, fallback: boolean): boolean {
+  return useApp((s) => {
+    const value = settingValue(s.settings, key);
+    return typeof value === "boolean" ? value : fallback;
+  });
+}
+
 export const useApp = create<State>((set, get) => ({
   ready: false,
   ping: null,

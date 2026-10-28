@@ -99,6 +99,8 @@ impl Host for TauriHost {
     fn shortcuts_changed(&self) {
         global::apply(&self.app);
         tray::refresh(&self.app);
+        // The menus show each entry's shortcut (EDT-116).
+        crate::rebuild_app_menu(&self.app);
         let _ = self.app.emit("xs://shortcuts", ());
     }
 
@@ -240,6 +242,11 @@ impl Host for TauriHost {
     }
 
     fn editor_event(&self, kind: &str, payload: Value) {
+        if kind == "menu_state" {
+            *self.app.state::<crate::AppState>().menu_state.lock().unwrap() = payload;
+            crate::apply_menu_state(&self.app);
+            return;
+        }
         if kind == "title" {
             let app = self.app.clone();
             let title = payload["title"].as_str().unwrap_or_default().to_string();

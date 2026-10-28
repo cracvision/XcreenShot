@@ -135,12 +135,29 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "APP-020",
         ),
+        // Preferences > Editor (EDT-118), in its order; the rest arrive with their features.
+        def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
+        def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),
         def(
-            "editor.deleteCroppedContent",
+            "editor.escClosesEditor",
             "editor",
             boolean(),
             json!(false),
-            "EDT-050",
+            "EDT-012",
+        ),
+        def(
+            "editor.toolbarLabels",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-003",
+        ),
+        def(
+            "editor.autoSelectAfterDraw",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-022",
         ),
         def(
             "editor.autoExpandCanvas",
@@ -148,6 +165,13 @@ pub fn definitions() -> Vec<SettingDef> {
             boolean(),
             json!(true),
             "EDT-071",
+        ),
+        def(
+            "editor.deleteCroppedContent",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-050",
         ),
         def(
             "advanced.keepEditorLoaded",
