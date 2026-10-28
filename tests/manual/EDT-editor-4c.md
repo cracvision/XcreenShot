@@ -22,7 +22,7 @@ No se probó con el teclado real: `Alt` o `F10` para entrar en la barra de menú
 
 ## Tanda 1 · Menús — Carlos
 
-Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación de la entrega 4c o posterior (aparece junto a la versión con `xcreenshot app ping`).
+Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `d2f7b71` o posterior (aparece junto a la versión con `xcreenshot app ping`).
 
 1. [ ] La ventana tiene la barra de menús **Archivo**, **Edición**, **Ver** y **Ayuda**. Cada entrada muestra su atajo a la derecha.
 2. [ ] Pulsa `Alt` (o `F10`) y recorre los menús con las flechas; `Enter` ejecuta la entrada elegida y `Esc` sale.
