@@ -30,6 +30,17 @@ struct AppState {
     memory: std::collections::BTreeMap<String, Value>,
 }
 
+/// Something that must be settled before the app quits (APP-004): documents with
+/// unsaved changes, recordings… Contributed by other crates.
+pub trait QuitGuard: Send + Sync {
+    /// What would be lost by quitting now, one item per thing the user must decide on.
+    fn pending(&self, lang: Lang) -> Vec<Value>;
+    /// Last chance to save before the process ends (always runs, also when forced).
+    fn before_quit(&self);
+}
+
+type Services = std::collections::HashMap<std::any::TypeId, Arc<dyn std::any::Any + Send + Sync>>;
+
 pub struct Core {
     pub paths: Paths,
     pub settings: SettingsStore,
@@ -38,6 +49,9 @@ pub struct Core {
     log: Option<LogControl>,
     state: RwLock<AppState>,
     registry: RwLock<Option<Arc<Registry>>>,
+    /// Per-core state owned by other crates (open documents…), one per type.
+    services: RwLock<Services>,
+    quit_guards: RwLock<Vec<Arc<dyn QuitGuard>>>,
 }
 
 /// Verbose logging switches itself off after this long (APP-046).
@@ -63,6 +77,8 @@ impl Core {
             log,
             state: RwLock::new(state),
             registry: RwLock::new(None),
+            services: RwLock::new(Services::new()),
+            quit_guards: RwLock::new(Vec::new()),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -89,6 +105,8 @@ impl Core {
             log: None,
             state: RwLock::new(AppState::default()),
             registry: RwLock::new(None),
+            services: RwLock::new(Services::new()),
+            quit_guards: RwLock::new(Vec::new()),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -102,6 +120,31 @@ impl Core {
 
     pub fn host(&self) -> Arc<dyn Host> {
         self.host.read().unwrap().clone()
+    }
+
+    /// The `T` service of this core, created on first use.
+    pub fn service<T: std::any::Any + Send + Sync>(&self, init: impl FnOnce() -> T) -> Arc<T> {
+        let id = std::any::TypeId::of::<T>();
+        if let Some(s) = self.services.read().unwrap().get(&id) {
+            return s.clone().downcast::<T>().expect("service type");
+        }
+        let mut services = self.services.write().unwrap();
+        services
+            .entry(id)
+            .or_insert_with(|| Arc::new(init()))
+            .clone()
+            .downcast::<T>()
+            .expect("service type")
+    }
+
+    pub fn add_quit_guard(&self, guard: Arc<dyn QuitGuard>) {
+        self.quit_guards.write().unwrap().push(guard);
+    }
+
+    /// Everything that needs a decision before quitting (APP-004).
+    pub fn quit_pending(&self, lang: Lang) -> Vec<Value> {
+        let guards = self.quit_guards.read().unwrap().clone();
+        guards.iter().flat_map(|g| g.pending(lang)).collect()
     }
 
     pub fn registry(&self) -> Arc<Registry> {
@@ -369,17 +412,11 @@ fn str_param<'a>(p: &'a Value, name: &str) -> Option<&'a str> {
 }
 
 fn resolve_slot(core: &Core, command: &str, scope: Option<&str>, lang: Lang) -> Result<Slot, CommandError> {
-    let scope = match scope {
-        Some("app") => Some(ShortcutScope::App),
-        Some("global") => Some(ShortcutScope::Global),
-        _ => None,
-    };
-    let found = match scope {
+    let found = match scope.and_then(ShortcutScope::parse) {
         Some(s) => core.shortcuts.find_slot(command, s),
-        None => core
-            .shortcuts
-            .find_slot(command, ShortcutScope::Global)
-            .or_else(|| core.shortcuts.find_slot(command, ShortcutScope::App)),
+        None => [ShortcutScope::Global, ShortcutScope::App, ShortcutScope::Editor]
+            .into_iter()
+            .find_map(|s| core.shortcuts.find_slot(command, s)),
     };
     found.ok_or_else(|| {
         CommandError::new(
@@ -444,9 +481,20 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         .host()
         .close_focused_window()
         .map(|_| json!({})));
-    on!("app.quit", |core, ctx, _p| {
+    on!("app.quit", |core, ctx, p| {
+        // APP-004: ask first about anything that would be lost, unless forced.
+        let force = p.get("force").and_then(Value::as_bool).unwrap_or(false);
+        let pending = core.quit_pending(ctx.lang);
+        if !force && !pending.is_empty() {
+            core.host().confirm_quit(&pending);
+            return Ok(json!({ "status": "needs_decision", "pending": pending }));
+        }
+        let guards = core.quit_guards.read().unwrap().clone();
+        for guard in guards {
+            guard.before_quit();
+        }
         core.host().quit();
-        Ok(json!({}))
+        Ok(json!({ "status": "quitting" }))
     });
     on!("app.diagnostics", |core, ctx, p| {
         let info = core.diagnostics();

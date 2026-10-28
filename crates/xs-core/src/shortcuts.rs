@@ -298,6 +298,28 @@ pub enum ShortcutScope {
     Global,
     /// Works while a XcreenShot window has focus.
     App,
+    /// Works in the editor window, where it takes precedence over an app shortcut with
+    /// the same combination (EDT-115, EDT-116; `Ctrl+W` closes the document there).
+    Editor,
+}
+
+impl ShortcutScope {
+    pub fn parse(s: &str) -> Option<ShortcutScope> {
+        match s {
+            "global" => Some(ShortcutScope::Global),
+            "app" => Some(ShortcutScope::App),
+            "editor" => Some(ShortcutScope::Editor),
+            _ => None,
+        }
+    }
+
+    /// Whether two shortcuts of these scopes can be pressed in the same place: a global
+    /// one everywhere, app ones in every window, editor ones in the editor, where they
+    /// win over app ones.
+    fn collides_with(self, other: ShortcutScope) -> bool {
+        use ShortcutScope::*;
+        !matches!((self, other), (App, Editor) | (Editor, App))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -335,6 +357,7 @@ impl Slot {
         let scope = match self.scope {
             ShortcutScope::Global => "global",
             ShortcutScope::App => "app",
+            ShortcutScope::Editor => "editor",
         };
         format!("{}@{scope}", self.id)
     }
@@ -371,6 +394,22 @@ pub fn slots() -> Vec<Slot> {
         scope,
         group: "app",
     };
+    // Editor actions run in the editor view (`editor.action`), tools and zoom by
+    // their own commands. Only what exists in this build (EDT-115, EDT-116).
+    let editor = |id, command, params| Slot {
+        id,
+        command,
+        params,
+        scope: Editor,
+        group: "editor",
+    };
+    let tool = |id, params| Slot {
+        id,
+        command: "editor.select_tool",
+        params,
+        scope: Editor,
+        group: "tools",
+    };
     vec![
         // Capture actions (CAP-065), in the spec's order.
         capture("capture.capture", "capture.capture", ""),
@@ -394,6 +433,45 @@ pub fn slots() -> Vec<Slot> {
         s("app.close_window", App),
         s("app.quit", Global),
         s("app.quit", App),
+        // Editor: file, edit and view (EDT-116), in the spec's order.
+        editor("editor.open", "editor.action", r#"{"action":"open"}"#),
+        editor("editor.save", "editor.action", r#"{"action":"save"}"#),
+        editor("editor.save_as", "editor.action", r#"{"action":"save_as"}"#),
+        editor("editor.export", "editor.action", r#"{"action":"export"}"#),
+        editor("editor.close", "editor.action", r#"{"action":"close"}"#),
+        editor("editor.close_all", "editor.action", r#"{"action":"close_all"}"#),
+        editor("editor.undo", "editor.action", r#"{"action":"undo"}"#),
+        editor("editor.redo", "editor.action", r#"{"action":"redo"}"#),
+        editor("editor.redo_alt", "editor.action", r#"{"action":"redo"}"#),
+        editor("editor.cut", "editor.action", r#"{"action":"cut"}"#),
+        editor("editor.copy", "editor.action", r#"{"action":"copy"}"#),
+        editor("editor.paste", "editor.action", r#"{"action":"paste"}"#),
+        editor(
+            "editor.paste_in_place",
+            "editor.action",
+            r#"{"action":"paste_in_place"}"#,
+        ),
+        editor("editor.copy_all", "editor.action", r#"{"action":"copy_all"}"#),
+        editor("editor.delete", "editor.action", r#"{"action":"delete"}"#),
+        editor("editor.delete_alt", "editor.action", r#"{"action":"delete"}"#),
+        editor("editor.deselect", "editor.action", r#"{"action":"deselect"}"#),
+        editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
+        editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
+        editor(
+            "editor.zoom_actual",
+            "editor.zoom",
+            r#"{"mode":"percent","value":100}"#,
+        ),
+        editor("editor.zoom_fit", "editor.zoom", r#"{"mode":"fit"}"#),
+        editor("editor.zoom_original", "editor.zoom", r#"{"mode":"original"}"#),
+        editor("editor.side_panel", "editor.action", r#"{"action":"side_panel"}"#),
+        // Tools (EDT-115): a single key.
+        tool("editor.tool_move", r#"{"tool":"move"}"#),
+        tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
+        tool("editor.tool_text", r#"{"tool":"text"}"#),
+        tool("editor.tool_shape", r#"{"tool":"shape"}"#),
+        tool("editor.tool_blur", r#"{"tool":"blur"}"#),
+        tool("editor.tool_crop", r#"{"tool":"crop"}"#),
     ]
 }
 
@@ -431,9 +509,75 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("app.close_window", App, _, Macos) => "Super+KeyW",
         ("settings.open", App, _, Windows) => "Ctrl+Comma",
         ("settings.open", App, _, Macos) => "Super+Comma",
+        (_, Editor, _, _) => return editor_default(slot.id, profile, platform),
         _ => return None,
     };
     Some(s.parse().expect("default shortcuts parse"))
+}
+
+/// Editor defaults (EDT-115, EDT-116). Written for Windows; on macOS `Ctrl` becomes
+/// `Cmd`, except where the table names `Control`.
+fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Accelerator> {
+    use Platform::*;
+    use Profile::*;
+    let s = match (id, profile, platform) {
+        ("editor.close", Compatibility, Macos) => "Super+Shift+KeyW",
+        ("editor.copy_all", Compatibility, Macos) => "Alt+Super+KeyC",
+        ("editor.side_panel", Compatibility, Macos) => "Super+Digit5",
+        ("editor.redo", _, Macos) => "Super+Shift+KeyZ",
+        // The table's Ctrl+Alt+Shift+S is Image capture on Windows (CAP-065), a global
+        // shortcut that would never let it through (spec/QUESTIONS.md).
+        ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
+        ("editor.redo_alt", _, Macos) => return None,
+        // Compatibility on macOS: Control and a letter per tool (EDT-115).
+        ("editor.tool_move", Compatibility, Macos) => "Ctrl+KeyV",
+        ("editor.tool_arrow", Compatibility, Macos) => "Ctrl+KeyA",
+        ("editor.tool_text", Compatibility, Macos) => "Ctrl+KeyT",
+        ("editor.tool_shape", Compatibility, Macos) => "Ctrl+KeyU",
+        ("editor.tool_blur", Compatibility, Macos) => "Ctrl+KeyB",
+        ("editor.tool_crop", Compatibility, Macos) => "Ctrl+KeyC",
+        ("editor.tool_move", ..) => "KeyV",
+        ("editor.tool_arrow", ..) => "KeyA",
+        ("editor.tool_text", ..) => "KeyT",
+        ("editor.tool_shape", ..) => "KeyU",
+        ("editor.tool_blur", ..) => "KeyB",
+        ("editor.tool_crop", ..) => "KeyR",
+        ("editor.delete", ..) => "Delete",
+        ("editor.delete_alt", ..) => "Backspace",
+        _ => {
+            let windows = match id {
+                "editor.open" => "Ctrl+KeyO",
+                "editor.save" => "Ctrl+KeyS",
+                "editor.save_as" => "Ctrl+Shift+KeyS",
+                "editor.export" => "Ctrl+Alt+Shift+KeyS",
+                "editor.close" => "Ctrl+KeyW",
+                "editor.close_all" => "Ctrl+Alt+KeyW",
+                "editor.undo" => "Ctrl+KeyZ",
+                "editor.redo" => "Ctrl+KeyY",
+                "editor.redo_alt" => "Ctrl+Shift+KeyZ",
+                "editor.cut" => "Ctrl+KeyX",
+                "editor.copy" => "Ctrl+KeyC",
+                "editor.paste" => "Ctrl+KeyV",
+                "editor.paste_in_place" => "Ctrl+Shift+KeyV",
+                "editor.copy_all" => "Ctrl+Shift+KeyC",
+                "editor.deselect" => "Ctrl+KeyD",
+                "editor.zoom_in" => "Ctrl+Equal",
+                "editor.zoom_out" => "Ctrl+Minus",
+                "editor.zoom_actual" => "Ctrl+Digit0",
+                "editor.zoom_fit" => "Ctrl+Shift+Digit0",
+                "editor.zoom_original" => "Ctrl+Alt+Digit0",
+                "editor.side_panel" => "Ctrl+Alt+KeyP",
+                _ => return None,
+            };
+            let mut acc: Accelerator = windows.parse().expect("editor defaults parse");
+            if platform == Macos && acc.ctrl {
+                acc.ctrl = false;
+                acc.meta = true;
+            }
+            return Some(acc);
+        }
+    };
+    Some(s.parse().expect("editor defaults parse"))
 }
 
 // ---------------------------------------------------------------------------
@@ -705,13 +849,11 @@ impl ShortcutStore {
             .collect()
     }
 
-    /// Other slot that already uses `acc` in a way that collides with `slot` (APP-017):
-    /// global vs global, and app vs global in both directions.
+    /// Other slot that already uses `acc` where `slot` would also work (APP-017). An
+    /// editor shortcut may repeat an app one: in the editor it wins.
     pub fn collision(&self, slot: &Slot, acc: &Accelerator, profile: Profile) -> Option<Slot> {
         self.bindings(profile).into_iter().find_map(|(other, a)| {
-            let same_command_and_scope = other == *slot;
-            let scopes_collide = slot.scope == ShortcutScope::Global || other.scope == ShortcutScope::Global;
-            (!same_command_and_scope && scopes_collide && a == *acc).then_some(other)
+            (other != *slot && slot.scope.collides_with(other.scope) && a == *acc).then_some(other)
         })
     }
 
@@ -798,7 +940,7 @@ impl ShortcutStore {
                         if other != slot
                             && !self.is_custom(other)
                             && default_for(other, to, self.platform).as_ref() == Some(acc)
-                            && (slot.scope == ShortcutScope::Global || other.scope == ShortcutScope::Global)
+                            && slot.scope.collides_with(other.scope)
                         {
                             conflicts.push(json!({"slot": slot.key(), "with": other.key(), "shortcut": acc.display(self.platform)}));
                         }
@@ -830,16 +972,21 @@ impl ShortcutStore {
         if slot.scope == ShortcutScope::App {
             return Status::Active;
         }
-        if let Some((winner, _)) = self
-            .bindings(profile)
-            .into_iter()
-            .find(|(s, a)| s.scope == ShortcutScope::Global && *a == acc)
-        {
+        // A global shortcut takes the keys first; of two editor shortcuts with the same
+        // keys, the first one runs.
+        if let Some((winner, _)) = self.bindings(profile).into_iter().find(|(s, a)| {
+            *a == acc
+                && (s.scope == ShortcutScope::Global
+                    || (slot.scope == ShortcutScope::Editor && s.scope == ShortcutScope::Editor))
+        }) {
             if winner != *slot {
                 return Status::Duplicate {
                     command: winner.id.to_string(),
                 };
             }
+        }
+        if slot.scope == ShortcutScope::Editor {
+            return Status::Active;
         }
         if self.paused() {
             return Status::Paused;
@@ -981,6 +1128,84 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// EDT-116 criterion: no two actions share a combination where both would work.
+    #[test]
+    fn no_default_combination_is_shared() {
+        for platform in [Platform::Windows, Platform::Macos] {
+            for profile in [Profile::Coexistence, Profile::Compatibility] {
+                let store = ShortcutStore::in_memory(platform);
+                let bindings = store.bindings(profile);
+                for (i, (a, acc_a)) in bindings.iter().enumerate() {
+                    for (b, acc_b) in &bindings[i + 1..] {
+                        assert!(
+                            !(acc_a == acc_b && a.scope.collides_with(b.scope)),
+                            "{platform:?} {profile:?}: {} and {} share {acc_a}",
+                            a.key(),
+                            b.key()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn editor_shortcuts_win_over_app_ones_but_not_global_ones() {
+        let store = ShortcutStore::in_memory(Platform::Windows);
+        let close = store.find_slot("editor.close", ShortcutScope::Editor).unwrap();
+        let app_close = store.find_slot("app.close_window", ShortcutScope::App).unwrap();
+        // Both use Ctrl+W: in the editor it closes the document (EDT-108).
+        assert_eq!(store.binding(&close, Profile::Coexistence), Some(acc("Ctrl+W")));
+        assert_eq!(
+            store.binding(&app_close, Profile::Coexistence),
+            Some(acc("Ctrl+W"))
+        );
+        assert_eq!(store.status(&close, Profile::Coexistence), Status::Active);
+        let e = store
+            .set(
+                &close,
+                Some(acc("Ctrl+Alt+Shift+K")),
+                false,
+                Profile::Coexistence,
+                Lang::En,
+            )
+            .unwrap_err();
+        assert_eq!(e.details.unwrap()["command"], "app.ping");
+        // A single key is fine in the editor (EDT-115).
+        let arrow = store
+            .find_slot("editor.tool_arrow", ShortcutScope::Editor)
+            .unwrap();
+        assert!(store
+            .set(&arrow, Some(acc("L")), false, Profile::Coexistence, Lang::En)
+            .is_ok());
+        // Two editor actions cannot share one.
+        let text = store
+            .find_slot("editor.tool_text", ShortcutScope::Editor)
+            .unwrap();
+        assert!(store
+            .set(&text, Some(acc("L")), false, Profile::Coexistence, Lang::En)
+            .is_err());
+    }
+
+    #[test]
+    fn editor_defaults_follow_the_platform() {
+        let mac = ShortcutStore::in_memory(Platform::Macos);
+        let slot = |id| mac.find_slot(id, ShortcutScope::Editor).unwrap();
+        assert_eq!(
+            mac.binding(&slot("editor.save"), Profile::Coexistence),
+            Some(acc("Cmd+S"))
+        );
+        assert_eq!(
+            mac.binding(&slot("editor.copy_all"), Profile::Compatibility),
+            Some(acc("Option+Cmd+C"))
+        );
+        assert_eq!(
+            mac.binding(&slot("editor.tool_crop"), Profile::Compatibility),
+            Some(acc("Control+C"))
+        );
+        assert_eq!(mac.binding(&slot("editor.redo_alt"), Profile::Coexistence), None);
     }
 
     #[test]

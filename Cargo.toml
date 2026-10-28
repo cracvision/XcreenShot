@@ -7,7 +7,7 @@ version = "0.2.0"
 edition = "2021"
 license = "UNLICENSED"
 publish = false
-rust-version = "1.85"
+rust-version = "1.88"
 
 [workspace.dependencies]
 xs-core = { path = "crates/xs-core" }

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cracvision/XcreenShot/docs/formats/xshot-document.schema.json",
+  "title": "XcreenShot document (document.json inside a .xshot file), format 1.x",
+  "description": "Positions and sizes are image pixels with the origin at the top-left corner of the canvas. Fields this schema does not list are allowed: newer minor versions add them and older apps keep them when saving (EDT-106).",
+  "type": "object",
+  "required": ["type", "canvas", "crop", "dpi", "objects"],
+  "properties": {
+    "type": { "type": "string", "enum": ["image", "guide"] },
+    "canvas": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "color": { "type": "string", "description": "#RRGGBB or #RRGGBBAA; absent means transparent" },
+        "cornerRadius": { "type": "number", "minimum": 0 }
+      }
+    },
+    "crop": {
+      "$ref": "#/$defs/pixelRect",
+      "description": "Where the canvas sits over base.png (the original pixels, never cropped), in base pixels"
+    },
+    "cropHistory": { "type": "array", "items": { "$ref": "#/$defs/pixelRect" } },
+    "frame": {
+      "$ref": "#/$defs/pixelRect",
+      "description": "The crop the user chose, while the canvas is larger to fit objects that stick out of it (EDT-071); absent when the canvas is that crop. crop may then reach past base.png"
+    },
+    "outside": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ids of objects a crop left outside the canvas; they do not make it grow"
+    },
+    "dpi": { "type": "number", "minimum": 1, "description": "Resolution written to exported files" },
+    "objects": {
+      "type": "array",
+      "description": "Annotations, bottom first. Each has an id and a type; the properties depend on the type.",
+      "items": {
+        "oneOf": [{ "$ref": "#/$defs/arrow" }, { "$ref": "#/$defs/otherObject" }]
+      }
+    },
+    "effects": { "type": "array", "items": { "type": "object" } }
+  },
+  "$defs": {
+    "pixelRect": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "point": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "arrow": {
+      "type": "object",
+      "required": ["id", "type", "from", "to", "style"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["arrow"] },
+        "from": { "$ref": "#/$defs/point" },
+        "to": { "$ref": "#/$defs/point" },
+        "style": {
+          "type": "object",
+          "required": ["color", "width", "startCap", "endCap", "lineStyle", "opacity"],
+          "properties": {
+            "color": { "type": "string" },
+            "width": { "type": "number", "minimum": 1, "maximum": 100 },
+            "startCap": { "$ref": "#/$defs/cap" },
+            "endCap": { "$ref": "#/$defs/cap" },
+            "lineStyle": { "type": "string", "enum": ["solid", "dash", "dot", "dashDot"] },
+            "opacity": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    },
+    "cap": {
+      "type": "string",
+      "enum": [
+        "none",
+        "filled",
+        "open",
+        "thin",
+        "concave",
+        "circle",
+        "circleHollow",
+        "square",
+        "diamond",
+        "bar"
+      ]
+    },
+    "otherObject": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" }
+      }
+    }
+  }
+}

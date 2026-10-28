@@ -21,7 +21,7 @@
     },
     "app_quit": {
       "title": "Quit XcreenShot",
-      "description": "Quits the app, releases global shortcuts and removes the icon."
+      "description": "Quits the app, releases global shortcuts and removes the icon. With documents that have unsaved changes outside the library it asks first and returns status needs_decision, unless --force."
     },
     "app_diagnostics": {
       "title": "Diagnostic information",
@@ -146,6 +146,114 @@
     "capture_repeat_last_area": {
       "title": "Repeat Last Area",
       "description": "Captures at once, without the crosshair, the same screen rectangle as the last region or window capture; a window that is still open is captured where it is now. With no previous capture, opens the capture panel."
+    },
+    "document_open": {
+      "title": "Open document",
+      "description": "Opens a .xshot, PNG or JPG file as a document. Returns its documentId for the other document commands."
+    },
+    "document_list": {
+      "title": "Open documents",
+      "description": "The documents open in the editor, in order, with which one is shown and which have unsaved changes."
+    },
+    "document_info": {
+      "title": "Document details",
+      "description": "Size, resolution, objects (id, type, geometry, style), capture metadata and unsaved state of a document."
+    },
+    "document_annotate": {
+      "title": "Annotate",
+      "description": "Adds objects (arrows for now) to a document in image pixels. All are created or none, as one undo step."
+    },
+    "document_update_object": {
+      "title": "Change object",
+      "description": "Changes the geometry or style of one or more objects, as one undo step."
+    },
+    "document_delete_object": {
+      "title": "Delete object",
+      "description": "Deletes one or more objects, as one undo step."
+    },
+    "document_undo": {
+      "title": "Undo",
+      "description": "Undoes the last change of a document."
+    },
+    "document_redo": {
+      "title": "Redo",
+      "description": "Redoes the last undone change of a document."
+    },
+    "document_save": {
+      "title": "Save",
+      "description": "Saves a document in its own file. With a path it saves as: a copy for library documents, or the new linked file for files opened from elsewhere."
+    },
+    "document_export": {
+      "title": "Export",
+      "description": "Writes the final image (pixels and objects, flattened) as PNG or JPG without changing the document's own file."
+    },
+    "document_copy_all": {
+      "title": "Copy all",
+      "description": "Copies the final image of a document to the clipboard. The document keeps its objects editable."
+    },
+    "document_close": {
+      "title": "Close document",
+      "description": "Closes a document (or all). Library documents are saved first; files from elsewhere with unsaved changes need save or discard, otherwise nothing closes and status is needs_decision."
+    },
+    "editor_show": {
+      "title": "Show the editor",
+      "description": "Shows the main window in the Editor view, optionally with a given document."
+    },
+    "editor_state": {
+      "title": "Editor state",
+      "description": "Active tool, the current style of each tool and the document shown."
+    },
+    "editor_select_tool": {
+      "title": "Select tool",
+      "description": "Makes a tool the active one in the editor."
+    },
+    "editor_set_style": {
+      "title": "Set tool style",
+      "description": "Changes the current style of a tool: the properties of the next objects it draws. Kept between sessions."
+    },
+    "editor_zoom": {
+      "title": "Zoom",
+      "description": "Changes the editor zoom: actual size, fit to window, original on-screen size, in, out or a percentage (10-3200)."
+    },
+    "editor_view": {
+      "title": "Editor view",
+      "description": "The editor reports the zoom and position of the document it shows."
+    },
+    "editor_recovery_list": {
+      "title": "Recoverable work",
+      "description": "Documents with unsaved changes kept from a session that ended unexpectedly."
+    },
+    "editor_recovery_restore": {
+      "title": "Recover work",
+      "description": "Opens recoverable documents with their changes."
+    },
+    "editor_recovery_discard": {
+      "title": "Discard recoverable work",
+      "description": "Deletes recovery copies for good."
+    },
+    "document_crop": {
+      "title": "Crop",
+      "description": "Crops the document to a rectangle in canvas pixels. Nothing is lost: the original pixels stay in the .xshot and a later crop can grow back to the original edges. Objects keep their place on the image. One undo step."
+    },
+    "editor_fonts": {
+      "title": "Installed fonts",
+      "description": "Font families installed on this computer, for text objects."
+    },
+    "document_copy_objects": {
+      "title": "Copy objects",
+      "description": "Copies objects so they paste editable in XcreenShot, and as a PNG with transparency for other apps. With cut, also deletes them."
+    },
+    "document_paste": {
+      "title": "Paste",
+      "description": "Pastes what the clipboard holds: objects copied in XcreenShot (editable, shifted 10 px if the originals are still there, or in place), plain text as a text object, or an image as a new document when nothing is open."
+    },
+    "editor_action": {
+      "title": "Editor action",
+      "description": "Does what an editor menu entry does, in the editor window: open, save, export, close, undo, cut, copy, paste, delete, show the side panel… For automation, the document.* commands work without the window."
+    },
+    "editor_menu_state": {
+      "title": "Editor menu state",
+      "description": "The editor window reports which of its menu entries can be used now and which are ticked."
     }
   },
   "settings": {
@@ -247,6 +355,34 @@
     "capture_autoDetect": {
       "label": "Automatic detection",
       "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
+    },
+    "editor_deleteCroppedContent": {
+      "label": "Delete cropped content when saving",
+      "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
+    },
+    "editor_autoExpandCanvas": {
+      "label": "Expand the canvas automatically",
+      "description": "When an object sticks out of the image, the canvas grows just enough to show it, and shrinks back when it returns. What a crop leaves outside stays outside."
+    },
+    "editor_shrinkToFit": {
+      "label": "Shrink to fit when opening",
+      "description": "An image larger than the window opens fitted to it; a smaller one opens at 100 %."
+    },
+    "editor_rememberView": {
+      "label": "Remember each document's zoom and position",
+      "description": "Opening a document again shows it as you left it."
+    },
+    "editor_escClosesEditor": {
+      "label": "Esc closes the editor",
+      "description": "With nothing to cancel (no drawing, selection or text being typed), Esc closes the editor window. The documents stay open."
+    },
+    "editor_toolbarLabels": {
+      "label": "Toolbar labels",
+      "description": "Shows each tool's name next to its icon when the window is wide enough. Also in View > Toolbar and with a right click on the toolbar."
+    },
+    "editor_autoSelectAfterDraw": {
+      "label": "Select an annotation after drawing it",
+      "description": "The object you just drew stays selected, ready to change."
     }
   },
   "errors": {
@@ -268,7 +404,21 @@
     "no_active_window": "There is no active window to capture.",
     "region_outside": "The rectangle is outside every monitor.",
     "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved.",
-    "capture_cancelled": "The capture was cancelled."
+    "capture_cancelled": "The capture was cancelled.",
+    "no_document": "No document is open in the editor.",
+    "document_not_found": "Document \"{{id}}\" is not open.",
+    "object_not_found": "There is no object \"{{id}}\" in this document.",
+    "cannot_open": "Cannot open \"{{name}}\": {{reason}}.",
+    "unsupported_format": "This file type cannot be opened yet. Open a .xshot, PNG or JPG file.",
+    "newer_format": "This file was made with a newer XcreenShot. Update XcreenShot to open it.",
+    "invalid_object": "Object {{index}}: {{reason}}.",
+    "tool_later": "That tool arrives in a later build.",
+    "save_failed": "Could not save \"{{name}}\": {{reason}}.",
+    "file_exists": "\"{{name}}\" already exists.",
+    "recovery_not_found": "There is no recoverable item \"{{id}}\".",
+    "copy_failed": "Could not copy the image to the clipboard. Try again.",
+    "nothing_to_paste": "The clipboard holds nothing XcreenShot can paste.",
+    "paste_image_later": "Pasting an image into an open document arrives in M2. Close the documents to paste it as a new one."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -295,7 +445,36 @@
     },
     "slot": {
       "capture_window": "Window Capture",
-      "capture_active_window": "Active Window"
+      "capture_active_window": "Active Window",
+      "editor_open": "Open…",
+      "editor_save": "Save",
+      "editor_save_as": "Save as…",
+      "editor_export": "Export…",
+      "editor_close": "Close",
+      "editor_close_all": "Close all",
+      "editor_undo": "Undo",
+      "editor_redo": "Redo",
+      "editor_redo_alt": "Redo (second shortcut)",
+      "editor_cut": "Cut",
+      "editor_copy": "Copy",
+      "editor_paste": "Paste",
+      "editor_paste_in_place": "Paste in place",
+      "editor_copy_all": "Copy all",
+      "editor_delete": "Delete",
+      "editor_delete_alt": "Delete (second shortcut)",
+      "editor_deselect": "Deselect",
+      "editor_zoom_in": "Zoom in",
+      "editor_zoom_out": "Zoom out",
+      "editor_zoom_actual": "Actual size",
+      "editor_zoom_fit": "Fit to window",
+      "editor_zoom_original": "Original size on screen",
+      "editor_side_panel": "Side panel",
+      "editor_tool_move": "Move tool",
+      "editor_tool_arrow": "Arrow tool",
+      "editor_tool_text": "Text tool",
+      "editor_tool_shape": "Shape tool",
+      "editor_tool_blur": "Blur tool",
+      "editor_tool_crop": "Crop tool"
     }
   },
   "tray": {
@@ -315,16 +494,42 @@
     "capture_panel": "Open Capture Panel"
   },
   "menu": {
-    "file": "File",
-    "edit": "Edit",
+    "file": "&File",
+    "edit": "&Edit",
     "window": "Window",
-    "help": "Help",
+    "help": "&Help",
     "preferences": "Preferences…",
     "settings_mac": "Settings…",
     "close_window": "Close window",
     "quit": "Quit XcreenShot",
     "open_logs": "Open logs folder",
-    "copy_diagnostics": "Copy diagnostic information"
+    "copy_diagnostics": "Copy diagnostic information",
+    "view": "&View",
+    "open": "Open…",
+    "save": "Save",
+    "save_as": "Save as…",
+    "export": "Export…",
+    "close": "Close",
+    "close_all": "Close all",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "copy_all": "Copy all",
+    "paste": "Paste",
+    "paste_in_place": "Paste in place",
+    "delete": "Delete",
+    "deselect": "Deselect",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_actual": "Actual size",
+    "zoom_fit": "Fit to window",
+    "zoom_original": "Original size on screen",
+    "side_panel": "Side panel",
+    "toolbar": "Toolbar",
+    "toolbar_labels": "Show labels",
+    "recover": "Recover work…",
+    "icons_only": "Icons only"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -366,25 +571,6 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
-    "home": {
-      "title": "XcreenShot",
-      "subtitle": "Development build of M1: capture panel, on-screen selection and delay. The editor and the library come next.",
-      "test_title": "Test command",
-      "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
-      "run_ping": "Run test command",
-      "shortcut_hint": "Global test shortcut: {{shortcut}}",
-      "cli_hint": "From a terminal:",
-      "activity": "Recent commands",
-      "activity_empty": "Nothing yet.",
-      "result": "Result",
-      "open_preferences": "Open Preferences",
-      "last_capture": "Last capture",
-      "no_capture": "No captures yet. Try the button above or the CLI.",
-      "saved_in": "Saved in",
-      "capture_help": "Open the capture panel from the icon. In the selection: drag a region, click a window or press F, then Capture (Enter). Esc cancels. The editor comes next.",
-      "capture_universal": "Universal Capture",
-      "open_panel": "Open capture panel"
-    },
     "prefs": {
       "title": "Preferences",
       "search": "Search settings",
@@ -437,6 +623,7 @@
       "filter_all": "All",
       "filter_global": "Global",
       "filter_app": "In the app",
+      "filter_editor": "Editor",
       "filter_conflict": "In conflict",
       "filter_custom": "Custom",
       "search": "Search by command or combination",
@@ -445,6 +632,7 @@
       "col_status": "Status",
       "scope_global": "Global",
       "scope_app": "In the app",
+      "scope_editor": "Editor",
       "record_prompt": "Press the combination…",
       "record_hint": "Esc cancels · Backspace removes",
       "none": "None",
@@ -526,6 +714,203 @@
       "label": "Capture in {{seconds}} s",
       "cancel": "Cancel",
       "hint": "Esc cancels"
+    },
+    "editor": {
+      "toolbar": "Editor toolbar",
+      "tools": "Tools",
+      "capture": "Capture",
+      "tool": {
+        "move": "Move",
+        "arrow": "Arrow",
+        "text": "Text",
+        "shape": "Shape",
+        "blur": "Blur",
+        "crop": "Crop"
+      },
+      "undo": "Undo",
+      "undo_named": "Undo {{label}}",
+      "redo": "Redo",
+      "redo_named": "Redo {{label}}",
+      "open": "Open…",
+      "save": "Save",
+      "save_all": "Save all",
+      "save_as": "Save as…",
+      "share_area": "Share",
+      "copy_all": "Copy all",
+      "share": "Share",
+      "share_file": "File…",
+      "share_clipboard": "Clipboard",
+      "preferences": "Preferences",
+      "format_xshot": "XcreenShot document",
+      "open_filter": "Images and XcreenShot documents",
+      "exported": "Image exported",
+      "copied": "Image copied",
+      "canvas_label": "Canvas of {{name}}. Drag to draw with the active tool.",
+      "side_panel": "Side panel",
+      "tab_styles": "Styles",
+      "tab_properties": "Properties",
+      "styles_soon": "Saved styles are coming soon.",
+      "props_selected_one": "Selected arrow",
+      "props_selected_other": "{{count}} selected arrows",
+      "props_tool": "{{tool}}: next objects",
+      "props_document": "Document",
+      "no_document": "No document open.",
+      "prop": {
+        "color": "Color",
+        "hex": "Hex color",
+        "width": "Thickness",
+        "start_cap": "Start",
+        "end_cap": "End",
+        "line_style": "Line type",
+        "opacity": "Opacity",
+        "size": "Image size",
+        "resolution": "Resolution",
+        "canvas_color": "Canvas color",
+        "file": "File",
+        "font": "Font",
+        "font_size": "Size",
+        "text_style": "Style",
+        "bold": "Bold",
+        "italic": "Italic",
+        "align": "Alignment",
+        "fill": "Fill",
+        "outline": "Outline",
+        "outline_width": "Outline thickness",
+        "shape_type": "Shape",
+        "blur_type": "Type",
+        "intensity": "Intensity"
+      },
+      "cap": {
+        "none": "None",
+        "filled": "Filled point",
+        "open": "Open point",
+        "thin": "Thin point",
+        "concave": "Concave point",
+        "circle": "Circle",
+        "circleHollow": "Hollow circle",
+        "square": "Square",
+        "diamond": "Diamond",
+        "bar": "Bar"
+      },
+      "line": {
+        "solid": "Solid",
+        "dash": "Dashed",
+        "dot": "Dotted",
+        "dashDot": "Dash and dot"
+      },
+      "dpi": "{{dpi}} dpi",
+      "transparent": "Transparent",
+      "pointer": "Pointer position in image pixels",
+      "zoom": "Zoom",
+      "zoom_in": "Zoom in",
+      "zoom_out": "Zoom out",
+      "zoom_menu": "Zoom levels",
+      "zoom_actual": "Actual size",
+      "zoom_fit": "Fit to window",
+      "zoom_original": "Original on-screen size",
+      "strip": "Open documents",
+      "strip_open": "{{name}}, open",
+      "unsaved": "Unsaved changes",
+      "close": "Close",
+      "close_named": "Close {{name}}",
+      "unsaved_title_one": "Save the changes to “{{name}}”?",
+      "unsaved_title_many": "Save the changes to these documents?",
+      "unsaved_close": "If you don't save, your changes will be lost.",
+      "unsaved_quit": "XcreenShot is about to quit. If you don't save, your changes will be lost.",
+      "dont_save": "Don't save",
+      "cancel": "Cancel",
+      "flatten_title": "Save with the annotations flattened?",
+      "flatten_body": "“{{name}}” is a PNG or JPG file. When saved, its annotations become part of the image and can no longer be edited in that file. To keep them editable, use Save as… and choose XcreenShot document.",
+      "dont_ask_again": "Don't ask again",
+      "recover_title": "Recover work",
+      "recover_body": "XcreenShot closed unexpectedly. These documents had unsaved changes:",
+      "recover": "Recover",
+      "discard": "Discard",
+      "later": "Later",
+      "nothing_to_recover": "There is no work to recover.",
+      "error_title": "Something went wrong",
+      "empty_title": "Nothing open yet",
+      "empty_help": "Take a capture, open an image or a .xshot document, or drop files here.",
+      "drop_hint": "Drop to open as documents",
+      "panel_width": "Side panel width",
+      "accept": "OK",
+      "mixed": "Mixed",
+      "objects_count_one": "{{count}} object",
+      "objects_count_other": "{{count}} objects",
+      "props_selection": "Selected: {{what}}",
+      "text_field": "Text",
+      "crop_help": "Drag the edges or corners, or drag a new box. Enter or double-click applies; Esc puts it back. What is cut stays in the document and can be recovered by cropping again.",
+      "crop_apply": "Crop",
+      "outside_one": "{{count}} object outside the canvas",
+      "outside_other": "{{count}} objects outside the canvas",
+      "select_outside": "Select",
+      "align": {
+        "left": "Left",
+        "center": "Center",
+        "right": "Right",
+        "justify": "Justified"
+      },
+      "shape": {
+        "rectangle": "Rectangle",
+        "ellipse": "Ellipse"
+      },
+      "blur": {
+        "blur": "Blur",
+        "pixelate": "Pixelate",
+        "solid": "Solid",
+        "solid_hint": "Best for confidential data: blur and pixelation can sometimes be reversed with outside tools.",
+        "security": "Exported images and copies never keep what a blur hides. A .xshot does, until the blur is flattened."
+      },
+      "color": {
+        "theme": "Theme colors",
+        "palette": "Palette",
+        "area": "Saturation and brightness",
+        "hue": "Hue",
+        "brightness_short": "Br",
+        "eyedropper": "Eyedropper"
+      },
+      "a11y": {
+        "object": "{{what}}, at {{x}}, {{y}}, {{w}} by {{h}} pixels",
+        "tool": "Tool: {{tool}}",
+        "zoom": "Zoom {{zoom}} %"
+      }
     }
+  },
+  "history": {
+    "annotate": "Annotate",
+    "draw_arrow": "Draw arrow",
+    "draw_objects": "Draw objects",
+    "move_arrow": "Move arrow",
+    "move_objects": "Move objects",
+    "change_arrow": "Change arrow",
+    "change_objects": "Change objects",
+    "delete_arrow": "Delete arrow",
+    "delete_objects": "Delete objects",
+    "draw_text": "Add text",
+    "move_text": "Move text",
+    "change_text": "Change text",
+    "delete_text": "Delete text",
+    "draw_shape": "Draw shape",
+    "move_shape": "Move shape",
+    "change_shape": "Change shape",
+    "delete_shape": "Delete shape",
+    "draw_blur": "Blur",
+    "move_blur": "Move blur",
+    "change_blur": "Change blur",
+    "delete_blur": "Delete blur",
+    "crop": "Crop",
+    "cut_arrow": "Cut arrow",
+    "cut_text": "Cut text",
+    "cut_shape": "Cut shape",
+    "cut_blur": "Cut blur",
+    "cut_objects": "Cut objects",
+    "paste_arrow": "Paste arrow",
+    "paste_text": "Paste text",
+    "paste_shape": "Paste shape",
+    "paste_blur": "Paste blur",
+    "paste_objects": "Paste objects"
+  },
+  "editor": {
+    "edited": "{{name}} — Edited"
   }
 }

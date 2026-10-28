@@ -119,13 +119,32 @@ pub fn render(v: Visual) -> Image<'static> {
 /// Menu id -> (command, params).
 pub type Actions = HashMap<String, (String, Value)>;
 
-fn shortcut_label(core: &Core, command: &str) -> Option<String> {
+/// Shortcut of a menu entry: the editor row named like the entry (EDT-116), else the
+/// global or app row of its command.
+fn shortcut_of(core: &Core, id: &str, command: &str) -> Option<xs_core::shortcuts::Accelerator> {
     let profile = core.profile();
-    [ShortcutScope::Global, ShortcutScope::App]
+    core.shortcuts
+        .find_slot(id, ShortcutScope::Editor)
         .into_iter()
-        .filter_map(|scope| core.shortcuts.find_slot(command, scope))
+        .chain(
+            [ShortcutScope::Global, ShortcutScope::App]
+                .into_iter()
+                .filter_map(|scope| core.shortcuts.find_slot(command, scope)),
+        )
         .find_map(|slot| core.shortcuts.binding(&slot, profile))
-        .map(|a| a.to_string())
+}
+
+/// How a menu shows shortcuts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Shortcuts {
+    /// The macOS menu bar, until its key equivalents are set up.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    None,
+    /// Real accelerators: the tray, where they never act as key bindings.
+    Accelerators,
+    /// As text after a tab, which Windows aligns to the right: in a window menu a real
+    /// accelerator would also take the keys, and the editor handles them itself.
+    Text,
 }
 
 fn native(app: &AppHandle, item: NativeItem) -> tauri::Result<PredefinedMenuItem<Wry>> {
@@ -143,14 +162,13 @@ fn native(app: &AppHandle, item: NativeItem) -> tauri::Result<PredefinedMenuItem
     }
 }
 
-/// Builds native menu items from the menu data. `with_accelerators` shows shortcut
-/// labels (tray only: in window menus they would also act as key bindings).
+/// Builds native menu items from the menu data.
 pub fn build_items(
     app: &AppHandle,
     core: &Core,
     entries: &[MenuEntry],
     lang: Lang,
-    with_accelerators: bool,
+    shortcuts: Shortcuts,
     actions: &mut Actions,
 ) -> tauri::Result<Vec<Box<dyn IsMenuItem<Wry>>>> {
     let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
@@ -164,11 +182,17 @@ pub fn build_items(
                 checked,
             } => {
                 actions.insert(id.to_string(), (command.to_string(), params.clone()));
-                let text = tr(lang, label, &[]);
-                let accel = if with_accelerators {
-                    shortcut_label(core, command)
-                } else {
-                    None
+                let mut text = tr(lang, label, &[]);
+                let shortcut = shortcut_of(core, id, command);
+                let accel = match shortcuts {
+                    Shortcuts::Accelerators => shortcut.map(|a| a.to_string()),
+                    Shortcuts::Text => {
+                        if let Some(a) = shortcut {
+                            text = format!("{text}\t{}", a.display(core.shortcuts.platform()));
+                        }
+                        None
+                    }
+                    Shortcuts::None => None,
                 };
                 if let Some(state) = checked {
                     let on = *state == "shortcuts_paused" && core.shortcuts.user_paused();
@@ -191,7 +215,7 @@ pub fn build_items(
                 }
             }
             MenuEntry::Submenu { label, items: sub } => {
-                let children = build_items(app, core, sub, lang, with_accelerators, actions)?;
+                let children = build_items(app, core, sub, lang, shortcuts, actions)?;
                 let refs: Vec<&dyn IsMenuItem<Wry>> = children.iter().map(|b| b.as_ref()).collect();
                 items.push(Box::new(Submenu::with_items(
                     app,
@@ -219,10 +243,10 @@ pub fn build_menu(
     app: &AppHandle,
     core: &Core,
     entries: &[MenuEntry],
-    with_accelerators: bool,
+    shortcuts: Shortcuts,
     actions: &mut Actions,
 ) -> tauri::Result<Menu<Wry>> {
-    let items = build_items(app, core, entries, core.lang(), with_accelerators, actions)?;
+    let items = build_items(app, core, entries, core.lang(), shortcuts, actions)?;
     let refs: Vec<&dyn IsMenuItem<Wry>> = items.iter().map(|b| b.as_ref()).collect();
     Menu::with_items(app, &refs)
 }
@@ -231,7 +255,13 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let state = app.state::<AppState>();
     let core = &state.core;
     let mut actions = state.actions.lock().unwrap();
-    let menu = build_menu(app, core, &xs_core::menus::tray_menu(), true, &mut actions)?;
+    let menu = build_menu(
+        app,
+        core,
+        &xs_core::menus::tray_menu(),
+        Shortcuts::Accelerators,
+        &mut actions,
+    )?;
     let visual = current_visual(app);
     let tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(render(visual))
@@ -312,7 +342,13 @@ pub fn refresh(app: &AppHandle) {
     let _ = tray.set_tooltip(Some(tooltip(core, visual)));
     let _ = tray.set_visible(core.settings.get_bool("general.showIcon"));
     let mut actions = state.actions.lock().unwrap();
-    if let Ok(menu) = build_menu(app, core, &xs_core::menus::tray_menu(), true, &mut actions) {
+    if let Ok(menu) = build_menu(
+        app,
+        core,
+        &xs_core::menus::tray_menu(),
+        Shortcuts::Accelerators,
+        &mut actions,
+    ) {
         let _ = tray.set_menu(Some(menu));
     }
 }

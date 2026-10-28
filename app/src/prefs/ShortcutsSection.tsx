@@ -7,7 +7,7 @@ import { useApp } from "../store";
 import { SettingRow } from "./SettingRow";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 
-type Filter = "all" | "global" | "app" | "conflict" | "custom";
+type Filter = "all" | "global" | "app" | "editor" | "conflict" | "custom";
 
 interface Reassign {
   row: ShortcutRow;
@@ -64,6 +64,7 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
     return (shortcuts?.rows ?? []).filter((r) => {
       if (filter === "global" && r.scope !== "global") return false;
       if (filter === "app" && r.scope !== "app") return false;
+      if (filter === "editor" && r.scope !== "editor") return false;
       if (filter === "conflict" && !r.conflict) return false;
       if (filter === "custom" && !r.custom) return false;
       if (!q) return true;
@@ -124,7 +125,7 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
         <label>
           {t("ui.shortcuts.filter")}{" "}
           <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
-            {(["all", "global", "app", "conflict", "custom"] as const).map((f) => (
+            {(["all", "global", "app", "editor", "conflict", "custom"] as const).map((f) => (
               <option key={f} value={f}>
                 {t(`ui.shortcuts.filter_${f}`)}
               </option>
@@ -148,7 +149,7 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
               <td>
                 <div>{r.title}</div>
                 <div className="muted" style={{ fontSize: 12 }}>
-                  {t(r.scope === "global" ? "ui.shortcuts.scope_global" : "ui.shortcuts.scope_app")}
+                  {t(`ui.shortcuts.scope_${r.scope}`)}
                 </div>
               </td>
               <td>

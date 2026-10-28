@@ -2,6 +2,8 @@
 
 Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataforma · `Hecho` verificado en ambas.
 
+Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … En M2: …"), `Win`, `Mac` y `Hecho` se refieren a la parte de su hito; lo demás se sigue en la prueba manual del ID.
+
 ## 01-captura.md
 
 | ID | Función | Hito | Prioridad | Estado |
@@ -77,35 +79,35 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| EDT-001 | Ventana principal | M1 | Must | — |
-| EDT-002 | Menús del editor | M1 | Must | — |
-| EDT-003 | Barra de herramientas y menú Más | M1 | Must | — |
+| EDT-001 | Ventana principal | M1 | Must | En curso |
+| EDT-002 | Menús del editor | M1 | Must | Win |
+| EDT-003 | Barra de herramientas y menú Más | M1 | Must | En curso |
 | EDT-004 | Personalizar la barra de herramientas | M2 | Should | — |
-| EDT-005 | Panel lateral | M1 | Must | — |
+| EDT-005 | Panel lateral | M1 | Must | En curso |
 | EDT-006 | Barra de edición rápida | M2 | Should | — |
-| EDT-007 | Zoom y vista | M1 | Must | — |
+| EDT-007 | Zoom y vista | M1 | Must | Win |
 | EDT-008 | Cuadrícula de píxeles | M2 | Could | — |
 | EDT-009 | Pantalla completa | M2 | Could | — |
 | EDT-010 | Área de trabajo | M2 | Could | — |
-| EDT-011 | Barra de estado | M1 | Should | — |
-| EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | — |
-| EDT-013 | Accesibilidad del lienzo | M1 | Should | — |
-| EDT-014 | Propiedades y estilo actual | M1 | Must | — |
+| EDT-011 | Barra de estado | M1 | Should | Win |
+| EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | Win |
+| EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |
+| EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
 | EDT-015 | Estilos guardados | M2 | Must | — |
 | EDT-016 | Favoritos | M2 | Should | — |
 | EDT-017 | Temas | M2 | Should | — |
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | — |
-| EDT-019 | Selector de color | M1 | Must | — |
+| EDT-019 | Selector de color | M1 | Must | Win |
 | EDT-020 | Degradados | M2 | Should | — |
 | EDT-021 | Sombra de los objetos | M2 | Should | — |
-| EDT-022 | Selección, tiradores y modificadores | M1 | Must | — |
+| EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
-| EDT-024 | Flecha | M1 | Must | — |
+| EDT-024 | Flecha | M1 | Must | Win |
 | EDT-025 | Línea | M2 | Should | — |
-| EDT-026 | Texto | M1 | Must | — |
+| EDT-026 | Texto | M1 | Must | Win |
 | EDT-027 | Corrector ortográfico | M2 | Should | — |
 | EDT-028 | Globo | M2 | Must | — |
-| EDT-029 | Forma: rectángulo y elipse | M1 | Must | — |
+| EDT-029 | Forma: rectángulo y elipse | M1 | Must | Win |
 | EDT-030 | Forma: rectángulo redondeado, polígono y otras formas | M2 | Should | — |
 | EDT-031 | Sello | M2 | Should | — |
 | EDT-032 | Sellos propios y Guardar como sello | M2 | Should | — |
@@ -116,17 +118,17 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-037 | Lápiz | M2 | Should | — |
 | EDT-038 | Lupa | M2 | Should | — |
 | EDT-039 | Foco | M2 | Should | — |
-| EDT-040 | Desenfocar | M1 | Must | — |
+| EDT-040 | Desenfocar | M1 | Must | Win |
 | EDT-041 | Simplificar | M2 | Should | — |
-| EDT-042 | Mover | M1 | Must | — |
+| EDT-042 | Mover | M1 | Must | En curso |
 | EDT-043 | Selección | M2 | Must | — |
 | EDT-044 | Acciones sobre la selección | M2 | Must | — |
 | EDT-045 | Relleno del hueco | M2 | Should | — |
 | EDT-046 | Varita mágica | M2 | Should | — |
 | EDT-047 | Relleno | M2 | Should | — |
 | EDT-048 | Borrador | M2 | Should | — |
-| EDT-049 | Recortar | M1 | Must | — |
-| EDT-050 | Recorte no destructivo | M1 | Must | — |
+| EDT-049 | Recortar | M1 | Must | Win |
+| EDT-050 | Recorte no destructivo | M1 | Must | Win |
 | EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | — |
 | EDT-052 | Quitar franja y añadir espacio | M2 | Should | — |
 | EDT-053 | Panel Efectos | M2 | Must | — |
@@ -147,7 +149,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-068 | Efectos de transformación | M2 | Should | — |
 | EDT-069 | Cambiar tamaño de la imagen | M2 | Must | — |
 | EDT-070 | Tamaño del lienzo | M2 | Should | — |
-| EDT-071 | Ampliar el lienzo automáticamente | M2 | Should | — |
+| EDT-071 | Ampliar el lienzo automáticamente | M1 | Should | Win |
 | EDT-072 | Girar | M2 | Should | — |
 | EDT-073 | Voltear | M2 | Could | — |
 | EDT-074 | Color del lienzo | M2 | Should | — |
@@ -165,10 +167,10 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-086 | Posición y tamaño numéricos | M2 | Must | — |
 | EDT-087 | Mover con el teclado | M2 | Should | — |
 | EDT-088 | Duplicar objetos | M2 | Should | — |
-| EDT-089 | Cortar, copiar y pegar | M1 | Must | — |
-| EDT-090 | Copiar todo | M1 | Must | — |
+| EDT-089 | Cortar, copiar y pegar | M1 | Must | Win |
+| EDT-090 | Copiar todo | M1 | Must | Win |
 | EDT-091 | Aplanar y desaplanar | M2 | Should | — |
-| EDT-092 | Deshacer y rehacer | M1 | Must | — |
+| EDT-092 | Deshacer y rehacer | M1 | Must | Win |
 | EDT-093 | Cursor como objeto | M2 | Should | — |
 | EDT-094 | Medición en vivo | M5 | Could | — |
 | EDT-095 | Nuevo desde plantilla | M2 | Should | — |
@@ -181,21 +183,21 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | EDT-102 | Paginación al imprimir y en PDF | M2 | Should | — |
 | EDT-103 | Nueva imagen | M2 | Should | — |
 | EDT-104 | Nueva desde el portapapeles | M2 | Should | — |
-| EDT-105 | Abrir, arrastrar y soltar archivos | M1 | Must | — |
-| EDT-106 | Formato `.xshot` | M1 | Must | — |
-| EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | — |
-| EDT-108 | Cerrar y Cerrar todo | M1 | Must | — |
+| EDT-105 | Abrir, arrastrar y soltar archivos | M1 | Must | En curso |
+| EDT-106 | Formato `.xshot` | M1 | Must | Win |
+| EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | Win |
+| EDT-108 | Cerrar y Cerrar todo | M1 | Must | En curso |
 | EDT-109 | Renombrar, duplicar, eliminar y mostrar | M2 | Should | — |
-| EDT-110 | Exportar a PNG y JPG | M1 | Must | — |
+| EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
 | EDT-111 | Más formatos de exportación | M2 | Should | — |
 | EDT-112 | Opciones de cada formato | M2 | Should | — |
 | EDT-113 | Exportación por lotes | M2 | Should | — |
 | EDT-114 | Imprimir y configurar página | M2 | Should | — |
-| EDT-115 | Atajos de herramientas | M1 | Must | — |
-| EDT-116 | Atajos de edición, vista y archivo | M1 | Must | — |
-| EDT-117 | Teclas del lienzo y modificadores | M1 | Must | — |
-| EDT-118 | Preferencias del editor | M1 | Should | — |
-| EDT-119 | Comandos del editor (CLI y MCP) | M1 | Must | — |
+| EDT-115 | Atajos de herramientas | M1 | Must | Win |
+| EDT-116 | Atajos de edición, vista y archivo | M1 | Must | Win |
+| EDT-117 | Teclas del lienzo y modificadores | M1 | Must | Win |
+| EDT-118 | Preferencias del editor | M1 | Should | Win |
+| EDT-119 | Comandos del editor (CLI y MCP) | M1 | Must | En curso |
 
 ## 03-video.md
 
@@ -302,14 +304,14 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
 | LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | — |
 | LIB-019 | Guías de pasos en la biblioteca | M5 | Should | — |
-| LIB-020 | Autoguardado de capturas | M1 | Must | — |
+| LIB-020 | Autoguardado de capturas | M1 | Must | En curso |
 | LIB-021 | Guardar como y copia editable | M1 | Must | — |
 | LIB-022 | Índice propio de la biblioteca | M1 | Must | — |
 | LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | — |
 | LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | — |
 | LIB-025 | Bibliotecas grandes | M2 | Must | — |
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
-| LIB-027 | Ubicación por defecto | M1 | Must | — |
+| LIB-027 | Ubicación por defecto | M1 | Must | En curso |
 | LIB-028 | Cambiar o mover la biblioteca | M2 | Must | — |
 | LIB-029 | Biblioteca en una carpeta sincronizada | M2 | Must | — |
 | LIB-030 | Biblioteca en una ubicación de red | M2 | Should | — |
@@ -318,7 +320,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | — |
 | LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | — |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | — |
-| TRY-002 | Contenido y orden | M1 | Must | — |
+| TRY-002 | Contenido y orden | M1 | Must | En curso |
 | TRY-003 | Capacidad | M2 | Should | — |
 | TRY-004 | Fijar y desfijar | M2 | Should | — |
 | TRY-005 | Reordenar | M2 | Should | — |
@@ -327,15 +329,15 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | TRY-008 | Cerrar elementos | M1 | Must | — |
 | TRY-009 | Eliminar desde la bandeja | M1 | Must | — |
 | TRY-010 | Duplicar | M2 | Should | — |
-| TRY-011 | Indicador de cambios sin guardar | M1 | Must | — |
+| TRY-011 | Indicador de cambios sin guardar | M1 | Must | En curso |
 | TRY-012 | Selección múltiple y acciones | M2 | Should | — |
 | TRY-013 | Navegación con teclado | M1 | Should | — |
 | TRY-014 | Combinar arrastrando al lienzo | M2 | Must | — |
 | TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | — |
 | TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | — |
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | — |
-| SHR-018 | Archivo | M1 | Must | — |
-| SHR-019 | Portapapeles | M1 | Must | — |
+| SHR-018 | Archivo | M1 | Must | En curso |
+| SHR-019 | Portapapeles | M1 | Must | En curso |
 
 ## 05-app.md
 
@@ -387,7 +389,7 @@ Estados: `—` pendiente · `En curso` · `Win` / `Mac` verificado en esa plataf
 | APP-044 | Lectores de pantalla | M1 | Must | — |
 | APP-045 | Contraste, escalado y movimiento | M1 | Should | — |
 | APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
-| APP-047 | Recuperación tras un cierre inesperado | M1 | Must | — |
+| APP-047 | Recuperación tras un cierre inesperado | M1 | Must | En curso |
 | APP-048 | Del atajo a la cruceta | M1 | Must | En curso |
 | APP-049 | De la captura al editor | M1 | Must | — |
 | APP-050 | Editor con imágenes muy grandes | M2 | Must | — |

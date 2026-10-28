@@ -60,7 +60,7 @@ export interface ShortcutRow {
   /** The command it runs, and with which parameters (CAP-065). */
   runs: string;
   params: Record<string, unknown>;
-  scope: "global" | "app";
+  scope: "global" | "app" | "editor";
   group: string;
   title: string;
   shortcut: string | null;

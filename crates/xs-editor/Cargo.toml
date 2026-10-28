@@ -1,0 +1,24 @@
+[package]
+name = "xs-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Open documents, undo history, saving and the document.* and editor.* commands (EDT-)"
+
+[dependencies]
+xs-core.workspace = true
+xs-image = { path = "../xs-image" }
+xs-library = { path = "../xs-library" }
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -99,6 +99,8 @@ impl Host for TauriHost {
     fn shortcuts_changed(&self) {
         global::apply(&self.app);
         tray::refresh(&self.app);
+        // The menus show each entry's shortcut (EDT-116).
+        crate::rebuild_app_menu(&self.app);
         let _ = self.app.emit("xs://shortcuts", ());
     }
 
@@ -214,16 +216,48 @@ impl Host for TauriHost {
             "xs://capture",
             json!({ "result": result, "thumbnail": thumbnail }),
         );
-        // Until the editor exists (EDT-, M1), "open in editor" shows the main window
-        // with the capture (CAP-045, provisional).
+        // "Open in = Editor" (CAP-045): the capture becomes the document shown.
         if open_editor {
             let app = self.app.clone();
+            let id = result["documentId"].clone();
             let _ = self.app.run_on_main_thread(move || {
                 // The panel comes back first, so the editor ends up in front of it.
                 windows::restore_capture_panel(&app);
-                let _ = windows::show_main(&app);
+                let core = app.state::<crate::AppState>().core.clone();
+                std::thread::spawn(move || {
+                    if let Err(e) = core.call(Source::Ui, "editor.show", json!({ "documentId": id }), None) {
+                        tracing::warn!(code = e.code.as_str(), "could not show the capture in the editor");
+                    }
+                });
             });
         }
+    }
+
+    fn confirm_quit(&self, pending: &[Value]) {
+        let _ = windows::show_main(&self.app);
+        let _ = self.app.emit(
+            "xs://editor",
+            json!({ "kind": "quit", "payload": { "pending": pending } }),
+        );
+    }
+
+    fn editor_event(&self, kind: &str, payload: Value) {
+        if kind == "menu_state" {
+            *self.app.state::<crate::AppState>().menu_state.lock().unwrap() = payload;
+            crate::apply_menu_state(&self.app);
+            return;
+        }
+        if kind == "title" {
+            let app = self.app.clone();
+            let title = payload["title"].as_str().unwrap_or_default().to_string();
+            let _ = self
+                .app
+                .run_on_main_thread(move || windows::set_main_title(&app, &title));
+            return;
+        }
+        let _ = self
+            .app
+            .emit("xs://editor", json!({ "kind": kind, "payload": payload }));
     }
 
     fn command_finished(&self, ctx: &Context, spec: &CommandSpec, result: &CommandResult) {
