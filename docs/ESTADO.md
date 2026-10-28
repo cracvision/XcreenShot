@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-10-27, con la entrega 4b probada por Carlos (falta repetir un paso).
+**Última actualización:** 2026-10-28, con la entrega 4b terminada y probada por Carlos.
 
 ## Fuentes
 
@@ -32,7 +32,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 2 · Selección en pantalla | Pantallas congeladas, cruceta, lupa, detección de ventanas, barra de captura con **Capturar** | Hecha y probada por Carlos |
 | 3 · Panel de captura | Pestañas Universal e Imagen, retardo con cuenta atrás, menú del ícono, Repetir última captura y Repetir última área, restablecer ajustes | Hecha; faltan 3 pruebas de Carlos (abajo) |
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
-| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (2026-10-27); falta repetir el paso 3 de la tanda 4 |
+| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (cinco tandas, 2026-10-28), con el lienzo que crece (EDT-071) |
 | 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Siguiente |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Pendiente |
 
@@ -79,12 +79,12 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-3. **Entrega 4b:** Carlos marcó PASS las cuatro tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) salvo el paso 3 de la tanda 4 (pegar en Word). Reportó dos fallos, ya corregidos: el selector de color no se cerraba al hacer clic fuera, y el clic derecho mostraba el menú del motor web, cuyo "Copiar imagen" copiaba solo los tiradores. Falta que repita ese paso con `Ctrl+C` y el instalador nuevo. Después pidió dos cambios: que los cuadritos del selector no lo cierren (hecho) y que **el lienzo crezca al sacar un objeto del borde** (EDT-071, adelantado a M1; hecho). Todo eso está en la tanda 5 de ese archivo.
-4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entrega 4a, probada y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4b ya está en el mismo PR #3 (rama `m1-editor`).
+3. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
+4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a y 4b, probadas y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4c seguirá en la rama `m1-editor`.
 
 ## Siguiente paso
 
-Mientras Carlos prueba la 4b, corregir lo que reporte y empezar la entrega 4c, menús, teclado y accesibilidad:
+Entrega 4c, menús, teclado y accesibilidad:
 1. Leer los bloques de EDT-002, EDT-012, EDT-013, EDT-116 y EDT-118 en `spec/02-editor.md`.
 2. Barra de menús del editor y menú contextual (EDT-002); sustituyen al menú de M0 y a los botones provisionales de Deshacer y Rehacer.
 3. Tabla completa de atajos del editor, asignables en Preferencias > Atajos (EDT-116). Hoy están fijos en `app/src/editor/keys.ts`.

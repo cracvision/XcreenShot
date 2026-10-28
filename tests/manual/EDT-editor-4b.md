@@ -25,7 +25,7 @@ Copiar y pegar no se probó en la instancia aislada para no tocar el portapapele
 
 ## Tanda 1 · Texto — Carlos
 
-Carlos marcó PASS (2026-10-27, instalador `72386c7`) las cuatro tandas, salvo el paso 3 de la tanda 4 (arriba).
+Carlos marcó PASS (2026-10-27, instalador `72386c7`) las cuatro tandas, salvo el paso 3 de la tanda 4 (arriba), que pasó al repetirlo en la tanda 5.
 
 Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `46cbb30` o posterior (el paso 3 de la tanda 4 se repite con `9528c37` o posterior) (aparece junto a la versión con `xcreenshot app ping`).
 
@@ -63,7 +63,7 @@ Estos pasos usan tu portapapeles.
 
 1. [x] Selecciona una flecha, `Ctrl+C` y `Ctrl+V`: aparece una copia 10 px más abajo y a la derecha, editable.
 2. [x] `Ctrl+X` sobre otra flecha la quita; abre otro documento de la tira y `Ctrl+V`: la flecha aparece en el centro de la vista. `Ctrl+Shift+V` la pega en su mismo sitio.
-3. [ ] Selecciona la flecha, `Ctrl+C` y pega en Paint o Word: llega solo la flecha, sin la captura de fondo.
+3. [x] Selecciona la flecha, `Ctrl+C` y pega en Paint o Word: llega solo la flecha, sin la captura de fondo. (PASS al repetirlo en la tanda 5, paso 7.)
 4. [x] Copia una frase en el Bloc de notas y pega en el editor: aparece como texto.
 5. [x] Pulsa `V`, `A`, `T`, `U`, `B` y `R`: cambia la herramienta. Mantener `V` y soltar vuelve a la herramienta de antes.
 6. [x] Haz clic en la imagen y pulsa `Tab` varias veces: se seleccionan los objetos uno a uno. Las flechas del teclado mueven el seleccionado 1 px (10 px con `Shift`).
@@ -71,13 +71,13 @@ Estos pasos usan tu portapapeles.
 
 ## Tanda 5 · Lienzo que crece y repeticiones — Carlos
 
-Carlos pidió (2026-10-27) que el lienzo crezca al sacar un objeto del borde (EDT-071, adelantado a M1). Repite también lo que falló. Instalador con la compilación de esta corrección o posterior.
+Carlos pidió (2026-10-27) que el lienzo crezca al sacar un objeto del borde (EDT-071, adelantado a M1). Repite también lo que falló. Carlos marcó PASS los siete pasos (2026-10-28, instalador `5a68118`).
 
-1. [ ] Con **Flecha**, dibuja una flecha que empiece dentro de la imagen y termine fuera, a la derecha: mientras arrastras se ve entera, y al soltar el lienzo crece hasta su punta. La franja nueva es transparente (damero).
-2. [ ] Con **Mover**, vuelve a meter la flecha dentro: el lienzo recupera su tamaño. `Ctrl+Z` deshace cada paso con el tamaño de lienzo que tenía.
-3. [ ] Dibuja un rectángulo que salga por la izquierda o por arriba: el lienzo crece por ese lado y la imagen no se mueve de su sitio.
-4. [ ] **Recorta** dejando una flecha medio fuera; después muévela un poco: el lienzo no crece (el recorte manda). Vuelve a **Recortar**: lo que sale de la imagen original no se dibuja.
-5. [ ] Un **Desenfocar** dibujado desde fuera de la imagen no amplía el lienzo.
-6. [ ] Abre un color del panel, haz clic en un cuadrito y después en el área de color: el selector sigue abierto. Un clic en el lienzo lo cierra y aplica el color.
-7. [ ] Selecciona una flecha, `Ctrl+C` (sin clic derecho) y pega en Word: llega solo la flecha. El clic derecho sobre el lienzo ya no muestra el menú del motor web.
+1. [x] Con **Flecha**, dibuja una flecha que empiece dentro de la imagen y termine fuera, a la derecha: mientras arrastras se ve entera, y al soltar el lienzo crece hasta su punta. La franja nueva es transparente (damero).
+2. [x] Con **Mover**, vuelve a meter la flecha dentro: el lienzo recupera su tamaño. `Ctrl+Z` deshace cada paso con el tamaño de lienzo que tenía.
+3. [x] Dibuja un rectángulo que salga por la izquierda o por arriba: el lienzo crece por ese lado y la imagen no se mueve de su sitio.
+4. [x] **Recorta** dejando una flecha medio fuera; después muévela un poco: el lienzo no crece (el recorte manda). Vuelve a **Recortar**: lo que sale de la imagen original no se dibuja.
+5. [x] Un **Desenfocar** dibujado desde fuera de la imagen no amplía el lienzo.
+6. [x] Abre un color del panel, haz clic en un cuadrito y después en el área de color: el selector sigue abierto. Un clic en el lienzo lo cierra y aplica el color.
+7. [x] Selecciona una flecha, `Ctrl+C` (sin clic derecho) y pega en Word: llega solo la flecha. El clic derecho sobre el lienzo ya no muestra el menú del motor web.
 
