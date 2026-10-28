@@ -351,6 +351,10 @@
     "editor_deleteCroppedContent": {
       "label": "Eliminar el contenido recortado al guardar",
       "description": "Los documentos guardados conservan solo la imagen recortada, así que un .xshot compartido no contiene nada oculto. Sin esta opción, un recorte posterior puede recuperar lo que se cortó."
+    },
+    "editor_autoExpandCanvas": {
+      "label": "Ampliar el lienzo automáticamente",
+      "description": "Cuando un objeto sobresale de la imagen, el lienzo crece lo justo para mostrarlo y se encoge cuando vuelve dentro. Lo que un recorte deja fuera se queda fuera."
     }
   },
   "errors": {

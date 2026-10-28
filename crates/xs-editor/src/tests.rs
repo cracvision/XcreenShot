@@ -576,3 +576,191 @@ fn lists_installed_fonts() {
     let fonts = cli(&e.core, "editor.fonts", json!({}))["fonts"].clone();
     assert!(!fonts.as_array().unwrap().is_empty());
 }
+
+fn size(e: &Env, doc: &str) -> (u64, u64) {
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    (info["width"].as_u64().unwrap(), info["height"].as_u64().unwrap())
+}
+
+#[test]
+fn the_canvas_grows_to_fit_an_object_and_shrinks_back() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    // A 400 × 200 capture; the arrow ends 50 px past the right edge.
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([300, 100], [450, 100])]}),
+    );
+    let (w, h) = size(&e, &doc);
+    assert!((450..=460).contains(&w), "grows just enough: {w}");
+    assert_eq!(h, 200, "only where the arrow sticks out");
+    // The new area is the canvas color (transparent): the export shows it.
+    let out = e.outside.path().join("grown.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    let png = image::open(&out).unwrap().to_rgba8();
+    assert_eq!(png.width() as u64, w);
+    assert_eq!(png.get_pixel(w as u32 - 1, 10).0[3], 0);
+    assert_eq!(png.get_pixel(10, 10).0, [255, 255, 255, 255]);
+    // Back inside: the canvas is the image again (Carlos, 2026-10-27).
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"from": [100, 100], "to": [250, 100]}}),
+    );
+    assert_eq!(size(&e, &doc), (400, 200));
+    // Each change is one undo step, with the canvas size it left.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(size(&e, &doc).0, w);
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(size(&e, &doc), (400, 200));
+}
+
+#[test]
+fn growing_to_the_left_keeps_objects_on_the_image() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            arrow([100, 100], [300, 100]),
+            {"type": "shape", "rect": {"x": -40, "y": -30, "w": 100, "h": 60}, "style": {"outlineWidth": 4}},
+        ]}),
+    );
+    assert_eq!(size(&e, &doc), (440, 230));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["crop"]["x"], -40);
+    assert_eq!(info["crop"]["y"], -30);
+    assert_eq!(info["frame"]["width"], 400);
+    assert_eq!(
+        info["objects"][0]["from"],
+        json!([140.0, 130.0]),
+        "the arrow moves with the image"
+    );
+    assert_eq!(info["objects"][1]["rect"]["x"], 0.0);
+    // Deleting the shape gives back the image's own size and place.
+    cli(
+        &e.core,
+        "document.delete_object",
+        json!({"documentId": doc, "objectId": "o2"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(400), Some(200))
+    );
+    assert_eq!(info["objects"][0]["from"], json!([100.0, 100.0]));
+    assert!(info.get("frame").is_none());
+}
+
+#[test]
+fn what_a_crop_leaves_outside_stays_outside() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([100, 100], [300, 100])]}),
+    );
+    cli(
+        &e.core,
+        "document.crop",
+        json!({"documentId": doc, "rect": {"x": 0, "y": 0, "w": 200, "h": 200}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["outside"], json!(["o1"]));
+    // Moved, it still does not make the canvas grow (Carlos, 2026-10-27).
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"from": [110, 110], "to": [310, 110]}}),
+    );
+    assert_eq!(size(&e, &doc), (200, 200));
+    // Wholly inside again, it is an ordinary object: taken out, the canvas grows.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"from": [20, 50], "to": [120, 50]}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info.get("outside").is_none());
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"from": [120, 50], "to": [260, 50]}}),
+    );
+    assert_eq!(size(&e, &doc), (260, 200), "up to the arrow's tip");
+}
+
+#[test]
+fn edges_and_blur_do_not_make_the_canvas_grow() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            // Drawn from the corner: its thickness there does not count.
+            arrow([0, 0], [50, 50]),
+            // Less than half a pixel out.
+            {"type": "shape", "rect": {"x": -0.3, "y": 20, "w": 50, "h": 50}},
+            // A blur only works on the image.
+            {"type": "blur", "rect": {"x": 350, "y": -20, "w": 100, "h": 60}},
+        ]}),
+    );
+    assert_eq!(size(&e, &doc), (400, 200));
+}
+
+#[test]
+fn the_canvas_stays_put_with_the_preference_off() {
+    let e = env();
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.autoExpandCanvas", "value": false}),
+    );
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([300, 100], [450, 100])]}),
+    );
+    assert_eq!(size(&e, &doc), (400, 200));
+}
+
+#[test]
+fn a_grown_canvas_survives_deleting_cropped_content() {
+    let e = env();
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.deleteCroppedContent", "value": true}),
+    );
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.crop",
+        json!({"documentId": doc, "rect": {"x": 100, "y": 0, "w": 200, "h": 200}}),
+    );
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "shape", "rect": {"x": -50, "y": 50, "w": 100, "h": 50}},
+        ]}),
+    );
+    assert_eq!(size(&e, &doc), (250, 200));
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let file = xs_core::document::Xshot::read(&path).unwrap();
+    assert_eq!(xs_image::encode::png_size(&file.base_png), Some((250, 200)));
+    let again = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(size(&e, &again), (250, 200));
+}

@@ -106,11 +106,17 @@ export function extentPoints(o: DocObject): Point[] {
   return b ? corners(b) : [];
 }
 
-/** Objects wholly or partly outside a `width` × `height` canvas (EDT-049, EDT-011). */
+/** Objects wholly or partly outside a `width` × `height` canvas (EDT-049, EDT-011).
+ * A blur is left out: past the edge it has nothing to hide. Less than half a pixel out
+ * is inside, as when the canvas grows to fit objects (EDT-071). */
 export function outside(objects: DocObject[], width: number, height: number): string[] {
   return objects
-    .filter((o) =>
-      extentPoints(o).some((p) => p[0] < 0 || p[1] < 0 || p[0] > width || p[1] > height),
+    .filter(
+      (o) =>
+        o.type !== "blur" &&
+        extentPoints(o).some(
+          (p) => p[0] <= -0.5 || p[1] <= -0.5 || p[0] >= width + 0.5 || p[1] >= height + 0.5,
+        ),
     )
     .map((o) => o.id);
 }

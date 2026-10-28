@@ -12,4 +12,4 @@ pub mod render;
 pub mod shapes;
 pub mod text;
 
-pub use render::{render, Base};
+pub use render::{object_bounds, render, Base};

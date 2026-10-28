@@ -271,9 +271,9 @@ export async function finishTextEdit(text: string): Promise<void> {
   }
 }
 
-/** Applies the crop being adjusted (EDT-049). The view keeps the image in place. */
+/** Applies the crop being adjusted (EDT-049). */
 export async function applyCrop(): Promise<void> {
-  const { active, cropRect, views, doc } = useEditor.getState();
+  const { active, cropRect, doc } = useEditor.getState();
   if (!active || !cropRect || !doc) return;
   const rect: Rect = {
     x: Math.round(cropRect.x),
@@ -289,9 +289,7 @@ export async function applyCrop(): Promise<void> {
       documentId: active,
       rect,
     });
-    const view = views[active];
-    if (view)
-      useEditor.getState().setView(active, { ...view, cx: view.cx - rect.x, cy: view.cy - rect.y });
+    // The view keeps the image in place when the new document arrives (state.ts).
     useEditor.setState({ cropRect: { x: 0, y: 0, w: r.width, h: r.height } });
   } catch (e) {
     fail(e);

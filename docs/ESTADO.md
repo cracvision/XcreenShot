@@ -66,7 +66,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
   - Selector de color completo, con cuentagotas de pantalla (Windows) y `I` sobre el lienzo.
   - Cortar, copiar y pegar objetos: editables dentro de la app, PNG con transparencia para las demás; texto e imágenes de otras apps.
   - Teclas de herramienta, `Tab`, `Ctrl+Enter`, `[` y `]`. 2 comandos nuevos (`document.copy_objects`, `document.paste`).
-  - Tras las pruebas de Carlos (2026-10-27): el selector de color se cierra con cualquier clic fuera y un cuadrito aplica su color al momento; el clic derecho ya no muestra el menú del motor web (salvo en campos de texto).
+  - Tras las pruebas de Carlos (2026-10-27): el selector de color se cierra con cualquier clic fuera (los cuadritos no lo cierran); el clic derecho ya no muestra el menú del motor web (salvo en campos de texto).
+  - **Lienzo que crece (EDT-071, decisión de Carlos del 2026-10-27):** crece al sacar un objeto del borde, se encoge solo cuando vuelve (nunca por debajo de la imagen o del último recorte), y respeta lo que deja fuera un recorte. Desenfocar no lo amplía. Campos nuevos en el `.xshot`: `frame` y `outside`. Preferencia `editor.autoExpandCanvas`.
   - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (tamaño del texto en puntos, intensidad del desenfoque, cuentagotas en macOS, huella del portapapeles, pegar imágenes con un documento abierto, tamaño de `Ctrl+Enter`).
 
 ## Pendiente inmediato
@@ -78,7 +79,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-3. **Entrega 4b:** Carlos marcó PASS las cuatro tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) salvo el paso 3 de la tanda 4 (pegar en Word). Reportó dos fallos, ya corregidos: el selector de color no se cerraba al hacer clic fuera, y el clic derecho mostraba el menú del motor web, cuyo "Copiar imagen" copiaba solo los tiradores. Falta que repita ese paso con `Ctrl+C` y el instalador nuevo.
+3. **Entrega 4b:** Carlos marcó PASS las cuatro tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) salvo el paso 3 de la tanda 4 (pegar en Word). Reportó dos fallos, ya corregidos: el selector de color no se cerraba al hacer clic fuera, y el clic derecho mostraba el menú del motor web, cuyo "Copiar imagen" copiaba solo los tiradores. Falta que repita ese paso con `Ctrl+C` y el instalador nuevo. Después pidió dos cambios: que los cuadritos del selector no lo cierren (hecho) y que **el lienzo crezca al sacar un objeto del borde** (EDT-071, adelantado a M1; hecho). Todo eso está en la tanda 5 de ese archivo.
 4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entrega 4a, probada y con la CI en verde) pasa a apuntar a `main` y se puede fusionar también. La 4b ya está en el mismo PR #3 (rama `m1-editor`).
 
 ## Siguiente paso

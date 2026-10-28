@@ -362,6 +362,97 @@ fn straight(pm: &Pixmap) -> RgbaImage {
     RgbaImage::from_raw(pm.width(), pm.height(), out).expect("buffer size")
 }
 
+/// Corners of `r` turned `rotation` degrees clockwise around its center.
+fn turned_corners(r: Rect, rotation: f64) -> [[f64; 2]; 4] {
+    let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
+    let (s, c) = rotation.to_radians().sin_cos();
+    [
+        (r.x, r.y),
+        (r.x + r.w, r.y),
+        (r.x + r.w, r.y + r.h),
+        (r.x, r.y + r.h),
+    ]
+    .map(|(x, y)| {
+        let (dx, dy) = (x - cx, y - cy);
+        [cx + dx * c - dy * s, cy + dx * s + dy * c]
+    })
+}
+
+/// What an object covers, `[x0, y0, x1, y1]` in canvas pixels, with its arrowheads,
+/// its rotation and the stroke of its ends: how far the canvas grows to fit it
+/// (EDT-071). An arrow's shaft counts by its two points, so one drawn from an edge
+/// does not widen the canvas by its thickness.
+pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
+    let mut b: Option<[f64; 4]> = None;
+    let mut add = |x: f64, y: f64| {
+        let e = b.get_or_insert([x, y, x, y]);
+        *e = [e[0].min(x), e[1].min(y), e[2].max(x), e[3].max(y)];
+    };
+    let rect = match object.kind.as_str() {
+        "arrow" => {
+            let g = Arrow::from_props(&object.props).ok()?.geometry();
+            if let Some([x1, y1, x2, y2]) = g.shaft {
+                add(x1, y1);
+                add(x2, y2);
+            }
+            for cap in &g.caps {
+                match cap {
+                    Shape::Path {
+                        points,
+                        fill,
+                        stroke_width,
+                        ..
+                    } => {
+                        let r = if *fill { 0.0 } else { stroke_width / 2.0 };
+                        for [x, y] in points.as_chunks::<2>().0 {
+                            add(x - r, y - r);
+                            add(x + r, y + r);
+                        }
+                    }
+                    Shape::Circle {
+                        cx,
+                        cy,
+                        r,
+                        fill,
+                        stroke_width,
+                    } => {
+                        let r = r + if *fill { 0.0 } else { stroke_width / 2.0 };
+                        add(cx - r, cy - r);
+                        add(cx + r, cy + r);
+                    }
+                }
+            }
+            None
+        }
+        "text" => {
+            let t = Text::from_props(&object.props).ok()?;
+            let laid = text::layout(&t, dpi);
+            Some((
+                Rect {
+                    x: t.at[0],
+                    y: t.at[1],
+                    w: laid.width as f64,
+                    h: laid.height as f64,
+                },
+                t.rotation,
+            ))
+        }
+        "shape" => ShapeObject::from_props(&object.props)
+            .ok()
+            .map(|s| (s.rect, s.rotation)),
+        "blur" => BlurObject::from_props(&object.props)
+            .ok()
+            .map(|b| (b.rect, b.rotation)),
+        _ => None,
+    };
+    if let Some((r, rotation)) = rect {
+        for [x, y] in turned_corners(r, rotation) {
+            add(x, y);
+        }
+    }
+    b
+}
+
 /// The final image of `doc` over `base`, straight RGBA.
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = canvas(doc, base);

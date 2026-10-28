@@ -1406,17 +1406,25 @@ Estas herramientas actúan sobre los píxeles de la imagen base o de la imagen f
 - **Fuentes:** research/02-editor.md §7 (Resize Canvas / extend canvas), §2.7 (Command-drag)
 
 ### EDT-071 · Ampliar el lienzo automáticamente
-- **Hito:** M2 · **Prioridad:** Should
+- **Hito:** M1 (adelantado de M2 por decisión de Carlos, 2026-10-27; las imágenes pegadas o soltadas llegan en M2 con EDT-078) · **Prioridad:** Should
 - **Plataformas:** Ambas
 - **Paridad con Snagit:** preferencia Auto-expand canvas to fit objects
 - **Comportamiento:**
-  - Preferencia **Ampliar el lienzo automáticamente** (`editor.autoExpandCanvas`; por defecto: sí): al pegar o soltar una imagen o un objeto que sobresale del lienzo, el lienzo crece lo justo para que quepa. El área nueva toma el color del lienzo.
-  - No se aplica al mover o redimensionar objetos ya existentes: en ese caso pueden quedar fuera (EDT-049); para incluirlos se usa Ajustar el lienzo al contenido (EDT-051).
-  - Deshacer revierte en un paso el pegado y la ampliación.
+  - Preferencia **Ampliar el lienzo automáticamente** (`editor.autoExpandCanvas`; por defecto: sí): cuando un objeto sobresale del lienzo al dibujarlo, moverlo, redimensionarlo, girarlo o pegarlo, el lienzo crece lo justo para que quepa. El área nueva toma el color del lienzo.
+  - Mientras se dibuja o se arrastra, el objeto se ve entero aunque salga del borde; el lienzo crece al soltar.
+  - Cuando el objeto vuelve dentro o se elimina, el lienzo se encoge solo. Nunca queda más pequeño que la imagen o que el último recorte (decisión de Carlos, 2026-10-27).
+  - Al crecer por la izquierda o por arriba, la imagen y los objetos se quedan en su sitio en pantalla.
+  - Lo que un recorte deja fuera se queda fuera aunque se mueva, porque el recorte fue intencionado (EDT-049). Si vuelve entero dentro del recorte, se trata como cualquier otro objeto.
+  - Los objetos de Desenfocar no amplían el lienzo: solo actúan sobre la imagen (decisión de diseño).
+  - Un objeto que sobresale menos de medio píxel cuenta como dentro, y la cola de una flecha dibujada desde el borde no amplía el lienzo por su grosor (decisión de diseño).
+  - Deshacer revierte en un paso el cambio del objeto y el del lienzo.
 - **Criterios de aceptación:**
-  - [ ] Con la preferencia activada, pegar una imagen de 1200 px de ancho en un lienzo de 800 px amplía el lienzo hasta que cabe.
-  - [ ] Con la preferencia desactivada, el lienzo no cambia y la imagen sobresale.
-  - [ ] Un solo Deshacer quita la imagen pegada y devuelve el lienzo a 800 px.
+  - [ ] Con la preferencia activada, arrastrar una flecha 100 px fuera del borde derecho amplía el lienzo hasta su punta; volver a meterla lo devuelve a su tamaño.
+  - [ ] Una forma que sobresale por la izquierda amplía el lienzo por la izquierda y la imagen no se mueve en pantalla.
+  - [ ] Con la preferencia desactivada, el lienzo no cambia y el objeto sobresale.
+  - [ ] Una flecha que un recorte dejó medio fuera no amplía el lienzo al moverla.
+  - [ ] Un solo Deshacer quita el cambio y devuelve el lienzo a su tamaño anterior.
+  - [ ] (M2) Pegar una imagen de 1200 px de ancho en un lienzo de 800 px amplía el lienzo hasta que cabe.
 - **Fuentes:** research/02-editor.md §7 (Resize Canvas), §11
 
 ### EDT-072 · Girar

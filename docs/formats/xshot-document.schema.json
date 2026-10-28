@@ -22,6 +22,15 @@
       "description": "Where the canvas sits over base.png (the original pixels, never cropped), in base pixels"
     },
     "cropHistory": { "type": "array", "items": { "$ref": "#/$defs/pixelRect" } },
+    "frame": {
+      "$ref": "#/$defs/pixelRect",
+      "description": "The crop the user chose, while the canvas is larger to fit objects that stick out of it (EDT-071); absent when the canvas is that crop. crop may then reach past base.png"
+    },
+    "outside": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ids of objects a crop left outside the canvas; they do not make it grow"
+    },
     "dpi": { "type": "number", "minimum": 1, "description": "Resolution written to exported files" },
     "objects": {
       "type": "array",

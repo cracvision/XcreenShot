@@ -57,8 +57,18 @@ describe("objects on the canvas (EDT-022, EDT-042)", () => {
     expect(tset).toEqual({ at: [0, 20], width: 120, rotation: 15 });
   });
 
-  it("finds objects outside the canvas", () => {
-    expect(outside([shape(null), text], 250, 300)).toEqual(["s"]);
+  it("finds objects outside the canvas, but not blurs", () => {
+    const blur = {
+      id: "b",
+      type: "blur",
+      rect: { x: 200, y: 0, w: 100, h: 50 },
+      rotation: 0,
+      style: { blurType: "blur", color: "#000000", intensity: 60, shapeType: "rectangle" },
+    } as DocObject;
+    expect(outside([shape(null), text, blur], 250, 300)).toEqual(["s"]);
+    // A canvas grown to fit an arrow leaves its tip a fraction of a pixel out.
+    const tip = { id: "a", type: "arrow", from: [100, 50], to: [-0.3, 50] } as DocObject;
+    expect(outside([tip], 250, 300)).toEqual([]);
   });
 
   it("fingerprints change with the object", () => {

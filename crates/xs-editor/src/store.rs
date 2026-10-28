@@ -208,21 +208,24 @@ impl Snapshot {
         let c = self.document.crop;
         let whole = c.x == 0 && c.y == 0 && (c.width, c.height) == (self.base.width, self.base.height);
         let mut document = self.document.clone();
-        let base_png = if drop_cropped && !whole {
+        // The part of the original pixels under the canvas; the canvas may also reach
+        // past them, where it grew to fit objects (EDT-071).
+        let (kx0, ky0) = (c.x.max(0), c.y.max(0));
+        let kx1 = (c.x + c.width as i64).min(self.base.width as i64);
+        let ky1 = (c.y + c.height as i64).min(self.base.height as i64);
+        let base_png = if drop_cropped && !whole && kx1 > kx0 && ky1 > ky0 {
             let kept = image::imageops::crop_imm(
                 &self.base.to_image(),
-                c.x.max(0) as u32,
-                c.y.max(0) as u32,
-                c.width,
-                c.height,
+                kx0 as u32,
+                ky0 as u32,
+                (kx1 - kx0) as u32,
+                (ky1 - ky0) as u32,
             )
             .to_image();
-            document.crop = xs_core::document::PixelRect {
-                x: 0,
-                y: 0,
-                width: kept.width(),
-                height: kept.height(),
-            };
+            for r in std::iter::once(&mut document.crop).chain(document.frame.as_mut()) {
+                r.x -= kx0;
+                r.y -= ky0;
+            }
             document.crop_history.clear();
             xs_image::encode::png(&kept, self.document.dpi, true)?
         } else if self.base_source.mime == "image/png" {

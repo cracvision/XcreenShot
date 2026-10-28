@@ -122,6 +122,8 @@ export interface TextEdit {
 export interface DocDetails extends Omit<DocSummary, "objects"> {
   canvas: { width: number; height: number; color?: string; cornerRadius: number };
   crop: { x: number; y: number; width: number; height: number };
+  /** Objects a crop left outside the canvas: they do not make it grow (EDT-071). */
+  outside?: string[];
   dpi: number;
   objects: DocObject[];
   base: { width: number; height: number; mime: string };
@@ -239,6 +241,16 @@ export const useEditor = create<EditorState>((set, get) => ({
         case "document": {
           const doc = payload as unknown as DocDetails;
           if (doc.documentId !== get().active) break;
+          // When the canvas moves over the image (a crop, or growing to fit objects,
+          // EDT-049, EDT-071), the view keeps the image in place.
+          const before = get().doc;
+          const view = get().views[doc.documentId];
+          if (before?.documentId === doc.documentId && view) {
+            const dx = before.crop.x - doc.crop.x;
+            const dy = before.crop.y - doc.crop.y;
+            if (dx !== 0 || dy !== 0)
+              get().setView(doc.documentId, { ...view, cx: view.cx + dx, cy: view.cy + dy });
+          }
           // Objects that no longer exist leave the selection (undo, CLI, delete).
           const ids = new Set(doc.objects.map((o) => o.id));
           set((s) => ({ doc, selection: s.selection.filter((id) => ids.has(id)) }));

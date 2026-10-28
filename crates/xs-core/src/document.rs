@@ -65,6 +65,14 @@ pub struct Document {
     /// Earlier crops, oldest first (EDT-050, EDT-076).
     #[serde(default)]
     pub crop_history: Vec<PixelRect>,
+    /// The crop the user chose, in base pixels, while the canvas is larger so that
+    /// objects sticking out of it fit (EDT-071). `None` when the canvas is that crop.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame: Option<PixelRect>,
+    /// Objects a crop left wholly or partly outside the canvas. They stay as the crop
+    /// left them and do not make the canvas grow (EDT-049, EDT-071).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outside: Vec<String>,
     /// Resolution written to exported files (EDT-077).
     pub dpi: f64,
     #[serde(default)]
@@ -99,6 +107,8 @@ impl Document {
                 height,
             },
             crop_history: Vec::new(),
+            frame: None,
+            outside: Vec::new(),
             dpi,
             objects: Vec::new(),
             effects: Vec::new(),

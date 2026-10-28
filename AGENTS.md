@@ -103,7 +103,7 @@ xcreenshot app ping --json
 | `document.redo` | `xcreenshot document redo [--document-id <id>]` | Redoes the last undone change. |
 | `document.save` | `xcreenshot document save [--document-id <id>] [--path <file> [--format xshot\|png\|jpg]]` | Saves in the document's own file. With `--path`: a copy for library documents (they stay linked to their `.xshot`), or the new linked file for documents opened from elsewhere. Saving a PNG or JPG flattens the objects into it. |
 | `document.export` | `xcreenshot document export --format png\|jpg --path <file> [--quality 1-100] [--on-conflict keepBoth\|replace\|fail]` | Writes the final image (pixels, objects, crop) without changing the document's file. PNG keeps transparency and declares the resolution and sRGB; JPG fills transparency with white (quality 90). An existing file is never overwritten unless `--on-conflict replace`: by default the copy gets ` (2)`. |
-| `document.crop` | `xcreenshot document crop --rect '{"x":10,"y":10,"w":400,"h":300}'` | Crops to a rectangle in canvas pixels. Non-destructive: the original pixels stay in the `.xshot`, and a later crop may reach past the canvas, up to the original edges. Objects keep their place on the image (they may end up outside the canvas). One undo step. `--trim` arrives in M2. |
+| `document.crop` | `xcreenshot document crop --rect '{"x":10,"y":10,"w":400,"h":300}'` | Crops to a rectangle in canvas pixels. Non-destructive: the original pixels stay in the `.xshot`, and a later crop may reach past the canvas, up to the original edges (or the canvas grown for objects). Objects keep their place on the image; those it leaves outside are listed in `outside` and stay there. One undo step. `--trim` arrives in M2. |
 | `document.copy_objects` | `xcreenshot document copy-objects --object-ids '["o1","o2"]' [--cut true]` | Copies objects: editable for a later `document.paste`, and as a PNG with transparency on the clipboard for other apps. `--cut true` also deletes them (one undo step). |
 | `document.paste` | `xcreenshot document paste [--in-place true] [--center '[400,300]']` | Pastes the clipboard: objects copied in XcreenShot (shifted 10 px if the originals are still there, centered on `--center` otherwise, or at their place with `--in-place`), plain text as a text object, or an image as a new library document when nothing is open. Returns `pasted` (`objects`, `text`, `document`) and the new `ids`. |
 | `document.copy_all` | `xcreenshot document copy-all [--document-id <id>]` | Puts the final image on the clipboard (PNG and bitmap). The document keeps its objects. |
@@ -143,6 +143,13 @@ Every capture is saved in the library as an editable `.xshot` document, in a fol
 
 Coordinates and sizes are image pixels, with the origin at the top-left corner of the
 canvas (after any crop). `documentId` defaults to the document shown in the editor.
+
+The canvas grows to fit objects that stick out of it (`editor.autoExpandCanvas`, on by
+default) and shrinks back when they return, never below the image or the last crop. When
+it grows to the left or the top, every object's coordinates shift with the image, so
+read them again with `document.info` (`crop` is then partly outside the original pixels,
+and `frame` is the crop the user chose). Blurs, and objects a crop left outside
+(`outside`), do not make it grow.
 
 An arrow:
 

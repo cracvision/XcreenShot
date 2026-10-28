@@ -2,6 +2,7 @@
 
 Pruebas automáticas:
 - `crates/xs-image`: texto de ancho automático y de ancho fijo con salto de línea, tamaño en puntos según la resolución del documento, glifos del color del texto (EDT-026); geometría de las formas contra `tests/fixtures/shape-geometry.json`, contorno dentro del tamaño, límites de una forma girada (EDT-029); desenfoque y pixelado que borran el detalle, bloques más grandes con más intensidad, Sólido que no deja rastro de lo que tapa (EDT-040); recorte que muestra solo su ventana (EDT-049).
+- `crates/xs-editor`: el lienzo crece hasta la punta de una flecha que sale del borde y se encoge cuando vuelve, un paso de deshacer cada vez; crece por la izquierda sin mover los objetos sobre la imagen; lo que deja fuera un recorte no lo amplía hasta que vuelve entero; la cola de una flecha desde el borde, lo que sobresale menos de medio píxel y el desenfoque no lo amplían; con la preferencia desactivada no cambia; un lienzo ampliado sobrevive a "Eliminar el contenido recortado" (EDT-071).
 - `crates/xs-editor`: anotar texto, formas y desenfoque por comando; recorte no destructivo que conserva los objetos sobre la imagen y se recupera volviendo a recortar (EDT-050); "Eliminar el contenido recortado" guarda solo lo recortado; lista de fuentes instaladas; esquema publicado de `document.json` con los tipos nuevos.
 - `app/src/editor`: la geometría de las formas de la interfaz coincide con la de Rust; tiradores (redimensionar desde el lado opuesto, `Shift` mantiene la proporción, `Alt` desde el centro, giro en pasos de 15° con `Shift`); qué hay bajo el puntero (formas sin relleno por el contorno, con relleno por dentro, texto por su tamaño real); objetos fuera del lienzo; selector de color (Hex ↔ RGB ↔ HSB, paleta de 40 colores distintos).
 
@@ -67,3 +68,16 @@ Estos pasos usan tu portapapeles.
 5. [x] Pulsa `V`, `A`, `T`, `U`, `B` y `R`: cambia la herramienta. Mantener `V` y soltar vuelve a la herramienta de antes.
 6. [x] Haz clic en la imagen y pulsa `Tab` varias veces: se seleccionan los objetos uno a uno. Las flechas del teclado mueven el seleccionado 1 px (10 px con `Shift`).
 7. [x] Con **Forma** activa, `Ctrl+Enter` inserta un rectángulo en el centro de la vista. Con una flecha seleccionada, `[` y `]` cambian su grosor.
+
+## Tanda 5 · Lienzo que crece y repeticiones — Carlos
+
+Carlos pidió (2026-10-27) que el lienzo crezca al sacar un objeto del borde (EDT-071, adelantado a M1). Repite también lo que falló. Instalador con la compilación de esta corrección o posterior.
+
+1. [ ] Con **Flecha**, dibuja una flecha que empiece dentro de la imagen y termine fuera, a la derecha: mientras arrastras se ve entera, y al soltar el lienzo crece hasta su punta. La franja nueva es transparente (damero).
+2. [ ] Con **Mover**, vuelve a meter la flecha dentro: el lienzo recupera su tamaño. `Ctrl+Z` deshace cada paso con el tamaño de lienzo que tenía.
+3. [ ] Dibuja un rectángulo que salga por la izquierda o por arriba: el lienzo crece por ese lado y la imagen no se mueve de su sitio.
+4. [ ] **Recorta** dejando una flecha medio fuera; después muévela un poco: el lienzo no crece (el recorte manda). Vuelve a **Recortar**: lo que sale de la imagen original no se dibuja.
+5. [ ] Un **Desenfocar** dibujado desde fuera de la imagen no amplía el lienzo.
+6. [ ] Abre un color del panel, haz clic en un cuadrito y después en el área de color: el selector sigue abierto. Un clic en el lienzo lo cierra y aplica el color.
+7. [ ] Selecciona una flecha, `Ctrl+C` (sin clic derecho) y pega en Word: llega solo la flecha. El clic derecho sobre el lienzo ya no muestra el menú del motor web.
+

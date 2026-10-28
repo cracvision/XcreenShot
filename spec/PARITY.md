@@ -149,7 +149,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-068 | Efectos de transformación | M2 | Should | — |
 | EDT-069 | Cambiar tamaño de la imagen | M2 | Must | — |
 | EDT-070 | Tamaño del lienzo | M2 | Should | — |
-| EDT-071 | Ampliar el lienzo automáticamente | M2 | Should | — |
+| EDT-071 | Ampliar el lienzo automáticamente | M1 | Should | En curso |
 | EDT-072 | Girar | M2 | Should | — |
 | EDT-073 | Voltear | M2 | Could | — |
 | EDT-074 | Color del lienzo | M2 | Should | — |

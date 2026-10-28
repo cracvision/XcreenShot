@@ -6,6 +6,7 @@
 //! close, unsaved changes and recovery copies (ADR 0004). Each capture is saved in
 //! the library as `.xshot` (LIB-020).
 
+pub mod fit;
 pub mod objects;
 pub mod recovery;
 pub mod store;
@@ -457,6 +458,11 @@ pub fn add_capture(
     add_image(core, image, meta, scale, app)
 }
 
+/// Whether the canvas grows to fit objects that stick out of it (EDT-071).
+fn auto_expand(core: &Core) -> bool {
+    core.settings.get_bool("editor.autoExpandCanvas")
+}
+
 /// A new library document from pixels (a capture, a pasted image).
 fn add_image(
     core: &Core,
@@ -776,6 +782,7 @@ pub fn extension() -> Extension {
             } else {
                 objects::label("draw", &kinds)
             };
+            let auto = auto_expand(&core);
             let ids = editor(&core)
                 .store
                 .mutate(&id, &label, |doc| {
@@ -788,6 +795,9 @@ pub fn extension() -> Extension {
                             props,
                         });
                         ids.push(oid);
+                    }
+                    if auto {
+                        fit::fit_canvas(doc);
                     }
                     Ok::<_, CommandError>(ids)
                 })
@@ -822,10 +832,10 @@ pub fn extension() -> Extension {
             }
             let action = if moved_only { "move" } else { "change" };
             let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+            let auto = auto_expand(&core);
             let updated = editor(&core)
                 .store
                 .mutate(&id, &objects::label(action, &kind_refs), |doc| {
-                    let mut out = Vec::new();
                     for oid in &oids {
                         let o = doc
                             .object_mut(oid)
@@ -837,8 +847,16 @@ pub fn extension() -> Extension {
                                 &[("param", "set"), ("reason", &r)],
                             ))
                         })?;
-                        out.push(serde_json::to_value(&*o).unwrap_or_default());
                     }
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
+                    // After the canvas fits: it may have moved every object.
+                    let out: Vec<Value> = oids
+                        .iter()
+                        .filter_map(|oid| doc.object(oid))
+                        .map(|o| serde_json::to_value(o).unwrap_or_default())
+                        .collect();
                     Ok::<_, CommandError>(out)
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
@@ -863,10 +881,14 @@ pub fn extension() -> Extension {
             let oids = object_ids(&p, ctx.lang)?;
             let kinds = kinds_of(&core, ctx.lang, &id, &oids)?;
             let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+            let auto = auto_expand(&core);
             editor(&core)
                 .store
                 .mutate(&id, &objects::label("delete", &kind_refs), |doc| {
                     doc.objects.retain(|o| !oids.contains(&o.id));
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
                     Ok::<_, CommandError>(())
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
@@ -1034,12 +1056,16 @@ pub fn extension() -> Extension {
                 .store
                 .mutate(&id, "history.crop", |doc| {
                     // Non-destructive (EDT-050): the canvas is a window over the original
-                    // pixels, and can grow back up to their edges.
+                    // pixels, and can grow back up to their edges, or to the canvas grown
+                    // for objects (EDT-071).
                     let old = doc.crop;
-                    let nx0 = (old.x + x0).clamp(0, base.0 as i64);
-                    let ny0 = (old.y + y0).clamp(0, base.1 as i64);
-                    let nx1 = (old.x + x1).clamp(0, base.0 as i64);
-                    let ny1 = (old.y + y1).clamp(0, base.1 as i64);
+                    let (ex0, ey0) = (old.x.min(0), old.y.min(0));
+                    let ex1 = (old.x + old.width as i64).max(base.0 as i64);
+                    let ey1 = (old.y + old.height as i64).max(base.1 as i64);
+                    let nx0 = (old.x + x0).clamp(ex0, ex1);
+                    let ny0 = (old.y + y0).clamp(ey0, ey1);
+                    let nx1 = (old.x + x1).clamp(ex0, ex1);
+                    let ny1 = (old.y + y1).clamp(ey0, ey1);
                     if nx1 - nx0 < 1 || ny1 - ny0 < 1 {
                         return Err(invalid(tr(
                             ctx.lang,
@@ -1060,6 +1086,9 @@ pub fn extension() -> Extension {
                     };
                     doc.canvas.width = doc.crop.width;
                     doc.canvas.height = doc.crop.height;
+                    // The crop is what the user chose; what it leaves outside stays there.
+                    doc.frame = None;
+                    doc.outside = fit::outside_canvas(doc);
                     Ok::<_, CommandError>((doc.canvas.width, doc.canvas.height))
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
@@ -1105,9 +1134,13 @@ pub fn extension() -> Extension {
             });
             if p.get("cut").and_then(Value::as_bool).unwrap_or(false) {
                 let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+                let auto = auto_expand(&core);
                 ed.store
                     .mutate(&id, &objects::label("cut", &kind_refs), |doc| {
                         doc.objects.retain(|o| !oids.contains(&o.id));
+                        if auto {
+                            fit::fit_canvas(doc);
+                        }
                         Ok::<_, CommandError>(())
                     })
                     .ok_or_else(|| CommandError::internal("document closed"))??;
@@ -1211,6 +1244,7 @@ pub fn extension() -> Extension {
             };
             let kinds: Vec<String> = objects.iter().map(|o| o.kind.clone()).collect();
             let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+            let auto = auto_expand(&core);
             let ids = ed
                 .store
                 .mutate(&id, &objects::label("paste", &kind_refs), |doc| {
@@ -1219,6 +1253,9 @@ pub fn extension() -> Extension {
                         o.id = doc.next_object_id();
                         ids.push(o.id.clone());
                         doc.objects.push(o.clone());
+                    }
+                    if auto {
+                        fit::fit_canvas(doc);
                     }
                     Ok::<_, CommandError>(ids)
                 })

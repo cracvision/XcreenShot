@@ -143,6 +143,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-050",
         ),
         def(
+            "editor.autoExpandCanvas",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-071",
+        ),
+        def(
             "advanced.keepEditorLoaded",
             "advanced",
             boolean(),

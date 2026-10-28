@@ -351,6 +351,10 @@
     "editor_deleteCroppedContent": {
       "label": "Delete cropped content when saving",
       "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
+    },
+    "editor_autoExpandCanvas": {
+      "label": "Expand the canvas automatically",
+      "description": "When an object sticks out of the image, the canvas grows just enough to show it, and shrinks back when it returns. What a crop leaves outside stays outside."
     }
   },
   "errors": {

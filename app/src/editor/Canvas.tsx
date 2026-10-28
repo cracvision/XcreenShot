@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
+import { useApp } from "../store";
 import { applyCrop, startNewText, startTextEdit } from "./actions";
 import {
   contains,
@@ -151,6 +152,9 @@ export function Canvas({ doc }: Props) {
   const zoomRequest = useEditor((s) => s.zoomRequest);
   const textEdit = useEditor((s) => s.textEdit);
   const cropState = useEditor((s) => s.cropRect);
+  const autoExpand = useApp(
+    (s) => s.settings.find((x) => x.key === "editor.autoExpandCanvas")?.value !== false,
+  );
   const { setSelection, setView, showError } = useEditor.getState();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -170,9 +174,16 @@ export function Canvas({ doc }: Props) {
     ? (cropState ?? { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height })
     : null;
   // What the scroll area covers, in canvas pixels: the canvas, or while cropping the
-  // whole original image, so the crop can grow back (EDT-050).
+  // whole original image and the canvas grown past it, so the crop can grow back
+  // (EDT-050, EDT-071).
   const ext: RectBox = cropping
-    ? { x: -doc.crop.x, y: -doc.crop.y, w: doc.base.width, h: doc.base.height }
+    ? (() => {
+        const x0 = Math.min(0, -doc.crop.x);
+        const y0 = Math.min(0, -doc.crop.y);
+        const x1 = Math.max(canvasSize.width, doc.base.width - doc.crop.x);
+        const y1 = Math.max(canvasSize.height, doc.base.height - doc.crop.y);
+        return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      })()
     : { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height };
   const extSize: Size = { width: ext.w, height: ext.h };
 
@@ -676,6 +687,99 @@ export function Canvas({ doc }: Props) {
   const editingId = textEdit?.id ?? null;
   const shownCrop = drag?.kind === "crop" ? drag.rect : cropRect;
 
+  // While a gesture takes an object past the edge it shows whole, unless a crop left it
+  // outside or it is a blur, which only works on the image (EDT-071).
+  const free = new Set<string>();
+  if (autoExpand) {
+    const outside = new Set(doc.outside ?? []);
+    const ids = [
+      drag && "id" in drag ? drag.id : null,
+      pending?.version === doc.version ? pending.object.id : null,
+    ];
+    for (const id of ids) {
+      const o = id ? doc.objects.find((x) => x.id === id) : undefined;
+      if (o && o.type !== "blur" && !outside.has(o.id)) free.add(o.id);
+    }
+  }
+
+  const clip = { clipX: ext.x, clipY: ext.y, clipWidth: ext.w, clipHeight: ext.h };
+
+  const objectNode = (o: DocObject) => {
+    switch (o.type) {
+      case "arrow":
+        return (
+          <ArrowShape
+            key={o.id}
+            g={arrowGeometry(o.from, o.to, o.style)}
+            style={o.style}
+            scale={scale}
+          />
+        );
+      case "shape":
+        return <ShapeShape key={o.id} o={o} scale={scale} />;
+      case "blur": {
+        const c = committed.get(o.id);
+        return (
+          <BlurShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "blur" ? c : o}
+            image={objectImages.get(o.id)}
+            canvas={canvasSize}
+          />
+        );
+      }
+      case "text":
+        return o.id === editingId ? null : (
+          <TextShape key={o.id} o={o} image={objectImages.get(o.id)} />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const dashedBox = (kind: "blur" | "text") => {
+    if (drawing?.tool !== kind) return null;
+    const r = dragRect(drawing.from, drawing.to, drawing.square, drawing.fromCenter);
+    return (
+      <Rect
+        x={r.x}
+        y={r.y}
+        width={r.w}
+        height={r.h}
+        stroke={ACCENT}
+        strokeWidth={1.5 / scale}
+        dash={[6 / scale, 4 / scale]}
+        {...(kind === "blur" ? { fill: "rgba(128,128,128,0.35)" } : {})}
+      />
+    );
+  };
+  const previews = (
+    <>
+      {drawing && styles && drawing.tool === "arrow" && (
+        <ArrowShape
+          g={arrowGeometry(drawing.from, drawing.to, styles.arrow)}
+          style={styles.arrow}
+          scale={scale}
+        />
+      )}
+      {drawing && styles && drawing.tool === "shape" && (
+        <ShapeShape
+          o={{
+            id: "new",
+            type: "shape",
+            rect: dragRect(drawing.from, drawing.to, drawing.square, drawing.fromCenter),
+            rotation: 0,
+            style: styles.shape,
+          }}
+          scale={scale}
+        />
+      )}
+      {dashedBox("text")}
+    </>
+  );
+  const blurPreview = dashedBox("blur");
+
   return (
     <div className="canvas-area">
       <div className="canvas-scroll" ref={scrollRef} onScroll={onScroll}>
@@ -715,16 +819,7 @@ export function Canvas({ doc }: Props) {
                   shadowBlur={12 / scale}
                   shadowOpacity={0.25}
                 />
-                <Group
-                  {...(cropping
-                    ? {}
-                    : {
-                        clipX: 0,
-                        clipY: 0,
-                        clipWidth: canvasSize.width,
-                        clipHeight: canvasSize.height,
-                      })}
-                >
+                <Group {...clip}>
                   <Rect
                     x={ext.x}
                     y={ext.y}
@@ -742,81 +837,21 @@ export function Canvas({ doc }: Props) {
                     />
                   )}
                   {base && <KImage image={base} x={-doc.crop.x} y={-doc.crop.y} />}
-                  {shown.map((o) => {
-                    switch (o.type) {
-                      case "arrow":
-                        return (
-                          <ArrowShape
-                            key={o.id}
-                            g={arrowGeometry(o.from, o.to, o.style)}
-                            style={o.style}
-                            scale={scale}
-                          />
-                        );
-                      case "shape":
-                        return <ShapeShape key={o.id} o={o} scale={scale} />;
-                      case "blur": {
-                        const c = committed.get(o.id);
-                        return (
-                          <BlurShape
-                            key={o.id}
-                            o={o}
-                            committed={c?.type === "blur" ? c : o}
-                            image={objectImages.get(o.id)}
-                            canvas={canvasSize}
-                          />
-                        );
-                      }
-                      case "text":
-                        return o.id === editingId ? null : (
-                          <TextShape key={o.id} o={o} image={objectImages.get(o.id)} />
-                        );
-                      default:
-                        return null;
-                    }
-                  })}
-                  {drawing && styles && drawing.tool === "arrow" && (
-                    <ArrowShape
-                      g={arrowGeometry(drawing.from, drawing.to, styles.arrow)}
-                      style={styles.arrow}
-                      scale={scale}
-                    />
-                  )}
-                  {drawing && styles && drawing.tool === "shape" && (
-                    <ShapeShape
-                      o={{
-                        id: "new",
-                        type: "shape",
-                        rect: dragRect(
-                          drawing.from,
-                          drawing.to,
-                          drawing.square,
-                          drawing.fromCenter,
-                        ),
-                        rotation: 0,
-                        style: styles.shape,
-                      }}
-                      scale={scale}
-                    />
-                  )}
-                  {drawing && (drawing.tool === "blur" || drawing.tool === "text") && (
-                    <Rect
-                      {...(() => {
-                        const r = dragRect(
-                          drawing.from,
-                          drawing.to,
-                          drawing.square,
-                          drawing.fromCenter,
-                        );
-                        return { x: r.x, y: r.y, width: r.w, height: r.h };
-                      })()}
-                      stroke={ACCENT}
-                      strokeWidth={1.5 / scale}
-                      dash={[6 / scale, 4 / scale]}
-                      {...(drawing.tool === "blur" ? { fill: "rgba(128,128,128,0.35)" } : {})}
-                    />
-                  )}
                 </Group>
+                {/* Objects are cut at the edge, except the one being drawn or dragged:
+                    it shows whole and the canvas grows to fit it when the gesture ends
+                    (EDT-071). Each is cut on its own to keep their order. */}
+                {shown.map((o) =>
+                  free.has(o.id) ? (
+                    objectNode(o)
+                  ) : (
+                    <Group key={o.id} {...clip}>
+                      {objectNode(o)}
+                    </Group>
+                  ),
+                )}
+                {autoExpand ? previews : <Group {...clip}>{previews}</Group>}
+                <Group {...clip}>{blurPreview}</Group>
                 {shownCrop && (
                   <Group>
                     {/* Outside the crop the image is darkened (EDT-049). */}
