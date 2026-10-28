@@ -80,7 +80,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
 | EDT-001 | Ventana principal | M1 | Must | En curso |
-| EDT-002 | Menús del editor | M1 | Must | En curso |
+| EDT-002 | Menús del editor | M1 | Must | Win |
 | EDT-003 | Barra de herramientas y menú Más | M1 | Must | En curso |
 | EDT-004 | Personalizar la barra de herramientas | M2 | Should | — |
 | EDT-005 | Panel lateral | M1 | Must | En curso |
@@ -90,8 +90,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-009 | Pantalla completa | M2 | Could | — |
 | EDT-010 | Área de trabajo | M2 | Could | — |
 | EDT-011 | Barra de estado | M1 | Should | Win |
-| EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | En curso |
-| EDT-013 | Accesibilidad del lienzo | M1 | Should | En curso |
+| EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | Win |
+| EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
 | EDT-015 | Estilos guardados | M2 | Must | — |
 | EDT-016 | Favoritos | M2 | Should | — |
@@ -193,10 +193,10 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-112 | Opciones de cada formato | M2 | Should | — |
 | EDT-113 | Exportación por lotes | M2 | Should | — |
 | EDT-114 | Imprimir y configurar página | M2 | Should | — |
-| EDT-115 | Atajos de herramientas | M1 | Must | En curso |
-| EDT-116 | Atajos de edición, vista y archivo | M1 | Must | En curso |
-| EDT-117 | Teclas del lienzo y modificadores | M1 | Must | En curso |
-| EDT-118 | Preferencias del editor | M1 | Should | En curso |
+| EDT-115 | Atajos de herramientas | M1 | Must | Win |
+| EDT-116 | Atajos de edición, vista y archivo | M1 | Must | Win |
+| EDT-117 | Teclas del lienzo y modificadores | M1 | Must | Win |
+| EDT-118 | Preferencias del editor | M1 | Should | Win |
 | EDT-119 | Comandos del editor (CLI y MCP) | M1 | Must | En curso |
 
 ## 03-video.md

@@ -64,6 +64,13 @@ export function Toolbar() {
         e.preventDefault();
         void toolbarMenu();
       }}
+      onClick={(e) => {
+        // A mouse click leaves no focus on the button: a key pressed later would draw
+        // its focus ring and an inactive tool would look selected (EDT-003). Enter and
+        // Space (detail 0) keep it, and so do the drop-down menus.
+        const button = (e.target as HTMLElement).closest("button");
+        if (e.detail > 0 && button && !button.closest(".menu-anchor")) button.blur();
+      }}
     >
       <button type="button" className="btn primary tb-btn" onClick={openCapturePanel}>
         <Icon name="capture" />

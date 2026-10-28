@@ -33,7 +33,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 3 · Panel de captura | Pestañas Universal e Imagen, retardo con cuenta atrás, menú del ícono, Repetir última captura y Repetir última área, restablecer ajustes | Hecha; faltan 3 pruebas de Carlos (abajo) |
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
 | 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (cinco tandas, 2026-10-28), con el lienzo que crece (EDT-071) |
-| 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Hecha; faltan las pruebas de Carlos (tres tandas) |
+| 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Hecha y probada por Carlos (tres tandas, 2026-10-28); falta una tanda corta del arreglo del marco de foco |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
@@ -77,6 +77,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
   - Preferencias > Editor con siete ajustes (EDT-118), `Esc` cierra el editor (EDT-012), Solo íconos (EDT-003).
   - Accesibilidad (EDT-013): `F6` entre zonas, anuncios para el lector de pantalla, `Shift`+flechas en los deslizadores.
   - Botones de Deshacer y Rehacer: se quedan (Carlos, 2026-10-28).
+  - Tras las pruebas de Carlos (2026-10-28, las tres tandas PASS): un clic de ratón en la barra de herramientas ya no deja el foco en el botón. Al pulsar después una tecla, su marco de foco hacía parecer que la herramienta anterior seguía elegida. Con `Enter` o `Espacio` el foco se queda, para quien usa el teclado.
+  - `PARITY.md`: EDT-002, EDT-012, EDT-013, EDT-115, EDT-116, EDT-117 y EDT-118 pasan a `Win`. EDT-003 sigue en curso (el menú Más llega con las herramientas de M2).
 
 ## Pendiente inmediato
 
@@ -87,13 +89,13 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-3. **Pruebas de Carlos de la entrega 4c:** tres tandas en [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (menús; atajos; Preferencias del editor y accesibilidad).
+3. **Entrega 4c:** Carlos marcó PASS las tres tandas de [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (2026-10-28, instalador `66a0f62`). Falta la tanda 4, corta, con el arreglo del marco de foco (instalador posterior a `66a0f62`). Carlos no ha objetado `Ctrl+Alt+Shift+E` para Exportar (la probó en la tanda 2); sigue provisional en `spec/QUESTIONS.md`.
 4. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
-5. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos pruebe la 4c.
+5. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-Mientras Carlos prueba la 4c, corregir lo que reporte. Después, la **entrega 5 (biblioteca)**:
+La entrega 4 está terminada salvo la tanda 4 de la 4c; corregir lo que reporte Carlos. Después, la **entrega 5 (biblioteca)**:
 1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
 2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
 3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.

@@ -20,33 +20,42 @@ Pruebas con la app en marcha (instancia aislada; menús leídos y pulsados desde
 
 No se probó con el teclado real: `Alt` o `F10` para entrar en la barra de menús y recorrerla con las flechas. Va en la tanda 1.
 
-## Tanda 1 · Menús — Carlos
+## Tanda 1 · Menús — Carlos: PASS (2026-10-28)
 
 Instalador: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `d2f7b71` o posterior (aparece junto a la versión con `xcreenshot app ping`).
 
-1. [ ] La ventana tiene la barra de menús **Archivo**, **Edición**, **Ver** y **Ayuda**. Cada entrada muestra su atajo a la derecha.
-2. [ ] Pulsa `Alt` (o `F10`) y recorre los menús con las flechas; `Enter` ejecuta la entrada elegida y `Esc` sale.
-3. [ ] Sin nada seleccionado, **Edición** muestra Cortar, Copiar, Eliminar y Deseleccionar en gris. Selecciona una flecha: se activan.
-4. [ ] **Ver > Acercar**, **Alejar** y **Ajustar a la ventana** cambian el zoom. **Ver > Panel lateral** oculta el panel y lo vuelve a mostrar; su marca cambia.
-5. [ ] Clic derecho sobre una flecha: Cortar, Copiar y Eliminar. Clic derecho en una zona sin objetos: Pegar, Pegar en el mismo sitio y Copiar todo.
-6. [ ] Clic derecho en la barra de herramientas > **Solo íconos**: desaparecen los nombres. **Ver > Barra de herramientas > Mostrar etiquetas** los devuelve.
-7. [ ] **Ayuda > Recuperar trabajo…** avisa de que no hay nada que recuperar (o lo ofrece, si lo hay).
+1. [x] La ventana tiene la barra de menús **Archivo**, **Edición**, **Ver** y **Ayuda**. Cada entrada muestra su atajo a la derecha.
+2. [x] Pulsa `Alt` (o `F10`) y recorre los menús con las flechas; `Enter` ejecuta la entrada elegida y `Esc` sale.
+3. [x] Sin nada seleccionado, **Edición** muestra Cortar, Copiar, Eliminar y Deseleccionar en gris. Selecciona una flecha: se activan.
+4. [x] **Ver > Acercar**, **Alejar** y **Ajustar a la ventana** cambian el zoom. **Ver > Panel lateral** oculta el panel y lo vuelve a mostrar; su marca cambia.
+5. [x] Clic derecho sobre una flecha: Cortar, Copiar y Eliminar. Clic derecho en una zona sin objetos: Pegar, Pegar en el mismo sitio y Copiar todo.
+6. [x] Clic derecho en la barra de herramientas > **Solo íconos**: desaparecen los nombres. **Ver > Barra de herramientas > Mostrar etiquetas** los devuelve.
+7. [x] **Ayuda > Recuperar trabajo…** avisa de que no hay nada que recuperar (o lo ofrece, si lo hay).
 
-## Tanda 2 · Atajos — Carlos
+## Tanda 2 · Atajos — Carlos: PASS (2026-10-28)
 
-1. [ ] **Preferencias > Atajos**, **Mostrar: Del editor**: salen los atajos del editor (Abrir, Guardar, Deshacer, Cortar…, y una fila por herramienta).
-2. [ ] Cambia **Herramienta Flecha** a `L`. En el editor, `L` activa Flecha y su tooltip dice "Flecha (L)". Restablécelo.
-3. [ ] Cambia **Guardar** a otra combinación: **Archivo** muestra la nueva junto a Guardar. Restablécelo.
-4. [ ] Intenta asignar a **Deshacer** tu atajo global `Ctrl+P`: avisa de que ya lo usa otro comando.
-5. [ ] En el editor, `Ctrl+W` cierra el documento, no la ventana. En Preferencias, `Ctrl+W` cierra Preferencias.
-6. [ ] `Ctrl+Alt+Shift+E` abre Exportar (antes era `Ctrl+Alt+Shift+S`, que choca con tu atajo de Capturar imagen).
+1. [x] **Preferencias > Atajos**, **Mostrar: Del editor**: salen los atajos del editor (Abrir, Guardar, Deshacer, Cortar…, y una fila por herramienta).
+2. [x] Cambia **Herramienta Flecha** a `L`. En el editor, `L` activa Flecha y su tooltip dice "Flecha (L)". Restablécelo.
+   - Nota de Carlos: al pulsar `L`, el botón de la herramienta anterior (Texto, elegida con el ratón) seguía resaltado. Era su marco de foco: el botón pulsado con el ratón conservaba el foco y, al pulsar una tecla, el navegador lo dibujaba. Corregido: un clic de ratón en la barra no deja el foco en el botón (con `Enter` o `Espacio` sí, para quien usa el teclado). Ver la tanda 4.
+3. [x] Cambia **Guardar** a otra combinación: **Archivo** muestra la nueva junto a Guardar. Restablécelo.
+4. [x] Intenta asignar a **Deshacer** tu atajo global `Ctrl+P`: avisa de que ya lo usa otro comando.
+5. [x] En el editor, `Ctrl+W` cierra el documento, no la ventana. En Preferencias, `Ctrl+W` cierra Preferencias.
+6. [x] `Ctrl+Alt+Shift+E` abre Exportar (antes era `Ctrl+Alt+Shift+S`, que choca con tu atajo de Capturar imagen).
 
-## Tanda 3 · Preferencias del editor y accesibilidad — Carlos
+## Tanda 3 · Preferencias del editor y accesibilidad — Carlos: PASS (2026-10-28)
 
-1. [ ] **Preferencias > Editor** muestra siete ajustes: Reducir para ajustar al abrir, Recordar el zoom y la posición, Esc cierra el editor, Etiquetas de la barra, Seleccionar la anotación al terminar de dibujarla, Ampliar el lienzo automáticamente y Eliminar el contenido recortado.
-2. [ ] Desactiva **Reducir para ajustar al abrir** y haz una captura de pantalla completa: se abre al 100 %, sin ajustarse a la ventana. Vuelve a activarlo.
-3. [ ] Activa **Esc cierra el editor**. Con una flecha seleccionada, el primer `Esc` la deselecciona y el segundo cierra la ventana; al reabrir el editor desde el ícono, el documento sigue ahí. Desactívalo.
-4. [ ] Desactiva **Seleccionar la anotación al terminar de dibujarla**: una flecha nueva queda sin seleccionar. Vuelve a activarlo.
-5. [ ] Haz clic en la imagen y pulsa `F6` varias veces: el foco pasa por el panel lateral, la tira de documentos, la barra de estado y la barra de herramientas. `Shift+F6` vuelve atrás.
-6. [ ] Selecciona una flecha, haz clic en el deslizador de Opacidad y pulsa ↓: baja 1 %. `Shift`+↓: baja 10 %.
-7. [ ] (Opcional) Con el Narrador de Windows activo (`Ctrl+Win+Enter`), haz clic en la imagen y pulsa `Tab`: anuncia cada objeto con su tipo, su texto y su posición.
+1. [x] **Preferencias > Editor** muestra siete ajustes: Reducir para ajustar al abrir, Recordar el zoom y la posición, Esc cierra el editor, Etiquetas de la barra, Seleccionar la anotación al terminar de dibujarla, Ampliar el lienzo automáticamente y Eliminar el contenido recortado.
+2. [x] Desactiva **Reducir para ajustar al abrir** y haz una captura de pantalla completa: se abre al 100 %, sin ajustarse a la ventana. Vuelve a activarlo.
+3. [x] Activa **Esc cierra el editor**. Con una flecha seleccionada, el primer `Esc` la deselecciona y el segundo cierra la ventana; al reabrir el editor desde el ícono, el documento sigue ahí. Desactívalo.
+4. [x] Desactiva **Seleccionar la anotación al terminar de dibujarla**: una flecha nueva queda sin seleccionar. Vuelve a activarlo.
+5. [x] Haz clic en la imagen y pulsa `F6` varias veces: el foco pasa por el panel lateral, la tira de documentos, la barra de estado y la barra de herramientas. `Shift+F6` vuelve atrás.
+6. [x] Selecciona una flecha, haz clic en el deslizador de Opacidad y pulsa ↓: baja 1 %. `Shift`+↓: baja 10 %.
+7. [x] (Opcional) Con el Narrador de Windows activo (`Ctrl+Win+Enter`), haz clic en la imagen y pulsa `Tab`: anuncia cada objeto con su tipo, su texto y su posición.
+
+## Tanda 4 · Arreglo del marco de foco — Carlos
+
+Instalador con el arreglo (compilación posterior a `66a0f62`).
+
+1. [ ] Haz clic en **Texto** y pulsa `A` (o `L` si la cambiaste): se activa Flecha y **Texto** queda sin marco ni resaltado.
+2. [ ] Dibuja dos flechas, haz clic en **Deshacer** y pulsa `Ctrl+Y`: el botón Deshacer no queda con marco.
+3. [ ] Pulsa `F6` hasta llegar a la barra de herramientas, muévete con `Tab` hasta **Forma** y pulsa `Enter`: Forma se activa y conserva su marco de foco (es lo correcto con el teclado).
