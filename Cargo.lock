@@ -6890,6 +6890,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "serde_json",
+ "windows-sys 0.59.0",
  "xs-core",
 ]
 

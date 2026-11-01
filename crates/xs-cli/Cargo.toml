@@ -15,6 +15,9 @@ xs-core.workspace = true
 serde_json.workspace = true
 clap = { version = "4", features = ["string"] }
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console"] }
+
 [dev-dependencies]
 assert_cmd = "2"
 serde_json.workspace = true
