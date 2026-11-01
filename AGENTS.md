@@ -21,6 +21,10 @@ xcreenshot app ping --json
   ever opened.**
 - If the app is not running, the CLI starts it in the background (no windows). Use
   `--no-launch` to fail instead (exit code 3).
+- At startup the app reopens the documents that were in the editor's strip when it
+  last ended (EDT-120, setting `editor.reopenDocuments`). `document.*` and `editor.*`
+  commands wait for that, up to 10 s, so `document.list` right after a launch already
+  lists them.
 - `xcreenshot <area> <action> [positional…] [--param value…]` runs `<area>.<action>`.
   `-` may replace `_` in action names. Parameter names are kebab-case
   (`resetCustom` → `--reset-custom`).

@@ -440,6 +440,10 @@
       "label": "Remember each document's zoom and position",
       "description": "Opening a document again shows it as you left it."
     },
+    "editor_reopenDocuments": {
+      "label": "Reopen the documents that were open",
+      "description": "When XcreenShot starts, the editor has the documents you had open, in the same order."
+    },
     "editor_escClosesEditor": {
       "label": "Esc closes the editor",
       "description": "With nothing to cancel (no drawing, selection or text being typed), Esc closes the editor window. The documents stay open."

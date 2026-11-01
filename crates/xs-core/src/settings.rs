@@ -143,6 +143,13 @@ pub fn definitions() -> Vec<SettingDef> {
         def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
         def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),
         def(
+            "editor.reopenDocuments",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-120",
+        ),
+        def(
             "editor.escClosesEditor",
             "editor",
             boolean(),

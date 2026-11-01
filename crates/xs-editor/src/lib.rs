@@ -13,8 +13,8 @@ pub mod store;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, Weak};
-use std::time::Duration;
+use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Map, Value};
 use xs_core::core::{Extension, QuitGuard};
@@ -38,6 +38,11 @@ const STYLES_KEY: &str = "editor.styles";
 const TOOL_KEY: &str = "editor.tool";
 const VIEWS_KEY: &str = "editor.views";
 const FLATTEN_OK_KEY: &str = "editor.flattenWarningOff";
+/// The documents of the strip when XcreenShot last ended (EDT-120).
+const OPEN_KEY: &str = "editor.openDocuments";
+const REOPEN_SETTING: &str = "editor.reopenDocuments";
+/// Longest wait of a command for the documents reopened at startup (EDT-120).
+const REOPEN_WAIT: Duration = Duration::from_secs(10);
 /// Remembered views (EDT-007), most recent first.
 const VIEWS_LIMIT: usize = 200;
 
@@ -52,6 +57,11 @@ pub struct Editor {
     writing: Mutex<()>,
     /// Objects copied last, to paste them editable (EDT-089).
     copied: Mutex<Option<Copied>>,
+    /// Documents being reopened at startup; commands wait for them (EDT-120).
+    reopening: Mutex<bool>,
+    reopened: Condvar,
+    /// The open documents last remembered, to write them only when they change.
+    remembered_open: Mutex<Option<Value>>,
 }
 
 /// What `document.copy_objects` put on the clipboard.
@@ -84,6 +94,9 @@ impl Editor {
             recovery_dir: Mutex::new(recovery::dir(&core.paths.local_dir)),
             writing: Mutex::new(()),
             copied: Mutex::new(None),
+            reopening: Mutex::new(false),
+            reopened: Condvar::new(),
+            remembered_open: Mutex::new(None),
         }
     }
 
@@ -97,6 +110,12 @@ impl Editor {
 
     pub fn recovery_dir(&self) -> PathBuf {
         self.recovery_dir.lock().unwrap().clone()
+    }
+
+    /// Waits, briefly, for the documents reopened at startup (EDT-120).
+    fn wait_reopened(&self) {
+        let busy = self.reopening.lock().unwrap_or_else(PoisonError::into_inner);
+        let _ = self.reopened.wait_timeout_while(busy, REOPEN_WAIT, |busy| *busy);
     }
 
     /// Other library and recovery folders (isolated tests).
@@ -263,6 +282,7 @@ fn emit_document(core: &Core, id: &str) {
         core.host().editor_event("document", i);
     }
     emit_title(core);
+    remember_open(core);
 }
 
 fn list(core: &Core) -> Value {
@@ -273,6 +293,7 @@ fn list(core: &Core) -> Value {
 fn emit_list(core: &Core) {
     core.host().editor_event("documents", list(core));
     emit_title(core);
+    remember_open(core);
 }
 
 /// Window title: the document shown, and "— Edited" while it has unsaved changes
@@ -546,6 +567,130 @@ pub fn open(core: &Arc<Core>, lang: Lang, path: &Path, show: bool) -> Result<Str
         emit_list(core);
     }
     Ok(id)
+}
+
+// ---------------------------------------------------------------------------
+// Reopening at startup (EDT-120)
+
+/// The documents of the editor's strip, in order, and the one shown.
+fn open_documents(core: &Core) -> Value {
+    let ed = editor(core);
+    let active = ed.store.active();
+    let mut paths = Vec::new();
+    let mut shown = Value::Null;
+    for id in ed.store.ids() {
+        let Some((Some(path), true)) = ed.store.with(&id, |d| (d.path.clone(), d.shown)) else {
+            continue;
+        };
+        let path = Value::String(path.to_string_lossy().into_owned());
+        if active.as_deref() == Some(id.as_str()) {
+            shown = path.clone();
+        }
+        paths.push(path);
+    }
+    json!({ "documents": paths, "active": shown })
+}
+
+/// Keeps the list of open documents up to date at every change, so it survives any
+/// way of ending: quitting, shutting down or a crash.
+fn remember_open(core: &Core) {
+    let ed = editor(core);
+    if *ed.reopening.lock().unwrap_or_else(PoisonError::into_inner) {
+        return;
+    }
+    let value = if core.settings.get_bool(REOPEN_SETTING) {
+        open_documents(core)
+    } else {
+        Value::Null
+    };
+    let mut last = ed.remembered_open.lock().unwrap();
+    if last.as_ref() != Some(&value) {
+        core.remember(OPEN_KEY, value.clone());
+        *last = Some(value);
+    }
+}
+
+/// Ends the reopening, even if it stopped halfway, and lets waiting commands go on.
+struct Reopening(Arc<Core>);
+
+impl Drop for Reopening {
+    fn drop(&mut self) {
+        let ed = editor(&self.0);
+        *ed.reopening.lock().unwrap_or_else(PoisonError::into_inner) = false;
+        ed.reopened.notify_all();
+    }
+}
+
+/// Reopens, in the background and without windows, the documents that were in the
+/// strip when XcreenShot last ended. Editor commands wait until it finishes. The shell
+/// calls it once at startup, before it answers commands.
+pub fn reopen_documents(core: &Arc<Core>) {
+    let saved = core.recall(OPEN_KEY).filter(|v| !v.is_null());
+    if !core.settings.get_bool(REOPEN_SETTING) {
+        if saved.is_some() {
+            core.remember(OPEN_KEY, Value::Null);
+        }
+        return;
+    }
+    let Some(saved) = saved.filter(|v| v["documents"].as_array().is_some_and(|a| !a.is_empty())) else {
+        return;
+    };
+    *editor(core).reopening.lock().unwrap() = true;
+    let guard = Reopening(core.clone());
+    std::thread::spawn(move || {
+        let started = Instant::now();
+        let (opened, skipped) = reopen(&guard.0, &saved);
+        let core = guard.0.clone();
+        drop(guard);
+        tracing::info!(
+            opened,
+            skipped,
+            elapsed_ms = started.elapsed().as_millis() as u64,
+            "documents reopened"
+        );
+        emit_list(&core);
+    });
+}
+
+/// Opens the remembered documents; returns how many opened and how many were left out.
+fn reopen(core: &Core, saved: &Value) -> (usize, usize) {
+    let ed = editor(core);
+    // A document with a recovery copy comes back through the recovery, with its changes.
+    let recovering: Vec<PathBuf> = recovery::list(&ed.recovery_dir())
+        .into_iter()
+        .filter_map(|e| e.original_path)
+        .collect();
+    let library = ed.library();
+    let (mut opened, mut skipped) = (0, 0);
+    let mut shown = None;
+    for p in saved["documents"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        let path = PathBuf::from(p);
+        if recovering.iter().any(|r| store::same_file(r, &path)) {
+            skipped += 1;
+            continue;
+        }
+        match DocStore::load(&path, &library) {
+            Ok(mut doc) => {
+                doc.view = remembered_view(core, &path);
+                let (id, _) = ed.store.insert(doc, true);
+                if shown.is_none() || saved["active"].as_str() == Some(p) {
+                    shown = Some(id);
+                }
+                opened += 1;
+            }
+            // Moved or deleted while XcreenShot was closed: left out without a word.
+            Err(_) => skipped += 1,
+        }
+    }
+    if let Some(id) = shown {
+        ed.store.set_active(Some(&id));
+    }
+    (opened, skipped)
 }
 
 /// Saves a new capture in the library as `.xshot` (LIB-020) and keeps it open, not
@@ -1035,6 +1180,8 @@ pub fn extension() -> Extension {
                 let weak = weak.clone();
                 reg.handle($id, move |$ctx: &Context, $p: Value| {
                     let $core = upgrade(&weak)?;
+                    // The documents reopened at startup come first (EDT-120).
+                    editor(&$core).wait_reopened();
                     #[allow(unused_variables)]
                     let $ctx = $ctx;
                     $body

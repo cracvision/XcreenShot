@@ -30,7 +30,8 @@ Este archivo especifica el editor de imágenes de XcreenShot: la ventana princip
 9. **Archivos** — EDT-103 Nueva imagen · EDT-104 Nueva desde el portapapeles · EDT-105 Abrir y arrastrar archivos · EDT-106 Formato `.xshot` · EDT-107 Guardar, Guardar como y Guardar todo · EDT-108 Cerrar y Cerrar todo · EDT-109 Renombrar, duplicar, eliminar y mostrar · EDT-110 Exportar a PNG y JPG · EDT-111 Más formatos de exportación · EDT-112 Opciones de cada formato · EDT-113 Exportación por lotes · EDT-114 Imprimir y configurar página
 10. **Atajos de teclado** — EDT-115 Atajos de herramientas · EDT-116 Atajos de edición, vista y archivo · EDT-117 Teclas del lienzo y modificadores
 11. **Preferencias y automatización** — EDT-118 Preferencias del editor · EDT-119 Comandos del editor (CLI y MCP)
-12. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
+12. **Funciones propias** — EDT-120 Reabrir los documentos al iniciar
+13. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
 
 ---
 
@@ -2395,6 +2396,7 @@ Reglas comunes a las tres fichas de esta sección:
     | Color del área de trabajo | `editor.workspaceColor` | **Automático** / color | EDT-010 |
     | Reducir para ajustar al abrir | `editor.shrinkToFit` | **Sí** / No | EDT-007 |
     | Recordar el zoom y la posición de cada documento | `editor.rememberView` | **Sí** / No | EDT-007 |
+    | Reabrir los documentos que estaban abiertos | `editor.reopenDocuments` | **Sí** / No | EDT-120 |
     | Cuadrícula de píxeles (menú) y zoom mínimo | `editor.pixelGrid`, `editor.pixelGridMinZoom` | **Sí**, **600 %** (400–1600 %) | EDT-008 |
     | Ajuste magnético (menú) | `editor.snapping` | **Sí** / No | EDT-084 |
     | `Esc` cierra el editor | `editor.escClosesEditor` | Sí / **No** | EDT-012 |
@@ -2467,5 +2469,34 @@ Reglas comunes a las tres fichas de esta sección:
   - [ ] `document.info` devuelve la lista de objetos con el mismo número, tipo y geometría que muestra el editor.
 - **Mejora sobre Snagit:** la edición completa es automatizable desde CLI y agentes en ambas plataformas.
 - **Fuentes:** research/04-biblioteca-compartir.md §8 (COM Server API); research/01-captura.md §1.9
+
+---
+
+## 12. Funciones propias
+
+### EDT-120 · Reabrir los documentos al iniciar
+- **Hito:** M1 (pedida por Carlos, 2026-11-01) · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia, IDEA-003 de `IDEAS.md`)
+- **Comportamiento:**
+  - Al iniciar, XcreenShot vuelve a abrir los documentos que había en la tira del editor cuando terminó, en el mismo orden, y deja a la vista el que se estaba viendo. Da igual cómo terminó: **Salir**, apagar el equipo o un cierre inesperado.
+  - Los abre sin mostrar ventanas: el arranque se ve igual que siempre (APP-001), también en segundo plano. Los documentos están ahí al abrir el editor, y `document.list` los devuelve, así que un agente que arranca la app (APP-029) los encuentra.
+  - Mientras se reabren, los comandos `document.*` y `editor.*` esperan a que terminen, como mucho 10 s.
+  - Solo se recuerdan los documentos de la tira. Los que un agente abrió sin mostrarlos, y las capturas de la multicaptura que no se insertaron (CAP-067), no se recuerdan.
+  - Cada documento se reabre desde su archivo, tal como quedó guardado. Los de la biblioteca se guardan solos antes de salir (EDT-012); los externos con cambios piden decisión (APP-004).
+  - Un documento con una copia de recuperación pendiente (EDT-012) no se reabre desde su archivo: lo ofrece la recuperación, con sus cambios, para que no se abra dos veces.
+  - Si un archivo ya no existe o no se puede leer, se omite sin avisar (decisión de diseño). El registro anota cuántos se omitieron, sin sus nombres.
+  - Cada documento vuelve con su zoom y su posición si **Recordar el zoom y la posición** está activado (EDT-007).
+  - Cerrar un documento lo quita de la lista y **Cerrar todo** la vacía, así que después de cerrar todo el editor empieza vacío.
+  - Preferencia **Reabrir los documentos que estaban abiertos** (`editor.reopenDocuments`; por defecto: sí), en Preferencias > Editor (EDT-118). Desactivada, el editor empieza vacío y no se guarda la lista.
+  - La lista guarda solo las rutas de los archivos, en el estado local de la app. No es una preferencia, no viaja en la exportación de ajustes (APP-011) y no sale del equipo.
+- **Criterios de aceptación:**
+  - [ ] Con tres documentos en la tira y el segundo a la vista, al salir y volver a abrir XcreenShot el editor muestra los tres en el mismo orden, con el segundo a la vista.
+  - [ ] Si la app arranca en segundo plano, `document.list` devuelve los documentos reabiertos y no se abre ninguna ventana.
+  - [ ] Un archivo borrado mientras XcreenShot estaba cerrado no se reabre ni muestra error, y los demás sí se reabren.
+  - [ ] Con la preferencia desactivada, el editor empieza vacío.
+  - [ ] Un documento con copia de recuperación aparece en la recuperación y no se abre dos veces.
+  - [ ] Después de **Cerrar todo** y salir, el editor empieza vacío.
+- **Fuentes:** `IDEAS.md` IDEA-003 y respuesta de Carlos del 2026-11-01
 
 ---

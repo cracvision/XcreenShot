@@ -330,6 +330,8 @@ pub fn run() {
             permissions::init(core.paths.config_dir.clone());
             // Recovery copies of unsaved documents every 30 s (EDT-012).
             xs_editor::start_background(&core);
+            // The documents open when XcreenShot last ended (EDT-120).
+            xs_editor::reopen_documents(&core);
             // System fonts load in the background, so the first text does not wait.
             xs_image::text::warm_up();
 

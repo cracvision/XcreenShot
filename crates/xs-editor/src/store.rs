@@ -321,7 +321,7 @@ pub struct DocStore {
 }
 
 /// Same file, whatever the spelling of its path.
-fn same_file(a: &Path, b: &Path) -> bool {
+pub(crate) fn same_file(a: &Path, b: &Path) -> bool {
     match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
         (Ok(x), Ok(y)) => x == y,
         _ => a == b,

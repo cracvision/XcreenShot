@@ -199,6 +199,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-117 | Teclas del lienzo y modificadores | M1 | Must | Win |
 | EDT-118 | Preferencias del editor | M1 | Should | Win |
 | EDT-119 | Comandos del editor (CLI y MCP) | M1 | Must | En curso |
+| EDT-120 | Reabrir los documentos al iniciar (función propia) | M1 | Should | En curso |
 
 ## 03-video.md
 

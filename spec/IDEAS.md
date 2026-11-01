@@ -115,3 +115,33 @@ Formato de cada idea:
    - *Propuesta:* que el modelo sea configurable.
 
 **Hito propuesto:** después del gate de paridad (M6), como primera función propia. La vía B puede llegar antes, porque casi no toca la app.
+
+---
+
+## IDEA-003 · Reabrir las capturas al volver a abrir XcreenShot (2026-11-01)
+
+> **Aprobada (2026-11-01):** es **EDT-120** en `02-editor.md`. Surgió en la prueba de la vía MCP: al salir, el editor se vaciaba. Claude Code preguntó si las capturas abiertas debían reaparecer, y Carlos contestó "sí me interesa". Los detalles quedaron con la propuesta, marcados como provisionales en `QUESTIONS.md`.
+
+**Lo que propone Carlos:**
+- Al volver a abrir XcreenShot, que reaparezcan en el editor las capturas que estaban abiertas.
+
+---
+
+## IDEA-004 · Botón "Añadir a Claude Desktop" (propuesta de Claude Code, 2026-11-01)
+
+> **Sin aprobar.** Pendiente del visto bueno de Carlos.
+
+**Lo que se propone:**
+- En Preferencias > IA, un botón que añada XcreenShot a la configuración de Claude Desktop:
+  - guarda antes una copia de seguridad;
+  - añade solo la entrada `xcreenshot`, sin tocar los demás servidores;
+  - comprueba que el archivo sigue siendo válido.
+- Sustituiría a **Copiar la configuración**, que copia un bloque completo y rompe el archivo si ya hay otros servidores. Eso le pasó a Carlos en la tanda B de SMT-043.
+
+**Relación con el spec:** SMT-043 y APP-029.
+
+**Riesgo:**
+- La app escribiría en un archivo de otra aplicación.
+- Por eso, solo cuando el usuario pulse el botón y con una copia de seguridad.
+
+**Hito propuesto:** con las correcciones de SMT-043, en M1.

@@ -999,3 +999,126 @@ fn document_image_is_a_scaled_png() {
     let full = cli(&e.core, "document.image", json!({"documentId": doc}));
     assert_eq!(full["width"], 400);
 }
+
+// ---------------------------------------------------------------------------
+// Reopening at startup (EDT-120)
+
+/// Shows a capture in the strip, as the editor does when it opens it.
+fn show(e: &Env, path: &Path) -> String {
+    cli(&e.core, "document.open", json!({"path": path, "show": true}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+/// XcreenShot started again: a new core on the same folders, with what the first one
+/// remembered.
+fn restart(e: &Env) -> Arc<Core> {
+    let saved = e.core.recall(OPEN_KEY).unwrap_or(Value::Null);
+    let core = Core::for_tests_with(Platform::Windows, vec![extension()]);
+    editor(&core).set_folders(e.library.path().to_path_buf(), e._recovery.path().to_path_buf());
+    core.remember(OPEN_KEY, saved);
+    reopen_documents(&core);
+    core
+}
+
+/// Files of the documents in the strip, in order, and the file of the one shown.
+fn strip(core: &Core) -> (Vec<PathBuf>, Option<PathBuf>) {
+    let list = cli(core, "document.list", json!({}));
+    let docs = list["documents"].as_array().unwrap();
+    let path = |d: &Value| PathBuf::from(d["path"].as_str().unwrap());
+    let shown = docs.iter().filter(|d| d["shown"] == true).map(path).collect();
+    let active = docs.iter().find(|d| d["documentId"] == list["active"]).map(path);
+    (shown, active)
+}
+
+#[test]
+fn open_documents_come_back_in_order_with_the_one_shown() {
+    let e = env();
+    let (_, a) = capture(&e);
+    let (_, b) = capture(&e);
+    let (_, c) = capture(&e);
+    // A capture an agent made but never showed is not part of the strip.
+    let (_, hidden) = capture(&e);
+    for path in [&a, &b, &c] {
+        show(&e, path);
+    }
+    show(&e, &b);
+    let saved = e.core.recall(OPEN_KEY).unwrap();
+    assert_eq!(saved["documents"].as_array().unwrap().len(), 3);
+
+    let again = restart(&e);
+    // document.list waits for the reopening: no sleep needed.
+    let (shown, active) = strip(&again);
+    assert_eq!(shown, vec![a, b.clone(), c]);
+    assert_eq!(active, Some(b));
+    assert!(!shown.contains(&hidden));
+}
+
+#[test]
+fn missing_files_and_recovered_documents_are_not_reopened() {
+    let e = env();
+    let (_, a) = capture(&e);
+    let (_, b) = capture(&e);
+    let (doc_c, c) = capture(&e);
+    for path in [&a, &b, &c] {
+        show(&e, path);
+    }
+    // c has unsaved changes kept in a recovery copy (EDT-012); a is deleted.
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc_c, "objects": [arrow([10, 10], [90, 10])]}),
+    );
+    write_recovery_copies(&e.core);
+    std::fs::remove_file(&a).unwrap();
+
+    let again = restart(&e);
+    let (shown, active) = strip(&again);
+    assert_eq!(shown, vec![b.clone()]);
+    assert_eq!(
+        active,
+        Some(b),
+        "the one shown was left out: the first reopened is shown"
+    );
+    let recovery = cli(&again, "editor.recovery_list", json!({}));
+    assert_eq!(
+        recovery["items"].as_array().unwrap().len(),
+        1,
+        "c comes back through the recovery"
+    );
+}
+
+#[test]
+fn closing_everything_or_turning_it_off_starts_empty() {
+    let e = env();
+    let (_, a) = capture(&e);
+    show(&e, &a);
+    cli(&e.core, "document.close", json!({"all": true}));
+    assert_eq!(e.core.recall(OPEN_KEY).unwrap()["documents"], json!([]));
+    assert_eq!(strip(&restart(&e)).0, Vec::<PathBuf>::new());
+
+    let (_, b) = capture(&e);
+    show(&e, &b);
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.reopenDocuments", "value": false}),
+    );
+    // The next change forgets the list.
+    show(&e, &b);
+    assert_eq!(e.core.recall(OPEN_KEY), Some(Value::Null));
+
+    // Turned off with a list still remembered: nothing reopens and the list goes.
+    let core = Core::for_tests_with(Platform::Windows, vec![extension()]);
+    editor(&core).set_folders(e.library.path().to_path_buf(), e._recovery.path().to_path_buf());
+    core.remember(OPEN_KEY, json!({"documents": [b], "active": b}));
+    cli(
+        &core,
+        "settings.set",
+        json!({"key": "editor.reopenDocuments", "value": false}),
+    );
+    reopen_documents(&core);
+    assert_eq!(strip(&core).0, Vec::<PathBuf>::new());
+    assert_eq!(core.recall(OPEN_KEY), Some(Value::Null));
+}
