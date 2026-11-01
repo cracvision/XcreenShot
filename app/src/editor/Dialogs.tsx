@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
+import { AiDialogs } from "./AiDialogs";
 import { decide, recover, saveActive } from "./actions";
 import { useEditor } from "./state";
 
@@ -159,6 +160,7 @@ export function Dialogs() {
       <Flatten />
       <Recovery />
       <ErrorMessage />
+      <AiDialogs />
     </>
   );
 }

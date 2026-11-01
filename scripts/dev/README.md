@@ -28,6 +28,9 @@ npx tauri dev
 
 El CLI habla con esa instancia con `XCREENSHOT_IPC_NAME=xs-dev target/debug/xcreenshot.exe …`. Para cerrarla: `… app quit --force`.
 
+- **Usa siempre `--no-launch`** al hablar con una instancia aislada, también en los bucles que esperan a que arranque. Sin esa opción, si la instancia aún no responde, el CLI arranca `target/debug/xcreenshot-app.exe` con la carpeta de datos real de Carlos.
+- **IA en la nube (SMT-039 a SMT-043) sin red ni clave real:** en las compilaciones de depuración, `XCREENSHOT_AI_BASE_URL=http://127.0.0.1:<puerto>` manda las peticiones a un servidor local que imite la API. Usa una clave inventada y bórrala al terminar (`ai key-clear --yes`). La instancia aislada guarda su clave en una entrada propia del Administrador de credenciales.
+
 Antes de usarlos:
 - Mueven el ratón y pulsan teclas de verdad: avisa a Carlos antes si está usando el equipo.
 - Para no llenar su carpeta de capturas, arranca la app con `XCREENSHOT_LIBRARY_DIR` apuntando a una carpeta temporal.

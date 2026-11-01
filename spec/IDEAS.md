@@ -59,6 +59,8 @@ Formato de cada idea:
 
 ## IDEA-002 · Entender imágenes con IA en la nube (2026-11-01)
 
+> **Aprobada (2026-11-01):** es **SMT-039 a SMT-043** en `06-inteligentes.md` (sección 8). Carlos respondió: acepta cambiar el principio "todo local" con las salvaguardas; las dos vías (A, la app con una clave, y B, el servidor MCP); cada colega pone su propia clave. Las preguntas 3 y 5 quedaron con la propuesta: nombre a petición, nunca automático (c por defecto y a como complemento), y modelo configurable (Opus 5.5 para preguntas, Haiku 5.5 para nombres). Lo que sigue queda como registro.
+
 **Lo que propone Carlos:**
 - Conectar la app a la API de Claude (modelo Opus 5.5, `claude-opus-5-5`) para que reconozca lo que hay en una imagen y cree contexto a partir de ella.
   - Ejemplo: el usuario sube la foto de una pareja en la playa, da los detalles relevantes y pide un poema basado en esa imagen.

@@ -372,7 +372,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-026 | Privilegios y privacidad en Windows | M1 | Should | — |
 | APP-027 | Registro de comandos | M0 | Must | Win |
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
-| APP-029 | Servidor MCP | M2 | Should | — |
+| APP-029 | Servidor MCP (herramientas adelantadas por SMT-043; faltan recursos y eventos) | M2 | Should | En curso |
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | — |
 | APP-031 | Eventos | M1 | Should | — |
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |
@@ -442,4 +442,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | SMT-036 | Crear un código QR | M5 | Could | — |
 | SMT-037 | Código QR de un enlace compartido | M5 | Could | — |
 | SMT-038 | Leer códigos QR | M5 | Could | — |
+| SMT-039 | Activar la IA en la nube: clave y modelos (función propia, adelantada) | M1 | Should | En curso |
+| SMT-040 | Preguntar a la IA sobre una imagen (función propia) | M1 | Should | En curso |
+| SMT-041 | Sugerir nombre con IA (función propia) | M1 | Should | En curso |
+| SMT-042 | Privacidad y costos de la IA en la nube | M1 | Must | En curso |
+| SMT-043 | IA desde un cliente MCP (función propia) | M1 | Should | En curso |
 

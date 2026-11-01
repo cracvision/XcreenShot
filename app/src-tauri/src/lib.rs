@@ -253,7 +253,11 @@ pub fn run() {
     let core = Core::with_extensions(
         paths.clone(),
         Some(log),
-        vec![xs_capture::extension(), xs_editor::extension()],
+        vec![
+            xs_capture::extension(),
+            xs_editor::extension(),
+            xs_ai::extension(),
+        ],
     );
     #[cfg(windows)]
     if !check_windows_version(core.lang()) {

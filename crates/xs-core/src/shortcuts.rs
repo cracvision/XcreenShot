@@ -467,6 +467,8 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.zoom_fit", "editor.zoom", r#"{"mode":"fit"}"#),
         editor("editor.zoom_original", "editor.zoom", r#"{"mode":"original"}"#),
         editor("editor.side_panel", "editor.action", r#"{"action":"side_panel"}"#),
+        editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
+        editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
         // Tools (EDT-115): a single key.
         tool("editor.tool_move", r#"{"tool":"move"}"#),
         tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),

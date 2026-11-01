@@ -7,6 +7,7 @@ import { isCommandError, run } from "../lib/commands";
 import type { Rect } from "./boxes";
 import type { ArrowStyle, LineStyle, Point } from "./geometry";
 import type { View } from "./view";
+import { aiProgress } from "./aiState";
 
 export type Tool = "move" | "arrow" | "text" | "shape" | "blur" | "crop";
 
@@ -292,6 +293,9 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
         case "styles":
           set({ styles: payload as unknown as Styles });
+          break;
+        case "ai":
+          aiProgress(payload.requestId as string, payload.text as string);
           break;
         case "zoom":
           set({

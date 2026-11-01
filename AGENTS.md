@@ -49,7 +49,7 @@ xcreenshot app ping --json
 | 3 | App not running and could not start | `not_running` |
 | 4 | Cancelled by the user | `cancelled` |
 | 5 | Busy | `busy` |
-| 6 | Blocked: missing OS permission, automation off, or policy | `permission_denied`, `disabled_by_policy`, `not_supported_on_platform` |
+| 6 | Blocked: missing OS permission, automation off, policy, or a feature that is off or not set up | `permission_denied`, `disabled_by_policy`, `feature_disabled`, `not_supported_on_platform` |
 | 7 | Not found | `not_found` |
 | 8 | Timed out | `timeout` |
 
@@ -64,6 +64,7 @@ xcreenshot app ping --json
 | `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
 | `app.open_logs` | `xcreenshot app open-logs` | Opens the logs folder. |
+| `app.mcp_config` | `xcreenshot app mcp-config --json` | How an MCP client starts XcreenShot: the installed CLI (`command`), `args` (`["mcp"]`), a JSON block for the client's configuration (`config`) and the command that adds it to Claude Code (`claudeCode`). `not_found` if the CLI is not installed next to the app. |
 | `app.permissions` | `xcreenshot app permissions --json` | OS permission states (macOS: screen recording, accessibility, camera, microphone). |
 | `app.request_permission` | `xcreenshot app request-permission <permission>` | Shows the OS request, or opens System Settings when the OS no longer asks. |
 | `app.open_permission_settings` | `xcreenshot app open-permission-settings <permission>` | Opens the System Settings page for a permission (macOS). |
@@ -111,6 +112,8 @@ xcreenshot app ping --json
 | `document.crop` | `xcreenshot document crop --rect '{"x":10,"y":10,"w":400,"h":300}'` | Crops to a rectangle in canvas pixels. Non-destructive: the original pixels stay in the `.xshot`, and a later crop may reach past the canvas, up to the original edges (or the canvas grown for objects). Objects keep their place on the image; those it leaves outside are listed in `outside` and stay there. One undo step. `--trim` arrives in M2. |
 | `document.copy_objects` | `xcreenshot document copy-objects --object-ids '["o1","o2"]' [--cut true]` | Copies objects: editable for a later `document.paste`, and as a PNG with transparency on the clipboard for other apps. `--cut true` also deletes them (one undo step). |
 | `document.insert_images` | `xcreenshot document insert-images --paths '["C:/…/capture.xshot"]' [--document-id <id>] [--center '[400,300]']` | Inserts library documents (their final image) or PNG/JPG files as floating images of the document shown, at their size, the first centered on `--center` (default: the canvas center) and the next ones 24 px further each. One undo step; the canvas grows to fit them (EDT-071). With nothing open, one `.xshot` opens as itself and several make a new library document with them stacked 10 px apart (`created: true`). Floating images are moved, resized and turned like shapes (`rect`, `rotation`) and have `style.opacity`. |
+| `document.rename` | `xcreenshot document rename --name "Quarterly sales chart" [--document-id <id>]` | Renames the file of an open document in its folder, keeping its extension. Invalid characters become spaces. Fails with `invalid_params` if another file has that name or the document has no file yet. Returns `path` and `name`. |
+| `document.image` | `xcreenshot document image [--document-id <id>] [--max-size 1568] --json` | The final image of a document (with its objects) as a PNG in base64 (`image.mimeType`, `image.data`), scaled down to `maxSize` px on its longest side (default 1568, at most 2576). Over MCP it arrives as an image the agent can see. Read-only; nothing leaves the computer. |
 | `document.paste` | `xcreenshot document paste [--in-place true] [--center '[400,300]']` | Pastes the clipboard: objects copied in XcreenShot (shifted 10 px if the originals are still there, centered on `--center` otherwise, or at their place with `--in-place`), plain text as a text object, or an image from another app as a floating image centered on `--center` (as a new library document when nothing is open). Returns `pasted` (`objects`, `text`, `image`, `document`) and the new `ids`. |
 | `document.copy_all` | `xcreenshot document copy-all [--document-id <id>]` | Puts the final image on the clipboard (PNG and bitmap). The document keeps its objects. |
 | `document.close` | `xcreenshot document close [--document-id <id> \| --all true] [--save <ids>] [--discard <ids>]` | Closes documents. Library documents are saved first. Documents from elsewhere with unsaved changes must be listed in `save` or `discard`; otherwise nothing closes and the result is `status: needs_decision` with them in `pending`. Files are never deleted. |
@@ -118,7 +121,7 @@ xcreenshot app ping --json
 | `editor.state` | `xcreenshot editor state --json` | Active tool, available tools, the current style of each tool, the open documents and how many recoverable items there are. |
 | `editor.fonts` | `xcreenshot editor fonts --json` | Font families installed on this computer, for the `font` of text objects. |
 | `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|text\|shape\|blur\|crop>` | Makes a tool active. |
-| `editor.action` | `xcreenshot editor action <open\|save\|save_as\|export\|close\|close_all\|undo\|redo\|cut\|copy\|paste\|paste_in_place\|copy_all\|delete\|deselect\|side_panel\|toolbar_labels\|recover>` | Does in the editor window what its menu entry does, with the window's selection, view and dialogs. Menus and editor shortcuts run it. To change documents without the window, use the `document.*` commands. |
+| `editor.action` | `xcreenshot editor action <open\|save\|save_as\|export\|close\|close_all\|undo\|redo\|cut\|copy\|paste\|paste_in_place\|copy_all\|delete\|deselect\|side_panel\|toolbar_labels\|recover\|ai_ask\|ai_name>` | Does in the editor window what its menu entry does, with the window's selection, view and dialogs. Menus and editor shortcuts run it. To change documents without the window, use the `document.*` commands. |
 | `editor.menu_state` | (UI only) | The editor window reports which menu entries can be used now and which are ticked. |
 | `editor.set_style` | `xcreenshot editor set-style --tool arrow --style '{"color":"#2D7FF9","width":4}'` | Changes the tool's current style: what the next objects drawn by the user or added without a style look like. |
 | `editor.zoom` | `xcreenshot editor zoom --mode actual\|fit\|original\|in\|out\|percent [--value 250]` | Changes the editor zoom (percent of physical pixels, 10–3200). The result is the expected zoom, or `null` for `fit` and `original`, which the window works out. |
@@ -126,6 +129,14 @@ xcreenshot app ping --json
 | `editor.recovery_list` | `xcreenshot editor recovery-list --json` | Documents with unsaved changes kept from a session that ended unexpectedly (recovery copies are written every 30 s). |
 | `editor.recovery_restore` | `xcreenshot editor recovery-restore --ids '["<id>"]'` | Opens recoverable documents with their changes, linked to their original files and still unsaved. |
 | `editor.recovery_discard` | `xcreenshot editor recovery-discard --ids '["<id>"]' --yes` | Deletes recovery copies for good. |
+| `ai.key_set` | (UI only) | Saves the Claude API key in the system keychain. The key never goes through the CLI or an agent. |
+| `ai.key_clear` | `xcreenshot ai key-clear --yes` | Removes the Claude API key from the system keychain. |
+| `ai.key_status` | `xcreenshot ai key-status --json` | Whether a key is saved (`saved`) and its last four characters (`hint`). Not over MCP. |
+| `ai.key_test` | `xcreenshot ai key-test [--model claude-opus-5-5]` | Checks the key and the model with the Claude API, without sending any image. Goes out to the network. |
+| `ai.ask` | `xcreenshot ai ask --prompt "Describe this image" [--document-id <id>] [--model claude-haiku-5-5] [--history '[{"prompt":…,"answer":…}]'] --json` | Sends the final image of a document (at most 2576 px on its longest side) and the request to Claude with the user's own key, and returns `text`, `model`, `stopReason` and `usage` (`inputTokens`, `outputTokens`). Needs cloud AI turned on in Preferences > AI (`feature_disabled` otherwise). Goes out to the network; not over MCP. One request at a time (`busy`). |
+| `ai.suggest_name` | `xcreenshot ai suggest-name [--document-id <id>] [--avoid '["Earlier name"]'] --json` | Asks Claude (the naming model, cheap by default) for a short descriptive file name for the image; returns `name`. Does not rename: use `document.rename`. Same conditions as `ai.ask`. |
+| `ai.open_console` | `xcreenshot ai open-console` | Opens the page where Claude API keys are created, in the browser. |
+| `ai.cancel` | `xcreenshot ai cancel` | Stops the AI request in progress (`cancelled: true` if there was one). |
 
 Shortcut combinations are written like `Ctrl+Alt+Shift+K`, `Cmd+Shift+5`, `PrtScn`.
 They are stored by physical key (`Ctrl+Alt+Shift+KeyK`), so they survive keyboard
@@ -275,3 +286,9 @@ xcreenshot shortcuts set-profile compatibility
   indicators.
 - **Logging.** Every CLI/MCP command is logged locally with time, command ID and
   outcome — never its parameters. Logs never leave the machine.
+- **Cloud AI (SMT-039 to SMT-042).** Off by default; only the Preferences window can
+  turn it on (`ai.enabled`) or save the API key. Agents over MCP cannot send anything
+  to the cloud through XcreenShot: `ai.ask` and `ai.suggest_name` are UI and CLI
+  only. An agent that wants to understand an image uses `document.image` and its own
+  model (SMT-043). Logs keep the model, tokens and outcome of AI requests, never the
+  image, the request, the answer or the key.

@@ -899,3 +899,103 @@ fn a_grown_canvas_survives_deleting_cropped_content() {
         .to_string();
     assert_eq!(size(&e, &again), (250, 200));
 }
+
+fn listed_name(e: &Env, doc: &str) -> String {
+    let list = cli(&e.core, "document.list", json!({}));
+    list["documents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["documentId"] == doc)
+        .unwrap()["name"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+/// SMT-041, TRY-006: renaming keeps the folder and the extension, never replaces
+/// another file, and later saves go to the new file.
+#[test]
+fn renaming_keeps_folder_and_extension() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    let out = cli(
+        &e.core,
+        "document.rename",
+        json!({"documentId": doc, "name": "Sales: Q3/2026."}),
+    );
+    assert_eq!(out["name"], "Sales Q3 2026");
+    let renamed = PathBuf::from(out["path"].as_str().unwrap());
+    assert_eq!(renamed.parent(), path.parent());
+    assert_eq!(renamed.extension().unwrap(), "xshot");
+    assert!(renamed.exists() && !path.exists());
+    assert_eq!(listed_name(&e, &doc), "Sales Q3 2026");
+
+    let (other, other_path) = capture(&e);
+    let taken = call(
+        &e.core,
+        Source::Cli,
+        "document.rename",
+        json!({"documentId": other, "name": "Sales Q3 2026"}),
+    )
+    .unwrap_err();
+    assert_eq!(taken.code, ErrorCode::InvalidParams);
+    assert!(other_path.exists() && renamed.exists());
+    let empty = call(
+        &e.core,
+        Source::Cli,
+        "document.rename",
+        json!({"documentId": doc, "name": " :: "}),
+    )
+    .unwrap_err();
+    assert_eq!(empty.code, ErrorCode::InvalidParams);
+
+    // A change of case only renames the same file.
+    let out = cli(
+        &e.core,
+        "document.rename",
+        json!({"documentId": doc, "name": "sales q3 2026"}),
+    );
+    let cased = PathBuf::from(out["path"].as_str().unwrap());
+    assert!(cased.exists());
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [60, 40])]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let saved = xs_core::document::Xshot::read(&cased).unwrap();
+    assert_eq!(saved.document.objects.len(), 1);
+}
+
+/// SMT-043: an agent gets the final image of a document, scaled down to fit.
+#[test]
+fn document_image_is_a_scaled_png() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [300, 150])]}),
+    );
+    let out = cli(
+        &e.core,
+        "document.image",
+        json!({"documentId": doc, "maxSize": 200}),
+    );
+    assert_eq!(
+        (out["width"].as_u64(), out["height"].as_u64()),
+        (Some(200), Some(100))
+    );
+    assert_eq!(out["image"]["mimeType"], "image/png");
+    use base64::Engine as _;
+    let png = base64::engine::general_purpose::STANDARD
+        .decode(out["image"]["data"].as_str().unwrap())
+        .unwrap();
+    let img = image::load_from_memory(&png).unwrap().to_rgba8();
+    assert_eq!(img.dimensions(), (200, 100));
+    // The arrow is in it: some pixels are not white.
+    assert!(img.pixels().any(|p| p[0] < 128));
+    let full = cli(&e.core, "document.image", json!({"documentId": doc}));
+    assert_eq!(full["width"], 400);
+}

@@ -67,6 +67,10 @@ impl B {
         self.0.destructive = true;
         self
     }
+    fn network(mut self) -> B {
+        self.0.network = true;
+        self
+    }
     fn assignable(mut self) -> B {
         self.0.assignable = true;
         self
@@ -78,7 +82,7 @@ impl B {
 }
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor"];
+pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai"];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -113,6 +117,20 @@ fn capture_result() -> Value {
 }
 
 /// What the multi-capture panel shows (CAP-067).
+fn ai_model() -> Value {
+    json!({"type": "string", "enum": crate::settings::AI_MODELS, "description": "Default: the model chosen in Preferences > AI"})
+}
+
+fn ai_key_status() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "saved": {"type": "boolean"},
+            "hint": {"type": "string", "description": "Last four characters of the saved key"}
+        }
+    })
+}
+
 fn multi_state() -> Value {
     json!({
         "type": "object",
@@ -181,6 +199,17 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
         B::new("app.open_logs", &["APP-046"]).scopes(UI_CLI),
+        B::new("app.mcp_config", &["APP-029", "SMT-043"])
+            .scopes(UI_CLI)
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "The installed CLI"},
+                    "args": {"type": "array", "items": {"type": "string"}},
+                    "config": {"type": "string", "description": "JSON block for an MCP client's configuration"},
+                    "claudeCode": {"type": "string", "description": "Command that adds the server to Claude Code"}
+                }
+            })),
         B::new("app.permissions", &["APP-024"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("app.request_permission", &["APP-024"])
             .scopes(UI_CLI)
@@ -534,6 +563,34 @@ pub fn specs() -> Vec<CommandSpec> {
                     "created": {"type": "boolean", "description": "A new document was made for them"}
                 }
             })),
+        B::new("document.rename", &["SMT-041", "TRY-006"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "name": {"type": "string", "minLength": 1, "description": "New file name, without folder or extension"}
+                }),
+                &["name"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "name": {"type": "string"}}})),
+        B::new("document.image", &["SMT-043", "APP-029"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "maxSize": {"type": "integer", "minimum": 64, "maximum": 2576, "default": 1568, "description": "Longest side in pixels; larger images are scaled down"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "image": {"type": "object", "description": "PNG: {mimeType, data (base64)}. MCP clients get it as an image"},
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "path": {"type": "string"}
+                }
+            })),
         B::new("document.paste", &["EDT-089"])
             .scopes(ALL)
             .assignable()
@@ -649,6 +706,74 @@ pub fn specs() -> Vec<CommandSpec> {
                 }),
                 &["documentId", "zoom", "x", "y", "viewportWidth", "viewportHeight", "dpr"],
             )),
+        // Cloud AI (SMT-039 to SMT-042): never from an agent, only on the user's request.
+        B::new("ai.key_set", &["SMT-039"])
+            .scopes(UI)
+            .mutates()
+            .params(params(json!({"key": {"type": "string", "minLength": 1}}), &["key"]))
+            .result(ai_key_status()),
+        B::new("ai.key_clear", &["SMT-039"]).scopes(UI_CLI).destructive().result(ai_key_status()),
+        B::new("ai.key_status", &["SMT-039"]).scopes(UI_CLI).result(ai_key_status()),
+        B::new("ai.key_test", &["SMT-039"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(json!({"model": ai_model()}), &[]))
+            .result(json!({"type": "object", "properties": {"ok": {"type": "boolean"}, "model": {"type": "string"}}})),
+        B::new("ai.ask", &["SMT-040", "SMT-042"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "prompt": {"type": "string", "minLength": 1, "description": "What to do with the image"},
+                    "history": {
+                        "type": "array",
+                        "description": "Earlier questions and answers about the same image, oldest first",
+                        "items": {
+                            "type": "object",
+                            "properties": {"prompt": {"type": "string"}, "answer": {"type": "string"}},
+                            "required": ["prompt", "answer"]
+                        }
+                    },
+                    "model": ai_model(),
+                    "requestId": {"type": "string", "description": "Tags the answer so far, sent to the editor window while it arrives"}
+                }),
+                &["prompt"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "model": {"type": "string"},
+                    "stopReason": {"type": "string"},
+                    "usage": {"type": "object", "properties": {"inputTokens": {"type": "integer"}, "outputTokens": {"type": "integer"}}},
+                    "width": {"type": "integer", "description": "Size of the image sent"},
+                    "height": {"type": "integer"}
+                }
+            })),
+        B::new("ai.suggest_name", &["SMT-041", "SMT-042"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "model": ai_model(),
+                    "avoid": {"type": "array", "items": {"type": "string"}, "description": "Names already suggested"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "model": {"type": "string"},
+                    "usage": {"type": "object"}
+                }
+            })),
+        B::new("ai.open_console", &["SMT-039"]).scopes(UI_CLI),
+        B::new("ai.cancel", &["SMT-040"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
         B::new("editor.recovery_list", &["APP-047", "EDT-012"]).result(json!({
             "type": "object",
             "properties": {"items": {"type": "array", "items": {"type": "object"}}}
@@ -673,7 +798,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 18] = [
+pub const EDITOR_ACTIONS: [&str; 20] = [
     "open",
     "save",
     "save_as",
@@ -692,6 +817,8 @@ pub const EDITOR_ACTIONS: [&str; 18] = [
     "side_panel",
     "toolbar_labels",
     "recover",
+    "ai_ask",
+    "ai_name",
 ];
 
 fn document_id() -> Value {

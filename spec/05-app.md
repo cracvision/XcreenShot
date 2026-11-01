@@ -1412,7 +1412,8 @@ Cada requisito tiene una prueba automática o un procedimiento manual repetible;
     1. buscar y descargar actualizaciones (APP-036), si está activado;
     2. enviar a un destino en línea o crear un Enlace para compartir, cuando el usuario lo pide (`SHR-`);
     3. capturar una página web por URL, cuando el usuario lo pide (CAP- (Página web por URL));
-    4. abrir enlaces en el navegador cuando el usuario hace clic (ayuda externa, Enviar comentarios).
+    4. abrir enlaces en el navegador cuando el usuario hace clic (ayuda externa, Enviar comentarios);
+    5. la IA en la nube (`https://api.anthropic.com`), solo si el usuario la activa y cuando la pide sobre una imagen (SMT-039 a SMT-042).
   - Ninguna otra parte de la app abre conexiones: ni fuentes ni íconos remotos, ni noticias, ni comprobación de licencia, ni descarga de modelos en segundo plano. Los modelos de las funciones inteligentes van incluidos en la app o los proporciona el sistema (`SMT-`).
   - Acerca de (APP-015) lista estas conexiones permitidas.
 - **Criterios de aceptación:**

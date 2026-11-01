@@ -278,6 +278,50 @@
     "document_insert_images": {
       "title": "Insert images",
       "description": "Inserts library documents or image files as floating images of the document shown, in a cascade from the center. With nothing open, one library document opens as itself and several make a new document with them stacked."
+    },
+    "ai_key_set": {
+      "title": "Save the AI key",
+      "description": "Saves the Claude API key in the system keychain. Only from Preferences > AI."
+    },
+    "ai_key_clear": {
+      "title": "Remove the AI key",
+      "description": "Removes the Claude API key from the system keychain."
+    },
+    "ai_key_status": {
+      "title": "AI key status",
+      "description": "Whether a Claude API key is saved, and its last four characters."
+    },
+    "ai_key_test": {
+      "title": "Test the AI key",
+      "description": "Checks the saved key and the model with the Claude API, without sending any image."
+    },
+    "ai_ask": {
+      "title": "Ask the AI",
+      "description": "Sends the final image of a document and a request to Claude, and returns the answer. Needs cloud AI turned on in Preferences > AI."
+    },
+    "ai_suggest_name": {
+      "title": "Suggest a name with AI",
+      "description": "Asks Claude for a short descriptive file name for the image of a document. Does not rename it."
+    },
+    "ai_cancel": {
+      "title": "Stop the AI",
+      "description": "Stops the AI request in progress."
+    },
+    "document_rename": {
+      "title": "Rename document",
+      "description": "Renames the file of an open document in its folder, keeping its extension. Never replaces another file."
+    },
+    "document_image": {
+      "title": "Document image",
+      "description": "The final image of a document as a PNG (base64), scaled down to maxSize on its longest side, for an agent to look at."
+    },
+    "ai_open_console": {
+      "title": "Get an AI key",
+      "description": "Opens the page where Claude API keys are created, in the browser."
+    },
+    "app_mcp_config": {
+      "title": "MCP client configuration",
+      "description": "How an MCP client (Claude Desktop, Claude Code…) starts XcreenShot: the installed CLI and its arguments."
     }
   },
   "settings": {
@@ -407,6 +451,28 @@
     "editor_autoSelectAfterDraw": {
       "label": "Select an annotation after drawing it",
       "description": "The object you just drew stays selected, ready to change."
+    },
+    "ai_enabled": {
+      "label": "Use cloud AI (Claude, by Anthropic)",
+      "description": "Lets you ask Claude about an image and get file name suggestions. An image is sent only when you ask, with your own key."
+    },
+    "ai_model": {
+      "label": "Model for questions",
+      "description": "Used by Ask the AI.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (most capable)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (balanced)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (cheapest)"
+      }
+    },
+    "ai_namingModel": {
+      "label": "Model for names",
+      "description": "Used by Suggest name. A cheaper model is enough.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (most capable)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (balanced)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (cheapest)"
+      }
     }
   },
   "errors": {
@@ -445,7 +511,27 @@
     "multicapture_busy": "Multi-capture is on. Press Esc or Finish in its panel first.",
     "multicapture_platform": "Multi-capture is not available on this system yet.",
     "multicapture_item": "The multi-capture panel has no capture {{id}}.",
-    "nothing_to_insert": "Give at least one file to insert."
+    "nothing_to_insert": "Give at least one file to insert.",
+    "ai_disabled": "Cloud AI is off. Turn it on in Preferences > AI.",
+    "ai_no_key": "There is no API key saved. Save one in Preferences > AI.",
+    "ai_busy": "The AI is still answering. Wait for it or stop it.",
+    "ai_keychain": "The system keychain could not be used: {{reason}}",
+    "ai_key_format": "That does not look like an API key: it has spaces or unusual characters.",
+    "ai_auth": "The API key is not valid. Check it in Preferences > AI.",
+    "ai_forbidden": "This API key may not use this model.",
+    "ai_no_credit": "Your API account has no credit left. Add some in the Anthropic console.",
+    "ai_unknown_model": "This model is not available with your API key. Choose another one in Preferences > AI.",
+    "ai_rate_limited": "You reached your usage limit for now. Wait a minute and try again.",
+    "ai_overloaded": "The AI service is overloaded. Try again in a moment.",
+    "ai_too_large": "The image is too large to send.",
+    "ai_refused": "The AI declined this request.",
+    "ai_network": "There is no connection with the AI service. Check your internet connection or proxy.",
+    "ai_timeout": "The AI service stopped answering. Try again.",
+    "ai_cancelled": "Stopped.",
+    "ai_other": "The AI service answered with an error: {{reason}}",
+    "rename_unsaved": "Save the document before renaming it.",
+    "rename_failed": "Could not rename to \"{{name}}\": {{reason}}",
+    "cli_missing": "The xcreenshot command-line tool is not installed next to the app. Reinstall XcreenShot."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -501,7 +587,9 @@
       "editor_tool_text": "Text tool",
       "editor_tool_shape": "Shape tool",
       "editor_tool_blur": "Blur tool",
-      "editor_tool_crop": "Crop tool"
+      "editor_tool_crop": "Crop tool",
+      "editor_ai_ask": "Ask the AI…",
+      "editor_ai_name": "Suggest name…"
     }
   },
   "tray": {
@@ -557,7 +645,10 @@
     "toolbar": "Toolbar",
     "toolbar_labels": "Show labels",
     "recover": "Recover work…",
-    "icons_only": "Icons only"
+    "icons_only": "Icons only",
+    "ai": "&AI",
+    "ai_ask": "Ask the AI…",
+    "ai_name": "Suggest name…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -592,7 +683,8 @@
     "run_about": "Run a command by its full ID",
     "help_about": "Show help for a command",
     "ok": "Done.",
-    "positional": "positional"
+    "positional": "positional",
+    "mcp_about": "Run the MCP server over standard input and output, for AI clients such as Claude Desktop or Claude Code."
   },
   "system": {
     "unsupported_title": "Unsupported system",
@@ -618,7 +710,8 @@
         "share": "Share",
         "shortcuts": "Shortcuts",
         "advanced": "Advanced",
-        "experimental": "Experimental features"
+        "experimental": "Experimental features",
+        "ai": "AI"
       }
     },
     "permissions": {
@@ -922,6 +1015,68 @@
       "resume": "Capture more",
       "close": "Close",
       "insert_none": "Insert"
+    },
+    "ai": {
+      "intro": "Ask Claude about an image (a description, alt text, a summary, a poem…) and get file name suggestions. XcreenShot sends an image only when you ask, with your own key. Each request uses credit from your API account.",
+      "key": "API key",
+      "key_hint": "Saved in the system keychain, never in a file.",
+      "key_placeholder": "sk-ant-…",
+      "save": "Save",
+      "saved": "Saved (ends in ····{{hint}})",
+      "change": "Change",
+      "remove": "Remove",
+      "test": "Test the key",
+      "testing": "Testing…",
+      "test_ok": "The key works with {{model}}.",
+      "get_key": "How to get a key",
+      "consent_title": "Turn on cloud AI",
+      "consent_what": "What is sent: the final image of the document and the text you write, only when you press Send or Suggest name.",
+      "consent_who": "To whom: Anthropic, over an encrypted connection to api.anthropic.com, with your own API key.",
+      "consent_cost": "Cost: each request uses credit from your API account.",
+      "consent_rest": "Everything else in XcreenShot keeps working offline, as before.",
+      "consent_accept": "Turn on",
+      "cancel": "Cancel",
+      "ask_title": "Ask the AI",
+      "sending": "The image of this document ({{width}} × {{height}} px) and your text will be sent to Anthropic ({{model}}).",
+      "quick": "Quick requests",
+      "quick_describe": "Describe",
+      "quick_alt": "Alt text",
+      "quick_summary": "Summarize the text",
+      "quick_poem": "Poem",
+      "prompt_describe": "Describe what this image shows.",
+      "prompt_alt": "Write alt text for this image, for a screen reader: one or two sentences.",
+      "prompt_summary": "Summarize the text in this image in a few bullet points.",
+      "prompt_poem": "Write a short poem inspired by this image.",
+      "prompt_label": "What should the AI do with this image?",
+      "prompt_placeholder": "For example: a poem for Ana and Luis, who are celebrating 10 years of marriage",
+      "send": "Send",
+      "stop": "Stop",
+      "thinking": "Thinking…",
+      "you": "You",
+      "assistant": "AI",
+      "stopped": "(stopped)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "insert": "Insert in the image",
+      "inserted": "Inserted as text",
+      "more": "Ask something else",
+      "new": "New conversation",
+      "usage": "{{input}} input tokens · {{output}} output tokens",
+      "not_ready_title": "Cloud AI is not ready",
+      "open_prefs": "Open Preferences > AI",
+      "name_title": "Suggest name",
+      "name_asking": "Asking for a suggestion…",
+      "name_label": "File name",
+      "rename": "Rename",
+      "another": "Another suggestion",
+      "renamed": "Renamed: {{name}}",
+      "no_document": "Open a document first.",
+      "mcp_title": "Use XcreenShot from Claude Desktop or Claude Code",
+      "mcp_body": "Another way, without a key here: your Claude app connects to XcreenShot, looks at your captures and renames them with its own account. Nothing is sent to the cloud by XcreenShot.",
+      "mcp_copy": "Copy the configuration",
+      "mcp_copied": "Copied. In Claude Desktop: Settings > Developer > Edit Config; paste it (inside mcpServers if the file already has servers) and restart Claude.",
+      "mcp_copy_code": "Copy the Claude Code command",
+      "mcp_copied_code": "Copied. Paste it in a terminal."
     }
   },
   "history": {

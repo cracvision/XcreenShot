@@ -196,6 +196,15 @@ fn editor_menus() -> Vec<MenuEntry> {
                 },
             ],
         },
+        // Cloud AI (SMT-040, SMT-041): always listed; without it set up they explain
+        // what is missing.
+        Submenu {
+            label: "menu.ai",
+            items: vec![
+                action("editor.ai_ask", "menu.ai_ask", "ai_ask"),
+                action("editor.ai_name", "menu.ai_name", "ai_name"),
+            ],
+        },
         Submenu {
             label: "menu.help",
             items: {

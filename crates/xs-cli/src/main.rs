@@ -19,6 +19,8 @@ use xs_core::paths::Paths;
 use xs_core::settings::SettingsStore;
 use xs_core::{CommandError, CommandSpec, ErrorCode, Lang, Source};
 
+mod mcp;
+
 /// `camelCase` / `snake_case` parameter name to `--kebab-case`.
 fn kebab(name: &str) -> String {
     let mut out = String::new();
@@ -192,6 +194,7 @@ fn build_cli(lang: Lang, specs: &[CommandSpec]) -> Command {
                     .help(tr(lang, "cli.opt_yes", &[])),
             ),
     )
+    .subcommand(Command::new("mcp").about(tr(lang, "cli.mcp_about", &[])))
     .subcommand(
         Command::new("help")
             .about(tr(lang, "cli.help_about", &[]))
@@ -369,6 +372,7 @@ fn main() -> ExitCode {
     let no_launch = matches.get_flag("no_launch");
 
     let (spec, params, yes) = match matches.subcommand() {
+        Some(("mcp", _)) => return mcp::serve(&specs, no_launch, lang),
         Some(("help", m)) => {
             let mut cli = cli;
             return match m.get_one::<String>("command") {

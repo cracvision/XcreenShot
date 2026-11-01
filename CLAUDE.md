@@ -78,6 +78,7 @@ crates/xs-editor    documentos abiertos, deshacer, guardado y comandos document.
 crates/xs-ocr       reconocimiento de texto
 crates/xs-library   biblioteca e índice
 crates/xs-share     destinos de compartir
+crates/xs-ai        IA en la nube: clave en el llavero, peticiones a la API de Claude (SMT-039 a SMT-042)
 crates/xs-cli       binario `xcreenshot` (CLI + MCP)
 app/src-tauri       shell, bandeja / barra de menú, atajos globales
 app/src             React
@@ -122,9 +123,9 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ## Privacidad
 
-- Sin telemetría. La única red es compartir (cuando el usuario lo elige) y las actualizaciones.
+- Sin telemetría. La única red es compartir (cuando el usuario lo elige), las actualizaciones y la IA en la nube (SMT-039 a SMT-043: solo si el usuario la activa y la pide sobre una imagen).
 - Las credenciales van en el llavero del sistema, nunca en archivos ni en logs.
-- El procesamiento inteligente es siempre local.
+- El procesamiento inteligente es siempre local, salvo esa IA en la nube, aprobada por Carlos el 2026-11-01. Nunca se registran la imagen, la petición, la respuesta ni la clave.
 - MCP solo por stdio.
 
 ## Comandos de desarrollo
@@ -142,7 +143,8 @@ Requisitos: Rust estable (rustup), Node 22, y en Windows las Build Tools de Visu
 | UI: lint, formato, tipos, pruebas | `npm run lint` · `npm run format:check` · `npm run typecheck` · `npm test` en `app/` |
 | Sin telemetría (APP-054) | `node scripts/check-no-telemetry.mjs` |
 | Regenerar el ícono | `node scripts/make-icon.mjs` y después `npx tauri icon src-tauri/icons/app-icon.png -o src-tauri/icons` en `app/` |
-| Paquete instalable | `npm run tauri build` en `app/` |
+| Paquete instalable (con el CLI dentro) | `npm run package` en `app/` |
+| Servidor MCP contra la app en marcha | `target/debug/xcreenshot mcp` (JSON-RPC por la entrada y la salida estándar) |
 
 Dónde vive cada cosa:
 - Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs` (los de captura en `xs-capture`, los del editor en `xs-editor`).

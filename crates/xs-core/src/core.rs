@@ -509,6 +509,27 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
     });
+    // How an MCP client starts XcreenShot (APP-029): the CLI installed next to the app.
+    on!("app.mcp_config", |_core, ctx, _p| {
+        let exe = if cfg!(windows) {
+            "xcreenshot.exe"
+        } else {
+            "xcreenshot"
+        };
+        let cli = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join(exe)))
+            .filter(|p| p.exists())
+            .ok_or_else(|| CommandError::new(ErrorCode::NotFound, tr(ctx.lang, "errors.cli_missing", &[])))?;
+        let command = cli.to_string_lossy().into_owned();
+        let config = json!({"mcpServers": {"xcreenshot": {"command": command, "args": ["mcp"]}}});
+        Ok(json!({
+            "command": command,
+            "args": ["mcp"],
+            "config": serde_json::to_string_pretty(&config).unwrap_or_default(),
+            "claudeCode": format!("claude mcp add xcreenshot -- \"{command}\" mcp"),
+        }))
+    });
     on!("app.permissions", |core, ctx, _p| Ok(serde_json::to_value(
         core.host().permissions()
     )

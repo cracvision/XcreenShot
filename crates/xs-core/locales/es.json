@@ -278,6 +278,50 @@
     "document_insert_images": {
       "title": "Insertar imágenes",
       "description": "Inserta documentos de la biblioteca o archivos de imagen como imágenes flotantes del documento que se muestra, en cascada desde el centro. Sin nada abierto, un documento de la biblioteca se abre tal cual y varios forman un documento nuevo con ellos apilados."
+    },
+    "ai_key_set": {
+      "title": "Guardar la clave de IA",
+      "description": "Guarda la clave de la API de Claude en el llavero del sistema. Solo desde Preferencias > IA."
+    },
+    "ai_key_clear": {
+      "title": "Borrar la clave de IA",
+      "description": "Borra la clave de la API de Claude del llavero del sistema."
+    },
+    "ai_key_status": {
+      "title": "Estado de la clave de IA",
+      "description": "Si hay una clave de la API de Claude guardada, y sus cuatro últimos caracteres."
+    },
+    "ai_key_test": {
+      "title": "Probar la clave de IA",
+      "description": "Comprueba la clave guardada y el modelo con la API de Claude, sin enviar ninguna imagen."
+    },
+    "ai_ask": {
+      "title": "Preguntar a la IA",
+      "description": "Envía a Claude la imagen final de un documento y una petición, y devuelve la respuesta. Necesita la IA en la nube activada en Preferencias > IA."
+    },
+    "ai_suggest_name": {
+      "title": "Sugerir nombre con IA",
+      "description": "Pide a Claude un nombre de archivo breve y descriptivo para la imagen de un documento. No lo renombra."
+    },
+    "ai_cancel": {
+      "title": "Detener la IA",
+      "description": "Detiene la petición de IA en curso."
+    },
+    "document_rename": {
+      "title": "Renombrar documento",
+      "description": "Cambia el nombre del archivo de un documento abierto, en su carpeta y con su extensión. Nunca reemplaza otro archivo."
+    },
+    "document_image": {
+      "title": "Imagen del documento",
+      "description": "La imagen final de un documento en PNG (base64), reducida a maxSize en su lado mayor, para que un agente la vea."
+    },
+    "ai_open_console": {
+      "title": "Conseguir una clave de IA",
+      "description": "Abre en el navegador la página donde se crean las claves de la API de Claude."
+    },
+    "app_mcp_config": {
+      "title": "Configuración para clientes MCP",
+      "description": "Cómo arranca XcreenShot un cliente MCP (Claude Desktop, Claude Code…): el CLI instalado y sus argumentos."
     }
   },
   "settings": {
@@ -407,6 +451,28 @@
     "editor_autoSelectAfterDraw": {
       "label": "Seleccionar la anotación al terminar de dibujarla",
       "description": "El objeto que acabas de dibujar queda seleccionado, listo para cambiarlo."
+    },
+    "ai_enabled": {
+      "label": "Usar IA en la nube (Claude, de Anthropic)",
+      "description": "Permite preguntar a Claude sobre una imagen y pedir sugerencias de nombre. Solo se envía una imagen cuando lo pides, con tu propia clave."
+    },
+    "ai_model": {
+      "label": "Modelo para preguntas",
+      "description": "Lo usa Preguntar a la IA.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (la más capaz)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (equilibrada)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (la más barata)"
+      }
+    },
+    "ai_namingModel": {
+      "label": "Modelo para nombres",
+      "description": "Lo usa Sugerir nombre. Basta un modelo más barato.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (la más capaz)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (equilibrada)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (la más barata)"
+      }
     }
   },
   "errors": {
@@ -445,7 +511,27 @@
     "multicapture_busy": "La multicaptura está activa. Pulsa Esc o Terminar en su panel primero.",
     "multicapture_platform": "La multicaptura todavía no está disponible en este sistema.",
     "multicapture_item": "El panel de multicaptura no tiene la captura {{id}}.",
-    "nothing_to_insert": "Indica al menos un archivo para insertar."
+    "nothing_to_insert": "Indica al menos un archivo para insertar.",
+    "ai_disabled": "La IA en la nube está desactivada. Actívala en Preferencias > IA.",
+    "ai_no_key": "No hay ninguna clave de API guardada. Guárdala en Preferencias > IA.",
+    "ai_busy": "La IA todavía está respondiendo. Espera o detenla.",
+    "ai_keychain": "No se pudo usar el llavero del sistema: {{reason}}",
+    "ai_key_format": "Eso no parece una clave de API: tiene espacios o caracteres raros.",
+    "ai_auth": "La clave de API no es válida. Revísala en Preferencias > IA.",
+    "ai_forbidden": "Esta clave de API no puede usar este modelo.",
+    "ai_no_credit": "Tu cuenta de la API no tiene saldo. Añádelo en la consola de Anthropic.",
+    "ai_unknown_model": "Este modelo no está disponible con tu clave. Elige otro en Preferencias > IA.",
+    "ai_rate_limited": "Llegaste a tu límite de uso por ahora. Espera un minuto y vuelve a intentarlo.",
+    "ai_overloaded": "El servicio de IA está saturado. Vuelve a intentarlo en un momento.",
+    "ai_too_large": "La imagen es demasiado grande para enviarla.",
+    "ai_refused": "La IA rechazó esta petición.",
+    "ai_network": "No hay conexión con el servicio de IA. Revisa la conexión a internet o el proxy.",
+    "ai_timeout": "El servicio de IA dejó de responder. Vuelve a intentarlo.",
+    "ai_cancelled": "Detenido.",
+    "ai_other": "El servicio de IA respondió con un error: {{reason}}",
+    "rename_unsaved": "Guarda el documento antes de renombrarlo.",
+    "rename_failed": "No se pudo renombrar a \"{{name}}\": {{reason}}",
+    "cli_missing": "La herramienta de línea de comandos xcreenshot no está instalada junto a la app. Vuelve a instalar XcreenShot."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -501,7 +587,9 @@
       "editor_tool_text": "Herramienta Texto",
       "editor_tool_shape": "Herramienta Forma",
       "editor_tool_blur": "Herramienta Desenfocar",
-      "editor_tool_crop": "Herramienta Recortar"
+      "editor_tool_crop": "Herramienta Recortar",
+      "editor_ai_ask": "Preguntar a la IA…",
+      "editor_ai_name": "Sugerir nombre…"
     }
   },
   "tray": {
@@ -557,7 +645,10 @@
     "toolbar": "Barra de herramientas",
     "toolbar_labels": "Mostrar etiquetas",
     "recover": "Recuperar trabajo…",
-    "icons_only": "Solo íconos"
+    "icons_only": "Solo íconos",
+    "ai": "&IA",
+    "ai_ask": "Preguntar a la IA…",
+    "ai_name": "Sugerir nombre…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -592,7 +683,8 @@
     "run_about": "Ejecuta un comando por su ID completo",
     "help_about": "Muestra la ayuda de un comando",
     "ok": "Hecho.",
-    "positional": "posicional"
+    "positional": "posicional",
+    "mcp_about": "Ejecuta el servidor MCP por la entrada y la salida estándar, para clientes de IA como Claude Desktop o Claude Code."
   },
   "system": {
     "unsupported_title": "Sistema no compatible",
@@ -618,7 +710,8 @@
         "share": "Compartir",
         "shortcuts": "Atajos",
         "advanced": "Avanzado",
-        "experimental": "Funciones en prueba"
+        "experimental": "Funciones en prueba",
+        "ai": "IA"
       }
     },
     "permissions": {
@@ -922,6 +1015,68 @@
       "resume": "Capturar más",
       "close": "Cerrar",
       "insert_none": "Insertar"
+    },
+    "ai": {
+      "intro": "Pregúntale a Claude sobre una imagen (una descripción, un texto alternativo, un resumen, un poema…) y pídele sugerencias de nombre. XcreenShot solo envía una imagen cuando lo pides, con tu propia clave. Cada petición consume saldo de tu cuenta de la API.",
+      "key": "Clave de API",
+      "key_hint": "Se guarda en el llavero del sistema, nunca en un archivo.",
+      "key_placeholder": "sk-ant-…",
+      "save": "Guardar",
+      "saved": "Guardada (termina en ····{{hint}})",
+      "change": "Cambiar",
+      "remove": "Borrar",
+      "test": "Probar la clave",
+      "testing": "Probando…",
+      "test_ok": "La clave funciona con {{model}}.",
+      "get_key": "Cómo conseguir una clave",
+      "consent_title": "Activar la IA en la nube",
+      "consent_what": "Qué se envía: la imagen final del documento y el texto que escribes, solo cuando pulsas Enviar o Sugerir nombre.",
+      "consent_who": "A quién: a Anthropic, por una conexión cifrada a api.anthropic.com, con tu propia clave de API.",
+      "consent_cost": "Costo: cada petición consume saldo de tu cuenta de la API.",
+      "consent_rest": "Todo lo demás de XcreenShot sigue funcionando sin conexión, como antes.",
+      "consent_accept": "Activar",
+      "cancel": "Cancelar",
+      "ask_title": "Preguntar a la IA",
+      "sending": "Se enviará la imagen de este documento ({{width}} × {{height}} px) y tu texto a Anthropic ({{model}}).",
+      "quick": "Peticiones rápidas",
+      "quick_describe": "Describir",
+      "quick_alt": "Texto alternativo",
+      "quick_summary": "Resumir el texto",
+      "quick_poem": "Poema",
+      "prompt_describe": "Describe lo que muestra esta imagen.",
+      "prompt_alt": "Escribe un texto alternativo para esta imagen, para un lector de pantalla: una o dos frases.",
+      "prompt_summary": "Resume en unos pocos puntos el texto de esta imagen.",
+      "prompt_poem": "Escribe un poema breve inspirado en esta imagen.",
+      "prompt_label": "¿Qué quieres que haga la IA con esta imagen?",
+      "prompt_placeholder": "Por ejemplo: un poema para Ana y Luis, que cumplen 10 años de casados",
+      "send": "Enviar",
+      "stop": "Detener",
+      "thinking": "Pensando…",
+      "you": "Tú",
+      "assistant": "IA",
+      "stopped": "(detenido)",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "insert": "Insertar en la imagen",
+      "inserted": "Insertado como texto",
+      "more": "Preguntar algo más",
+      "new": "Nueva conversación",
+      "usage": "{{input}} tokens de entrada · {{output}} de salida",
+      "not_ready_title": "La IA en la nube no está lista",
+      "open_prefs": "Abrir Preferencias > IA",
+      "name_title": "Sugerir nombre",
+      "name_asking": "Pidiendo una sugerencia…",
+      "name_label": "Nombre del archivo",
+      "rename": "Renombrar",
+      "another": "Otra sugerencia",
+      "renamed": "Renombrado: {{name}}",
+      "no_document": "Primero abre un documento.",
+      "mcp_title": "Usar XcreenShot desde Claude Desktop o Claude Code",
+      "mcp_body": "Otra vía, sin clave aquí: tu app de Claude se conecta a XcreenShot, mira tus capturas y las renombra con su propia cuenta. XcreenShot no envía nada a la nube.",
+      "mcp_copy": "Copiar la configuración",
+      "mcp_copied": "Copiada. En Claude Desktop: Settings > Developer > Edit Config; pégala (dentro de mcpServers si el archivo ya tiene servidores) y reinicia Claude.",
+      "mcp_copy_code": "Copiar el comando para Claude Code",
+      "mcp_copied_code": "Copiado. Pégalo en una terminal."
     }
   },
   "history": {

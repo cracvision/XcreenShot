@@ -15,6 +15,7 @@ import {
   type Tool,
 } from "./state";
 import { setting, useApp } from "../store";
+import { openAi } from "./aiState";
 
 const t = (key: string) => i18next.t(key);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -305,6 +306,14 @@ export function performAction(action: string): boolean {
       return true;
     case "recover":
       void showRecovery();
+      return true;
+    case "ai_ask":
+      if (!doc) return false;
+      void openAi("ask");
+      return true;
+    case "ai_name":
+      if (!doc) return false;
+      void openAi("name");
       return true;
     default:
       return false;

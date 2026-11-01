@@ -145,6 +145,105 @@ fn resolve(core: &Core, lang: Lang, p: &Value) -> Result<String, CommandError> {
     }
 }
 
+/// The document a command names with `documentId`, or the one shown in the editor.
+/// For other crates' commands that act on a document (SMT-040).
+pub fn resolve_document(core: &Core, lang: Lang, p: &Value) -> Result<String, CommandError> {
+    resolve(core, lang, p)
+}
+
+/// The final image of an open document, with its objects (EDT-110, SMT-040).
+pub fn final_image(core: &Core, id: &str) -> Result<image::RgbaImage, String> {
+    Ok(editor(core).store.snapshot(id)?.render())
+}
+
+/// Renames the file of an open document in its folder, keeping its extension
+/// (SMT-041, TRY-006). Never replaces another file.
+fn rename(core: &Core, lang: Lang, p: &Value) -> Result<Value, CommandError> {
+    let id = resolve(core, lang, p)?;
+    let ed = editor(core);
+    let wanted = p["name"].as_str().unwrap_or_default();
+    let name = xs_library::file_name(wanted).ok_or_else(|| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", "name"), ("reason", "empty")],
+        ))
+    })?;
+    let path = ed
+        .store
+        .with(&id, |d| d.path.clone())
+        .flatten()
+        .ok_or_else(|| invalid(tr(lang, "errors.rename_unsaved", &[])))?;
+    let ext = path
+        .extension()
+        .map(|e| e.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let target = path.with_file_name(if ext.is_empty() {
+        name.clone()
+    } else {
+        format!("{name}.{ext}")
+    });
+    if target == path {
+        return Ok(json!({ "path": path, "name": name }));
+    }
+    // A change of case only is the same file on Windows and macOS.
+    let same_file = target.to_string_lossy().to_lowercase() == path.to_string_lossy().to_lowercase();
+    if target.exists() && !same_file {
+        let shown = target
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        return Err(invalid(tr(lang, "errors.file_exists", &[("name", &shown)])));
+    }
+    {
+        let _guard = ed.writing.lock().unwrap();
+        std::fs::rename(&path, &target).map_err(|e| {
+            CommandError::new(
+                ErrorCode::Internal,
+                tr(
+                    lang,
+                    "errors.rename_failed",
+                    &[("name", &name), ("reason", &e.to_string())],
+                ),
+            )
+        })?;
+        ed.store.with(&id, |d| d.path = Some(target.clone()));
+    }
+    tracing::info!(document = %id, "document renamed");
+    emit_list(core);
+    Ok(json!({ "path": target, "name": name }))
+}
+
+/// The final image of a document as a PNG an agent can look at (SMT-043, APP-029):
+/// scaled down to `maxSize` on its longest side.
+fn document_image(core: &Core, lang: Lang, p: &Value) -> Result<Value, CommandError> {
+    let id = resolve(core, lang, p)?;
+    let max = p
+        .get("maxSize")
+        .and_then(Value::as_u64)
+        .unwrap_or(1568)
+        .clamp(64, 2576) as u32;
+    let (name, path) = editor(core)
+        .store
+        .with(&id, |d| (d.name(), d.path.clone()))
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let full = final_image(core, &id).map_err(CommandError::internal)?;
+    let image = if full.width().max(full.height()) > max {
+        xs_image::encode::thumbnail(&full, max)
+    } else {
+        full
+    };
+    let png = xs_image::encode::png(&image, 0.0, true).map_err(CommandError::internal)?;
+    use base64::Engine as _;
+    Ok(json!({
+        "image": {"mimeType": "image/png", "data": base64::engine::general_purpose::STANDARD.encode(png)},
+        "width": image.width(),
+        "height": image.height(),
+        "name": name,
+        "path": path,
+    }))
+}
+
 fn translate_labels(mut info: Value, lang: Lang) -> Value {
     for key in ["undoLabel", "redoLabel"] {
         if let Some(label) = info.get(key).and_then(Value::as_str).map(str::to_string) {
@@ -1504,6 +1603,10 @@ pub fn extension() -> Extension {
             &core, ctx, &p
         ));
         on!("document.close", |core, ctx, p| close(&core, ctx, &p));
+        on!("document.rename", |core, ctx, p| rename(&core, ctx.lang, &p));
+        on!("document.image", |core, ctx, p| document_image(
+            &core, ctx.lang, &p
+        ));
         on!("editor.show", |core, ctx, p| {
             if p.get("documentId").is_some() {
                 let id = resolve(&core, ctx.lang, &p)?;

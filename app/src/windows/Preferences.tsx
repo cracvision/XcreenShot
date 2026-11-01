@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
+import { AiSection } from "../prefs/AiSection";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
 import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
@@ -18,6 +19,7 @@ const SECTIONS = [
   "editor",
   "library",
   "share",
+  "ai",
   "shortcuts",
   "advanced",
   "experimental",
@@ -110,6 +112,7 @@ export function Preferences() {
       ));
     }
     if (section === "shortcuts") return <ShortcutsSection highlightKey={highlight} />;
+    if (section === "ai") return <AiSection highlightKey={highlight} />;
     const rows = inSection(section);
     return (
       <>

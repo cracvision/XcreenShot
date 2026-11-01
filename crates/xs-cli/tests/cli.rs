@@ -73,3 +73,43 @@ fn agents_md_lists_every_command() {
         );
     }
 }
+
+/// APP-029, SMT-043: `xcreenshot mcp` speaks JSON-RPC over standard input and output,
+/// lists the MCP commands as tools and reports a closed app as a tool error.
+#[test]
+fn mcp_server_lists_tools_and_answers_without_the_app() {
+    let input = [
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}"#,
+        r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"app_ping","arguments":{}}}"#,
+        r#"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"ai_ask","arguments":{"prompt":"x"}}}"#,
+        r#"{"jsonrpc":"2.0","id":5,"method":"nope"}"#,
+    ]
+    .join("\n")
+        + "\n";
+    let out = cli()
+        .args(["mcp", "--no-launch"])
+        .write_stdin(input)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let replies: Vec<serde_json::Value> = String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).expect("stdout is only JSON-RPC"))
+        .collect();
+    assert_eq!(replies.len(), 5, "the notification gets no answer");
+    assert_eq!(replies[0]["result"]["protocolVersion"], "2025-06-18");
+    assert_eq!(replies[0]["result"]["serverInfo"]["name"], "xcreenshot");
+    let tools = replies[1]["result"]["tools"].as_array().unwrap();
+    assert!(tools.iter().any(|t| t["name"] == "document_image"));
+    assert!(!tools.iter().any(|t| t["name"] == "ai_ask"));
+    assert_eq!(replies[2]["result"]["isError"], true);
+    assert!(replies[2]["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("not_running"));
+    assert_eq!(replies[3]["error"]["code"], -32602);
+    assert_eq!(replies[4]["error"]["code"], -32601);
+}

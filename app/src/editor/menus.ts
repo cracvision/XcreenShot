@@ -80,6 +80,8 @@ export function useMenuBar(): void {
       "zoom_actual",
       "zoom_fit",
       "zoom_original",
+      "ai_ask",
+      "ai_name",
     ];
     const enabled: Record<string, boolean> = {
       "editor.close_all": anyOpen,

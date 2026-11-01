@@ -34,6 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
 | 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (cinco tandas, 2026-10-28), con el lienzo que crece (EDT-071) |
 | 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Hecha y probada por Carlos (tres tandas, 2026-10-28); falta una tanda corta del arreglo del marco de foco |
+| IA en la nube (función propia, SMT-039 a SMT-043) | Aprobada por Carlos el 2026-11-01 (IDEA-002): cambia el principio "todo local" para esta función; las dos vías (la app con la clave de cada uno, y Claude Desktop o Claude Code por MCP); cada colega paga su clave. Preguntar a la IA sobre una imagen, sugerir nombre, servidor MCP | Hecha; faltan las pruebas de Carlos (tandas A y B, la A necesita su clave) |
 | Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
 
@@ -42,6 +43,21 @@ Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelanta
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
+
+- **IA en la nube, SMT-039 a SMT-043** (2026-11-01; Carlos aprobó IDEA-002: cambiar "todo local" para esta función, las dos vías, cada colega con su clave):
+  - Spec: sección 8 de `06-inteligentes.md`; SPEC §2.3 y §3.2, APP-054 (quinta conexión permitida) y la privacidad de `CLAUDE.md` actualizados.
+  - Crate nuevo `xs-ai`:
+    - la clave en el llavero (`CredWriteW`/`CredReadW` en Windows; Llavero de macOS con `security-framework`);
+    - peticiones HTTPS a la API de Claude con `reqwest` (TLS y proxy del sistema), en streaming, con `fallbacks: "default"` en Opus y Sonnet;
+    - comandos `ai.key_set` (solo la interfaz), `ai.key_clear`, `ai.key_status`, `ai.key_test`, `ai.open_console`, `ai.ask`, `ai.suggest_name` y `ai.cancel`.
+  - Ajustes: `ai.enabled` (por defecto no; solo desde Preferencias), `ai.model` (Opus 5.5) y `ai.namingModel` (Haiku 5.5). Código de error nuevo `feature_disabled`.
+  - Interfaz: sección **IA** en Preferencias, con el aviso al activar, la clave, **Probar la clave**, los modelos y la vía MCP. Menú **IA** del editor con **Preguntar a la IA…** (respuesta por partes, peticiones rápidas, seguimiento, **Detener**, **Insertar en la imagen**, tokens) y **Sugerir nombre…** (**Renombrar**, **Otra sugerencia**).
+  - Editor: `document.rename` y `document.image`.
+  - Vía B: `xcreenshot mcp` (APP-029 adelantado: herramientas; faltan recursos y eventos). Las imágenes van como imagen MCP. Ninguna herramienta `ai_*` por MCP. `app.mcp_config` y los botones **Copiar** en Preferencias > IA.
+  - El instalador incluye ahora el CLI: `npm run package` en `app/` (`scripts/sidecar.mjs` y `tauri.bundle.json`).
+  - El registro ahora guarda también las líneas de `xs_editor` y `xs_ai`. De la IA solo quedan el modelo, los tokens, el tiempo y el resultado.
+  - Probado en la instancia aislada contra un servidor local que imita la API, con una clave inventada. Ver [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md).
+  - Tropiezo: la espera de esa prueba lanzó un momento la app de depuración vieja sin carpeta aislada, porque el CLI arranca la app si no responde. Se cerró en seguida; no escribió en la configuración de Carlos. Para esperar a una instancia aislada, usar siempre `--no-launch`.
 
 Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en `git log`.
 
@@ -101,12 +117,12 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 3. **Entrega 4c:** Carlos marcó PASS las tres tandas de [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (2026-10-28, instalador `66a0f62`). Falta la tanda 4, corta, con el arreglo del marco de foco (instalador posterior a `66a0f62`). Carlos no ha objetado `Ctrl+Alt+Shift+E` para Exportar (la probó en la tanda 2); sigue provisional en `spec/QUESTIONS.md`.
 4. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
 5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
-6. **IDEA-002 (IA en la nube, [`spec/IDEAS.md`](../spec/IDEAS.md)):** parada hasta que Carlos responda sus tres preguntas. Exige cambiar el principio "todo local" (SPEC §2.3); no construir nada antes.
+6. **IA en la nube (SMT-039 a SMT-043):** hecha. Carlos tiene dos tandas en [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md): la A necesita su propia clave de la API (platform.claude.com) y la B, Claude Desktop o Claude Code. Las decisiones provisionales están en `spec/QUESTIONS.md` (filas SMT-039 a SMT-043, APP-028 y APP-029).
 7. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-Corregir lo que Carlos reporte de la tanda 4 de la 4c y de la multicaptura. Después, la **entrega 5 (biblioteca)**:
+Corregir lo que Carlos reporte de la tanda 4 de la 4c, de la multicaptura y de la IA en la nube. Después, la **entrega 5 (biblioteca)**; con ella llega sugerir nombres para varias capturas a la vez (SMT-041):
 1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
 2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
 3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.

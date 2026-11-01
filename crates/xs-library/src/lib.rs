@@ -48,6 +48,34 @@ pub fn safe_name(name: Option<&str>) -> String {
     }
 }
 
+/// A name the user (or a suggestion, SMT-041) gave a file: invalid characters become
+/// spaces, runs of spaces one, no trailing dots, at most 100 characters, and never a
+/// name Windows reserves (`CON`, `NUL`, `COM1`…). `None` if nothing is left.
+pub fn file_name(name: &str) -> Option<String> {
+    let spaced: String = name
+        .chars()
+        .map(|c| {
+            if c.is_control() || INVALID.contains(&c) {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect();
+    let joined = spaced.split_whitespace().collect::<Vec<_>>().join(" ");
+    let cut: String = joined.chars().take(100).collect();
+    let cleaned = cut.trim().trim_end_matches('.').trim().to_string();
+    if cleaned.is_empty() {
+        return None;
+    }
+    let upper = cleaned.to_ascii_uppercase();
+    let reserved = ["CON", "PRN", "AUX", "NUL"].contains(&upper.as_str())
+        || ((upper.starts_with("COM") || upper.starts_with("LPT"))
+            && upper.len() == 4
+            && upper.as_bytes()[3].is_ascii_digit());
+    Some(if reserved { format!("{cleaned}_") } else { cleaned })
+}
+
 /// Where a new library item goes (LIB-020): a `AAAA-MM` folder per month and a name
 /// like `Chrome 2026-10-12 14.03.22.xshot`, with ` (2)`, ` (3)`… if it exists.
 /// Provisional pattern until SHR-006 (file names) is written.
@@ -85,6 +113,17 @@ mod tests {
 
     fn at() -> chrono::DateTime<chrono::Local> {
         chrono::Local.with_ymd_and_hms(2026, 10, 12, 14, 3, 22).unwrap()
+    }
+
+    #[test]
+    fn file_names_are_cleaned() {
+        assert_eq!(file_name("  Sales: Q3/2026.  ").as_deref(), Some("Sales Q3 2026"));
+        assert_eq!(file_name("a\tb\nc").as_deref(), Some("a b c"));
+        assert_eq!(file_name(" ?* ").as_deref(), None);
+        assert_eq!(file_name("con").as_deref(), Some("con_"));
+        assert_eq!(file_name("COM1").as_deref(), Some("COM1_"));
+        assert_eq!(file_name("Company").as_deref(), Some("Company"));
+        assert_eq!(file_name(&"x".repeat(300)).unwrap().len(), 100);
     }
 
     #[test]

@@ -1663,3 +1663,113 @@ html.overlay-root.overlay-native #root {
   gap: 6px;
   justify-content: flex-end;
 }
+
+/* Cloud AI (SMT-039 to SMT-041). */
+.section-intro {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  max-width: 64ch;
+}
+
+.ok-text {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.btn.link {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.ai-key {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ai-key input {
+  width: 220px;
+}
+
+.ai-key-actions {
+  margin-top: 8px;
+  gap: 6px;
+}
+
+.ai-consent li {
+  margin: 4px 0;
+}
+
+.backdrop .dialog:has(.ai-dialog) {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.ai-dialog {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-sending {
+  margin: 0;
+  font-size: 13px;
+}
+
+.ai-log {
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  padding: 10px 12px;
+  display: grid;
+  gap: 14px;
+}
+
+.ai-turn {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-who {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.ai-q {
+  color: var(--text-muted);
+}
+
+.ai-text {
+  white-space: pre-wrap;
+  user-select: text;
+  margin-top: 2px;
+}
+
+.ai-turn-actions,
+.ai-quick {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-label {
+  font-weight: 500;
+}
+
+.ai-dialog textarea,
+.ai-name {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  resize: vertical;
+}
+
+.ai-usage {
+  margin: 0;
+  font-size: 12px;
+}
