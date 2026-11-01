@@ -12,6 +12,7 @@ use crate::AppState;
 pub const MAIN: &str = "main";
 pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
+pub const MULTI_PANEL: &str = "multicapture";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -138,6 +139,59 @@ pub fn capture_panel(app: &AppHandle, show: Option<bool>) -> tauri::Result<bool>
         (None, false) => {}
     }
     Ok(show)
+}
+
+/// Logical size of the multi-capture panel and its distance to the work area edges.
+const MULTI_WIDTH: f64 = 340.0;
+const MULTI_HEIGHT: f64 = 420.0;
+const MULTI_MARGIN: f64 = 16.0;
+
+/// Multi-capture panel (CAP-067): always in front and never part of a capture. It
+/// appears without taking the focus, at the bottom right of the monitor under the
+/// pointer, so the app being captured keeps it. `false` closes it.
+pub fn multicapture_panel(app: &AppHandle, show: bool) -> tauri::Result<()> {
+    let existing = app.get_webview_window(MULTI_PANEL);
+    match (existing, show) {
+        (Some(w), true) => {
+            w.show()?;
+            w.unminimize()?;
+        }
+        (Some(w), false) => w.destroy()?,
+        (None, true) => {
+            let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.multi.title", &[]);
+            let w = WebviewWindowBuilder::new(app, MULTI_PANEL, WebviewUrl::App("index.html".into()))
+                .title(title)
+                .inner_size(MULTI_WIDTH, MULTI_HEIGHT)
+                .min_inner_size(260.0, 240.0)
+                .always_on_top(true)
+                .maximizable(false)
+                .minimizable(false)
+                .focused(false)
+                .visible(false)
+                .content_protected(true)
+                .theme(theme(app))
+                .build()?;
+            let pointer = app.cursor_position().ok();
+            let monitor = pointer
+                .and_then(|p| app.monitor_from_point(p.x, p.y).ok().flatten())
+                .or_else(|| app.primary_monitor().ok().flatten());
+            if let Some(m) = monitor {
+                let scale = m.scale_factor();
+                let area = m.work_area();
+                let (width, height) = ((MULTI_WIDTH * scale) as i32, (MULTI_HEIGHT * scale) as i32);
+                let margin = (MULTI_MARGIN * scale) as i32;
+                // Position first: moving to a monitor with another scale resizes it.
+                w.set_position(tauri::PhysicalPosition::new(
+                    area.position.x + area.size.width as i32 - width - margin,
+                    area.position.y + area.size.height as i32 - height - margin,
+                ))?;
+                w.set_size(tauri::PhysicalSize::new(width as u32, height as u32))?;
+            }
+            w.show()?;
+        }
+        (None, false) => {}
+    }
+    Ok(())
 }
 
 /// The panel fits its content (compact or expanded view, CAP-001).

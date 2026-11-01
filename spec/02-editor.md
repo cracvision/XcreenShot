@@ -1544,6 +1544,7 @@ Estas herramientas actúan sobre los píxeles de la imagen base o de la imagen f
   - [ ] Pegar un PNG con fondo transparente lo muestra sin fondo sobre la captura.
   - [ ] Doble clic en una imagen flotante y recortarla reduce solo esa imagen; luego se puede ampliar de nuevo.
   - [ ] Con la preferencia de aplanar activada, la imagen pegada pasa a formar parte de la imagen base y no se puede seleccionar.
+- **En M1 (adelantado por CAP-067, Carlos 2026-11-01):** la imagen flotante como objeto que se mueve, cambia de tamaño y gira con los tiradores (EDT-022; desde una esquina mantiene la proporción y `Shift` la libera, decisión de diseño), con su opacidad; se crea al **Insertar** desde el panel de multicaptura (`document.insert_images`) y al **pegar** una imagen de otra app con un documento abierto (EDT-089). Se guarda en `images/` del `.xshot`. Lo demás (soltar archivos, arrastrar desde la bandeja, Importar, recortar la imagen, herramientas de píxeles, aplanar), en M2.
 - **Fuentes:** research/02-editor.md §8 (Floating images), §1.1 (drag a tray item), §11; research/04-biblioteca-compartir.md §6 (Drag in)
 
 ### EDT-079 · Selección múltiple

@@ -4,11 +4,13 @@ import { corners, type Box, type Rect } from "./boxes";
 import { distanceToSegment, type Point } from "./geometry";
 import type { DocObject, TextObject } from "./state";
 
-/** The box of an object drawn in a rectangle (text, shape, blur), or null for arrows. */
+/** The box of an object drawn in a rectangle (text, shape, blur, image), or null for
+ * arrows. */
 export function boxOf(o: DocObject): Box | null {
   switch (o.type) {
     case "shape":
     case "blur":
+    case "image":
       return { ...o.rect, rotation: o.rotation };
     case "text":
       return {
@@ -71,6 +73,11 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
       return [{ ...o, rect }, { rect }];
     }
+    case "image": {
+      // Whole pixels keep a picture sharp (EDT-078).
+      const rect = { ...o.rect, x: Math.round(o.rect.x + dx), y: Math.round(o.rect.y + dy) };
+      return [{ ...o, rect }, { rect }];
+    }
     default:
       return [o, {}];
   }
@@ -85,6 +92,18 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
       const changes = { at, width: b.w, rotation: b.rotation };
       const layout = { ...o.layout, width: b.w };
       return [{ ...o, ...changes, layout } as TextObject, changes];
+    }
+    case "image": {
+      const rect: Rect = {
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        w: Math.max(1, Math.round(b.w)),
+        h: Math.max(1, Math.round(b.h)),
+      };
+      return [
+        { ...o, rect, rotation: b.rotation },
+        { rect, rotation: b.rotation },
+      ];
     }
     case "shape":
     case "blur": {

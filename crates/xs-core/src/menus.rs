@@ -71,6 +71,7 @@ pub fn tray_menu() -> Vec<MenuEntry> {
             params: json!({ "show": true }),
             checked: None,
         },
+        cmd("capture_multi", "tray.capture_multi", "capture.multi_start"),
         MenuEntry::Separator,
         MenuEntry::Submenu {
             label: "tray.recent",

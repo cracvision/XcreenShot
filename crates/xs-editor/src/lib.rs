@@ -11,6 +11,7 @@ pub mod objects;
 pub mod recovery;
 pub mod store;
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
@@ -57,6 +58,8 @@ pub struct Editor {
 struct Copied {
     objects: Vec<Object>,
     from_document: String,
+    /// Pictures of the floating images among them (EDT-078), so they paste anywhere.
+    images: BTreeMap<String, Vec<u8>>,
     /// Of the image written to the system clipboard: if the clipboard still holds it,
     /// pasting gives back the editable objects.
     fingerprint: u64,
@@ -463,6 +466,17 @@ fn auto_expand(core: &Core) -> bool {
     core.settings.get_bool("editor.autoExpandCanvas")
 }
 
+/// Saves a capture in the library without opening it (CAP-067).
+pub fn save_capture(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+) -> Result<PathBuf, String> {
+    write_library_item(core, image, meta, scale, app).map(|(path, _, _)| path)
+}
+
 /// A new library document from pixels (a capture, a pasted image).
 fn add_image(
     core: &Core,
@@ -471,6 +485,29 @@ fn add_image(
     scale: f64,
     app: Option<&str>,
 ) -> Result<(String, PathBuf), String> {
+    let ed = editor(core);
+    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app)?;
+    let doc = DocStore::from_image(
+        path.clone(),
+        Kind::Library,
+        document,
+        meta,
+        png,
+        Base::from_image(image.clone()),
+    );
+    let (id, _) = ed.store.insert(doc, false);
+    emit_list(core);
+    Ok((id, path))
+}
+
+/// Writes a new `.xshot` of `image` in the library: its path, document and PNG.
+fn write_library_item(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+) -> Result<(PathBuf, Document, Vec<u8>), String> {
     let ed = editor(core);
     let path = xs_library::new_item_path(&ed.library(), app, chrono::Local::now(), "xshot");
     let dpi = (96.0 * scale).round();
@@ -489,17 +526,189 @@ fn add_image(
         let _guard = ed.writing.lock().unwrap();
         file.write(&path).map_err(|e| e.to_string())?;
     }
-    let doc = DocStore::from_image(
-        path.clone(),
-        Kind::Library,
-        document,
-        meta,
-        png,
-        Base::from_image(image.clone()),
-    );
-    let (id, _) = ed.store.insert(doc, false);
-    emit_list(core);
-    Ok((id, path))
+    Ok((path, document, png))
+}
+
+// ---------------------------------------------------------------------------
+// Floating images (EDT-078)
+
+/// Space between pictures stacked in a new document (as the "Stacked" layout of
+/// CAP-033).
+const STACK_GAP: u32 = 10;
+/// Offset between pictures inserted together in an open document.
+const CASCADE: f64 = 24.0;
+
+/// A picture to insert: its file name in `images/`, its bytes and its size.
+struct Picture {
+    name: String,
+    bytes: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
+/// FNV-1a: the same picture inserted twice is stored once.
+fn content_hash(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ *b as u64).wrapping_mul(0x0100_0000_01b3)
+    })
+}
+
+fn picture(bytes: Vec<u8>, ext: &str, width: u32, height: u32) -> Picture {
+    Picture {
+        name: format!("{}{:016x}.{ext}", store::INSERTED, content_hash(&bytes)),
+        bytes,
+        width,
+        height,
+    }
+}
+
+/// What a file looks like as a floating image: the final image of a document (the
+/// open state if it is open), or a PNG or JPG as it is.
+fn picture_of(core: &Core, lang: Lang, path: &Path) -> Result<Picture, CommandError> {
+    let ed = editor(core);
+    let rendered = |image: image::RgbaImage| -> Result<Picture, CommandError> {
+        let png = xs_image::encode::png(&image, 0.0, true).map_err(|e| internal(lang, "", e))?;
+        Ok(picture(png, "png", image.width(), image.height()))
+    };
+    if let Some(id) = ed.store.find_by_path(path) {
+        let snap = ed.store.snapshot(&id).map_err(|e| internal(lang, "", e))?;
+        return rendered(snap.render());
+    }
+    match Format::from_path(path) {
+        Some(Format::Xshot) => {
+            let doc = DocStore::load(path, &ed.library()).map_err(|e| open_error(lang, path, e))?;
+            rendered(DocStore::render_doc(&doc).map_err(|e| internal(lang, "", e))?)
+        }
+        Some(format) => {
+            let bytes = std::fs::read(path)
+                .map_err(|e| open_error(lang, path, OpenError::Unreadable(e.to_string())))?;
+            let image = xs_image::encode::decode(&bytes)
+                .map_err(|e| open_error(lang, path, OpenError::Unreadable(e)))?;
+            Ok(picture(bytes, format.ext(), image.width(), image.height()))
+        }
+        None => Err(open_error(lang, path, OpenError::Unsupported)),
+    }
+}
+
+/// Adds `pictures` to document `id` as floating images, in one undo step, each at its
+/// own size with its top-left corner at the matching point of `at`.
+fn place_pictures(
+    core: &Core,
+    lang: Lang,
+    id: &str,
+    pictures: &[Picture],
+    at: &[[f64; 2]],
+    action: &str,
+) -> Result<Vec<String>, CommandError> {
+    let ed = editor(core);
+    let files = pictures
+        .iter()
+        .map(|p| (p.name.clone(), p.bytes.clone()))
+        .collect();
+    ed.store
+        .add_images(id, &files)
+        .map_err(|e| internal(lang, "", e))?;
+    let objects: Vec<Map<String, Value>> = pictures
+        .iter()
+        .zip(at)
+        .map(|(p, [x, y])| objects::image_object(&p.name, [*x, *y, p.width as f64, p.height as f64]))
+        .collect::<Result<_, _>>()
+        .map_err(invalid)?;
+    let auto = auto_expand(core);
+    ed.store
+        .mutate(id, &objects::label(action, &["image"]), |doc| {
+            let mut ids = Vec::new();
+            for props in objects {
+                let oid = doc.next_object_id();
+                doc.objects.push(Object {
+                    id: oid.clone(),
+                    kind: "image".to_string(),
+                    props,
+                });
+                ids.push(oid);
+            }
+            if auto {
+                fit::fit_canvas(doc);
+            }
+            Ok::<_, CommandError>(ids)
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))?
+}
+
+/// `document.insert_images`: files as floating images of the document shown, in a
+/// cascade from `center`. With nothing open, one library document opens as itself
+/// and several make a new document with them stacked (CAP-067).
+fn insert_images(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let ed = editor(core);
+    let paths: Vec<PathBuf> = p["paths"]
+        .as_array()
+        .map(|a| a.iter().filter_map(Value::as_str).map(PathBuf::from).collect())
+        .unwrap_or_default();
+    if paths.is_empty() {
+        return Err(invalid(tr(lang, "errors.nothing_to_insert", &[])));
+    }
+    let target = match p.get("documentId").and_then(Value::as_str) {
+        Some(_) => Some(resolve(core, lang, p)?),
+        None => ed.store.active(),
+    };
+    if target.is_none() && paths.len() == 1 && Format::from_path(&paths[0]) == Some(Format::Xshot) {
+        let id = open(core, lang, &paths[0], true)?;
+        return Ok(json!({ "documentId": id, "ids": [], "created": false }));
+    }
+    let pictures = paths
+        .iter()
+        .map(|path| picture_of(core, lang, path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let (id, at, created) = match target {
+        Some(id) => {
+            let canvas = ed
+                .store
+                .with(&id, |d| (d.document.canvas.width, d.document.canvas.height))
+                .ok_or_else(|| CommandError::internal("document closed"))?;
+            let center = p
+                .get("center")
+                .and_then(Value::as_array)
+                .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]))
+                .unwrap_or([canvas.0 as f64 / 2.0, canvas.1 as f64 / 2.0]);
+            let at = pictures
+                .iter()
+                .enumerate()
+                .map(|(i, pic)| {
+                    let step = CASCADE * i as f64;
+                    [
+                        (center[0] - pic.width as f64 / 2.0 + step).round(),
+                        (center[1] - pic.height as f64 / 2.0 + step).round(),
+                    ]
+                })
+                .collect::<Vec<_>>();
+            (id, at, false)
+        }
+        None => {
+            let width = pictures.iter().map(|p| p.width).max().unwrap_or(1);
+            let height =
+                pictures.iter().map(|p| p.height).sum::<u32>() + STACK_GAP * (pictures.len() as u32 - 1);
+            let blank = image::RgbaImage::new(width, height);
+            let (id, _) = add_image(core, &blank, json!({ "source": "insert" }), 1.0, None)
+                .map_err(|e| internal(lang, "", e))?;
+            let mut y = 0.0;
+            let at = pictures
+                .iter()
+                .map(|pic| {
+                    let here = [0.0, y];
+                    y += (pic.height + STACK_GAP) as f64;
+                    here
+                })
+                .collect::<Vec<_>>();
+            (id, at, true)
+        }
+    };
+    let ids = place_pictures(core, lang, &id, &pictures, &at, "insert")?;
+    if created {
+        activate(core, &id);
+    }
+    changed(core, ctx, &id);
+    Ok(json!({ "documentId": id, "ids": ids, "created": created }))
 }
 
 // ---------------------------------------------------------------------------
@@ -1127,8 +1336,14 @@ pub fn extension() -> Extension {
                     CommandError::new(ErrorCode::Internal, tr(ctx.lang, "errors.copy_failed", &[]))
                 })?;
             }
+            let images = objects
+                .iter()
+                .filter_map(|o| o.props.get("image").and_then(Value::as_str))
+                .filter_map(|name| Some((name.to_string(), snap.images.get(name)?.clone())))
+                .collect();
             *ed.copied.lock().unwrap() = Some(Copied {
                 objects,
+                images,
                 from_document: id.clone(),
                 fingerprint: image.as_ref().map(fingerprint).unwrap_or(0),
             });
@@ -1165,7 +1380,7 @@ pub fn extension() -> Extension {
                 copied
                     .as_ref()
                     .filter(|c| image.as_ref().map(fingerprint) == Some(c.fingerprint))
-                    .map(|c| (c.objects.clone(), c.from_document.clone()))
+                    .map(|c| (c.objects.clone(), c.from_document.clone(), c.images.clone()))
             };
             // An image from elsewhere with nothing open: a new document (EDT-089).
             let Some(id) = target else {
@@ -1184,7 +1399,12 @@ pub fn extension() -> Extension {
                 let _ = core.host().show_main_window();
                 return Ok(json!({ "pasted": "document", "documentId": doc_id, "ids": [] }));
             };
-            let (mut objects, kind) = if let Some((objects, from)) = ours {
+            let (mut objects, kind) = if let Some((objects, from, images)) = ours {
+                if !images.is_empty() {
+                    ed.store
+                        .add_images(&id, &images)
+                        .map_err(|e| internal(ctx.lang, "", e))?;
+                }
                 // Shifted 10 px when the originals are still there, centered in the view
                 // otherwise; in place with Ctrl+Shift+V (EDT-089).
                 let originals_here = from == id
@@ -1231,11 +1451,28 @@ pub fn extension() -> Extension {
                     }],
                     "text",
                 )
-            } else if image.is_some() {
-                return Err(CommandError::new(
-                    ErrorCode::NotFound,
-                    tr(ctx.lang, "errors.paste_image_later", &[]),
-                ));
+            } else if let Some(img) = image {
+                // An image from another app: a floating image centered in the view
+                // (EDT-078, EDT-089).
+                let png = xs_image::encode::png(&img, 0.0, true).map_err(|e| internal(ctx.lang, "", e))?;
+                let pic = picture(png, "png", img.width(), img.height());
+                let c = center.unwrap_or_else(|| {
+                    ed.store
+                        .with(&id, |d| {
+                            [
+                                d.document.canvas.width as f64 / 2.0,
+                                d.document.canvas.height as f64 / 2.0,
+                            ]
+                        })
+                        .unwrap_or([0.0, 0.0])
+                });
+                let at = [
+                    (c[0] - img.width() as f64 / 2.0).round(),
+                    (c[1] - img.height() as f64 / 2.0).round(),
+                ];
+                let ids = place_pictures(&core, ctx.lang, &id, &[pic], &[at], "paste")?;
+                changed(&core, ctx, &id);
+                return Ok(json!({ "pasted": "image", "documentId": id, "ids": ids }));
             } else {
                 return Err(CommandError::new(
                     ErrorCode::NotFound,
@@ -1263,6 +1500,9 @@ pub fn extension() -> Extension {
             changed(&core, ctx, &id);
             Ok(json!({ "pasted": kind, "documentId": id, "ids": ids }))
         });
+        on!("document.insert_images", |core, ctx, p| insert_images(
+            &core, ctx, &p
+        ));
         on!("document.close", |core, ctx, p| close(&core, ctx, &p));
         on!("editor.show", |core, ctx, p| {
             if p.get("documentId").is_some() {

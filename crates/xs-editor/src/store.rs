@@ -12,6 +12,9 @@ use serde_json::{json, Map, Value};
 use xs_core::document::{Document, Manifest, Xshot, XshotError, THUMB_SIZE};
 use xs_image::Base;
 
+/// Prefix of the pictures this build inserts in `images/` (EDT-078).
+pub const INSERTED: &str = "img-";
+
 /// At least 100 steps (EDT-092).
 pub const UNDO_LIMIT: usize = 200;
 /// Decoded images kept for documents that are not on screen.
@@ -91,7 +94,9 @@ pub struct Doc {
     base: Option<Base>,
     /// Parts of the `.xshot` this build only carries along.
     manifest_extra: Map<String, Value>,
-    images: BTreeMap<String, Vec<u8>>,
+    /// The `images/` folder: pictures of floating images (EDT-078) and what this
+    /// build only carries along.
+    images: Arc<BTreeMap<String, Vec<u8>>>,
     undo: Vec<Step>,
     redo: Vec<Step>,
     /// Identifies the current state; a save records it.
@@ -129,7 +134,7 @@ impl Doc {
             base_size,
             base: None,
             manifest_extra: Map::new(),
-            images: BTreeMap::new(),
+            images: Arc::default(),
             undo: Vec::new(),
             redo: Vec::new(),
             version: 0,
@@ -193,7 +198,7 @@ pub struct Snapshot {
     pub base_source: BaseSource,
     pub base: Base,
     pub manifest_extra: Map<String, Value>,
-    pub images: BTreeMap<String, Vec<u8>>,
+    pub images: Arc<BTreeMap<String, Vec<u8>>>,
     pub version: u64,
 }
 
@@ -236,13 +241,26 @@ impl Snapshot {
         let thumb = xs_image::encode::thumbnail(&self.render(), THUMB_SIZE);
         let mut manifest = Manifest::current();
         manifest.extra = self.manifest_extra.clone();
+        // Pictures this build inserted that no object shows any more (an insertion
+        // undone) stay out of the file; anything else is carried along.
+        let used: std::collections::BTreeSet<&str> = document
+            .objects
+            .iter()
+            .filter_map(|o| o.props.get("image").and_then(Value::as_str))
+            .collect();
+        let images = self
+            .images
+            .iter()
+            .filter(|(name, _)| !name.starts_with(INSERTED) || used.contains(name.as_str()))
+            .map(|(name, bytes)| (name.clone(), bytes.clone()))
+            .collect();
         Ok(Xshot {
             manifest,
             document,
             base_png,
             meta: self.meta.clone(),
             thumb_png: xs_image::encode::png(&thumb, 0.0, true)?,
-            images: self.images.clone(),
+            images,
         })
     }
 }
@@ -338,7 +356,7 @@ impl DocStore {
                     },
                 );
                 doc.manifest_extra = x.manifest.extra;
-                doc.images = x.images;
+                doc.images = Arc::new(x.images);
                 Ok(doc)
             }
             Format::Png | Format::Jpg => {
@@ -527,22 +545,62 @@ impl DocStore {
 
     /// Decoded pixels of a document, decoding them if needed (outside the lock).
     pub fn base(&self, id: &str) -> Result<Base, String> {
-        let source = {
+        let (source, images) = {
             let mut inner = self.inner.lock().unwrap();
             inner.touch(id);
             let doc = inner.get_mut(id).ok_or("document closed")?;
             if let Some(b) = &doc.base {
                 return Ok(b.clone());
             }
-            doc.base_source.bytes.clone()
+            (doc.base_source.bytes.clone(), doc.images.clone())
         };
-        let base = Base::from_image(xs_image::encode::decode(&source)?);
+        let mut base = Base::from_image(xs_image::encode::decode(&source)?);
+        for (name, bytes) in images.iter() {
+            // What is not a picture (carried along from a newer build) is skipped.
+            let _ = base.add_image(name, bytes);
+        }
         let mut inner = self.inner.lock().unwrap();
         if let Some(doc) = inner.get_mut(id) {
             doc.base = Some(base.clone());
         }
         inner.evict(id);
         Ok(base)
+    }
+
+    /// The final image of a document read from disk and not in the store.
+    pub fn render_doc(doc: &Doc) -> Result<image::RgbaImage, String> {
+        let mut base = Base::from_image(xs_image::encode::decode(&doc.base_source.bytes)?);
+        for (name, bytes) in doc.images.iter() {
+            let _ = base.add_image(name, bytes);
+        }
+        Ok(xs_image::render(&doc.document, &base))
+    }
+
+    /// Adds pictures to a document's `images/` folder (EDT-078), before the objects
+    /// that show them. Decodes them outside the lock.
+    pub fn add_images(&self, id: &str, images: &BTreeMap<String, Vec<u8>>) -> Result<(), String> {
+        let mut decoded = Base::from_image(image::RgbaImage::new(1, 1));
+        for (name, bytes) in images {
+            decoded.add_image(name, bytes)?;
+        }
+        let mut inner = self.inner.lock().unwrap();
+        let doc = inner.get_mut(id).ok_or("document closed")?;
+        let files = Arc::make_mut(&mut doc.images);
+        for (name, bytes) in images {
+            files.insert(name.clone(), bytes.clone());
+        }
+        if let Some(base) = &mut doc.base {
+            let pictures = Arc::make_mut(&mut base.images);
+            for (name, picture) in decoded.images.iter() {
+                pictures.insert(name.clone(), picture.clone());
+            }
+        }
+        Ok(())
+    }
+
+    /// The bytes of one picture of a document's `images/` folder.
+    pub fn image_file(&self, id: &str, name: &str) -> Option<Vec<u8>> {
+        self.with(id, |d| d.images.get(name).cloned()).flatten()
     }
 
     pub fn snapshot(&self, id: &str) -> Result<Snapshot, String> {

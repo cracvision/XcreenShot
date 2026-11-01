@@ -1561,3 +1561,105 @@ html.overlay-root.overlay-native #root {
 .side-body .prop-field {
   position: relative;
 }
+
+/* Multi-capture panel (CAP-067). */
+.multi {
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg);
+}
+
+.multi-hint {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.multi-empty {
+  flex: 1;
+  margin: 0;
+}
+
+.multi-grid {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.multi-item {
+  position: relative;
+}
+
+.multi-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  cursor: pointer;
+}
+
+.multi-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Chosen: accent border and a check, never color alone (APP-045). */
+.multi-thumb[aria-pressed="true"] {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 2px;
+}
+
+.multi-thumb[aria-pressed="true"]::after {
+  content: "✓";
+  position: absolute;
+  left: 4px;
+  top: 2px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.multi-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-raised);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.multi-remove:hover {
+  border-color: var(--accent);
+}
+
+.multi-problem {
+  margin: 0;
+  color: var(--danger);
+}
+
+.multi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}

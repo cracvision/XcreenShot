@@ -107,8 +107,8 @@ interface Target {
   commit: (changes: Record<string, unknown>) => void;
 }
 
-type StyledKind = "arrow" | "text" | "shape" | "blur";
-const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur"];
+type StyledKind = "arrow" | "text" | "shape" | "blur" | "image";
+const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image"];
 
 function useTarget(): Target | null {
   const doc = useEditor((s) => s.doc);
@@ -159,8 +159,9 @@ function useTarget(): Target | null {
         ),
     };
   }
+  // A tool's own style; there is no image tool, images are inserted (EDT-078).
   if (selected.length === 0 && STYLED.includes(tool as StyledKind)) {
-    const k = tool as StyledKind;
+    const k = tool as Exclude<StyledKind, "image">;
     return {
       kind: k,
       styles: [styles[k] as unknown as Record<string, unknown>],
@@ -412,6 +413,8 @@ function Properties({ target }: { target: Target }) {
         </>
       );
     }
+    case "image":
+      return opacity;
   }
 }
 

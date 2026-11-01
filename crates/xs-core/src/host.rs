@@ -153,6 +153,10 @@ pub trait Host: Send + Sync {
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         Err(unsupported())
     }
+    /// Shows (`true`) or closes the multi-capture panel (CAP-067).
+    fn multicapture_panel(&self, show: bool) {}
+    /// The multi-capture state changed (`{capturing, items}`): the panel shows it.
+    fn multicapture_event(&self, state: Value) {}
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

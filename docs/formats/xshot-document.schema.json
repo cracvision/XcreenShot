@@ -36,7 +36,11 @@
       "type": "array",
       "description": "Annotations, bottom first. Each has an id and a type; the properties depend on the type.",
       "items": {
-        "oneOf": [{ "$ref": "#/$defs/arrow" }, { "$ref": "#/$defs/otherObject" }]
+        "oneOf": [
+          { "$ref": "#/$defs/arrow" },
+          { "$ref": "#/$defs/image" },
+          { "$ref": "#/$defs/otherObject" }
+        ]
       }
     },
     "effects": { "type": "array", "items": { "type": "object" } }
@@ -77,6 +81,32 @@
             "lineStyle": { "type": "string", "enum": ["solid", "dash", "dot", "dashDot"] },
             "opacity": { "type": "number", "minimum": 0, "maximum": 100 }
           }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "description": "Floating image (EDT-078): a picture of the file's images/ folder drawn in rect, turned by rotation degrees around its center",
+      "required": ["id", "type", "image", "rect", "rotation", "style"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["image"] },
+        "image": { "type": "string", "description": "File name inside images/" },
+        "rect": {
+          "type": "object",
+          "required": ["x", "y", "w", "h"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "w": { "type": "number", "minimum": 1 },
+            "h": { "type": "number", "minimum": 1 }
+          }
+        },
+        "rotation": { "type": "number" },
+        "style": {
+          "type": "object",
+          "required": ["opacity"],
+          "properties": { "opacity": { "type": "number", "minimum": 0, "maximum": 100 } }
         }
       }
     },

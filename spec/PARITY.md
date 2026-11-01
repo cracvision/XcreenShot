@@ -74,6 +74,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-064 | Presets incorporados | M3 | Should | — |
 | CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | En curso |
 | CAP-066 | Perfil de compatibilidad | M1 | Should | — |
+| CAP-067 | Multicaptura (función propia, adelantada) | M1 | Should | En curso |
 
 ## 02-editor.md
 
@@ -156,7 +157,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-075 | Esquinas redondeadas | M2 | Should | — |
 | EDT-076 | Volver al original | M2 | Should | — |
 | EDT-077 | Resolución y densidad de píxeles | M2 | Could | — |
-| EDT-078 | Imágenes flotantes | M2 | Must | — |
+| EDT-078 | Imágenes flotantes (lo básico, adelantado a M1 por CAP-067) | M2 | Must | En curso |
 | EDT-079 | Selección múltiple | M2 | Must | — |
 | EDT-080 | Transformar varios objetos | M2 | Should | — |
 | EDT-081 | Orden de apilado | M2 | Should | — |

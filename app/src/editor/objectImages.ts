@@ -1,7 +1,8 @@
-// Images of the objects Rust draws for the canvas (text, blur), ADR 0004.
+// Images of the objects Rust draws for the canvas (text, blur), ADR 0004, and the
+// pictures of floating images (EDT-078).
 import { useEffect, useState } from "react";
 import { fingerprint } from "./objects";
-import { objectUrl, type DocObject } from "./state";
+import { imageUrl, objectUrl, type DocObject } from "./state";
 
 const images = new Map<string, HTMLImageElement>();
 
@@ -15,17 +16,22 @@ export function useObjectImages(
   version: number,
 ): Map<string, HTMLImageElement> {
   const [last, setLast] = useState(new Map<string, HTMLImageElement>());
-  const wanted = objects
-    .filter((o) => o.type === "text" || (o.type === "blur" && o.style.blurType !== "solid"))
-    .map((o) => ({
-      id: o.id,
-      // A blur shows what is below it: anything changing below changes it.
-      url: objectUrl(
-        documentId,
-        o.id,
-        o.type === "blur" ? `${version}-${fingerprint(o)}` : fingerprint(o),
-      ),
-    }));
+  const wanted = objects.flatMap((o) => {
+    // A picture never changes: its name is its content.
+    if (o.type === "image") return [{ id: o.id, url: imageUrl(documentId, o.image) }];
+    if (o.type !== "text" && !(o.type === "blur" && o.style.blurType !== "solid")) return [];
+    return [
+      {
+        id: o.id,
+        // A blur shows what is below it: anything changing below changes it.
+        url: objectUrl(
+          documentId,
+          o.id,
+          o.type === "blur" ? `${version}-${fingerprint(o)}` : fingerprint(o),
+        ),
+      },
+    ];
+  });
   const key = wanted.map((w) => w.url).join("|");
   useEffect(() => {
     let alive = true;

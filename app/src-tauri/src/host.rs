@@ -178,6 +178,19 @@ impl Host for TauriHost {
         crate::countdown::run(&self.app, seconds)
     }
 
+    fn multicapture_panel(&self, show: bool) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::multicapture_panel(&app, show) {
+                tracing::error!(error = %e, "multi-capture panel");
+            }
+        });
+    }
+
+    fn multicapture_event(&self, state: Value) {
+        let _ = self.app.emit("xs://multicapture", state);
+    }
+
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         let (tx, rx) = std::sync::mpsc::channel();
         let app = self.app.clone();

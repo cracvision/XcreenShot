@@ -234,6 +234,70 @@ impl BlurObject {
     }
 }
 
+/// Floating image properties of M1 (EDT-078). Border, shadow and corners arrive in M2.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct ImageStyle {
+    pub opacity: f64,
+}
+
+impl Default for ImageStyle {
+    fn default() -> Self {
+        ImageStyle { opacity: 100.0 }
+    }
+}
+
+impl ImageStyle {
+    pub fn merged(base: &ImageStyle, changes: &Map<String, Value>) -> Result<ImageStyle, String> {
+        let s: ImageStyle = merged(base, changes)?;
+        if !(0.0..=100.0).contains(&s.opacity) {
+            return Err("opacity must be between 0 and 100".to_string());
+        }
+        Ok(s)
+    }
+}
+
+/// A picture of the document's `images/` folder drawn in a rectangle (EDT-078): it can
+/// be moved, scaled and turned like a shape.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImageObject {
+    /// File name inside `images/`.
+    pub image: String,
+    pub rect: Rect,
+    pub rotation: f64,
+    pub style: ImageStyle,
+}
+
+/// A file name inside `images/`: no folders, nothing hidden.
+pub fn is_image_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+
+impl ImageObject {
+    pub fn from_props(props: &Map<String, Value>) -> Result<ImageObject, String> {
+        let style = match props.get("style") {
+            Some(Value::Object(s)) => ImageStyle::merged(&ImageStyle::default(), s)?,
+            Some(_) => return Err("style must be an object".to_string()),
+            None => ImageStyle::default(),
+        };
+        let image = props
+            .get("image")
+            .and_then(Value::as_str)
+            .filter(|n| is_image_name(n))
+            .ok_or("image must be the name of a file in images/")?;
+        Ok(ImageObject {
+            image: image.to_string(),
+            rect: rect(props.get("rect"))?,
+            rotation: rotation(props),
+            style,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

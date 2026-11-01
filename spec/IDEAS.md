@@ -14,6 +14,8 @@ Formato de cada idea:
 
 ## IDEA-001 · Modo multicaptura (2026-11-01)
 
+> **Aprobada (2026-11-01):** es **CAP-067** en `01-captura.md`. Carlos respondió: clic captura la ventana resaltada y arrastrar un rectángulo; el clic llega a la app; `Esc` termina; la X y Limpiar no borran de la biblioteca. Lo que sigue queda como registro.
+
 **Lo que propone Carlos:**
 - Un modo en el que **cada clic izquierdo hace una captura** y el **clic derecho sale** del modo.
 - Mientras dura, un **panel** muestra las miniaturas de las capturas de esa sesión, y solo de esa sesión. Tiene un botón **Limpiar**, y cada miniatura tiene una **X** para sacarla del panel.

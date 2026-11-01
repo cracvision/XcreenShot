@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use xs_core::document::Object;
 use xs_image::geometry::{Arrow, ArrowStyle};
-use xs_image::shapes::{BlurObject, BlurStyle, ShapeObject, ShapeStyle};
+use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::text::{Text, TextStyle};
 
 /// Current style of each tool: what the next object will look like (EDT-014).
@@ -56,7 +56,6 @@ const LATER_TYPES: &[&str] = &[
     "highlight",
     "magnify",
     "spotlight",
-    "image",
 ];
 
 /// Geometry properties of each type (everything but `style`).
@@ -64,7 +63,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
     match kind {
         "arrow" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
-        "shape" | "blur" => Some(&["rect", "rotation"]),
+        "shape" | "blur" | "image" => Some(&["rect", "rotation"]),
         _ => None,
     }
 }
@@ -122,6 +121,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let b = BlurObject::from_props(props)?;
             json!({"rect": b.rect, "rotation": b.rotation, "style": b.style})
         }
+        "image" => {
+            let i = ImageObject::from_props(props)?;
+            json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style})
+        }
         k => return Err(format!("objects of type \"{k}\" cannot be changed in this build")),
     };
     Ok(value.as_object().cloned().unwrap_or_default())
@@ -135,6 +138,10 @@ pub fn new_object(input: &Value, styles: &Styles) -> Result<(String, Map<String,
         .get("type")
         .and_then(Value::as_str)
         .ok_or("type is required")?;
+    if kind == "image" {
+        // Its picture has to travel with it: document.insert_images (EDT-078).
+        return Err("images are added with document.insert_images".to_string());
+    }
     let Some(keys) = geometry_keys(kind) else {
         return Err(if LATER_TYPES.contains(&kind) {
             format!("type \"{kind}\" arrives in a later build")
@@ -148,6 +155,14 @@ pub fn new_object(input: &Value, styles: &Styles) -> Result<(String, Map<String,
     let style = merge_style(styles.of(kind).as_ref(), &style_changes(obj.get("style"))?);
     props.insert("style".into(), style);
     Ok((kind.to_string(), canonical(kind, &props)?))
+}
+
+/// A floating image showing `image` (a file of `images/`) in `rect` = `[x, y, w, h]`
+/// (EDT-078).
+pub fn image_object(image: &str, rect: [f64; 4]) -> Result<Map<String, Value>, String> {
+    let [x, y, w, h] = rect;
+    let props = json!({"image": image, "rect": {"x": x, "y": y, "w": w, "h": h}, "rotation": 0.0});
+    canonical("image", props.as_object().expect("object"))
 }
 
 /// What an update changed, for the undo step name.

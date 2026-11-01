@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { Circle, Ellipse, Group, Image as KImage, Line, Rect } from "react-konva";
 import { innerRect, pixelBounds } from "./boxes";
 import { dash, type ArrowStyle, type Geometry } from "./geometry";
-import type { BlurObject, ShapeObject, TextObject } from "./state";
+import type { BlurObject, ImageObject, ShapeObject, TextObject } from "./state";
 
 /** Draws its children whole and blends them once when translucent, like the export. */
 function Translucent({
@@ -130,6 +130,26 @@ export function TextShape({ o, image }: { o: TextObject; image: HTMLImageElement
       image={image}
       x={o.at[0] + w / 2}
       y={o.at[1] + h / 2}
+      offsetX={w / 2}
+      offsetY={h / 2}
+      rotation={o.rotation}
+      opacity={o.style.opacity / 100}
+      listening={false}
+    />
+  );
+}
+
+/** A floating image (EDT-078): its picture stretched to its box and turned. */
+export function ImageShape({ o, image }: { o: ImageObject; image: HTMLImageElement | undefined }) {
+  if (!image) return null;
+  const { x, y, w, h } = o.rect;
+  return (
+    <KImage
+      image={image}
+      x={x + w / 2}
+      y={y + h / 2}
+      width={w}
+      height={h}
       offsetX={w / 2}
       offsetY={h / 2}
       rotation={o.rotation}

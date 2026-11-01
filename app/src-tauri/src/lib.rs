@@ -396,6 +396,12 @@ pub fn run() {
                         let core = core.clone();
                         std::thread::spawn(move || xs_editor::save_library_documents(&core));
                     }
+                    if window.label() == windows::MULTI_PANEL {
+                        // Closing the panel ends the session (CAP-067); its captures
+                        // stay in the library.
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_capture::multi::stop(&core, true));
+                    }
                     let keep_loaded = core.settings.get_bool("advanced.keepEditorLoaded");
                     if window.label() == windows::MAIN && keep_loaded {
                         api.prevent_close();

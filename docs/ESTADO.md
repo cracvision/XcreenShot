@@ -34,6 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
 | 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (cinco tandas, 2026-10-28), con el lienzo que crece (EDT-071) |
 | 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Hecha y probada por Carlos (tres tandas, 2026-10-28); falta una tanda corta del arreglo del marco de foco |
+| Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
@@ -70,6 +71,14 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
   - **Lienzo que crece (EDT-071, decisión de Carlos del 2026-10-27):** crece al sacar un objeto del borde, se encoge solo cuando vuelve (nunca por debajo de la imagen o del último recorte), y respeta lo que deja fuera un recorte. Desenfocar no lo amplía. Campos nuevos en el `.xshot`: `frame` y `outside`. Preferencia `editor.autoExpandCanvas`.
   - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (tamaño del texto en puntos, intensidad del desenfoque, cuentagotas en macOS, huella del portapapeles, pegar imágenes con un documento abierto, tamaño de `Ctrl+Enter`).
 
+- **Multicaptura, CAP-067** (2026-11-01, pedida y decidida por Carlos; ver `spec/IDEAS.md` IDEA-001):
+  - `xs-capture/src/multi.rs`: los gestos (clic, arrastre, doble clic) sin llamadas al sistema, con pruebas; la sesión, sus capturas y los comandos `capture.multi_start`, `multi_stop`, `multi_state`, `multi_remove`, `multi_clear`.
+  - `xs-capture/src/multi_win.rs` (Windows): gancho de ratón y teclado de bajo nivel en un hilo propio. La pulsación se retiene, se captura la ventana y se devuelve el clic con `SendInput` (marcado, para no volver a capturarlo). Cuatro ventanas finas hacen el borde resaltado (`WDA_EXCLUDEFROMCAPTURE`). Las ventanas de apps elevadas no se retienen (Windows no deja devolverles el clic).
+  - Cada captura se guarda en la biblioteca sin abrirse (`xs_editor::save_capture`). Mientras dura, las demás capturas responden `busy`.
+  - Panel `multicapture` (React, `windows/MultiCapture.tsx`): miniaturas por `xsdoc://…/multi/<id>`, elegir, X, Limpiar, Insertar, Terminar, Capturar más y Cerrar. Nunca sale en las capturas (`content_protected`). Entrada **Multicaptura** en el menú del ícono y atajo asignable, sin atajo por defecto.
+  - **Imágenes flotantes (EDT-078, lo básico, adelantado):** objeto `image` (`image`, `rect`, `rotation`, `style.opacity`) con su imagen en `images/` del `.xshot`; dibujado en Rust (`render.rs`) y en Konva. Se mueve, redimensiona (proporción desde la esquina; `Shift` la libera) y gira como una forma, en píxeles enteros. Comando `document.insert_images`. Pegar una imagen de otra app con un documento abierto ya la inserta como imagen flotante.
+  - Probado en la instancia aislada con una ventana de prueba propia y clics reales: ver [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md).
+  - `scripts/dev/cdp.mjs` acepta `XS_CDP_WINDOW=<etiqueta>` para manejar otras ventanas (el panel, Preferencias).
 - **Entrega 4c** (2026-10-28):
   - Barra de menús nativa del editor en Windows (Archivo, Edición, Ver, Ayuda), con el atajo de cada entrada y las que no aplican en gris; menú del clic derecho en el lienzo y en la barra (EDT-002).
   - Atajos del editor asignables: ámbito nuevo **Editor** en Preferencias > Atajos, que en el editor gana a los de la app (EDT-115, EDT-116). Comando nuevo `editor.action` (lo usan menús y atajos) y `editor.menu_state` (solo interfaz).
@@ -91,12 +100,13 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
 3. **Entrega 4c:** Carlos marcó PASS las tres tandas de [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (2026-10-28, instalador `66a0f62`). Falta la tanda 4, corta, con el arreglo del marco de foco (instalador posterior a `66a0f62`). Carlos no ha objetado `Ctrl+Alt+Shift+E` para Exportar (la probó en la tanda 2); sigue provisional en `spec/QUESTIONS.md`.
 4. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
-5. **Ideas de Carlos (2026-11-01), guardadas en [`spec/IDEAS.md`](../spec/IDEAS.md):** modo multicaptura (IDEA-001) y entender imágenes con IA en la nube (IDEA-002). Esperan sus respuestas a las preguntas de cada una; no se construyen todavía. La IDEA-002 exige cambiar el principio "todo local" (SPEC §2.3).
-6. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
+5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
+6. **IDEA-002 (IA en la nube, [`spec/IDEAS.md`](../spec/IDEAS.md)):** parada hasta que Carlos responda sus tres preguntas. Exige cambiar el principio "todo local" (SPEC §2.3); no construir nada antes.
+7. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-La entrega 4 está terminada salvo la tanda 4 de la 4c; corregir lo que reporte Carlos. Después, la **entrega 5 (biblioteca)**:
+Corregir lo que Carlos reporte de la tanda 4 de la 4c y de la multicaptura. Después, la **entrega 5 (biblioteca)**:
 1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
 2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
 3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.

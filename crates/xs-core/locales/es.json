@@ -245,7 +245,7 @@
     },
     "document_paste": {
       "title": "Pegar",
-      "description": "Pega lo que hay en el portapapeles: objetos copiados en XcreenShot (editables, desplazados 10 px si los originales siguen ahí, o en el mismo sitio), texto plano como objeto de texto, o una imagen como documento nuevo si no hay nada abierto."
+      "description": "Pega lo que hay en el portapapeles: objetos copiados en XcreenShot (editables, desplazados 10 px si los originales siguen ahí, o en el mismo sitio), texto plano como objeto de texto, o una imagen como imagen flotante del documento que se muestra, o como documento nuevo si no hay nada abierto."
     },
     "editor_action": {
       "title": "Acción del editor",
@@ -254,6 +254,30 @@
     "editor_menu_state": {
       "title": "Estado de los menús del editor",
       "description": "La ventana del editor indica qué entradas de sus menús se pueden usar ahora y cuáles están marcadas."
+    },
+    "capture_multi_start": {
+      "title": "Multicaptura",
+      "description": "Inicia la multicaptura: cada clic captura la ventana que hay bajo el puntero tal como se veía justo antes del clic, y después el clic llega a la app; arrastrar captura un rectángulo. Esc la termina. Las capturas de la sesión aparecen en un panel."
+    },
+    "capture_multi_stop": {
+      "title": "Terminar la multicaptura",
+      "description": "Deja de capturar los clics. El panel se queda para poder insertar sus capturas, salvo que close también lo cierre y olvide la sesión."
+    },
+    "capture_multi_state": {
+      "title": "Estado de la multicaptura",
+      "description": "Si se están capturando los clics y las capturas de la sesión."
+    },
+    "capture_multi_remove": {
+      "title": "Quitar de la multicaptura",
+      "description": "Saca capturas del panel de multicaptura. Siguen en la biblioteca."
+    },
+    "capture_multi_clear": {
+      "title": "Limpiar la multicaptura",
+      "description": "Vacía el panel de multicaptura. Las capturas siguen en la biblioteca."
+    },
+    "document_insert_images": {
+      "title": "Insertar imágenes",
+      "description": "Inserta documentos de la biblioteca o archivos de imagen como imágenes flotantes del documento que se muestra, en cascada desde el centro. Sin nada abierto, un documento de la biblioteca se abre tal cual y varios forman un documento nuevo con ellos apilados."
     }
   },
   "settings": {
@@ -418,7 +442,10 @@
     "recovery_not_found": "No hay ningún elemento recuperable \"{{id}}\".",
     "copy_failed": "No se pudo copiar la imagen al portapapeles. Inténtalo de nuevo.",
     "nothing_to_paste": "El portapapeles no tiene nada que XcreenShot pueda pegar.",
-    "paste_image_later": "Pegar una imagen en un documento abierto llega en M2. Cierra los documentos para pegarla como uno nuevo."
+    "multicapture_busy": "La multicaptura está activa. Pulsa Esc o Terminar en su panel primero.",
+    "multicapture_platform": "La multicaptura todavía no está disponible en este sistema.",
+    "multicapture_item": "El panel de multicaptura no tiene la captura {{id}}.",
+    "nothing_to_insert": "Indica al menos un archivo para insertar."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -491,7 +518,8 @@
     "capture_universal": "Captura universal",
     "capture_image": "Captura de imagen",
     "capture_repeat_last": "Repetir última captura",
-    "capture_panel": "Abrir panel de captura"
+    "capture_panel": "Abrir panel de captura",
+    "capture_multi": "Multicaptura"
   },
   "menu": {
     "file": "&Archivo",
@@ -725,7 +753,8 @@
         "text": "Texto",
         "shape": "Forma",
         "blur": "Desenfocar",
-        "crop": "Recortar"
+        "crop": "Recortar",
+        "image": "Imagen"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -874,6 +903,25 @@
         "tool": "Herramienta: {{tool}}",
         "zoom": "Zoom {{zoom}} %"
       }
+    },
+    "multi": {
+      "title": "Multicaptura",
+      "hint": "Haz clic en una ventana para capturarla; el clic le sigue llegando. Arrastra para capturar un rectángulo. Esc termina.",
+      "stopped": "La captura terminó. Elige capturas para insertarlas, o captura más.",
+      "empty": "Todavía no hay capturas. Haz clic en una ventana para empezar.",
+      "captures": "Capturas de esta sesión",
+      "capture_n": "Captura {{n}}, {{width}} por {{height}} píxeles",
+      "remove": "Quitar {{name}} del panel",
+      "remove_hint": "Quitar del panel (sigue en la biblioteca)",
+      "all": "Elegir todas",
+      "none": "No elegir ninguna",
+      "clear": "Limpiar",
+      "insert_one": "Insertar {{count}}",
+      "insert_other": "Insertar {{count}}",
+      "finish": "Terminar (Esc)",
+      "resume": "Capturar más",
+      "close": "Cerrar",
+      "insert_none": "Insertar"
     }
   },
   "history": {
@@ -908,7 +956,13 @@
     "paste_text": "Pegar texto",
     "paste_shape": "Pegar forma",
     "paste_blur": "Pegar desenfoque",
-    "paste_objects": "Pegar objetos"
+    "paste_objects": "Pegar objetos",
+    "insert_image": "Insertar imagen",
+    "move_image": "Mover imagen",
+    "change_image": "Cambiar imagen",
+    "delete_image": "Eliminar imagen",
+    "cut_image": "Cortar imagen",
+    "paste_image": "Pegar imagen"
   },
   "editor": {
     "edited": "{{name}} — Editado"

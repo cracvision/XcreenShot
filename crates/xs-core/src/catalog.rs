@@ -112,6 +112,30 @@ fn capture_result() -> Value {
     })
 }
 
+/// What the multi-capture panel shows (CAP-067).
+fn multi_state() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "capturing": {"type": "boolean", "description": "Clicks are being captured"},
+            "items": {
+                "type": "array",
+                "description": "Captures of the session, oldest first, saved in the library",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "path": {"type": "string"},
+                        "width": {"type": "integer"},
+                        "height": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "required": ["capturing", "items"]
+    })
+}
+
 const PERMISSIONS: [&str; 4] = ["screen_recording", "accessibility", "camera", "microphone"];
 
 pub fn specs() -> Vec<CommandSpec> {
@@ -265,6 +289,29 @@ pub fn specs() -> Vec<CommandSpec> {
             .assignable()
             .params(params(json!({"show": {"type": "boolean"}}), &[]))
             .result(json!({"type": "object", "properties": {"visible": {"type": "boolean"}}})),
+        B::new("capture.multi_start", &["CAP-067"])
+            .scopes(ALL)
+            .assignable()
+            .interactive()
+            .mutates()
+            .result(multi_state()),
+        B::new("capture.multi_stop", &["CAP-067"])
+            .params(params(
+                json!({"close": {"type": "boolean", "default": false, "description": "Also close the panel and forget the session's captures (they stay in the library)"}}),
+                &[],
+            ))
+            .result(multi_state()),
+        B::new("capture.multi_state", &["CAP-067"]).result(multi_state()),
+        B::new("capture.multi_remove", &["CAP-067"])
+            .mutates()
+            .params(params(
+                json!({"ids": {"type": "array", "items": {"type": "string"}, "description": "Ids of captures of the session"}}),
+                &["ids"],
+            ))
+            .result(multi_state()),
+        B::new("capture.multi_clear", &["CAP-067"])
+            .mutates()
+            .result(multi_state()),
         B::new("capture.settings", &["CAP-001", "CAP-002", "CAP-010"]).result(json!({"type": "object"})),
         B::new("capture.configure", &["CAP-001", "CAP-002", "CAP-010"])
             .mutates()
@@ -469,6 +516,24 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["objectIds"],
             ))
             .result(json!({"type": "object", "properties": {"count": {"type": "integer"}}})),
+        B::new("document.insert_images", &["EDT-078", "CAP-067"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Library documents (.xshot) or PNG/JPG files"},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "Canvas point [x, y] the first image is centered on (default: the canvas center)"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "documentId": {"type": "string"},
+                    "ids": {"type": "array", "items": {"type": "string"}},
+                    "created": {"type": "boolean", "description": "A new document was made for them"}
+                }
+            })),
         B::new("document.paste", &["EDT-089"])
             .scopes(ALL)
             .assignable()

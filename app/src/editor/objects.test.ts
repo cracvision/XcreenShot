@@ -71,6 +71,27 @@ describe("objects on the canvas (EDT-022, EDT-042)", () => {
     expect(outside([tip], 250, 300)).toEqual([]);
   });
 
+  it("moves, resizes and turns floating images like shapes (EDT-078)", () => {
+    const image: DocObject = {
+      id: "i",
+      type: "image",
+      image: "img-1.png",
+      rect: { x: 10, y: 10, w: 40, h: 20 },
+      rotation: 0,
+      style: { opacity: 100 },
+    };
+    expect(boxOf(image)).toEqual({ x: 10, y: 10, w: 40, h: 20, rotation: 0 });
+    expect(hits(image, [30, 20], 0)).toBe(true);
+    expect(moved(image, 5, -5)[1]).toEqual({ rect: { x: 15, y: 5, w: 40, h: 20 } });
+    // Whole pixels, so the picture stays sharp.
+    expect(moved(image, 5.4, -5.6)[1]).toEqual({ rect: { x: 15, y: 4, w: 40, h: 20 } });
+    expect(reboxed(image, { x: 0, y: 0, w: 80, h: 40, rotation: 90 })[1]).toEqual({
+      rect: { x: 0, y: 0, w: 80, h: 40 },
+      rotation: 90,
+    });
+    expect(outside([image], 40, 40)).toEqual(["i"]);
+  });
+
   it("fingerprints change with the object", () => {
     expect(fingerprint(text)).not.toBe(fingerprint({ ...text, text: "Adiós" } as DocObject));
   });

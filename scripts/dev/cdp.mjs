@@ -13,6 +13,8 @@
 import { writeFileSync } from "node:fs";
 
 const PORT = 9333;
+// Another window than the editor: XS_CDP_WINDOW=multicapture, preferences…
+const WINDOW = process.env.XS_CDP_WINDOW ?? "main";
 const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
 
 function connect(url) {
@@ -62,14 +64,14 @@ for (const t of targets.filter((t) => t.type === "page")) {
     c,
     "window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label",
   );
-  if (label === "main") {
+  if (label === WINDOW) {
     main = c;
     break;
   }
   c.close();
 }
 if (!main) {
-  console.error("main window not found");
+  console.error(`${WINDOW} window not found`);
   process.exit(1);
 }
 

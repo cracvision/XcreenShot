@@ -435,6 +435,130 @@ fn resolve_refs(v: &Value, defs: &Value) -> Value {
     }
 }
 
+/// A red PNG outside the library, to insert.
+fn red_png(e: &Env, w: u32, h: u32) -> PathBuf {
+    let path = xs_library::unique(e.outside.path(), "red", "png");
+    let red = image::RgbaImage::from_pixel(w, h, image::Rgba([255, 0, 0, 255]));
+    std::fs::write(&path, xs_image::encode::png(&red, 96.0, false).unwrap()).unwrap();
+    path
+}
+
+/// EDT-078, CAP-067: inserted files become floating images of the document shown,
+/// saved with their pictures, in one undo step; they move and resize like shapes.
+#[test]
+fn inserted_images_float_over_the_document() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    let red = red_png(&e, 40, 20);
+    let r = cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red, red], "center": [100, 100]}),
+    );
+    assert_eq!(r["documentId"], json!(doc));
+    assert_eq!(r["ids"], json!(["o1", "o2"]));
+    assert_eq!(r["created"], json!(false));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let first = &info["objects"][0];
+    assert_eq!(first["type"], "image");
+    assert_eq!(first["rect"], json!({"x": 80.0, "y": 90.0, "w": 40.0, "h": 20.0}));
+    assert_eq!(
+        info["objects"][1]["rect"]["x"],
+        json!(104.0),
+        "the next one 24 px further"
+    );
+    assert_eq!(
+        first["image"], info["objects"][1]["image"],
+        "the same picture is kept once"
+    );
+    assert_eq!(info["undoLabel"], "Insert image");
+
+    let out = e.outside.path().join("out.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    let png = image::open(&out).unwrap().to_rgba8();
+    assert_eq!(png.get_pixel(90, 95).0, [255, 0, 0, 255]);
+    assert_eq!(png.get_pixel(60, 95).0, [255, 255, 255, 255]);
+
+    // They move and resize like shapes, and keep their picture.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"rect": {"x": 0, "y": 0, "w": 80, "h": 40}}}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = xs_core::document::Xshot::read(&path).unwrap();
+    let name = file.document.objects[0].props["image"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(file.images.contains_key(&name), "the picture travels in the file");
+    assert_eq!(file.images.len(), 1);
+
+    // Undone, and saved again: the picture no longer stays in the file.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(
+        cli(&e.core, "document.info", json!({"documentId": doc}))["objects"],
+        json!([])
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    assert!(xs_core::document::Xshot::read(&path).unwrap().images.is_empty());
+
+    // Agents insert them with this command, not with annotate.
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "image", "image": name, "rect": {"x": 0, "y": 0, "w": 9, "h": 9}}]}),
+    )
+    .unwrap_err();
+    assert!(err.message.contains("insert_images"), "{}", err.message);
+}
+
+/// CAP-067: with nothing open, one capture opens as itself and several make a new
+/// document with them stacked 10 px apart.
+#[test]
+fn inserting_with_nothing_open() {
+    let e = env();
+    let (one, path) = capture(&e);
+    cli(&e.core, "document.close", json!({"documentId": one}));
+    let r = cli(&e.core, "document.insert_images", json!({"paths": [path]}));
+    assert_eq!(r["created"], json!(false));
+    assert_eq!(r["ids"], json!([]));
+    cli(&e.core, "document.close", json!({"all": true}));
+
+    let red = red_png(&e, 40, 20);
+    let r = cli(&e.core, "document.insert_images", json!({"paths": [path, red]}));
+    assert_eq!(r["created"], json!(true));
+    let doc = r["documentId"].as_str().unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (
+            info["canvas"]["width"].as_u64(),
+            info["canvas"]["height"].as_u64()
+        ),
+        (Some(400), Some(230))
+    );
+    assert_eq!(
+        info["objects"][1]["rect"],
+        json!({"x": 0.0, "y": 210.0, "w": 40.0, "h": 20.0})
+    );
+    assert_eq!(cli(&e.core, "document.list", json!({}))["active"], json!(doc));
+
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.insert_images",
+        json!({"paths": [e.outside.path().join("nope.png")]}),
+    )
+    .unwrap_err();
+    assert_eq!(err.code, ErrorCode::NotFound);
+}
+
 #[test]
 fn saved_documents_follow_the_published_schema() {
     let e = env();
@@ -457,6 +581,17 @@ fn saved_documents_follow_the_published_schema() {
     for o in value["objects"].as_array().unwrap() {
         xs_core::schema::validate(&arrow_schema, o).unwrap();
     }
+    // A floating image against its own schema (EDT-078).
+    let red = red_png(&e, 10, 10);
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = xs_core::document::Xshot::read(&path).unwrap();
+    let image = serde_json::to_value(&file.document.objects[1]).unwrap();
+    xs_core::schema::validate(&resolve_refs(&defs["image"], &defs), &image).unwrap();
 }
 
 #[test]

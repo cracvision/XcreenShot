@@ -22,7 +22,7 @@ import {
 } from "./boxes";
 import { arrowGeometry, constrain45, type Point } from "./geometry";
 import { useObjectImages } from "./objectImages";
-import { ArrowShape, BlurShape, ShapeShape, TextShape } from "./ObjectShapes";
+import { ArrowShape, BlurShape, ImageShape, ShapeShape, TextShape } from "./ObjectShapes";
 import { boxOf, hits, moved, reboxed } from "./objects";
 import {
   docUrl,
@@ -128,7 +128,8 @@ const checker = (() => {
 /** Handles a selected object shows (EDT-022): text changes only its width. */
 function handlesOf(o: DocObject): Handle[] {
   if (o.type === "text") return ["w", "e", "rotate"];
-  if (o.type === "shape" || o.type === "blur") return [...RESIZE_HANDLES, "rotate"];
+  if (o.type === "shape" || o.type === "blur" || o.type === "image")
+    return [...RESIZE_HANDLES, "rotate"];
   return [];
 }
 
@@ -508,12 +509,17 @@ export function Canvas({ doc }: Props) {
         setDrag({ ...drag, delta: isMoved ? [dx, dy] : [0, 0], moved: isMoved });
         break;
       }
-      case "resize":
+      case "resize": {
+        // An image keeps its proportions from a corner; Shift frees them (EDT-078).
+        const image = doc.objects.find((o) => o.id === drag.id)?.type === "image";
+        const corner = drag.handle.length === 2;
+        const keepRatio = image && corner ? !e.shiftKey : e.shiftKey;
         setDrag({
           ...drag,
-          box: resize(drag.start, drag.handle, p, { keepRatio: e.shiftKey, fromCenter: e.altKey }),
+          box: resize(drag.start, drag.handle, p, { keepRatio, fromCenter: e.altKey }),
         });
         break;
+      }
       case "rotate":
         setDrag({ ...drag, box: { ...drag.start, rotation: rotateTo(drag.start, p, e.shiftKey) } });
         break;
@@ -744,6 +750,8 @@ export function Canvas({ doc }: Props) {
         return o.id === editingId ? null : (
           <TextShape key={o.id} o={o} image={objectImages.get(o.id)} />
         );
+      case "image":
+        return <ImageShape key={o.id} o={o} image={objectImages.get(o.id)} />;
       default:
         return null;
     }

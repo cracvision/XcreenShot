@@ -8,6 +8,9 @@
 
 pub mod compose;
 pub mod interactive;
+pub mod multi;
+#[cfg(windows)]
+mod multi_win;
 pub mod panel;
 pub mod platform;
 
@@ -602,6 +605,13 @@ const LAST_AREA_KEY: &str = "capture.lastArea";
 /// it for "Repeat last capture" (CAP-007). The capture panel steps aside meanwhile
 /// (CAP-001, CAP-023).
 fn dispatch(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
+    // Multi-capture holds the mouse: finish it first (CAP-067).
+    if multi::capturing(core) {
+        return Err(
+            CommandError::new(ErrorCode::Busy, tr(ctx.lang, "errors.multicapture_busy", &[]))
+                .with_details(json!({ "status": "busy" })),
+        );
+    }
     let _busy = Busy::take(ctx.lang)?;
     core.remember(
         LAST_KEY,
@@ -793,6 +803,35 @@ pub fn extension() -> Extension {
             })?;
             panel::save(&core, &next);
             Ok(serde_json::to_value(next).unwrap_or_default())
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_start", move |ctx, _p| {
+            multi::start(&upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_stop", move |_ctx, p| {
+            let close = p.get("close").and_then(Value::as_bool).unwrap_or(false);
+            Ok(multi::stop(&*upgrade(&w)?, close))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_state", move |_ctx, _p| {
+            Ok(multi::get_state(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_remove", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let ids: Vec<String> = p["ids"]
+                .as_array()
+                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            if let Some(missing) = ids.iter().find(|id| !multi::has_item(&core, id)) {
+                return Err(multi::unknown(ctx.lang, missing));
+            }
+            Ok(multi::remove(&core, &ids))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_clear", move |_ctx, _p| {
+            Ok(multi::clear(&*upgrade(&w)?))
         });
         let w = weak;
         reg.handle("capture.reset_settings", move |_ctx, _p| {

@@ -5,6 +5,9 @@
 //! - `/<documentId>/thumb` returns a small PNG of the final image, for the strip of
 //!   open documents.
 //! - `/<documentId>/object/<objectId>` returns a text or blur object as Rust draws it.
+//! - `/<documentId>/image/<name>` returns a picture of the document's `images/` folder
+//!   (a floating image, EDT-078).
+//! - `/multi/<itemId>` returns the thumbnail of a multi-capture (CAP-067).
 
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager};
@@ -28,6 +31,15 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             xs_image::encode::png(&image, 0.0, true)
                 .ok()
                 .map(|png| (std::sync::Arc::new(png), "image/png"))
+        }),
+        ["multi", item] => xs_capture::multi::thumbnail_png(&core, item).map(|png| (png, "image/png")),
+        [id, "image", name] => editor.store.image_file(id, name).map(|bytes| {
+            let mime = if name.ends_with(".jpg") {
+                "image/jpeg"
+            } else {
+                "image/png"
+            };
+            (std::sync::Arc::new(bytes), mime)
         }),
         [id, "thumb"] => editor.store.snapshot(id).ok().and_then(|snap| {
             let small = xs_image::encode::thumbnail(&snap.render(), THUMB);

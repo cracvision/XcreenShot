@@ -97,9 +97,25 @@ export interface BlurObject {
   style: BlurStyle;
 }
 
+/** Floating image properties of M1 (EDT-078). */
+export interface ImageStyle {
+  opacity: number;
+}
+
+/** A picture of the document's `images/` folder in a rectangle (EDT-078). */
+export interface ImageObject {
+  id: string;
+  type: "image";
+  /** File name in `images/`. */
+  image: string;
+  rect: Rect;
+  rotation: number;
+  style: ImageStyle;
+}
+
 /** Objects of later builds are kept and drawn by the core, not edited here. */
 export type DocObject =
-  ArrowObject | TextObject | ShapeObject | BlurObject | { id: string; type: "other" };
+  ArrowObject | TextObject | ShapeObject | BlurObject | ImageObject | { id: string; type: "other" };
 
 export interface Styles {
   arrow: ArrowStyle;
@@ -383,11 +399,20 @@ export const usePointer = create<{
 }>(() => ({ point: null, screen: null }));
 
 /** URL of an object Rust draws for the canvas (text, blur); `version` busts caches. */
-export function objectUrl(documentId: string, objectId: string, version: string): string {
-  const path = `${documentId}/object/${objectId}?v=${version}`;
+/** URL of `path` on the `xsdoc` protocol (ADR 0004). */
+export function xsdocUrl(path: string): string {
   return navigator.userAgent.includes("Windows")
     ? `http://xsdoc.localhost/${path}`
     : `xsdoc://localhost/${path}`;
+}
+
+export function objectUrl(documentId: string, objectId: string, version: string): string {
+  return xsdocUrl(`${documentId}/object/${objectId}?v=${version}`);
+}
+
+/** A picture of a document's `images/` folder: a floating image (EDT-078). */
+export function imageUrl(documentId: string, name: string): string {
+  return xsdocUrl(`${documentId}/image/${encodeURIComponent(name)}`);
 }
 
 /** URL of a document's pixels for the canvas (`xsdoc` protocol, ADR 0004). */

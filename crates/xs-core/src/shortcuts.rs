@@ -425,6 +425,8 @@ pub fn slots() -> Vec<Slot> {
         // No default in any profile (CAP-065); assignable in Preferences > Shortcuts.
         capture("capture.repeat_last_area", "capture.repeat_last_area", ""),
         capture("capture.panel", "capture.panel", ""),
+        // No default (CAP-067); assignable in Preferences > Shortcuts.
+        capture("capture.multi_start", "capture.multi_start", ""),
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),

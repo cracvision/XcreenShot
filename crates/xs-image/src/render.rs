@@ -1,6 +1,7 @@
 //! Final image of a document (EDT-110): canvas color, the cropped base pixels and
 //! every object, flattened, without any interface element (handles, guides).
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use image::RgbaImage;
@@ -12,15 +13,19 @@ use xs_core::document::{Document, Object};
 use crate::color::Rgba;
 use crate::effects;
 use crate::geometry::{dash, Arrow, Geometry, Shape};
-use crate::shapes::{inner_rect, pixel_bounds, BlurObject, BlurType, Rect, ShapeKind, ShapeObject};
+use crate::shapes::{
+    inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
+};
 use crate::text::{self, Text};
 
-/// Original pixels of a document, straight RGBA, shared between renders.
+/// Original pixels of a document, straight RGBA, shared between renders, with the
+/// pictures of its floating images (`images/`, EDT-078), decoded.
 #[derive(Clone)]
 pub struct Base {
     pub width: u32,
     pub height: u32,
     pub rgba: Arc<Vec<u8>>,
+    pub images: Arc<BTreeMap<String, Arc<Pixmap>>>,
 }
 
 impl Base {
@@ -29,12 +34,41 @@ impl Base {
             width: image.width(),
             height: image.height(),
             rgba: Arc::new(image.into_raw()),
+            images: Arc::default(),
         }
     }
 
     pub fn to_image(&self) -> RgbaImage {
         RgbaImage::from_raw(self.width, self.height, self.rgba.as_ref().clone()).expect("buffer size")
     }
+
+    /// Adds the picture of a floating image, from its encoded file (PNG or JPG).
+    pub fn add_image(&mut self, name: &str, bytes: &[u8]) -> Result<(), String> {
+        let picture = premultiplied(&crate::encode::decode(bytes)?).ok_or("empty image")?;
+        Arc::make_mut(&mut self.images).insert(name.to_string(), Arc::new(picture));
+        Ok(())
+    }
+}
+
+/// `image` as a premultiplied pixmap, ready to draw.
+fn premultiplied(image: &RgbaImage) -> Option<Pixmap> {
+    let mut pm = Pixmap::new(image.width(), image.height())?;
+    for (d, s) in pm
+        .data_mut()
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(image.as_raw().as_chunks::<4>().0)
+    {
+        let a = s[3] as u32;
+        let pm = |v: u8| ((v as u32 * a + 127) / 255) as u8;
+        *d = if a == 255 {
+            *s
+        } else {
+            [pm(s[0]), pm(s[1]), pm(s[2]), s[3]]
+        };
+    }
+    Some(pm)
 }
 
 /// Premultiplied copy of the part of `base` under the canvas, and where it goes.
@@ -279,7 +313,7 @@ fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
 }
 
 /// Draws one object. Kinds this build does not know are skipped (a newer file).
-fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64) {
+fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
     match object.kind.as_str() {
         "arrow" => {
             let Ok(a) = Arrow::from_props(&object.props) else {
@@ -314,6 +348,27 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64) {
             if let Ok(s) = ShapeObject::from_props(&object.props) {
                 draw_shape(pm, &s);
             }
+        }
+        "image" => {
+            let Ok(i) = ImageObject::from_props(&object.props) else {
+                return;
+            };
+            let Some(picture) = images.get(&i.image) else {
+                return;
+            };
+            let r = i.rect;
+            let paint = PixmapPaint {
+                opacity: (i.style.opacity / 100.0).clamp(0.0, 1.0) as f32,
+                quality: tiny_skia::FilterQuality::Bicubic,
+                ..PixmapPaint::default()
+            };
+            let at = turned(r, i.rotation)
+                .pre_translate(r.x as f32, r.y as f32)
+                .pre_scale(
+                    (r.w / picture.width() as f64) as f32,
+                    (r.h / picture.height() as f64) as f32,
+                );
+            pm.draw_pixmap(0, 0, picture.as_ref().as_ref(), &paint, at, None);
         }
         "blur" => {
             let Ok(b) = BlurObject::from_props(&object.props) else {
@@ -443,6 +498,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "blur" => BlurObject::from_props(&object.props)
             .ok()
             .map(|b| (b.rect, b.rotation)),
+        "image" => ImageObject::from_props(&object.props)
+            .ok()
+            .map(|i| (i.rect, i.rotation)),
         _ => None,
     };
     if let Some((r, rotation)) = rect {
@@ -457,7 +515,7 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = canvas(doc, base);
     for object in &doc.objects {
-        draw_object(&mut pm, object, doc.dpi);
+        draw_object(&mut pm, object, doc.dpi, &base.images);
     }
     straight(&pm)
 }
@@ -481,7 +539,7 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
             }
             let mut pm = canvas(doc, base);
             for below in &doc.objects[..index] {
-                draw_object(&mut pm, below, doc.dpi);
+                draw_object(&mut pm, below, doc.dpi, &base.images);
             }
             let (patch, x, y) = blur_patch(&pm, &b)?;
             Some((straight(&patch), x, y))
@@ -673,6 +731,39 @@ mod tests {
         let (own, x, y) = object_image(&doc, &base, "text1").unwrap();
         assert_eq!((x, y), (20, 30));
         assert!(own.width() > 40);
+    }
+
+    /// EDT-078: a floating image is drawn scaled into its rectangle, its bounds turn
+    /// with it, and a missing picture draws nothing.
+    #[test]
+    fn floating_images_are_scaled_into_their_rectangle() {
+        let mut base = white(100, 60);
+        let red = RgbaImage::from_pixel(10, 5, image::Rgba([255, 0, 0, 255]));
+        let png = crate::encode::png(&red, 96.0, true).unwrap();
+        base.add_image("img-1.png", &png).unwrap();
+        let mut doc = Document::new(100, 60, 96.0);
+        doc.objects.push(object(
+            "image",
+            json!({"image": "img-1.png", "rect": {"x": 10, "y": 10, "w": 40, "h": 20}}),
+        ));
+        doc.objects.push(object(
+            "image",
+            json!({"image": "img-2.png", "rect": {"x": 60, "y": 10, "w": 20, "h": 20}}),
+        ));
+        let img = render(&doc, &base);
+        assert_eq!(img.get_pixel(12, 12).0, [255, 0, 0, 255]);
+        assert_eq!(img.get_pixel(48, 28).0, [255, 0, 0, 255], "scaled up to 40 x 20");
+        assert_eq!(img.get_pixel(52, 12).0, [255, 255, 255, 255]);
+        assert_eq!(
+            img.get_pixel(70, 20).0,
+            [255, 255, 255, 255],
+            "no picture, nothing drawn"
+        );
+        let mut turned = doc.objects[0].clone();
+        turned.props.insert("rotation".into(), json!(90));
+        let b = object_bounds(&turned, 96.0).unwrap();
+        assert!((b[0] - 20.0).abs() < 1e-9 && (b[1] - 0.0).abs() < 1e-9, "{b:?}");
+        assert!((b[2] - 40.0).abs() < 1e-9 && (b[3] - 40.0).abs() < 1e-9, "{b:?}");
     }
 
     #[test]
