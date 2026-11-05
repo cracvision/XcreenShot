@@ -56,8 +56,8 @@ const REFRESH: Duration = Duration::from_millis(400);
 const AFTER_CLICK: Duration = Duration::from_millis(150);
 /// Width of the frame around what a click captures, in physical pixels.
 const FRAME: i32 = 3;
-/// Frame color: the accent of the dark theme, visible on light and dark windows.
-const FRAME_COLOR: u32 = 0x3C | (0xC2 << 8) | (0xB2 << 16);
+/// Frame color: the logo's bright blue (#0C9AFC), visible on light and dark windows.
+const FRAME_COLOR: u32 = 0x0C | (0x9A << 8) | (0xFC << 16);
 
 /// A window or monitor, top of the stack first.
 #[derive(Debug, Clone)]

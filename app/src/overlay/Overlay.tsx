@@ -82,7 +82,8 @@ type Interaction =
   | { kind: "resize"; handle: Handle; orig: Rect }
   | null;
 
-const ACCENT = "#2ec4b6";
+/** The selection over any screen: the logo's bright blue. */
+const ACCENT = "#0c9afc";
 const OUTLINE = "rgba(0, 0, 0, 0.65)";
 const DIM = "rgba(0, 0, 0, 0.4)";
 const MAG_CSS = 168; // magnifier box, CSS px

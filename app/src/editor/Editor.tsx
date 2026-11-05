@@ -2,6 +2,8 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import logoDark from "../assets/brand/logo-dark.webp";
+import logoLight from "../assets/brand/logo-light.webp";
 import { Keys } from "../components/Keys";
 import { displayKeys } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
@@ -30,7 +32,13 @@ function Empty({ dropping }: { dropping: boolean }) {
   return (
     <div className={`editor-empty${dropping ? " dropping" : ""}`}>
       <div className="empty-card">
-        <div className="empty-viewfinder" aria-hidden="true" />
+        {/* The logo stays while no capture is shown; its REC dot blinks as if
+            recording (Carlos, 2026-11-05). */}
+        <div className="brand-logo">
+          <img className="logo-light" src={logoLight} alt="XcreenShot" draggable={false} />
+          <img className="logo-dark" src={logoDark} alt="XcreenShot" draggable={false} />
+          <span className="rec-dot" aria-hidden="true" />
+        </div>
         <h1>{t("ui.editor.empty_title")}</h1>
         <p className="muted">{t("ui.editor.empty_help")}</p>
         <div className="row">

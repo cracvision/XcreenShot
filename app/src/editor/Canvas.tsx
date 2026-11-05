@@ -52,7 +52,8 @@ const DRAG_THRESHOLD = 3;
 const HANDLE = 11;
 const HIT = 6;
 const STEM = 24;
-const ACCENT = "#0b7469";
+/** Selection outline and handles: the logo's electric blue. */
+const ACCENT = "#0064fb";
 
 type BoxHandle = Exclude<Handle, "rotate">;
 
