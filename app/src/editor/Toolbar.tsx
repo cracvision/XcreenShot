@@ -3,7 +3,7 @@
 // Share ▾). Tooltips show the current shortcut (APP-014).
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
-import { MenuButton } from "../components/MenuButton";
+import { Menu } from "../components/Menu";
 import { run } from "../lib/commands";
 import {
   copyAll,
@@ -146,21 +146,30 @@ export function Toolbar() {
           <Icon name="copy" />
           <span className="tb-label tb-wide">{t("ui.editor.copy_all")}</span>
         </button>
-        <MenuButton
-          className="btn tb-btn"
+        <Menu
+          triggerClass="btn tb-btn"
+          align="end"
           disabled={!hasDoc}
           title={t("ui.editor.share")}
           label={
             <>
               <Icon name="share" />
               <span className="tb-label tb-wide">{t("ui.editor.share")}</span>
-              <Icon name="chevron" />
             </>
           }
           items={[
-            { label: t("ui.editor.share_file"), onSelect: () => void exportImage() },
-            { label: t("ui.editor.share_clipboard"), onSelect: () => void copyAll() },
-            { label: t("ui.editor.save_as"), onSelect: () => void saveAs(), separator: true },
+            { id: "file", label: t("ui.editor.share_file"), onSelect: () => void exportImage() },
+            {
+              id: "clipboard",
+              label: t("ui.editor.share_clipboard"),
+              onSelect: () => void copyAll(),
+            },
+            {
+              id: "save_as",
+              label: t("ui.editor.save_as"),
+              onSelect: () => void saveAs(),
+              separator: true,
+            },
           ]}
         />
       </div>

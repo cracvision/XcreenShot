@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
+import { Icon } from "../components/Icon";
+import { Menu } from "../components/Menu";
 import { display } from "../lib/accelerator";
 import { isCommandError, run, type ShortcutRow } from "../lib/commands";
 import { useApp } from "../store";
 import { SettingRow } from "./SettingRow";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 
-type Filter = "all" | "global" | "app" | "editor" | "conflict" | "custom";
+const FILTERS = ["all", "global", "app", "editor", "conflict", "custom"] as const;
+type Filter = (typeof FILTERS)[number];
 
 interface Reassign {
   row: ShortcutRow;
@@ -122,16 +125,16 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <label>
-          {t("ui.shortcuts.filter")}{" "}
-          <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
-            {(["all", "global", "app", "editor", "conflict", "custom"] as const).map((f) => (
-              <option key={f} value={f}>
-                {t(`ui.shortcuts.filter_${f}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Menu
+          align="end"
+          label={`${t("ui.shortcuts.filter")}: ${t(`ui.shortcuts.filter_${filter}`)}`}
+          items={FILTERS.map((f) => ({
+            id: f,
+            label: t(`ui.shortcuts.filter_${f}`),
+            checked: filter === f,
+            onSelect: () => setFilter(f),
+          }))}
+        />
       </div>
 
       <table className="shortcuts">
@@ -168,7 +171,14 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
                 )}
               </td>
               <td>
-                <span className={r.conflict ? "status-conflict" : "muted"}>{r.statusText}</span>
+                {r.conflict ? (
+                  <span className="status-conflict">
+                    <Icon name="alert" />
+                    {r.statusText}
+                  </span>
+                ) : (
+                  <span className="muted">{r.statusText}</span>
+                )}
                 {r.conflict && (
                   <div className="row" style={{ marginTop: 4 }}>
                     <button className="btn small" onClick={() => void run("shortcuts.retry")}>
@@ -196,7 +206,7 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
                       void run("shortcuts.reset", { command: r.command, scope: r.scope })
                     }
                   >
-                    ↺
+                    <Icon name="restore" />
                   </button>
                   <button
                     className="btn icon"
@@ -205,7 +215,7 @@ export function ShortcutsSection({ highlightKey }: { highlightKey: string | null
                     disabled={!r.shortcut}
                     onClick={() => void assign(r, null)}
                   >
-                    ✕
+                    <Icon name="close" />
                   </button>
                 </div>
               </td>

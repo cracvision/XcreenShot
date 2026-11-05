@@ -1,6 +1,6 @@
 // Status bar (EDT-011): image size, pointer position and zoom.
 import { useTranslation } from "react-i18next";
-import { MenuButton } from "../components/MenuButton";
+import { Menu } from "../components/Menu";
 import { Icon } from "./icons";
 import { outside } from "./objects";
 import { requestZoom, useEditor, usePointer } from "./state";
@@ -91,17 +91,28 @@ export function StatusBar() {
         >
           <Icon name="plus" />
         </button>
-        <MenuButton
-          className="btn icon small"
+        <Menu
+          triggerClass="btn icon small"
           ariaLabel={t("ui.editor.zoom_menu")}
           title={t("ui.editor.zoom_menu")}
-          up
-          label=<Icon name="chevron" />
+          side="top"
+          align="end"
+          label={<Icon name="chevron" />}
+          chevron={false}
           items={[
-            { label: t("ui.editor.zoom_actual"), onSelect: () => requestZoom("percent", 100) },
-            { label: t("ui.editor.zoom_fit"), onSelect: () => requestZoom("fit") },
-            { label: t("ui.editor.zoom_original"), onSelect: () => requestZoom("original") },
+            {
+              id: "actual",
+              label: t("ui.editor.zoom_actual"),
+              onSelect: () => requestZoom("percent", 100),
+            },
+            { id: "fit", label: t("ui.editor.zoom_fit"), onSelect: () => requestZoom("fit") },
+            {
+              id: "original",
+              label: t("ui.editor.zoom_original"),
+              onSelect: () => requestZoom("original"),
+            },
             ...ZOOM_STEPS.map((z, i) => ({
+              id: `z${z}`,
               label: `${z} %`,
               onSelect: () => requestZoom("percent", z),
               separator: i === 0,
