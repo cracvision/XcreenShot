@@ -871,6 +871,7 @@
       "open_filter": "Imágenes y documentos de XcreenShot",
       "exported": "Imagen exportada",
       "copied": "Imagen copiada",
+      "canvas_menu": "Menú del lienzo",
       "canvas_label": "Lienzo de {{name}}. Arrastra para dibujar con la herramienta activa.",
       "side_panel": "Panel lateral",
       "tab_styles": "Estilos",

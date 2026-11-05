@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import logoDark from "../assets/brand/logo-dark.webp";
 import logoLight from "../assets/brand/logo-light.webp";
 import { Keys } from "../components/Keys";
+import { ContextMenu } from "../components/Menu";
 import { displayKeys } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { useApp } from "../store";
@@ -12,7 +13,7 @@ import { openCapturePanel, openFiles } from "./actions";
 import { Canvas } from "./Canvas";
 import { Dialogs } from "./Dialogs";
 import { useEditorKeys } from "./keys";
-import { useMenuBar } from "./menus";
+import { closeContextMenu, useContextMenu, useMenuBar } from "./menus";
 import { useAnnouncement } from "./announce";
 import { SidePanel } from "./SidePanel";
 import { useEditor } from "./state";
@@ -56,6 +57,21 @@ function Empty({ dropping }: { dropping: boolean }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** The right-click menu of the canvas or the toolbar, when one is open. */
+function EditorContextMenu() {
+  const menu = useContextMenu();
+  return (
+    <ContextMenu
+      open={menu.open}
+      x={menu.x}
+      y={menu.y}
+      label={menu.label}
+      items={menu.items}
+      onClose={closeContextMenu}
+    />
   );
 }
 
@@ -109,6 +125,7 @@ export function Editor() {
       )}
       {dropping && doc && <div className="drop-hint">{t("ui.editor.drop_hint")}</div>}
       <Dialogs />
+      <EditorContextMenu />
       <div className="sr-only" role="status" aria-live="polite">
         {announcement}
       </div>

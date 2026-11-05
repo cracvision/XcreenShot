@@ -24,7 +24,7 @@ export interface MenuItem {
   /** Extra content after the label, such as a setting key. */
   trailing?: ReactNode;
   /** Shortcut shown at the right, already written for this platform. */
-  shortcut?: string;
+  shortcut?: string | undefined;
   /** Draws a separator above the item. */
   separator?: boolean;
   onSelect: () => void;

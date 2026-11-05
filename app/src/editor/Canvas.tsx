@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
 import { applyCrop, startNewText, startTextEdit } from "./actions";
-import { canvasMenu } from "./menus";
+import { canvasMenu, menuPoint } from "./menus";
 import {
   contains,
   corners,
@@ -624,7 +624,7 @@ export function Canvas({ doc }: Props) {
     if (!lay || cropping) return;
     const hit = hitObject(toCanvas(local(e)));
     if (hit && !selection.includes(hit.id)) setSelection([hit.id]);
-    void canvasMenu(hit !== null);
+    canvasMenu(hit !== null, menuPoint(e));
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {

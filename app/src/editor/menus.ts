@@ -1,60 +1,96 @@
 // The editor's menus seen from the window (EDT-002): the state of the menu bar
 // entries, its orders (`editor.action`), and the right-click menus of the canvas and
-// the toolbar. Entries show their current shortcut (EDT-116).
+// the toolbar, drawn by the app so they animate like every other menu (APP-012).
+// Entries show their current shortcut (EDT-116).
 import { listen } from "@tauri-apps/api/event";
-import { Menu } from "@tauri-apps/api/menu";
 import i18next from "i18next";
+import type { MouseEvent } from "react";
 import { useEffect } from "react";
+import { create } from "zustand";
+import type { MenuItem } from "../components/Menu";
 import { display } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
 import { performAction, toggleToolbarLabels } from "./actions";
 import { useEditor, usePanel } from "./state";
 
-/** "Name<Tab>Shortcut": Windows aligns the shortcut to the right. */
-function label(key: string, slot?: string): string {
-  const text = i18next.t(key);
-  const { shortcuts, layout } = useApp.getState();
-  const row = slot ? shortcuts?.rows.find((r) => r.command === slot) : undefined;
-  if (!row?.shortcut) return text;
-  return `${text}\t${display(row.shortcut, shortcuts?.platform ?? "windows", layout)}`;
+interface Point {
+  x: number;
+  y: number;
 }
 
-function entry(action: string, enabled = true) {
+interface ContextMenuState extends Point {
+  open: boolean;
+  label: string;
+  items: MenuItem[];
+}
+
+/** The right-click menu open in the editor, if any. */
+export const useContextMenu = create<ContextMenuState>(() => ({
+  open: false,
+  x: 0,
+  y: 0,
+  label: "",
+  items: [],
+}));
+
+export function closeContextMenu(): void {
+  useContextMenu.setState({ open: false });
+}
+
+/** The current shortcut of an editor row, written for this platform. */
+export function shortcutOf(slot: string): string | undefined {
+  const { shortcuts, layout } = useApp.getState();
+  const row = shortcuts?.rows.find((r) => r.command === slot);
+  return row?.shortcut
+    ? display(row.shortcut, shortcuts?.platform ?? "windows", layout)
+    : undefined;
+}
+
+function entry(action: string, separator = false): MenuItem {
   return {
     id: `editor.${action}`,
-    text: label(`menu.${action}`, `editor.${action}`),
-    enabled,
-    action: () => void performAction(action),
+    label: i18next.t(`menu.${action}`),
+    shortcut: shortcutOf(`editor.${action}`),
+    separator,
+    onSelect: () => void performAction(action),
   };
 }
 
-const SEPARATOR = { item: "Separator" } as const;
+/** Where to open a menu: at the pointer, or by the element for the menu key. */
+export function menuPoint(e: MouseEvent): Point {
+  if (e.clientX === 0 && e.clientY === 0) {
+    const r = (e.target as HTMLElement).getBoundingClientRect();
+    return { x: r.left + 12, y: r.top + 12 };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
 
 /** Right click on the canvas: what applies to the object under the pointer, or to the
  * image (EDT-002). Grouping, order and flattening arrive with them (M2). */
-export async function canvasMenu(onObject: boolean): Promise<void> {
+export function canvasMenu(onObject: boolean, at: Point): void {
   const items = onObject
-    ? [entry("cut"), entry("copy"), SEPARATOR, entry("delete")]
-    : [entry("paste"), entry("paste_in_place"), SEPARATOR, entry("copy_all")];
-  const menu = await Menu.new({ items });
-  await menu.popup();
+    ? [entry("cut"), entry("copy"), entry("delete", true)]
+    : [entry("paste"), entry("paste_in_place"), entry("copy_all", true)];
+  useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
 }
 
 /** Right click on the toolbar: Icons only (EDT-003). */
-export async function toolbarMenu(): Promise<void> {
+export function toolbarMenu(at: Point): void {
   const labels = useApp.getState().settings.find((s) => s.key === "editor.toolbarLabels");
-  const menu = await Menu.new({
+  useContextMenu.setState({
+    open: true,
+    ...at,
+    label: i18next.t("ui.editor.toolbar"),
     items: [
       {
         id: "editor.icons_only",
-        text: i18next.t("menu.icons_only"),
+        label: i18next.t("menu.icons_only"),
         checked: labels?.value === false,
-        action: toggleToolbarLabels,
+        onSelect: toggleToolbarLabels,
       },
     ],
   });
-  await menu.popup();
 }
 
 /** Tells the menu bar which entries apply now, and runs what it orders. */

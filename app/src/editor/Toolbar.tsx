@@ -20,7 +20,7 @@ import {
 } from "./actions";
 import { Icon } from "./icons";
 import { useEditor, type Tool } from "./state";
-import { toolbarMenu } from "./menus";
+import { menuPoint, toolbarMenu } from "./menus";
 import { useSetting } from "../store";
 import { hint, useShortcut } from "./tools";
 
@@ -66,7 +66,7 @@ export function Toolbar() {
       aria-label={t("ui.editor.toolbar")}
       onContextMenu={(e) => {
         e.preventDefault();
-        void toolbarMenu();
+        toolbarMenu(menuPoint(e));
       }}
       onClick={(e) => {
         // A mouse click leaves no focus on the button: a key pressed later would draw
