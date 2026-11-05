@@ -1,6 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { run } from "../lib/commands";
+import { run, type PermissionStatus } from "../lib/commands";
 import { useApp } from "../store";
+
+const BADGE: Record<PermissionStatus["state"], string> = {
+  granted: "ok",
+  denied: "err",
+  not_determined: "warn",
+};
 
 /** Preferences > General > Permissions and "Fix permissions" (APP-024). */
 export function PermissionsBlock() {
@@ -17,10 +23,11 @@ export function PermissionsBlock() {
       </p>
       {permissions.map((p) => (
         <div className="permission" key={p.permission}>
-          <div>
+          <div className="head">
             <strong>{t(`ui.permissions.name.${p.permission}`)}</strong>
-            {" · "}
-            <span>{t(`ui.permissions.state.${p.state}`)}</span>
+            <span className={`badge ${BADGE[p.state]}`}>
+              {t(`ui.permissions.state.${p.state}`)}
+            </span>
           </div>
           <div className="row">
             {p.state !== "granted" && p.can_request && (
@@ -42,9 +49,7 @@ export function PermissionsBlock() {
               </button>
             )}
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {t(`ui.permissions.purpose.${p.permission}`)}
-          </div>
+          <div className="purpose">{t(`ui.permissions.purpose.${p.permission}`)}</div>
         </div>
       ))}
     </div>

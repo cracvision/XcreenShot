@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "../../src-tauri/icons/128x128.png";
-import { display } from "../lib/accelerator";
+import { Keys } from "../components/Keys";
+import { displayKeys } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { isCommandError, run } from "../lib/commands";
 import { useApp } from "../store";
@@ -16,9 +17,11 @@ export function Home() {
 
   const pingRow = shortcuts?.rows.find((r) => r.command === "app.ping" && r.scope === "global");
   const platform = shortcuts?.platform ?? ping?.platform ?? "windows";
-  const pingShortcut = pingRow?.shortcut
-    ? display(pingRow.shortcut, platform, layout)
-    : t("ui.shortcuts.none");
+  const pingShortcut = pingRow?.shortcut ? (
+    <Keys keys={displayKeys(pingRow.shortcut, platform, layout)} />
+  ) : (
+    <kbd>{t("ui.shortcuts.none")}</kbd>
+  );
 
   const runPing = async () => {
     try {
@@ -41,7 +44,7 @@ export function Home() {
         </button>
       </header>
 
-      <section className="card" aria-labelledby="test-title">
+      <section className="card feature" aria-labelledby="test-title">
         <h2 id="test-title">{t("ui.home.test_title")}</h2>
         <p className="muted" style={{ margin: 0 }}>
           {t("ui.home.test_help")}
@@ -50,9 +53,9 @@ export function Home() {
           <button className="btn primary" onClick={() => void runPing()}>
             {t("ui.home.run_ping")}
           </button>
-          <span>
+          <span className="row">
             {t("ui.home.shortcut_hint", { shortcut: "" })}
-            <kbd>{pingShortcut}</kbd>
+            {pingShortcut}
           </span>
         </div>
         <div className="row">
@@ -76,7 +79,7 @@ export function Home() {
               <span className={`badge ${a.ok ? "ok" : "err"}`}>{a.ok ? "OK" : a.error?.code}</span>
               <code>{a.id}</code>
               <span className="muted">{t(`source.${a.source}`)}</span>
-              <span className="muted">{new Date(Number(a.at)).toLocaleTimeString()}</span>
+              <span className="muted time">{new Date(Number(a.at)).toLocaleTimeString()}</span>
             </li>
           ))}
         </ul>

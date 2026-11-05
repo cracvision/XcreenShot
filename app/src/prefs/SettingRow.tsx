@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Icon } from "../components/Icon";
+import { ContextMenu } from "../components/Menu";
 import { isCommandError, run, type SettingEntry } from "../lib/commands";
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
 export function SettingRow({ setting, highlighted }: Props) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState({ open: false, x: 0, y: 0 });
   const id = `setting-${setting.key}`;
   const optionsBase = `settings.${setting.key.replace(".", "_")}.options`;
 
@@ -56,18 +58,13 @@ export function SettingRow({ setting, highlighted }: Props) {
     );
   }
 
-  const copyKey = async () => {
-    setMenu(null);
-    await navigator.clipboard.writeText(setting.key);
-  };
-
   return (
     <div
       className={`setting${highlighted ? " highlight" : ""}`}
       data-key={setting.key}
       onContextMenu={(e) => {
         e.preventDefault();
-        setMenu({ x: e.clientX, y: e.clientY });
+        setMenu({ open: true, x: e.clientX, y: e.clientY });
       }}
     >
       <label className="label" htmlFor={id}>
@@ -76,24 +73,34 @@ export function SettingRow({ setting, highlighted }: Props) {
       <div className="control">{control}</div>
       <div className="description" id={`${id}-desc`}>
         {setting.description}
-        {setting.locked && <div className="locked">🔒 {t("ui.prefs.locked")}</div>}
+        {setting.locked && (
+          <div className="locked">
+            <Icon name="lock" />
+            {t("ui.prefs.locked")}
+          </div>
+        )}
         {error && (
           <div className="error-text" role="alert">
+            <Icon name="alert" />
             {error}
           </div>
         )}
       </div>
-      {menu && (
-        <div
-          className="context-menu"
-          style={{ left: menu.x, top: menu.y }}
-          onMouseLeave={() => setMenu(null)}
-        >
-          <button autoFocus onClick={() => void copyKey()} onBlur={() => setMenu(null)}>
-            {t("ui.prefs.copy_key")} <code>{setting.key}</code>
-          </button>
-        </div>
-      )}
+      <ContextMenu
+        open={menu.open}
+        x={menu.x}
+        y={menu.y}
+        label={setting.label}
+        onClose={() => setMenu((m) => ({ ...m, open: false }))}
+        items={[
+          {
+            id: "copy-key",
+            label: t("ui.prefs.copy_key"),
+            trailing: <code>{setting.key}</code>,
+            onSelect: () => void navigator.clipboard.writeText(setting.key),
+          },
+        ]}
+      />
     </div>
   );
 }
