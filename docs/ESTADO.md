@@ -37,6 +37,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | IA en la nube (función propia, SMT-039 a SMT-043) | Aprobada por Carlos el 2026-11-01 (IDEA-002): cambia el principio "todo local" para esta función; las dos vías (la app con la clave de cada uno, y Claude Desktop o Claude Code por MCP); cada colega paga su clave. Preguntar a la IA sobre una imagen, sugerir nombre, servidor MCP | Hecha. Tanda B PASS (2026-11-01). Falta la tanda A (necesita su clave) |
 | Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
+| Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
@@ -44,6 +45,23 @@ Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelanta
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
+
+- **Aspecto nuevo (2026-11-05):** Carlos quería una interfaz menos aburrida, con animaciones en menús y botones. Claude Design había hecho el sistema "Snap" (PR #4), pero sobre `main`, sin el editor.
+  - Se llevó a `m1-editor` en la rama `snap-ui`, preparada en una carpeta aparte (`C:\Projects\XcreenShot-snap`).
+  - Los nombres de color viejos pasaron a los de Snap. `MenuButton` y el menú Más del panel pasaron al `Menu` animado.
+  - Editor:
+    - pestañas y herramientas con un resaltado que se desliza;
+    - íconos con micro-animaciones y botón principal con brillo;
+    - tira con miniaturas que se levantan y esquinas amarillas en la captura actual;
+    - avisos y cuenta atrás animados, y una rejilla de puntos detrás del lienzo.
+  - Logo de Carlos:
+    - paleta del logo, con tokens con nombre de función (`--brand`, `--star`, `--magenta`, `--rec`);
+    - el logo en el editor vacío, en versión clara u oscura, con el REC parpadeando;
+    - ícono nuevo, el emblema simplificado (`scripts/make-icon.mjs`);
+    - títulos en Outfit, la fuente gratuita más parecida a la del logo, empaquetada.
+  - Los clics derechos del editor y, en Windows, la barra de menús ya no son nativos: los dibuja la app (`MenuBar.tsx`), con `Alt`, `F10`, letras de acceso, flechas y submenús. macOS conserva su barra del sistema.
+  - Arreglo de paso: las teclas del editor se quedaban con flechas, `Enter` y `Escape` aunque se pulsaran dentro de un menú.
+  - El PR #4 queda superado: su contenido llegó por `snap-ui`.
 
 - **Reabrir los documentos al iniciar, EDT-120** (2026-11-01; Carlos: "sí me interesa", IDEA-003):
   - Spec: sección 12 de `02-editor.md`, la fila en la tabla de EDT-118 y dos decisiones provisionales en `QUESTIONS.md`.
@@ -129,11 +147,12 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
 6. **IA en la nube (SMT-039 a SMT-043):** hecha. Carlos tiene dos tandas en [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md): la A necesita su propia clave de la API (platform.claude.com) y la B, Claude Desktop o Claude Code. Las decisiones provisionales están en `spec/QUESTIONS.md` (filas SMT-039 a SMT-043, APP-028 y APP-029). Tanda B: PASS (2026-11-01). Su configuración de Claude Desktop ya tiene la entrada `xcreenshot` (copia de seguridad en `%APPDATA%\Claude\claude_desktop_config.backup-2026-11-01.json`). Propuesta pendiente de su visto bueno: IDEA-004, el botón **Añadir a Claude Desktop**, porque el bloque copiado no sirve si ya hay otros servidores.
 7. **Reabrir los documentos al iniciar (EDT-120):** hecha; Carlos tiene una tanda en [`tests/manual/EDT-120.md`](../tests/manual/EDT-120.md). Necesita el instalador nuevo.
-8. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
+8. **Aspecto nuevo (Snap con el logo):** hecho; Carlos tiene una tanda en [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md). Pendiente de su visto bueno: cerrar el PR #4 de Claude Design sin fusionarlo, porque su contenido ya está en `m1-editor`, y borrar la carpeta `C:\Projects\XcreenShot-snap` (en ella quedaron dos copias del logo que puso Carlos; el original está en `docs/brand/`).
+9. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-Corregir lo que Carlos reporte de la tanda 4 de la 4c, de la multicaptura, de la IA en la nube (tanda A) y de EDT-120. Después, la **entrega 5 (biblioteca)**; con ella llega sugerir nombres para varias capturas a la vez (SMT-041):
+Corregir lo que Carlos reporte de la tanda 4 de la 4c, de la multicaptura, de la IA en la nube (tanda A), de EDT-120 y del aspecto nuevo ([`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md)). Después, la **entrega 5 (biblioteca)**; con ella llega sugerir nombres para varias capturas a la vez (SMT-041):
 1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
 2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
 3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.

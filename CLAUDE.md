@@ -106,6 +106,27 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ---
 
+## Diseño: Snap con los colores del logo
+
+La interfaz usa el sistema de diseño **Snap** con la paleta del logo de Carlos (2026-11-05). Todo vive en `app/src/styles.css`; el logo original está en `docs/brand/`.
+
+- **Colores:** solo tokens con nombre de función.
+  - Superficies y texto: `--surface*`, `--ink*`, `--line`, `--control-line`.
+  - `--brand*`: el azul del logo, para selección, foco e interruptores. `--brand-gradient`: el botón principal.
+  - `--star`: amarillo decorativo, nunca para texto. `--magenta`: lo experimental. `--rec`, `--danger`, `--warning`: estados.
+  - Nada de colores sueltos, salvo en las capas de la selección en pantalla.
+  - Texto ≥ 4,5:1 y bordes de control ≥ 3:1, en claro y en oscuro.
+- **Letra:** `--font-display` (Outfit, empaquetada con la app) para títulos; `--font-sans` (la del sistema) para lo demás. La app no carga fuentes de internet.
+- **Movimiento:**
+  - Duraciones `--dur-*` y curvas `--ease-*`: se entra con `--ease-spring` y se sale con `--ease-in`.
+  - Toda animación nueva tiene su versión en el bloque "Reduced motion" del final de `styles.css`: un fundido de 100 ms como mucho.
+- **Componentes:**
+  - Cualquier menú dentro de una ventana usa `Menu`, `ContextMenu` o `MenuList` (`app/src/components/Menu.tsx`), no menús nativos. Los nativos quedan solo para la bandeja y la barra de menús de macOS.
+  - Las opciones segmentadas usan `.seg` con `useIndicator`. Los diálogos usan `Dialog`.
+  - En Windows, la barra de menús del editor la dibuja la app (`app/src/editor/MenuBar.tsx`) con los menús de `xs_core::menus`.
+- **Ícono:** `node scripts/make-icon.mjs` dibuja el emblema simplificado. Después, `npx tauri icon …` (tabla de abajo), y hay que borrar los íconos de tiendas, Android e iOS que genera.
+- El sistema de diseño publicado por Claude Design sigue en turquesa: la fuente de verdad es el código.
+
 ## Flujo de trabajo
 
 1. Trabaja por hito (`SPEC.md` §4) y por ID.
