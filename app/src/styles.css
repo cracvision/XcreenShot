@@ -63,11 +63,10 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
-  /* The display face is bundled once it is approved (spec/QUESTIONS.md, APP-012);
-     until then the system display face stands in. Nothing loads from the network. */
+  /* Titles: Outfit, the free face closest to the logo's wordmark (Carlos, 2026-11-05),
+     bundled with the app (main.tsx). */
   --font-display:
-    "Bricolage Grotesque", "Segoe UI Variable Display", "Segoe UI", -apple-system, system-ui,
-    sans-serif;
+    "Outfit Variable", "Segoe UI Variable Display", "Segoe UI", -apple-system, system-ui, sans-serif;
   --font-sans:
     "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont,
     system-ui, sans-serif;

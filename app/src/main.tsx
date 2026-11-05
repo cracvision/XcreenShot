@@ -1,5 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+// Titles use the font closest to the logo's wordmark, bundled: nothing loads from the
+// network (APP-054).
+import "@fontsource-variable/outfit/wght.css";
 import "./i18n";
 import "./styles.css";
 import { App } from "./App";

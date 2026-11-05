@@ -56,7 +56,8 @@ pub fn render(v: Visual) -> Image<'static> {
             p[..3].copy_from_slice(&mono_color);
         }
     }
-    let glyph: [u8; 3] = if v.monochrome { mono_color } else { [14, 140, 127] };
+    // The paused slash: the logo's blue, as the dark theme's brand color.
+    let glyph: [u8; 3] = if v.monochrome { mono_color } else { [77, 124, 255] };
     let size = w as f32;
     if v.paused {
         // Paused: the X goes away (the brackets stay) so the slash drawn below reads
