@@ -8,10 +8,13 @@
 
 pub mod compose;
 pub mod interactive;
+pub mod multi;
+#[cfg(windows)]
+mod multi_win;
 pub mod panel;
 pub mod platform;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
@@ -368,34 +371,6 @@ impl Options {
     }
 }
 
-/// Where captures are kept until the library (LIB-020) stores `.xshot` documents:
-/// `Documents\XcreenShot` on Windows, `~/Pictures/XcreenShot` on macOS (LIB-027).
-pub fn library_dir() -> PathBuf {
-    if let Some(dir) = std::env::var_os("XCREENSHOT_LIBRARY_DIR") {
-        return PathBuf::from(dir);
-    }
-    let dirs = directories::UserDirs::new();
-    let base = if cfg!(target_os = "macos") {
-        dirs.as_ref().and_then(|d| d.picture_dir().map(Path::to_path_buf))
-    } else {
-        dirs.as_ref()
-            .and_then(|d| d.document_dir().map(Path::to_path_buf))
-    };
-    base.unwrap_or_else(std::env::temp_dir).join("XcreenShot")
-}
-
-/// `XcreenShot_2026-10-12_14-05-33.png`, with ` (2)`… if it exists (CAP-053 default).
-pub fn unique_name(dir: &Path, now: chrono::DateTime<chrono::Local>) -> PathBuf {
-    let stem = format!("XcreenShot_{}", now.format("%Y-%m-%d_%H-%M-%S"));
-    let mut path = dir.join(format!("{stem}.png"));
-    let mut n = 2;
-    while path.exists() {
-        path = dir.join(format!("{stem} ({n}).png"));
-        n += 1;
-    }
-    path
-}
-
 /// Capture metadata (CAP-056). Field names are the same on every platform.
 pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) -> Value {
     let (user, machine) = platform::user_and_machine();
@@ -462,13 +437,12 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         warnings.push("cursor: arrives with the editor".to_string());
     }
 
-    // 1-2. Keep it safe first.
-    let dir = library_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| failed(lang, e))?;
-    let path = unique_name(&dir, now);
-    shot.image.save(&path).map_err(|e| failed(lang, e))?;
-    let mut files = vec![path.to_string_lossy().into_owned()];
+    // 1-2. Keep it safe first: a `.xshot` in the library, open for the editor (LIB-020).
     let meta = metadata(core, &shot, now);
+    let app = shot.app.as_ref().map(|a| a.name.as_str());
+    let (document_id, path) = xs_editor::add_capture(core, &shot.image, meta.clone(), shot.scale as f64, app)
+        .map_err(|e| failed(lang, e))?;
+    let mut files = vec![path.to_string_lossy().into_owned()];
 
     // 3. Clipboard.
     let mut copied = false;
@@ -491,7 +465,9 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         if let Some(parent) = out.parent().filter(|p| !p.as_os_str().is_empty()) {
             std::fs::create_dir_all(parent).map_err(|e| failed(lang, e))?;
         }
-        std::fs::copy(&path, out).map_err(|e| failed(lang, e))?;
+        let dpi = (96.0 * shot.scale as f64).round();
+        let png = xs_image::encode::png(&shot.image, dpi, false).map_err(|e| failed(lang, e))?;
+        std::fs::write(out, png).map_err(|e| failed(lang, e))?;
         files.push(out.to_string_lossy().into_owned());
     }
 
@@ -511,6 +487,7 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     }
     let result = json!({
         "status": "completed",
+        "documentId": document_id,
         "path": files.last(),
         "files": files,
         "width": shot.image.width(),
@@ -534,11 +511,11 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         let body = if copied {
             tr(lang, "notify.capture_copied", &[])
         } else {
-            tr(
-                lang,
-                "notify.capture_saved",
-                &[("folder", &dir.to_string_lossy())],
-            )
+            let folder = path
+                .parent()
+                .map(|d| d.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            tr(lang, "notify.capture_saved", &[("folder", &folder)])
         };
         host.notify("captures", &tr(lang, "app.name", &[]), &body);
     }
@@ -628,6 +605,13 @@ const LAST_AREA_KEY: &str = "capture.lastArea";
 /// it for "Repeat last capture" (CAP-007). The capture panel steps aside meanwhile
 /// (CAP-001, CAP-023).
 fn dispatch(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
+    // Multi-capture holds the mouse: finish it first (CAP-067).
+    if multi::capturing(core) {
+        return Err(
+            CommandError::new(ErrorCode::Busy, tr(ctx.lang, "errors.multicapture_busy", &[]))
+                .with_details(json!({ "status": "busy" })),
+        );
+    }
     let _busy = Busy::take(ctx.lang)?;
     core.remember(
         LAST_KEY,
@@ -820,6 +804,35 @@ pub fn extension() -> Extension {
             panel::save(&core, &next);
             Ok(serde_json::to_value(next).unwrap_or_default())
         });
+        let w = weak.clone();
+        reg.handle("capture.multi_start", move |ctx, _p| {
+            multi::start(&upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_stop", move |_ctx, p| {
+            let close = p.get("close").and_then(Value::as_bool).unwrap_or(false);
+            Ok(multi::stop(&*upgrade(&w)?, close))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_state", move |_ctx, _p| {
+            Ok(multi::get_state(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_remove", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let ids: Vec<String> = p["ids"]
+                .as_array()
+                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            if let Some(missing) = ids.iter().find(|id| !multi::has_item(&core, id)) {
+                return Err(multi::unknown(ctx.lang, missing));
+            }
+            Ok(multi::remove(&core, &ids))
+        });
+        let w = weak.clone();
+        reg.handle("capture.multi_clear", move |_ctx, _p| {
+            Ok(multi::clear(&*upgrade(&w)?))
+        });
         let w = weak;
         reg.handle("capture.reset_settings", move |_ctx, _p| {
             let core = upgrade(&w)?;
@@ -901,22 +914,6 @@ mod tests {
         );
         let cli = Options::from_params(&json!({"open": "editor", "copy": false}), Source::Cli);
         assert!(!cli.copy && cli.open_editor);
-    }
-
-    #[test]
-    fn unique_names_do_not_overwrite() {
-        let dir = tempfile::tempdir().unwrap();
-        let now = chrono::Local::now();
-        let first = unique_name(dir.path(), now);
-        std::fs::write(&first, b"x").unwrap();
-        let second = unique_name(dir.path(), now);
-        assert_ne!(first, second);
-        assert!(second.to_string_lossy().ends_with(" (2).png"));
-        assert!(first
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .starts_with("XcreenShot_"));
     }
 
     #[test]

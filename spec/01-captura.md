@@ -23,7 +23,8 @@ Este archivo especifica cómo se inicia una captura de imagen en XcreenShot, có
 7. **Anotación rápida** — CAP-057 Anotación rápida de imagen
 8. **Presets** — CAP-058 Lista de presets · CAP-059 Crear un preset · CAP-060 Editar, renombrar, duplicar y eliminar · CAP-061 Reordenar · CAP-062 Atajo por preset · CAP-063 Exportar e importar `.xpreset` · CAP-064 Presets incorporados
 9. **Atajos de captura** — CAP-065 Acciones de captura y atajos por defecto · CAP-066 Perfil de compatibilidad
-10. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
+10. **Funciones propias** — CAP-067 Multicaptura
+11. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
 
 ---
 
@@ -1697,6 +1698,46 @@ Este archivo especifica cómo se inicia una captura de imagen en XcreenShot, có
   - [ ] (Windows) Con el perfil de compatibilidad, en Múltiples áreas, el clic derecho termina la captura con las áreas elegidas.
   - [ ] Al volver al perfil Coexistencia, las teclas de la selección vuelven a ser las de CAP-017 sin reiniciar.
 - **Fuentes:** research/01-captura.md §10, §3.4, §5.7, §6.2 (teclas), §1.4; research/05-plataformas-versiones.md §3 (Default hotkeys; Video: bloqueo 4:3); SPEC D-08
+
+---
+
+## 10. Funciones propias
+
+### CAP-067 · Multicaptura
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01) · **Prioridad:** Should
+- **Plataformas:** Ambas. Primero en Windows; en macOS llegará con las pruebas en Mac y necesitará el permiso de Accesibilidad (APP-024).
+- **Paridad con Snagit:** — (función propia, IDEA-001 de `IDEAS.md`)
+- **Comportamiento:**
+  - Se inicia con **Multicaptura** en el menú del ícono (CAP-005), con su atajo (sin atajo por defecto; se asigna en Preferencias > Atajos) o con `capture.multi_start`.
+  - Mientras dura, la pantalla **no se congela** y se sigue usando con normalidad (Carlos, 2026-11-01):
+    - Al mover el puntero, un borde de color de acento resalta la ventana que hay debajo (CAP-016; las subáreas llegarán con CAP-016). Fuera de toda ventana, el monitor.
+    - **Clic izquierdo:** captura lo resaltado tal como se veía **justo antes** del clic y, después, el clic llega a la app. Un doble clic llega como doble clic y hace una sola captura.
+    - **Arrastrar** (más de 5 px con el botón pulsado): dibuja un rectángulo y captura esa región. El arrastre no llega a la app, así que mientras dura el modo no se puede arrastrar dentro de las apps (decisión de diseño).
+    - Clic derecho, clic central, rueda y teclado funcionan como siempre y no capturan.
+    - Los clics sobre ventanas de XcreenShot y sobre la barra de tareas no capturan.
+    - En ventanas de apps que se ejecutan como administrador, Windows no deja devolverles el clic: el clic pasa sin retenerse y la captura se toma enseguida, así que puede mostrar ya su efecto (APP-026).
+    - **`Esc`** termina el modo y no llega a la app. Mientras el modo está activo, las demás capturas responden "ocupado".
+  - Cada captura se guarda en la biblioteca como una captura normal (LIB-020), con sus metadatos (CAP-056). No se abre en el editor, no se copia al portapapeles y no muestra notificación (decisión de diseño).
+  - **Panel de multicaptura:** una ventana pequeña, siempre delante, abajo a la derecha del monitor donde está el puntero. Aparece sin quitar el foco a la app y nunca sale en las capturas (CAP-023):
+    - miniaturas de las capturas de **esta sesión**, en el orden en que se hicieron;
+    - un clic en una miniatura la elige o la deja de elegir. La elegida se marca con borde y una marca, nunca solo con color (APP-045);
+    - cada miniatura tiene una **X** que la saca del panel;
+    - **Elegir todas** / **No elegir ninguna** y **Limpiar** (saca todas del panel);
+    - **Insertar** añade las elegidas, en el orden en que se hicieron, al documento que muestra el editor, como imágenes flotantes (EDT-078): a su tamaño, la primera centrada en el lienzo y cada una 24 px más abajo y a la derecha (decisión de diseño). Sin documento abierto, una sola captura se abre tal cual; varias forman un documento nuevo de la biblioteca, una debajo de otra con 10 px de separación sobre un lienzo transparente (como "Apiladas" de CAP-033). Después se muestra el editor;
+    - **Terminar (Esc)** deja de capturar. El panel se queda para poder insertar, y ofrece **Capturar más** y **Cerrar** (decisión de diseño);
+    - **Cerrar**, o cerrar la ventana, termina la sesión: la siguiente empieza con el panel vacío.
+    - La X, Limpiar y Cerrar **no borran** las capturas de la biblioteca (Carlos, 2026-11-01).
+  - Comandos: `capture.multi_start`, `capture.multi_stop` (`close` cierra el panel), `capture.multi_state`, `capture.multi_remove`, `capture.multi_clear`, y `document.insert_images` (EDT-078) para insertar.
+- **Criterios de aceptación:**
+  - [ ] Con el modo activo, un clic en un botón de otra app captura su ventana y el botón responde a ese clic.
+  - [ ] Si el clic abre un menú, la captura muestra la ventana sin el menú (antes del clic).
+  - [ ] Un arrastre de 300 × 200 px produce una captura de 300 × 200 px y no selecciona nada en la app de debajo.
+  - [ ] Un doble clic en un archivo del Explorador lo abre y añade una sola captura.
+  - [ ] Ni el panel ni el borde resaltado aparecen en ninguna captura.
+  - [ ] La X de una miniatura la quita del panel, y la captura sigue en la biblioteca.
+  - [ ] Insertar dos miniaturas elegidas con un documento abierto añade dos imágenes flotantes que se pueden mover.
+  - [ ] Tras `Esc`, el siguiente clic ya no captura y el panel sigue mostrando las capturas.
+- **Fuentes:** `IDEAS.md` IDEA-001 y respuestas de Carlos del 2026-11-01
 
 ---
 

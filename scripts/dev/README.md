@@ -12,6 +12,24 @@ Scripts de PowerShell para comprobar la app en marcha sin depender de que Carlos
 | `esc-runs.ps1` | Lanza varias capturas de región y cancela cada una con `Esc`. |
 | `esc-countdown.ps1` | Lanza una captura con retardo y pulsa `Esc` durante la cuenta atrás. |
 | `enter-universal.ps1` | Lanza una captura universal y pulsa `Enter` cuando aparece la selección. |
+| `cdp.mjs` | Maneja la ventana principal de una instancia aislada por el protocolo de DevTools: clics, arrastres, teclas, rueda, capturas de la página y evaluar código. **No mueve el ratón ni el teclado reales.** |
+
+## Instancia aislada con DevTools (para `cdp.mjs`)
+
+En Git Bash, desde `app/`, con su propia carpeta de datos, biblioteca y perfil de WebView2 (si comparte el perfil con la app instalada, WebView2 no arranca):
+
+```sh
+S=<carpeta temporal>
+export XCREENSHOT_IPC_NAME=xs-dev XCREENSHOT_DATA_DIR="$S/data" XCREENSHOT_LIBRARY_DIR="$S/lib"
+export WEBVIEW2_USER_DATA_FOLDER="<misma carpeta, con barras de Windows>\wv2"
+export WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9333"
+npx tauri dev
+```
+
+El CLI habla con esa instancia con `XCREENSHOT_IPC_NAME=xs-dev target/debug/xcreenshot.exe …`. Para cerrarla: `… app quit --force`.
+
+- **Usa siempre `--no-launch`** al hablar con una instancia aislada, también en los bucles que esperan a que arranque. Sin esa opción, si la instancia aún no responde, el CLI arranca `target/debug/xcreenshot-app.exe` con la carpeta de datos real de Carlos.
+- **IA en la nube (SMT-039 a SMT-043) sin red ni clave real:** en las compilaciones de depuración, `XCREENSHOT_AI_BASE_URL=http://127.0.0.1:<puerto>` manda las peticiones a un servidor local que imite la API. Usa una clave inventada y bórrala al terminar (`ai key-clear --yes`). La instancia aislada guarda su clave en una entrada propia del Administrador de credenciales.
 
 Antes de usarlos:
 - Mueven el ratón y pulsan teclas de verdad: avisa a Carlos antes si está usando el equipo.

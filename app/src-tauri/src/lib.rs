@@ -2,6 +2,7 @@
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
 mod countdown;
+mod docs;
 #[cfg(windows)]
 mod freeze_win;
 mod global;
@@ -17,7 +18,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
+use tauri::menu::{Menu, MenuItemKind};
+use tauri::{AppHandle, Manager, RunEvent, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
 use xs_core::ipc::{self, Request, Response};
 use xs_core::paths::Paths;
@@ -27,6 +29,10 @@ pub struct AppState {
     pub core: Arc<Core>,
     /// Native menu id -> (command, params).
     pub actions: Mutex<tray::Actions>,
+    /// The editor menus: the main window's on Windows, the menu bar on macOS (EDT-002).
+    pub window_menu: Mutex<Option<Menu<Wry>>>,
+    /// What the editor last said about its menu entries (`editor.menu_state`).
+    pub menu_state: Mutex<Value>,
     /// OS shortcut id -> (command, params).
     pub shortcut_map: Mutex<HashMap<u32, (String, Value)>>,
     /// Section/key to show when the Preferences window finishes loading.
@@ -100,6 +106,12 @@ fn xs_countdown_current(app: AppHandle) -> Option<Value> {
     countdown::current(&app)
 }
 
+/// The editor's menus, for the menu bar it draws on Windows (EDT-002).
+#[tauri::command]
+fn xs_editor_menus() -> Value {
+    xs_core::menus::to_json(&xs_core::menus::app_menu(xs_core::platform::Platform::Windows))
+}
+
 /// The capture panel fits its content (CAP-001).
 #[tauri::command]
 fn xs_panel_fit(app: AppHandle, height: f64) {
@@ -112,27 +124,64 @@ fn xs_take_navigation(state: tauri::State<'_, AppState>) -> Option<Value> {
     state.pending_navigation.lock().unwrap().take()
 }
 
+/// Builds the application menu again: language or shortcuts changed.
 pub(crate) fn rebuild_app_menu(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
         let state = app.state::<AppState>();
         let mut actions = state.actions.lock().unwrap();
         let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Macos);
-        if let Ok(menu) = tray::build_menu(app, &state.core, &entries, false, &mut actions) {
+        if let Ok(menu) = tray::build_menu(app, &state.core, &entries, tray::Shortcuts::None, &mut actions) {
+            *state.window_menu.lock().unwrap() = Some(menu.clone());
             let _ = app.set_menu(menu);
         }
     }
-    #[cfg(windows)]
-    {
-        let state = app.state::<AppState>();
-        if let Some(w) = app.get_webview_window(windows::MAIN) {
-            let mut actions = state.actions.lock().unwrap();
-            let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Windows);
-            if let Ok(menu) = tray::build_menu(app, &state.core, &entries, false, &mut actions) {
-                let _ = w.set_menu(menu);
+    // Windows: the editor draws its menu bar and follows language and shortcuts itself.
+    apply_menu_state(app);
+}
+
+/// Greys out and ticks the editor menu entries as the editor window last said
+/// (EDT-002): entries that do not apply are disabled, never hidden.
+pub(crate) fn apply_menu_state(app: &AppHandle) {
+    fn visit(items: &[MenuItemKind<Wry>], f: &mut impl FnMut(&MenuItemKind<Wry>)) {
+        for item in items {
+            f(item);
+            if let MenuItemKind::Submenu(sub) = item {
+                if let Ok(children) = sub.items() {
+                    visit(&children, f);
+                }
             }
         }
     }
+    let state = app.state::<AppState>();
+    let Some(menu) = state.window_menu.lock().unwrap().clone() else {
+        return;
+    };
+    let s = state.menu_state.lock().unwrap().clone();
+    let Ok(items) = menu.items() else {
+        return;
+    };
+    visit(&items, &mut |item| {
+        let id = item.id().as_ref();
+        let enabled = s["enabled"].get(id).and_then(Value::as_bool);
+        let checked = s["checked"].get(id).and_then(Value::as_bool);
+        match item {
+            MenuItemKind::MenuItem(i) => {
+                if let Some(on) = enabled {
+                    let _ = i.set_enabled(on);
+                }
+            }
+            MenuItemKind::Check(c) => {
+                if let Some(on) = enabled {
+                    let _ = c.set_enabled(on);
+                }
+                if let Some(on) = checked {
+                    let _ = c.set_checked(on);
+                }
+            }
+            _ => {}
+        }
+    });
 }
 
 /// APP-040: refuse to start below Windows 10 22H2 with a clear message.
@@ -194,7 +243,15 @@ pub fn run() {
         return;
     }
 
-    let core = Core::with_extensions(paths.clone(), Some(log), vec![xs_capture::extension()]);
+    let core = Core::with_extensions(
+        paths.clone(),
+        Some(log),
+        vec![
+            xs_capture::extension(),
+            xs_editor::extension(),
+            xs_ai::extension(),
+        ],
+    );
     #[cfg(windows)]
     if !check_windows_version(core.lang()) {
         return;
@@ -221,6 +278,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
         // windows and the countdown are left out: the plugin shows any window it has no
         // saved state for, which made a hidden selection window appear at startup.
@@ -232,6 +290,8 @@ pub fn run() {
         .manage(AppState {
             core: core.clone(),
             actions: Mutex::new(HashMap::new()),
+            window_menu: Mutex::new(None),
+            menu_state: Mutex::new(json!({})),
             shortcut_map: Mutex::new(HashMap::new()),
             pending_navigation: Mutex::new(None),
             overlays: overlay::Overlays::default(),
@@ -246,16 +306,28 @@ pub fn run() {
             xs_frame_patch,
             xs_countdown_cancel,
             xs_countdown_current,
-            xs_panel_fit
+            xs_panel_fit,
+            xs_editor_menus
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || responder.respond(overlay::serve_frame(&app, &request)));
         })
+        // Document pixels for the editor canvas (ADR 0004).
+        .register_asynchronous_uri_scheme_protocol("xsdoc", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || responder.respond(docs::serve(&app, &request)));
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
             core.set_host(Arc::new(host::TauriHost { app: handle.clone() }));
             permissions::init(core.paths.config_dir.clone());
+            // Recovery copies of unsaved documents every 30 s (EDT-012).
+            xs_editor::start_background(&core);
+            // The documents open when XcreenShot last ended (EDT-120).
+            xs_editor::reopen_documents(&core);
+            // System fonts load in the background, so the first text does not wait.
+            xs_image::text::warm_up();
 
             if let Err(e) = serve_ipc(core.clone()) {
                 tracing::error!(error = %e, "could not open the local automation channel");
@@ -318,11 +390,19 @@ pub fn run() {
             let app = window.app_handle();
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
-                    let keep_loaded = app
-                        .state::<AppState>()
-                        .core
-                        .settings
-                        .get_bool("advanced.keepEditorLoaded");
+                    let core = app.state::<AppState>().core.clone();
+                    if window.label() == windows::MAIN {
+                        // Library documents save themselves when the editor closes (EDT-012).
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_editor::save_library_documents(&core));
+                    }
+                    if window.label() == windows::MULTI_PANEL {
+                        // Closing the panel ends the session (CAP-067); its captures
+                        // stay in the library.
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_capture::multi::stop(&core, true));
+                    }
+                    let keep_loaded = core.settings.get_bool("advanced.keepEditorLoaded");
                     if window.label() == windows::MAIN && keep_loaded {
                         api.prevent_close();
                         let _ = window.hide();

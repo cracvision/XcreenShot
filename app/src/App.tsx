@@ -1,7 +1,8 @@
 import { Overlay } from "./overlay/Overlay";
+import { Editor } from "./editor/Editor";
 import { CapturePanel } from "./windows/CapturePanel";
 import { Countdown } from "./windows/Countdown";
-import { Home } from "./windows/Home";
+import { MultiCapture } from "./windows/MultiCapture";
 import { Preferences } from "./windows/Preferences";
 import { isOverlay, windowLabel } from "./windowKind";
 
@@ -15,7 +16,9 @@ export function App() {
       return <CapturePanel />;
     case "countdown":
       return <Countdown />;
+    case "multicapture":
+      return <MultiCapture />;
     default:
-      return <Home />;
+      return <Editor />;
   }
 }

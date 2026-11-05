@@ -97,6 +97,12 @@ pub trait Host: Send + Sync {
     }
     /// Starts the quit sequence (APP-004).
     fn quit(&self) {}
+    /// Shows what needs a decision before quitting (APP-004), in the main window.
+    /// Without a UI nothing is asked.
+    fn confirm_quit(&self, pending: &[Value]) {}
+    /// The editor view must reflect a change (`document`, `documents`, `tool`, `zoom`,
+    /// `recovery`…), whoever made it: UI, shortcut or CLI (EDT-119).
+    fn editor_event(&self, kind: &str, payload: Value) {}
     /// A setting changed; apply it (theme, language, icon, login item…).
     fn settings_changed(&self, key: &str, value: &Value) {}
     /// Shortcuts or their pause state changed; re-register global shortcuts.
@@ -147,6 +153,10 @@ pub trait Host: Send + Sync {
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         Err(unsupported())
     }
+    /// Shows (`true`) or closes the multi-capture panel (CAP-067).
+    fn multicapture_panel(&self, show: bool) {}
+    /// The multi-capture state changed (`{capturing, items}`): the panel shows it.
+    fn multicapture_event(&self, state: Value) {}
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

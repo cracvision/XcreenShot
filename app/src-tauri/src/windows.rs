@@ -12,6 +12,7 @@ use crate::AppState;
 pub const MAIN: &str = "main";
 pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
+pub const MULTI_PANEL: &str = "multicapture";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -60,25 +61,22 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
     #[allow(unused_mut)]
     let mut builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App("index.html".into()))
         .title(title)
-        .inner_size(960.0, 640.0)
-        .min_inner_size(640.0, 420.0)
+        .inner_size(1280.0, 800.0)
+        // EDT-001: the editor stays usable down to 900 × 600.
+        .min_inner_size(900.0, 600.0)
         .theme(theme(app));
-    #[cfg(windows)]
-    {
-        let state = app.state::<AppState>();
-        let mut actions = state.actions.lock().unwrap();
-        let menu = crate::tray::build_menu(
-            app,
-            &state.core,
-            &xs_core::menus::app_menu(xs_core::platform::Platform::Windows),
-            false,
-            &mut actions,
-        )?;
-        builder = builder.menu(menu);
-    }
+    // On Windows the editor draws its own menu bar (EDT-002, `xs_editor_menus`): a
+    // native one cannot animate like the rest of the app (APP-012).
     let w = builder.build()?;
     focus(&w);
     Ok(())
+}
+
+/// Title of the main window: the document shown and its unsaved state (EDT-012).
+pub fn set_main_title(app: &AppHandle, title: &str) {
+    if let Some(w) = app.get_webview_window(MAIN) {
+        let _ = w.set_title(title);
+    }
 }
 
 pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str>) -> tauri::Result<()> {
@@ -129,6 +127,59 @@ pub fn capture_panel(app: &AppHandle, show: Option<bool>) -> tauri::Result<bool>
         (None, false) => {}
     }
     Ok(show)
+}
+
+/// Logical size of the multi-capture panel and its distance to the work area edges.
+const MULTI_WIDTH: f64 = 340.0;
+const MULTI_HEIGHT: f64 = 420.0;
+const MULTI_MARGIN: f64 = 16.0;
+
+/// Multi-capture panel (CAP-067): always in front and never part of a capture. It
+/// appears without taking the focus, at the bottom right of the monitor under the
+/// pointer, so the app being captured keeps it. `false` closes it.
+pub fn multicapture_panel(app: &AppHandle, show: bool) -> tauri::Result<()> {
+    let existing = app.get_webview_window(MULTI_PANEL);
+    match (existing, show) {
+        (Some(w), true) => {
+            w.show()?;
+            w.unminimize()?;
+        }
+        (Some(w), false) => w.destroy()?,
+        (None, true) => {
+            let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.multi.title", &[]);
+            let w = WebviewWindowBuilder::new(app, MULTI_PANEL, WebviewUrl::App("index.html".into()))
+                .title(title)
+                .inner_size(MULTI_WIDTH, MULTI_HEIGHT)
+                .min_inner_size(260.0, 240.0)
+                .always_on_top(true)
+                .maximizable(false)
+                .minimizable(false)
+                .focused(false)
+                .visible(false)
+                .content_protected(true)
+                .theme(theme(app))
+                .build()?;
+            let pointer = app.cursor_position().ok();
+            let monitor = pointer
+                .and_then(|p| app.monitor_from_point(p.x, p.y).ok().flatten())
+                .or_else(|| app.primary_monitor().ok().flatten());
+            if let Some(m) = monitor {
+                let scale = m.scale_factor();
+                let area = m.work_area();
+                let (width, height) = ((MULTI_WIDTH * scale) as i32, (MULTI_HEIGHT * scale) as i32);
+                let margin = (MULTI_MARGIN * scale) as i32;
+                // Position first: moving to a monitor with another scale resizes it.
+                w.set_position(tauri::PhysicalPosition::new(
+                    area.position.x + area.size.width as i32 - width - margin,
+                    area.position.y + area.size.height as i32 - height - margin,
+                ))?;
+                w.set_size(tauri::PhysicalSize::new(width as u32, height as u32))?;
+            }
+            w.show()?;
+        }
+        (None, false) => {}
+    }
+    Ok(())
 }
 
 /// The panel fits its content (compact or expanded view, CAP-001).
@@ -228,7 +279,11 @@ pub fn after_window_gone(app: &AppHandle, closing_label: &str) {
             .get_bool("general.keepRunning")
     {
         tracing::info!("last window closed and keepRunning is off: quitting");
-        app.exit(0);
+        // Through the command, so unsaved documents are asked about first (APP-004).
+        let core = app.state::<AppState>().core.clone();
+        std::thread::spawn(move || {
+            let _ = core.call(xs_core::Source::Ui, "app.quit", json!({}), None);
+        });
     }
 }
 

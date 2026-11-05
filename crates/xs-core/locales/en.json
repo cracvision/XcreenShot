@@ -21,7 +21,7 @@
     },
     "app_quit": {
       "title": "Quit XcreenShot",
-      "description": "Quits the app, releases global shortcuts and removes the icon."
+      "description": "Quits the app, releases global shortcuts and removes the icon. With documents that have unsaved changes outside the library it asks first and returns status needs_decision, unless --force."
     },
     "app_diagnostics": {
       "title": "Diagnostic information",
@@ -146,6 +146,182 @@
     "capture_repeat_last_area": {
       "title": "Repeat Last Area",
       "description": "Captures at once, without the crosshair, the same screen rectangle as the last region or window capture; a window that is still open is captured where it is now. With no previous capture, opens the capture panel."
+    },
+    "document_open": {
+      "title": "Open document",
+      "description": "Opens a .xshot, PNG or JPG file as a document. Returns its documentId for the other document commands."
+    },
+    "document_list": {
+      "title": "Open documents",
+      "description": "The documents open in the editor, in order, with which one is shown and which have unsaved changes."
+    },
+    "document_info": {
+      "title": "Document details",
+      "description": "Size, resolution, objects (id, type, geometry, style), capture metadata and unsaved state of a document."
+    },
+    "document_annotate": {
+      "title": "Annotate",
+      "description": "Adds objects (arrows for now) to a document in image pixels. All are created or none, as one undo step."
+    },
+    "document_update_object": {
+      "title": "Change object",
+      "description": "Changes the geometry or style of one or more objects, as one undo step."
+    },
+    "document_delete_object": {
+      "title": "Delete object",
+      "description": "Deletes one or more objects, as one undo step."
+    },
+    "document_undo": {
+      "title": "Undo",
+      "description": "Undoes the last change of a document."
+    },
+    "document_redo": {
+      "title": "Redo",
+      "description": "Redoes the last undone change of a document."
+    },
+    "document_save": {
+      "title": "Save",
+      "description": "Saves a document in its own file. With a path it saves as: a copy for library documents, or the new linked file for files opened from elsewhere."
+    },
+    "document_export": {
+      "title": "Export",
+      "description": "Writes the final image (pixels and objects, flattened) as PNG or JPG without changing the document's own file."
+    },
+    "document_copy_all": {
+      "title": "Copy all",
+      "description": "Copies the final image of a document to the clipboard. The document keeps its objects editable."
+    },
+    "document_close": {
+      "title": "Close document",
+      "description": "Closes a document (or all). Library documents are saved first; files from elsewhere with unsaved changes need save or discard, otherwise nothing closes and status is needs_decision."
+    },
+    "editor_show": {
+      "title": "Show the editor",
+      "description": "Shows the main window in the Editor view, optionally with a given document."
+    },
+    "editor_state": {
+      "title": "Editor state",
+      "description": "Active tool, the current style of each tool and the document shown."
+    },
+    "editor_select_tool": {
+      "title": "Select tool",
+      "description": "Makes a tool the active one in the editor."
+    },
+    "editor_set_style": {
+      "title": "Set tool style",
+      "description": "Changes the current style of a tool: the properties of the next objects it draws. Kept between sessions."
+    },
+    "editor_zoom": {
+      "title": "Zoom",
+      "description": "Changes the editor zoom: actual size, fit to window, original on-screen size, in, out or a percentage (10-3200)."
+    },
+    "editor_view": {
+      "title": "Editor view",
+      "description": "The editor reports the zoom and position of the document it shows."
+    },
+    "editor_recovery_list": {
+      "title": "Recoverable work",
+      "description": "Documents with unsaved changes kept from a session that ended unexpectedly."
+    },
+    "editor_recovery_restore": {
+      "title": "Recover work",
+      "description": "Opens recoverable documents with their changes."
+    },
+    "editor_recovery_discard": {
+      "title": "Discard recoverable work",
+      "description": "Deletes recovery copies for good."
+    },
+    "document_crop": {
+      "title": "Crop",
+      "description": "Crops the document to a rectangle in canvas pixels. Nothing is lost: the original pixels stay in the .xshot and a later crop can grow back to the original edges. Objects keep their place on the image. One undo step."
+    },
+    "editor_fonts": {
+      "title": "Installed fonts",
+      "description": "Font families installed on this computer, for text objects."
+    },
+    "document_copy_objects": {
+      "title": "Copy objects",
+      "description": "Copies objects so they paste editable in XcreenShot, and as a PNG with transparency for other apps. With cut, also deletes them."
+    },
+    "document_paste": {
+      "title": "Paste",
+      "description": "Pastes the clipboard: objects copied in XcreenShot (editable, shifted 10 px if the originals are still there, or in place), plain text as a text object, or an image as a floating image of the document shown, or as a new document if nothing is open."
+    },
+    "editor_action": {
+      "title": "Editor action",
+      "description": "Does what an editor menu entry does, in the editor window: open, save, export, close, undo, cut, copy, paste, delete, show the side panel… For automation, the document.* commands work without the window."
+    },
+    "editor_menu_state": {
+      "title": "Editor menu state",
+      "description": "The editor window reports which of its menu entries can be used now and which are ticked."
+    },
+    "capture_multi_start": {
+      "title": "Multi-capture",
+      "description": "Starts multi-capture: every click captures the window under the pointer as it looked just before the click, and then reaches the app; a drag captures a rectangle. Esc ends it. The captures of the session are listed in a panel."
+    },
+    "capture_multi_stop": {
+      "title": "Finish multi-capture",
+      "description": "Stops capturing clicks. The panel stays so its captures can still be inserted, unless close also closes it and forgets the session."
+    },
+    "capture_multi_state": {
+      "title": "Multi-capture state",
+      "description": "Whether clicks are being captured and the captures of the session."
+    },
+    "capture_multi_remove": {
+      "title": "Remove from multi-capture",
+      "description": "Takes captures out of the multi-capture panel. They stay in the library."
+    },
+    "capture_multi_clear": {
+      "title": "Clear multi-capture",
+      "description": "Empties the multi-capture panel. The captures stay in the library."
+    },
+    "document_insert_images": {
+      "title": "Insert images",
+      "description": "Inserts library documents or image files as floating images of the document shown, in a cascade from the center. With nothing open, one library document opens as itself and several make a new document with them stacked."
+    },
+    "ai_key_set": {
+      "title": "Save the AI key",
+      "description": "Saves the Claude API key in the system keychain. Only from Preferences > AI."
+    },
+    "ai_key_clear": {
+      "title": "Remove the AI key",
+      "description": "Removes the Claude API key from the system keychain."
+    },
+    "ai_key_status": {
+      "title": "AI key status",
+      "description": "Whether a Claude API key is saved, and its last four characters."
+    },
+    "ai_key_test": {
+      "title": "Test the AI key",
+      "description": "Checks the saved key and the model with the Claude API, without sending any image."
+    },
+    "ai_ask": {
+      "title": "Ask the AI",
+      "description": "Sends the final image of a document and a request to Claude, and returns the answer. Needs cloud AI turned on in Preferences > AI."
+    },
+    "ai_suggest_name": {
+      "title": "Suggest a name with AI",
+      "description": "Asks Claude for a short descriptive file name for the image of a document. Does not rename it."
+    },
+    "ai_cancel": {
+      "title": "Stop the AI",
+      "description": "Stops the AI request in progress."
+    },
+    "document_rename": {
+      "title": "Rename document",
+      "description": "Renames the file of an open document in its folder, keeping its extension. Never replaces another file."
+    },
+    "document_image": {
+      "title": "Document image",
+      "description": "The final image of a document as a PNG (base64), scaled down to maxSize on its longest side, for an agent to look at."
+    },
+    "ai_open_console": {
+      "title": "Get an AI key",
+      "description": "Opens the page where Claude API keys are created, in the browser."
+    },
+    "app_mcp_config": {
+      "title": "MCP client configuration",
+      "description": "How an MCP client (Claude Desktop, Claude Code…) starts XcreenShot: the installed CLI and its arguments."
     }
   },
   "settings": {
@@ -247,6 +423,60 @@
     "capture_autoDetect": {
       "label": "Automatic detection",
       "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
+    },
+    "editor_deleteCroppedContent": {
+      "label": "Delete cropped content when saving",
+      "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
+    },
+    "editor_autoExpandCanvas": {
+      "label": "Expand the canvas automatically",
+      "description": "When an object sticks out of the image, the canvas grows just enough to show it, and shrinks back when it returns. What a crop leaves outside stays outside."
+    },
+    "editor_shrinkToFit": {
+      "label": "Shrink to fit when opening",
+      "description": "An image larger than the window opens fitted to it; a smaller one opens at 100 %."
+    },
+    "editor_rememberView": {
+      "label": "Remember each document's zoom and position",
+      "description": "Opening a document again shows it as you left it."
+    },
+    "editor_reopenDocuments": {
+      "label": "Reopen the documents that were open",
+      "description": "When XcreenShot starts, the editor has the documents you had open, in the same order."
+    },
+    "editor_escClosesEditor": {
+      "label": "Esc closes the editor",
+      "description": "With nothing to cancel (no drawing, selection or text being typed), Esc closes the editor window. The documents stay open."
+    },
+    "editor_toolbarLabels": {
+      "label": "Toolbar labels",
+      "description": "Shows each tool's name next to its icon when the window is wide enough. Also in View > Toolbar and with a right click on the toolbar."
+    },
+    "editor_autoSelectAfterDraw": {
+      "label": "Select an annotation after drawing it",
+      "description": "The object you just drew stays selected, ready to change."
+    },
+    "ai_enabled": {
+      "label": "Use cloud AI (Claude, by Anthropic)",
+      "description": "Lets you ask Claude about an image and get file name suggestions. An image is sent only when you ask, with your own key."
+    },
+    "ai_model": {
+      "label": "Model for questions",
+      "description": "Used by Ask the AI.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (most capable)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (balanced)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (cheapest)"
+      }
+    },
+    "ai_namingModel": {
+      "label": "Model for names",
+      "description": "Used by Suggest name. A cheaper model is enough.",
+      "options": {
+        "claude-opus-5-5": "Claude Opus 5.5 (most capable)",
+        "claude-sonnet-5-5": "Claude Sonnet 5.5 (balanced)",
+        "claude-haiku-5-5": "Claude Haiku 5.5 (cheapest)"
+      }
     }
   },
   "errors": {
@@ -268,7 +498,44 @@
     "no_active_window": "There is no active window to capture.",
     "region_outside": "The rectangle is outside every monitor.",
     "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved.",
-    "capture_cancelled": "The capture was cancelled."
+    "capture_cancelled": "The capture was cancelled.",
+    "no_document": "No document is open in the editor.",
+    "document_not_found": "Document \"{{id}}\" is not open.",
+    "object_not_found": "There is no object \"{{id}}\" in this document.",
+    "cannot_open": "Cannot open \"{{name}}\": {{reason}}.",
+    "unsupported_format": "This file type cannot be opened yet. Open a .xshot, PNG or JPG file.",
+    "newer_format": "This file was made with a newer XcreenShot. Update XcreenShot to open it.",
+    "invalid_object": "Object {{index}}: {{reason}}.",
+    "tool_later": "That tool arrives in a later build.",
+    "save_failed": "Could not save \"{{name}}\": {{reason}}.",
+    "file_exists": "\"{{name}}\" already exists.",
+    "recovery_not_found": "There is no recoverable item \"{{id}}\".",
+    "copy_failed": "Could not copy the image to the clipboard. Try again.",
+    "nothing_to_paste": "The clipboard holds nothing XcreenShot can paste.",
+    "multicapture_busy": "Multi-capture is on. Press Esc or Finish in its panel first.",
+    "multicapture_platform": "Multi-capture is not available on this system yet.",
+    "multicapture_item": "The multi-capture panel has no capture {{id}}.",
+    "nothing_to_insert": "Give at least one file to insert.",
+    "ai_disabled": "Cloud AI is off. Turn it on in Preferences > AI.",
+    "ai_no_key": "There is no API key saved. Save one in Preferences > AI.",
+    "ai_busy": "The AI is still answering. Wait for it or stop it.",
+    "ai_keychain": "The system keychain could not be used: {{reason}}",
+    "ai_key_format": "That does not look like an API key: it has spaces or unusual characters.",
+    "ai_auth": "The API key is not valid. Check it in Preferences > AI.",
+    "ai_forbidden": "This API key may not use this model.",
+    "ai_no_credit": "Your API account has no credit left. Add some in the Anthropic console.",
+    "ai_unknown_model": "This model is not available with your API key. Choose another one in Preferences > AI.",
+    "ai_rate_limited": "You reached your usage limit for now. Wait a minute and try again.",
+    "ai_overloaded": "The AI service is overloaded. Try again in a moment.",
+    "ai_too_large": "The image is too large to send.",
+    "ai_refused": "The AI declined this request.",
+    "ai_network": "There is no connection with the AI service. Check your internet connection or proxy.",
+    "ai_timeout": "The AI service stopped answering. Try again.",
+    "ai_cancelled": "Stopped.",
+    "ai_other": "The AI service answered with an error: {{reason}}",
+    "rename_unsaved": "Save the document before renaming it.",
+    "rename_failed": "Could not rename to \"{{name}}\": {{reason}}",
+    "cli_missing": "The xcreenshot command-line tool is not installed next to the app. Reinstall XcreenShot."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -295,7 +562,38 @@
     },
     "slot": {
       "capture_window": "Window Capture",
-      "capture_active_window": "Active Window"
+      "capture_active_window": "Active Window",
+      "editor_open": "Open…",
+      "editor_save": "Save",
+      "editor_save_as": "Save as…",
+      "editor_export": "Export…",
+      "editor_close": "Close",
+      "editor_close_all": "Close all",
+      "editor_undo": "Undo",
+      "editor_redo": "Redo",
+      "editor_redo_alt": "Redo (second shortcut)",
+      "editor_cut": "Cut",
+      "editor_copy": "Copy",
+      "editor_paste": "Paste",
+      "editor_paste_in_place": "Paste in place",
+      "editor_copy_all": "Copy all",
+      "editor_delete": "Delete",
+      "editor_delete_alt": "Delete (second shortcut)",
+      "editor_deselect": "Deselect",
+      "editor_zoom_in": "Zoom in",
+      "editor_zoom_out": "Zoom out",
+      "editor_zoom_actual": "Actual size",
+      "editor_zoom_fit": "Fit to window",
+      "editor_zoom_original": "Original size on screen",
+      "editor_side_panel": "Side panel",
+      "editor_tool_move": "Move tool",
+      "editor_tool_arrow": "Arrow tool",
+      "editor_tool_text": "Text tool",
+      "editor_tool_shape": "Shape tool",
+      "editor_tool_blur": "Blur tool",
+      "editor_tool_crop": "Crop tool",
+      "editor_ai_ask": "Ask the AI…",
+      "editor_ai_name": "Suggest name…"
     }
   },
   "tray": {
@@ -312,19 +610,49 @@
     "capture_universal": "Universal Capture",
     "capture_image": "Image Capture",
     "capture_repeat_last": "Repeat Last Capture",
-    "capture_panel": "Open Capture Panel"
+    "capture_panel": "Open Capture Panel",
+    "capture_multi": "Multi-capture"
   },
   "menu": {
-    "file": "File",
-    "edit": "Edit",
+    "file": "&File",
+    "edit": "&Edit",
     "window": "Window",
-    "help": "Help",
+    "help": "&Help",
     "preferences": "Preferences…",
     "settings_mac": "Settings…",
     "close_window": "Close window",
     "quit": "Quit XcreenShot",
     "open_logs": "Open logs folder",
-    "copy_diagnostics": "Copy diagnostic information"
+    "copy_diagnostics": "Copy diagnostic information",
+    "view": "&View",
+    "open": "Open…",
+    "save": "Save",
+    "save_as": "Save as…",
+    "export": "Export…",
+    "close": "Close",
+    "close_all": "Close all",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "copy_all": "Copy all",
+    "paste": "Paste",
+    "paste_in_place": "Paste in place",
+    "delete": "Delete",
+    "deselect": "Deselect",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_actual": "Actual size",
+    "zoom_fit": "Fit to window",
+    "zoom_original": "Original size on screen",
+    "side_panel": "Side panel",
+    "toolbar": "Toolbar",
+    "toolbar_labels": "Show labels",
+    "recover": "Recover work…",
+    "icons_only": "Icons only",
+    "ai": "&AI",
+    "ai_ask": "Ask the AI…",
+    "ai_name": "Suggest name…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -359,32 +687,14 @@
     "run_about": "Run a command by its full ID",
     "help_about": "Show help for a command",
     "ok": "Done.",
-    "positional": "positional"
+    "positional": "positional",
+    "mcp_about": "Run the MCP server over standard input and output, for AI clients such as Claude Desktop or Claude Code."
   },
   "system": {
     "unsupported_title": "Unsupported system",
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
-    "home": {
-      "title": "XcreenShot",
-      "subtitle": "Development build of M1: capture panel, on-screen selection and delay. The editor and the library come next.",
-      "test_title": "Test command",
-      "test_help": "Runs app.ping. The same command answers from this button, the global test shortcut and the CLI.",
-      "run_ping": "Run test command",
-      "shortcut_hint": "Global test shortcut: {{shortcut}}",
-      "cli_hint": "From a terminal:",
-      "activity": "Recent commands",
-      "activity_empty": "Nothing yet.",
-      "result": "Result",
-      "open_preferences": "Open Preferences",
-      "last_capture": "Last capture",
-      "no_capture": "No captures yet. Try the button above or the CLI.",
-      "saved_in": "Saved in",
-      "capture_help": "Open the capture panel from the icon. In the selection: drag a region, click a window or press F, then Capture (Enter). Esc cancels. The editor comes next.",
-      "capture_universal": "Universal Capture",
-      "open_panel": "Open capture panel"
-    },
     "prefs": {
       "title": "Preferences",
       "search": "Search settings",
@@ -404,7 +714,8 @@
         "share": "Share",
         "shortcuts": "Shortcuts",
         "advanced": "Advanced",
-        "experimental": "Experimental features"
+        "experimental": "Experimental features",
+        "ai": "AI"
       }
     },
     "permissions": {
@@ -437,6 +748,7 @@
       "filter_all": "All",
       "filter_global": "Global",
       "filter_app": "In the app",
+      "filter_editor": "Editor",
       "filter_conflict": "In conflict",
       "filter_custom": "Custom",
       "search": "Search by command or combination",
@@ -445,6 +757,7 @@
       "col_status": "Status",
       "scope_global": "Global",
       "scope_app": "In the app",
+      "scope_editor": "Editor",
       "record_prompt": "Press the combination…",
       "record_hint": "Esc cancels · Backspace removes",
       "none": "None",
@@ -526,6 +839,294 @@
       "label": "Capture in {{seconds}} s",
       "cancel": "Cancel",
       "hint": "Esc cancels"
+    },
+    "editor": {
+      "toolbar": "Editor toolbar",
+      "tools": "Tools",
+      "capture": "Capture",
+      "tool": {
+        "move": "Move",
+        "arrow": "Arrow",
+        "text": "Text",
+        "shape": "Shape",
+        "blur": "Blur",
+        "crop": "Crop",
+        "image": "Image"
+      },
+      "undo": "Undo",
+      "undo_named": "Undo {{label}}",
+      "redo": "Redo",
+      "redo_named": "Redo {{label}}",
+      "open": "Open…",
+      "save": "Save",
+      "save_all": "Save all",
+      "save_as": "Save as…",
+      "share_area": "Share",
+      "copy_all": "Copy all",
+      "share": "Share",
+      "share_file": "File…",
+      "share_clipboard": "Clipboard",
+      "preferences": "Preferences",
+      "format_xshot": "XcreenShot document",
+      "open_filter": "Images and XcreenShot documents",
+      "exported": "Image exported",
+      "copied": "Image copied",
+      "menubar": "Menu bar",
+      "canvas_menu": "Canvas menu",
+      "canvas_label": "Canvas of {{name}}. Drag to draw with the active tool.",
+      "side_panel": "Side panel",
+      "tab_styles": "Styles",
+      "tab_properties": "Properties",
+      "styles_soon": "Saved styles are coming soon.",
+      "props_selected_one": "Selected arrow",
+      "props_selected_other": "{{count}} selected arrows",
+      "props_tool": "{{tool}}: next objects",
+      "props_document": "Document",
+      "no_document": "No document open.",
+      "prop": {
+        "color": "Color",
+        "hex": "Hex color",
+        "width": "Thickness",
+        "start_cap": "Start",
+        "end_cap": "End",
+        "line_style": "Line type",
+        "opacity": "Opacity",
+        "size": "Image size",
+        "resolution": "Resolution",
+        "canvas_color": "Canvas color",
+        "file": "File",
+        "font": "Font",
+        "font_size": "Size",
+        "text_style": "Style",
+        "bold": "Bold",
+        "italic": "Italic",
+        "align": "Alignment",
+        "fill": "Fill",
+        "outline": "Outline",
+        "outline_width": "Outline thickness",
+        "shape_type": "Shape",
+        "blur_type": "Type",
+        "intensity": "Intensity"
+      },
+      "cap": {
+        "none": "None",
+        "filled": "Filled point",
+        "open": "Open point",
+        "thin": "Thin point",
+        "concave": "Concave point",
+        "circle": "Circle",
+        "circleHollow": "Hollow circle",
+        "square": "Square",
+        "diamond": "Diamond",
+        "bar": "Bar"
+      },
+      "line": {
+        "solid": "Solid",
+        "dash": "Dashed",
+        "dot": "Dotted",
+        "dashDot": "Dash and dot"
+      },
+      "dpi": "{{dpi}} dpi",
+      "transparent": "Transparent",
+      "pointer": "Pointer position in image pixels",
+      "zoom": "Zoom",
+      "zoom_in": "Zoom in",
+      "zoom_out": "Zoom out",
+      "zoom_menu": "Zoom levels",
+      "zoom_actual": "Actual size",
+      "zoom_fit": "Fit to window",
+      "zoom_original": "Original on-screen size",
+      "strip": "Open documents",
+      "strip_open": "{{name}}, open",
+      "unsaved": "Unsaved changes",
+      "close": "Close",
+      "close_named": "Close {{name}}",
+      "unsaved_title_one": "Save the changes to “{{name}}”?",
+      "unsaved_title_many": "Save the changes to these documents?",
+      "unsaved_close": "If you don't save, your changes will be lost.",
+      "unsaved_quit": "XcreenShot is about to quit. If you don't save, your changes will be lost.",
+      "dont_save": "Don't save",
+      "cancel": "Cancel",
+      "flatten_title": "Save with the annotations flattened?",
+      "flatten_body": "“{{name}}” is a PNG or JPG file. When saved, its annotations become part of the image and can no longer be edited in that file. To keep them editable, use Save as… and choose XcreenShot document.",
+      "dont_ask_again": "Don't ask again",
+      "recover_title": "Recover work",
+      "recover_body": "XcreenShot closed unexpectedly. These documents had unsaved changes:",
+      "recover": "Recover",
+      "discard": "Discard",
+      "later": "Later",
+      "nothing_to_recover": "There is no work to recover.",
+      "error_title": "Something went wrong",
+      "empty_title": "Nothing open yet",
+      "empty_help": "Take a capture, open an image or a .xshot document, or drop files here.",
+      "empty_shortcut": "Or press",
+      "drop_hint": "Drop to open as documents",
+      "panel_width": "Side panel width",
+      "accept": "OK",
+      "mixed": "Mixed",
+      "objects_count_one": "{{count}} object",
+      "objects_count_other": "{{count}} objects",
+      "props_selection": "Selected: {{what}}",
+      "text_field": "Text",
+      "crop_help": "Drag the edges or corners, or drag a new box. Enter or double-click applies; Esc puts it back. What is cut stays in the document and can be recovered by cropping again.",
+      "crop_apply": "Crop",
+      "outside_one": "{{count}} object outside the canvas",
+      "outside_other": "{{count}} objects outside the canvas",
+      "select_outside": "Select",
+      "align": {
+        "left": "Left",
+        "center": "Center",
+        "right": "Right",
+        "justify": "Justified"
+      },
+      "shape": {
+        "rectangle": "Rectangle",
+        "ellipse": "Ellipse"
+      },
+      "blur": {
+        "blur": "Blur",
+        "pixelate": "Pixelate",
+        "solid": "Solid",
+        "solid_hint": "Best for confidential data: blur and pixelation can sometimes be reversed with outside tools.",
+        "security": "Exported images and copies never keep what a blur hides. A .xshot does, until the blur is flattened."
+      },
+      "color": {
+        "theme": "Theme colors",
+        "palette": "Palette",
+        "area": "Saturation and brightness",
+        "hue": "Hue",
+        "brightness_short": "Br",
+        "eyedropper": "Eyedropper"
+      },
+      "a11y": {
+        "object": "{{what}}, at {{x}}, {{y}}, {{w}} by {{h}} pixels",
+        "tool": "Tool: {{tool}}",
+        "zoom": "Zoom {{zoom}} %"
+      }
+    },
+    "multi": {
+      "title": "Multi-capture",
+      "hint": "Click a window to capture it; the click still reaches it. Drag to capture a rectangle. Esc finishes.",
+      "stopped": "Capturing is finished. Pick captures to insert them, or capture more.",
+      "empty": "No captures yet. Click a window to start.",
+      "captures": "Captures of this session",
+      "capture_n": "Capture {{n}}, {{width}} by {{height}} pixels",
+      "remove": "Remove {{name}} from the panel",
+      "remove_hint": "Remove from the panel (it stays in the library)",
+      "all": "Select all",
+      "none": "Select none",
+      "clear": "Clear",
+      "insert_one": "Insert {{count}}",
+      "insert_other": "Insert {{count}}",
+      "finish": "Finish (Esc)",
+      "resume": "Capture more",
+      "close": "Close",
+      "insert_none": "Insert"
+    },
+    "ai": {
+      "intro": "Ask Claude about an image (a description, alt text, a summary, a poem…) and get file name suggestions. XcreenShot sends an image only when you ask, with your own key. Each request uses credit from your API account.",
+      "key": "API key",
+      "key_hint": "Saved in the system keychain, never in a file.",
+      "key_placeholder": "sk-ant-…",
+      "save": "Save",
+      "saved": "Saved (ends in ····{{hint}})",
+      "change": "Change",
+      "remove": "Remove",
+      "test": "Test the key",
+      "testing": "Testing…",
+      "test_ok": "The key works with {{model}}.",
+      "get_key": "How to get a key",
+      "consent_title": "Turn on cloud AI",
+      "consent_what": "What is sent: the final image of the document and the text you write, only when you press Send or Suggest name.",
+      "consent_who": "To whom: Anthropic, over an encrypted connection to api.anthropic.com, with your own API key.",
+      "consent_cost": "Cost: each request uses credit from your API account.",
+      "consent_rest": "Everything else in XcreenShot keeps working offline, as before.",
+      "consent_accept": "Turn on",
+      "cancel": "Cancel",
+      "ask_title": "Ask the AI",
+      "sending": "The image of this document ({{width}} × {{height}} px) and your text will be sent to Anthropic ({{model}}).",
+      "quick": "Quick requests",
+      "quick_describe": "Describe",
+      "quick_alt": "Alt text",
+      "quick_summary": "Summarize the text",
+      "quick_poem": "Poem",
+      "prompt_describe": "Describe what this image shows.",
+      "prompt_alt": "Write alt text for this image, for a screen reader: one or two sentences.",
+      "prompt_summary": "Summarize the text in this image in a few bullet points.",
+      "prompt_poem": "Write a short poem inspired by this image.",
+      "prompt_label": "What should the AI do with this image?",
+      "prompt_placeholder": "For example: a poem for Ana and Luis, who are celebrating 10 years of marriage",
+      "send": "Send",
+      "stop": "Stop",
+      "thinking": "Thinking…",
+      "you": "You",
+      "assistant": "AI",
+      "stopped": "(stopped)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "insert": "Insert in the image",
+      "inserted": "Inserted as text",
+      "more": "Ask something else",
+      "new": "New conversation",
+      "usage": "{{input}} input tokens · {{output}} output tokens",
+      "not_ready_title": "Cloud AI is not ready",
+      "open_prefs": "Open Preferences > AI",
+      "name_title": "Suggest name",
+      "name_asking": "Asking for a suggestion…",
+      "name_label": "File name",
+      "rename": "Rename",
+      "another": "Another suggestion",
+      "renamed": "Renamed: {{name}}",
+      "no_document": "Open a document first.",
+      "mcp_title": "Use XcreenShot from Claude Desktop or Claude Code",
+      "mcp_body": "Another way, without a key here: your Claude app connects to XcreenShot, looks at your captures and renames them with its own account. Nothing is sent to the cloud by XcreenShot.",
+      "mcp_copy": "Copy the configuration",
+      "mcp_copied": "Copied. In Claude Desktop: Settings > Developer > Edit Config; paste it (inside mcpServers if the file already has servers) and restart Claude.",
+      "mcp_copy_code": "Copy the Claude Code command",
+      "mcp_copied_code": "Copied. Paste it in a terminal."
     }
+  },
+  "history": {
+    "annotate": "Annotate",
+    "draw_arrow": "Draw arrow",
+    "draw_objects": "Draw objects",
+    "move_arrow": "Move arrow",
+    "move_objects": "Move objects",
+    "change_arrow": "Change arrow",
+    "change_objects": "Change objects",
+    "delete_arrow": "Delete arrow",
+    "delete_objects": "Delete objects",
+    "draw_text": "Add text",
+    "move_text": "Move text",
+    "change_text": "Change text",
+    "delete_text": "Delete text",
+    "draw_shape": "Draw shape",
+    "move_shape": "Move shape",
+    "change_shape": "Change shape",
+    "delete_shape": "Delete shape",
+    "draw_blur": "Blur",
+    "move_blur": "Move blur",
+    "change_blur": "Change blur",
+    "delete_blur": "Delete blur",
+    "crop": "Crop",
+    "cut_arrow": "Cut arrow",
+    "cut_text": "Cut text",
+    "cut_shape": "Cut shape",
+    "cut_blur": "Cut blur",
+    "cut_objects": "Cut objects",
+    "paste_arrow": "Paste arrow",
+    "paste_text": "Paste text",
+    "paste_shape": "Paste shape",
+    "paste_blur": "Paste blur",
+    "paste_objects": "Paste objects",
+    "insert_image": "Insert image",
+    "move_image": "Move image",
+    "change_image": "Change image",
+    "delete_image": "Delete image",
+    "cut_image": "Cut image",
+    "paste_image": "Paste image"
+  },
+  "editor": {
+    "edited": "{{name}} — Edited"
   }
 }

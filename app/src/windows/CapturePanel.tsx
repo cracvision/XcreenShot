@@ -6,6 +6,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
+import { Menu } from "../components/Menu";
+import { useIndicator } from "../components/useIndicator";
 import { display } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import {
@@ -188,6 +190,8 @@ function merge(s: PanelSettings, p: Patch): PanelSettings {
 function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const list = useRef<HTMLDivElement>(null);
+  useIndicator(list, value);
   const onKey = (e: React.KeyboardEvent) => {
     const i = TABS.indexOf(value);
     const next =
@@ -206,7 +210,14 @@ function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
     refs.current[next]?.focus();
   };
   return (
-    <div className="panel-tabs" role="tablist" aria-label={t("ui.panel.tabs")} onKeyDown={onKey}>
+    <div
+      className="panel-tabs seg"
+      role="tablist"
+      aria-label={t("ui.panel.tabs")}
+      onKeyDown={onKey}
+      ref={list}
+    >
+      <span className="seg-indicator" aria-hidden="true" />
       {TABS.map((tab) => (
         <button
           key={tab}
@@ -454,69 +465,24 @@ function CaptureShortcut() {
 /** "More" menu (CAP-001): only the entries whose features exist. */
 function MoreMenu({ onReset }: { onReset: () => void }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    menu.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    const close = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!menu.current?.contains(target) && !button.current?.contains(target)) setOpen(false);
-    };
-    window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
-  }, [open]);
-
-  const onKey = (e: React.KeyboardEvent) => {
-    const items = [...(menu.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      setOpen(false);
-      button.current?.focus();
-    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      const d = e.key === "ArrowDown" ? 1 : -1;
-      items[(i + d + items.length) % items.length]?.focus();
-    }
-  };
-  const choose = (action: () => void) => {
-    setOpen(false);
-    button.current?.focus();
-    action();
-  };
-
   return (
     <div className="panel-more">
-      <button
-        ref={button}
-        type="button"
-        className="btn icon"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={t("ui.panel.more")}
+      <Menu
+        triggerClass="btn icon"
+        align="end"
+        chevron={false}
+        ariaLabel={t("ui.panel.more")}
         title={t("ui.panel.more")}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span aria-hidden="true">⋯</span>
-      </button>
-      {open && (
-        <div className="menu" role="menu" ref={menu} onKeyDown={onKey}>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            onClick={() => choose(() => void run("settings.open", { section: "capture" }))}
-          >
-            {t("ui.panel.capture_prefs")}
-          </button>
-          <button type="button" role="menuitem" tabIndex={-1} onClick={() => choose(onReset)}>
-            {t("ui.panel.reset")}
-          </button>
-        </div>
-      )}
+        label={<span aria-hidden="true">⋯</span>}
+        items={[
+          {
+            id: "prefs",
+            label: t("ui.panel.capture_prefs"),
+            onSelect: () => void run("settings.open", { section: "capture" }),
+          },
+          { id: "reset", label: t("ui.panel.reset"), onSelect: onReset },
+        ]}
+      />
     </div>
   );
 }

@@ -17,13 +17,14 @@ use crate::platform::Platform;
 use crate::schema;
 
 /// Preferences sections, in sidebar order (APP-006).
-pub const SECTIONS: [&str; 9] = [
+pub const SECTIONS: [&str; 10] = [
     "general",
     "capture",
     "video",
     "editor",
     "library",
     "share",
+    "ai",
     "shortcuts",
     "advanced",
     "experimental",
@@ -68,6 +69,9 @@ fn boolean() -> Value {
 fn one_of(values: &[&str]) -> Value {
     json!({"type": "string", "enum": values})
 }
+
+/// Models the cloud AI can use (SMT-039), most capable first.
+pub const AI_MODELS: [&str; 3] = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"];
 
 /// All settings that exist in this build, in display order.
 pub fn definitions() -> Vec<SettingDef> {
@@ -135,6 +139,51 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "APP-020",
         ),
+        // Preferences > Editor (EDT-118), in its order; the rest arrive with their features.
+        def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
+        def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),
+        def(
+            "editor.reopenDocuments",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-120",
+        ),
+        def(
+            "editor.escClosesEditor",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-012",
+        ),
+        def(
+            "editor.toolbarLabels",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-003",
+        ),
+        def(
+            "editor.autoSelectAfterDraw",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-022",
+        ),
+        def(
+            "editor.autoExpandCanvas",
+            "editor",
+            boolean(),
+            json!(true),
+            "EDT-071",
+        ),
+        def(
+            "editor.deleteCroppedContent",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-050",
+        ),
         def(
             "advanced.keepEditorLoaded",
             "advanced",
@@ -163,6 +212,22 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "APP-032",
         )),
+        // Cloud AI (SMT-039): only the Preferences window may turn it on.
+        locked_down(def("ai.enabled", "ai", boolean(), json!(false), "SMT-039")),
+        def(
+            "ai.model",
+            "ai",
+            one_of(&AI_MODELS),
+            json!("claude-opus-5-5"),
+            "SMT-039",
+        ),
+        def(
+            "ai.namingModel",
+            "ai",
+            one_of(&AI_MODELS),
+            json!("claude-haiku-5-5"),
+            "SMT-039",
+        ),
         def(
             "diagnostics.verbose",
             "advanced",

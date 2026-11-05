@@ -8,6 +8,8 @@ description = "Screen and window capture (CAP-)"
 
 [dependencies]
 xs-core.workspace = true
+xs-editor = { path = "../xs-editor" }
+xs-image = { path = "../xs-image" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -15,11 +17,10 @@ tracing.workspace = true
 xcap = "0.9"
 image = { version = "0.25", default-features = false, features = ["png"] }
 arboard = { version = "3", default-features = false, features = ["image-data"] }
-directories = "6"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Storage_FileSystem", "Win32_System_SystemInformation"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_Security"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"

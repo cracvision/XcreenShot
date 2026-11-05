@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-10-24, al cerrar la entrega 3 de M1.
+**Última actualización:** 2026-10-28, con la entrega 4c terminada y pendiente de las pruebas de Carlos.
 
 ## Fuentes
 
@@ -12,7 +12,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Avance por ID | [`spec/PARITY.md`](../spec/PARITY.md) |
 | Decisiones y dudas abiertas | [`spec/QUESTIONS.md`](../spec/QUESTIONS.md) |
 | Pruebas manuales y sus resultados | [`tests/manual/`](../tests/manual/) |
-| Decisiones de arquitectura | [`docs/adr/`](adr/) |
+| Decisiones de arquitectura | [`docs/adr/`](adr/) (la 0004 es la del editor) |
+| Formato `.xshot` | [`docs/formats/`](formats/) |
 | Comandos para agentes (CLI y MCP) | [`AGENTS.md`](../AGENTS.md) |
 | Historial de cambios | `git log` y los PR en [GitHub](https://github.com/cracvision/XcreenShot/pulls) |
 | Ayudas para probar en Windows | [`scripts/dev/`](../scripts/dev/README.md) |
@@ -22,60 +23,139 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 - **Hito actual:** M1 · Captura y edición básicas. Versión 0.2.0.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
-- **M1** se construye por entregas en la rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde). Último commit: `c97ce05`.
+- **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
+- **M1, entrega 4 (editor):** rama `m1-editor`, que sale de `m1-capture`. Su PR apunta a `m1-capture` hasta que se fusione el PR #2; después, a `main`.
 
 | Entrega de M1 | Contenido | Estado |
 |---|---|---|
 | 1 · Motor de captura | Pantalla completa, región y ventana; portapapeles; metadatos; comandos `capture.*` en el CLI | Hecha y probada por Carlos |
 | 2 · Selección en pantalla | Pantallas congeladas, cruceta, lupa, detección de ventanas, barra de captura con **Capturar** | Hecha y probada por Carlos |
 | 3 · Panel de captura | Pestañas Universal e Imagen, retardo con cuenta atrás, menú del ícono, Repetir última captura y Repetir última área, restablecer ajustes | Hecha; faltan 3 pruebas de Carlos (abajo) |
-| 4 · Editor básico | Flecha, Texto, Forma, Desenfocar, Recortar, deshacer y rehacer; guardar PNG, JPG y `.xshot` | Siguiente |
-| 5 · Biblioteca | Autoguardado y bandeja reciente básica | Pendiente |
+| 4a · De la captura al archivo | Ventana Editor con lienzo, zoom y barra de estado; Mover y Flecha; deshacer y rehacer; guardar `.xshot`, exportar PNG y JPG, Copiar todo, abrir y soltar archivos, cerrar; aviso de cambios sin guardar y recuperación; cada captura se guarda como `.xshot` en la biblioteca; tira de documentos abiertos; comandos `document.*` y `editor.*` | Hecha y probada por Carlos (tres tandas, 2026-10-25) |
+| 4b · Las demás herramientas | Texto, Forma, Desenfocar, Recortar sin perder lo recortado; tiradores con `Shift`/`Alt`; selector de color completo; cortar, copiar y pegar objetos; teclas de herramienta | Hecha y probada por Carlos (cinco tandas, 2026-10-28), con el lienzo que crece (EDT-071) |
+| 4c · Menús, teclado y accesibilidad | Barra de menús del editor y menú contextual, tabla completa de atajos (asignables), accesibilidad del lienzo, Preferencias > Editor | Hecha y probada por Carlos (tres tandas, 2026-10-28); falta una tanda corta del arreglo del marco de foco |
+| IA en la nube (función propia, SMT-039 a SMT-043) | Aprobada por Carlos el 2026-11-01 (IDEA-002): cambia el principio "todo local" para esta función; las dos vías (la app con la clave de cada uno, y Claude Desktop o Claude Code por MCP); cada colega paga su clave. Preguntar a la IA sobre una imagen, sugerir nombre, servidor MCP | Hecha. Tanda B PASS (2026-11-01). Falta la tanda A (necesita su clave) |
+| Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
+| Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
+| Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
+| 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
 
-En `spec/QUESTIONS.md` el editor aparece como "parte 2 de M1" y la biblioteca como "parte 3": son las entregas 4 y 5 de esta tabla.
+Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
 
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
 
-Sesión "M0 startup según spec" (2026-10-12 a 2026-10-24). El detalle está en `git log`.
+- **Aspecto nuevo (2026-11-05):** Carlos quería una interfaz menos aburrida, con animaciones en menús y botones. Claude Design había hecho el sistema "Snap" (PR #4), pero sobre `main`, sin el editor.
+  - Se llevó a `m1-editor` en la rama `snap-ui`, preparada en una carpeta aparte (`C:\Projects\XcreenShot-snap`).
+  - Los nombres de color viejos pasaron a los de Snap. `MenuButton` y el menú Más del panel pasaron al `Menu` animado.
+  - Editor:
+    - pestañas y herramientas con un resaltado que se desliza;
+    - íconos con micro-animaciones y botón principal con brillo;
+    - tira con miniaturas que se levantan y esquinas amarillas en la captura actual;
+    - avisos y cuenta atrás animados, y una rejilla de puntos detrás del lienzo.
+  - Logo de Carlos:
+    - paleta del logo, con tokens con nombre de función (`--brand`, `--star`, `--magenta`, `--rec`);
+    - el logo en el editor vacío, en versión clara u oscura, con el REC parpadeando;
+    - ícono nuevo, el emblema simplificado (`scripts/make-icon.mjs`);
+    - títulos en Outfit, la fuente gratuita más parecida a la del logo, empaquetada.
+  - Los clics derechos del editor y, en Windows, la barra de menús ya no son nativos: los dibuja la app (`MenuBar.tsx`), con `Alt`, `F10`, letras de acceso, flechas y submenús. macOS conserva su barra del sistema.
+  - Arreglo de paso: las teclas del editor se quedaban con flechas, `Enter` y `Escape` aunque se pulsaran dentro de un menú.
+  - El PR #4 queda superado: su contenido llegó por `snap-ui`.
 
-- **M0 completo:**
-  - Registro de comandos, CLI, ícono en la bandeja, atajos globales, preferencias, EN/ES y CI.
-  - Fusionado en el PR #1.
-- **M1, entrega 1:** motor de captura.
-- **M1, entrega 2:**
-  - Selección en pantalla rápida (~105 ms en 5120×2160).
-  - Lupa con copia del color y botón **Capturar**.
-  - Selector EN | ES.
-- **M1, entrega 3:**
-  - Panel de captura y cuenta atrás que no roba el foco.
-  - Entradas de captura en el menú del ícono.
-  - Repetir última captura y Repetir última área.
-  - Corregidos: el menú ⋯ cortado en la vista compacta, la grabación de `PrtScn` en los atajos y el anillo de foco de las pestañas.
-- **Continuidad:**
-  - Se creó este archivo y la regla en `CLAUDE.md`.
-  - Los scripts de prueba pasaron a `scripts/dev/`.
+- **Reabrir los documentos al iniciar, EDT-120** (2026-11-01; Carlos: "sí me interesa", IDEA-003):
+  - Spec: sección 12 de `02-editor.md`, la fila en la tabla de EDT-118 y dos decisiones provisionales en `QUESTIONS.md`.
+  - `xs-editor` guarda la lista de la tira en el estado local (`editor.openDocuments`) cada vez que cambia, así que sobrevive a Salir, a un apagado y a un cierre inesperado. Al arrancar, la reabre en segundo plano, sin ventanas, y los comandos `document.*` y `editor.*` esperan a que termine (10 s como mucho).
+  - Ajuste `editor.reopenDocuments` (por defecto sí).
+  - Se omiten sin avisar los archivos que ya no existen y los que tienen copia de recuperación, que llegan por la recuperación.
+  - Probado en una instancia aislada: tres documentos, la app arrancada otra vez por el CLI, y la tira igual que antes.
+- **Corrección del CLI (APP-028):** en Windows, la app que arranca el CLI heredaba sus tuberías de salida. Un script, un agente o un cliente MCP que leía la salida del CLI esperaba hasta que la app se cerrara. Ahora el CLI no deja heredar sus manejadores estándar.
+- **Tanda B de la IA (SMT-043):** PASS. La configuración de Claude Desktop de Carlos ya tenía cinco servidores, así que Claude Code añadió la entrada `xcreenshot`, con su permiso y con una copia de seguridad. Propuesta IDEA-004 (botón **Añadir a Claude Desktop**), pendiente de su visto bueno.
+
+- **IA en la nube, SMT-039 a SMT-043** (2026-11-01; Carlos aprobó IDEA-002: cambiar "todo local" para esta función, las dos vías, cada colega con su clave):
+  - Spec: sección 8 de `06-inteligentes.md`; SPEC §2.3 y §3.2, APP-054 (quinta conexión permitida) y la privacidad de `CLAUDE.md` actualizados.
+  - Crate nuevo `xs-ai`:
+    - la clave en el llavero (`CredWriteW`/`CredReadW` en Windows; Llavero de macOS con `security-framework`);
+    - peticiones HTTPS a la API de Claude con `reqwest` (TLS y proxy del sistema), en streaming, con `fallbacks: "default"` en Opus y Sonnet;
+    - comandos `ai.key_set` (solo la interfaz), `ai.key_clear`, `ai.key_status`, `ai.key_test`, `ai.open_console`, `ai.ask`, `ai.suggest_name` y `ai.cancel`.
+  - Ajustes: `ai.enabled` (por defecto no; solo desde Preferencias), `ai.model` (Opus 5.5) y `ai.namingModel` (Haiku 5.5). Código de error nuevo `feature_disabled`.
+  - Interfaz: sección **IA** en Preferencias, con el aviso al activar, la clave, **Probar la clave**, los modelos y la vía MCP. Menú **IA** del editor con **Preguntar a la IA…** (respuesta por partes, peticiones rápidas, seguimiento, **Detener**, **Insertar en la imagen**, tokens) y **Sugerir nombre…** (**Renombrar**, **Otra sugerencia**).
+  - Editor: `document.rename` y `document.image`.
+  - Vía B: `xcreenshot mcp` (APP-029 adelantado: herramientas; faltan recursos y eventos). Las imágenes van como imagen MCP. Ninguna herramienta `ai_*` por MCP. `app.mcp_config` y los botones **Copiar** en Preferencias > IA.
+  - El instalador incluye ahora el CLI: `npm run package` en `app/` (`scripts/sidecar.mjs` y `tauri.bundle.json`).
+  - El registro ahora guarda también las líneas de `xs_editor` y `xs_ai`. De la IA solo quedan el modelo, los tokens, el tiempo y el resultado.
+  - Probado en la instancia aislada contra un servidor local que imita la API, con una clave inventada. Ver [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md).
+  - Tropiezo: la espera de esa prueba lanzó un momento la app de depuración vieja sin carpeta aislada, porque el CLI arranca la app si no responde. Se cerró en seguida; no escribió en la configuración de Carlos. Para esperar a una instancia aislada, usar siempre `--no-launch`.
+
+Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en `git log`.
+
+- **Plan de la entrega 4** propuesto y aprobado (tres partes, decisiones A, B y C). ADR 0004.
+- **Entrega 4a:**
+  - Modelo de documento y formato `.xshot` con esquema publicado; guardado seguro; versiones.
+  - Motor de dibujo en Rust (`xs-image`): flecha con 10 extremos y 4 tipos de línea, opacidad, PNG con resolución y sRGB, JPG.
+  - Crate nuevo `xs-editor`: documentos abiertos, 200 pasos de deshacer, guardado automático de la biblioteca, preguntar antes de perder cambios (cerrar y salir), copias de recuperación cada 30 s.
+  - Las capturas se guardan como `.xshot` en `Documentos\XcreenShot\AAAA-MM\` y se abren en el editor.
+  - Ventana Editor (Konva): lienzo con zoom y desplazamiento, Mover y Flecha, panel Propiedades, barra de estado, tira de documentos, diálogos.
+  - 20 comandos nuevos (`document.*`, `editor.*`); `app.quit` pregunta por cambios sin guardar.
+- **Herramientas de prueba:** `scripts/dev/cdp.mjs` prueba la ventana de una instancia aislada sin mover el ratón real.
+- **Fallos que encontró Carlos en sus pruebas, corregidos:**
+  - el editor instalado no mostraba la captura (la política de seguridad bloqueaba las imágenes del protocolo `xsdoc`; ahora hay una prueba);
+  - la captura temblaba con la ventana acoplada a media pantalla (barra de desplazamiento que aparecía y desaparecía por fracciones de píxel);
+  - al alternar documentos el zoom se copiaba o se volvía a aplicar.
+- **Lección:** antes de dar un instalador, probar con `npx tauri build --debug --no-bundle`, que empaqueta la interfaz como la app instalada (el servidor de desarrollo no aplica la política de seguridad).
+- **Entrega 4b** (2026-10-25):
+  - Texto con `cosmic-text` y fuentes del sistema: Rust lo dibuja también en pantalla; mientras se escribe, un campo encima con la misma medida.
+  - Forma (rectángulo y elipse) y Desenfocar (desenfoque, pixelado y sólido), calculados en Rust sobre lo que hay debajo.
+  - Tiradores para redimensionar y girar, con `Shift` y `Alt`.
+  - Recortar sin perder lo recortado (se recupera volviendo a recortar) y aviso de objetos fuera del lienzo. La preferencia `editor.deleteCroppedContent` recorta de verdad al guardar.
+  - Selector de color completo, con cuentagotas de pantalla (Windows) y `I` sobre el lienzo.
+  - Cortar, copiar y pegar objetos: editables dentro de la app, PNG con transparencia para las demás; texto e imágenes de otras apps.
+  - Teclas de herramienta, `Tab`, `Ctrl+Enter`, `[` y `]`. 2 comandos nuevos (`document.copy_objects`, `document.paste`).
+  - Tras las pruebas de Carlos (2026-10-27): el selector de color se cierra con cualquier clic fuera (los cuadritos no lo cierran); el clic derecho ya no muestra el menú del motor web (salvo en campos de texto).
+  - **Lienzo que crece (EDT-071, decisión de Carlos del 2026-10-27):** crece al sacar un objeto del borde, se encoge solo cuando vuelve (nunca por debajo de la imagen o del último recorte), y respeta lo que deja fuera un recorte. Desenfocar no lo amplía. Campos nuevos en el `.xshot`: `frame` y `outside`. Preferencia `editor.autoExpandCanvas`.
+  - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (tamaño del texto en puntos, intensidad del desenfoque, cuentagotas en macOS, huella del portapapeles, pegar imágenes con un documento abierto, tamaño de `Ctrl+Enter`).
+
+- **Multicaptura, CAP-067** (2026-11-01, pedida y decidida por Carlos; ver `spec/IDEAS.md` IDEA-001):
+  - `xs-capture/src/multi.rs`: los gestos (clic, arrastre, doble clic) sin llamadas al sistema, con pruebas; la sesión, sus capturas y los comandos `capture.multi_start`, `multi_stop`, `multi_state`, `multi_remove`, `multi_clear`.
+  - `xs-capture/src/multi_win.rs` (Windows): gancho de ratón y teclado de bajo nivel en un hilo propio. La pulsación se retiene, se captura la ventana y se devuelve el clic con `SendInput` (marcado, para no volver a capturarlo). Cuatro ventanas finas hacen el borde resaltado (`WDA_EXCLUDEFROMCAPTURE`). Las ventanas de apps elevadas no se retienen (Windows no deja devolverles el clic).
+  - Cada captura se guarda en la biblioteca sin abrirse (`xs_editor::save_capture`). Mientras dura, las demás capturas responden `busy`.
+  - Panel `multicapture` (React, `windows/MultiCapture.tsx`): miniaturas por `xsdoc://…/multi/<id>`, elegir, X, Limpiar, Insertar, Terminar, Capturar más y Cerrar. Nunca sale en las capturas (`content_protected`). Entrada **Multicaptura** en el menú del ícono y atajo asignable, sin atajo por defecto.
+  - **Imágenes flotantes (EDT-078, lo básico, adelantado):** objeto `image` (`image`, `rect`, `rotation`, `style.opacity`) con su imagen en `images/` del `.xshot`; dibujado en Rust (`render.rs`) y en Konva. Se mueve, redimensiona (proporción desde la esquina; `Shift` la libera) y gira como una forma, en píxeles enteros. Comando `document.insert_images`. Pegar una imagen de otra app con un documento abierto ya la inserta como imagen flotante.
+  - Probado en la instancia aislada con una ventana de prueba propia y clics reales: ver [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md).
+  - `scripts/dev/cdp.mjs` acepta `XS_CDP_WINDOW=<etiqueta>` para manejar otras ventanas (el panel, Preferencias).
+- **Entrega 4c** (2026-10-28):
+  - Barra de menús nativa del editor en Windows (Archivo, Edición, Ver, Ayuda), con el atajo de cada entrada y las que no aplican en gris; menú del clic derecho en el lienzo y en la barra (EDT-002).
+  - Atajos del editor asignables: ámbito nuevo **Editor** en Preferencias > Atajos, que en el editor gana a los de la app (EDT-115, EDT-116). Comando nuevo `editor.action` (lo usan menús y atajos) y `editor.menu_state` (solo interfaz).
+  - Exportar pasa a `Ctrl+Alt+Shift+E` en Windows: la del spec choca con Capturar imagen. Una prueba vigila que ningún atajo por defecto se repita.
+  - Preferencias > Editor con siete ajustes (EDT-118), `Esc` cierra el editor (EDT-012), Solo íconos (EDT-003).
+  - Accesibilidad (EDT-013): `F6` entre zonas, anuncios para el lector de pantalla, `Shift`+flechas en los deslizadores.
+  - Botones de Deshacer y Rehacer: se quedan (Carlos, 2026-10-28).
+  - Tras las pruebas de Carlos (2026-10-28, las tres tandas PASS): un clic de ratón en la barra de herramientas ya no deja el foco en el botón. Al pulsar después una tecla, su marco de foco hacía parecer que la herramienta anterior seguía elegida. Con `Enter` o `Espacio` el foco se queda, para quien usa el teclado.
+  - `PARITY.md`: EDT-002, EDT-012, EDT-013, EDT-115, EDT-116, EDT-117 y EDT-118 pasan a `Win`. EDT-003 sigue en curso (el menú Más llega con las herramientas de M2).
 
 ## Pendiente inmediato
 
-1. **Pruebas de Carlos con el instalador `c97ce05`** ([`tests/manual/CAP-panel.md`](../tests/manual/CAP-panel.md)):
-   - grabar otra vez `Ctrl+Shift+PrtScn` en el campo Atajo del panel (antes no lo aceptaba);
+1. **Pruebas de Carlos con el instalador `c97ce05`** (entrega 3, [`tests/manual/CAP-panel.md`](../tests/manual/CAP-panel.md)):
+   - grabar otra vez `Ctrl+Shift+PrtScn` en el campo Atajo del panel;
    - cambiar de pestaña con las flechas sin que asome el turquesa en la pestaña vecina;
-   - **Repetir última área**: asignarle un atajo en Preferencias > Atajos y comprobar que repite el mismo rectángulo sin cruceta.
-2. Otras casillas sin marcar en ese archivo: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
-3. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
-4. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2. Antes hay que cambiarle el título, porque dice "capture engine" y ya abarca las entregas 1 a 3. El editor iría en una rama nueva (`m1-editor`).
+   - **Repetir última área** con un atajo asignado en Preferencias > Atajos.
+   - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
+   - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
+2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
+3. **Entrega 4c:** Carlos marcó PASS las tres tandas de [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (2026-10-28, instalador `66a0f62`). Falta la tanda 4, corta, con el arreglo del marco de foco (instalador posterior a `66a0f62`). Carlos no ha objetado `Ctrl+Alt+Shift+E` para Exportar (la probó en la tanda 2); sigue provisional en `spec/QUESTIONS.md`.
+4. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
+5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
+6. **IA en la nube (SMT-039 a SMT-043):** hecha. Carlos tiene dos tandas en [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md): la A necesita su propia clave de la API (platform.claude.com) y la B, Claude Desktop o Claude Code. Las decisiones provisionales están en `spec/QUESTIONS.md` (filas SMT-039 a SMT-043, APP-028 y APP-029). Tanda B: PASS (2026-11-01). Su configuración de Claude Desktop ya tiene la entrada `xcreenshot` (copia de seguridad en `%APPDATA%\Claude\claude_desktop_config.backup-2026-11-01.json`). Propuesta pendiente de su visto bueno: IDEA-004, el botón **Añadir a Claude Desktop**, porque el bloque copiado no sirve si ya hay otros servidores.
+7. **Reabrir los documentos al iniciar (EDT-120):** hecha; Carlos tiene una tanda en [`tests/manual/EDT-120.md`](../tests/manual/EDT-120.md). Necesita el instalador nuevo.
+8. **Aspecto nuevo (Snap con el logo):** hecho; Carlos tiene una tanda en [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md). Pendiente de su visto bueno: cerrar el PR #4 de Claude Design sin fusionarlo, porque su contenido ya está en `m1-editor`, y borrar la carpeta `C:\Projects\XcreenShot-snap` (en ella quedaron dos copias del logo que puso Carlos; el original está en `docs/brand/`).
+9. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-Entrega 4, el editor básico:
-1. Leer [`spec/02-editor.md`](../spec/02-editor.md) completo y sacar los IDs `EDT-` de M1.
-2. Proponer a Carlos el plan de la entrega antes de programar.
-
-El stack ya está fijado en `CLAUDE.md`: Konva para el lienzo y las operaciones de píxeles en Rust. Mientras no exista el editor:
-- "Abrir en = Editor" muestra la ventana principal con la última captura;
-- "Capturar cursor" está desactivado, porque el cursor será un objeto del documento.
+Corregir lo que Carlos reporte de la tanda 4 de la 4c, de la multicaptura, de la IA en la nube (tanda A), de EDT-120 y del aspecto nuevo ([`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md)). Después, la **entrega 5 (biblioteca)**; con ella llega sugerir nombres para varias capturas a la vez (SMT-041):
+1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
+2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
+3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.
 
 ## Decisiones vigentes que conviene recordar
 
@@ -85,7 +165,9 @@ El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
 - **Versión:** un número menor por hito (0.1 = M0, 0.2 = M1) más el commit de la compilación.
 - **Atajo de prueba:** Carlos cambió el de `app.ping` a `Ctrl+P` a propósito. No tocarlo.
 - **Barra de captura:** el botón se llama **Capturar** (`Enter`; `I` también funciona). El selector rápido **EN | ES** está en la ventana principal y en Preferencias.
-- **Dónde se guardan las capturas:** como PNG en `Documentos\XcreenShot` hasta que llegue la biblioteca. En el equipo de Carlos esa carpeta está en OneDrive.
+- **Dónde se guardan las capturas:** como `.xshot` en `Documentos\XcreenShot\AAAA-MM\`, con el nombre `<App> AAAA-MM-DD HH.MM.SS` (provisional hasta SHR-006). En el equipo de Carlos esa carpeta está en OneDrive. Las PNG de antes se quedan donde estaban.
+- **Editor (ADR 0004):** el documento vive en Rust; la interfaz es una vista que manda comandos. Cada gesto es un solo comando al soltar. La imagen final la dibuja solo Rust; la geometría está duplicada en `geometry.ts` y `boxes.ts` y la vigilan `tests/fixtures/arrow-geometry.json` y `shape-geometry.json`. El texto y el desenfoque los dibuja Rust también en pantalla (protocolo `xsdoc`).
+- **Atajos del editor:** ámbito Editor en Preferencias > Atajos; en el editor ganan a los de la app (`Ctrl+W` cierra el documento, no la ventana). Las teclas del lienzo (`Ctrl+1…9`, flechas, `Tab`, `Enter`, `Esc`, `I`, `[`, `]`) son fijas. Los menús de la ventana muestran el atajo como texto: no lo registran.
 - **Valores por defecto según quién lanza la captura:**
   - Desde atajos y menús, las acciones de un solo modo (ventana, ventana activa, región, pantalla completa) toman de la pestaña Imagen lo que no es el modo.
   - Desde el CLI y MCP usan valores fijos y no abren ventanas salvo `--open editor`.
@@ -101,8 +183,10 @@ El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
 - **Probar sin tocar su app:** usar una instancia aislada de **depuración** con `XCREENSHOT_IPC_NAME`, `XCREENSHOT_DATA_DIR` y `XCREENSHOT_LIBRARY_DIR`.
   - Nunca la versión de release aislada: al primer arranque se registra para iniciar con Windows y pisa su entrada.
   - Sus atajos los tiene la app instalada, así que la copia aislada avisa de que no pudo activarlos.
+  - Para probar la ventana sin mover su ratón: arrancarla además con `WEBVIEW2_USER_DATA_FOLDER` propio y la depuración remota, y usar `scripts/dev/cdp.mjs` (instrucciones en `scripts/dev/README.md`).
+  - No usar Copiar todo, copiar o cortar objetos en las pruebas automáticas: pisan el portapapeles de Carlos.
 - **Herramientas:**
   - `gh` está en `C:\Program Files\GitHub CLI\gh.exe` (no está en el PATH de Git Bash).
-  - Rust está en `~/.cargo/bin` (en Git Bash: `export PATH="$HOME/.cargo/bin:$PATH"`).
-  - Los scripts largos de Node o PowerShell van en archivos, para evitar problemas de comillas.
+  - Rust está en `~/.cargo/bin` (en Git Bash: `export PATH="$HOME/.cargo/bin:$PATH"`). Mínimo 1.88.
+  - Los scripts largos de Node, Python o PowerShell van en archivos, para evitar problemas de comillas. Al reescribir archivos con Python en Windows, usar `newline=''` para no cambiar los finales de línea.
 - **Comandos que debe ejecutar Carlos:** decirle en qué ventana (PowerShell o cmd) y darle una sola línea.
