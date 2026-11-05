@@ -10,6 +10,11 @@ Qué cambió (2026-11-05):
   - Los botones suben al pasar el puntero y se hunden al pulsarlos; el principal tiene un brillo que lo cruza.
   - Las miniaturas de la tira se levantan al pasar el puntero y entran con un salto.
   - Los avisos suben y los segundos de la cuenta atrás aparecen de golpe.
+- **Opciones elegidas sin contornos** (Carlos, 2026-11-05: los bordes azules "hacían ver la app barata"):
+  - las opciones van en una cápsula hundida;
+  - la herramienta activa, la negrita, la cursiva y la alineación elegida se rellenan con el degradado del logo y un brillo suave;
+  - en las pestañas y en EN/ES, la opción elegida se levanta como una pastilla;
+  - los botones secundarios de la barra (Abrir, Guardar, Copiar todo, Compartir, deshacer) no tienen caja hasta pasar el puntero.
 - **Menús dibujados por la app.** En Windows, la barra de menús del editor y los menús del clic derecho ya no son los nativos: se animan como los demás.
 
 Pruebas automáticas:
@@ -39,7 +44,7 @@ Con el instalador nuevo:
 4. [ ] Pulsa `Alt` y suéltalo: se subraya una letra en Archivo, Edición, Ver, IA y Ayuda. Con las flechas abre Ver > Barra de herramientas ▸ y desactiva "Mostrar etiquetas": la barra queda solo con íconos. Vuelve a activarla con el ratón.
 5. [ ] `Alt`+`A` abre Archivo (en inglés, `Alt`+`F`). `Escape` lo cierra.
 6. [ ] Abre una captura y haz clic derecho sobre ella: el menú sale junto al puntero, con un pequeño rebote.
-7. [ ] Pasa el puntero por las herramientas y haz clic en varias: el resaltado azul se desliza de una a otra. Haz lo mismo con las pestañas Estilos y Propiedades.
+7. [ ] Haz clic en varias herramientas: la pastilla con el degradado se desliza de una a otra, sin contornos. En las pestañas Estilos y Propiedades, la elegida se levanta como una pastilla. Con la herramienta Texto, la negrita, la cursiva y la alineación elegidas se rellenan con el degradado.
 8. [ ] Abre dos o tres capturas: entran en la tira con un salto, y la que estás viendo lleva las esquinas amarillas.
 9. [ ] En Windows, activa Configuración > Accesibilidad > Efectos visuales > **Efectos de animación: desactivado**. Las animaciones quedan en fundidos cortos y el punto de REC deja de parpadear. Vuelve a activarlo.
 10. [ ] Las teclas de siempre siguen funcionando: herramientas (`V`, `A`, `T`…), `Ctrl+Z`, mover un objeto con las flechas.

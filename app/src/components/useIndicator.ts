@@ -1,5 +1,6 @@
 // The highlight of a segmented control (`.seg`): a `.seg-indicator` child that springs
-// to the chosen option, the one with aria-selected or aria-pressed set to true. It
+// to the chosen option, the one with aria-selected, aria-pressed or aria-checked set to
+// true. It
 // follows the option when labels appear or the window resizes.
 import { useLayoutEffect, type RefObject } from "react";
 
@@ -11,7 +12,7 @@ export function useIndicator(container: RefObject<HTMLElement>, chosen: unknown)
       const marker = box.querySelector<HTMLElement>(":scope > .seg-indicator");
       if (!marker) return;
       const option = box.querySelector<HTMLElement>(
-        ':scope > [aria-selected="true"], :scope > [aria-pressed="true"]',
+        ':scope > [aria-selected="true"], :scope > [aria-pressed="true"], :scope > [aria-checked="true"]',
       );
       if (!option) {
         marker.style.opacity = "0";

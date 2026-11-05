@@ -37,6 +37,9 @@
   --shadow-pop: 0 2px 6px rgb(22 20 51 / 0.1), 0 16px 40px -8px rgb(37 22 120 / 0.3);
   --shadow-dialog: 0 32px 80px -16px rgb(22 20 51 / 0.45);
   --glow: 0 8px 22px -8px rgb(107 28 242 / 0.6);
+  /* A sunken well for groups of choices, and the gloss on a filled choice. */
+  --well: inset 0 1px 2px rgb(22 20 51 / 0.1);
+  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.28);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -110,6 +113,10 @@
     --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 18px 44px -8px rgb(0 0 0 / 0.75);
     --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.07), 0 32px 80px -16px rgb(0 0 0 / 0.85);
     --glow: 0 8px 26px -8px rgb(122 76 255 / 0.7);
+    --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+    --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
+    --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+    --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
   }
 }
 
@@ -145,6 +152,8 @@
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 18px 44px -8px rgb(0 0 0 / 0.75);
   --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.07), 0 32px 80px -16px rgb(0 0 0 / 0.85);
   --glow: 0 8px 26px -8px rgb(122 76 255 / 0.7);
+  --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
 }
 
 /* System high contrast wins over the palette (APP-045). */
@@ -1776,16 +1785,51 @@ html.overlay-root.overlay-native #root {
   z-index: 5;
 }
 
+/* Bold, italic and alignment: icon buttons in a sunken well, without outlines. A pressed
+   toggle fills with the logo's gradient; alignment is a `.seg.brand` whose pill slides. */
 .prop-buttons {
-  display: flex;
-  gap: 4px;
+  position: relative;
+  display: inline-flex;
+  gap: 2px;
+  width: fit-content;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  box-shadow: var(--well);
 }
 
-.prop-buttons .btn[aria-pressed="true"],
-.prop-buttons .btn[aria-checked="true"] {
-  background: var(--brand-soft);
-  border: 2px solid var(--brand);
-  padding: 4px;
+.prop-buttons > .btn {
+  width: 34px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+.prop-buttons > .btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--ink);
+  transform: none;
+}
+
+.prop-buttons > .btn[aria-pressed="true"] {
+  background: var(--brand-gradient);
+  color: var(--on-gradient);
+  box-shadow: var(--gloss), var(--glow);
+}
+
+.prop-buttons > .btn[aria-pressed="true"] svg {
+  animation: pop var(--dur-base) var(--ease-spring);
+}
+
+/* In the alignment group the pill draws the chosen one; the button stays clear. */
+.prop-buttons.seg > .btn[aria-checked="true"],
+.prop-buttons.seg > .btn[aria-checked="true"]:hover {
+  background: transparent;
+  color: var(--on-gradient);
 }
 
 .prop-field input[list] {
@@ -2157,18 +2201,19 @@ html.overlay-root.overlay-native #root {
 
 /* ==================== Snap in the editor and the small windows ==================== */
 
-/* Segmented controls: the side panel and capture panel tabs, the tools and the language
-   switch. A highlight springs to the chosen option (useIndicator); the option is marked by
-   that raised shape too, never by color alone (APP-045). */
+/* Segmented controls: the side panel and capture panel tabs, the tools, the language
+   switch and the text alignment. The choices sit in a sunken well, without outlines, and a
+   pill springs to the chosen one (useIndicator): a raised pill, or the logo's gradient in
+   `.seg.brand`. The chosen option is marked by that pill, never by color alone (APP-045). */
 .seg {
   position: relative;
   display: inline-flex;
   align-items: stretch;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
+  box-shadow: var(--well);
 }
 
 .seg > .seg-indicator {
@@ -2177,11 +2222,14 @@ html.overlay-root.overlay-native #root {
   top: 0;
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 0 0 1px var(--brand);
+  box-shadow: var(--gloss), var(--shadow-sm);
   opacity: 0;
   pointer-events: none;
+}
+
+.seg.brand > .seg-indicator {
+  background: var(--brand-gradient);
+  box-shadow: var(--gloss), var(--glow);
 }
 
 .seg[data-ready] > .seg-indicator {
@@ -2215,8 +2263,14 @@ html.overlay-root.overlay-native #root {
 }
 
 .seg > button[aria-selected="true"],
-.seg > button[aria-pressed="true"] {
-  color: var(--brand-ink);
+.seg > button[aria-pressed="true"],
+.seg > button[aria-checked="true"] {
+  color: var(--ink);
+}
+
+.seg.brand > button[aria-pressed="true"],
+.seg.brand > button[aria-checked="true"] {
+  color: var(--on-gradient);
 }
 
 /* Inside, so the ring does not spill onto the neighbour. */
@@ -2262,6 +2316,24 @@ html.overlay-root.overlay-native #root {
   padding: 0 var(--space-3);
 }
 
+/* Secondary toolbar buttons have no box until the pointer arrives, so the bar stays light
+   and Capture and the tools stand out. */
+.editor-toolbar .btn:not(.primary) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.editor-toolbar .btn:not(.primary):hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--surface-sunken);
+}
+
+.editor-toolbar .btn:not(.primary)[aria-expanded="true"] {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
 .editor-toolbar .lang-toggle {
   flex-shrink: 0;
 }
@@ -2271,12 +2343,8 @@ html.overlay-root.overlay-native #root {
   min-height: 26px;
 }
 
-/* The tools: the active one sits in a brand pill that springs from tool to tool. */
-.tb-tools > .seg-indicator {
-  background: var(--brand-soft);
-  box-shadow: inset 0 0 0 2px var(--brand);
-}
-
+/* The tools: the active one sits in a pill of the logo's gradient that springs from tool
+   to tool (`.seg.brand`). */
 .tb-tools > .tb-tool {
   min-height: 32px;
   padding: 0 10px;
@@ -2285,8 +2353,8 @@ html.overlay-root.overlay-native #root {
 }
 
 .tb-tools > .tb-tool[aria-pressed="true"] {
-  color: var(--brand-ink);
-  font-weight: 700;
+  color: var(--on-gradient);
+  font-weight: 600;
 }
 
 .tb-tool svg,
@@ -2894,7 +2962,8 @@ html.overlay-root.overlay-native #root {
   }
 
   .tb-capture:hover svg,
-  .strip li.current::after {
+  .strip li.current::after,
+  .prop-buttons > .btn[aria-pressed="true"] svg {
     animation: none;
   }
 

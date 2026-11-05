@@ -81,7 +81,7 @@ export function Toolbar() {
         <span className="tb-label">{t("ui.editor.capture")}</span>
       </button>
       <div
-        className="tb-group seg tb-tools"
+        className="tb-group seg brand tb-tools"
         role="group"
         aria-label={t("ui.editor.tools")}
         ref={toolGroup}

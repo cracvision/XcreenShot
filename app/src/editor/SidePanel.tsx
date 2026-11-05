@@ -326,22 +326,7 @@ function Properties({ target }: { target: Target }) {
           />
           <div className="prop-field">
             <span id="align-label">{t("ui.editor.prop.align")}</span>
-            <div className="prop-buttons" role="radiogroup" aria-labelledby="align-label">
-              {(["left", "center", "right", "justify"] as const).map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  role="radio"
-                  className="btn icon"
-                  aria-checked={align === a}
-                  aria-label={t(`ui.editor.align.${a}`)}
-                  title={t(`ui.editor.align.${a}`)}
-                  onClick={() => commit({ align: a })}
-                >
-                  <Icon name={ALIGN_ICONS[a]} />
-                </button>
-              ))}
-            </div>
+            <AlignChoice value={align} onChange={(a) => commit({ align: a })} />
           </div>
           {opacity}
         </>
@@ -425,6 +410,43 @@ const ALIGN_ICONS: Record<TextAlign, IconName> = {
   right: "alignRight",
   justify: "alignJustify",
 };
+
+/** Text alignment: a pill in the logo's gradient springs to the chosen one (EDT-026). */
+function AlignChoice({
+  value,
+  onChange,
+}: {
+  value: TextAlign | undefined;
+  onChange: (a: TextAlign) => void;
+}) {
+  const { t } = useTranslation();
+  const group = useRef<HTMLDivElement>(null);
+  useIndicator(group, value);
+  return (
+    <div
+      className="prop-buttons seg brand"
+      role="radiogroup"
+      aria-labelledby="align-label"
+      ref={group}
+    >
+      <span className="seg-indicator" aria-hidden="true" />
+      {(["left", "center", "right", "justify"] as const).map((a) => (
+        <button
+          key={a}
+          type="button"
+          role="radio"
+          className="btn icon"
+          aria-checked={value === a}
+          aria-label={t(`ui.editor.align.${a}`)}
+          title={t(`ui.editor.align.${a}`)}
+          onClick={() => onChange(a)}
+        >
+          <Icon name={ALIGN_ICONS[a]} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Installed fonts with search (EDT-026): a field that suggests as you type. */
 function FontField(props: {
