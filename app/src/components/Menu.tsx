@@ -14,12 +14,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
+import { usePresence } from "./usePresence";
 
 export interface MenuItem {
   id: string;
   label: ReactNode;
   /** Set (true or false) for a choice that shows a check mark when chosen. */
-  checked?: boolean;
+  checked?: boolean | undefined;
   disabled?: boolean;
   /** Extra content after the label, such as a setting key. */
   trailing?: ReactNode;
@@ -27,41 +28,24 @@ export interface MenuItem {
   shortcut?: string | undefined;
   /** Draws a separator above the item. */
   separator?: boolean;
+  /** Entries of a submenu that opens beside the item (EDT-002: "Toolbar ▸"). */
+  submenu?: MenuItem[];
   onSelect: () => void;
 }
 
 export type CloseReason = "select" | "escape" | "tab" | "outside" | "blur";
 
-/** Upper bound for the exit animation, in case animationend never fires. */
-const EXIT_MS = 320;
+/** A submenu follows the pointer after this pause, so crossing an item does not open it. */
+const SUBMENU_DELAY_MS = 120;
 
-/** Keeps a closing menu mounted until its exit animation has played. */
-function usePresence(open: boolean) {
-  const [closing, setClosing] = useState(false);
-  const [wasOpen, setWasOpen] = useState(open);
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    setClosing(!open);
-  }
-  useEffect(() => {
-    if (!closing) return;
-    const timer = window.setTimeout(() => setClosing(false), EXIT_MS);
-    return () => window.clearTimeout(timer);
-  }, [closing]);
-  return {
-    mounted: open || closing,
-    state: open ? ("open" as const) : ("closed" as const),
-    exited: () => setClosing(false),
-  };
-}
-
+/** The menu's own items: a submenu's items belong to the submenu. */
 function enabledItems(menu: HTMLElement): HTMLElement[] {
   return Array.from(
-    menu.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])'),
+    menu.querySelectorAll<HTMLElement>(':scope > [role^="menuitem"]:not([aria-disabled="true"])'),
   );
 }
 
-interface MenuListProps {
+export interface MenuListProps {
   items: MenuItem[];
   state: "open" | "closed";
   /** Where focus goes when the menu opens. */
@@ -69,14 +53,17 @@ interface MenuListProps {
   className: string;
   menuRef: RefObject<HTMLDivElement>;
   id?: string;
-  label?: string;
+  label?: string | undefined;
   labelledBy?: string;
   style?: CSSProperties;
   onClose: (reason: CloseReason) => void;
   onExited: () => void;
+  /** Left or Right that the list does not use itself: the menu bar moves to the next
+   * menu, a submenu goes back to its parent. */
+  onSide?: (direction: -1 | 1) => void;
 }
 
-function MenuList({
+export function MenuList({
   items,
   state,
   focus,
@@ -88,7 +75,13 @@ function MenuList({
   style,
   onClose,
   onExited,
+  onSide,
 }: MenuListProps) {
+  const [sub, setSub] = useState<{ id: string; focus: "first" | "menu"; top: number } | null>(null);
+  const subMenu = useRef<HTMLDivElement>(null);
+  const hover = useRef<number>();
+  useEffect(() => () => window.clearTimeout(hover.current), []);
+
   useEffect(() => {
     const menu = menuRef.current;
     if (state !== "open" || !menu) return;
@@ -96,11 +89,28 @@ function MenuList({
     else menu.focus({ preventScroll: true });
   }, [state, focus, menuRef]);
 
+  const opener = (itemId: string) =>
+    Array.from(menuRef.current?.children ?? []).find(
+      (el): el is HTMLElement => el instanceof HTMLElement && el.dataset.item === itemId,
+    );
+  // Measured when it opens (an event), beside its item.
+  const openSub = (itemId: string, how: "first" | "menu") =>
+    setSub({ id: itemId, focus: how, top: (opener(itemId)?.offsetTop ?? 0) - 7 });
+  const closeSub = () => {
+    if (!sub) return;
+    opener(sub.id)?.focus({ preventScroll: true });
+    setSub(null);
+  };
+
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     const list = enabledItems(e.currentTarget);
+    // Keys pressed inside an open submenu are the submenu's.
+    if (e.target !== e.currentTarget && !list.includes(e.target as HTMLElement)) return;
     const at = list.indexOf(document.activeElement as HTMLElement);
+    const current = at >= 0 ? items.find((it) => it.id === list[at]?.dataset.item) : undefined;
     const go = (n: number) => {
       e.preventDefault();
+      e.stopPropagation();
       list[(n + list.length) % list.length]?.focus();
     };
     switch (e.key) {
@@ -115,6 +125,17 @@ function MenuList({
         break;
       case "End":
         go(-1);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        e.stopPropagation();
+        if (current?.submenu && !current.disabled) openSub(current.id, "first");
+        else onSide?.(1);
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        e.stopPropagation();
+        onSide?.(-1);
         break;
       case "Escape":
         e.preventDefault();
@@ -145,20 +166,47 @@ function MenuList({
     >
       {items.map((item, i) => {
         const checkable = item.checked !== undefined;
-        const button = (
+        const nested = item.submenu;
+        const expanded = sub?.id === item.id;
+        const parts = [];
+        if (item.separator && i > 0)
+          parts.push(<div key={`${item.id}-sep`} role="separator" className="menu-separator" />);
+        parts.push(
           <button
             key={item.id}
             type="button"
             role={checkable ? "menuitemradio" : "menuitem"}
+            data-item={item.id}
             aria-checked={checkable ? item.checked : undefined}
             aria-disabled={item.disabled || undefined}
+            aria-haspopup={nested ? "menu" : undefined}
+            aria-expanded={nested ? expanded : undefined}
             tabIndex={-1}
             className="menu-item"
             style={{ "--i": i } as CSSProperties}
+            onPointerEnter={() => {
+              window.clearTimeout(hover.current);
+              if (nested && expanded) return;
+              hover.current = window.setTimeout(
+                () => (nested && !item.disabled ? openSub(item.id, "menu") : setSub(null)),
+                SUBMENU_DELAY_MS,
+              );
+            }}
             onClick={() => {
               if (item.disabled) return;
+              if (nested) {
+                if (expanded) setSub(null);
+                else openSub(item.id, "first");
+                return;
+              }
               item.onSelect();
               onClose("select");
+            }}
+            onKeyDown={(e) => {
+              if (nested && !item.disabled && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                openSub(item.id, "first");
+              }
             }}
           >
             {checkable && (
@@ -167,10 +215,27 @@ function MenuList({
             <span className="menu-label">{item.label}</span>
             {item.trailing}
             {item.shortcut && <span className="menu-shortcut">{item.shortcut}</span>}
-          </button>
+            {nested && <Icon name="chevron" className="menu-sub-chevron" />}
+          </button>,
         );
-        if (!item.separator || i === 0) return button;
-        return [<div key={`${item.id}-sep`} role="separator" className="menu-separator" />, button];
+        if (nested && expanded) {
+          parts.push(
+            <MenuList
+              key={`${item.id}-menu`}
+              menuRef={subMenu}
+              label={typeof item.label === "string" ? item.label : undefined}
+              items={nested}
+              state="open"
+              focus={sub.focus}
+              className="menu sub"
+              style={{ top: sub.top }}
+              onClose={(reason) => (reason === "escape" ? closeSub() : onClose(reason))}
+              onExited={() => undefined}
+              onSide={(direction) => (direction < 0 ? closeSub() : onSide?.(1))}
+            />,
+          );
+        }
+        return parts;
       })}
     </div>
   );

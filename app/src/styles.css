@@ -1500,11 +1500,79 @@ html.overlay-root.overlay-native #root {
 
 /* Editor (EDT-001). */
 .editor {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The menu bar the editor draws on Windows (EDT-002). */
+.menubar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--space-2);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.menubar-item {
+  position: relative;
+}
+
+.menubar-top {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: default;
+  transition:
+    background-color var(--dur-instant) var(--ease-standard),
+    color var(--dur-instant) var(--ease-standard);
+}
+
+.menubar-top:hover {
+  background: var(--surface-sunken);
+}
+
+.menubar-top[aria-expanded="true"] {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.menubar-top:focus-visible {
+  outline-offset: -2px;
+}
+
+.menubar .menu {
+  top: calc(100% + 4px);
+}
+
+/* Access keys: underlined while the keyboard drives the bar, as Windows does. */
+.menubar[data-keys] .mnemonic {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A submenu opens beside its item and grows from that corner. */
+.menu.sub {
+  left: calc(100% - 6px);
+}
+
+.menu-item[aria-expanded="true"] {
+  background: var(--brand-soft);
+}
+
+.menu-sub-chevron {
+  margin-left: var(--space-4);
+  color: var(--ink-muted);
+  transform: rotate(-90deg);
 }
 
 /* Narrow windows: the share area keeps only its icons (EDT-001), and below that the
@@ -1528,6 +1596,7 @@ html.overlay-root.overlay-native #root {
 
 .editor-main {
   display: flex;
+  flex: 1;
   min-height: 0;
 }
 

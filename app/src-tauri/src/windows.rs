@@ -65,20 +65,8 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
         // EDT-001: the editor stays usable down to 900 × 600.
         .min_inner_size(900.0, 600.0)
         .theme(theme(app));
-    #[cfg(windows)]
-    {
-        let state = app.state::<AppState>();
-        let mut actions = state.actions.lock().unwrap();
-        let menu = crate::tray::build_menu(
-            app,
-            &state.core,
-            &xs_core::menus::app_menu(xs_core::platform::Platform::Windows),
-            crate::tray::Shortcuts::Text,
-            &mut actions,
-        )?;
-        *state.window_menu.lock().unwrap() = Some(menu.clone());
-        builder = builder.menu(menu);
-    }
+    // On Windows the editor draws its own menu bar (EDT-002, `xs_editor_menus`): a
+    // native one cannot animate like the rest of the app (APP-012).
     let w = builder.build()?;
     focus(&w);
     Ok(())

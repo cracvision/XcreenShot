@@ -106,6 +106,12 @@ fn xs_countdown_current(app: AppHandle) -> Option<Value> {
     countdown::current(&app)
 }
 
+/// The editor's menus, for the menu bar it draws on Windows (EDT-002).
+#[tauri::command]
+fn xs_editor_menus() -> Value {
+    xs_core::menus::to_json(&xs_core::menus::app_menu(xs_core::platform::Platform::Windows))
+}
+
 /// The capture panel fits its content (CAP-001).
 #[tauri::command]
 fn xs_panel_fit(app: AppHandle, height: f64) {
@@ -130,20 +136,7 @@ pub(crate) fn rebuild_app_menu(app: &AppHandle) {
             let _ = app.set_menu(menu);
         }
     }
-    #[cfg(windows)]
-    {
-        let state = app.state::<AppState>();
-        if let Some(w) = app.get_webview_window(windows::MAIN) {
-            let mut actions = state.actions.lock().unwrap();
-            let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Windows);
-            if let Ok(menu) =
-                tray::build_menu(app, &state.core, &entries, tray::Shortcuts::Text, &mut actions)
-            {
-                *state.window_menu.lock().unwrap() = Some(menu.clone());
-                let _ = w.set_menu(menu);
-            }
-        }
-    }
+    // Windows: the editor draws its menu bar and follows language and shortcuts itself.
     apply_menu_state(app);
 }
 
@@ -313,7 +306,8 @@ pub fn run() {
             xs_frame_patch,
             xs_countdown_cancel,
             xs_countdown_current,
-            xs_panel_fit
+            xs_panel_fit,
+            xs_editor_menus
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();

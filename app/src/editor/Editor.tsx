@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import logoDark from "../assets/brand/logo-dark.webp";
 import logoLight from "../assets/brand/logo-light.webp";
 import { Keys } from "../components/Keys";
+import { MenuBar } from "./MenuBar";
 import { ContextMenu } from "../components/Menu";
 import { displayKeys } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
@@ -60,6 +61,9 @@ function Empty({ dropping }: { dropping: boolean }) {
   );
 }
 
+/** macOS keeps the system menu bar; Windows gets the drawn one (EDT-002). */
+const IS_MAC = navigator.userAgent.includes("Mac");
+
 /** The right-click menu of the canvas or the toolbar, when one is open. */
 function EditorContextMenu() {
   const menu = useContextMenu();
@@ -111,6 +115,7 @@ export function Editor() {
 
   return (
     <div className={`editor${dropping ? " dropping" : ""}`}>
+      {!IS_MAC && <MenuBar />}
       <Toolbar />
       <div className="editor-main">
         {doc ? <Canvas key={doc.documentId} doc={doc} /> : <Empty dropping={dropping} />}

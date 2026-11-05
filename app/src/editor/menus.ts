@@ -19,6 +19,73 @@ interface Point {
   y: number;
 }
 
+/** A menu as the shell describes it (`xs_editor_menus`, EDT-002). */
+export type MenuNode =
+  | {
+      kind: "command";
+      id: string;
+      label: string;
+      command: string;
+      params: Record<string, unknown>;
+      checked: string | null;
+    }
+  | { kind: "submenu"; label: string; items: MenuNode[] }
+  | { kind: "placeholder"; label: string }
+  | { kind: "separator" };
+
+/** A label's access key: "&File" is "File" with F, "Ay&uda" is "Ayuda" with u. */
+export function mnemonic(label: string): { text: string; key: string | null; at: number } {
+  const at = label.search(/&[^&]/);
+  const text = label.replace(/&(.)/g, "$1");
+  if (at < 0) return { text, key: null, at: -1 };
+  return { text, key: label.charAt(at + 1).toLowerCase(), at };
+}
+
+/** The entries of a menu, with their state, shortcut and command. */
+export function menuItems(
+  nodes: MenuNode[],
+  t: (key: string) => string,
+  state: { enabled: Record<string, boolean>; checked: Record<string, boolean> },
+): MenuItem[] {
+  const out: MenuItem[] = [];
+  let separator = false;
+  for (const node of nodes) {
+    if (node.kind === "separator") {
+      separator = true;
+      continue;
+    }
+    if (node.kind === "submenu") {
+      out.push({
+        id: node.label,
+        label: mnemonic(t(node.label)).text,
+        separator,
+        submenu: menuItems(node.items, t, state),
+        onSelect: () => undefined,
+      });
+    } else if (node.kind === "placeholder") {
+      out.push({
+        id: node.label,
+        label: mnemonic(t(node.label)).text,
+        separator,
+        disabled: true,
+        onSelect: () => undefined,
+      });
+    } else {
+      out.push({
+        id: node.id,
+        label: mnemonic(t(node.label)).text,
+        shortcut: shortcutOf(node.id) ?? shortcutOf(node.command),
+        disabled: state.enabled[node.id] === false,
+        checked: node.checked ? (state.checked[node.checked] ?? false) : undefined,
+        separator,
+        onSelect: () => void run(node.command, node.params).catch(() => undefined),
+      });
+    }
+    separator = false;
+  }
+  return out;
+}
+
 interface ContextMenuState extends Point {
   open: boolean;
   label: string;
@@ -33,6 +100,12 @@ export const useContextMenu = create<ContextMenuState>(() => ({
   label: "",
   items: [],
 }));
+
+/** Which menu bar entries apply now and which are ticked, by entry id (EDT-002). */
+export const useMenuState = create<{
+  enabled: Record<string, boolean>;
+  checked: Record<string, boolean>;
+}>(() => ({ enabled: {}, checked: {} }));
 
 export function closeContextMenu(): void {
   useContextMenu.setState({ open: false });
@@ -127,6 +200,8 @@ export function useMenuBar(): void {
     for (const a of onDoc) enabled[`editor.${a}`] = hasDoc;
     for (const a of ["cut", "copy", "delete", "deselect"]) enabled[`editor.${a}`] = selected;
     const checked = { "editor.side_panel": panel, "editor.toolbar_labels": labels };
+    // The drawn menu bar (Windows) reads it here; the system one (macOS) from the shell.
+    useMenuState.setState({ enabled, checked });
     run("editor.menu_state", { enabled, checked }).catch(() => undefined);
   }, [hasDoc, canUndo, canRedo, selected, anyOpen, panel, labels]);
 

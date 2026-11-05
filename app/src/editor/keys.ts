@@ -45,6 +45,11 @@ const HOLD_MS = 300;
 /** Size of objects inserted from the keyboard (EDT-013), in canvas pixels. */
 const INSERT = { w: 200, h: 120 };
 
+/** Keys pressed in a menu or the menu bar are the menu's: arrows, Enter, Escape (EDT-002). */
+function inMenu(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[role="menu"], [role="menubar"]') !== null;
+}
+
 function typing(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement ||
@@ -226,7 +231,7 @@ export function useEditorKeys(): void {
         nextZone(e.shiftKey);
         return;
       }
-      if (typing(e.target) || document.querySelector(".backdrop")) return;
+      if (typing(e.target) || inMenu(e.target) || document.querySelector(".backdrop")) return;
       const done = () => {
         e.preventDefault();
         // Before the app-wide shortcuts (Ctrl+W there closes the window).

@@ -871,6 +871,7 @@
       "open_filter": "Images and XcreenShot documents",
       "exported": "Image exported",
       "copied": "Image copied",
+      "menubar": "Menu bar",
       "canvas_menu": "Canvas menu",
       "canvas_label": "Canvas of {{name}}. Drag to draw with the active tool.",
       "side_panel": "Side panel",

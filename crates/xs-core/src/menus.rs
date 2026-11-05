@@ -274,6 +274,40 @@ pub fn app_menu(platform: Platform) -> Vec<MenuEntry> {
     }
 }
 
+/// Menus as data for a window that draws them itself: the editor's menu bar on Windows
+/// (EDT-002), which animates like the rest of the app (APP-012). Labels stay as keys;
+/// items name their command and parameters, and the state that ticks them.
+pub fn to_json(entries: &[MenuEntry]) -> Value {
+    Value::Array(
+        entries
+            .iter()
+            .filter_map(|e| match e {
+                MenuEntry::Command {
+                    id,
+                    label,
+                    command,
+                    params,
+                    checked,
+                } => Some(json!({
+                    "kind": "command",
+                    "id": id,
+                    "label": label,
+                    "command": command,
+                    "params": params,
+                    "checked": checked,
+                })),
+                MenuEntry::Submenu { label, items } => {
+                    Some(json!({ "kind": "submenu", "label": label, "items": to_json(items) }))
+                }
+                MenuEntry::Placeholder { label } => Some(json!({ "kind": "placeholder", "label": label })),
+                MenuEntry::Separator => Some(json!({ "kind": "separator" })),
+                // System items (macOS only) have no place in a drawn menu.
+                MenuEntry::Native(_) => None,
+            })
+            .collect(),
+    )
+}
+
 /// Every command referenced by a menu, recursively.
 pub fn commands_in(entries: &[MenuEntry]) -> Vec<&'static str> {
     let mut out = Vec::new();
@@ -301,4 +335,32 @@ pub fn labels_in(entries: &[MenuEntry]) -> Vec<&'static str> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_windows_menu_bar_as_data() {
+        let menus = to_json(&app_menu(Platform::Windows));
+        let tops: Vec<&str> = menus
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| m["label"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            tops,
+            ["menu.file", "menu.edit", "menu.view", "menu.ai", "menu.help"]
+        );
+        let file = &menus[0]["items"];
+        assert_eq!(file[0]["kind"], "command");
+        assert_eq!(file[0]["command"], "editor.action");
+        assert_eq!(file[0]["params"], json!({ "action": "open" }));
+        assert_eq!(file[1]["kind"], "separator");
+        let view = menus[2]["items"].as_array().unwrap();
+        let toolbar = view.iter().find(|i| i["kind"] == "submenu").unwrap();
+        assert_eq!(toolbar["items"][0]["checked"], "editor.toolbar_labels");
+    }
 }

@@ -143,9 +143,6 @@ pub enum Shortcuts {
     None,
     /// Real accelerators: the tray, where they never act as key bindings.
     Accelerators,
-    /// As text after a tab, which Windows aligns to the right: in a window menu a real
-    /// accelerator would also take the keys, and the editor handles them itself.
-    Text,
 }
 
 fn native(app: &AppHandle, item: NativeItem) -> tauri::Result<PredefinedMenuItem<Wry>> {
@@ -183,16 +180,10 @@ pub fn build_items(
                 checked,
             } => {
                 actions.insert(id.to_string(), (command.to_string(), params.clone()));
-                let mut text = tr(lang, label, &[]);
+                let text = tr(lang, label, &[]);
                 let shortcut = shortcut_of(core, id, command);
                 let accel = match shortcuts {
                     Shortcuts::Accelerators => shortcut.map(|a| a.to_string()),
-                    Shortcuts::Text => {
-                        if let Some(a) = shortcut {
-                            text = format!("{text}\t{}", a.display(core.shortcuts.platform()));
-                        }
-                        None
-                    }
                     Shortcuts::None => None,
                 };
                 if let Some(state) = checked {
