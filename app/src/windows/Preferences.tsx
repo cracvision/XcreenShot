@@ -1,7 +1,7 @@
 // Single Preferences window, same structure on Windows and macOS (APP-006).
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
@@ -84,6 +84,26 @@ export function Preferences() {
     );
   }, [query, settings]);
 
+  // The highlight behind the open section springs to the next one (styles.css).
+  const navList = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  const current = results ? null : section;
+  useLayoutEffect(() => {
+    const active = navList.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const bar = indicator.current;
+    if (!bar) return;
+    bar.style.opacity = active ? "" : "0";
+    if (active) {
+      bar.style.transform = `translateY(${active.offsetTop}px)`;
+      bar.style.height = `${active.offsetHeight}px`;
+    }
+  }, [current, t]);
+  // Turn the transition on after the first placement so it does not slide in on open.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => navList.current?.setAttribute("data-ready", ""));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   const inSection = (name: Section): SettingEntry[] =>
     settings.filter((s) => s.section === name && s.key !== "shortcuts.profile");
 
@@ -96,12 +116,7 @@ export function Preferences() {
           {results
             .filter((r) => r.section === sec)
             .map((r) => (
-              <button
-                key={r.key}
-                className="btn"
-                style={{ display: "block", margin: "6px 0", textAlign: "left" }}
-                onClick={() => go({ key: r.key })}
-              >
+              <button key={r.key} className="btn search-result" onClick={() => go({ key: r.key })}>
                 {r.label}
               </button>
             ))}
@@ -148,17 +163,20 @@ export function Preferences() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {SECTIONS.map((s) => (
-          <button
-            key={s}
-            aria-current={!results && section === s ? "page" : undefined}
-            onClick={() => go({ section: s })}
-          >
-            {t(`ui.prefs.section.${s}`)}
-          </button>
-        ))}
+        <div className="nav-list" ref={navList}>
+          <span className="nav-indicator" ref={indicator} aria-hidden="true" />
+          {SECTIONS.map((s) => (
+            <button
+              key={s}
+              aria-current={current === s ? "page" : undefined}
+              onClick={() => go({ section: s })}
+            >
+              <span>{t(`ui.prefs.section.${s}`)}</span>
+            </button>
+          ))}
+        </div>
       </nav>
-      <main>
+      <main key={current ?? "search"} className="section-enter">
         <h1>{results ? t("ui.prefs.search") : t(`ui.prefs.section.${section}`)}</h1>
         {content()}
       </main>

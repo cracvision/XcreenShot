@@ -71,31 +71,41 @@ export function keyLabel(code: string, layout?: LayoutMap): string {
   return KEY_LABELS[code] ?? code;
 }
 
+const MODIFIER_LABELS: Record<"windows" | "macos", [string, string][]> = {
+  windows: [
+    ["Ctrl", "Ctrl"],
+    ["Alt", "Alt"],
+    ["Shift", "Shift"],
+    ["Super", "Win"],
+  ],
+  macos: [
+    ["Ctrl", "⌃"],
+    ["Alt", "⌥"],
+    ["Shift", "⇧"],
+    ["Super", "⌘"],
+  ],
+};
+
+/** The keys of a shortcut as the platform shows them, one entry per key cap. */
+export function displayKeys(
+  canonical: string,
+  platform: "windows" | "macos",
+  layout?: LayoutMap,
+): string[] {
+  const parts = canonical.split("+");
+  const code = parts.pop() ?? "";
+  const mods = new Set(parts);
+  const keys = MODIFIER_LABELS[platform].filter(([mod]) => mods.has(mod)).map(([, label]) => label);
+  keys.push(keyLabel(code, layout));
+  return keys;
+}
+
 export function display(
   canonical: string,
   platform: "windows" | "macos",
   layout?: LayoutMap,
 ): string {
-  const parts = canonical.split("+");
-  const code = parts.pop() ?? "";
-  const mods = new Set(parts);
-  const key = keyLabel(code, layout);
-  if (platform === "macos") {
-    return (
-      (mods.has("Ctrl") ? "⌃" : "") +
-      (mods.has("Alt") ? "⌥" : "") +
-      (mods.has("Shift") ? "⇧" : "") +
-      (mods.has("Super") ? "⌘" : "") +
-      key
-    );
-  }
-  const out: string[] = [];
-  if (mods.has("Ctrl")) out.push("Ctrl");
-  if (mods.has("Alt")) out.push("Alt");
-  if (mods.has("Shift")) out.push("Shift");
-  if (mods.has("Super")) out.push("Win");
-  out.push(key);
-  return out.join("+");
+  return displayKeys(canonical, platform, layout).join(platform === "macos" ? "" : "+");
 }
 
 interface NavigatorKeyboard {
