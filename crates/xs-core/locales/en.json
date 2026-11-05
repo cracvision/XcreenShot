@@ -957,6 +957,7 @@
       "error_title": "Something went wrong",
       "empty_title": "Nothing open yet",
       "empty_help": "Take a capture, open an image or a .xshot document, or drop files here.",
+      "empty_shortcut": "Or press",
       "drop_hint": "Drop to open as documents",
       "panel_width": "Side panel width",
       "accept": "OK",

@@ -957,6 +957,7 @@
       "error_title": "Algo salió mal",
       "empty_title": "Todavía no hay nada abierto",
       "empty_help": "Haz una captura, abre una imagen o un documento .xshot, o suelta archivos aquí.",
+      "empty_shortcut": "O pulsa",
       "drop_hint": "Suelta para abrirlos como documentos",
       "panel_width": "Anchura del panel lateral",
       "accept": "Aceptar",

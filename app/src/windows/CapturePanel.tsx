@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { Menu } from "../components/Menu";
+import { useIndicator } from "../components/useIndicator";
 import { display } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import {
@@ -189,6 +190,8 @@ function merge(s: PanelSettings, p: Patch): PanelSettings {
 function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const list = useRef<HTMLDivElement>(null);
+  useIndicator(list, value);
   const onKey = (e: React.KeyboardEvent) => {
     const i = TABS.indexOf(value);
     const next =
@@ -207,7 +210,14 @@ function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
     refs.current[next]?.focus();
   };
   return (
-    <div className="panel-tabs" role="tablist" aria-label={t("ui.panel.tabs")} onKeyDown={onKey}>
+    <div
+      className="panel-tabs seg"
+      role="tablist"
+      aria-label={t("ui.panel.tabs")}
+      onKeyDown={onKey}
+      ref={list}
+    >
+      <span className="seg-indicator" aria-hidden="true" />
       {TABS.map((tab) => (
         <button
           key={tab}

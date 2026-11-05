@@ -1,9 +1,11 @@
 // Editor toolbar (EDT-001, EDT-003): Capture, the tools of this build, Undo and Redo
 // (they stay with the menus: Carlos, 2026-10-28), and the share area (Copy all,
 // Share ▾). Tooltips show the current shortcut (APP-014).
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { Menu } from "../components/Menu";
+import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import {
   copyAll,
@@ -47,6 +49,8 @@ export function Toolbar() {
   const doc = useEditor((s) => s.doc);
   const hasDoc = doc !== null;
   const labels = useSetting("editor.toolbarLabels", true);
+  const toolGroup = useRef<HTMLDivElement>(null);
+  useIndicator(toolGroup, `${tool}:${labels}`);
   const keys = {
     undo: useShortcut("editor.undo"),
     redo: useShortcut("editor.redo"),
@@ -72,11 +76,17 @@ export function Toolbar() {
         if (e.detail > 0 && button && !button.closest(".menu-anchor")) button.blur();
       }}
     >
-      <button type="button" className="btn primary tb-btn" onClick={openCapturePanel}>
+      <button type="button" className="btn primary tb-btn tb-capture" onClick={openCapturePanel}>
         <Icon name="capture" />
         <span className="tb-label">{t("ui.editor.capture")}</span>
       </button>
-      <div className="tb-group" role="group" aria-label={t("ui.editor.tools")}>
+      <div
+        className="tb-group seg tb-tools"
+        role="group"
+        aria-label={t("ui.editor.tools")}
+        ref={toolGroup}
+      >
+        <span className="seg-indicator" aria-hidden="true" />
         {tools.map((id: Tool) => (
           <ToolButton key={id} id={id} active={tool === id} />
         ))}
@@ -84,7 +94,7 @@ export function Toolbar() {
       <div className="tb-group">
         <button
           type="button"
-          className="btn icon"
+          className="btn icon tb-undo"
           disabled={!doc?.canUndo}
           title={hint(
             doc?.undoLabel
@@ -99,7 +109,7 @@ export function Toolbar() {
         </button>
         <button
           type="button"
-          className="btn icon"
+          className="btn icon tb-redo"
           disabled={!doc?.canRedo}
           title={hint(
             doc?.redoLabel

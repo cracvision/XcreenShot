@@ -2,6 +2,7 @@
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import { applyCrop, loadFonts, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
@@ -584,24 +585,7 @@ export function SidePanel() {
   return (
     <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
       <ResizeEdge />
-      <div className="panel-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "styles"}
-          onClick={() => setTab("styles")}
-        >
-          {t("ui.editor.tab_styles")}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "props"}
-          onClick={() => setTab("props")}
-        >
-          {t("ui.editor.tab_properties")}
-        </button>
-      </div>
+      <PanelTabs tab={tab} setTab={setTab} />
       <div className="side-body" role="tabpanel">
         {tab === "styles" ? (
           <p className="muted">{t("ui.editor.styles_soon")}</p>
@@ -613,5 +597,33 @@ export function SidePanel() {
         )}
       </div>
     </aside>
+  );
+}
+
+/** Styles and Properties, with a highlight that springs between them. */
+function PanelTabs({ tab, setTab }: { tab: string; setTab: (tab: "styles" | "props") => void }) {
+  const { t } = useTranslation();
+  const tabs = useRef<HTMLDivElement>(null);
+  useIndicator(tabs, tab);
+  return (
+    <div className="panel-tabs seg" role="tablist" ref={tabs}>
+      <span className="seg-indicator" aria-hidden="true" />
+      <button
+        type="button"
+        role="tab"
+        aria-selected={tab === "styles"}
+        onClick={() => setTab("styles")}
+      >
+        {t("ui.editor.tab_styles")}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={tab === "props"}
+        onClick={() => setTab("props")}
+      >
+        {t("ui.editor.tab_properties")}
+      </button>
+    </div>
   );
 }

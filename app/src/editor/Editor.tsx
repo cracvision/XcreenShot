@@ -2,7 +2,10 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Keys } from "../components/Keys";
+import { displayKeys } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
+import { useApp } from "../store";
 import { openCapturePanel, openFiles } from "./actions";
 import { Canvas } from "./Canvas";
 import { Dialogs } from "./Dialogs";
@@ -17,17 +20,32 @@ import { Toolbar } from "./Toolbar";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
+  // Plain values: a selector that builds an array would re-render without end.
+  const shortcut = useApp(
+    (s) => s.shortcuts?.rows.find((r) => r.command === "capture.capture")?.shortcut,
+  );
+  const platform = useApp((s) => s.shortcuts?.platform ?? "windows");
+  const layout = useApp((s) => s.layout);
+  const keys = shortcut ? displayKeys(shortcut, platform, layout) : null;
   return (
     <div className={`editor-empty${dropping ? " dropping" : ""}`}>
-      <h1>{t("ui.editor.empty_title")}</h1>
-      <p className="muted">{t("ui.editor.empty_help")}</p>
-      <div className="row">
-        <button type="button" className="btn primary" onClick={openCapturePanel}>
-          {t("ui.editor.capture")}
-        </button>
-        <button type="button" className="btn" onClick={() => void openFiles()}>
-          {t("ui.editor.open")}
-        </button>
+      <div className="empty-card">
+        <div className="empty-viewfinder" aria-hidden="true" />
+        <h1>{t("ui.editor.empty_title")}</h1>
+        <p className="muted">{t("ui.editor.empty_help")}</p>
+        <div className="row">
+          <button type="button" className="btn primary" onClick={openCapturePanel}>
+            {t("ui.editor.capture")}
+          </button>
+          <button type="button" className="btn" onClick={() => void openFiles()}>
+            {t("ui.editor.open")}
+          </button>
+        </div>
+        {keys && (
+          <p className="empty-keys muted">
+            {t("ui.editor.empty_shortcut")} <Keys keys={keys} />
+          </p>
+        )}
       </div>
     </div>
   );
@@ -77,7 +95,7 @@ export function Editor() {
       <StatusBar />
       <Strip />
       {toast && (
-        <div className="editor-toast" role="status">
+        <div className="editor-toast" role="status" key={toast}>
           {toast}
         </div>
       )}
