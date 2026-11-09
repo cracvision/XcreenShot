@@ -1,5 +1,10 @@
 {
   "bundle": {
-    "externalBin": ["binaries/xcreenshot"]
+    "externalBin": ["binaries/xcreenshot"],
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
+      }
+    }
   }
 }

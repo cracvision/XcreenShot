@@ -46,6 +46,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Instalador con un cliente MCP conectado (APP-028, 2026-11-09):** Claude Desktop mantiene `xcreenshot.exe mcp` en marcha y el instalador se paraba con "Error opening file for writing". Ahora aparta el archivo en uso y coloca el nuevo (`app/src-tauri/installer-hooks.nsh`), sin cortar la conexión. Prueba de Carlos en [`tests/manual/APP-028.md`](../tests/manual/APP-028.md), en su próxima actualización.
+
 - **Aspecto nuevo (2026-11-05):** Carlos quería una interfaz menos aburrida, con animaciones en menús y botones. Claude Design había hecho el sistema "Snap" (PR #4), pero sobre `main`, sin el editor.
   - Se llevó a `m1-editor` en la rama `snap-ui`, preparada en una carpeta aparte (`C:\Projects\XcreenShot-snap`).
   - Los nombres de color viejos pasaron a los de Snap. `MenuButton` y el menú Más del panel pasaron al `Menu` animado.
