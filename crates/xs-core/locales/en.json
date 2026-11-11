@@ -207,6 +207,14 @@
       "title": "Arrange objects",
       "description": "Brings objects to the front or one place forward, or sends them one place backward or to the back."
     },
+    "document_flatten": {
+      "title": "Flatten objects",
+      "description": "Merges objects into the image; they can be made objects again, except a blur."
+    },
+    "document_unflatten": {
+      "title": "Unflatten",
+      "description": "Makes flattened objects editable objects again."
+    },
     "document_transform": {
       "title": "Transform objects",
       "description": "Stretches, turns or gives the same size to several objects as one."
@@ -745,6 +753,9 @@
       "editor_ungroup": "Ungroup objects",
       "editor_equal_width": "Equal width",
       "editor_equal_height": "Equal height",
+      "editor_flatten": "Flatten objects",
+      "editor_flatten_all": "Flatten all objects",
+      "editor_unflatten_all": "Unflatten all",
       "editor_deselect": "Deselect",
       "editor_zoom_in": "Zoom in",
       "editor_zoom_out": "Zoom out",
@@ -790,6 +801,10 @@
     "open_library": "Open library"
   },
   "menu": {
+    "flatten": "Fla&tten",
+    "flatten_all": "Flatten a&ll",
+    "unflatten": "Unflatten",
+    "unflatten_all": "U&nflatten all",
     "equal_width": "Equal &width",
     "equal_height": "Equal hei&ght",
     "group": "&Group",
@@ -1189,6 +1204,11 @@
       "align_title": "Align",
       "align_help": "Against the selection; one object, against the canvas.",
       "scale_strokes": "Scale line widths and text",
+      "flatten_blur_title": "Flatten the blur?",
+      "flatten_blur_body": "A flattened blur cannot be unflattened: when the file is saved, it no longer has what the blur hides. Anything flattened earlier under it stays flat too. You can still undo it now with Undo.",
+      "flatten_blur_ok": "Flatten",
+      "unflatten_blur": "A flattened blur cannot be unflattened: its purpose is to hide what is below it.",
+      "unflatten_covered": "A blur was flattened over it, so it is now part of the image.",
       "pos": {
         "title": "Position and size",
         "width": "Width",
@@ -1516,6 +1536,10 @@
     }
   },
   "history": {
+    "flatten": "Flatten",
+    "flatten_all": "Flatten all",
+    "unflatten": "Unflatten",
+    "unflatten_all": "Unflatten all",
     "group": "Group",
     "ungroup": "Ungroup",
     "arrange": "Change order",

@@ -8,7 +8,7 @@ use image::RgbaImage;
 use tiny_skia::{
     FillRule, LineCap, LineJoin, Mask, Paint, PathBuilder, Pixmap, PixmapPaint, Stroke, StrokeDash, Transform,
 };
-use xs_core::document::{Document, Object};
+use xs_core::document::{Canvas, Document, Flattened, Object, PixelRect};
 
 use crate::color::Rgba;
 use crate::effects;
@@ -511,13 +511,136 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
     b
 }
 
-/// The final image of `doc` over `base`, straight RGBA.
+/// The final image of `doc` over `base`, straight RGBA: the flattened objects, then the
+/// objects (EDT-091).
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = canvas(doc, base);
-    for object in &doc.objects {
+    for object in flattened_objects(doc).iter().chain(&doc.objects) {
         draw_object(&mut pm, object, doc.dpi, &base.images);
     }
     straight(&pm)
+}
+
+/// The flattened objects of `doc` in canvas pixels, oldest first (EDT-091).
+pub fn flattened_objects(doc: &Document) -> Vec<Object> {
+    let (dx, dy) = (-doc.crop.x as f64, -doc.crop.y as f64);
+    doc.flattened
+        .iter()
+        .flat_map(|f| f.objects.iter())
+        .map(|o| {
+            let mut o = o.clone();
+            o.translate(dx, dy);
+            o
+        })
+        .collect()
+}
+
+fn union(a: Option<[f64; 4]>, b: [f64; 4]) -> Option<[f64; 4]> {
+    Some(match a {
+        None => b,
+        Some(a) => [a[0].min(b[0]), a[1].min(b[1]), a[2].max(b[2]), a[3].max(b[3])],
+    })
+}
+
+/// What a flattened layer covers, `[x0, y0, x1, y1]` in canvas pixels (EDT-091).
+pub fn layer_bounds(doc: &Document, layer: &Flattened) -> Option<[f64; 4]> {
+    let (dx, dy) = (-doc.crop.x as f64, -doc.crop.y as f64);
+    layer
+        .objects
+        .iter()
+        .filter_map(|o| object_bounds(o, doc.dpi))
+        .fold(None, union)
+        .map(|b| [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy])
+}
+
+/// What the editor shows under the objects when some are flattened (EDT-091): the
+/// original pixels with the flattened layers drawn over them, and where its top left
+/// corner is, in base pixels. It reaches past the original pixels where a flattened
+/// object does, as far as the canvas. `None` without flattened layers.
+pub fn flattened_view(doc: &Document, base: &Base) -> Option<(RgbaImage, i64, i64)> {
+    let r = flattened_view_rect(doc, base.width, base.height)?;
+    let view = Document {
+        canvas: Canvas {
+            width: r.width,
+            height: r.height,
+            color: None,
+            corner_radius: 0.0,
+            extra: Default::default(),
+        },
+        crop: r,
+        objects: Vec::new(),
+        ..doc.clone()
+    };
+    Some((render(&view, base), r.x, r.y))
+}
+
+/// Where [`flattened_view`] is, in base pixels, for original pixels of `width` ×
+/// `height`. `None` without flattened layers.
+pub fn flattened_view_rect(doc: &Document, width: u32, height: u32) -> Option<PixelRect> {
+    if doc.flattened.is_empty() {
+        return None;
+    }
+    let image = [0.0, 0.0, width as f64, height as f64];
+    let c = doc.crop;
+    let reach = union(
+        Some(image),
+        [
+            c.x as f64,
+            c.y as f64,
+            (c.x + c.width as i64) as f64,
+            (c.y + c.height as i64) as f64,
+        ],
+    )?;
+    let layers = doc
+        .flattened
+        .iter()
+        .flat_map(|f| &f.objects)
+        .filter_map(|o| object_bounds(o, doc.dpi))
+        .fold(Some(image), union)?;
+    let x0 = layers[0].max(reach[0]).floor() as i64;
+    let y0 = layers[1].max(reach[1]).floor() as i64;
+    let x1 = layers[2].min(reach[2]).ceil() as i64;
+    let y1 = layers[3].min(reach[3]).ceil() as i64;
+    Some(PixelRect {
+        x: x0,
+        y: y0,
+        width: (x1 - x0).max(1) as u32,
+        height: (y1 - y0).max(1) as u32,
+    })
+}
+
+/// The original pixels with the permanent flattened layers merged in: what `base.png`
+/// holds once the file is written, so it no longer has what a flattened blur hid
+/// (EDT-091). `None` without permanent layers.
+pub fn baked_base(doc: &Document, base: &Base) -> Option<RgbaImage> {
+    let permanent: Vec<Flattened> = doc
+        .flattened
+        .iter()
+        .filter(|f| f.permanent.is_some())
+        .cloned()
+        .collect();
+    if permanent.is_empty() {
+        return None;
+    }
+    let view = Document {
+        canvas: Canvas {
+            width: base.width,
+            height: base.height,
+            color: None,
+            corner_radius: 0.0,
+            extra: Default::default(),
+        },
+        crop: PixelRect {
+            x: 0,
+            y: 0,
+            width: base.width,
+            height: base.height,
+        },
+        objects: Vec::new(),
+        flattened: permanent,
+        ..doc.clone()
+    };
+    Some(render(&view, base))
 }
 
 /// What the editor canvas shows for objects Rust draws (ADR 0004), with its top-left
@@ -538,7 +661,7 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
                 return None;
             }
             let mut pm = canvas(doc, base);
-            for below in &doc.objects[..index] {
+            for below in flattened_objects(doc).iter().chain(&doc.objects[..index]) {
                 draw_object(&mut pm, below, doc.dpi, &base.images);
             }
             let (patch, x, y) = blur_patch(&pm, &b)?;

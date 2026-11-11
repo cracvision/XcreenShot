@@ -226,6 +226,10 @@ impl Snapshot {
         let c = self.document.crop;
         let whole = c.x == 0 && c.y == 0 && (c.width, c.height) == (self.base.width, self.base.height);
         let mut document = self.document.clone();
+        // A flattened blur, and what is under it, merge into the original pixels: the
+        // file no longer has what it hid (EDT-091).
+        let baked = xs_image::render::baked_base(&self.document, &self.base);
+        document.flattened.retain(|l| l.permanent.is_none());
         // The part of the original pixels under the canvas; the canvas may also reach
         // past them, where it grew to fit objects (EDT-071).
         let (kx0, ky0) = (c.x.max(0), c.y.max(0));
@@ -233,7 +237,7 @@ impl Snapshot {
         let ky1 = (c.y + c.height as i64).min(self.base.height as i64);
         let base_png = if drop_cropped && !whole && kx1 > kx0 && ky1 > ky0 {
             let kept = image::imageops::crop_imm(
-                &self.base.to_image(),
+                baked.as_ref().unwrap_or(&self.base.to_image()),
                 kx0 as u32,
                 ky0 as u32,
                 (kx1 - kx0) as u32,
@@ -245,7 +249,13 @@ impl Snapshot {
                 r.y -= ky0;
             }
             document.crop_history.clear();
+            // Flattened layers keep their place on the pixels that stay.
+            for o in document.flattened.iter_mut().flat_map(|l| &mut l.objects) {
+                o.translate(-kx0 as f64, -ky0 as f64);
+            }
             xs_image::encode::png(&kept, self.document.dpi, true)?
+        } else if let Some(baked) = &baked {
+            xs_image::encode::png(baked, self.document.dpi, true)?
         } else if self.base_source.mime == "image/png" {
             self.base_source.bytes.as_ref().clone()
         } else {
@@ -259,6 +269,7 @@ impl Snapshot {
         let used: std::collections::BTreeSet<&str> = document
             .objects
             .iter()
+            .chain(document.flattened.iter().flat_map(|l| &l.objects))
             .filter_map(|o| o.props.get("image").and_then(Value::as_str))
             .collect();
         let images = self
@@ -687,6 +698,12 @@ impl DocStore {
                 }
             }
         }
+        // Flattened layers (EDT-091): where each is on the canvas, for Unflatten.
+        if let Some(layers) = v.get_mut("flattened").and_then(Value::as_array_mut) {
+            for (l, layer) in layers.iter_mut().zip(&d.document.flattened) {
+                l["bounds"] = json!(xs_image::render::layer_bounds(&d.document, layer));
+            }
+        }
         let extra = json!({
             "documentId": d.id,
             "name": d.name(),
@@ -696,6 +713,9 @@ impl DocStore {
             "width": d.document.canvas.width,
             "height": d.document.canvas.height,
             "base": {"width": bw, "height": bh, "mime": d.base_source.mime},
+            // With flattened objects the canvas shows a view of the image that may start
+            // before the original pixels (EDT-091), in base pixels.
+            "baseView": xs_image::render::flattened_view_rect(&d.document, bw, bh),
             "metadata": d.meta,
             "dirty": d.dirty(),
             "canUndo": !d.undo.is_empty(),

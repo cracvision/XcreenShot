@@ -43,6 +43,26 @@
         ]
       }
     },
+    "flattened": {
+      "type": "array",
+      "description": "Objects merged into the image (EDT-091), oldest first. Drawn over base.png and under the objects; they can become objects again.",
+      "items": {
+        "type": "object",
+        "required": ["id", "objects"],
+        "properties": {
+          "id": { "type": "string", "description": "f1, f2…" },
+          "objects": {
+            "type": "array",
+            "description": "The objects as they were, in base pixels (not canvas pixels): a crop does not move them.",
+            "items": { "oneOf": [{ "$ref": "#/$defs/arrow" }, { "$ref": "#/$defs/image" }, { "$ref": "#/$defs/otherObject" }] }
+          },
+          "permanent": {
+            "type": "string",
+            "description": "Why it cannot become objects again (blur, covered). Written files have none: such a layer is merged into base.png."
+          }
+        }
+      }
+    },
     "effects": { "type": "array", "items": { "type": "object" } }
   },
   "$defs": {

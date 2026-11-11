@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
-use xs_core::document::Object;
+use xs_core::document::{translate_props, Object};
 use xs_image::geometry::{Arrow, ArrowStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::text::{Text, TextStyle};
@@ -248,38 +248,10 @@ pub fn update(object: &mut Object, set: &Map<String, Value>) -> Result<Change, S
     Ok(change)
 }
 
-fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
-    let shift = |v: &mut Value| {
-        if let Some(a) = v.as_array_mut() {
-            if let (Some(x), Some(y)) = (
-                a.first().and_then(Value::as_f64),
-                a.get(1).and_then(Value::as_f64),
-            ) {
-                *a = vec![json!(x + dx), json!(y + dy)];
-            }
-        }
-    };
-    for key in ["from", "to", "at"] {
-        if let Some(v) = props.get_mut(key) {
-            shift(v);
-        }
-    }
-    if let Some(points) = props.get_mut("points").and_then(Value::as_array_mut) {
-        points.iter_mut().for_each(shift);
-    }
-    if let Some(r) = props.get_mut("rect").and_then(Value::as_object_mut) {
-        for (key, d) in [("x", dx), ("y", dy)] {
-            if let Some(v) = r.get(key).and_then(Value::as_f64) {
-                r.insert(key.into(), json!(v + d));
-            }
-        }
-    }
-}
-
 /// Moves an object by (`dx`, `dy`) canvas pixels, whatever its type: its points
 /// (`from`, `to`, `at`, `points`) and its `rect`. Used when cropping (EDT-049).
 pub fn translate(object: &mut Object, dx: f64, dy: f64) {
-    translate_props(&mut object.props, dx, dy);
+    object.translate(dx, dy);
 }
 
 /// i18n key of the undo step for objects of one `kind` (`history.*`).

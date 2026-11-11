@@ -1,7 +1,9 @@
 //! `xsdoc` protocol: the editor canvas loads a document's pixels without passing them
 //! through JSON (ADR 0004).
 //!
-//! - `/<documentId>/base` returns the original pixels as encoded in the file (PNG/JPG).
+//! - `/<documentId>/base` returns the original pixels as encoded in the file (PNG/JPG),
+//!   or, with flattened objects (EDT-091), a PNG of them over those pixels, which starts
+//!   where `document.info` says (`baseView`).
 //! - `/<documentId>/thumb` returns a small PNG of the final image, for the strip of
 //!   open documents.
 //! - `/<documentId>/object/<objectId>` returns a text or blur object as Rust draws it.
@@ -27,9 +29,24 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         ["library", item, "thumb"] => xs_library::library(&core)
             .thumbnail(item)
             .map(|png| (std::sync::Arc::new(png), "image/png")),
-        [id, "base"] => editor
-            .store
-            .with(id, |d| (d.base_source.bytes.clone(), d.base_source.mime)),
+        [id, "base"] => {
+            let flat = editor
+                .store
+                .with(id, |d| !d.document.flattened.is_empty())
+                .unwrap_or(false);
+            if flat {
+                editor.store.snapshot(id).ok().and_then(|snap| {
+                    let (image, _, _) = xs_image::render::flattened_view(&snap.document, &snap.base)?;
+                    xs_image::encode::png(&image, 0.0, true)
+                        .ok()
+                        .map(|png| (std::sync::Arc::new(png), "image/png"))
+                })
+            } else {
+                editor
+                    .store
+                    .with(id, |d| (d.base_source.bytes.clone(), d.base_source.mime))
+            }
+        }
         // Text and blur as Rust draws them (ADR 0004); the canvas places them.
         [id, "object", object] => editor.store.snapshot(id).ok().and_then(|snap| {
             let (image, _, _) = xs_image::render::object_image(&snap.document, &snap.base, object)?;

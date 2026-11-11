@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { AiDialogs } from "./AiDialogs";
 import { FileDialogs } from "../library/FileDialogs";
-import { decide, recover, saveActive } from "./actions";
+import { decide, flattenNow, recover, saveActive } from "./actions";
 import { useEditor } from "./state";
 
 function Decision() {
@@ -134,6 +134,39 @@ function Recovery() {
   );
 }
 
+/** Flattening a blur cannot be undone with Unflatten (EDT-091). */
+function FlattenBlur() {
+  const { t } = useTranslation();
+  const ask = useEditor((s) => s.flattenAsk);
+  if (!ask) return null;
+  const close = () => useEditor.setState({ flattenAsk: null });
+  return (
+    <Dialog
+      title={t("ui.editor.flatten_blur_title")}
+      onCancel={close}
+      actions={
+        <>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => {
+              close();
+              void flattenNow(ask.all);
+            }}
+          >
+            {t("ui.editor.flatten_blur_ok")}
+          </button>
+          <button type="button" className="btn" onClick={close}>
+            {t("ui.editor.cancel")}
+          </button>
+        </>
+      }
+    >
+      <p>{t("ui.editor.flatten_blur_body")}</p>
+    </Dialog>
+  );
+}
+
 function ErrorMessage() {
   const { t } = useTranslation();
   const error = useEditor((s) => s.error);
@@ -160,6 +193,7 @@ export function Dialogs() {
       <Decision />
       <Flatten />
       <Recovery />
+      <FlattenBlur />
       <ErrorMessage />
       <AiDialogs />
       <FileDialogs />

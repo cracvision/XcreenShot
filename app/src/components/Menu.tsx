@@ -22,6 +22,8 @@ export interface MenuItem {
   /** Set (true or false) for a choice that shows a check mark when chosen. */
   checked?: boolean | undefined;
   disabled?: boolean;
+  /** Tooltip: why it is off, for instance. */
+  title?: string;
   /** Extra content after the label, such as a setting key. */
   trailing?: ReactNode;
   /** Shortcut shown at the right, already written for this platform. */
@@ -179,6 +181,8 @@ export function MenuList({
             data-item={item.id}
             aria-checked={checkable ? item.checked : undefined}
             aria-disabled={item.disabled || undefined}
+            title={item.title}
+            aria-description={item.disabled ? item.title : undefined}
             aria-haspopup={nested ? "menu" : undefined}
             aria-expanded={nested ? expanded : undefined}
             tabIndex={-1}

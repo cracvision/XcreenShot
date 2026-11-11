@@ -348,6 +348,31 @@ export function arrangeSelection(action: string): void {
   }).catch(fail);
 }
 
+/** Flattens the selection, or every object (EDT-091). */
+export async function flattenNow(all: boolean): Promise<void> {
+  const { active, selection } = useEditor.getState();
+  if (!active) return;
+  await run(
+    "document.flatten",
+    all ? { documentId: active, all } : { documentId: active, objectIds: selection },
+  )
+    .then(() => useEditor.getState().setSelection([]))
+    .catch(fail);
+}
+
+/** Makes a flattened layer (or, with `null`, every one that can) objects again, and
+ * selects them (EDT-091). */
+export async function unflattenLayer(layer: string | null): Promise<void> {
+  const { active } = useEditor.getState();
+  if (!active) return;
+  await run<{ ids: string[] }>(
+    "document.unflatten",
+    layer ? { documentId: active, layerId: layer } : { documentId: active, all: true },
+  )
+    .then((r) => useEditor.getState().setSelection(r.ids))
+    .catch(fail);
+}
+
 /** Locks or unlocks objects, in one undo step (EDT-085). */
 export async function setLocked(ids: string[], locked: boolean): Promise<void> {
   const { active } = useEditor.getState();
@@ -556,6 +581,20 @@ export function performAction(action: string): boolean {
       // Every object but the locked ones (EDT-079, EDT-085).
       if (!doc || doc.objects.length === 0) return false;
       setSelection(doc.objects.filter((o) => !o.locked).map((o) => o.id));
+      return true;
+    case "flatten":
+    case "flatten_all": {
+      // Merge into the image (EDT-091); a blur cannot come back, so it asks first.
+      const all = action === "flatten_all";
+      const picked = doc?.objects.filter((o) => all || selection.includes(o.id)) ?? [];
+      if (!doc || picked.length === 0) return false;
+      if (picked.some((o) => o.type === "blur")) useEditor.setState({ flattenAsk: { all } });
+      else void flattenNow(all);
+      return true;
+    }
+    case "unflatten_all":
+      if (!doc?.flattened?.some((l) => !l.permanent)) return false;
+      void unflattenLayer(null);
       return true;
     case "equal_width":
     case "equal_height":

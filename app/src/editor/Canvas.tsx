@@ -95,7 +95,7 @@ type Drag =
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
   | { kind: "pan"; x: number; y: number; left: number; top: number };
 
-function useBaseImage(id: string): HTMLImageElement | null {
+function useBaseImage(id: string, key: number): HTMLImageElement | null {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   useEffect(() => {
     let alive = true;
@@ -110,12 +110,13 @@ function useBaseImage(id: string): HTMLImageElement | null {
         requestAnimationFrame(() => void invoke("xs_editor_painted").catch(() => undefined)),
       );
     };
-    el.src = docUrl(id, "base");
+    el.src = docUrl(id, "base", key);
     return () => {
       alive = false;
-      setImg(null);
     };
-  }, [id]);
+  }, [id, key]);
+  // Another document starts empty; the same one keeps showing until the new view loads.
+  useEffect(() => () => setImg(null), [id]);
   return img;
 }
 
@@ -128,6 +129,16 @@ function useDevicePixelRatio(): number {
     return () => mq.removeEventListener("change", update);
   }, [dpr]);
   return dpr;
+}
+
+/** A small number that changes when `text` does: a URL version. */
+function hashOf(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 }
 
 /** Light and mid gray squares of a fixed screen size for transparent areas (EDT-010). */
@@ -185,7 +196,13 @@ export function Canvas({ doc }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
   const dpr = useDevicePixelRatio();
-  const base = useBaseImage(doc.documentId);
+  // With flattened objects the image shown changes with them (EDT-091).
+  const flatKey = useMemo(
+    () => (doc.flattened?.length ? hashOf(JSON.stringify(doc.flattened)) : 0),
+    [doc.flattened],
+  );
+  const base = useBaseImage(doc.documentId, flatKey);
+  const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
   const objectImages = useObjectImages(doc.documentId, doc.objects, doc.version);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [space, setSpace] = useState(false);
@@ -781,7 +798,20 @@ export function Canvas({ doc }: Props) {
       return;
     }
     if (hit && !selection.includes(hit.id)) setSelection([hit.id]);
-    canvasMenu(hit !== null, menuPoint(e));
+    // On a flattened place: Unflatten (EDT-091), the newest layer there.
+    const layer = hit
+      ? undefined
+      : [...(doc.flattened ?? [])]
+          .reverse()
+          .find(
+            (l) =>
+              l.bounds &&
+              p[0] >= l.bounds[0] &&
+              p[0] <= l.bounds[2] &&
+              p[1] >= l.bounds[1] &&
+              p[1] <= l.bounds[3],
+          );
+    canvasMenu(hit !== null, menuPoint(e), layer);
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1041,7 +1071,9 @@ export function Canvas({ doc }: Props) {
                       fill={doc.canvas.color}
                     />
                   )}
-                  {base && <KImage image={base} x={-doc.crop.x} y={-doc.crop.y} />}
+                  {base && (
+                    <KImage image={base} x={baseAt.x - doc.crop.x} y={baseAt.y - doc.crop.y} />
+                  )}
                 </Group>
                 {/* Objects are cut at the edge, except the one being drawn or dragged:
                     it shows whole and the canvas grows to fit it when the gesture ends

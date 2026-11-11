@@ -170,7 +170,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-088 | Duplicar objetos | M2 | Should | En curso |
 | EDT-089 | Cortar, copiar y pegar | M1 | Must | Win |
 | EDT-090 | Copiar todo | M1 | Must | Win |
-| EDT-091 | Aplanar y desaplanar | M2 | Should | — |
+| EDT-091 | Aplanar y desaplanar | M2 | Should | En curso |
 | EDT-092 | Deshacer y rehacer | M1 | Must | Win |
 | EDT-093 | Cursor como objeto | M2 | Should | — |
 | EDT-094 | Medición en vivo | M5 | Could | — |

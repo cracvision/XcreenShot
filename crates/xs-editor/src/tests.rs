@@ -1744,3 +1744,100 @@ fn equal_width_matches_the_widest() {
     .unwrap_err();
     assert!(err.message.contains("one of"), "{}", err.message);
 }
+
+/// EDT-091: a flattened arrow can no longer be picked; Unflatten makes it an object
+/// again, also after saving and reopening.
+#[test]
+fn a_flattened_arrow_comes_back_after_reopening() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([20, 50], [120, 50]), arrow([20, 150], [120, 150])]}),
+    );
+    let before = cli(&e.core, "document.image", json!({"documentId": doc}));
+    let r = cli(
+        &e.core,
+        "document.flatten",
+        json!({"documentId": doc, "objectIds": ["o1"]}),
+    );
+    assert_eq!(r, json!({"layers": ["f1"], "permanent": false}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"].as_array().unwrap().len(),
+        1,
+        "no longer an object"
+    );
+    assert_eq!(info["flattened"][0]["id"], "f1");
+    assert!(info["flattened"][0]["bounds"].is_array());
+    // It still shows: the image is the same.
+    let after = cli(&e.core, "document.image", json!({"documentId": doc}));
+    assert_eq!(before["data"], after["data"]);
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let doc = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let r = cli(
+        &e.core,
+        "document.unflatten",
+        json!({"documentId": doc, "layerId": "f1"}),
+    );
+    assert_eq!(r["ids"], json!(["o1"]));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["id"], "o1");
+    assert_eq!(info["objects"][0]["from"], json!([20.0, 50.0]));
+    assert!(info.get("flattened").is_none());
+}
+
+/// EDT-091: a flattened blur cannot be unflattened, and once saved the file no longer
+/// has the pixels it hid.
+#[test]
+fn a_flattened_blur_leaves_nothing_behind_in_the_file() {
+    let e = env();
+    // Stripes, so a blur changes them.
+    let stripes = image::RgbaImage::from_fn(200, 100, |x, _| {
+        if (x / 4) % 2 == 0 {
+            image::Rgba([0, 0, 0, 255])
+        } else {
+            image::Rgba([255, 255, 255, 255])
+        }
+    });
+    let (doc, path) =
+        add_capture(&e.core, &stripes, json!({"mode": "region"}), 1.0, Some("Stripes")).unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "blur", "rect": {"x": 20, "y": 20, "w": 60, "h": 40}}]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.flatten",
+        json!({"documentId": doc, "all": true}),
+    );
+    assert_eq!(r["permanent"], true);
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.unflatten",
+        json!({"documentId": doc, "layerId": r["layers"][0]}),
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("cannot become objects again"),
+        "{}",
+        err.message
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert!(file.document.flattened.is_empty(), "merged into the image");
+    let base = xs_image::encode::decode(&file.base_png).unwrap();
+    // Inside the blur the stripes are gone; outside they are as they were.
+    let (x, y) = (50, 40);
+    assert_ne!(base.get_pixel(x, y), stripes.get_pixel(x, y));
+    assert_ne!(base.get_pixel(x + 4, y), stripes.get_pixel(x + 4, y));
+    assert_eq!(base.get_pixel(150, 80), stripes.get_pixel(150, 80));
+    assert_eq!(base.get_pixel(5, 5), stripes.get_pixel(5, 5));
+}

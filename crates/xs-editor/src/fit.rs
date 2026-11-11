@@ -62,6 +62,15 @@ pub fn fit_canvas(doc: &mut Document) {
             e = [e[0].min(b[0]), e[1].min(b[1]), e[2].max(b[2]), e[3].max(b[3])];
         }
     }
+    // Flattened objects keep the canvas as it was for them (EDT-091).
+    for o in xs_image::render::flattened_objects(doc)
+        .iter()
+        .filter(|o| grows(o))
+    {
+        if let Some(b) = object_bounds(o, dpi) {
+            e = [e[0].min(b[0]), e[1].min(b[1]), e[2].max(b[2]), e[3].max(b[3])];
+        }
+    }
     let x0 = (e[0] + HALF).floor() as i64;
     let y0 = (e[1] + HALF).floor() as i64;
     let x1 = (e[2] - HALF).ceil() as i64;

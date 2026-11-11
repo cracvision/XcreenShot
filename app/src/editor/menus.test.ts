@@ -20,6 +20,7 @@ describe("editor right-click menus (EDT-002)", () => {
       "editor.bring_forward",
       "editor.send_backward",
       "editor.send_back",
+      "editor.flatten",
     ]);
     expect(s.items.map((i) => i.separator)).toEqual([
       false,
@@ -32,7 +33,16 @@ describe("editor right-click menus (EDT-002)", () => {
       false,
       false,
       false,
+      true,
     ]);
+  });
+
+  it("on a flattened place: Unflatten, off with its reason for a blur (EDT-091)", () => {
+    canvasMenu(false, { x: 0, y: 0 }, { id: "f1", permanent: "blur", bounds: [0, 0, 9, 9] });
+    const last = useContextMenu.getState().items.at(-1);
+    expect(last?.id).toBe("editor.unflatten");
+    expect(last?.disabled).toBe(true);
+    expect(last?.title).toBeTruthy();
   });
 
   it("on the image: paste, paste in place and copy all", () => {

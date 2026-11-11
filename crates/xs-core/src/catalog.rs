@@ -527,6 +527,31 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.flatten", &["EDT-091", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "all": {"type": "boolean", "default": false, "description": "Flatten every object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "layers": {"type": "array", "items": {"type": "string"}, "description": "New layers, oldest first: each blur has one of its own"},
+                "permanent": {"type": "boolean", "description": "A blur was flattened: it cannot become objects again"}
+            }})),
+        B::new("document.unflatten", &["EDT-091", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "layerId": {"type": "string", "description": "A layer of `flattened` in document.info"},
+                    "all": {"type": "boolean", "default": false, "description": "Every layer that can"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(
@@ -995,7 +1020,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 49] = [
+pub const EDITOR_ACTIONS: [&str; 52] = [
     "open",
     "save",
     "save_as",
@@ -1045,6 +1070,9 @@ pub const EDITOR_ACTIONS: [&str; 49] = [
     "ungroup",
     "equal_width",
     "equal_height",
+    "flatten",
+    "flatten_all",
+    "unflatten_all",
 ];
 
 fn library_item() -> Value {

@@ -207,6 +207,14 @@
       "title": "Ordenar objetos",
       "description": "Trae objetos al frente o un paso adelante, o los envía un paso atrás o al fondo."
     },
+    "document_flatten": {
+      "title": "Aplanar objetos",
+      "description": "Funde objetos con la imagen; se pueden volver a hacer objetos, salvo un desenfoque."
+    },
+    "document_unflatten": {
+      "title": "Desaplanar",
+      "description": "Vuelve a hacer objetos editables lo que se aplanó."
+    },
     "document_transform": {
       "title": "Transformar objetos",
       "description": "Estira, gira o iguala el tamaño de varios objetos como si fueran uno."
@@ -745,6 +753,9 @@
       "editor_ungroup": "Desagrupar objetos",
       "editor_equal_width": "Igualar ancho",
       "editor_equal_height": "Igualar alto",
+      "editor_flatten": "Aplanar objetos",
+      "editor_flatten_all": "Aplanar todos los objetos",
+      "editor_unflatten_all": "Desaplanar todo",
       "editor_deselect": "Deseleccionar",
       "editor_zoom_in": "Acercar",
       "editor_zoom_out": "Alejar",
@@ -790,6 +801,10 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "flatten": "A&planar",
+    "flatten_all": "Aplanar &todo",
+    "unflatten": "Desaplanar",
+    "unflatten_all": "Desaplanar t&odo",
     "equal_width": "Igualar &ancho",
     "equal_height": "Igualar a&lto",
     "group": "&Agrupar",
@@ -1189,6 +1204,11 @@
       "align_title": "Alinear",
       "align_help": "Respecto a la selección; con un objeto, respecto al lienzo.",
       "scale_strokes": "Escalar grosores y texto",
+      "flatten_blur_title": "¿Aplanar el desenfoque?",
+      "flatten_blur_body": "Un desenfoque aplanado no se puede desaplanar: al guardar, el archivo ya no tiene lo que el desenfoque oculta. Lo que se aplanó antes debajo de él también queda aplanado. Ahora todavía puedes deshacerlo con Deshacer.",
+      "flatten_blur_ok": "Aplanar",
+      "unflatten_blur": "Un desenfoque aplanado no se puede desaplanar: su fin es ocultar lo que tapa.",
+      "unflatten_covered": "Encima se aplanó un desenfoque, así que ya forma parte de la imagen.",
       "pos": {
         "title": "Posición y tamaño",
         "width": "Ancho",
@@ -1516,6 +1536,10 @@
     }
   },
   "history": {
+    "flatten": "Aplanar",
+    "flatten_all": "Aplanar todo",
+    "unflatten": "Desaplanar",
+    "unflatten_all": "Desaplanar todo",
     "group": "Agrupar",
     "ungroup": "Desagrupar",
     "arrange": "Cambiar el orden",

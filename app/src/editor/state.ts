@@ -147,6 +147,13 @@ export interface TextEdit {
 }
 
 /** What `document.info` returns (EDT-119). */
+/** A flattened layer (EDT-091): `permanent` says why it cannot become objects again. */
+export interface FlatLayer {
+  id: string;
+  permanent?: "blur" | "covered" | string;
+  bounds: [number, number, number, number] | null;
+}
+
 export interface DocDetails extends Omit<DocSummary, "objects"> {
   canvas: { width: number; height: number; color?: string; cornerRadius: number };
   crop: { x: number; y: number; width: number; height: number };
@@ -155,6 +162,11 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   dpi: number;
   objects: DocObject[];
   base: { width: number; height: number; mime: string };
+  /** With flattened objects, the canvas shows a view of the image that may start
+   * before the original pixels, in base pixels (EDT-091). */
+  baseView?: { x: number; y: number; width: number; height: number } | null;
+  /** Objects merged into the image (EDT-091), oldest first; `bounds` on the canvas. */
+  flattened?: FlatLayer[];
   metadata: { display?: { scale?: number } };
   canUndo: boolean;
   canRedo: boolean;
@@ -194,6 +206,8 @@ interface EditorState {
   active: string | null;
   doc: DocDetails | null;
   selection: string[];
+  /** Flattening a blur waits for this question (EDT-091). */
+  flattenAsk: { all: boolean } | null;
   /** The group a double click entered, outermost first (EDT-082). */
   entered: string[];
   /** Last view of each document in this session. */
@@ -243,6 +257,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   active: null,
   doc: null,
   selection: [],
+  flattenAsk: null,
   entered: [],
   views: {},
   zoomRequest: null,

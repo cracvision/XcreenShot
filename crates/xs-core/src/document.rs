@@ -53,6 +53,61 @@ pub struct Object {
     pub props: Map<String, Value>,
 }
 
+impl Object {
+    /// Moves it by (`dx`, `dy`) pixels, whatever its type: its points (`from`, `to`,
+    /// `at`, `points`) and its `rect`.
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        translate_props(&mut self.props, dx, dy);
+    }
+}
+
+/// [`Object::translate`] on the properties alone.
+pub fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
+    let shift = |v: &mut Value| {
+        if let Some(a) = v.as_array_mut() {
+            if let (Some(x), Some(y)) = (
+                a.first().and_then(Value::as_f64),
+                a.get(1).and_then(Value::as_f64),
+            ) {
+                *a = vec![Value::from(x + dx), Value::from(y + dy)];
+            }
+        }
+    };
+    for key in ["from", "to", "at"] {
+        if let Some(v) = props.get_mut(key) {
+            shift(v);
+        }
+    }
+    if let Some(points) = props.get_mut("points").and_then(Value::as_array_mut) {
+        points.iter_mut().for_each(shift);
+    }
+    if let Some(r) = props.get_mut("rect").and_then(Value::as_object_mut) {
+        for (key, d) in [("x", dx), ("y", dy)] {
+            if let Some(v) = r.get(key).and_then(Value::as_f64) {
+                r.insert(key.into(), Value::from(v + d));
+            }
+        }
+    }
+}
+
+/// Objects merged into the image (EDT-091). They are drawn over `base.png` and under
+/// the objects, and can become objects again: the file keeps them as they were.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Flattened {
+    /// `f1`, `f2`…
+    pub id: String,
+    /// The objects as they were, in base pixels: a crop does not move them.
+    pub objects: Vec<Object>,
+    /// Why it cannot become objects again: `blur` (its purpose is to hide what is
+    /// below) or `covered` (a blur was flattened over it later). Such a layer is merged
+    /// into `base.png` when the file is written, so the file no longer has what it hid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permanent: Option<String>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
@@ -77,6 +132,9 @@ pub struct Document {
     pub dpi: f64,
     #[serde(default)]
     pub objects: Vec<Object>,
+    /// Objects merged into the image, oldest first (EDT-091).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub flattened: Vec<Flattened>,
     /// Document effects (EDT-053, M2).
     #[serde(default)]
     pub effects: Vec<Value>,
@@ -111,6 +169,7 @@ impl Document {
             outside: Vec::new(),
             dpi,
             objects: Vec::new(),
+            flattened: Vec::new(),
             effects: Vec::new(),
             extra: Map::new(),
         }
@@ -124,15 +183,28 @@ impl Document {
         self.objects.iter_mut().find(|o| o.id == id)
     }
 
-    /// An object id not used in this document: `o1`, `o2`…
+    /// An object id not used in this document, flattened objects included: `o1`,
+    /// `o2`…
     pub fn next_object_id(&self) -> String {
         let max = self
             .objects
             .iter()
+            .chain(self.flattened.iter().flat_map(|f| &f.objects))
             .filter_map(|o| o.id.strip_prefix('o').and_then(|n| n.parse::<u64>().ok()))
             .max()
             .unwrap_or(0);
         format!("o{}", max + 1)
+    }
+
+    /// A flattened layer id not used yet: `f1`, `f2`…
+    pub fn next_flattened_id(&self) -> String {
+        let max = self
+            .flattened
+            .iter()
+            .filter_map(|f| f.id.strip_prefix('f').and_then(|n| n.parse::<u64>().ok()))
+            .max()
+            .unwrap_or(0);
+        format!("f{}", max + 1)
     }
 }
 

@@ -11,8 +11,8 @@ import type { MenuItem } from "../components/Menu";
 import { display } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
-import { performAction, setLocked, toggleToolbarLabels } from "./actions";
-import { useEditor, usePanel } from "./state";
+import { performAction, setLocked, toggleToolbarLabels, unflattenLayer } from "./actions";
+import { useEditor, usePanel, type FlatLayer } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
 
@@ -142,9 +142,9 @@ export function menuPoint(e: MouseEvent): Point {
 }
 
 /** Right click on the canvas: what applies to the object under the pointer, or to the
- * image (EDT-002). Grouping, order and flattening arrive with them (M2). */
-export function canvasMenu(onObject: boolean, at: Point): void {
-  const items = onObject
+ * image (EDT-002), and Unflatten on a flattened place (EDT-091). */
+export function canvasMenu(onObject: boolean, at: Point, layer?: FlatLayer): void {
+  const items: MenuItem[] = onObject
     ? [
         entry("cut"),
         entry("copy"),
@@ -156,8 +156,19 @@ export function canvasMenu(onObject: boolean, at: Point): void {
         entry("bring_forward"),
         entry("send_backward"),
         entry("send_back"),
+        entry("flatten", true),
       ]
     : [entry("paste"), entry("paste_in_place"), entry("copy_all", true)];
+  if (!onObject && layer) {
+    items.push({
+      id: "editor.unflatten",
+      label: i18next.t("menu.unflatten"),
+      separator: true,
+      disabled: Boolean(layer.permanent),
+      ...(layer.permanent ? { title: i18next.t(`ui.editor.unflatten_${layer.permanent}`) } : {}),
+      onSelect: () => void unflattenLayer(layer.id),
+    });
+  }
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
 }
 
@@ -223,6 +234,7 @@ export function useMenuBar(): void {
   // In the Library view the document entries do not apply (LIB-001).
   const hasDoc = doc !== null && !inLibrary;
   const objectCount = inLibrary ? 0 : (doc?.objects.length ?? 0);
+  const canUnflatten = !inLibrary && (doc?.flattened ?? []).some((l) => !l.permanent);
   const canUndo = (doc?.canUndo ?? false) && !inLibrary;
   const canRedo = (doc?.canRedo ?? false) && !inLibrary;
 
@@ -284,6 +296,9 @@ export function useMenuBar(): void {
     enabled["editor.ungroup"] = groupedSelected;
     enabled["editor.unlock_all"] = lockedCount > 0;
     enabled["editor.select_all"] = objectCount > 0;
+    enabled["editor.flatten"] = selected;
+    enabled["editor.flatten_all"] = objectCount > 0;
+    enabled["editor.unflatten_all"] = canUnflatten;
     const checked = {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
@@ -298,6 +313,7 @@ export function useMenuBar(): void {
     selectedCount,
     lockedCount,
     groupedSelected,
+    canUnflatten,
     canUndo,
     canRedo,
     selected,

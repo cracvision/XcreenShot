@@ -7,6 +7,7 @@
 //! the library as `.xshot` (LIB-020).
 
 pub mod fit;
+pub mod flatten;
 pub mod objects;
 pub mod recovery;
 pub mod store;
@@ -1716,6 +1717,92 @@ pub fn extension() -> Extension {
                 .ok_or_else(|| CommandError::internal("document closed"))??;
             changed(&core, ctx, &id);
             Ok(json!({ "objects": updated }))
+        });
+        // Flatten (EDT-091): the objects become part of the image, in one undo step.
+        on!("document.flatten", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let all = p.get("all").and_then(Value::as_bool).unwrap_or(false);
+            let oids = if all {
+                Vec::new()
+            } else {
+                let oids = object_ids(&p, ctx.lang)?;
+                kinds_of(&core, ctx.lang, &id, &oids)?;
+                oids
+            };
+            let label = if all {
+                "history.flatten_all"
+            } else {
+                "history.flatten"
+            };
+            let auto = auto_expand(&core);
+            let made = editor(&core)
+                .store
+                .mutate(&id, label, |doc| {
+                    let ids: Vec<String> = if all {
+                        doc.objects.iter().map(|o| o.id.clone()).collect()
+                    } else {
+                        oids.clone()
+                    };
+                    let made = flatten::flatten(doc, &ids).ok_or_else(|| {
+                        invalid(tr(
+                            ctx.lang,
+                            "errors.invalid_param",
+                            &[("param", "objectIds"), ("reason", "there is nothing to flatten")],
+                        ))
+                    })?;
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
+                    Ok::<_, CommandError>(made)
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "layers": made.layers, "permanent": made.permanent }))
+        });
+        // Unflatten (EDT-091): a flattened layer, or all of them, objects again.
+        on!("document.unflatten", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let all = p.get("all").and_then(Value::as_bool).unwrap_or(false);
+            let layer = p.get("layerId").and_then(Value::as_str).map(str::to_string);
+            let bad = |reason: &str| {
+                invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "layerId"), ("reason", reason)],
+                ))
+            };
+            if all == layer.is_some() {
+                return Err(bad("give layerId or all"));
+            }
+            let auto = auto_expand(&core);
+            let label = if all {
+                "history.unflatten_all"
+            } else {
+                "history.unflatten"
+            };
+            let ids = editor(&core)
+                .store
+                .mutate(&id, label, |doc| {
+                    let ids = match &layer {
+                        Some(l) => flatten::unflatten(doc, l).map_err(|r| match r.as_str() {
+                            "not_found" => bad("there is no such flattened layer"),
+                            _ => {
+                                bad("this flattened layer hides information and cannot become objects again")
+                            }
+                        })?,
+                        None => flatten::unflatten_all(doc),
+                    };
+                    if ids.is_empty() {
+                        return Err(bad("nothing flattened can become objects again"));
+                    }
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
+                    Ok::<_, CommandError>(ids)
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "ids": ids }))
         });
         // Stacking order (EDT-081): one undo step.
         on!("document.arrange", |core, ctx, p| {
