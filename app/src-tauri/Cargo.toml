@@ -36,6 +36,10 @@ tauri-plugin-dialog = "2"
 drag = "2.1.1"
 
 [target.'cfg(windows)'.dependencies]
+# Already in the tree through Tauri: to tell WebView2 to keep little memory for a
+# hidden window (APP-051).
+webview2-com = "0.39"
+windows-core = "0.62"
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_System_LibraryLoader"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

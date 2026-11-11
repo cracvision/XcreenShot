@@ -442,6 +442,7 @@ fn copy_to_clipboard(image: &RgbaImage) -> Result<(), arboard::Error> {
 pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> CommandResult {
     let lang = ctx.lang;
     let now = chrono::Local::now();
+    let started = std::time::Instant::now();
     let host = core.host();
     let mut warnings = shot.warnings.clone();
     // The moment of the capture: its sound and flash (CAP-055).
@@ -493,6 +494,7 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         pointer.as_ref(),
     )
     .map_err(|e| failed(lang, e))?;
+    let save_ms = started.elapsed().as_millis() as u64;
     let mut files = vec![path.to_string_lossy().into_owned()];
 
     // 3. Clipboard.
@@ -527,6 +529,8 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         width = shot.image.width(),
         height = shot.image.height(),
         source = ?ctx.source,
+        save_ms,
+        total_ms = started.elapsed().as_millis() as u64,
         "capture completed"
     );
     // "Repeat last area" (CAP-007): the rectangle of the last region or window.

@@ -150,6 +150,10 @@ impl Host for TauriHost {
             }
             "general.showIcon" | "general.monochromeIcon" => tray::refresh(&self.app),
             "shortcuts.takeOver" => self.shortcuts_changed(),
+            // A test copy never changes how the installed app starts.
+            "general.launchAtLogin" if xs_core::paths::isolated() => {
+                tracing::info!("isolated instance: login item left alone");
+            }
             "general.launchAtLogin" => {
                 let auto = self.app.autolaunch();
                 let r = if value.as_bool().unwrap_or(false) {

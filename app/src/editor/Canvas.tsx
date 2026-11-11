@@ -1,6 +1,7 @@
 // The editor canvas (EDT-007, EDT-022, EDT-024, EDT-026, EDT-029, EDT-040, EDT-042,
 // EDT-049). Konva draws; the pointer is handled here in canvas pixels; every change is
 // one command when the gesture ends.
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import { useTranslation } from "react-i18next";
@@ -90,7 +91,14 @@ function useBaseImage(id: string): HTMLImageElement | null {
     const el = new window.Image();
     // Readable pixels, for the canvas color picker (EDT-117 `I`).
     el.crossOrigin = "anonymous";
-    el.onload = () => alive && setImg(el);
+    el.onload = () => {
+      if (!alive) return;
+      setImg(el);
+      // Once painted, the shell logs how long the capture took to show (APP-049).
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => void invoke("xs_editor_painted").catch(() => undefined)),
+      );
+    };
     el.src = docUrl(id, "base");
     return () => {
       alive = false;

@@ -44,6 +44,9 @@ pub struct AppState {
     pub countdown: countdown::Countdown,
     /// The capture panel was hidden for the capture in progress (CAP-001).
     pub panel_stepped_aside: AtomicBool,
+    /// When the last on-screen selection was confirmed, to time it until the editor
+    /// shows the capture (APP-049).
+    pub capture_confirmed: Mutex<Option<std::time::Instant>>,
 }
 
 /// The single entry point from the webviews: run a registered command.
@@ -92,7 +95,22 @@ fn xs_frame_patch(
 /// The user finished or cancelled the on-screen selection.
 #[tauri::command]
 fn xs_overlay_finish(app: AppHandle, seq: u64, outcome: Value) {
+    if matches!(outcome["kind"].as_str(), Some("rect" | "window")) {
+        *app.state::<AppState>().capture_confirmed.lock().unwrap() = Some(std::time::Instant::now());
+    }
     overlay::finish(&app, seq, outcome);
+}
+
+/// The editor painted a document: right after a selection, how long the capture took
+/// to appear (APP-049, in the log for diagnostics).
+#[tauri::command]
+fn xs_editor_painted(state: tauri::State<'_, AppState>) {
+    if let Some(at) = state.capture_confirmed.lock().unwrap().take() {
+        let ms = at.elapsed().as_millis() as u64;
+        if ms < 30_000 {
+            tracing::info!(ms, "capture to editor");
+        }
+    }
 }
 
 /// Cancel button of the delay countdown (CAP-048).
@@ -336,6 +354,7 @@ pub fn run() {
             overlays: overlay::Overlays::default(),
             countdown: countdown::Countdown::default(),
             panel_stepped_aside: AtomicBool::new(false),
+            capture_confirmed: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             xs_run,
@@ -348,7 +367,8 @@ pub fn run() {
             xs_panel_fit,
             xs_editor_menus,
             xs_drag_prepare,
-            xs_drag_start
+            xs_drag_start,
+            xs_editor_painted
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
@@ -380,7 +400,10 @@ pub fn run() {
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
             let first_run = !first_run_marker.exists();
             if first_run {
-                if !cfg!(debug_assertions) && core.settings.get_bool("general.launchAtLogin") {
+                if !cfg!(debug_assertions)
+                    && !xs_core::paths::isolated()
+                    && core.settings.get_bool("general.launchAtLogin")
+                {
                     let _ = handle.autolaunch().enable();
                 }
                 let _ = std::fs::create_dir_all(&core.paths.config_dir);
@@ -455,6 +478,9 @@ pub fn run() {
                     if window.label() == windows::MAIN && keep_loaded {
                         api.prevent_close();
                         let _ = window.hide();
+                        if let Some(w) = app.get_webview_window(windows::MAIN) {
+                            windows::memory_target(&w, true);
+                        }
                     }
                     windows::after_window_gone(app, window.label());
                 }

@@ -393,11 +393,11 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | En curso |
 | APP-048 | Del atajo a la cruceta | M1 | Must | En curso |
-| APP-049 | De la captura al editor | M1 | Must | — |
+| APP-049 | De la captura al editor | M1 | Must | En curso |
 | APP-050 | Editor con imágenes muy grandes | M2 | Must | — |
-| APP-051 | Consumo en reposo y arranque | M1 | Should | — |
+| APP-051 | Consumo en reposo y arranque | M1 | Should | En curso |
 | APP-052 | Escala de la biblioteca | M2 | Must | — |
-| APP-053 | Cruceta con varios monitores 4K | M1 | Must | — |
+| APP-053 | Cruceta con varios monitores 4K | M1 | Must | En curso |
 | APP-054 | Local y privado | M0 | Must | En curso |
 | APP-055 | Portabilidad de datos y migración entre equipos | M2 | Should | — |
 

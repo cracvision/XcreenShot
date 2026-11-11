@@ -56,6 +56,7 @@ fn dock(app: &AppHandle, visible: bool) {
 pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
     dock(app, true);
     if let Some(w) = app.get_webview_window(MAIN) {
+        memory_target(&w, false);
         focus(&w);
         return Ok(());
     }
@@ -72,6 +73,38 @@ pub fn show_main(app: &AppHandle) -> tauri::Result<()> {
     let w = builder.build()?;
     focus(&w);
     Ok(())
+}
+
+/// Asks WebView2 to keep little memory for a window while it is hidden (the editor
+/// kept loaded, APP-004), and the usual again when it shows (APP-051). The textures of
+/// large captures go back to the system this way.
+pub fn memory_target(w: &WebviewWindow, low: bool) {
+    #[cfg(windows)]
+    {
+        let _ = w.with_webview(move |webview| {
+            use webview2_com::Microsoft::Web::WebView2::Win32::{
+                ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
+                COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
+            };
+            use windows_core::Interface;
+            let level = if low {
+                COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+            } else {
+                COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+            };
+            // SAFETY: COM calls on the webview's own controller, on its thread; an older
+            // WebView2 without ICoreWebView2_19 is left as it is.
+            unsafe {
+                if let Ok(core) = webview.controller().CoreWebView2() {
+                    if let Ok(v19) = core.cast::<ICoreWebView2_19>() {
+                        let _ = v19.SetMemoryUsageTargetLevel(level);
+                    }
+                }
+            }
+        });
+    }
+    #[cfg(not(windows))]
+    let _ = (w, low);
 }
 
 /// Title of the main window: the document shown and its unsaved state (EDT-012).

@@ -239,7 +239,7 @@ El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
 - **Instalador para sus pruebas:** `npm run tauri build` en `app/`. El archivo queda en `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe` y lo ejecuta él.
 - **Antes de `npx tauri dev`:** cerrar la app instalada con `target/debug/xcreenshot.exe app quit --no-launch`, porque la instancia única ocupa el canal.
 - **Probar sin tocar su app:** usar una instancia aislada de **depuración** con `XCREENSHOT_IPC_NAME`, `XCREENSHOT_DATA_DIR` y `XCREENSHOT_LIBRARY_DIR`.
-  - Nunca la versión de release aislada: al primer arranque se registra para iniciar con Windows y pisa su entrada.
+  - Desde el 2026-11-11 una instancia con `XCREENSHOT_DATA_DIR` nunca toca el inicio con Windows, así que la versión de release aislada ya es segura (sirve para medir rendimiento). Antes de ese cambio se registraba y pisaba la entrada de Carlos.
   - Sus atajos los tiene la app instalada, así que la copia aislada avisa de que no pudo activarlos.
   - Para probar la ventana sin mover su ratón: arrancarla además con `WEBVIEW2_USER_DATA_FOLDER` propio y la depuración remota, y usar `scripts/dev/cdp.mjs` (instrucciones en `scripts/dev/README.md`).
   - No usar Copiar todo, copiar o cortar objetos en las pruebas automáticas: pisan el portapapeles de Carlos.

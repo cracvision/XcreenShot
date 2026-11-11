@@ -12,7 +12,8 @@ Scripts de PowerShell para comprobar la app en marcha sin depender de que Carlos
 | `esc-runs.ps1` | Lanza varias capturas de región y cancela cada una con `Esc`. |
 | `esc-countdown.ps1` | Lanza una captura con retardo y pulsa `Esc` durante la cuenta atrás. |
 | `enter-universal.ps1` | Lanza una captura universal y pulsa `Enter` cuando aparece la selección. |
-| `cdp.mjs` | Maneja la ventana principal de una instancia aislada por el protocolo de DevTools: clics, arrastres, teclas, rueda, capturas de la página y evaluar código. **No mueve el ratón ni el teclado reales.** |
+| `cdp.mjs` | Maneja la ventana principal de una instancia aislada por el protocolo de DevTools: clics, arrastres, teclas, rueda, capturas de la página y evaluar código. `media forced-colors active` o `media prefers-reduced-motion reduce` emulan esos ajustes solo en la página (APP-045). **No mueve el ratón ni el teclado reales.** |
+| `a11y-audit.js` | Auditoría de accesibilidad de una ventana (controles sin nombre, campos sin etiqueta, imágenes sin texto alternativo). Se ejecuta con `cdp.mjs eval "$(cat scripts/dev/a11y-audit.js)"`. |
 
 ## Instancia aislada con DevTools (para `cdp.mjs`)
 
@@ -28,6 +29,7 @@ npx tauri dev
 
 El CLI habla con esa instancia con `XCREENSHOT_IPC_NAME=xs-dev target/debug/xcreenshot.exe …`. Para cerrarla: `… app quit --force`.
 
+- Una instancia con `XCREENSHOT_DATA_DIR` nunca toca el inicio con Windows (ni al primer arranque ni al cambiar el ajuste), así que también se puede probar aislada la compilación de *release* (`npx tauri build --no-bundle`, que deja `target/release/xcreenshot-app.exe`), por ejemplo para medir tiempos y memoria.
 - **Usa siempre `--no-launch`** al hablar con una instancia aislada, también en los bucles que esperan a que arranque. Sin esa opción, si la instancia aún no responde, el CLI arranca `target/debug/xcreenshot-app.exe` con la carpeta de datos real de Carlos.
 - **IA en la nube (SMT-039 a SMT-043) sin red ni clave real:** en las compilaciones de depuración, `XCREENSHOT_AI_BASE_URL=http://127.0.0.1:<puerto>` manda las peticiones a un servidor local que imite la API. Usa una clave inventada y bórrala al terminar (`ai key-clear --yes`). La instancia aislada guarda su clave en una entrada propia del Administrador de credenciales.
 
