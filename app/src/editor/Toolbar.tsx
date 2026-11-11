@@ -23,6 +23,7 @@ import { useEditor, type Tool } from "./state";
 import { menuPoint, toolbarMenu } from "./menus";
 import { useSetting } from "../store";
 import { hint, useShortcut } from "./tools";
+import { ViewSwitch } from "../library/ViewSwitch";
 
 function ToolButton({ id, active }: { id: Tool; active: boolean }) {
   const { t } = useTranslation();
@@ -76,6 +77,7 @@ export function Toolbar() {
         if (e.detail > 0 && button && !button.closest(".menu-anchor")) button.blur();
       }}
     >
+      <ViewSwitch />
       <button type="button" className="btn primary tb-btn tb-capture" onClick={openCapturePanel}>
         <Icon name="capture" />
         <span className="tb-label">{t("ui.editor.capture")}</span>

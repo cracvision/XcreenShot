@@ -15,6 +15,7 @@ import {
 } from "./actions";
 import { moved } from "./objects";
 import { requestZoom, useEditor, usePointer, type Tool } from "./state";
+import { useMainView } from "../library/state";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -50,6 +51,12 @@ function inMenu(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('[role="menu"], [role="menubar"]') !== null;
 }
 
+/** The library grid and the recent tray have their own keys: arrows, Enter, Delete
+ * (LIB-002, TRY-013). */
+function ownKeys(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(".strip, .library-grid") !== null;
+}
+
 function typing(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement ||
@@ -66,7 +73,14 @@ function fail(e: unknown): void {
 }
 
 /** The zones `F6` goes through, in order (EDT-013). */
-const ZONES = [".editor-toolbar", ".canvas-stage", ".side-panel", ".strip", ".status-bar"];
+const ZONES = [
+  ".editor-toolbar",
+  ".canvas-stage",
+  ".library-grid",
+  ".side-panel",
+  ".strip",
+  ".status-bar",
+];
 
 /** `F6` / `Shift+F6`: the focus to the next or previous zone of the window. */
 function nextZone(back: boolean): void {
@@ -77,12 +91,14 @@ function nextZone(back: boolean): void {
   const at = zones.findIndex((z) => z.contains(document.activeElement));
   const next = zones[(at + (back ? zones.length - 1 : 1) + zones.length) % zones.length];
   if (!next) return;
+  // A list with one stop (the tray, the grid) is entered at that stop.
   const target =
     next.tabIndex >= 0
       ? next
-      : next.querySelector<HTMLElement>(
+      : (next.querySelector<HTMLElement>('[tabindex="0"]') ??
+        next.querySelector<HTMLElement>(
           "button:not(:disabled), input, select, [tabindex]:not([tabindex='-1'])",
-        );
+        ));
   target?.focus();
 }
 
@@ -238,6 +254,13 @@ export function useEditorKeys(): void {
         e.stopImmediatePropagation();
       };
       const row = editorRow(e);
+      // In the Library view, the grid and the tray only shortcuts with a modifier or a
+      // function key run (Ctrl+Delete, F2…): plain keys belong to the list.
+      if (useMainView.getState().view === "library" || ownKeys(e.target)) {
+        const modified = e.ctrlKey || e.altKey || e.metaKey || /^F\d+$/.test(e.code);
+        if (row && modified && row.runs === "editor.action" && runRow(row, e)) done();
+        return;
+      }
       if (row) {
         if (runRow(row, e)) done();
         return;

@@ -8,6 +8,8 @@ import type { Rect } from "./boxes";
 import type { ArrowStyle, LineStyle, Point } from "./geometry";
 import type { View } from "./view";
 import { aiProgress } from "./aiState";
+import { showView, useLibrary, useTray, type MainView } from "../library/state";
+import { arrived } from "./tray";
 
 export type Tool = "move" | "arrow" | "text" | "shape" | "blur" | "crop";
 
@@ -23,6 +25,8 @@ export interface DocSummary {
   dirty: boolean;
   shown: boolean;
   version: number;
+  /** Its file was moved or deleted outside XcreenShot (TRY-002). */
+  missing: boolean;
 }
 
 export interface ArrowObject {
@@ -190,8 +194,8 @@ interface EditorState {
   recovery: RecoveryItem[];
   /** Recover work is on screen: at start, or from Help (APP-047). */
   recoveryShown: boolean;
-  /** Documents to decide on before closing or quitting. */
-  decision: { kind: "close" | "quit"; pending: Pending[] } | null;
+  /** Documents to decide on before closing or quitting, and what was being closed. */
+  decision: { kind: "close" | "quit"; pending: Pending[]; targets: string[] | "all" } | null;
   /** The text box being typed, if any (EDT-026). */
   textEdit: TextEdit | null;
   /** The crop being adjusted, in canvas pixels (EDT-049). */
@@ -249,7 +253,11 @@ export const useEditor = create<EditorState>((set, get) => ({
         case "documents": {
           const active = (payload.active as string | null) ?? null;
           const changed = active !== get().active;
-          set({ documents: payload.documents as DocSummary[], active });
+          const documents = payload.documents as DocSummary[];
+          // A capture that arrives with the tray hidden lights its button (TRY-001).
+          if (arrived(get().documents, documents) && !useTray.getState().visible)
+            useTray.setState({ fresh: true });
+          set({ documents, active });
           if (changed) {
             set({ selection: [], cropRect: null, textEdit: null });
             void loadDoc(active).then((doc) => {
@@ -308,7 +316,24 @@ export const useEditor = create<EditorState>((set, get) => ({
           });
           break;
         case "quit":
-          set({ decision: { kind: "quit", pending: payload.pending as Pending[] } });
+          set({
+            decision: { kind: "quit", pending: payload.pending as Pending[], targets: "all" },
+          });
+          break;
+        case "view":
+          // Abrir biblioteca from the tray icon, `editor.show --view` (LIB-001).
+          showView(payload.view as MainView);
+          break;
+        case "library":
+          // The folder changed: the Library view, and the tray's "Not found" (TRY-002).
+          void run<{ active: string | null; documents: DocSummary[] }>("document.list")
+            .then((r) => set({ documents: r.documents }))
+            .catch(() => undefined);
+          if (useLibrary.getState().loaded)
+            void useLibrary
+              .getState()
+              .load()
+              .catch(() => undefined);
           break;
       }
     });
@@ -318,7 +343,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       styles: Styles;
       active: string | null;
       documents: DocSummary[];
+      view: MainView | null;
     }>("editor.state");
+    // A view asked for before this window loaded (LIB-001).
+    if (state.view) showView(state.view);
     const recovery = await run<{ items: RecoveryItem[] }>("editor.recovery_list");
     set({
       tool: state.tool,

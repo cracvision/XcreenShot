@@ -13,6 +13,8 @@ import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
 import { performAction, toggleToolbarLabels } from "./actions";
 import { useEditor, usePanel } from "./state";
+import { useLibrary, useMainView, useTray } from "../library/state";
+import { neighbour } from "./tray";
 
 interface Point {
   x: number;
@@ -169,13 +171,25 @@ export function toolbarMenu(at: Point): void {
 /** Tells the menu bar which entries apply now, and runs what it orders. */
 export function useMenuBar(): void {
   const doc = useEditor((s) => s.doc);
-  const selected = useEditor((s) => s.selection.length > 0);
+  const inLibrary = useMainView((s) => s.view === "library");
+  const selected = useEditor((s) => s.selection.length > 0) && !inLibrary;
   const anyOpen = useEditor((s) => s.documents.length > 0);
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
-  const hasDoc = doc !== null;
-  const canUndo = doc?.canUndo ?? false;
-  const canRedo = doc?.canRedo ?? false;
+  const tray = useTray((s) => s.visible);
+  const inTray = useEditor((s) => s.documents.filter((d) => d.shown).length);
+  const hasPrev = useEditor((s) => neighbour(s.documents, s.active, -1) !== null);
+  const hasNext = useEditor((s) => neighbour(s.documents, s.active, 1) !== null);
+  // The file of the document shown, while it is where it was (TRY-002).
+  const hasFile = useEditor((s) => {
+    const d = s.documents.find((x) => x.documentId === s.active);
+    return Boolean(d?.path) && !d?.missing;
+  });
+  const picked = useLibrary((s) => s.selection.length);
+  // In the Library view the document entries do not apply (LIB-001).
+  const hasDoc = doc !== null && !inLibrary;
+  const canUndo = (doc?.canUndo ?? false) && !inLibrary;
+  const canRedo = (doc?.canRedo ?? false) && !inLibrary;
 
   useEffect(() => {
     const onDoc = [
@@ -196,14 +210,41 @@ export function useMenuBar(): void {
       "editor.close_all": anyOpen,
       "editor.undo": canUndo,
       "editor.redo": canRedo,
+      "editor.close_others": !inLibrary && inTray > 1,
+      "editor.prev_item": hasDoc && hasPrev,
+      "editor.next_item": hasDoc && hasNext,
+      "editor.rename_item": inLibrary ? picked === 1 : hasDoc && hasFile,
+      "editor.show_in_folder": inLibrary ? picked > 0 : hasDoc && hasFile,
+      "editor.delete_item": inLibrary ? picked > 0 : hasDoc && hasFile,
+      "editor.paste": !inLibrary,
+      "editor.paste_in_place": !inLibrary,
     };
     for (const a of onDoc) enabled[`editor.${a}`] = hasDoc;
     for (const a of ["cut", "copy", "delete", "deselect"]) enabled[`editor.${a}`] = selected;
-    const checked = { "editor.side_panel": panel, "editor.toolbar_labels": labels };
+    const checked = {
+      "editor.side_panel": panel,
+      "editor.toolbar_labels": labels,
+      "editor.tray": tray,
+    };
     // The drawn menu bar (Windows) reads it here; the system one (macOS) from the shell.
     useMenuState.setState({ enabled, checked });
     run("editor.menu_state", { enabled, checked }).catch(() => undefined);
-  }, [hasDoc, canUndo, canRedo, selected, anyOpen, panel, labels]);
+  }, [
+    hasDoc,
+    canUndo,
+    canRedo,
+    selected,
+    anyOpen,
+    panel,
+    labels,
+    tray,
+    inLibrary,
+    inTray,
+    hasPrev,
+    hasNext,
+    hasFile,
+    picked,
+  ]);
 
   useEffect(() => {
     const off = listen<{ kind: string; payload: { action?: string } }>("xs://editor", (e) => {

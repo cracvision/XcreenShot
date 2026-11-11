@@ -148,7 +148,7 @@ switch (cmd) {
     const [key, code, ...rest] = args;
     const m = mods(rest);
     const vk =
-      { Delete: 46, Escape: 27, Backspace: 8 }[key] ??
+      { Delete: 46, Escape: 27, Backspace: 8, Enter: 13, " ": 32 }[key] ??
       key.toUpperCase().charCodeAt(0);
     await main.send("Input.dispatchKeyEvent", {
       type: "rawKeyDown",
@@ -157,6 +157,10 @@ switch (cmd) {
       modifiers: m,
       windowsVirtualKeyCode: vk,
     });
+    // Enter and Space also type their character, which is what activates a button.
+    const text = { Enter: "\r", " ": " " }[key];
+    if (text)
+      await main.send("Input.dispatchKeyEvent", { type: "char", key, code, text, modifiers: m });
     await main.send("Input.dispatchKeyEvent", {
       type: "keyUp",
       key,

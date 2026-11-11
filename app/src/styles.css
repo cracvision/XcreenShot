@@ -734,6 +734,13 @@ kbd {
   grid-column: 2;
 }
 
+.library-location .path {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+  word-break: break-all;
+}
+
 .setting.highlight {
   animation: highlight 1.6s var(--ease-out);
 }
@@ -2904,6 +2911,286 @@ html.overlay-root.overlay-native #root {
   box-shadow: var(--shadow-card);
 }
 
+/* ---------- Editor | Library switch (LIB-001) ---------- */
+.view-switch > button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Library view (LIB-001, LIB-002, LIB-026) ---------- */
+.library-main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--surface-sunken);
+}
+
+.library-loading {
+  margin: auto;
+}
+
+.library-grid {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  overflow: auto;
+  user-select: none;
+}
+
+.lib-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: var(--space-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  outline: none;
+  cursor: default;
+  animation: lib-in var(--dur-slow) var(--ease-spring) backwards;
+  transition:
+    background-color var(--dur-instant) var(--ease-standard),
+    border-color var(--dur-instant) var(--ease-standard);
+}
+
+@keyframes lib-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lib-item:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+/* Selected: a soft wash, a brand border and a check mark (not by color alone, APP-045). */
+.lib-item.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.lib-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-instant) var(--ease-standard);
+}
+
+.lib-item:hover .lib-thumb {
+  transform: translateY(-3px);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-card);
+}
+
+.lib-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.lib-item.selected .lib-thumb::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-gradient);
+  box-shadow: 0 0 0 2px var(--surface-raised);
+  color: var(--on-gradient);
+  font-size: 13px;
+  font-weight: 800;
+  animation: pop var(--dur-base) var(--ease-spring) backwards;
+}
+
+.lib-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.lib-name {
+  overflow: hidden;
+  padding: 0 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lib-date {
+  padding: 0 2px;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}
+
+.rubber-band {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid var(--brand);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  pointer-events: none;
+}
+
+.library-status .lib-root {
+  max-width: 45%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lib-synced {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--brand-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- Recent tray extras (TRY-001, TRY-002) ---------- */
+.recent-toggle {
+  position: relative;
+  min-height: 26px;
+  gap: 6px;
+  padding: 0 var(--space-3);
+}
+
+.recent-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.recent-toggle[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+/* Captures arrived while the tray was hidden. */
+.recent-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: pop var(--dur-base) var(--ease-spring) backwards;
+}
+
+/* A file moved or deleted outside XcreenShot: dimmed, with its label (TRY-002). */
+.strip li.missing .strip-item img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.strip-missing {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ---------- "Moved to the trash · Undo" (LIB-015, TRY-008) ---------- */
+.undo-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 6px 6px var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
+  transform: translateX(-50%);
+  animation: toast-in var(--dur-slow) var(--ease-spring) backwards;
+}
+
+.undo-notice .btn {
+  min-height: 28px;
+  border-color: color-mix(in srgb, var(--surface) 40%, transparent);
+  background: transparent;
+  box-shadow: none;
+  color: var(--surface);
+}
+
+.undo-notice .btn:hover:not(:disabled) {
+  border-color: var(--surface);
+}
+
+.undo-notice .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Delete and Rename dialogs (LIB-015, TRY-006) ---------- */
+.delete-names {
+  max-height: 150px;
+  overflow: auto;
+}
+
+.warning-text {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.btn.danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,
@@ -2956,6 +3243,8 @@ html.overlay-root.overlay-native #root {
   .swatch,
   .strip-item,
   .strip-close,
+  .lib-item,
+  .lib-thumb,
   .multi-thumb,
   .editor-empty {
     transition-duration: 0.01ms;
@@ -2963,6 +3252,8 @@ html.overlay-root.overlay-native #root {
 
   .tb-capture:hover svg,
   .strip li.current::after,
+  .lib-item.selected .lib-thumb::after,
+  .recent-dot,
   .prop-buttons > .btn[aria-pressed="true"] svg {
     animation: none;
   }
@@ -2978,6 +3269,8 @@ html.overlay-root.overlay-native #root {
   .strip li,
   .multi-item,
   .editor-toast,
+  .undo-notice,
+  .lib-item,
   .drop-hint,
   .countdown-number {
     animation: fade-in var(--dur-instant) linear both;
@@ -2991,7 +3284,8 @@ html.overlay-root.overlay-native #root {
   .swatch:active,
   .strip-item:hover,
   .strip-item:active,
-  .multi-thumb:hover {
+  .multi-thumb:hover,
+  .lib-item:hover .lib-thumb {
     transform: none;
   }
 }

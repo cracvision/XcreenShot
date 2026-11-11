@@ -244,6 +244,8 @@ fn rename(core: &Core, lang: Lang, p: &Value) -> Result<Value, CommandError> {
         })?;
         ed.store.with(&id, |d| d.path = Some(target.clone()));
     }
+    // The library item keeps its ID (LIB-022).
+    xs_library::xmeta::follow(&path, &target);
     tracing::info!(document = %id, "document renamed");
     emit_list(core);
     Ok(json!({ "path": target, "name": name }))

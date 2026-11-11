@@ -252,8 +252,19 @@ impl Library {
     /// Sends items to the trash (or deletes them for good with `permanent`). Returns
     /// the Undo ID, if there is Undo, and the items removed.
     pub fn delete(&self, ids: &[String], permanent: bool) -> Result<(Option<String>, Vec<Item>), TrashError> {
+        self.delete_with(ids, &[], permanent)
+    }
+
+    /// [`Library::delete`] of items and of `others`, files outside the library (a file
+    /// opened from elsewhere and deleted from the recent tray, TRY-009).
+    pub fn delete_with(
+        &self,
+        ids: &[String],
+        others: &[PathBuf],
+        permanent: bool,
+    ) -> Result<(Option<String>, Vec<Item>), TrashError> {
         let items: Vec<Item> = ids.iter().filter_map(|id| self.get(id)).collect();
-        let mut files = Vec::new();
+        let mut files: Vec<PathBuf> = others.to_vec();
         for item in &items {
             let abs = self.abs(&item.path);
             let side = xmeta::path_of(&abs);

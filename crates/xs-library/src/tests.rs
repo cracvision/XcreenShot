@@ -289,3 +289,33 @@ fn commands_list_get_delete_and_restore() {
     );
     assert_eq!(cli("library.list", json!({})).unwrap()["total"], 2);
 }
+
+#[test]
+fn files_outside_the_library_can_be_deleted_by_path_and_brought_back() {
+    let e = env();
+    write_png(&e.path("in.png"), 4, 4);
+    let outside = tempfile::tempdir().unwrap();
+    let other = outside.path().join("other.png");
+    write_png(&other, 6, 6);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+    let r = cli("library.delete", json!({ "paths": [e.path("in.png"), other] })).unwrap();
+    assert_eq!(r["deleted"], 2);
+    assert!(!other.exists() && !e.path("in.png").exists());
+    assert_eq!(cli("library.list", json!({})).unwrap()["total"], 0);
+    cli("library.restore", json!({ "undo": r["undo"] })).unwrap();
+    assert!(other.exists(), "the outside file is back");
+    assert_eq!(cli("library.list", json!({})).unwrap()["total"], 1);
+    let none = cli("library.delete", json!({})).unwrap_err();
+    assert_eq!(none.code, ErrorCode::InvalidParams);
+    let gone = cli(
+        "library.delete",
+        json!({ "paths": [outside.path().join("nope.png")] }),
+    )
+    .unwrap_err();
+    assert_eq!(gone.code, ErrorCode::NotFound);
+}

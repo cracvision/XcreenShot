@@ -16,8 +16,20 @@ import {
 } from "./state";
 import { setting, useApp } from "../store";
 import { openAi } from "./aiState";
+import {
+  askDelete,
+  askRename,
+  docRef,
+  itemRef,
+  offerUndo,
+  openItems,
+  showInFolder,
+  type FileRef,
+} from "../library/actions";
+import { selectedItems, showView, useMainView, useTray } from "../library/state";
+import { focusedTrayItem, neighbour, trayOrder } from "./tray";
 
-const t = (key: string) => i18next.t(key);
+const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
 
 function fail(e: unknown): void {
@@ -71,10 +83,11 @@ export async function openFiles(paths?: string[]): Promise<void> {
         ],
       }));
     if (!chosen) return;
-    // All are opened; the last one is shown (EDT-105).
+    // All are opened; the last one is shown (EDT-105), in the Editor view.
     for (const path of Array.isArray(chosen) ? chosen : [chosen]) {
       await run("document.open", { path, show: true });
     }
+    showView("editor");
   } catch (e) {
     fail(e);
   }
@@ -137,18 +150,56 @@ export async function copyAll(): Promise<void> {
 }
 
 async function closeWith(ids: string[] | "all", save: string[], discard: string[]): Promise<void> {
+  const before = useEditor.getState();
+  const targets = ids === "all" ? before.documents.map((d) => d.documentId) : ids;
+  // Files to reopen with Undo when several close at once (TRY-008), oldest first.
+  const reopen = before.documents
+    .filter((d) => targets.includes(d.documentId) && d.shown && d.path && !d.missing)
+    .filter((d) => !discard.includes(d.documentId) || !d.dirty)
+    .map((d) => d.path as string);
+  const shown = before.documents.find((d) => d.documentId === before.active)?.path ?? null;
   const params =
-    ids === "all" ? { all: true, save, discard } : { documentId: ids[0], save, discard };
+    ids === "all"
+      ? { all: true, save, discard }
+      : ids.length === 1
+        ? { documentId: ids[0], save, discard }
+        : { documentIds: ids, save, discard };
   const r = await run<{ status: string; pending: Pending[] }>("document.close", params);
   if (r.status === "needs_decision") {
-    useEditor.setState({ decision: { kind: "close", pending: r.pending } });
+    useEditor.setState({ decision: { kind: "close", pending: r.pending, targets: ids } });
+    return;
+  }
+  if (reopen.length > 1) {
+    offerUndo(t("ui.files.closed", { count: reopen.length }), async () => {
+      try {
+        for (const path of reopen) await run("document.open", { path, show: true });
+        if (shown && reopen.includes(shown))
+          await run("document.open", { path: shown, show: true });
+      } catch (e) {
+        fail(e);
+      }
+    });
   }
 }
 
-/** Close all (EDT-108): one question for every file from elsewhere with changes. */
+/** Close all (EDT-108, TRY-008): one question for every file from elsewhere with
+ * changes; Undo reopens them. */
 export async function closeAll(): Promise<void> {
   try {
     await closeWith("all", [], []);
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Close others (TRY-008): every tray item but `keep`. */
+export async function closeOthers(keep: string): Promise<void> {
+  const others = trayOrder(useEditor.getState().documents)
+    .map((d) => d.documentId)
+    .filter((id) => id !== keep);
+  if (others.length === 0) return;
+  try {
+    await closeWith(others, [], []);
   } catch (e) {
     fail(e);
   }
@@ -174,7 +225,7 @@ export async function decide(choice: "save" | "discard" | "cancel"): Promise<voi
   const discard = choice === "discard" ? ids : [];
   try {
     if (decision.kind === "close") {
-      await closeWith(ids.length === 1 ? ids : "all", save, discard);
+      await closeWith(decision.targets, save, discard);
     } else {
       await run("document.close", { all: true, save, discard });
       await run("app.quit", { force: true });
@@ -240,12 +291,89 @@ export function toggleToolbarLabels(): void {
   run("settings.set", { key: "editor.toolbarLabels", value: current?.value === false }).catch(fail);
 }
 
+/** The tray item an action is about: the one with the focus in the tray, else the
+ * document shown (TRY-008, TRY-009). */
+function trayTarget(): FileRef | null {
+  const { documents, active } = useEditor.getState();
+  const id = focusedTrayItem() ?? active;
+  const doc = documents.find((d) => d.documentId === id);
+  return doc ? docRef(doc) : null;
+}
+
+/** The files an action is about: the Library view's selection, or the tray item. */
+function fileTargets(): FileRef[] {
+  if (useMainView.getState().view === "library") return selectedItems().map(itemRef);
+  const target = trayTarget();
+  return target ? [target] : [];
+}
+
+/** What applies in the Library view too; the rest is about the document shown. */
+const IN_LIBRARY = new Set([
+  "open",
+  "close_all",
+  "view_editor",
+  "view_library",
+  "tray",
+  "rename_item",
+  "show_in_folder",
+  "delete_item",
+  "open_item",
+  "recover",
+  "toolbar_labels",
+]);
+
 /** What an editor menu entry or shortcut does (`editor.action`, EDT-002, EDT-116).
  * False when it does not apply now, so the key goes on to the page. */
 export function performAction(action: string): boolean {
-  const { selection, setSelection, doc } = useEditor.getState();
+  const { selection, setSelection, doc, documents, active } = useEditor.getState();
   const selected = selection.length > 0;
+  if (useMainView.getState().view === "library" && !IN_LIBRARY.has(action)) return false;
   switch (action) {
+    case "view_editor":
+      showView("editor");
+      return true;
+    case "view_library":
+      showView("library");
+      return true;
+    case "tray":
+      useTray.getState().toggle();
+      return true;
+    case "prev_item":
+    case "next_item": {
+      if (!doc) return false;
+      const id = neighbour(documents, active, action === "next_item" ? 1 : -1);
+      if (id) showDocument(id);
+      return true;
+    }
+    case "close_others": {
+      const target = trayTarget();
+      if (!target?.documentId) return false;
+      void closeOthers(target.documentId);
+      return true;
+    }
+    case "open_item": {
+      if (useMainView.getState().view !== "library") return false;
+      void openItems(selectedItems());
+      return true;
+    }
+    case "rename_item": {
+      const [file, ...more] = fileTargets();
+      if (!file?.path || more.length > 0) return false;
+      askRename(file);
+      return true;
+    }
+    case "show_in_folder": {
+      const file = fileTargets()[0];
+      if (!file?.path) return false;
+      showInFolder(file);
+      return true;
+    }
+    case "delete_item": {
+      const files = fileTargets().filter((f) => f.path);
+      if (files.length === 0) return false;
+      askDelete(files);
+      return true;
+    }
     case "open":
       void openFiles();
       return true;

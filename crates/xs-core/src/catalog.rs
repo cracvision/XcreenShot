@@ -749,10 +749,11 @@ pub fn specs() -> Vec<CommandSpec> {
             .destructive()
             .params(params(
                 json!({
-                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Library item IDs"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files, in the library or not (ids or paths, or both)"},
                     "permanent": {"type": "boolean", "default": false, "description": "Delete for good instead of moving to the trash"}
                 }),
-                &["ids"],
+                &[],
             ))
             .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}, "undo": {"type": ["string", "null"]}}})),
         B::new("library.restore", &["LIB-015", "TRY-009"])

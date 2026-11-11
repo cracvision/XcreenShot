@@ -10,13 +10,19 @@ interface Props {
 /** Modal dialog: focus moves inside, Esc cancels, the title labels it. */
 export function Dialog({ title, children, actions, onCancel }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const cancel = useRef(onCancel);
+  useEffect(() => {
+    cancel.current = onCancel;
+  });
+  // Once, when it opens: a new onCancel at each redraw must not pull the focus back to
+  // the first button while the user types in a field of the dialog.
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLElement>("button")?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onCancel();
+        cancel.current();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -24,7 +30,7 @@ export function Dialog({ title, children, actions, onCancel }: Props) {
       window.removeEventListener("keydown", onKey, true);
       previous?.focus();
     };
-  }, [onCancel]);
+  }, []);
   return (
     <div className="backdrop">
       <div

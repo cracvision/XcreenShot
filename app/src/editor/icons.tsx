@@ -137,6 +137,26 @@ const ICONS = {
       <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
     </Svg>
   ),
+  editor: (
+    <Svg>
+      <rect x="2.5" y="4" width="15" height="12" rx="1.5" />
+      <path d="M7 12.5l5.5-5.5 1.5 1.5L8.5 14H7z" />
+    </Svg>
+  ),
+  library: (
+    <Svg>
+      <rect x="3" y="3" width="6" height="6" rx="1.2" />
+      <rect x="11" y="3" width="6" height="6" rx="1.2" />
+      <rect x="3" y="11" width="6" height="6" rx="1.2" />
+      <rect x="11" y="11" width="6" height="6" rx="1.2" />
+    </Svg>
+  ),
+  recent: (
+    <Svg>
+      <rect x="2.5" y="8.5" width="15" height="8" rx="1.5" />
+      <path d="M4.5 6h11M6.5 3.5h7" />
+    </Svg>
+  ),
   minus: (
     <Svg>
       <path d="M5 10h10" />

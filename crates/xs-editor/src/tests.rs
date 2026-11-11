@@ -1347,3 +1347,34 @@ fn the_tray_can_start_empty_after_quitting() {
     assert_eq!(strip(&restart(&e2)).0, Vec::<PathBuf>::new());
     assert!(a.exists(), "the file stays in the library");
 }
+
+#[test]
+fn renaming_from_the_library_moves_the_open_document_and_keeps_the_id() {
+    let library = tempfile::tempdir().unwrap();
+    let recovery = tempfile::tempdir().unwrap();
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![
+            extension(),
+            xs_library::extension_with(Some(library.path().to_path_buf())),
+        ],
+    );
+    editor(&core).set_folders(library.path().to_path_buf(), recovery.path().to_path_buf());
+    let (doc, path) = add_capture(
+        &core,
+        &white(40, 20),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Test"),
+    )
+    .unwrap();
+    let lib = xs_library::library(&core);
+    lib.scan();
+    let item = lib.find(&path).unwrap();
+    let r = cli(&core, "library.rename", json!({"id": item.id, "name": "Renamed"}));
+    assert_eq!(r["id"], json!(item.id), "the same item");
+    assert_eq!(r["name"], "Renamed");
+    let open = cli(&core, "document.info", json!({"documentId": doc}));
+    assert_eq!(open["path"], r["path"], "the open document follows its file");
+    assert!(!path.exists());
+}

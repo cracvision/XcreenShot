@@ -1,6 +1,9 @@
-// Status bar (EDT-011): image size, pointer position and zoom.
+// Status bar (EDT-011): the Recent button (TRY-001), image size, pointer position and
+// zoom.
 import { useTranslation } from "react-i18next";
 import { Menu } from "../components/Menu";
+import { useTray } from "../library/state";
+import { hint, useShortcut } from "./tools";
 import { Icon } from "./icons";
 import { outside } from "./objects";
 import { requestZoom, useEditor, usePointer } from "./state";
@@ -42,12 +45,41 @@ function OutsideObjects() {
   );
 }
 
+/** Shows or hides the recent tray; a dot when captures arrived while hidden (TRY-001). */
+function RecentButton() {
+  const { t } = useTranslation();
+  const visible = useTray((s) => s.visible);
+  const fresh = useTray((s) => s.fresh);
+  const toggle = useTray((s) => s.toggle);
+  const key = useShortcut("editor.tray");
+  const name = t("ui.editor.recent");
+  return (
+    <button
+      type="button"
+      className="btn small recent-toggle"
+      aria-pressed={visible}
+      aria-label={fresh && !visible ? t("ui.editor.recent_new") : name}
+      title={hint(t("menu.tray"), key)}
+      onClick={toggle}
+    >
+      <Icon name="recent" />
+      <span>{name}</span>
+      {fresh && !visible && <span className="recent-dot" aria-hidden="true" />}
+    </button>
+  );
+}
+
 export function StatusBar() {
   const { t } = useTranslation();
   const doc = useEditor((s) => s.doc);
   const zoom = useEditor((s) => (s.active ? s.views[s.active]?.zoom : undefined));
   const [draft, setDraft] = useDraft(zoom ? `${Math.round(zoom * 10) / 10} %` : "");
-  if (!doc) return <footer className="status-bar" />;
+  if (!doc)
+    return (
+      <footer className="status-bar">
+        <RecentButton />
+      </footer>
+    );
 
   const typed = () => {
     const z = parseZoom(draft);
@@ -57,6 +89,7 @@ export function StatusBar() {
 
   return (
     <footer className="status-bar">
+      <RecentButton />
       <span className="status-item" title={t("ui.editor.prop.size")}>
         {doc.canvas.width} × {doc.canvas.height} px
       </span>

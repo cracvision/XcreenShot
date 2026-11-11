@@ -219,27 +219,55 @@ fn close_open(core: &Core, source: Source, files: &[PathBuf]) -> Vec<PathBuf> {
 
 fn delete(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
     let lib = library(core);
-    let ids = ids_of(p);
+    let mut ids = ids_of(p);
     for id in &ids {
         if lib.get(id).is_none() {
             return Err(not_found(ctx.lang, id));
         }
     }
-    let files: Vec<PathBuf> = ids
+    // Files by path: the library's become their items; others are files opened from
+    // elsewhere (TRY-009).
+    let mut others = Vec::new();
+    for path in p["paths"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        let path = PathBuf::from(path);
+        match lib.find(&path) {
+            Some(item) if !ids.contains(&item.id) => ids.push(item.id),
+            Some(_) => {}
+            None if path.is_file() && scan::format_of(&path).is_some() => others.push(path),
+            None => return Err(not_found(ctx.lang, &path.to_string_lossy())),
+        }
+    }
+    if ids.is_empty() && others.is_empty() {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                ctx.lang,
+                "errors.invalid_param",
+                &[("param", "ids"), ("reason", "empty")],
+            ),
+        ));
+    }
+    let mut files: Vec<PathBuf> = ids
         .iter()
         .filter_map(|id| lib.get(id))
         .map(|i| lib.abs(&i.path))
         .collect();
+    files.extend(others.iter().cloned());
     let permanent = p["permanent"].as_bool().unwrap_or(false);
     let open = close_open(core, ctx.source, &files);
-    match lib.delete(&ids, permanent) {
+    match lib.delete_with(&ids, &others, permanent) {
         Ok((undo, items)) => {
             if let Some(undo) = &undo {
                 lib.remember_open(undo, open);
             }
             tracing::info!(count = items.len(), permanent, "library items deleted");
             changed(core);
-            Ok(json!({ "deleted": items.len(), "undo": undo }))
+            Ok(json!({ "deleted": items.len() + others.len(), "undo": undo }))
         }
         Err(e) => {
             // Back in the editor what was closed for nothing.
@@ -289,10 +317,38 @@ fn restore(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError>
     Ok(json!({ "restored": back.len() }))
 }
 
+/// The open document of `file`, if any.
+fn open_document(core: &Core, source: Source, file: &Path) -> Option<String> {
+    let list = core.call(source, "document.list", json!({}), None).ok()?;
+    list["documents"]
+        .as_array()?
+        .iter()
+        .find(|d| d["path"].as_str().is_some_and(|p| same_path(file, Path::new(p))))
+        .and_then(|d| d["documentId"].as_str().map(str::to_string))
+}
+
 fn rename(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
     let lib = library(core);
     let id = p["id"].as_str().unwrap_or_default();
     let name = p["name"].as_str().unwrap_or_default();
+    // An item open in the editor is renamed by the editor, so the document follows
+    // its file (TRY-006).
+    if let Some(item) = lib.get(id) {
+        if let Some(doc) = open_document(core, ctx.source, &lib.abs(&item.path)) {
+            let r = core.call(
+                ctx.source,
+                "document.rename",
+                json!({ "documentId": doc, "name": name }),
+                Some(ctx.lang),
+            )?;
+            lib.scan();
+            let path = PathBuf::from(r["path"].as_str().unwrap_or_default());
+            return lib
+                .find(&path)
+                .map(|i| i.to_json(lib.root()))
+                .ok_or_else(|| not_found(ctx.lang, id));
+        }
+    }
     let item = lib.rename(id, name).map_err(|e| match e {
         service::RenameError::NotFound => not_found(ctx.lang, id),
         service::RenameError::Invalid => CommandError::new(

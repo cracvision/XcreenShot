@@ -1,4 +1,5 @@
-// Main window in the Editor view (EDT-001). The Library view arrives in build 5.
+// Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
+// the top; the menu bar, dialogs and notices are shared by both.
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,9 @@ import { useEditor } from "./state";
 import { StatusBar } from "./StatusBar";
 import { Strip } from "./Strip";
 import { Toolbar } from "./Toolbar";
+import { LibraryView } from "../library/LibraryView";
+import { useMainView } from "../library/state";
+import { UndoNotice } from "./UndoNotice";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
@@ -88,6 +92,7 @@ export function Editor() {
   const ready = useEditor((s) => s.ready);
   const doc = useEditor((s) => s.doc);
   const toast = useEditor((s) => s.toast);
+  const view = useMainView((s) => s.view);
   const [dropping, setDropping] = useState(false);
 
   useEffect(() => {
@@ -116,13 +121,21 @@ export function Editor() {
   return (
     <div className={`editor${dropping ? " dropping" : ""}`}>
       {!IS_MAC && <MenuBar />}
-      <Toolbar />
-      <div className="editor-main">
-        {doc ? <Canvas key={doc.documentId} doc={doc} /> : <Empty dropping={dropping} />}
-        <SidePanel />
-      </div>
-      <StatusBar />
-      <Strip />
+      {view === "library" ? (
+        <LibraryView />
+      ) : (
+        <>
+          <Toolbar />
+          <div className="editor-main">
+            {doc ? <Canvas key={doc.documentId} doc={doc} /> : <Empty dropping={dropping} />}
+            <SidePanel />
+          </div>
+          <StatusBar />
+          {/* The recent tray belongs to the Editor view (LIB-001). */}
+          <Strip />
+        </>
+      )}
+      <UndoNotice />
       {toast && (
         <div className="editor-toast" role="status" key={toast}>
           {toast}

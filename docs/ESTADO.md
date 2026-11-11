@@ -38,13 +38,46 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
 | Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
-| 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Siguiente |
+| 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Casi hecha (en pausa el 2026-11-11). Falta arrastrar a otras apps (TRY-015) y `PARITY.md` |
+| 6 · Lo que falta de captura y app | Repasar en `PARITY.md` los IDs de captura y app de M1 que siguen pendientes | Pendiente |
+| 7 · Calidad | Teclado, lector de pantalla y rendimiento en todo M1 | Pendiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
 
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
+
+- **Plan acordado con Carlos (2026-11-10):** Claude implementa seguido las entregas 5, 6 y 7, que cierran M1 en Windows. Después Carlos hace una **caminata por la app con un instalador**, Claude corrige lo que encuentre y solo entonces escribe **un único guion de pruebas** consolidado. Las tandas pendientes de antes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028) entran en esa caminata. Luego M2 y siguientes con el mismo ciclo; las partes del spec sin escribir se proponen a Carlos antes de construirlas.
+- **Limpieza aprobada por Carlos (2026-11-10):** PR #4 cerrado; carpeta `C:\Projects\XcreenShot-snap` y rama `snap-ui` borradas; las 16 capturas de prueba del 2026-10-18 movidas a `OneDrive\Documents\XcreenShot\pruebas`.
+- **Entrega 5, biblioteca y bandeja reciente (2026-11-10 y 11, en pausa a pedido de Carlos):**
+  - Crate `xs-library`:
+    - índice SQLite (`rusqlite`) que sigue a la carpeta (escaneo más vigilante `notify-debouncer-mini`), con IDs en archivos ocultos `.xmeta` que sobreviven a renombrar desde el Explorador;
+    - miniaturas en caché;
+    - borrar a la Papelera de reciclaje con **Deshacer** (`trash`);
+    - renombrar y mostrar en la carpeta.
+  - Con la biblioteca en OneDrive, el índice vive en los datos locales.
+  - Comandos nuevos:
+    - `library.list`, `library.get`, `library.delete` (por ID o por ruta, también archivos de fuera), `library.restore`, `library.rename` y `library.show_in_folder`;
+    - `document.locate`;
+    - `document.close --document-ids` y `editor.show --view library`.
+  - Editor:
+    - autoguardado desactivable (las capturas esperan fuera de la biblioteca hasta guardarlas, LIB-020);
+    - copia editable `.xshot` al guardar un PNG o JPG anotado (LIB-021);
+    - vaciar la bandeja al salir (TRY-008);
+    - renombrar desde la biblioteca un elemento abierto lo renombra también en el editor.
+  - Interfaz:
+    - conmutador **Editor | Biblioteca** arriba, con `Ctrl+Shift+1`/`2`;
+    - vista Biblioteca: cuadrícula, selección con clic, `Ctrl`, `Shift`, rectángulo, `Ctrl+A` y flechas; menú contextual, `Supr`, `F2`, `Enter` y barra de estado;
+    - bandeja reciente:
+      - lo más nuevo primero, botón **Recientes** con punto si llegan capturas estando oculta, `Ctrl+Alt+R`, `Ctrl+RePág`/`AvPág`, flechas, `F6`;
+      - menú con Cerrar, Cerrar los demás, Cerrar todos (con **Deshacer**), Renombrar, Mostrar en el Explorador, Copiar ruta y Mover a la papelera;
+      - "No encontrado" con **Buscar…** y **Quitar**;
+    - diálogos de eliminar y renombrar;
+    - Preferencias > Biblioteca con la ubicación y **Abrir carpeta**.
+  - Arreglo de paso: el diálogo común devolvía el foco a su primer botón cada vez que se redibujaba, así que al escribir en un campo el foco se escapaba tras la primera letra.
+  - Probado en una instancia aislada con imágenes de prueba en una carpeta temporal: selección, teclado, menú, borrar y Deshacer contra la Papelera real, abrir, bandeja, "No encontrado", renombrar, cerrar los demás con Deshacer, español y Preferencias.
+  - Decisiones provisionales: sección "entrega 5" de `spec/QUESTIONS.md`.
 
 - **Instalador con un cliente MCP conectado (APP-028, 2026-11-09):** Claude Desktop mantiene `xcreenshot.exe mcp` en marcha y el instalador se paraba con "Error opening file for writing". Ahora aparta el archivo en uso y coloca el nuevo (`app/src-tauri/installer-hooks.nsh`), sin cortar la conexión. Prueba de Carlos en [`tests/manual/APP-028.md`](../tests/manual/APP-028.md), en su próxima actualización.
 
@@ -143,21 +176,30 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
    - **Repetir última área** con un atajo asignado en Preferencias > Atajos.
    - Otras casillas sin marcar: Preferencias de captura desde el menú ⋯, Universal con Retardo de 5 s, y Captura universal desde el menú del ícono.
    - El instalador de la 4a (`9ddb1ba`) sustituye al de la entrega 3: las pruebas que faltan se pueden hacer con él.
-2. **Carlos no ha respondido:** qué hacer con 16 capturas de prueba que Claude guardó el 2026-10-18 (hacia las 15:20) en `OneDrive\Documents\XcreenShot`. No borrarlas sin su permiso.
+2. Hecho (2026-11-10): las 16 capturas de prueba del 2026-10-18 están en `OneDrive\Documents\XcreenShot\pruebas`.
 3. **Entrega 4c:** Carlos marcó PASS las tres tandas de [`tests/manual/EDT-editor-4c.md`](../tests/manual/EDT-editor-4c.md) (2026-10-28, instalador `66a0f62`). Falta la tanda 4, corta, con el arreglo del marco de foco (instalador posterior a `66a0f62`). Carlos no ha objetado `Ctrl+Alt+Shift+E` para Exportar (la probó en la tanda 2); sigue provisional en `spec/QUESTIONS.md`.
 4. **Entrega 4b:** terminada. Carlos marcó PASS las cinco tandas de [`tests/manual/EDT-editor-4b.md`](../tests/manual/EDT-editor-4b.md) (2026-10-28, instalador `5a68118`).
 5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
 6. **IA en la nube (SMT-039 a SMT-043):** hecha. Carlos tiene dos tandas en [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md): la A necesita su propia clave de la API (platform.claude.com) y la B, Claude Desktop o Claude Code. Las decisiones provisionales están en `spec/QUESTIONS.md` (filas SMT-039 a SMT-043, APP-028 y APP-029). Tanda B: PASS (2026-11-01). Su configuración de Claude Desktop ya tiene la entrada `xcreenshot` (copia de seguridad en `%APPDATA%\Claude\claude_desktop_config.backup-2026-11-01.json`). Propuesta pendiente de su visto bueno: IDEA-004, el botón **Añadir a Claude Desktop**, porque el bloque copiado no sirve si ya hay otros servidores.
 7. **Reabrir los documentos al iniciar (EDT-120):** hecha; Carlos tiene una tanda en [`tests/manual/EDT-120.md`](../tests/manual/EDT-120.md). Necesita el instalador nuevo.
-8. **Aspecto nuevo (Snap con el logo):** hecho; Carlos tiene una tanda en [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md). Pendiente de su visto bueno: cerrar el PR #4 de Claude Design sin fusionarlo, porque su contenido ya está en `m1-editor`, y borrar la carpeta `C:\Projects\XcreenShot-snap` (en ella quedaron dos copias del logo que puso Carlos; el original está en `docs/brand/`).
+8. **Aspecto nuevo (Snap con el logo):** hecho; Carlos tiene una tanda en [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md). El PR #4 está cerrado y la carpeta `XcreenShot-snap` borrada (2026-11-10).
 9. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-Corregir lo que Carlos reporte de la tanda 4 de la 4c, de la multicaptura, de la IA en la nube (tanda A), de EDT-120 y del aspecto nuevo ([`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md)). Después, la **entrega 5 (biblioteca)**; con ella llega sugerir nombres para varias capturas a la vez (SMT-041):
-1. Leer en `spec/04-biblioteca-compartir.md` (ya tiene el alcance de M1) los bloques de LIB- y TRY- de M1.
-2. Proponer a Carlos el plan de la entrega 5: índice SQLite (`xs-library`), vista Biblioteca con el conmutador Editor/Biblioteca (EDT-001), Bandeja reciente completa y persistente (TRY-), copia editable al guardar en otro formato (LIB-021, EDT-107).
-3. Cerrar M1: repasar en `spec/PARITY.md` los IDs de M1 que siguen "En curso" y qué les falta.
+**Carlos pidió una pausa el 2026-11-11:** trabaja en otro proyecto y las ventanas de la instancia de prueba lo interrumpían. Al volver, **no arrancar instancias de prueba sin avisarle antes**: sus ventanas salen en su escritorio aunque estén aisladas.
+
+1. **Terminar la entrega 5 con TRY-015 (arrastrar a otras apps):**
+   - Plan: crate `drag` 2.1.1 (de CrabNebula, el que usa el plugin de Tauri) en `app/src-tauri`. Añade `windows` 0.52 en Windows: anotarlo en `QUESTIONS.md`.
+   - Comando de Tauri `xs_drag_out { docs, items }`. Prepara los archivos con los comandos de siempre:
+     - un PNG o JPG sin cambios se entrega tal cual;
+     - un `.xshot` o un documento con cambios se exporta como PNG aplanado a `local_dir/drag/` (se limpia al empezar cada arrastre).
+   - Después llama a `drag::start_drag` con `run_on_main_thread`, con una miniatura de unos 160 px como imagen del arrastre.
+   - En la interfaz: empezar al mover más de 4 px con el botón pulsado sobre un elemento de la bandeja o de la biblioteca (la selección entera si el elemento está seleccionado).
+2. Marcar en `spec/PARITY.md` LIB-001, LIB-002, LIB-015, LIB-020, LIB-021, LIB-022, LIB-027, TRY-001, TRY-002, TRY-008, TRY-009, TRY-011 y TRY-013 (y TRY-006 y EDT-109, adelantados).
+3. **Entrega 6:** repasar en `PARITY.md` los IDs de captura y app de M1 que siguen pendientes y hacerlos.
+4. **Entrega 7:** calidad (teclado, lector de pantalla, rendimiento).
+5. Instalador (probar antes con `npx tauri build --debug --no-bundle`), caminata de Carlos, arreglos y un único guion de pruebas.
 
 ## Decisiones vigentes que conviene recordar
 

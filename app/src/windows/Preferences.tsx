@@ -7,6 +7,7 @@ import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
 import { AiSection } from "../prefs/AiSection";
+import { LibraryLocation } from "../prefs/LibraryLocation";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
 import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
@@ -134,6 +135,8 @@ export function Preferences() {
         {rows.length === 0 && section !== "general" && (
           <p className="empty">{t("ui.prefs.empty_section")}</p>
         )}
+        {/* Where the library is comes first (LIB-027). */}
+        {section === "library" && <LibraryLocation />}
         {rows.map((s) => (
           <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
         ))}
