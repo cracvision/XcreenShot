@@ -66,8 +66,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
     - APP-045: temas de contraste de Windows (bordes y botones principales legibles), transparencia reducida, texto mínimo de 12 px.
     - Rendimiento (APP-049, APP-051): unos 110 ms de una selección 4K al editor, 27 ms hasta tener el ícono y los atajos, 340 MB en reposo con el editor cargado. No cumplen: 205 MB en reposo sin el editor (la selección precargada) y la caché de GPU de WebView2 tras muchas capturas 4K. Decisiones en `spec/QUESTIONS.md`.
     - Una instancia aislada (`XCREENSHOT_DATA_DIR`) ya no toca el inicio con Windows.
-  - Instalador para la caminata: `targeteleaseundle
-sis\XcreenShot_0.2.0_x64-setup.exe` (commit `bbc74be`). Guía: [`docs/caminata-M1.md`](caminata-M1.md).
+  - Instalador para la caminata: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe` (commit `bbc74be`). Guía: [`docs/caminata-M1.md`](caminata-M1.md).
   - Pregunta abierta para Carlos: a dónde lleva **Enviar comentarios** si sus colegas no ven el repositorio (QUESTIONS, APP-015).
 
 - **Plan acordado con Carlos (2026-11-10):** Claude implementa seguido las entregas 5, 6 y 7, que cierran M1 en Windows. Después Carlos hace una **caminata por la app con un instalador**, Claude corrige lo que encuentre y solo entonces escribe **un único guion de pruebas** consolidado. Las tandas pendientes de antes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028) entran en esa caminata. Luego M2 y siguientes con el mismo ciclo; las partes del spec sin escribir se proponen a Carlos antes de construirlas.
