@@ -41,8 +41,8 @@ Construyes **únicamente** a partir de `spec/`.
 | Archivo | Estado |
 |---|---|
 | `SPEC.md`, `01-captura.md`, `03-video.md`, `05-app.md`, `06-inteligentes.md` | Completos |
-| `02-editor.md` | Completo hasta las herramientas y efectos. Las plantillas, la exportación y los atajos del editor se completan antes de M2 |
-| `04-biblioteca-compartir.md` | Solo el alcance de M1. Se completa antes de M2 y de M6 |
+| `02-editor.md` | Completo (herramientas, efectos, plantillas, exportación y atajos) |
+| `04-biblioteca-compartir.md` | Biblioteca y bandeja completas (M1 y M2). Compartir (`SHR-`) solo tiene lo de M1: se completa antes de M6 |
 | `IDEAS.md` | Ideas de Carlos sin aprobar. **No se construyen** hasta que tengan su bloque con ID |
 
 Si un ID que necesitas no existe todavía, para y pregunta.
