@@ -322,6 +322,34 @@
     "app_mcp_config": {
       "title": "MCP client configuration",
       "description": "How an MCP client (Claude Desktop, Claude Code…) starts XcreenShot: the installed CLI and its arguments."
+    },
+    "library_list": {
+      "title": "Library items",
+      "description": "Items of the library, newest capture first, with their stable ID."
+    },
+    "library_get": {
+      "title": "Library item",
+      "description": "One library item: name, file, format, size and capture data."
+    },
+    "library_delete": {
+      "title": "Delete from the library",
+      "description": "Moves items to the system's trash (or deletes them for good), with Undo for a while."
+    },
+    "library_restore": {
+      "title": "Undo delete",
+      "description": "Brings back items just deleted from the library."
+    },
+    "library_rename": {
+      "title": "Rename library item",
+      "description": "Renames an item's file in its folder, keeping its ID."
+    },
+    "library_show_in_folder": {
+      "title": "Show in folder",
+      "description": "Opens the folder of an item, or of the library, with the file selected."
+    },
+    "document_locate": {
+      "title": "Locate document file",
+      "description": "Links an open document to its file after it was moved outside XcreenShot."
     }
   },
   "settings": {
@@ -477,6 +505,22 @@
         "claude-sonnet-5-5": "Claude Sonnet 5.5 (balanced)",
         "claude-haiku-5-5": "Claude Haiku 5.5 (cheapest)"
       }
+    },
+    "library_autosaveImages": {
+      "label": "Save image captures to the library automatically",
+      "description": "Off: new captures stay unsaved until you save them, and XcreenShot asks before losing them."
+    },
+    "library_keepEditableCopy": {
+      "label": "Keep an editable copy when saving to another format",
+      "description": "Saving annotations into a PNG or JPG from elsewhere also keeps an editable .xshot in the library."
+    },
+    "library_confirmDelete": {
+      "label": "Confirm before deleting",
+      "description": "Ask before moving library items to the trash."
+    },
+    "tray_clearUnpinnedOnExit": {
+      "label": "Clear the recent tray when quitting",
+      "description": "On quitting XcreenShot, the recent tray empties. The files stay in the library."
     }
   },
   "errors": {
@@ -535,7 +579,10 @@
     "ai_other": "The AI service answered with an error: {{reason}}",
     "rename_unsaved": "Save the document before renaming it.",
     "rename_failed": "Could not rename to \"{{name}}\": {{reason}}",
-    "cli_missing": "The xcreenshot command-line tool is not installed next to the app. Reinstall XcreenShot."
+    "cli_missing": "The xcreenshot command-line tool is not installed next to the app. Reinstall XcreenShot.",
+    "library_not_found": "Item \"{{id}}\" is not in the library.",
+    "library_no_trash": "\"{{name}}\" cannot go to the trash here: deleting it would be final.",
+    "library_undo_expired": "It is too late to undo that delete."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -593,7 +640,16 @@
       "editor_tool_blur": "Blur tool",
       "editor_tool_crop": "Crop tool",
       "editor_ai_ask": "Ask the AI…",
-      "editor_ai_name": "Suggest name…"
+      "editor_ai_name": "Suggest name…",
+      "editor_view_editor": "Editor view",
+      "editor_view_library": "Library view",
+      "editor_tray": "Show or hide the recent tray",
+      "editor_prev_item": "Previous capture",
+      "editor_next_item": "Next capture",
+      "editor_close_others": "Close others",
+      "editor_rename_item": "Rename",
+      "editor_show_in_folder": "Show in Explorer or Finder",
+      "editor_delete_item": "Move to trash"
     }
   },
   "tray": {
@@ -611,7 +667,8 @@
     "capture_image": "Image Capture",
     "capture_repeat_last": "Repeat Last Capture",
     "capture_panel": "Open Capture Panel",
-    "capture_multi": "Multi-capture"
+    "capture_multi": "Multi-capture",
+    "open_library": "Open library"
   },
   "menu": {
     "file": "&File",
@@ -652,7 +709,21 @@
     "icons_only": "Icons only",
     "ai": "&AI",
     "ai_ask": "Ask the AI…",
-    "ai_name": "Suggest name…"
+    "ai_name": "Suggest name…",
+    "view_editor": "Editor",
+    "view_library": "Library",
+    "tray": "Recent tray",
+    "prev_item": "Previous capture",
+    "next_item": "Next capture",
+    "close_others": "Close others",
+    "rename_item": "Rename…",
+    "show_in_folder": "Show in Explorer",
+    "show_in_finder": "Show in Finder",
+    "delete_item": "Move to trash",
+    "copy_path": "Copy path",
+    "open_item": "Open",
+    "remove_from_tray": "Remove from the tray",
+    "locate": "Find…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",

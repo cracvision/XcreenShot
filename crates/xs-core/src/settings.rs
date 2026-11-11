@@ -139,6 +139,35 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "APP-020",
         ),
+        // Preferences > Library (LIB-, TRY-), M1 part.
+        def(
+            "library.autosaveImages",
+            "library",
+            boolean(),
+            json!(true),
+            "LIB-020",
+        ),
+        def(
+            "library.keepEditableCopy",
+            "library",
+            boolean(),
+            json!(true),
+            "LIB-021",
+        ),
+        def(
+            "library.confirmDelete",
+            "library",
+            boolean(),
+            json!(true),
+            "LIB-015",
+        ),
+        def(
+            "tray.clearUnpinnedOnExit",
+            "library",
+            boolean(),
+            json!(false),
+            "TRY-008",
+        ),
         // Preferences > Editor (EDT-118), in its order; the rest arrive with their features.
         def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
         def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),

@@ -469,6 +469,39 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.side_panel", "editor.action", r#"{"action":"side_panel"}"#),
         editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
         editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
+        editor(
+            "editor.view_editor",
+            "editor.action",
+            r#"{"action":"view_editor"}"#,
+        ),
+        editor(
+            "editor.view_library",
+            "editor.action",
+            r#"{"action":"view_library"}"#,
+        ),
+        editor("editor.tray", "editor.action", r#"{"action":"tray"}"#),
+        editor("editor.prev_item", "editor.action", r#"{"action":"prev_item"}"#),
+        editor("editor.next_item", "editor.action", r#"{"action":"next_item"}"#),
+        editor(
+            "editor.close_others",
+            "editor.action",
+            r#"{"action":"close_others"}"#,
+        ),
+        editor(
+            "editor.rename_item",
+            "editor.action",
+            r#"{"action":"rename_item"}"#,
+        ),
+        editor(
+            "editor.show_in_folder",
+            "editor.action",
+            r#"{"action":"show_in_folder"}"#,
+        ),
+        editor(
+            "editor.delete_item",
+            "editor.action",
+            r#"{"action":"delete_item"}"#,
+        ),
         // Tools (EDT-115): a single key.
         tool("editor.tool_move", r#"{"tool":"move"}"#),
         tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
@@ -547,6 +580,15 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_blur", ..) => "KeyB",
         ("editor.tool_crop", ..) => "KeyR",
         ("editor.delete", ..) => "Delete",
+        // LIB-001: Cmd+1 / Cmd+2 on macOS; Ctrl+Shift on Windows, where Ctrl+1…9 pick
+        // tools. TRY-001, TRY-009, TRY-013 as the spec writes them.
+        ("editor.view_editor", _, Macos) => "Super+Digit1",
+        ("editor.view_library", _, Macos) => "Super+Digit2",
+        ("editor.tray", _, Macos) => "Alt+Super+KeyT",
+        ("editor.prev_item", _, Macos) => "Super+BracketLeft",
+        ("editor.next_item", _, Macos) => "Super+BracketRight",
+        ("editor.delete_item", _, Macos) => "Super+Backspace",
+        ("editor.rename_item", _, Macos) => return None,
         ("editor.delete_alt", ..) => "Backspace",
         _ => {
             let windows = match id {
@@ -571,6 +613,13 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.zoom_fit" => "Ctrl+Shift+Digit0",
                 "editor.zoom_original" => "Ctrl+Alt+Digit0",
                 "editor.side_panel" => "Ctrl+Alt+KeyP",
+                "editor.view_editor" => "Ctrl+Shift+Digit1",
+                "editor.view_library" => "Ctrl+Shift+Digit2",
+                "editor.tray" => "Ctrl+Alt+KeyR",
+                "editor.prev_item" => "Ctrl+PageUp",
+                "editor.next_item" => "Ctrl+PageDown",
+                "editor.delete_item" => "Ctrl+Delete",
+                "editor.rename_item" => "F2",
                 _ => return None,
             };
             let mut acc: Accelerator = windows.parse().expect("editor defaults parse");

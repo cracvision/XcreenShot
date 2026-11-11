@@ -1,6 +1,7 @@
 //! Command-level tests: what an agent or the editor view sees (EDT-119).
 
 use super::*;
+use xs_core::document::Xshot;
 use xs_core::platform::Platform;
 
 struct Env {
@@ -1121,4 +1122,228 @@ fn closing_everything_or_turning_it_off_starts_empty() {
     reopen_documents(&core);
     assert_eq!(strip(&core).0, Vec::<PathBuf>::new());
     assert_eq!(core.recall(OPEN_KEY), Some(Value::Null));
+}
+
+// ---------------------------------------------------------------------------
+// Library and recent tray (LIB-020, LIB-021, TRY-002, TRY-008)
+
+fn set(core: &Core, key: &str, value: Value) {
+    cli(core, "settings.set", json!({"key": key, "value": value}));
+}
+
+fn info(core: &Core, doc: &str) -> Value {
+    cli(core, "document.info", json!({"documentId": doc}))
+}
+
+#[test]
+fn with_autosave_off_captures_wait_until_saved() {
+    let e = env();
+    set(&e.core, "library.autosaveImages", json!(false));
+    let (doc, path) = capture(&e);
+    assert!(path.exists());
+    assert!(!path.starts_with(e.library.path()), "not in the library yet");
+    assert_eq!(info(&e.core, &doc)["dirty"], true);
+    let r = cli(&e.core, "document.close", json!({"documentId": doc}));
+    assert_eq!(r["status"], "needs_decision", "closing asks first");
+
+    // Saving puts it in the library, where it then saves itself like any other.
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let saved = info(&e.core, &doc);
+    let saved_path = PathBuf::from(saved["path"].as_str().unwrap());
+    assert!(saved_path.starts_with(e.library.path()));
+    assert!(saved_path.exists());
+    assert_eq!(saved["kind"], "library");
+    assert_eq!(saved["dirty"], false);
+    assert!(!path.exists(), "the waiting copy is gone");
+
+    // Closed without saving: nothing is left behind.
+    let (other, other_path) = capture(&e);
+    let r = cli(
+        &e.core,
+        "document.close",
+        json!({"documentId": other, "discard": [other]}),
+    );
+    assert_eq!(r["status"], "closed");
+    assert!(!other_path.exists());
+
+    // Multi-capture saves to the library either way (CAP-067).
+    let (_, multi) = add_capture(
+        &e.core,
+        &white(40, 20),
+        json!({"mode": "multi"}),
+        1.0,
+        Some("Test"),
+    )
+    .unwrap();
+    assert!(multi.starts_with(e.library.path()));
+}
+
+/// The `.xshot` files of this month's library folder.
+fn library_xshots(e: &Env) -> Vec<PathBuf> {
+    let month = e
+        .library
+        .path()
+        .join(chrono::Local::now().format("%Y-%m").to_string());
+    let Ok(read) = std::fs::read_dir(month) else {
+        return Vec::new();
+    };
+    read.flatten()
+        .map(|f| f.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "xshot"))
+        .collect()
+}
+
+#[test]
+fn a_flattened_file_keeps_an_editable_copy_in_the_library() {
+    let e = env();
+    let path = external_png(&e);
+    let doc = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // Saved without annotations: nothing to keep.
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    assert!(library_xshots(&e).is_empty());
+
+    let annotate = |from: [i32; 2]| {
+        cli(
+            &e.core,
+            "document.annotate",
+            json!({"documentId": doc, "objects": [arrow(from, [90, 40])]}),
+        );
+        cli(&e.core, "document.save", json!({"documentId": doc}));
+    };
+    annotate([10, 10]);
+    let copies = library_xshots(&e);
+    assert_eq!(copies.len(), 1);
+    let summary = Xshot::read_summary(&copies[0]).unwrap();
+    assert_eq!(summary.meta["linkedFile"], json!(path));
+    let opened = Xshot::read(&copies[0]).unwrap();
+    assert_eq!(opened.document.objects.len(), 1, "the arrow stays editable");
+
+    // Each save updates the same copy.
+    annotate([20, 20]);
+    assert_eq!(library_xshots(&e), copies);
+    assert_eq!(Xshot::read(&copies[0]).unwrap().document.objects.len(), 2);
+
+    // Turned off: no copy.
+    let other = external_png(&e);
+    set(&e.core, "library.keepEditableCopy", json!(false));
+    let doc2 = cli(&e.core, "document.open", json!({"path": other}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc2, "objects": [arrow([5, 5], [50, 40])]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc2}));
+    assert_eq!(library_xshots(&e).len(), 1);
+}
+
+#[test]
+fn several_documents_close_at_once() {
+    let e = env();
+    let (a, _) = capture(&e);
+    let (b, _) = capture(&e);
+    let (c, _) = capture(&e);
+    let r = cli(&e.core, "document.close", json!({"documentIds": [a, b]}));
+    assert_eq!(r["status"], "closed");
+    let list = cli(&e.core, "document.list", json!({}));
+    let left: Vec<&str> = list["documents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["documentId"].as_str().unwrap())
+        .collect();
+    assert_eq!(left, [c.as_str()]);
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.close",
+        json!({"documentIds": [c, "nope"]}),
+    )
+    .unwrap_err();
+    assert_eq!(err.code, ErrorCode::NotFound);
+    assert_eq!(
+        cli(&e.core, "document.list", json!({}))["documents"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn a_moved_file_is_marked_and_can_be_found_again() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    let moved = e.outside.path().join("moved.xshot");
+    std::fs::rename(&path, &moved).unwrap();
+    let listed = cli(&e.core, "document.list", json!({}));
+    assert_eq!(listed["documents"][0]["missing"], true, "the strip marks it");
+
+    let png = external_png(&e);
+    let wrong = call(
+        &e.core,
+        Source::Cli,
+        "document.locate",
+        json!({"documentId": doc, "path": png}),
+    );
+    assert!(wrong.is_err(), "another format is not the same file");
+    let gone = call(
+        &e.core,
+        Source::Cli,
+        "document.locate",
+        json!({"documentId": doc, "path": e.outside.path().join("nope.xshot")}),
+    );
+    assert!(gone.is_err());
+
+    let found = cli(
+        &e.core,
+        "document.locate",
+        json!({"documentId": doc, "path": moved}),
+    );
+    assert_eq!(found["missing"], false);
+    assert_eq!(found["kind"], "external", "outside the library now");
+    assert_eq!(found["path"], json!(moved));
+}
+
+#[test]
+fn the_library_view_waits_for_the_window() {
+    let e = env();
+    // Tests have no window to show; the view is remembered before that.
+    let _ = call(&e.core, Source::Cli, "editor.show", json!({"view": "library"}));
+    assert_eq!(cli(&e.core, "editor.state", json!({}))["view"], "library");
+    assert_eq!(
+        cli(&e.core, "editor.state", json!({}))["view"],
+        Value::Null,
+        "taken once"
+    );
+    let bad = call(&e.core, Source::Cli, "editor.show", json!({"view": "gallery"}));
+    assert_eq!(bad.unwrap_err().code, ErrorCode::InvalidParams);
+}
+
+#[test]
+fn the_tray_can_start_empty_after_quitting() {
+    let e = env();
+    let (_, a) = capture(&e);
+    show(&e, &a);
+    let guard = EditorQuitGuard(Arc::downgrade(&e.core));
+    guard.before_quit();
+    assert_eq!(strip(&restart(&e)).0, vec![a.clone()], "kept by default");
+
+    let e2 = Env {
+        core: restart(&e),
+        ..e
+    };
+    set(&e2.core, "tray.clearUnpinnedOnExit", json!(true));
+    EditorQuitGuard(Arc::downgrade(&e2.core)).before_quit();
+    assert_eq!(e2.core.recall(OPEN_KEY), Some(Value::Null));
+    // Closing documents while quitting does not write the list back.
+    cli(&e2.core, "document.close", json!({"all": true}));
+    assert_eq!(e2.core.recall(OPEN_KEY), Some(Value::Null));
+    assert_eq!(strip(&restart(&e2)).0, Vec::<PathBuf>::new());
+    assert!(a.exists(), "the file stays in the library");
 }

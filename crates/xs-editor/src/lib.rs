@@ -62,6 +62,12 @@ pub struct Editor {
     reopened: Condvar,
     /// The open documents last remembered, to write them only when they change.
     remembered_open: Mutex<Option<Value>>,
+    /// Quitting with "clear the recent tray" (TRY-008): the list is not written again.
+    forget_open: std::sync::atomic::AtomicBool,
+    /// The view `editor.show` asked for before the window loaded (LIB-001).
+    requested_view: Mutex<Option<String>>,
+    /// New captures while automatic saving is off (LIB-020).
+    unsaved_dir: Mutex<PathBuf>,
 }
 
 /// What `document.copy_objects` put on the clipboard.
@@ -97,6 +103,9 @@ impl Editor {
             reopening: Mutex::new(false),
             reopened: Condvar::new(),
             remembered_open: Mutex::new(None),
+            forget_open: std::sync::atomic::AtomicBool::new(false),
+            requested_view: Mutex::new(None),
+            unsaved_dir: Mutex::new(core.paths.local_dir.join("unsaved")),
         }
     }
 
@@ -112,15 +121,22 @@ impl Editor {
         self.recovery_dir.lock().unwrap().clone()
     }
 
+    /// Captures kept out of the library until they are saved (LIB-020 off).
+    fn unsaved_dir(&self) -> PathBuf {
+        self.unsaved_dir.lock().unwrap().clone()
+    }
+
     /// Waits, briefly, for the documents reopened at startup (EDT-120).
     fn wait_reopened(&self) {
         let busy = self.reopening.lock().unwrap_or_else(PoisonError::into_inner);
         let _ = self.reopened.wait_timeout_while(busy, REOPEN_WAIT, |busy| *busy);
     }
 
-    /// Other library and recovery folders (isolated tests).
+    /// Other library and recovery folders (isolated tests). Unsaved captures then wait
+    /// inside the recovery folder.
     pub fn set_folders(&self, library: PathBuf, recovery: PathBuf) {
         *self.library.lock().unwrap() = library;
+        *self.unsaved_dir.lock().unwrap() = recovery.join("unsaved");
         *self.recovery_dir.lock().unwrap() = recovery;
     }
 }
@@ -379,15 +395,65 @@ fn drop_cropped(core: &Core) -> bool {
     core.settings.get_bool("editor.deleteCroppedContent")
 }
 
-/// Saves a document in its own file and clears its unsaved state (EDT-107).
+/// Saves a document in its own file and clears its unsaved state (EDT-107). A
+/// capture kept unsaved (LIB-020) goes into the library.
 fn save_own(core: &Core, id: &str) -> Result<PathBuf, String> {
     let ed = editor(core);
     let snap = ed.store.snapshot(id)?;
-    let path = snap.path.clone().ok_or("no file")?;
+    let mut path = snap.path.clone().ok_or("no file")?;
+    let unsaved = path.starts_with(ed.unsaved_dir());
+    if unsaved {
+        let app = snap.meta["app"].as_str();
+        path = xs_library::new_item_path(&ed.library(), app, chrono::Local::now(), "xshot");
+    }
     write_snapshot(&ed, &snap, &path, snap.format, 90, drop_cropped(core))?;
-    ed.store.mark_saved(id, snap.version);
+    if unsaved {
+        if let Some(old) = &snap.path {
+            let _ = std::fs::remove_file(old);
+        }
+        ed.store
+            .relink(id, path.clone(), Kind::Library, Format::Xshot, snap.version);
+    } else {
+        ed.store.mark_saved(id, snap.version);
+    }
     drop_recovery(core, id);
     Ok(path)
+}
+
+/// LIB-021: after a flat file from elsewhere is saved with its objects flattened, an
+/// editable `.xshot` copy goes to the library (the same one at each save), linked to
+/// the file.
+fn keep_editable_copy(core: &Core, id: &str) {
+    let ed = editor(core);
+    let worth = ed
+        .store
+        .with(id, |d| {
+            d.kind == Kind::External && d.format != Format::Xshot && !d.document.objects.is_empty()
+        })
+        .unwrap_or(false);
+    if !worth || !core.settings.get_bool("library.keepEditableCopy") {
+        return;
+    }
+    let Ok(mut snap) = ed.store.snapshot(id) else {
+        return;
+    };
+    let existing = ed.store.with(id, |d| d.editable_copy.clone()).flatten();
+    let target = existing.unwrap_or_else(|| {
+        let dir = ed
+            .library()
+            .join(chrono::Local::now().format("%Y-%m").to_string());
+        xs_library::unique(&dir, &snap.name, "xshot")
+    });
+    if let Some(original) = &snap.path {
+        snap.meta["linkedFile"] = json!(original);
+    }
+    match write_snapshot(&ed, &snap, &target, Format::Xshot, 90, false) {
+        Ok(_) => {
+            ed.store.with(id, |d| d.editable_copy = Some(target.clone()));
+            tracing::info!("editable copy kept in the library");
+        }
+        Err(e) => tracing::warn!(error = %e, "could not keep the editable copy"),
+    }
 }
 
 /// Saves library documents with unsaved changes (EDT-012): when switching document,
@@ -595,7 +661,9 @@ fn open_documents(core: &Core) -> Value {
 /// way of ending: quitting, shutting down or a crash.
 fn remember_open(core: &Core) {
     let ed = editor(core);
-    if *ed.reopening.lock().unwrap_or_else(PoisonError::into_inner) {
+    if *ed.reopening.lock().unwrap_or_else(PoisonError::into_inner)
+        || ed.forget_open.load(std::sync::atomic::Ordering::Relaxed)
+    {
         return;
     }
     let value = if core.settings.get_bool(REOPEN_SETTING) {
@@ -625,6 +693,9 @@ impl Drop for Reopening {
 /// strip when XcreenShot last ended. Editor commands wait until it finishes. The shell
 /// calls it once at startup, before it answers commands.
 pub fn reopen_documents(core: &Arc<Core>) {
+    // Captures left unsaved by a previous run (LIB-020): their changes, if any, are
+    // in the recovery copies.
+    let _ = std::fs::remove_dir_all(editor(core).unsaved_dir());
     let saved = core.recall(OPEN_KEY).filter(|v| !v.is_null());
     if !core.settings.get_bool(REOPEN_SETTING) {
         if saved.is_some() {
@@ -730,16 +801,21 @@ fn add_image(
     app: Option<&str>,
 ) -> Result<(String, PathBuf), String> {
     let ed = editor(core);
+    let autosave = core.settings.get_bool("library.autosaveImages");
     let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app)?;
     let doc = DocStore::from_image(
         path.clone(),
-        Kind::Library,
+        if autosave { Kind::Library } else { Kind::External },
         document,
         meta,
         png,
         Base::from_image(image.clone()),
     );
     let (id, _) = ed.store.insert(doc, false);
+    if !autosave {
+        // Not in the library until saved: the strip marks it, closing asks (LIB-020).
+        ed.store.mark_unsaved(&id);
+    }
     emit_list(core);
     Ok((id, path))
 }
@@ -753,7 +829,14 @@ fn write_library_item(
     app: Option<&str>,
 ) -> Result<(PathBuf, Document, Vec<u8>), String> {
     let ed = editor(core);
-    let path = xs_library::new_item_path(&ed.library(), app, chrono::Local::now(), "xshot");
+    // Off (LIB-020): the capture waits in the app's data until it is saved.
+    // Multi-capture saves to the library either way (CAP-067).
+    let folder = if core.settings.get_bool("library.autosaveImages") || meta["mode"] == "multi" {
+        ed.library()
+    } else {
+        ed.unsaved_dir()
+    };
+    let path = xs_library::new_item_path(&folder, app, chrono::Local::now(), "xshot");
     let dpi = (96.0 * scale).round();
     let document = Document::new(image.width(), image.height(), dpi);
     let png = xs_image::encode::png(image, dpi, true)?;
@@ -995,6 +1078,12 @@ impl QuitGuard for EditorQuitGuard {
     fn before_quit(&self) {
         let Some(core) = self.0.upgrade() else { return };
         save_library_documents(&core);
+        // TRY-008: the recent tray starts empty next time (the files stay).
+        if core.settings.get_bool("tray.clearUnpinnedOnExit") {
+            let ed = editor(&core);
+            ed.forget_open.store(true, std::sync::atomic::Ordering::Relaxed);
+            core.remember(OPEN_KEY, Value::Null);
+        }
         // Whatever is still unsaved stays recoverable (APP-004 forced quit, APP-047).
         write_recovery_copies(&core);
     }
@@ -1005,6 +1094,18 @@ fn close(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
     let targets: Vec<String> = if p.get("all").and_then(Value::as_bool).unwrap_or(false) {
         ed.store.ids()
+    } else if let Some(ids) = p.get("documentIds").and_then(Value::as_array) {
+        let ids: Vec<String> = ids
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
+        if let Some(missing) = ids.iter().find(|id| !ed.store.exists(id)) {
+            return Err(CommandError::new(
+                ErrorCode::NotFound,
+                tr(lang, "errors.document_not_found", &[("id", missing)]),
+            ));
+        }
+        ids
     } else {
         vec![resolve(core, lang, p)?]
     };
@@ -1040,6 +1141,10 @@ fn close(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     for doc in ed.store.remove(&targets) {
         if let Some(rid) = doc.recovery_id {
             recovery::remove(&ed.recovery_dir(), &rid);
+        }
+        // A capture never saved (LIB-020) leaves nothing behind.
+        if let Some(path) = doc.path.filter(|p| p.starts_with(ed.unsaved_dir())) {
+            let _ = std::fs::remove_file(path);
         }
     }
     // Show the next document of the strip, or the one before (EDT-108).
@@ -1402,6 +1507,7 @@ pub fn extension() -> Extension {
                     core.remember(FLATTEN_OK_KEY, json!(true));
                 }
                 let path = save_own(&core, &id).map_err(|e| internal(ctx.lang, &name, e))?;
+                keep_editable_copy(&core, &id);
                 emit_document(&core, &id);
                 emit_list(&core);
                 return Ok(json!({ "status": "saved", "path": path, "linked": true }));
@@ -1759,8 +1865,40 @@ pub fn extension() -> Extension {
                 let id = resolve(&core, ctx.lang, &p)?;
                 activate(&core, &id);
             }
+            // LIB-001: the Library view, also for a window that is not loaded yet.
+            let view = p["view"].as_str().unwrap_or("editor").to_string();
+            *editor(&core).requested_view.lock().unwrap() = Some(view.clone());
+            core.host().editor_event("view", json!({ "view": view }));
             core.host().show_main_window()?;
             Ok(json!({}))
+        });
+        on!("document.locate", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let path = PathBuf::from(p["path"].as_str().unwrap_or_default());
+            if !path.is_file() {
+                return Err(open_error(
+                    ctx.lang,
+                    &path,
+                    OpenError::Unreadable("not found".into()),
+                ));
+            }
+            let ed = editor(&core);
+            let format = ed.store.with(&id, |d| d.format);
+            if Format::from_path(&path) != format {
+                return Err(open_error(ctx.lang, &path, OpenError::Unsupported));
+            }
+            let kind = if xs_library::contains(&ed.library(), &path) {
+                Kind::Library
+            } else {
+                Kind::External
+            };
+            ed.store.with(&id, |d| {
+                d.path = Some(path.clone());
+                d.kind = kind;
+            });
+            emit_document(&core, &id);
+            emit_list(&core);
+            Ok(ed.store.with(&id, |d| d.summary()).unwrap_or_default())
         });
         on!("editor.fonts", |_core, ctx, _p| Ok(
             json!({ "fonts": xs_image::text::families() })
@@ -1776,6 +1914,7 @@ pub fn extension() -> Extension {
                 "documents": ed.store.summaries(),
                 "recoverable": recoverable,
                 "zoomSteps": ZOOM_STEPS,
+                "view": ed.requested_view.lock().unwrap().take(),
             }))
         });
         on!("editor.select_tool", |core, ctx, p| {

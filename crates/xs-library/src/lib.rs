@@ -1,8 +1,60 @@
-//! Library files (LIB-). Build 4 of M1 brings the location (LIB-027) and where each
-//! capture is saved as `.xshot` (LIB-020). The index (LIB-022) and the Library view
-//! arrive in build 5.
+//! The library (LIB-): its location (LIB-027), where each capture is saved as `.xshot`
+//! (LIB-020), the index kept in step with the folder (LIB-022), thumbnails, and the
+//! `library.*` commands: list, get, delete with Undo, rename and show in the folder.
+
+pub mod index;
+pub mod recycle;
+pub mod scan;
+pub mod service;
+pub mod xmeta;
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Weak};
+
+use serde_json::{json, Value};
+use xs_core::core::Extension;
+use xs_core::i18n::tr;
+use xs_core::{CommandError, Context, Core, ErrorCode, Lang, Source};
+
+pub use index::Item;
+pub use service::{synced, Library};
+
+/// The library of `core`, opened at its location the first time.
+pub fn library(core: &Core) -> Arc<Library> {
+    core.service(|| Library::open(location(), &core.paths.local_dir))
+}
+
+/// Indexes the folder in the background, then follows changes made outside
+/// XcreenShot (LIB-022). The shell calls it once at startup.
+pub fn start(core: &Arc<Core>) {
+    let weak = Arc::downgrade(core);
+    std::thread::spawn(move || {
+        let Some(core) = weak.upgrade() else { return };
+        let lib = library(&core);
+        let started = std::time::Instant::now();
+        lib.scan();
+        tracing::info!(
+            items = lib.list().len(),
+            elapsed_ms = started.elapsed().as_millis() as u64,
+            synced = synced(lib.root()),
+            "library indexed"
+        );
+        changed(&core);
+        let weak = Arc::downgrade(&core);
+        drop(core);
+        lib.watch(move || {
+            if let Some(core) = weak.upgrade() {
+                changed(&core);
+            }
+        });
+    });
+}
+
+/// Tells the main window that the library changed: the Library view and the strip
+/// (a file that disappeared) refresh.
+fn changed(core: &Core) {
+    core.host().editor_event("library", json!({}));
+}
 
 /// Library folder: `Documents\XcreenShot` on Windows (the real Documents folder, also
 /// when OneDrive redirects it), `~/Pictures/XcreenShot` on macOS (LIB-027).
@@ -106,8 +158,245 @@ pub fn unique(dir: &Path, stem: &str, extension: &str) -> PathBuf {
     path
 }
 
+// ---------------------------------------------------------------------------
+// Commands (LIB-034 brings the rest of the `library` area in M2)
+
+fn not_found(lang: Lang, id: &str) -> CommandError {
+    CommandError::new(
+        ErrorCode::NotFound,
+        tr(lang, "errors.library_not_found", &[("id", id)]),
+    )
+}
+
+fn ids_of(p: &Value) -> Vec<String> {
+    p["ids"]
+        .as_array()
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .unwrap_or_default()
+}
+
+fn same_path(a: &Path, b: &Path) -> bool {
+    let norm = |p: &Path| {
+        let s = p.to_string_lossy().replace('/', "\\");
+        if cfg!(windows) {
+            s.to_lowercase()
+        } else {
+            s
+        }
+    };
+    norm(a) == norm(b)
+}
+
+/// Closes in the editor the documents of files about to be deleted: their unsaved
+/// changes go with them (LIB-015). Returns the files that were open.
+fn close_open(core: &Core, source: Source, files: &[PathBuf]) -> Vec<PathBuf> {
+    let Ok(list) = core.call(source, "document.list", json!({}), None) else {
+        return Vec::new();
+    };
+    let mut ids = Vec::new();
+    let mut paths = Vec::new();
+    for doc in list["documents"].as_array().into_iter().flatten() {
+        let (Some(id), Some(path)) = (doc["documentId"].as_str(), doc["path"].as_str()) else {
+            continue;
+        };
+        if files.iter().any(|f| same_path(f, Path::new(path))) {
+            ids.push(id.to_string());
+            if doc["shown"] == true {
+                paths.push(PathBuf::from(path));
+            }
+        }
+    }
+    if !ids.is_empty() {
+        let _ = core.call(
+            source,
+            "document.close",
+            json!({ "documentIds": ids, "discard": ids }),
+            None,
+        );
+    }
+    paths
+}
+
+fn delete(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lib = library(core);
+    let ids = ids_of(p);
+    for id in &ids {
+        if lib.get(id).is_none() {
+            return Err(not_found(ctx.lang, id));
+        }
+    }
+    let files: Vec<PathBuf> = ids
+        .iter()
+        .filter_map(|id| lib.get(id))
+        .map(|i| lib.abs(&i.path))
+        .collect();
+    let permanent = p["permanent"].as_bool().unwrap_or(false);
+    let open = close_open(core, ctx.source, &files);
+    match lib.delete(&ids, permanent) {
+        Ok((undo, items)) => {
+            if let Some(undo) = &undo {
+                lib.remember_open(undo, open);
+            }
+            tracing::info!(count = items.len(), permanent, "library items deleted");
+            changed(core);
+            Ok(json!({ "deleted": items.len(), "undo": undo }))
+        }
+        Err(e) => {
+            // Back in the editor what was closed for nothing.
+            for path in open {
+                let _ = core.call(
+                    ctx.source,
+                    "document.open",
+                    json!({ "path": path, "show": true }),
+                    None,
+                );
+            }
+            let name = files
+                .first()
+                .and_then(|f| f.file_name())
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            Err(match e {
+                recycle::TrashError::NoTrash(reason) => CommandError::new(
+                    ErrorCode::NotSupportedOnPlatform,
+                    tr(ctx.lang, "errors.library_no_trash", &[("name", &name)]),
+                )
+                .with_details(json!({ "reason": "no_trash", "detail": reason })),
+                recycle::TrashError::Io(io) => CommandError::internal(io.to_string()),
+            })
+        }
+    }
+}
+
+fn restore(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lib = library(core);
+    let undo = p["undo"].as_str().unwrap_or_default();
+    let back = lib.restore(undo).map_err(|_| {
+        CommandError::new(
+            ErrorCode::NotFound,
+            tr(ctx.lang, "errors.library_undo_expired", &[]),
+        )
+    })?;
+    for path in lib.take_open(undo) {
+        let _ = core.call(
+            ctx.source,
+            "document.open",
+            json!({ "path": path, "show": true }),
+            None,
+        );
+    }
+    changed(core);
+    Ok(json!({ "restored": back.len() }))
+}
+
+fn rename(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lib = library(core);
+    let id = p["id"].as_str().unwrap_or_default();
+    let name = p["name"].as_str().unwrap_or_default();
+    let item = lib.rename(id, name).map_err(|e| match e {
+        service::RenameError::NotFound => not_found(ctx.lang, id),
+        service::RenameError::Invalid => CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                ctx.lang,
+                "errors.invalid_param",
+                &[("param", "name"), ("reason", "empty")],
+            ),
+        ),
+        service::RenameError::Exists(n) => CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(ctx.lang, "errors.file_exists", &[("name", &n)]),
+        ),
+        service::RenameError::Io(io) => CommandError::new(
+            ErrorCode::Internal,
+            tr(
+                ctx.lang,
+                "errors.rename_failed",
+                &[("name", name), ("reason", &io.to_string())],
+            ),
+        ),
+    })?;
+    changed(core);
+    Ok(item.to_json(lib.root()))
+}
+
+/// Registers the `library.*` commands at the default location.
+pub fn extension() -> Extension {
+    extension_with(None)
+}
+
+/// Registers the `library.*` commands, with the library at `root` (tests: deleted
+/// files then wait in the app's data and never reach the real Recycle Bin).
+pub fn extension_with(root: Option<PathBuf>) -> Extension {
+    Box::new(move |reg, weak: Weak<Core>| {
+        if let Some(core) = weak.upgrade() {
+            core.service(|| match &root {
+                Some(root) => Library::open(root.clone(), &core.paths.local_dir).holding_deletes(),
+                None => Library::open(location(), &core.paths.local_dir),
+            });
+        }
+        macro_rules! on {
+            ($id:literal, |$core:ident, $ctx:ident, $p:ident| $body:expr) => {{
+                let weak = weak.clone();
+                reg.handle($id, move |$ctx: &Context, $p: Value| {
+                    let $core = weak
+                        .upgrade()
+                        .ok_or_else(|| CommandError::internal("shutting down"))?;
+                    #[allow(unused_variables)]
+                    let $ctx = $ctx;
+                    $body
+                });
+            }};
+        }
+        on!("library.list", |core, ctx, p| {
+            let lib = library(&core);
+            let all = lib.list();
+            let offset = p["offset"].as_u64().unwrap_or(0) as usize;
+            let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
+            let items: Vec<Value> = all
+                .iter()
+                .skip(offset)
+                .take(limit)
+                .map(|i| i.to_json(lib.root()))
+                .collect();
+            Ok(json!({
+                "root": lib.root(),
+                "synced": synced(lib.root()),
+                "total": all.len(),
+                "items": items,
+            }))
+        });
+        on!("library.get", |core, ctx, p| {
+            let lib = library(&core);
+            let id = p["id"].as_str().unwrap_or_default();
+            lib.get(id)
+                .map(|i| i.to_json(lib.root()))
+                .ok_or_else(|| not_found(ctx.lang, id))
+        });
+        on!("library.delete", |core, ctx, p| delete(&core, ctx, &p));
+        on!("library.restore", |core, ctx, p| restore(&core, ctx, &p));
+        on!("library.rename", |core, ctx, p| rename(&core, ctx, &p));
+        on!("library.show_in_folder", |core, ctx, p| {
+            let lib = library(&core);
+            let path = match (p["id"].as_str(), p["path"].as_str()) {
+                (Some(id), _) => lib
+                    .get(id)
+                    .map(|i| lib.abs(&i.path))
+                    .ok_or_else(|| not_found(ctx.lang, id))?,
+                (None, Some(path)) => PathBuf::from(path),
+                (None, None) => lib.root().to_path_buf(),
+            };
+            service::show_in_folder(&path).map_err(|e| CommandError::internal(e.to_string()))?;
+            Ok(json!({}))
+        });
+    })
+}
+
 #[cfg(test)]
-mod tests {
+mod tests;
+
+#[cfg(test)]
+mod name_tests {
     use super::*;
     use chrono::TimeZone;
 

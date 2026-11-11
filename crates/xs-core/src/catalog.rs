@@ -82,7 +82,7 @@ impl B {
 }
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai"];
+pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library"];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -573,6 +573,16 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["name"],
             ))
             .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "name": {"type": "string"}}})),
+        B::new("document.locate", &["TRY-002"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "Where the file is now"}
+                }),
+                &["path"],
+            ))
+            .result(document_summary()),
         B::new("document.image", &["SMT-043", "APP-029"])
             .params(params(
                 json!({
@@ -622,6 +632,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Several documents at once (TRY-008)"},
                     "all": {"type": "boolean", "default": false},
                     "save": {"type": "array", "items": {"type": "string"}, "description": "Documents with unsaved changes to save first"},
                     "discard": {"type": "array", "items": {"type": "string"}, "description": "Documents whose unsaved changes may be lost"}
@@ -640,7 +651,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .scopes(ALL)
             .params(params(
                 json!({
-                    "view": {"type": "string", "enum": ["editor"], "default": "editor"},
+                    "view": {"type": "string", "enum": ["editor", "library"], "default": "editor"},
                     "documentId": document_id()
                 }),
                 &[],
@@ -712,6 +723,55 @@ pub fn specs() -> Vec<CommandSpec> {
             .mutates()
             .params(params(json!({"key": {"type": "string", "minLength": 1}}), &["key"]))
             .result(ai_key_status()),
+        // The library (LIB-); the rest of the area arrives with M2 (LIB-034).
+        B::new("library.list", &["LIB-001", "LIB-002", "LIB-022", "LIB-034"])
+            .params(params(
+                json!({
+                    "offset": {"type": "integer", "minimum": 0, "default": 0},
+                    "limit": {"type": "integer", "minimum": 1, "description": "Default: all"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "root": {"type": "string"},
+                    "synced": {"type": "boolean"},
+                    "total": {"type": "integer"},
+                    "items": {"type": "array", "items": library_item()}
+                }
+            })),
+        B::new("library.get", &["LIB-034"])
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .positional(&["id"])
+            .result(library_item()),
+        B::new("library.delete", &["LIB-015", "TRY-009"])
+            .destructive()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "permanent": {"type": "boolean", "default": false, "description": "Delete for good instead of moving to the trash"}
+                }),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}, "undo": {"type": ["string", "null"]}}})),
+        B::new("library.restore", &["LIB-015", "TRY-009"])
+            .mutates()
+            .params(params(json!({"undo": {"type": "string"}}), &["undo"]))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "integer"}}})),
+        B::new("library.rename", &["TRY-006", "LIB-002"])
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string"}, "name": {"type": "string", "minLength": 1}}),
+                &["id", "name"],
+            ))
+            .result(library_item()),
+        B::new("library.show_in_folder", &["EDT-109", "LIB-002"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"id": {"type": "string"}, "path": {"type": "string"}}),
+                &[],
+            )),
         B::new("ai.key_clear", &["SMT-039"]).scopes(UI_CLI).destructive().result(ai_key_status()),
         B::new("ai.key_status", &["SMT-039"]).scopes(UI_CLI).result(ai_key_status()),
         B::new("ai.key_test", &["SMT-039"])
@@ -798,7 +858,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 20] = [
+pub const EDITOR_ACTIONS: [&str; 29] = [
     "open",
     "save",
     "save_as",
@@ -819,7 +879,34 @@ pub const EDITOR_ACTIONS: [&str; 20] = [
     "recover",
     "ai_ask",
     "ai_name",
+    "view_editor",
+    "view_library",
+    "tray",
+    "prev_item",
+    "next_item",
+    "close_others",
+    "rename_item",
+    "show_in_folder",
+    "delete_item",
 ];
+
+fn library_item() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Stable: it survives renames (LIB-034)"},
+            "name": {"type": "string"},
+            "path": {"type": "string"},
+            "format": {"type": "string", "enum": ["xshot", "png", "jpg"]},
+            "captured": {"type": "string"},
+            "modified": {"type": "string"},
+            "width": {"type": ["integer", "null"]},
+            "height": {"type": ["integer", "null"]},
+            "app": {"type": ["string", "null"]},
+            "size": {"type": "integer"}
+        }
+    })
+}
 
 fn document_id() -> Value {
     json!({"type": "string", "description": "Default: the document shown in the editor"})

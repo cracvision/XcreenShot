@@ -17,6 +17,7 @@ tauri-build = { version = "2", features = [] }
 xs-core.workspace = true
 xs-capture = { path = "../../crates/xs-capture" }
 xs-editor = { path = "../../crates/xs-editor" }
+xs-library = { path = "../../crates/xs-library" }
 xs-ai = { path = "../../crates/xs-ai" }
 xs-image = { path = "../../crates/xs-image" }
 base64 = "0.22"

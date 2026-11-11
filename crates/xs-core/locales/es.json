@@ -322,6 +322,34 @@
     "app_mcp_config": {
       "title": "Configuración para clientes MCP",
       "description": "Cómo arranca XcreenShot un cliente MCP (Claude Desktop, Claude Code…): el CLI instalado y sus argumentos."
+    },
+    "library_list": {
+      "title": "Elementos de la biblioteca",
+      "description": "Elementos de la biblioteca, la captura más reciente primero, con su ID estable."
+    },
+    "library_get": {
+      "title": "Elemento de la biblioteca",
+      "description": "Un elemento de la biblioteca: nombre, archivo, formato, tamaño y datos de captura."
+    },
+    "library_delete": {
+      "title": "Eliminar de la biblioteca",
+      "description": "Mueve elementos a la papelera del sistema (o los borra definitivamente), con Deshacer durante un rato."
+    },
+    "library_restore": {
+      "title": "Deshacer eliminar",
+      "description": "Devuelve los elementos que se acaban de eliminar de la biblioteca."
+    },
+    "library_rename": {
+      "title": "Renombrar un elemento",
+      "description": "Cambia el nombre del archivo de un elemento en su carpeta y conserva su ID."
+    },
+    "library_show_in_folder": {
+      "title": "Mostrar en la carpeta",
+      "description": "Abre la carpeta de un elemento, o de la biblioteca, con el archivo seleccionado."
+    },
+    "document_locate": {
+      "title": "Localizar el archivo de un documento",
+      "description": "Enlaza un documento abierto con su archivo después de moverlo fuera de XcreenShot."
     }
   },
   "settings": {
@@ -477,6 +505,22 @@
         "claude-sonnet-5-5": "Claude Sonnet 5.5 (equilibrada)",
         "claude-haiku-5-5": "Claude Haiku 5.5 (la más barata)"
       }
+    },
+    "library_autosaveImages": {
+      "label": "Guardar automáticamente las capturas de imagen en la biblioteca",
+      "description": "Desactivado: las capturas nuevas quedan sin guardar hasta que las guardes, y XcreenShot pregunta antes de perderlas."
+    },
+    "library_keepEditableCopy": {
+      "label": "Conservar una copia editable al guardar en otro formato",
+      "description": "Al guardar anotaciones en un PNG o JPG de otra carpeta, también se guarda un .xshot editable en la biblioteca."
+    },
+    "library_confirmDelete": {
+      "label": "Confirmar antes de eliminar",
+      "description": "Preguntar antes de mover elementos de la biblioteca a la papelera."
+    },
+    "tray_clearUnpinnedOnExit": {
+      "label": "Vaciar la bandeja reciente al salir",
+      "description": "Al salir de XcreenShot, la bandeja reciente se vacía. Los archivos siguen en la biblioteca."
     }
   },
   "errors": {
@@ -535,7 +579,10 @@
     "ai_other": "El servicio de IA respondió con un error: {{reason}}",
     "rename_unsaved": "Guarda el documento antes de renombrarlo.",
     "rename_failed": "No se pudo renombrar a \"{{name}}\": {{reason}}",
-    "cli_missing": "La herramienta de línea de comandos xcreenshot no está instalada junto a la app. Vuelve a instalar XcreenShot."
+    "cli_missing": "La herramienta de línea de comandos xcreenshot no está instalada junto a la app. Vuelve a instalar XcreenShot.",
+    "library_not_found": "El elemento \"{{id}}\" no está en la biblioteca.",
+    "library_no_trash": "\"{{name}}\" no puede ir a la papelera aquí: eliminarlo sería definitivo.",
+    "library_undo_expired": "Ya es tarde para deshacer esa eliminación."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -593,7 +640,16 @@
       "editor_tool_blur": "Herramienta Desenfocar",
       "editor_tool_crop": "Herramienta Recortar",
       "editor_ai_ask": "Preguntar a la IA…",
-      "editor_ai_name": "Sugerir nombre…"
+      "editor_ai_name": "Sugerir nombre…",
+      "editor_view_editor": "Vista Editor",
+      "editor_view_library": "Vista Biblioteca",
+      "editor_tray": "Mostrar u ocultar la bandeja reciente",
+      "editor_prev_item": "Captura anterior",
+      "editor_next_item": "Captura siguiente",
+      "editor_close_others": "Cerrar los demás",
+      "editor_rename_item": "Renombrar",
+      "editor_show_in_folder": "Mostrar en el Explorador o el Finder",
+      "editor_delete_item": "Mover a la papelera"
     }
   },
   "tray": {
@@ -611,7 +667,8 @@
     "capture_image": "Captura de imagen",
     "capture_repeat_last": "Repetir última captura",
     "capture_panel": "Abrir panel de captura",
-    "capture_multi": "Multicaptura"
+    "capture_multi": "Multicaptura",
+    "open_library": "Abrir biblioteca"
   },
   "menu": {
     "file": "&Archivo",
@@ -652,7 +709,21 @@
     "icons_only": "Solo íconos",
     "ai": "&IA",
     "ai_ask": "Preguntar a la IA…",
-    "ai_name": "Sugerir nombre…"
+    "ai_name": "Sugerir nombre…",
+    "view_editor": "Editor",
+    "view_library": "Biblioteca",
+    "tray": "Bandeja reciente",
+    "prev_item": "Captura anterior",
+    "next_item": "Captura siguiente",
+    "close_others": "Cerrar los demás",
+    "rename_item": "Renombrar…",
+    "show_in_folder": "Mostrar en el Explorador",
+    "show_in_finder": "Mostrar en el Finder",
+    "delete_item": "Mover a la papelera",
+    "copy_path": "Copiar ruta",
+    "open_item": "Abrir",
+    "remove_from_tray": "Quitar de la bandeja",
+    "locate": "Buscar…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",

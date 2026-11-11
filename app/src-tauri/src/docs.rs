@@ -8,6 +8,8 @@
 //! - `/<documentId>/image/<name>` returns a picture of the document's `images/` folder
 //!   (a floating image, EDT-078).
 //! - `/multi/<itemId>` returns the thumbnail of a multi-capture (CAP-067).
+//! - `/library/<itemId>/thumb` returns the thumbnail of a library item (LIB-001); the
+//!   URL carries the item's modified time, so a changed file gets a new one.
 
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager};
@@ -22,6 +24,9 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let core = app.state::<AppState>().core.clone();
     let editor = xs_editor::editor(&core);
     let body = match parts.as_slice() {
+        ["library", item, "thumb"] => xs_library::library(&core)
+            .thumbnail(item)
+            .map(|png| (std::sync::Arc::new(png), "image/png")),
         [id, "base"] => editor
             .store
             .with(id, |d| (d.base_source.bytes.clone(), d.base_source.mime)),

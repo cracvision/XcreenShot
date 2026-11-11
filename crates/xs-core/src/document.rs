@@ -178,6 +178,17 @@ pub struct Xshot {
     pub images: BTreeMap<String, Vec<u8>>,
 }
 
+/// What the library needs from a `.xshot` without its pixels (LIB-022).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct XshotSummary {
+    /// Size of the final image: the canvas.
+    pub width: u32,
+    pub height: u32,
+    /// Capture metadata (CAP-056).
+    pub meta: Value,
+    pub thumb_png: Vec<u8>,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum XshotError {
     #[error("{0}")]
@@ -213,24 +224,48 @@ fn required<R: Read + Seek>(zip: &mut zip::ZipArchive<R>, name: &str) -> Result<
     read_entry(zip, name)?.ok_or_else(|| XshotError::Invalid(format!("missing {name}")))
 }
 
+/// The manifest, if this build can read the file.
+fn manifest_of<R: Read + Seek>(zip: &mut zip::ZipArchive<R>) -> Result<Manifest, XshotError> {
+    let manifest: Manifest = serde_json::from_slice(&required(zip, "manifest.json")?).map_err(invalid)?;
+    if manifest.format != "xshot" {
+        return Err(XshotError::Invalid(format!("format {}", manifest.format)));
+    }
+    match manifest.major() {
+        Some(major) if major > FORMAT_MAJOR => Err(XshotError::Newer(manifest.version)),
+        Some(_) => Ok(manifest),
+        None => Err(XshotError::Invalid(format!("version {}", manifest.version))),
+    }
+}
+
 impl Xshot {
     pub fn read(path: &Path) -> Result<Xshot, XshotError> {
         let file = std::fs::File::open(path)?;
         Xshot::from_reader(std::io::BufReader::new(file))
     }
 
+    /// Reads only the small parts, without the pixels: the canvas size, the capture
+    /// metadata and the thumbnail (LIB-022).
+    pub fn read_summary(path: &Path) -> Result<XshotSummary, XshotError> {
+        let file = std::fs::File::open(path)?;
+        let mut zip = zip::ZipArchive::new(std::io::BufReader::new(file)).map_err(invalid)?;
+        manifest_of(&mut zip)?;
+        let document: Document =
+            serde_json::from_slice(&required(&mut zip, "document.json")?).map_err(invalid)?;
+        let meta = match read_entry(&mut zip, "meta.json")? {
+            Some(b) => serde_json::from_slice(&b).map_err(invalid)?,
+            None => Value::Object(Map::new()),
+        };
+        Ok(XshotSummary {
+            width: document.canvas.width,
+            height: document.canvas.height,
+            meta,
+            thumb_png: read_entry(&mut zip, "thumb.png")?.unwrap_or_default(),
+        })
+    }
+
     pub fn from_reader<R: Read + Seek>(reader: R) -> Result<Xshot, XshotError> {
         let mut zip = zip::ZipArchive::new(reader).map_err(invalid)?;
-        let manifest: Manifest =
-            serde_json::from_slice(&required(&mut zip, "manifest.json")?).map_err(invalid)?;
-        if manifest.format != "xshot" {
-            return Err(XshotError::Invalid(format!("format {}", manifest.format)));
-        }
-        match manifest.major() {
-            Some(major) if major > FORMAT_MAJOR => return Err(XshotError::Newer(manifest.version)),
-            Some(_) => {}
-            None => return Err(XshotError::Invalid(format!("version {}", manifest.version))),
-        }
+        let manifest = manifest_of(&mut zip)?;
         let document = serde_json::from_slice(&required(&mut zip, "document.json")?).map_err(invalid)?;
         let base_png = required(&mut zip, "base.png")?;
         let meta = match read_entry(&mut zip, "meta.json")? {

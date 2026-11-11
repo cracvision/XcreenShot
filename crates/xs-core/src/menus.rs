@@ -80,6 +80,13 @@ pub fn tray_menu() -> Vec<MenuEntry> {
             }],
         },
         cmd("open_editor", "tray.open_editor", "app.show"),
+        MenuEntry::Command {
+            id: "open_library",
+            label: "tray.open_library",
+            command: "editor.show",
+            params: json!({ "view": "library" }),
+            checked: None,
+        },
         MenuEntry::Separator,
         MenuEntry::Command {
             id: "pause_shortcuts",
@@ -136,9 +143,14 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.save_as", "menu.save_as", "save_as"),
                 action("editor.export", "menu.export", "export"),
                 Separator,
+                action("editor.rename_item", "menu.rename_item", "rename_item"),
+                action("editor.show_in_folder", "menu.show_in_folder", "show_in_folder"),
+                action("editor.delete_item", "menu.delete_item", "delete_item"),
+                Separator,
                 cmd("file_preferences", "menu.preferences", "settings.open"),
                 Separator,
                 action("editor.close", "menu.close", "close"),
+                action("editor.close_others", "menu.close_others", "close_others"),
                 action("editor.close_all", "menu.close_all", "close_all"),
                 Separator,
                 cmd("file_exit", "menu.quit", "app.quit"),
@@ -163,6 +175,9 @@ fn editor_menus() -> Vec<MenuEntry> {
         Submenu {
             label: "menu.view",
             items: vec![
+                action("editor.view_editor", "menu.view_editor", "view_editor"),
+                action("editor.view_library", "menu.view_library", "view_library"),
+                Separator,
                 zoom("editor.zoom_in", "menu.zoom_in", json!({ "mode": "in" })),
                 zoom("editor.zoom_out", "menu.zoom_out", json!({ "mode": "out" })),
                 zoom(
@@ -184,6 +199,15 @@ fn editor_menus() -> Vec<MenuEntry> {
                     params: json!({ "action": "side_panel" }),
                     checked: Some("editor.side_panel"),
                 },
+                MenuEntry::Command {
+                    id: "editor.tray",
+                    label: "menu.tray",
+                    command: "editor.action",
+                    params: json!({ "action": "tray" }),
+                    checked: Some("editor.tray"),
+                },
+                action("editor.prev_item", "menu.prev_item", "prev_item"),
+                action("editor.next_item", "menu.next_item", "next_item"),
                 Submenu {
                     label: "menu.toolbar",
                     items: vec![MenuEntry::Command {

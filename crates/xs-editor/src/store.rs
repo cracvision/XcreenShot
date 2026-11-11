@@ -109,6 +109,9 @@ pub struct Doc {
     pub shown: bool,
     /// Zoom and position the editor reported (EDT-007).
     pub view: Option<Value>,
+    /// The editable `.xshot` kept in the library for a flat file from elsewhere
+    /// (LIB-021), once there is one.
+    pub editable_copy: Option<PathBuf>,
     last_used: u64,
 }
 
@@ -143,6 +146,7 @@ impl Doc {
             recovery_id: None,
             shown: false,
             view: None,
+            editable_copy: None,
             last_used: 0,
         }
     }
@@ -179,6 +183,8 @@ impl Doc {
             "height": self.document.canvas.height,
             "objects": self.document.objects.len(),
             "dirty": self.dirty(),
+            // Moved or deleted outside XcreenShot (TRY-002).
+            "missing": self.path.as_ref().is_some_and(|p| !p.exists()),
             "shown": self.shown,
             "version": self.version,
         })
