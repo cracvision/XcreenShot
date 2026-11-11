@@ -35,6 +35,7 @@ import {
 } from "./state";
 import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
+import { expand, unitOf } from "./groups";
 import {
   fitZoom,
   imagePoint,
@@ -168,6 +169,10 @@ export function Canvas({ doc }: Props) {
   const cropState = useEditor((s) => s.cropRect);
   const autoExpand = useSetting("editor.autoExpandCanvas", true);
   const { setSelection, setView, showError } = useEditor.getState();
+  // Another document: no group is entered (EDT-082).
+  useEffect(() => {
+    useEditor.setState({ entered: [] });
+  }, [doc.documentId]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
@@ -461,16 +466,25 @@ export function Canvas({ doc }: Props) {
     const hit = e.altKey && tool !== "move" ? null : hitObject(p);
     // Shift or Ctrl/Cmd adds an object to the selection, or takes it out (EDT-079).
     const adding = e.shiftKey || e.ctrlKey || e.metaKey;
+    // A click leaves the entered group when it lands outside it (EDT-082).
+    const entered = useEditor.getState().entered;
+    const inside = hit ? unitOf(hit, entered) !== undefined : false;
+    if (entered.length > 0 && (!hit || !inside)) useEditor.setState({ entered: [] });
+    const level = inside ? entered : [];
+    // A click takes the object with the rest of its group (EDT-082).
+    const unit = hit ? expand(doc.objects, [hit.id], level) : [];
     if (hit && adding) {
       setSelection(
-        selection.includes(hit.id) ? selection.filter((x) => x !== hit.id) : [...selection, hit.id],
+        selection.includes(hit.id)
+          ? selection.filter((x) => !unit.includes(x))
+          : [...selection, ...unit.filter((x) => !selection.includes(x))],
       );
       return;
     }
     if (hit) {
       // Dragging one of several selected objects moves them all.
-      const ids = selection.includes(hit.id) ? selection : [hit.id];
-      if (!selection.includes(hit.id)) setSelection([hit.id]);
+      const ids = selection.includes(hit.id) ? selection : unit;
+      if (!selection.includes(hit.id)) setSelection(unit);
       capture();
       // With Move, Alt+drag leaves a copy where it is let go (EDT-088).
       const copy = e.altKey && tool === "move";
@@ -627,9 +641,11 @@ export function Canvas({ doc }: Props) {
       } else if (d.kind === "band") {
         const r = dragRect(d.start, d.end, false, false);
         if (r.w * scale < DRAG_THRESHOLD && r.h * scale < DRAG_THRESHOLD) return;
-        const inside = doc.objects
+        const boxed = doc.objects
           .filter((o) => !o.locked && inBand(o, r, d.touch))
           .map((o) => o.id);
+        // Whole groups (EDT-082).
+        const inside = expand(doc.objects, boxed, []);
         setSelection(d.add ? [...new Set([...selection, ...inside])] : inside);
       } else if (d.kind === "end") {
         const o = committed.get(d.id);
@@ -697,6 +713,18 @@ export function Canvas({ doc }: Props) {
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const p = toCanvas(local(e));
+    // On a group: enter it, and select what was clicked inside (EDT-082).
+    {
+      const hit = hitObject(p);
+      const { entered } = useEditor.getState();
+      const unit = hit ? unitOf(hit, entered) : undefined;
+      if (hit && typeof unit === "string" && !cropRect) {
+        const next = [...entered, unit];
+        useEditor.setState({ entered: next });
+        setSelection(expand(doc.objects, [hit.id], next));
+        return;
+      }
+    }
     if (cropRect) {
       // Double click inside the crop box applies it (EDT-049).
       if (contains({ ...cropRect, rotation: 0 }, p)) void applyCrop();

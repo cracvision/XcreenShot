@@ -207,6 +207,10 @@
       "title": "Arrange objects",
       "description": "Brings objects to the front or one place forward, or sends them one place backward or to the back."
     },
+    "document_group": {
+      "title": "Group objects",
+      "description": "Puts objects in a group that is selected and moved as one, or takes them out of it."
+    },
     "document_duplicate": {
       "title": "Duplicate objects",
       "description": "Copies objects, moved a little from the originals, on top of the others."
@@ -729,6 +733,8 @@
       "editor_distribute_v": "Distribute vertically",
       "editor_lock": "Lock objects",
       "editor_unlock_all": "Unlock all objects",
+      "editor_group": "Group objects",
+      "editor_ungroup": "Ungroup objects",
       "editor_deselect": "Deselect",
       "editor_zoom_in": "Zoom in",
       "editor_zoom_out": "Zoom out",
@@ -774,6 +780,8 @@
     "open_library": "Open library"
   },
   "menu": {
+    "group": "&Group",
+    "ungroup": "&Ungroup",
     "lock": "&Lock",
     "unlock_all": "U&nlock all",
     "unlock": "Unlock",
@@ -1495,6 +1503,8 @@
     }
   },
   "history": {
+    "group": "Group",
+    "ungroup": "Ungroup",
     "arrange": "Change order",
     "duplicate": "Duplicate",
     "annotate": "Annotate",

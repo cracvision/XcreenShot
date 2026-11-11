@@ -317,6 +317,79 @@ pub fn arranged(objects: &mut Vec<Object>, ids: &[String], to: &str) {
     }
 }
 
+/// The groups an object belongs to, outermost first (EDT-082).
+pub fn groups_of(o: &Object) -> Vec<String> {
+    o.props
+        .get("groups")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_str).map(String::from).collect())
+        .unwrap_or_default()
+}
+
+fn set_groups(o: &mut Object, groups: Vec<String>) {
+    if groups.is_empty() {
+        o.props.remove("groups");
+    } else {
+        o.props.insert("groups".into(), json!(groups));
+    }
+}
+
+/// A group id no object uses yet: `g1`, `g2`…
+pub fn new_group_id(objects: &[Object]) -> String {
+    let used: Vec<String> = objects.iter().flat_map(groups_of).collect();
+    (1..)
+        .map(|n| format!("g{n}"))
+        .find(|g| !used.contains(g))
+        .unwrap_or_default()
+}
+
+/// Puts `ids` in a new group around whatever groups they were in (EDT-082). Returns it.
+pub fn group(objects: &mut [Object], ids: &[String]) -> String {
+    let g = new_group_id(objects);
+    for o in objects.iter_mut().filter(|o| ids.contains(&o.id)) {
+        let mut groups = groups_of(o);
+        groups.insert(0, g.clone());
+        set_groups(o, groups);
+    }
+    g
+}
+
+/// Takes `ids` out of their outermost group; the groups inside it stay.
+pub fn ungroup(objects: &mut [Object], ids: &[String]) {
+    for o in objects.iter_mut().filter(|o| ids.contains(&o.id)) {
+        let mut groups = groups_of(o);
+        if !groups.is_empty() {
+            groups.remove(0);
+            set_groups(o, groups);
+        }
+    }
+}
+
+/// Copies keep being a group among themselves, not with the originals (EDT-088).
+pub fn regroup_copies(objects: &[Object], copies: &mut [Object]) {
+    let mut taken: Vec<String> = objects.iter().flat_map(groups_of).collect();
+    let mut renamed: std::collections::BTreeMap<String, String> = Default::default();
+    for c in copies.iter_mut() {
+        let groups: Vec<String> = groups_of(c)
+            .into_iter()
+            .map(|g| {
+                renamed
+                    .entry(g)
+                    .or_insert_with(|| {
+                        let fresh = (1..)
+                            .map(|n| format!("g{n}"))
+                            .find(|x| !taken.contains(x))
+                            .unwrap_or_default();
+                        taken.push(fresh.clone());
+                        fresh
+                    })
+                    .clone()
+            })
+            .collect();
+        set_groups(c, groups);
+    }
+}
+
 pub fn label(action: &str, kinds: &[&str]) -> String {
     // One kind (even several objects of it) names it; a mix is "objects".
     let what = match kinds.first() {
@@ -342,6 +415,27 @@ mod tests {
 
     fn order(objects: &[Object]) -> Vec<&str> {
         objects.iter().map(|o| o.id.as_str()).collect()
+    }
+
+    #[test]
+    fn groups_nest_and_copies_get_their_own() {
+        let mut o = named(&["a", "b", "c"]);
+        let g1 = group(&mut o, &["a".into(), "b".into()]);
+        let g2 = group(&mut o, &["a".into(), "b".into(), "c".into()]);
+        assert_eq!(groups_of(&o[0]), [g2.clone(), g1.clone()]);
+        assert_eq!(groups_of(&o[2]), std::slice::from_ref(&g2));
+        ungroup(&mut o, &["a".into(), "b".into(), "c".into()]);
+        assert_eq!(
+            groups_of(&o[0]),
+            std::slice::from_ref(&g1),
+            "the inner group stays"
+        );
+        assert!(o[2].props.get("groups").is_none());
+        let mut copies = vec![o[0].clone(), o[1].clone()];
+        regroup_copies(&o, &mut copies);
+        let new = groups_of(&copies[0]);
+        assert_eq!(new, groups_of(&copies[1]), "the copies are one group");
+        assert_ne!(new, [g1]);
     }
 
     #[test]

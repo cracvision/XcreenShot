@@ -150,6 +150,8 @@ export function canvasMenu(onObject: boolean, at: Point): void {
         entry("copy"),
         entry("duplicate"),
         entry("delete", true),
+        entry("group", true),
+        entry("ungroup"),
         entry("bring_front", true),
         entry("bring_forward"),
         entry("send_backward"),
@@ -200,6 +202,11 @@ export function useMenuBar(): void {
   const selected = useEditor((s) => s.selection.length > 0) && !inLibrary;
   const selectedCount = useEditor((s) => s.selection.length);
   const lockedCount = useEditor((s) => s.doc?.objects.filter((o) => o.locked).length ?? 0);
+  const groupedSelected = useEditor(
+    (s) =>
+      s.doc?.objects.some((o) => s.selection.includes(o.id) && (o.groups ?? []).length > 0) ??
+      false,
+  );
   const anyOpen = useEditor((s) => s.documents.length > 0);
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
@@ -271,6 +278,8 @@ export function useMenuBar(): void {
       enabled[`editor.${a}`] = selected;
     for (const a of ["distribute_h", "distribute_v"]) enabled[`editor.${a}`] = selectedCount >= 3;
     enabled["editor.lock"] = selected;
+    enabled["editor.group"] = selectedCount >= 2;
+    enabled["editor.ungroup"] = groupedSelected;
     enabled["editor.unlock_all"] = lockedCount > 0;
     enabled["editor.select_all"] = objectCount > 0;
     const checked = {
@@ -286,6 +295,7 @@ export function useMenuBar(): void {
     objectCount,
     selectedCount,
     lockedCount,
+    groupedSelected,
     canUndo,
     canRedo,
     selected,

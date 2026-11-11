@@ -474,6 +474,8 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"send_backward"}"#,
         ),
         editor("editor.send_back", "editor.action", r#"{"action":"send_back"}"#),
+        editor("editor.group", "editor.action", r#"{"action":"group"}"#),
+        editor("editor.ungroup", "editor.action", r#"{"action":"ungroup"}"#),
         editor("editor.lock", "editor.action", r#"{"action":"lock"}"#),
         // No default (EDT-116): assignable in Preferences > Shortcuts.
         editor("editor.unlock_all", "editor.action", r#"{"action":"unlock_all"}"#),
@@ -665,6 +667,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.select_all" => "Ctrl+KeyA",
                 "editor.duplicate" => "Ctrl+KeyJ",
                 "editor.lock" => "Ctrl+KeyL",
+                "editor.group" => "Ctrl+KeyG",
+                "editor.ungroup" => "Ctrl+Shift+KeyG",
                 "editor.bring_forward" => "Ctrl+ArrowUp",
                 "editor.send_backward" => "Ctrl+ArrowDown",
                 "editor.bring_front" => "Ctrl+Shift+ArrowUp",

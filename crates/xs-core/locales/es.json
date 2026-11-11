@@ -207,6 +207,10 @@
       "title": "Ordenar objetos",
       "description": "Trae objetos al frente o un paso adelante, o los envía un paso atrás o al fondo."
     },
+    "document_group": {
+      "title": "Agrupar objetos",
+      "description": "Une objetos en un grupo que se selecciona y se mueve como uno solo, o los saca de él."
+    },
     "document_duplicate": {
       "title": "Duplicar objetos",
       "description": "Copia objetos, un poco desplazados de los originales, encima de los demás."
@@ -729,6 +733,8 @@
       "editor_distribute_v": "Distribuir verticalmente",
       "editor_lock": "Bloquear objetos",
       "editor_unlock_all": "Desbloquear todos los objetos",
+      "editor_group": "Agrupar objetos",
+      "editor_ungroup": "Desagrupar objetos",
       "editor_deselect": "Deseleccionar",
       "editor_zoom_in": "Acercar",
       "editor_zoom_out": "Alejar",
@@ -774,6 +780,8 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "group": "&Agrupar",
+    "ungroup": "&Desagrupar",
     "lock": "&Bloquear",
     "unlock_all": "Des&bloquear todo",
     "unlock": "Desbloquear",
@@ -1495,6 +1503,8 @@
     }
   },
   "history": {
+    "group": "Agrupar",
+    "ungroup": "Desagrupar",
     "arrange": "Cambiar el orden",
     "duplicate": "Duplicar",
     "annotate": "Anotar",

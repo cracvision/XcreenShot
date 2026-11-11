@@ -1601,6 +1601,34 @@ pub fn extension() -> Extension {
             changed(&core, ctx, &id);
             Ok(json!({ "order": order }))
         });
+        // Groups (EDT-082): one undo step each.
+        on!("document.group", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let oids = object_ids(&p, ctx.lang)?;
+            kinds_of(&core, ctx.lang, &id, &oids)?;
+            let ungroup = p.get("ungroup").and_then(Value::as_bool).unwrap_or(false);
+            let group = editor(&core)
+                .store
+                .mutate(
+                    &id,
+                    if ungroup {
+                        "history.ungroup"
+                    } else {
+                        "history.group"
+                    },
+                    |doc| {
+                        if ungroup {
+                            objects::ungroup(&mut doc.objects, &oids);
+                            Ok::<_, CommandError>(None)
+                        } else {
+                            Ok(Some(objects::group(&mut doc.objects, &oids)))
+                        }
+                    },
+                )
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "group": group }))
+        });
         // Copies of objects, moved by `offset`, on top of the others (EDT-088).
         on!("document.duplicate", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
@@ -1615,12 +1643,13 @@ pub fn extension() -> Extension {
             let ids = editor(&core)
                 .store
                 .mutate(&id, "history.duplicate", |doc| {
-                    let copies: Vec<Object> = doc
+                    let mut copies: Vec<Object> = doc
                         .objects
                         .iter()
                         .filter(|o| oids.contains(&o.id))
                         .cloned()
                         .collect();
+                    objects::regroup_copies(&doc.objects, &mut copies);
                     let mut ids = Vec::new();
                     for mut copy in copies {
                         copy.id = doc.next_object_id();

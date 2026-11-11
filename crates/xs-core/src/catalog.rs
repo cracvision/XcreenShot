@@ -527,6 +527,17 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.group", &["EDT-082", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "ungroup": {"type": "boolean", "default": false, "description": "Take them out of their outermost group instead"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"group": {"type": ["string", "null"]}}})),
         B::new("document.duplicate", &["EDT-088", "EDT-119"])
             .mutates()
             .params(params(
@@ -960,7 +971,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 45] = [
+pub const EDITOR_ACTIONS: [&str; 47] = [
     "open",
     "save",
     "save_as",
@@ -1006,6 +1017,8 @@ pub const EDITOR_ACTIONS: [&str; 45] = [
     "align_bottom",
     "distribute_h",
     "distribute_v",
+    "group",
+    "ungroup",
 ];
 
 fn library_item() -> Value {

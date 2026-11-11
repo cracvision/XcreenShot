@@ -557,6 +557,22 @@ export function performAction(action: string): boolean {
       if (!doc || doc.objects.length === 0) return false;
       setSelection(doc.objects.filter((o) => !o.locked).map((o) => o.id));
       return true;
+    case "group":
+      // Two or more objects become one group (EDT-082).
+      if (!doc || selection.length < 2) return false;
+      run("document.group", { documentId: doc.documentId, objectIds: selection }).catch(fail);
+      return true;
+    case "ungroup": {
+      const grouped =
+        doc?.objects.filter((o) => selection.includes(o.id) && (o.groups ?? []).length > 0) ?? [];
+      if (!doc || grouped.length === 0) return false;
+      run("document.group", {
+        documentId: doc.documentId,
+        objectIds: grouped.map((o) => o.id),
+        ungroup: true,
+      }).catch(fail);
+      return true;
+    }
     case "lock": {
       // Locks the selection, or unlocks it when it is all locked already (EDT-085).
       if (!selected || !doc) return false;

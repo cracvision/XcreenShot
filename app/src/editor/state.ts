@@ -125,6 +125,8 @@ export type DocObject = (
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
   locked?: boolean;
+  /** The groups it belongs to, outermost first (EDT-082). */
+  groups?: string[];
 };
 
 export interface Styles {
@@ -192,6 +194,8 @@ interface EditorState {
   active: string | null;
   doc: DocDetails | null;
   selection: string[];
+  /** The group a double click entered, outermost first (EDT-082). */
+  entered: string[];
   /** Last view of each document in this session. */
   views: Record<string, View>;
   /** A zoom asked by a command (CLI, menu) for the canvas to apply. */
@@ -239,6 +243,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   active: null,
   doc: null,
   selection: [],
+  entered: [],
   views: {},
   zoomRequest: null,
   recovery: [],
