@@ -83,6 +83,10 @@
       "title": "Reset settings",
       "description": "Puts the settings of a section, or every setting and shortcut, back to their defaults. Captures, the library and saved styles are never touched."
     },
+    "app_hints": {
+      "title": "Hints",
+      "description": "Which one-time hints were seen; marks one as seen."
+    },
     "app_warnings": {
       "title": "Warnings and hints",
       "description": "Counts the warnings answered with \"Don't ask again\" and the hints already seen; with reset, shows them all again."
@@ -409,6 +413,19 @@
     "general_keepRunning": {
       "label": "Keep running in the background when all windows are closed",
       "description": "If off, closing the last window quits XcreenShot."
+    },
+    "general_tooltips": {
+      "label": "Tooltips",
+      "description": "How much the tooltips say when you rest the pointer on a button.",
+      "options": {
+        "off": "Off",
+        "brief": "Brief: name and shortcut",
+        "detailed": "Detailed: also what it does"
+      }
+    },
+    "general_hints": {
+      "label": "Show hints",
+      "description": "Short tips that appear once, the first time you use something."
     },
     "notifications_captures": {
       "label": "Notify about captures",
@@ -837,6 +854,13 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "hints": {
+      "got_it": "Got it",
+      "no_more": "Don't show more hints",
+      "label": "Hint",
+      "tray_icon": "XcreenShot keeps running next to the clock when you close this window. To always see its icon: Windows Settings > Personalization > Taskbar > Other system tray icons.",
+      "tray_drag": "Drag a capture from the recent tray into a chat, an email or a folder: it arrives as a PNG with its marks."
+    },
     "welcome": {
       "title": "Welcome to XcreenShot",
       "permissions_title": "Screen Recording",
@@ -1098,6 +1122,15 @@
       "toolbar": "Editor toolbar",
       "tools": "Tools",
       "capture": "Capture",
+      "tool_detail": {
+        "move": "Select objects to move them, resize them or change them in Properties.",
+        "arrow": "Drag on the capture to point at something.",
+        "text": "Click to write; drag to make a text box.",
+        "shape": "Drag to draw a rectangle or an ellipse.",
+        "blur": "Drag over what should not be seen: blur, pixelate or solid.",
+        "crop": "Drag to keep a part. Nothing is lost: crop again to bring it back.",
+        "image": "A picture over the capture."
+      },
       "tool": {
         "move": "Move",
         "arrow": "Arrow",

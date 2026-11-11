@@ -751,6 +751,21 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         }
         Ok(json!({ "reset": changed.iter().map(|(k, _)| k).collect::<Vec<_>>() }))
     });
+    // One-time hints (APP-014): which were seen, and marking one as seen.
+    on!("app.hints", |core, ctx, p| {
+        if let Some(id) = str_param(&p, "seen").filter(|id| !id.is_empty()) {
+            core.remember(&format!("{HINT_PREFIX}{id}"), json!(true));
+        }
+        let seen: Vec<String> = core
+            .state
+            .read()
+            .unwrap()
+            .memory
+            .keys()
+            .filter_map(|k| k.strip_prefix(HINT_PREFIX).map(String::from))
+            .collect();
+        Ok(json!({ "enabled": core.settings.get_bool("general.hints"), "seen": seen }))
+    });
     on!("app.warnings", |core, ctx, p| {
         let hidden = core.hidden_warnings();
         let reset = p.get("reset").and_then(Value::as_bool).unwrap_or(false);

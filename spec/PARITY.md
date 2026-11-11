@@ -358,7 +358,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-011 | Exportar e importar ajustes | M2 | Should | — |
 | APP-012 | Tema de la interfaz | M0 | Must | En curso |
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
-| APP-014 | Tooltips y pistas | M1 | Should | — |
+| APP-014 | Tooltips y pistas | M1 | Should | En curso |
 | APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | En curso |
 | APP-016 | Notificaciones | M1 | Must | En curso |
 | APP-017 | Ámbitos y reglas de los atajos | M0 | Must | En curso |
@@ -366,11 +366,11 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-019 | Detección de conflictos | M0 | Must | En curso |
 | APP-020 | Tomar atajos ocupados | M0 | Must | En curso |
 | APP-021 | Perfiles de atajos | M0 | Must | En curso |
-| APP-022 | Atajos de presets, destinos y otros comandos | M1 | Should | — |
+| APP-022 | Atajos de presets, destinos y otros comandos | M1 | Should | En curso |
 | APP-023 | Hoja de atajos | M2 | Could | — |
 | APP-024 | Permisos de macOS y Reparar permisos | M0 | Must | En curso |
 | APP-025 | Aviso periódico de acceso a la pantalla (macOS) | M1 | Should | — |
-| APP-026 | Privilegios y privacidad en Windows | M1 | Should | — |
+| APP-026 | Privilegios y privacidad en Windows | M1 | Should | En curso |
 | APP-027 | Registro de comandos | M0 | Must | Win |
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
 | APP-029 | Servidor MCP (herramientas adelantadas por SMT-043; faltan recursos y eventos) | M2 | Should | En curso |

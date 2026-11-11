@@ -125,6 +125,15 @@ pub fn definitions() -> Vec<SettingDef> {
             json!("system"),
             "APP-013",
         ),
+        // Tooltips and hints (APP-014).
+        def(
+            "general.tooltips",
+            "general",
+            one_of(&["off", "brief", "detailed"]),
+            json!("detailed"),
+            "APP-014",
+        ),
+        def("general.hints", "general", boolean(), json!(true), "APP-014"),
         // Notification categories (APP-016); Share and Updates arrive with their features.
         def(
             "notifications.captures",

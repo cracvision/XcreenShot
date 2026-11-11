@@ -12,6 +12,11 @@ export function useShortcut(id: string): string | undefined {
 }
 
 /** "Name (shortcut)", for tooltips. */
-export function hint(label: string, shortcut: string | undefined): string {
-  return shortcut ? `${label} (${shortcut})` : label;
+/** A tooltip: the name and its shortcut, and with `detail` what it does (APP-014). */
+export function hint(label: string, shortcut: string | undefined, detail?: string): string {
+  const head = shortcut ? `${label} (${shortcut})` : label;
+  return detail
+    ? `${head}
+${detail}`
+    : head;
 }

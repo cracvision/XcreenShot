@@ -30,7 +30,7 @@ interface State {
   refreshPermissions: () => Promise<void>;
 }
 
-function settingValue(settings: SettingEntry[], key: string): unknown {
+export function settingValue(settings: SettingEntry[], key: string): unknown {
   return settings.find((s) => s.key === key)?.value;
 }
 

@@ -23,18 +23,21 @@ import { useEditor, type Tool } from "./state";
 import { menuPoint, toolbarMenu } from "./menus";
 import { useSetting } from "../store";
 import { hint, useShortcut } from "./tools";
+import { useTooltipLevel } from "../components/tooltips";
 import { ViewSwitch } from "../library/ViewSwitch";
 
 function ToolButton({ id, active }: { id: Tool; active: boolean }) {
   const { t } = useTranslation();
   const name = t(`ui.editor.tool.${id}`);
   const shortcut = useShortcut(`editor.tool_${id}`);
+  // Detailed tooltips also say what the tool does (APP-014).
+  const detailed = useTooltipLevel() === "detailed";
   return (
     <button
       type="button"
       className="tb-tool"
       aria-pressed={active}
-      title={hint(name, shortcut)}
+      title={hint(name, shortcut, detailed ? t(`ui.editor.tool_detail.${id}`) : undefined)}
       onClick={() => selectTool(id)}
     >
       <Icon name={id} />

@@ -83,6 +83,10 @@
       "title": "Restablecer ajustes",
       "description": "Devuelve los ajustes de una sección, o todos los ajustes y atajos, a su valor por defecto. Nunca toca las capturas, la biblioteca ni los estilos guardados."
     },
+    "app_hints": {
+      "title": "Pistas",
+      "description": "Qué pistas de una sola vez ya se vieron; marca una como vista."
+    },
     "app_warnings": {
       "title": "Avisos y pistas",
       "description": "Cuenta los avisos respondidos con \"No volver a preguntar\" y las pistas ya vistas; con reset, vuelve a mostrarlos todos."
@@ -409,6 +413,19 @@
     "general_keepRunning": {
       "label": "Seguir en segundo plano al cerrar todas las ventanas",
       "description": "Si se desactiva, cerrar la última ventana cierra XcreenShot."
+    },
+    "general_tooltips": {
+      "label": "Tooltips",
+      "description": "Cuánto dicen los tooltips al dejar el puntero sobre un botón.",
+      "options": {
+        "off": "Desactivados",
+        "brief": "Breves: nombre y atajo",
+        "detailed": "Detallados: también qué hace"
+      }
+    },
+    "general_hints": {
+      "label": "Mostrar pistas",
+      "description": "Consejos breves que aparecen una sola vez, la primera vez que usas algo."
     },
     "notifications_captures": {
       "label": "Avisar de las capturas",
@@ -837,6 +854,13 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "hints": {
+      "got_it": "Entendido",
+      "no_more": "No mostrar más pistas",
+      "label": "Pista",
+      "tray_icon": "XcreenShot sigue funcionando junto al reloj aunque cierres esta ventana. Para ver siempre su ícono: Configuración de Windows > Personalización > Barra de tareas > Otros íconos de la bandeja del sistema.",
+      "tray_drag": "Arrastra una captura de la bandeja reciente a un chat, un correo o una carpeta: llega como PNG con sus marcas."
+    },
     "welcome": {
       "title": "Te damos la bienvenida a XcreenShot",
       "permissions_title": "Grabación de pantalla",
@@ -1098,6 +1122,15 @@
       "toolbar": "Barra de herramientas del editor",
       "tools": "Herramientas",
       "capture": "Capturar",
+      "tool_detail": {
+        "move": "Selecciona objetos para moverlos, cambiarles el tamaño o cambiarlos en Propiedades.",
+        "arrow": "Arrastra sobre la captura para señalar algo.",
+        "text": "Haz clic para escribir; arrastra para hacer un cuadro de texto.",
+        "shape": "Arrastra para dibujar un rectángulo o una elipse.",
+        "blur": "Arrastra sobre lo que no debe verse: desenfoque, pixelado o sólido.",
+        "crop": "Arrastra para quedarte con una parte. No se pierde nada: vuelve a recortar para recuperarlo.",
+        "image": "Una imagen sobre la captura."
+      },
       "tool": {
         "move": "Mover",
         "arrow": "Flecha",

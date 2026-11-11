@@ -22,6 +22,7 @@ import { useEditor } from "./state";
 import { StatusBar } from "./StatusBar";
 import { Strip } from "./Strip";
 import { Toolbar } from "./Toolbar";
+import { HintBubble } from "../components/Hints";
 import { draggingOut } from "../library/dragOut";
 import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
@@ -94,6 +95,7 @@ export function Editor() {
   const doc = useEditor((s) => s.doc);
   const toast = useEditor((s) => s.toast);
   const view = useMainView((s) => s.view);
+  const trayItems = useEditor((s) => s.documents.filter((d) => d.shown).length);
   const [dropping, setDropping] = useState(false);
 
   useEffect(() => {
@@ -142,6 +144,8 @@ export function Editor() {
         </>
       )}
       <UndoNotice />
+      {/* One hint at a time, the first time (APP-014). */}
+      {view === "editor" && <HintBubble trayItems={trayItems} />}
       {toast && (
         <div className="editor-toast" role="status" key={toast}>
           {toast}

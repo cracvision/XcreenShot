@@ -292,6 +292,13 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"reset": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("app.hints", &["APP-014"])
+            .scopes(UI)
+            .params(params(
+                json!({"seen": {"type": "string", "description": "A hint just seen and closed: it does not show again"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"enabled": {"type": "boolean"}, "seen": {"type": "array", "items": {"type": "string"}}}})),
         B::new("app.warnings", &["APP-010", "APP-014"])
             .params(params(
                 json!({

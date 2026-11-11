@@ -82,6 +82,7 @@ xcreenshot app ping --json
 | `settings.get` | `xcreenshot settings get <key>` | Reads a setting. |
 | `settings.set` | `xcreenshot settings set <key> <value>` | Changes a setting. Values are parsed as JSON when possible (`true`, `5`), else as text. |
 | `settings.reset` | `xcreenshot settings reset [--section capture] --yes` | Puts a section's settings back to their defaults; without `--section`, every setting, the shortcut profile and every shortcut. Captures, the library and saved styles are never touched. Destructive: needs `--yes`. |
+| `app.hints` | (UI only) | Which one-time hints were seen; `seen` marks one. |
 | `app.warnings` | `xcreenshot app warnings [--reset true]` | How many warnings were answered with "Don't ask again" and how many hints were seen (`hidden`); with `--reset true`, shows them all again. |
 | `settings.list` | `xcreenshot settings list --json` | Every setting with type, default, current value and lock state. |
 | `settings.schema` | `xcreenshot settings schema --json` | Setting definitions. |

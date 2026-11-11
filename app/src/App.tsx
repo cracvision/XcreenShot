@@ -1,3 +1,4 @@
+import { useTooltipsOff } from "./components/tooltips";
 import { Overlay } from "./overlay/Overlay";
 import { Editor } from "./editor/Editor";
 import { CapturePanel } from "./windows/CapturePanel";
@@ -10,6 +11,8 @@ import { isOverlay, windowLabel } from "./windowKind";
 
 /** Each webview window renders the view named by its label. */
 export function App() {
+  // Tooltips off (APP-014) holds in every window except the selection.
+  useTooltipsOff();
   if (isOverlay) return <Overlay />;
   switch (windowLabel) {
     case "preferences":
