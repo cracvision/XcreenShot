@@ -10,6 +10,7 @@ pub mod command;
 pub mod core;
 pub mod document;
 pub mod error;
+pub mod events;
 pub mod host;
 pub mod i18n;
 pub mod ipc;

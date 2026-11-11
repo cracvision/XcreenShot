@@ -27,6 +27,10 @@
       "title": "Información de diagnóstico",
       "description": "Reúne la versión, el sistema, los monitores, los permisos, los atajos en conflicto y las últimas líneas del registro. Con copy, copia el texto al portapapeles."
     },
+    "events_watch": {
+      "title": "Seguir los eventos",
+      "description": "Escribe una línea JSON por evento (capturas empezadas, terminadas, canceladas o fallidas; archivos escritos; estado de la app) hasta que se interrumpe."
+    },
     "app_welcome": {
       "title": "Volver a mostrar la bienvenida",
       "description": "Muestra la ventana de bienvenida del primer arranque: idioma, atajos, inicio y biblioteca."
@@ -589,6 +593,7 @@
     "setting_preferences_only": "El ajuste \"{{key}}\" solo se cambia en Preferencias.",
     "invalid_value": "Valor no válido para \"{{key}}\": {{reason}}.",
     "automation_disabled": "La automatización está desactivada. Activa \"Permitir el control por CLI y agentes (MCP)\" en Preferencias > Avanzado.",
+    "events_stream_only": "events.watch envía sus eventos por partes: úsalo desde la línea de comandos, `xcreenshot events watch`.",
     "no_shortcut_slot": "El comando \"{{command}}\" no admite atajo.",
     "macos_only": "Solo está disponible en macOS.",
     "capture_busy": "Ya hay otra captura en curso.",

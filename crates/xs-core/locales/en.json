@@ -27,6 +27,10 @@
       "title": "Diagnostic information",
       "description": "Collects version, system, monitors, permissions, shortcut conflicts and the last log lines. With copy, puts the text on the clipboard."
     },
+    "events_watch": {
+      "title": "Watch events",
+      "description": "Writes one JSON line per event (captures started, finished, cancelled or failed; files written; app state) until interrupted."
+    },
     "app_welcome": {
       "title": "Show the welcome again",
       "description": "Shows the welcome window of the first run: language, shortcuts, startup and library."
@@ -589,6 +593,7 @@
     "setting_preferences_only": "The setting \"{{key}}\" can only be changed in Preferences.",
     "invalid_value": "Invalid value for \"{{key}}\": {{reason}}.",
     "automation_disabled": "Automation is turned off. Turn on \"Allow control from the CLI and agents (MCP)\" in Preferences > Advanced.",
+    "events_stream_only": "events.watch streams its events: run it from the command line, `xcreenshot events watch`.",
     "no_shortcut_slot": "The command \"{{command}}\" cannot have a shortcut.",
     "macos_only": "This is only available on macOS.",
     "capture_busy": "Another capture is in progress.",

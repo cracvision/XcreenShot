@@ -238,6 +238,7 @@ fn check_windows_version(lang: xs_core::Lang) -> bool {
 /// Requests from the CLI. The claimed source is not trusted: only a second app
 /// launch may ask, as the UI, to show the main window (single instance, APP-001).
 fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
+    let events_core = core.clone();
     let handler: ipc::RequestHandler = Arc::new(move |req: Request| {
         let source = match (req.source, req.command.as_str()) {
             (Source::Ui, "app.show") => Source::Ui,
@@ -246,7 +247,16 @@ fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
         };
         Response::from(core.call(source, &req.command, req.params, req.lang))
     });
-    ipc::serve(&ipc::endpoint(), handler).map(|_| ())
+    // `xcreenshot events watch` keeps its connection and gets one line per event (APP-031).
+    let streams: ipc::StreamHandler = Arc::new(move |req: &Request, emit: &mut dyn FnMut(&Value) -> bool| {
+        if req.command != "events.watch" {
+            return false;
+        }
+        let lang = req.lang.unwrap_or_else(|| events_core.lang());
+        events_core.watch_events(&req.params, lang, emit);
+        true
+    });
+    ipc::serve_with_streams(&ipc::endpoint(), handler, Some(streams)).map(|_| ())
 }
 
 pub fn run() {

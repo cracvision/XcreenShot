@@ -510,11 +510,46 @@ fn main() -> ExitCode {
         lang: Some(lang),
     };
     let _ = std::io::stderr().flush();
+    // One JSON line per event until interrupted (APP-031).
+    if spec.id == "events.watch" {
+        return watch(&endpoint, &request, &out, lang);
+    }
     match ipc::send(&endpoint, &request, timeout) {
         Ok(response) => out.finish(response, lang),
         Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
             out.fail(CommandError::new(ErrorCode::Timeout, e.to_string()), lang)
         }
+        Err(e) => out.fail(
+            CommandError::new(
+                ErrorCode::NotRunning,
+                format!("{}: {e}", tr(lang, "cli.not_running", &[])),
+            ),
+            lang,
+        ),
+    }
+}
+
+/// `xcreenshot events watch`: the app answers first whether it watches, then sends
+/// every event; each one is printed as a JSON line as it arrives.
+fn watch(endpoint: &str, request: &Request, out: &Output, lang: Lang) -> ExitCode {
+    let mut refused = None;
+    let mut first = true;
+    let streamed = ipc::stream(endpoint, request, |line| {
+        if std::mem::take(&mut first) {
+            if line["ok"] == json!(false) {
+                refused = serde_json::from_value::<CommandError>(line["error"].clone()).ok();
+                return false;
+            }
+            return true;
+        }
+        let mut stdout = std::io::stdout().lock();
+        writeln!(stdout, "{line}").and_then(|_| stdout.flush()).is_ok()
+    });
+    if let Some(e) = refused {
+        return out.fail(e, lang);
+    }
+    match streamed {
+        Ok(()) => ExitCode::SUCCESS,
         Err(e) => out.fail(
             CommandError::new(
                 ErrorCode::NotRunning,

@@ -67,6 +67,7 @@ xcreenshot app ping --json
 | `app.close_window` | (UI and shortcuts only) | Closes the focused XcreenShot window. |
 | `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
+| `events.watch` | `xcreenshot events watch [--filter capture.*,file.written]` | Prints one JSON line per event until interrupted (CLI only): `capture.started`, `capture.succeeded`, `capture.cancelled`, `capture.failed`, `file.written` (path, type, size) and `app.state_changed` (`capturing` / `idle`). Each has `event`, `time`, `source` (`ui`, `shortcut`, `cli`, `mcp`) and its own data; never image content. Includes what the user does in the interface. |
 | `app.welcome` | `xcreenshot app welcome` | Shows the welcome window of the first run again. |
 | `app.help` | `xcreenshot app help [--topic capture]` | Opens the Help window (offline pages) at a topic: `start`, `capture`, `editor`, `library`, `shortcuts`, `permissions`, `automation`, `video`, `share` or `about`. |
 | `app.about` | `xcreenshot app about --json` | Version, build and its date, architecture, channel, data and settings folders, and the only network connections the app makes. `--open true` also shows it. |

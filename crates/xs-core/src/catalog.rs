@@ -11,6 +11,7 @@ const UI_SHORTCUT_CLI: &[Scope] = &[Scope::Ui, Scope::Shortcut, Scope::Cli];
 const UI_CLI: &[Scope] = &[Scope::Ui, Scope::Cli];
 const UI_SHORTCUT: &[Scope] = &[Scope::Ui, Scope::Shortcut];
 const UI: &[Scope] = &[Scope::Ui];
+const CLI: &[Scope] = &[Scope::Cli];
 
 fn no_params() -> Value {
     json!({"type": "object", "properties": {}, "additionalProperties": false})
@@ -212,6 +213,13 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("app.diagnostics", &["APP-046"])
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
+        B::new("events.watch", &["APP-031"])
+            .scopes(CLI)
+            .params(params(
+                json!({"filter": {"type": "string", "description": "Events to show, separated by commas; a * at the end matches the rest (capture.*,file.written). Without it, all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"watching": {"type": "boolean"}}})),
         B::new("app.welcome", &["APP-005"]).scopes(UI_CLI),
         B::new("app.help", &["APP-015"])
             .scopes(UI_CLI)

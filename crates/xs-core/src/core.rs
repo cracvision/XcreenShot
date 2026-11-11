@@ -82,6 +82,8 @@ pub struct Core {
     /// Per-core state owned by other crates (open documents…), one per type.
     services: RwLock<Services>,
     quit_guards: RwLock<Vec<Arc<dyn QuitGuard>>>,
+    /// What scripts and agents can follow (APP-031).
+    pub events: crate::events::Events,
 }
 
 /// Verbose logging switches itself off after this long (APP-046).
@@ -109,6 +111,7 @@ impl Core {
             registry: RwLock::new(None),
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
+            events: Default::default(),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -137,6 +140,7 @@ impl Core {
             registry: RwLock::new(None),
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
+            events: Default::default(),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -229,7 +233,36 @@ impl Core {
             source,
             lang: lang.unwrap_or_else(|| self.lang()),
         };
-        self.registry().call(&ctx, id, params)
+        self.events.before(id, source);
+        let result = self.registry().call(&ctx, id, params);
+        self.events.after(id, source, &result);
+        result
+    }
+
+    /// `events.watch` (APP-031): sends `{"ok": true, "result": {"watching": true}}`, then
+    /// every event that passes the filter, one per `emit`, until `emit` fails (the
+    /// client left). Refused, like any automation, when automation is off (APP-032).
+    pub fn watch_events(&self, params: &Value, lang: Lang, emit: &mut dyn FnMut(&Value) -> bool) {
+        if !self.settings.get_bool("automation.enabled") {
+            let refused = CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(lang, "errors.automation_disabled", &[]),
+            );
+            emit(&json!({ "ok": false, "error": refused }));
+            return;
+        }
+        let filter = params["filter"].as_str().unwrap_or_default().to_string();
+        let rx = self.events.subscribe();
+        if !emit(&json!({ "ok": true, "result": { "watching": true } })) {
+            return;
+        }
+        tracing::info!(filter, "events watch started");
+        for event in rx {
+            if crate::events::matches(&filter, event["event"].as_str().unwrap_or_default()) && !emit(&event) {
+                break;
+            }
+        }
+        tracing::info!("events watch ended");
     }
 
     fn save_state(&self) {
@@ -563,6 +596,11 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
     });
+    // Streams over the CLI's connection; the IPC server handles it (APP-031).
+    on!("events.watch", |_core, ctx, _p| Err(CommandError::new(
+        ErrorCode::InvalidParams,
+        tr(ctx.lang, "errors.events_stream_only", &[]),
+    )));
     on!("app.welcome", |core, ctx, _p| {
         core.host().open_welcome()?;
         Ok(json!({}))

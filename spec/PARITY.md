@@ -375,7 +375,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
 | APP-029 | Servidor MCP (herramientas adelantadas por SMT-043; faltan recursos y eventos) | M2 | Should | En curso |
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | En curso |
-| APP-031 | Eventos | M1 | Should | — |
+| APP-031 | Eventos | M1 | Should | En curso |
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |
 | APP-033 | `AGENTS.md` | M2 | Should | — |
 | APP-034 | Funciones en prueba | M1 | Should | En curso |
