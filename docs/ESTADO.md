@@ -48,6 +48,11 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Sesión del 2026-11-11 (noche, continuación): M2.1 terminada.**
+  - Agrupar y desagrupar (EDT-082, `Ctrl+G` / `Ctrl+Shift+G`): doble clic entra en el grupo.
+  - Transformar varios (EDT-080): el recuadro común tiene tiradores de tamaño y de giro (`document.transform`); la casilla **Escalar grosores y texto** en Propiedades (`editor.scaleStrokes`); **Igualar ancho / alto** en Objeto > Distribuir y en Propiedades. Propiedades ya muestra las selecciones de tipos distintos.
+  - Aplanar y desaplanar (EDT-091, `Ctrl+E` / `Ctrl+Shift+E`): lo aplanado se guarda en el `.xshot` como capas (`flattened`) y se puede desaplanar también tras reabrir; un Desenfocar aplanado pregunta antes, es permanente y al guardar se funde en `base.png`.
+  - Probado en vivo con una instancia aislada (escalar ×1,5, girar 90°, aplanar, desaplanar, aviso del desenfoque).
 - **Sesión del 2026-11-11 (noche), con la PC libre ("no te detengas hasta completar todas las fases"):**
   - Entrega 5 terminada: arrastrar de la bandeja o la biblioteca a otras apps (TRY-015, crate `drag`). Probado con el ratón real contra una ventana de prueba propia: un PNG va tal cual, un `.xshot` o un documento con cambios llega aplanado, tres seleccionados dan tres archivos, y soltar sobre XcreenShot no abre nada.
   - Entrega 6 (cada punto con su commit; decisiones provisionales en `spec/QUESTIONS.md`, sección "entrega 6"):
@@ -213,10 +218,10 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 1. **Caminata de Carlos** con el instalador `bbc74be` y la guía [`docs/caminata-M1.md`](caminata-M1.md). Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
-4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**. M2.1 empezada el 2026-11-11:
-   - hecho: selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083) y bloquear (EDT-085). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1");
-   - de paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; y las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba);
-   - sigue: agrupar (EDT-082), transformar varios e igualar tamaño (EDT-080), aplanar y desaplanar (EDT-091). Después, M2.2 (Paso y Globo).
+4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
+   - **M2.1 terminada (2026-11-11):** selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083), bloquear (EDT-085), agrupar (EDT-082), transformar varios con Igualar ancho/alto (EDT-080) y aplanar/desaplanar (EDT-091). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1"). Falta en EDT-091 el criterio del Borrador: llega con las herramientas de píxeles (M2.3).
+   - De paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba); y el diálogo Recuperar trabajo se salía del panel con rutas largas.
+   - **Sigue: M2.2** (herramientas de anotación), empezando por Paso (EDT-035) y Globo (EDT-028).
 
 ## Decisiones vigentes que conviene recordar
 
