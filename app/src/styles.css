@@ -1850,13 +1850,21 @@ html.overlay-root.overlay-native #root {
   padding: 0 !important;
   display: grid;
   gap: 10px;
+  /* Many documents scroll inside the dialog. */
+  max-height: 50vh;
+  overflow-y: auto;
 }
 
 .recover-list li {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  /* A long path wraps instead of pushing the buttons out of the dialog. */
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
+}
+
+.recover-list li .muted {
+  overflow-wrap: anywhere;
 }
 
 /* Typing a text box on the canvas (EDT-026). */
