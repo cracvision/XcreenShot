@@ -1539,3 +1539,44 @@ fn several_objects_move_together_in_one_step() {
     assert_eq!(info["objects"][0]["from"], json!([10.0, 10.0]));
     assert_eq!(info["objects"][1]["to"], json!([50.0, 40.0]));
 }
+
+#[test]
+fn duplicates_go_on_top_moved_by_the_offset() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [50, 10])]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.duplicate",
+        json!({"documentId": doc, "objectIds": ["o1"]}),
+    );
+    assert_eq!(r["ids"], json!(["o2"]));
+    let r = cli(
+        &e.core,
+        "document.duplicate",
+        json!({"documentId": doc, "objectIds": ["o2"], "offset": [50, 0]}),
+    );
+    assert_eq!(r["ids"], json!(["o3"]));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let from: Vec<Value> = info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["from"].clone())
+        .collect();
+    assert_eq!(
+        from,
+        [json!([10.0, 10.0]), json!([20.0, 20.0]), json!([70.0, 20.0])]
+    );
+    // Sent to the back, the last copy is drawn first (EDT-081).
+    let r = cli(
+        &e.core,
+        "document.arrange",
+        json!({"documentId": doc, "objectIds": ["o3"], "to": "back"}),
+    );
+    assert_eq!(r["order"], json!(["o3", "o1", "o2"]));
+}

@@ -28,6 +28,7 @@ import {
 } from "../library/actions";
 import { selectedItems, showView, useMainView, useTray } from "../library/state";
 import { focusedTrayItem, neighbour, trayOrder } from "./tray";
+import { extentPoints } from "./objects";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -260,6 +261,57 @@ export async function loadFonts(): Promise<void> {
   }
 }
 
+/** The last duplicate: its copies, where they were made and the step used, so
+ *  duplicating the copy again repeats how it was moved (EDT-088). */
+let lastDuplicate: {
+  copies: string[];
+  at: [number, number] | null;
+  step: [number, number];
+} | null = null;
+
+/** The top-left corner of some objects, to compare where copies went. */
+function cornerOf(ids: string[]): [number, number] | null {
+  const doc = useEditor.getState().doc;
+  const pts = (doc?.objects ?? []).filter((o) => ids.includes(o.id)).flatMap(extentPoints);
+  if (pts.length === 0) return null;
+  return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1]))];
+}
+
+/** Edit > Duplicate (EDT-088): copies 10 px right and down; duplicating the copy again
+ *  repeats where the last copy went. */
+export async function duplicateSelection(offset?: [number, number]): Promise<string[]> {
+  const { active, selection, setSelection } = useEditor.getState();
+  if (!active || selection.length === 0) return [];
+  let step = offset ?? ([10, 10] as [number, number]);
+  const last = lastDuplicate;
+  if (!offset && last && last.copies.join() === selection.join()) {
+    // The copy moved since it was made: the next one moves the same; else the same step.
+    const now = cornerOf(last.copies);
+    const moved =
+      now && last.at ? ([now[0] - last.at[0], now[1] - last.at[1]] as [number, number]) : null;
+    step = moved && (moved[0] !== 0 || moved[1] !== 0) ? moved : last.step;
+  }
+  try {
+    const r = await run<{ ids: string[] }>("document.duplicate", {
+      documentId: active,
+      objectIds: selection,
+      offset: step,
+    });
+    setSelection(r.ids);
+    // Where the copies are once the document says so (EDT-088).
+    const at = cornerOf(selection);
+    lastDuplicate = {
+      copies: r.ids,
+      at: at ? [at[0] + step[0], at[1] + step[1]] : null,
+      step,
+    };
+    return r.ids;
+  } catch (e) {
+    fail(e);
+    return [];
+  }
+}
+
 export function deleteSelection(): void {
   const { active, selection } = useEditor.getState();
   if (!active || selection.length === 0) return;
@@ -421,6 +473,26 @@ export function performAction(action: string): boolean {
     case "delete":
       if (!selected) return false;
       deleteSelection();
+      return true;
+    case "duplicate":
+      if (!selected) return false;
+      void duplicateSelection();
+      return true;
+    case "bring_front":
+    case "bring_forward":
+    case "send_backward":
+    case "send_back":
+      if (!selected || !doc) return false;
+      run("document.arrange", {
+        documentId: doc.documentId,
+        objectIds: selection,
+        to: {
+          bring_front: "front",
+          bring_forward: "forward",
+          send_backward: "backward",
+          send_back: "back",
+        }[action],
+      }).catch(fail);
       return true;
     case "select_all":
       // Every object (EDT-079); locked objects (EDT-085) will stay out.

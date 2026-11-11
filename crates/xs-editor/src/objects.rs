@@ -266,6 +266,40 @@ pub fn translate(object: &mut Object, dx: f64, dy: f64) {
 }
 
 /// i18n key of the undo step for objects of one `kind` (`history.*`).
+/// The stacking order after moving `ids` (EDT-081): to the front or the back of all,
+/// or one place up or down past the next object that is not moving. Moved objects keep
+/// their order among themselves.
+pub fn arranged(objects: &mut Vec<Object>, ids: &[String], to: &str) {
+    let moving = |o: &Object| ids.contains(&o.id);
+    match to {
+        "front" | "back" => {
+            let (picked, rest): (Vec<Object>, Vec<Object>) = objects.drain(..).partition(moving);
+            if to == "front" {
+                objects.extend(rest);
+                objects.extend(picked);
+            } else {
+                objects.extend(picked);
+                objects.extend(rest);
+            }
+        }
+        "forward" => {
+            for i in (0..objects.len().saturating_sub(1)).rev() {
+                if moving(&objects[i]) && !moving(&objects[i + 1]) {
+                    objects.swap(i, i + 1);
+                }
+            }
+        }
+        "backward" => {
+            for i in 1..objects.len() {
+                if moving(&objects[i]) && !moving(&objects[i - 1]) {
+                    objects.swap(i - 1, i);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 pub fn label(action: &str, kinds: &[&str]) -> String {
     // One kind (even several objects of it) names it; a mix is "objects".
     let what = match kinds.first() {
@@ -278,6 +312,34 @@ pub fn label(action: &str, kinds: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn named(ids: &[&str]) -> Vec<Object> {
+        ids.iter()
+            .map(|id| Object {
+                id: id.to_string(),
+                kind: "shape".into(),
+                props: Map::new(),
+            })
+            .collect()
+    }
+
+    fn order(objects: &[Object]) -> Vec<&str> {
+        objects.iter().map(|o| o.id.as_str()).collect()
+    }
+
+    #[test]
+    fn stacking_order() {
+        // Bottom first: a, b, c.
+        let mut o = named(&["a", "b", "c"]);
+        arranged(&mut o, &["c".into()], "back");
+        assert_eq!(order(&o), ["c", "a", "b"], "the top one goes under the other two");
+        arranged(&mut o, &["c".into()], "forward");
+        assert_eq!(order(&o), ["a", "c", "b"], "one place up, not to the top");
+        arranged(&mut o, &["a".into(), "c".into()], "front");
+        assert_eq!(order(&o), ["b", "a", "c"], "several keep their order");
+        arranged(&mut o, &["c".into()], "backward");
+        assert_eq!(order(&o), ["b", "c", "a"]);
+    }
 
     #[test]
     fn missing_style_comes_from_the_tool() {

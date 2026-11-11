@@ -4,13 +4,31 @@ import { canvasMenu, closeContextMenu, toolbarMenu, useContextMenu } from "./men
 beforeEach(() => closeContextMenu());
 
 describe("editor right-click menus (EDT-002)", () => {
-  it("on an object: cut, copy, then delete after a separator, at the pointer", () => {
+  it("on an object: cut, copy, duplicate, delete, then the order, at the pointer", () => {
     canvasMenu(true, { x: 120, y: 80 });
     const s = useContextMenu.getState();
     expect(s.open).toBe(true);
     expect([s.x, s.y]).toEqual([120, 80]);
-    expect(s.items.map((i) => i.id)).toEqual(["editor.cut", "editor.copy", "editor.delete"]);
-    expect(s.items.map((i) => i.separator)).toEqual([false, false, true]);
+    expect(s.items.map((i) => i.id)).toEqual([
+      "editor.cut",
+      "editor.copy",
+      "editor.duplicate",
+      "editor.delete",
+      "editor.bring_front",
+      "editor.bring_forward",
+      "editor.send_backward",
+      "editor.send_back",
+    ]);
+    expect(s.items.map((i) => i.separator)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 
   it("on the image: paste, paste in place and copy all", () => {

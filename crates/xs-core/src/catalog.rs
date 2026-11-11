@@ -514,6 +514,30 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
+        B::new("document.arrange", &["EDT-081", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "to": {"type": "string", "enum": ["front", "forward", "backward", "back"]}
+                }),
+                &["to"],
+            ))
+            .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.duplicate", &["EDT-088", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Where the copies go from the originals, [dx, dy] (default [10, 10])"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
         B::new("document.delete_object", &["EDT-119", "EDT-042"])
             .mutates()
             .params(params(

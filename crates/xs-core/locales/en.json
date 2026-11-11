@@ -203,6 +203,14 @@
       "title": "Change object",
       "description": "Changes the geometry or style of one or more objects, as one undo step."
     },
+    "document_arrange": {
+      "title": "Arrange objects",
+      "description": "Brings objects to the front or one place forward, or sends them one place backward or to the back."
+    },
+    "document_duplicate": {
+      "title": "Duplicate objects",
+      "description": "Copies objects, moved a little from the originals, on top of the others."
+    },
     "document_delete_object": {
       "title": "Delete object",
       "description": "Deletes one or more objects, as one undo step."
@@ -706,6 +714,11 @@
       "editor_delete": "Delete",
       "editor_delete_alt": "Delete (second shortcut)",
       "editor_select_all": "Select all objects",
+      "editor_duplicate": "Duplicate objects",
+      "editor_bring_front": "Bring to front",
+      "editor_bring_forward": "Bring forward",
+      "editor_send_backward": "Send backward",
+      "editor_send_back": "Send to back",
       "editor_deselect": "Deselect",
       "editor_zoom_in": "Zoom in",
       "editor_zoom_out": "Zoom out",
@@ -751,6 +764,12 @@
     "open_library": "Open library"
   },
   "menu": {
+    "object": "&Object",
+    "duplicate": "D&uplicate",
+    "bring_front": "Bring to &front",
+    "bring_forward": "Bring &forward",
+    "send_backward": "Send &backward",
+    "send_back": "Send to bac&k",
     "welcome": "Show the &welcome again",
     "help_contents": "XcreenShot &Help",
     "feedback": "Send &feedback…",
@@ -1451,6 +1470,8 @@
     }
   },
   "history": {
+    "arrange": "Change order",
+    "duplicate": "Duplicate",
     "annotate": "Annotate",
     "draw_arrow": "Draw arrow",
     "draw_objects": "Draw objects",

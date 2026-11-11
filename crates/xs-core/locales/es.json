@@ -203,6 +203,14 @@
       "title": "Cambiar objeto",
       "description": "Cambia la geometría o el estilo de uno o varios objetos, en un solo paso de deshacer."
     },
+    "document_arrange": {
+      "title": "Ordenar objetos",
+      "description": "Trae objetos al frente o un paso adelante, o los envía un paso atrás o al fondo."
+    },
+    "document_duplicate": {
+      "title": "Duplicar objetos",
+      "description": "Copia objetos, un poco desplazados de los originales, encima de los demás."
+    },
     "document_delete_object": {
       "title": "Eliminar objeto",
       "description": "Elimina uno o varios objetos, en un solo paso de deshacer."
@@ -706,6 +714,11 @@
       "editor_delete": "Eliminar",
       "editor_delete_alt": "Eliminar (segundo atajo)",
       "editor_select_all": "Seleccionar todos los objetos",
+      "editor_duplicate": "Duplicar objetos",
+      "editor_bring_front": "Traer al frente",
+      "editor_bring_forward": "Traer adelante",
+      "editor_send_backward": "Enviar atrás",
+      "editor_send_back": "Enviar al fondo",
       "editor_deselect": "Deseleccionar",
       "editor_zoom_in": "Acercar",
       "editor_zoom_out": "Alejar",
@@ -751,6 +764,12 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "object": "&Objeto",
+    "duplicate": "D&uplicar",
+    "bring_front": "Traer al &frente",
+    "bring_forward": "Traer &adelante",
+    "send_backward": "Enviar a&trás",
+    "send_back": "Enviar al fo&ndo",
     "welcome": "Volver a mostrar la &bienvenida",
     "help_contents": "A&yuda de XcreenShot",
     "feedback": "Enviar &comentarios…",
@@ -1451,6 +1470,8 @@
     }
   },
   "history": {
+    "arrange": "Cambiar el orden",
+    "duplicate": "Duplicar",
     "annotate": "Anotar",
     "draw_arrow": "Dibujar flecha",
     "draw_objects": "Dibujar objetos",

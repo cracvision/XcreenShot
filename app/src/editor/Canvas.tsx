@@ -7,7 +7,7 @@ import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
-import { applyCrop, startNewText, startTextEdit } from "./actions";
+import { applyCrop, duplicateSelection, startNewText, startTextEdit } from "./actions";
 import { canvasMenu, menuPoint } from "./menus";
 import {
   contains,
@@ -77,7 +77,7 @@ type Drag =
       square: boolean;
       fromCenter: boolean;
     }
-  | { kind: "move"; ids: string[]; start: Point; delta: Point; moved: boolean }
+  | { kind: "move"; ids: string[]; start: Point; delta: Point; moved: boolean; copy?: boolean }
   // A selection box drawn with Move over an empty place (EDT-079).
   | { kind: "band"; start: Point; end: Point; touch: boolean; add: boolean }
   | { kind: "end"; id: string; end: "from" | "to"; other: Point; point: Point }
@@ -469,7 +469,9 @@ export function Canvas({ doc }: Props) {
       const ids = selection.includes(hit.id) ? selection : [hit.id];
       if (!selection.includes(hit.id)) setSelection([hit.id]);
       capture();
-      setDrag({ kind: "move", ids, start: p, delta: [0, 0], moved: false });
+      // With Move, Alt+drag leaves a copy where it is let go (EDT-088).
+      const copy = e.altKey && tool === "move";
+      setDrag({ kind: "move", ids, start: p, delta: [0, 0], moved: false, copy });
       return;
     }
     if (tool === "move") {
@@ -601,6 +603,8 @@ export function Canvas({ doc }: Props) {
         });
         // The new object stays selected to adjust it (EDT-022, editor.autoSelectAfterDraw).
         if (r.ids[0] && setting("editor.autoSelectAfterDraw", true)) setSelection([r.ids[0]]);
+      } else if (d.kind === "move" && d.moved && d.copy) {
+        await duplicateSelection(d.delta);
       } else if (d.kind === "move" && d.moved) {
         const one = d.ids.length === 1 ? committed.get(d.ids[0] ?? "") : undefined;
         if (one) {

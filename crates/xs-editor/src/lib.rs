@@ -1569,6 +1569,58 @@ pub fn extension() -> Extension {
             changed(&core, ctx, &id);
             Ok(json!({ "objects": updated }))
         });
+        // Stacking order (EDT-081): one undo step.
+        on!("document.arrange", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let oids = object_ids(&p, ctx.lang)?;
+            kinds_of(&core, ctx.lang, &id, &oids)?;
+            let to = p["to"].as_str().unwrap_or_default().to_string();
+            let order = editor(&core)
+                .store
+                .mutate(&id, "history.arrange", |doc| {
+                    objects::arranged(&mut doc.objects, &oids, &to);
+                    Ok::<_, CommandError>(doc.objects.iter().map(|o| o.id.clone()).collect::<Vec<_>>())
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "order": order }))
+        });
+        // Copies of objects, moved by `offset`, on top of the others (EDT-088).
+        on!("document.duplicate", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let oids = object_ids(&p, ctx.lang)?;
+            kinds_of(&core, ctx.lang, &id, &oids)?;
+            let (dx, dy) = p
+                .get("offset")
+                .and_then(Value::as_array)
+                .and_then(|a| Some((a.first()?.as_f64()?, a.get(1)?.as_f64()?)))
+                .unwrap_or((10.0, 10.0));
+            let auto = auto_expand(&core);
+            let ids = editor(&core)
+                .store
+                .mutate(&id, "history.duplicate", |doc| {
+                    let copies: Vec<Object> = doc
+                        .objects
+                        .iter()
+                        .filter(|o| oids.contains(&o.id))
+                        .cloned()
+                        .collect();
+                    let mut ids = Vec::new();
+                    for mut copy in copies {
+                        copy.id = doc.next_object_id();
+                        objects::translate(&mut copy, dx, dy);
+                        ids.push(copy.id.clone());
+                        doc.objects.push(copy);
+                    }
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
+                    Ok::<_, CommandError>(ids)
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(json!({ "ids": ids }))
+        });
         on!("document.delete_object", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
             let oids = object_ids(&p, ctx.lang)?;

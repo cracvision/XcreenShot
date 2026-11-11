@@ -169,6 +169,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.paste_in_place", "menu.paste_in_place", "paste_in_place"),
                 Separator,
                 action("editor.delete", "menu.delete", "delete"),
+                action("editor.duplicate", "menu.duplicate", "duplicate"),
                 action("editor.select_all", "menu.select_all", "select_all"),
                 action("editor.deselect", "menu.deselect", "deselect"),
             ],
@@ -219,6 +220,16 @@ fn editor_menus() -> Vec<MenuEntry> {
                         checked: Some("editor.toolbar_labels"),
                     }],
                 },
+            ],
+        },
+        // Objects (EDT-081): their stacking order; grouping and locking arrive with them.
+        Submenu {
+            label: "menu.object",
+            items: vec![
+                action("editor.bring_front", "menu.bring_front", "bring_front"),
+                action("editor.bring_forward", "menu.bring_forward", "bring_forward"),
+                action("editor.send_backward", "menu.send_backward", "send_backward"),
+                action("editor.send_back", "menu.send_back", "send_back"),
             ],
         },
         // Cloud AI (SMT-040, SMT-041): always listed; without it set up they explain
@@ -390,7 +401,14 @@ mod tests {
             .collect();
         assert_eq!(
             tops,
-            ["menu.file", "menu.edit", "menu.view", "menu.ai", "menu.help"]
+            [
+                "menu.file",
+                "menu.edit",
+                "menu.view",
+                "menu.object",
+                "menu.ai",
+                "menu.help"
+            ]
         );
         let file = &menus[0]["items"];
         assert_eq!(file[0]["kind"], "command");

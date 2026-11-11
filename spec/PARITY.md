@@ -160,14 +160,14 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-078 | Imágenes flotantes (lo básico, adelantado a M1 por CAP-067) | M2 | Must | En curso |
 | EDT-079 | Selección múltiple | M2 | Must | En curso |
 | EDT-080 | Transformar varios objetos | M2 | Should | — |
-| EDT-081 | Orden de apilado | M2 | Should | — |
+| EDT-081 | Orden de apilado | M2 | Should | En curso |
 | EDT-082 | Agrupar y desagrupar | M2 | Should | — |
 | EDT-083 | Alinear y distribuir | M2 | Should | — |
 | EDT-084 | Ajuste magnético y guías | M2 | Should | — |
 | EDT-085 | Bloquear objetos | M2 | Should | — |
 | EDT-086 | Posición y tamaño numéricos | M2 | Must | En curso |
 | EDT-087 | Mover con el teclado | M2 | Should | En curso |
-| EDT-088 | Duplicar objetos | M2 | Should | — |
+| EDT-088 | Duplicar objetos | M2 | Should | En curso |
 | EDT-089 | Cortar, copiar y pegar | M1 | Must | Win |
 | EDT-090 | Copiar todo | M1 | Must | Win |
 | EDT-091 | Aplanar y desaplanar | M2 | Should | — |

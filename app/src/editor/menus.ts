@@ -145,7 +145,16 @@ export function menuPoint(e: MouseEvent): Point {
  * image (EDT-002). Grouping, order and flattening arrive with them (M2). */
 export function canvasMenu(onObject: boolean, at: Point): void {
   const items = onObject
-    ? [entry("cut"), entry("copy"), entry("delete", true)]
+    ? [
+        entry("cut"),
+        entry("copy"),
+        entry("duplicate"),
+        entry("delete", true),
+        entry("bring_front", true),
+        entry("bring_forward"),
+        entry("send_backward"),
+        entry("send_back"),
+      ]
     : [entry("paste"), entry("paste_in_place"), entry("copy_all", true)];
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
 }
@@ -221,7 +230,18 @@ export function useMenuBar(): void {
       "editor.paste_in_place": !inLibrary,
     };
     for (const a of onDoc) enabled[`editor.${a}`] = hasDoc;
-    for (const a of ["cut", "copy", "delete", "deselect"]) enabled[`editor.${a}`] = selected;
+    for (const a of [
+      "cut",
+      "copy",
+      "delete",
+      "deselect",
+      "duplicate",
+      "bring_front",
+      "bring_forward",
+      "send_backward",
+      "send_back",
+    ])
+      enabled[`editor.${a}`] = selected;
     enabled["editor.select_all"] = objectCount > 0;
     const checked = {
       "editor.side_panel": panel,
