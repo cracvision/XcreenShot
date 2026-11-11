@@ -63,6 +63,17 @@ const ICONS = {
       <path d="M3 3v14M17 3v14M8 6v8M12 6v8" />
     </Svg>
   ),
+  // Equal width and height (EDT-083): two bars made the same size.
+  equal_width: (
+    <Svg>
+      <path d="M4 6h12M4 13h12M4 4v4M16 4v4M4 11v4M16 11v4" />
+    </Svg>
+  ),
+  equal_height: (
+    <Svg>
+      <path d="M6 4v12M13 4v12M4 4h4M4 16h4M11 4h4M11 16h4" />
+    </Svg>
+  ),
   distribute_v: (
     <Svg>
       <path d="M3 3h14M3 17h14M6 8h8M6 12h8" />

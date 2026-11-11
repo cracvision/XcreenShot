@@ -254,6 +254,9 @@ fn editor_menus() -> Vec<MenuEntry> {
                     items: vec![
                         action("editor.distribute_h", "menu.distribute_h", "distribute_h"),
                         action("editor.distribute_v", "menu.distribute_v", "distribute_v"),
+                        Separator,
+                        action("editor.equal_width", "menu.equal_width", "equal_width"),
+                        action("editor.equal_height", "menu.equal_height", "equal_height"),
                     ],
                 },
             ],

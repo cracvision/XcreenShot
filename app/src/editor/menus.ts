@@ -279,6 +279,8 @@ export function useMenuBar(): void {
     for (const a of ["distribute_h", "distribute_v"]) enabled[`editor.${a}`] = selectedCount >= 3;
     enabled["editor.lock"] = selected;
     enabled["editor.group"] = selectedCount >= 2;
+    enabled["editor.equal_width"] = selectedCount >= 2;
+    enabled["editor.equal_height"] = selectedCount >= 2;
     enabled["editor.ungroup"] = groupedSelected;
     enabled["editor.unlock_all"] = lockedCount > 0;
     enabled["editor.select_all"] = objectCount > 0;

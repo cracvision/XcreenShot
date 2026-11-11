@@ -173,6 +173,36 @@ function useTarget(): Target | null {
   return null;
 }
 
+/** Several objects of different kinds: the properties they all have, changed in all of
+ * them at once (EDT-080, EDT-014). For now their opacity. */
+function SharedProperties() {
+  const { t } = useTranslation();
+  const doc = useEditor((s) => s.doc);
+  const selection = useEditor((s) => s.selection);
+  const { active, showError } = useEditor.getState();
+  const styles = (doc?.objects ?? [])
+    .filter((o) => selection.includes(o.id))
+    .map((o) => ("style" in o ? (o.style as unknown as Record<string, unknown>) : {}));
+  if (styles.length === 0 || !styles.every((s) => typeof s.opacity === "number")) return null;
+  return (
+    <NumberField
+      label={t("ui.editor.prop.opacity")}
+      value={common<number>(styles, "opacity")}
+      min={0}
+      max={100}
+      step={1}
+      unit="%"
+      onCommit={(opacity) =>
+        void run("document.update_object", {
+          documentId: active,
+          objectIds: selection,
+          set: { style: { opacity } },
+        }).catch(showError)
+      }
+    />
+  );
+}
+
 /** The value of `key` when every style agrees, else `undefined` (shown as Mixed). */
 function common<T>(styles: Record<string, unknown>[], key: string): T | undefined {
   const first = styles[0]?.[key];
@@ -593,6 +623,17 @@ export function SidePanel() {
       <>
         <Properties target={target} />
         {/* Where it is and how big, in numbers (EDT-086). */}
+        {!editing && <PositionSize />}
+      </>
+    );
+  } else if (doc && selection.length > 1) {
+    // Objects of several kinds: what they share, where they are (EDT-080).
+    title = t("ui.editor.props_selection", {
+      what: t("ui.editor.objects_count", { count: selection.length }),
+    });
+    body = (
+      <>
+        <SharedProperties />
         {!editing && <PositionSize />}
       </>
     );

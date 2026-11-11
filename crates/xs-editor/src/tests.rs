@@ -1624,3 +1624,123 @@ fn a_lock_is_saved_and_unlocking_all_is_one_step() {
         .iter()
         .all(|o| o["locked"] == true));
 }
+
+/// EDT-080: an arrow and a floating image grown half again as one keep their places
+/// and grow together; without scaling strokes the arrow keeps its width; turning three
+/// objects goes around their common center. Each is one undo step.
+#[test]
+fn several_objects_scale_and_turn_as_one() {
+    let e = env();
+    // Objects at the edge would make the canvas grow and move them all.
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.autoExpandCanvas", "value": false}),
+    );
+    let (doc, _) = capture(&e);
+    let red = red_png(&e, 40, 20);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([0, 0], [100, 0])]}),
+    );
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red], "center": [120, 60]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"][1]["rect"],
+        json!({"x": 100.0, "y": 50.0, "w": 40.0, "h": 20.0})
+    );
+    cli(
+        &e.core,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o1", "o2"], "scale": {"factor": 1.5}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let (a, i) = (&info["objects"][0], &info["objects"][1]);
+    assert_eq!(a["to"], json!([150.0, 0.0]));
+    assert_eq!(a["style"]["width"], json!(12.0));
+    assert_eq!(i["rect"], json!({"x": 150.0, "y": 75.0, "w": 60.0, "h": 30.0}));
+    // Without "Scale line widths and text": the arrow keeps its width.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(
+        &e.core,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o1", "o2"], "scale": {"factor": 1.5}, "strokes": false}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["style"]["width"], json!(8.0));
+    assert_eq!(info["objects"][0]["to"], json!([150.0, 0.0]));
+    // A quarter turn of three objects goes around the center of their box.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "shape", "rect": {"x": 200, "y": 0, "w": 40, "h": 20}}]}),
+    );
+    cli(
+        &e.core,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o1", "o2", "o3"], "rotate": 90}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    // The box was (0, 0)–(240, 70): its center (120, 35).
+    let a = &info["objects"][0];
+    let near = |v: &Value, x: f64, y: f64| {
+        (v[0].as_f64().unwrap() - x).abs() < 1e-6 && (v[1].as_f64().unwrap() - y).abs() < 1e-6
+    };
+    assert!(near(&a["from"], 155.0, -85.0), "{}", a["from"]);
+    assert!(near(&a["to"], 155.0, 15.0), "{}", a["to"]);
+    let s = &info["objects"][2];
+    assert_eq!(s["rotation"], json!(90.0));
+    let r = &s["rect"];
+    let cx = r["x"].as_f64().unwrap() + r["w"].as_f64().unwrap() / 2.0;
+    let cy = r["y"].as_f64().unwrap() + r["h"].as_f64().unwrap() / 2.0;
+    assert!(
+        (cx - 145.0).abs() < 1e-6 && (cy - 135.0).abs() < 1e-6,
+        "{cx}, {cy}"
+    );
+    // One undo step puts all three back.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([0.0, 0.0]));
+    assert_eq!(info["objects"][2]["rotation"], json!(0.0));
+}
+
+/// EDT-083: Equal width gives the others the width of the widest; arrows stay.
+#[test]
+fn equal_width_matches_the_widest() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "shape", "rect": {"x": 10, "y": 10, "w": 30, "h": 20}},
+            {"type": "shape", "rect": {"x": 10, "y": 50, "w": 80, "h": 20}},
+            arrow([0, 100], [300, 100]),
+        ]}),
+    );
+    cli(
+        &e.core,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o1", "o2", "o3"], "equal": "width"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"][0]["rect"],
+        json!({"x": 10.0, "y": 10.0, "w": 80.0, "h": 20.0})
+    );
+    assert_eq!(info["objects"][2]["to"], json!([300.0, 100.0]));
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o1"], "rotate": 10, "equal": "width"}),
+    )
+    .unwrap_err();
+    assert!(err.message.contains("one of"), "{}", err.message);
+}

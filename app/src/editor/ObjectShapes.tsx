@@ -123,11 +123,17 @@ export function ShapeShape({ o, scale }: { o: ShapeObject; scale: number }) {
 
 export function TextShape({ o, image }: { o: TextObject; image: HTMLImageElement | undefined }) {
   if (!image) return null;
-  const w = image.naturalWidth;
-  const h = image.naturalHeight;
+  // Its picture at its own size; stretched only while several are resized (EDT-080).
+  const off = (a: number, b: number) => Math.abs(a - b) > 1;
+  const stretched =
+    off(o.layout.width, image.naturalWidth) || off(o.layout.height, image.naturalHeight);
+  const w = stretched ? o.layout.width : image.naturalWidth;
+  const h = stretched ? o.layout.height : image.naturalHeight;
   return (
     <KImage
       image={image}
+      width={w}
+      height={h}
       x={o.at[0] + w / 2}
       y={o.at[1] + h / 2}
       offsetX={w / 2}

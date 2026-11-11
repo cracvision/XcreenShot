@@ -207,6 +207,10 @@
       "title": "Arrange objects",
       "description": "Brings objects to the front or one place forward, or sends them one place backward or to the back."
     },
+    "document_transform": {
+      "title": "Transform objects",
+      "description": "Stretches, turns or gives the same size to several objects as one."
+    },
     "document_group": {
       "title": "Group objects",
       "description": "Puts objects in a group that is selected and moved as one, or takes them out of it."
@@ -546,6 +550,10 @@
       "label": "Delete cropped content when saving",
       "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
     },
+    "editor_scaleStrokes": {
+      "label": "Scale line widths and text",
+      "description": "When several objects are resized together, their line widths and text sizes grow and shrink with them."
+    },
     "editor_autoExpandCanvas": {
       "label": "Expand the canvas automatically",
       "description": "When an object sticks out of the image, the canvas grows just enough to show it, and shrinks back when it returns. What a crop leaves outside stays outside."
@@ -735,6 +743,8 @@
       "editor_unlock_all": "Unlock all objects",
       "editor_group": "Group objects",
       "editor_ungroup": "Ungroup objects",
+      "editor_equal_width": "Equal width",
+      "editor_equal_height": "Equal height",
       "editor_deselect": "Deselect",
       "editor_zoom_in": "Zoom in",
       "editor_zoom_out": "Zoom out",
@@ -780,6 +790,8 @@
     "open_library": "Open library"
   },
   "menu": {
+    "equal_width": "Equal &width",
+    "equal_height": "Equal hei&ght",
     "group": "&Group",
     "ungroup": "&Ungroup",
     "lock": "&Lock",
@@ -1176,6 +1188,7 @@
       "capture": "Capture",
       "align_title": "Align",
       "align_help": "Against the selection; one object, against the canvas.",
+      "scale_strokes": "Scale line widths and text",
       "pos": {
         "title": "Position and size",
         "width": "Width",

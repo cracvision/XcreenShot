@@ -527,6 +527,30 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "scale": {
+                        "type": "object",
+                        "description": "Stretch them as one: from the box `from` (default: the box around them) to `to`, or by `factor` (a number or [x, y]) from its top left corner",
+                        "properties": {
+                            "from": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                            "to": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                            "factor": {"type": ["number", "array"]}
+                        }
+                    },
+                    "strokes": {"type": "boolean", "description": "With scale: line widths and text sizes too. Default: the editor.scaleStrokes setting"},
+                    "rotate": {"type": "number", "description": "Turn them as one, in degrees clockwise"},
+                    "around": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "With rotate: the center (default: the center of the box around them)"},
+                    "equal": {"type": "string", "enum": ["width", "height"], "description": "Give them all the same width or height"},
+                    "size": {"type": "number", "minimum": 1, "description": "With equal: the size (default: the largest)"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
         B::new("document.group", &["EDT-082", "EDT-119"])
             .mutates()
             .params(params(
@@ -971,7 +995,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 47] = [
+pub const EDITOR_ACTIONS: [&str; 49] = [
     "open",
     "save",
     "save_as",
@@ -1019,6 +1043,8 @@ pub const EDITOR_ACTIONS: [&str; 47] = [
     "distribute_v",
     "group",
     "ungroup",
+    "equal_width",
+    "equal_height",
 ];
 
 fn library_item() -> Value {

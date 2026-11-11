@@ -557,6 +557,16 @@ export function performAction(action: string): boolean {
       if (!doc || doc.objects.length === 0) return false;
       setSelection(doc.objects.filter((o) => !o.locked).map((o) => o.id));
       return true;
+    case "equal_width":
+    case "equal_height":
+      // The same width or height as the largest (EDT-083, EDT-080).
+      if (!doc || selection.length < 2) return false;
+      run("document.transform", {
+        documentId: doc.documentId,
+        objectIds: selection,
+        equal: action === "equal_width" ? "width" : "height",
+      }).catch(fail);
+      return true;
     case "group":
       // Two or more objects become one group (EDT-082).
       if (!doc || selection.length < 2) return false;

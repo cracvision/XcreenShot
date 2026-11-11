@@ -159,7 +159,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-077 | Resolución y densidad de píxeles | M2 | Could | — |
 | EDT-078 | Imágenes flotantes (lo básico, adelantado a M1 por CAP-067) | M2 | Must | En curso |
 | EDT-079 | Selección múltiple | M2 | Must | En curso |
-| EDT-080 | Transformar varios objetos | M2 | Should | — |
+| EDT-080 | Transformar varios objetos | M2 | Should | En curso |
 | EDT-081 | Orden de apilado | M2 | Should | En curso |
 | EDT-082 | Agrupar y desagrupar | M2 | Should | En curso |
 | EDT-083 | Alinear y distribuir | M2 | Should | En curso |

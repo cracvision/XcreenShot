@@ -474,6 +474,16 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"send_backward"}"#,
         ),
         editor("editor.send_back", "editor.action", r#"{"action":"send_back"}"#),
+        editor(
+            "editor.equal_width",
+            "editor.action",
+            r#"{"action":"equal_width"}"#,
+        ),
+        editor(
+            "editor.equal_height",
+            "editor.action",
+            r#"{"action":"equal_height"}"#,
+        ),
         editor("editor.group", "editor.action", r#"{"action":"group"}"#),
         editor("editor.ungroup", "editor.action", r#"{"action":"ungroup"}"#),
         editor("editor.lock", "editor.action", r#"{"action":"lock"}"#),

@@ -207,6 +207,10 @@
       "title": "Ordenar objetos",
       "description": "Trae objetos al frente o un paso adelante, o los envía un paso atrás o al fondo."
     },
+    "document_transform": {
+      "title": "Transformar objetos",
+      "description": "Estira, gira o iguala el tamaño de varios objetos como si fueran uno."
+    },
     "document_group": {
       "title": "Agrupar objetos",
       "description": "Une objetos en un grupo que se selecciona y se mueve como uno solo, o los saca de él."
@@ -546,6 +550,10 @@
       "label": "Eliminar el contenido recortado al guardar",
       "description": "Los documentos guardados conservan solo la imagen recortada, así que un .xshot compartido no contiene nada oculto. Sin esta opción, un recorte posterior puede recuperar lo que se cortó."
     },
+    "editor_scaleStrokes": {
+      "label": "Escalar grosores y texto",
+      "description": "Al cambiar el tamaño de varios objetos a la vez, el grosor de sus líneas y el tamaño de su letra crecen y se reducen con ellos."
+    },
     "editor_autoExpandCanvas": {
       "label": "Ampliar el lienzo automáticamente",
       "description": "Cuando un objeto sobresale de la imagen, el lienzo crece lo justo para mostrarlo y se encoge cuando vuelve dentro. Lo que un recorte deja fuera se queda fuera."
@@ -735,6 +743,8 @@
       "editor_unlock_all": "Desbloquear todos los objetos",
       "editor_group": "Agrupar objetos",
       "editor_ungroup": "Desagrupar objetos",
+      "editor_equal_width": "Igualar ancho",
+      "editor_equal_height": "Igualar alto",
       "editor_deselect": "Deseleccionar",
       "editor_zoom_in": "Acercar",
       "editor_zoom_out": "Alejar",
@@ -780,6 +790,8 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "equal_width": "Igualar &ancho",
+    "equal_height": "Igualar a&lto",
     "group": "&Agrupar",
     "ungroup": "&Desagrupar",
     "lock": "&Bloquear",
@@ -1176,6 +1188,7 @@
       "capture": "Capturar",
       "align_title": "Alinear",
       "align_help": "Respecto a la selección; con un objeto, respecto al lienzo.",
+      "scale_strokes": "Escalar grosores y texto",
       "pos": {
         "title": "Posición y tamaño",
         "width": "Ancho",

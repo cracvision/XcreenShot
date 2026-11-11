@@ -6,6 +6,7 @@ import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { arrowFocus } from "../components/arrowFocus";
 import { run } from "../lib/commands";
+import { useSetting } from "../store";
 import { arrangeSelection } from "./actions";
 import { Icon } from "./icons";
 import { extentPoints, boxOf, reboxed } from "./objects";
@@ -23,6 +24,8 @@ const ALIGN_ACTIONS = [
   "align_bottom",
   "distribute_h",
   "distribute_v",
+  "equal_width",
+  "equal_height",
 ] as const;
 
 /** One field: shows `value`; what is typed is evaluated on it when applied. */
@@ -77,6 +80,7 @@ export function PositionSize() {
   const selection = useEditor((s) => s.selection);
   const showError = useEditor((s) => s.showError);
   const [locked, setLocked] = useState(false);
+  const scaleStrokes = useSetting("editor.scaleStrokes", true);
   if (!doc || selection.length === 0) return null;
   const objects = doc.objects.filter((o) => selection.includes(o.id));
   if (objects.length === 0) return null;
@@ -90,12 +94,30 @@ export function PositionSize() {
     const pts = objects.flatMap(extentPoints);
     const x = Math.min(...pts.map((p) => p[0]));
     const y = Math.min(...pts.map((p) => p[1]));
+    const w = Math.max(...pts.map((p) => p[0])) - x;
+    const h = Math.max(...pts.map((p) => p[1])) - y;
+    const ids = objects.map((o) => o.id);
     const move = (dx: number, dy: number) =>
       run("document.update_object", {
         documentId: doc.documentId,
-        objectIds: objects.map((o) => o.id),
+        objectIds: ids,
         move: [dx, dy],
       }).catch(showError);
+    // A new size of their common box stretches them all from its top left (EDT-080).
+    const resize = (which: "w" | "h", v: number) => {
+      const value = Math.max(1, v);
+      const size = locked
+        ? keepRatio(w, h, which, value)
+        : which === "w"
+          ? { w: value, h }
+          : { w, h: value };
+      run("document.transform", {
+        documentId: doc.documentId,
+        objectIds: ids,
+        scale: { from: [x, y, w, h], to: [x, y, size.w, size.h] },
+        strokes: scaleStrokes,
+      }).catch(showError);
+    };
     return (
       <>
         <fieldset className="pos-size">
@@ -103,6 +125,35 @@ export function PositionSize() {
           <div className="pos-grid">
             <Field label="X" value={x} onApply={(v) => void move(v - x, 0)} />
             <Field label="Y" value={y} onApply={(v) => void move(0, v - y)} />
+            <Field label={t("ui.editor.pos.width")} value={w} onApply={(v) => resize("w", v)} />
+            <Field
+              label={t("ui.editor.pos.height")}
+              value={h}
+              disabled={h < 1}
+              onApply={(v) => resize("h", v)}
+            />
+            <label className="pos-lock">
+              <input
+                type="checkbox"
+                checked={locked}
+                onChange={(e) => setLocked(e.target.checked)}
+              />
+              <span>{t("ui.editor.pos.lock")}</span>
+            </label>
+            {/* Whether line widths and text sizes follow (EDT-080). */}
+            <label className="pos-lock">
+              <input
+                type="checkbox"
+                checked={scaleStrokes}
+                onChange={(e) =>
+                  void run("settings.set", {
+                    key: "editor.scaleStrokes",
+                    value: e.target.checked,
+                  }).catch(showError)
+                }
+              />
+              <span>{t("ui.editor.scale_strokes")}</span>
+            </label>
           </div>
         </fieldset>
         {/* Align and distribute the selection (EDT-083). */}

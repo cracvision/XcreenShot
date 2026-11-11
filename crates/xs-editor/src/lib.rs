@@ -10,6 +10,7 @@ pub mod fit;
 pub mod objects;
 pub mod recovery;
 pub mod store;
+pub mod transform;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -1582,6 +1583,137 @@ pub fn extension() -> Extension {
                     }
                 }
             }
+            changed(&core, ctx, &id);
+            Ok(json!({ "objects": updated }))
+        });
+        // Several objects stretched, turned or given the same size as one, in one undo
+        // step (EDT-080, EDT-083).
+        on!("document.transform", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let oids = object_ids(&p, ctx.lang)?;
+            let kinds = kinds_of(&core, ctx.lang, &id, &oids)?;
+            let bad = |param: &str, reason: &str| {
+                invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", param), ("reason", reason)],
+                ))
+            };
+            let given = |k: &str| p.get(k).is_some_and(|v| !v.is_null());
+            if ["scale", "rotate", "equal"].iter().filter(|k| given(k)).count() != 1 {
+                return Err(bad("scale", "give one of scale, rotate or equal"));
+            }
+            // Line widths and text sizes follow, unless the option says no (EDT-080).
+            let strokes = p
+                .get("strokes")
+                .and_then(Value::as_bool)
+                .unwrap_or_else(|| core.settings.get_bool("editor.scaleStrokes"));
+            let scale = p.get("scale").filter(|v| !v.is_null()).cloned();
+            let rotate = p.get("rotate").and_then(Value::as_f64);
+            if given("rotate") && rotate.is_none() {
+                return Err(bad("rotate", "degrees must be a number"));
+            }
+            let around = p
+                .get("around")
+                .and_then(Value::as_array)
+                .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]));
+            let equal = match p.get("equal").and_then(Value::as_str) {
+                Some("width") => Some(true),
+                Some("height") => Some(false),
+                Some(_) => return Err(bad("equal", "must be width or height")),
+                None if given("equal") => return Err(bad("equal", "must be width or height")),
+                None => None,
+            };
+            let size = p.get("size").and_then(Value::as_f64);
+            let kind_refs: Vec<&str> = kinds.iter().map(String::as_str).collect();
+            let auto = auto_expand(&core);
+            let updated = editor(&core)
+                .store
+                .mutate(&id, &objects::label("change", &kind_refs), |doc| {
+                    let dpi = doc.dpi;
+                    let measure = |props: &Map<String, Value>| {
+                        let t = xs_image::text::Text::from_props(props).ok()?;
+                        let l = xs_image::text::layout(&t, dpi);
+                        Some((f64::from(l.width), f64::from(l.height)))
+                    };
+                    let picked: Vec<Object> = doc
+                        .objects
+                        .iter()
+                        .filter(|o| oids.contains(&o.id))
+                        .cloned()
+                        .collect();
+                    let refs: Vec<&Object> = picked.iter().collect();
+                    let all = transform::bounds(refs.iter().copied(), &measure)
+                        .ok_or_else(|| bad("objectIds", "the objects have no size"))?;
+                    let op = if let Some(s) = &scale {
+                        let from = match s.get("from") {
+                            Some(v) => transform::Rect::from_value(v)
+                                .ok_or_else(|| bad("scale.from", "must be [x, y, w, h]"))?,
+                            None => all,
+                        };
+                        let to = match (s.get("to"), s.get("factor")) {
+                            (Some(v), _) => transform::Rect::from_value(v)
+                                .ok_or_else(|| bad("scale.to", "must be [x, y, w, h]"))?,
+                            // By a factor, from the box's top left corner.
+                            (None, Some(f)) => {
+                                let (fx, fy) = match f {
+                                    Value::Array(a) => (
+                                        a.first().and_then(Value::as_f64),
+                                        a.get(1).and_then(Value::as_f64),
+                                    ),
+                                    v => (v.as_f64(), v.as_f64()),
+                                };
+                                let (Some(fx), Some(fy)) = (fx, fy) else {
+                                    return Err(bad("scale.factor", "must be a number or [x, y]"));
+                                };
+                                transform::Rect {
+                                    w: from.w * fx,
+                                    h: from.h * fy,
+                                    ..from
+                                }
+                            }
+                            (None, None) => return Err(bad("scale", "give to or factor")),
+                        };
+                        if to.w < 0.0 || to.h < 0.0 || from.w < 0.0 || from.h < 0.0 {
+                            return Err(bad("scale", "sizes must not be negative"));
+                        }
+                        transform::Op::Scale { from, to, strokes }
+                    } else if let Some(degrees) = rotate {
+                        transform::Op::Rotate {
+                            center: around.unwrap_or_else(|| all.center()),
+                            degrees,
+                        }
+                    } else {
+                        let width = equal.unwrap_or(true);
+                        let size = match size {
+                            Some(s) if s >= 1.0 => s,
+                            Some(_) => return Err(bad("size", "must be at least 1")),
+                            None => transform::largest(&refs, width, &measure)
+                                .ok_or_else(|| bad("objectIds", "none of them has that side"))?,
+                        };
+                        transform::Op::Equal { width, size }
+                    };
+                    for o in &picked {
+                        let set = transform::transformed(o, &op, &measure);
+                        if set.is_empty() {
+                            continue;
+                        }
+                        let target = doc
+                            .object_mut(&o.id)
+                            .ok_or_else(|| CommandError::internal("object vanished"))?;
+                        objects::update(target, &set).map_err(|r| bad("objectIds", &r))?;
+                    }
+                    if auto {
+                        fit::fit_canvas(doc);
+                    }
+                    let out: Vec<Value> = oids
+                        .iter()
+                        .filter_map(|oid| doc.object(oid))
+                        .map(|o| serde_json::to_value(o).unwrap_or_default())
+                        .collect();
+                    Ok::<_, CommandError>(out)
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
             changed(&core, ctx, &id);
             Ok(json!({ "objects": updated }))
         });

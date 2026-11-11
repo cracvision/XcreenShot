@@ -10,6 +10,7 @@ import { setting, useSetting } from "../store";
 import { applyCrop, duplicateSelection, startNewText, startTextEdit } from "./actions";
 import { canvasMenu, lockedMenu, menuPoint } from "./menus";
 import {
+  center,
   contains,
   corners,
   dragRect,
@@ -36,6 +37,7 @@ import {
 import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
+import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
 import {
   fitZoom,
   imagePoint,
@@ -66,7 +68,9 @@ type ArrowObj = Extract<DocObject, { type: "arrow" }>;
 type HandleHit =
   | { crop: BoxHandle }
   | { object: ArrowObj; end: "from" | "to" }
-  | { object: DocObject; handle: Handle };
+  | { object: DocObject; handle: Handle }
+  // A handle of the box around several selected objects (EDT-080).
+  | { multi: Handle };
 
 type Drag =
   | {
@@ -85,6 +89,9 @@ type Drag =
   | { kind: "end"; id: string; end: "from" | "to"; other: Point; point: Point }
   | { kind: "resize"; id: string; handle: BoxHandle; start: Box; box: Box }
   | { kind: "rotate"; id: string; start: Box; box: Box }
+  // Several objects stretched or turned with their common box (EDT-080).
+  | { kind: "mresize"; handle: BoxHandle; start: Box; box: Box }
+  | { kind: "mrotate"; start: Box; angle: number }
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
   | { kind: "pan"; x: number; y: number; left: number; top: number };
 
@@ -168,6 +175,7 @@ export function Canvas({ doc }: Props) {
   const textEdit = useEditor((s) => s.textEdit);
   const cropState = useEditor((s) => s.cropRect);
   const autoExpand = useSetting("editor.autoExpandCanvas", true);
+  const scaleStrokes = useSetting("editor.scaleStrokes", true);
   const { setSelection, setView, showError } = useEditor.getState();
   // Another document: no group is entered (EDT-082).
   useEffect(() => {
@@ -349,8 +357,15 @@ export function Canvas({ doc }: Props) {
   }, []);
 
   // Objects as the canvas shows them: with the gesture in progress applied.
+  const multiOp: TransformOp | null =
+    drag?.kind === "mresize"
+      ? { kind: "scale", from: drag.start, to: drag.box, strokes: scaleStrokes }
+      : drag?.kind === "mrotate"
+        ? { kind: "rotate", center: center(drag.start), degrees: drag.angle }
+        : null;
   const shown: DocObject[] = doc.objects.map((o) => {
     if (pending?.version === doc.version && pending.object.id === o.id) return pending.object;
+    if (multiOp) return selection.includes(o.id) ? transformed(o, multiOp) : o;
     if (drag?.kind === "move")
       return drag.ids.includes(o.id) ? moved(o, drag.delta[0], drag.delta[1])[0] : o;
     if (!drag || !("id" in drag) || drag.id !== o.id) return o;
@@ -363,6 +378,12 @@ export function Canvas({ doc }: Props) {
     }
   });
   const committed = new Map(doc.objects.map((o) => [o.id, o]));
+  /** The box around several selected objects, as they are stored (EDT-080). */
+  const multiBox = (): Box | null => {
+    if (selection.length < 2) return null;
+    const all = boundsOf(doc.objects.filter((o) => selection.includes(o.id)));
+    return all ? { ...all, rotation: 0 } : null;
+  };
 
   const local = (e: React.PointerEvent | React.WheelEvent | React.MouseEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -380,6 +401,13 @@ export function Canvas({ doc }: Props) {
       const box: Box = { ...cropRect, rotation: 0 };
       for (const h of RESIZE_HANDLES)
         if (near(handlePoint(box, h, 0), s)) return { crop: h as BoxHandle };
+      return null;
+    }
+    if (selection.length > 1) {
+      const all = multiBox();
+      if (!all) return null;
+      for (const h of [...RESIZE_HANDLES, "rotate" as const])
+        if (near(handlePoint(all, h, STEM / lay.scale), s)) return { multi: h };
       return null;
     }
     if (selection.length !== 1) return null;
@@ -437,6 +465,18 @@ export function Canvas({ doc }: Props) {
             : "new";
       setDrag({ kind: "crop", mode, start: p, from: cropRect, rect: cropRect });
       return;
+    }
+    if (handle && "multi" in handle) {
+      const start = multiBox();
+      if (start) {
+        capture();
+        setDrag(
+          handle.multi === "rotate"
+            ? { kind: "mrotate", start, angle: 0 }
+            : { kind: "mresize", handle: handle.multi, start, box: start },
+        );
+        return;
+      }
     }
     if (handle && "end" in handle) {
       capture();
@@ -557,6 +597,13 @@ export function Canvas({ doc }: Props) {
       }
       case "rotate":
         return { ...d, box: { ...d.start, rotation: rotateTo(d.start, p, e.shiftKey) } };
+      case "mresize": {
+        // From a corner the proportions stay, as with pictures; Shift frees them.
+        const keepRatio = d.handle.length === 2 ? !e.shiftKey : e.shiftKey;
+        return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
+      }
+      case "mrotate":
+        return { ...d, angle: normalized(rotateTo(d.start, p, e.shiftKey)) };
       case "crop": {
         const bounds = ext;
         let rect: RectBox;
@@ -587,7 +634,15 @@ export function Canvas({ doc }: Props) {
     usePointer.setState({ point: p, screen: s });
     if (!drag) {
       const h = hitHandle(s);
-      const handleName = h ? ("crop" in h ? h.crop : "end" in h ? "end" : h.handle) : null;
+      const handleName = h
+        ? "crop" in h
+          ? h.crop
+          : "multi" in h
+            ? h.multi
+            : "end" in h
+              ? "end"
+              : h.handle
+        : null;
       setHover(
         handleName ??
           (cropRect ? null : hitObject(p) ? "object" : hitObject(p, true) ? "locked" : null),
@@ -656,6 +711,24 @@ export function Canvas({ doc }: Props) {
           const [next, set] = reboxed(o, d.box);
           await update(next, set);
         }
+      } else if (d.kind === "mresize") {
+        const { start, box } = d;
+        if (start.w === box.w && start.h === box.h && start.x === box.x && start.y === box.y)
+          return;
+        await run("document.transform", {
+          documentId: id,
+          objectIds: selection,
+          scale: { from: [start.x, start.y, start.w, start.h], to: [box.x, box.y, box.w, box.h] },
+          strokes: scaleStrokes,
+        });
+      } else if (d.kind === "mrotate") {
+        if (d.angle === 0) return;
+        await run("document.transform", {
+          documentId: id,
+          objectIds: selection,
+          rotate: d.angle,
+          around: center(d.start),
+        });
       } else if (d.kind === "crop") {
         useEditor.setState({ cropRect: d.rect });
       }
@@ -811,6 +884,7 @@ export function Canvas({ doc }: Props) {
     const outside = new Set(doc.outside ?? []);
     const ids = [
       ...(drag?.kind === "move" ? drag.ids : []),
+      ...(multiOp ? selection : []),
       drag && "id" in drag ? drag.id : null,
       pending?.version === doc.version ? pending.object.id : null,
     ];
@@ -1068,13 +1142,21 @@ export function Canvas({ doc }: Props) {
                   if (pts.length === 0) return null;
                   const xs = pts.map((q) => q[0]);
                   const ys = pts.map((q) => q[1]);
-                  const all = {
-                    x: Math.min(...xs),
-                    y: Math.min(...ys),
-                    w: Math.max(...xs) - Math.min(...xs),
-                    h: Math.max(...ys) - Math.min(...ys),
-                    rotation: 0,
-                  };
+                  // While turning, the box turns with them (EDT-080).
+                  const all: Box =
+                    drag?.kind === "mrotate"
+                      ? { ...drag.start, rotation: drag.angle }
+                      : drag?.kind === "mresize"
+                        ? drag.box
+                        : {
+                            x: Math.min(...xs),
+                            y: Math.min(...ys),
+                            w: Math.max(...xs) - Math.min(...xs),
+                            h: Math.max(...ys) - Math.min(...ys),
+                            rotation: 0,
+                          };
+                  const [tx, ty] = toScreen(handlePoint(all, "n", 0));
+                  const [rx, ry] = toScreen(handlePoint(all, "rotate", STEM / scale));
                   return (
                     <Group>
                       {marks.map((o) => (
@@ -1100,6 +1182,33 @@ export function Canvas({ doc }: Props) {
                         strokeWidth={1}
                         dash={[4, 3]}
                       />
+                      <Line points={[tx, ty, rx, ry]} stroke={ACCENT} strokeWidth={1} />
+                      <Circle
+                        x={rx}
+                        y={ry}
+                        radius={HANDLE / 2}
+                        fill="#ffffff"
+                        stroke={ACCENT}
+                        strokeWidth={1.5}
+                      />
+                      {RESIZE_HANDLES.map((h) => {
+                        const [x, y] = toScreen(handlePoint(all, h, 0));
+                        return (
+                          <Rect
+                            key={h}
+                            x={x}
+                            y={y}
+                            width={HANDLE - 2}
+                            height={HANDLE - 2}
+                            offsetX={(HANDLE - 2) / 2}
+                            offsetY={(HANDLE - 2) / 2}
+                            rotation={all.rotation}
+                            fill="#ffffff"
+                            stroke={ACCENT}
+                            strokeWidth={1.5}
+                          />
+                        );
+                      })}
                     </Group>
                   );
                 })()}
