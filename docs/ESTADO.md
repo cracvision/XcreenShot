@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-11 (noche), con la entrega 5 terminada y la 6 avanzada.
+**Última actualización:** 2026-11-11 (noche), con M1 terminado en Windows (entregas 5, 6 y 7) y el instalador listo para la caminata de Carlos.
 
 ## Fuentes
 
@@ -40,7 +40,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato, arrastrar a otras apps | Hecha (2026-11-11); entra en la caminata de Carlos |
 | 6 · Lo que falta de captura y app | Cursor, aviso de capturas en negro, sonido y destello, notificaciones con clic, restablecer ajustes, Avanzado, Funciones en prueba, Ayuda y Acerca de, bienvenida, ayuda en pantalla, guías de tamaño, cruceta simplificada, teclas del perfil de compatibilidad, eventos (`events watch`), tooltips y pistas | Hecha en Windows (2026-11-11). APP-025 es solo de macOS |
-| 7 · Calidad | Teclado, lector de pantalla, contraste y movimiento, y rendimiento en todo M1 | En curso |
+| 7 · Calidad | Teclado, lector de pantalla, contraste y movimiento, y rendimiento en todo M1 | Hecha (2026-11-11). Medidas y lo que no cumple en [`tests/manual/APP-rendimiento-M1.md`](../tests/manual/APP-rendimiento-M1.md) |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
 
@@ -60,6 +60,14 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
     - CAP-020, CAP-019, CAP-014, CAP-066: panel de teclas (`H`/`F1`), guías de tamaño (`G`), cruceta simplificada y las teclas del perfil de compatibilidad.
     - APP-031: eventos y `xcreenshot events watch` (una línea JSON por evento).
     - APP-014: nivel de detalle de los tooltips y pistas de una sola vez.
+  - Entrega 7 (calidad):
+    - APP-043: las flechas recorren la barra de herramientas y las listas de secciones; `Shift`+flechas suman 10 en los campos numéricos.
+    - APP-044: auditoría `scripts/dev/a11y-audit.js` sin controles sin nombre; la biblioteca anuncia la app de origen; "Captura copiada" se anuncia.
+    - APP-045: temas de contraste de Windows (bordes y botones principales legibles), transparencia reducida, texto mínimo de 12 px.
+    - Rendimiento (APP-049, APP-051): unos 110 ms de una selección 4K al editor, 27 ms hasta tener el ícono y los atajos, 340 MB en reposo con el editor cargado. No cumplen: 205 MB en reposo sin el editor (la selección precargada) y la caché de GPU de WebView2 tras muchas capturas 4K. Decisiones en `spec/QUESTIONS.md`.
+    - Una instancia aislada (`XCREENSHOT_DATA_DIR`) ya no toca el inicio con Windows.
+  - Instalador para la caminata: `targeteleaseundle
+sis\XcreenShot_0.2.0_x64-setup.exe` (commit `bbc74be`). Guía: [`docs/caminata-M1.md`](caminata-M1.md).
   - Pregunta abierta para Carlos: a dónde lleva **Enviar comentarios** si sus colegas no ven el repositorio (QUESTIONS, APP-015).
 
 - **Plan acordado con Carlos (2026-11-10):** Claude implementa seguido las entregas 5, 6 y 7, que cierran M1 en Windows. Después Carlos hace una **caminata por la app con un instalador**, Claude corrige lo que encuentre y solo entonces escribe **un único guion de pruebas** consolidado. Las tandas pendientes de antes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028) entran en esa caminata. Luego M2 y siguientes con el mismo ciclo; las partes del spec sin escribir se proponen a Carlos antes de construirlas.
@@ -201,19 +209,12 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 ## Siguiente paso
 
-**Carlos pidió una pausa el 2026-11-11:** trabaja en otro proyecto y las ventanas de la instancia de prueba lo interrumpían. Al volver, **no arrancar instancias de prueba sin avisarle antes**: sus ventanas salen en su escritorio aunque estén aisladas.
+**M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Terminar la entrega 5 con TRY-015 (arrastrar a otras apps):**
-   - Plan: crate `drag` 2.1.1 (de CrabNebula, el que usa el plugin de Tauri) en `app/src-tauri`. Añade `windows` 0.52 en Windows: anotarlo en `QUESTIONS.md`.
-   - Comando de Tauri `xs_drag_out { docs, items }`. Prepara los archivos con los comandos de siempre:
-     - un PNG o JPG sin cambios se entrega tal cual;
-     - un `.xshot` o un documento con cambios se exporta como PNG aplanado a `local_dir/drag/` (se limpia al empezar cada arrastre).
-   - Después llama a `drag::start_drag` con `run_on_main_thread`, con una miniatura de unos 160 px como imagen del arrastre.
-   - En la interfaz: empezar al mover más de 4 px con el botón pulsado sobre un elemento de la bandeja o de la biblioteca (la selección entera si el elemento está seleccionado).
-2. Marcar en `spec/PARITY.md` LIB-001, LIB-002, LIB-015, LIB-020, LIB-021, LIB-022, LIB-027, TRY-001, TRY-002, TRY-008, TRY-009, TRY-011 y TRY-013 (y TRY-006 y EDT-109, adelantados).
-3. **Entrega 6:** repasar en `PARITY.md` los IDs de captura y app de M1 que siguen pendientes y hacerlos.
-4. **Entrega 7:** calidad (teclado, lector de pantalla, rendimiento).
-5. Instalador (probar antes con `npx tauri build --debug --no-bundle`), caminata de Carlos, arreglos y un único guion de pruebas.
+1. **Caminata de Carlos** con el instalador `bbc74be` y la guía [`docs/caminata-M1.md`](caminata-M1.md). Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
+2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
+3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
+4. **M2 (editor completo y biblioteca):** proponer a Carlos el plan por entregas antes de construir. Lo que el spec aún no tiene (plantillas, exportación y atajos del editor en `02-editor.md`; la parte de M2 de `04-biblioteca-compartir.md`) se propone primero. Si Carlos pide seguir sin esperar, empezar por los IDs Must que ya están escritos: Paso (EDT-035), Globo (EDT-028), Selección múltiple (EDT-079), Selección (EDT-043/044), Cambiar tamaño (EDT-069), Estilos guardados (EDT-015) y Panel Efectos (EDT-053).
 
 ## Decisiones vigentes que conviene recordar
 
