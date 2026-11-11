@@ -828,7 +828,62 @@ pub fn add_capture(
     scale: f64,
     app: Option<&str>,
 ) -> Result<(String, PathBuf), String> {
-    add_image(core, image, meta, scale, app)
+    add_capture_with(core, image, meta, scale, app, None)
+}
+
+/// The pointer taken with a capture (CAP-047): its picture and where its top-left
+/// corner falls in the image, in image pixels.
+pub struct Pointer {
+    pub image: image::RgbaImage,
+    pub x: i32,
+    pub y: i32,
+}
+
+/// [`add_capture`] with the pointer, which arrives as a floating image the user can
+/// move, resize or delete without a trace underneath (CAP-047; the Cursor object
+/// itself, with its shapes, is EDT-093 in M2).
+pub fn add_capture_with(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+    pointer: Option<&Pointer>,
+) -> Result<(String, PathBuf), String> {
+    let ed = editor(core);
+    let autosave = core.settings.get_bool("library.autosaveImages");
+    let extra = pointer
+        .map(|p| -> Result<(Picture, [f64; 2]), String> {
+            let png = xs_image::encode::png(&p.image, 0.0, true)?;
+            Ok((
+                picture(png, "png", p.image.width(), p.image.height()),
+                [p.x as f64, p.y as f64],
+            ))
+        })
+        .transpose()?;
+    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app, extra.as_ref())?;
+    let mut base = Base::from_image(image.clone());
+    let mut images = BTreeMap::new();
+    if let Some((pic, _)) = &extra {
+        base.add_image(&pic.name, &pic.bytes)?;
+        images.insert(pic.name.clone(), pic.bytes.clone());
+    }
+    let doc = DocStore::from_image(
+        path.clone(),
+        if autosave { Kind::Library } else { Kind::External },
+        document,
+        meta,
+        png,
+        base,
+    )
+    .with_images(images);
+    let (id, _) = ed.store.insert(doc, false);
+    if !autosave {
+        // Not in the library until saved: the strip marks it, closing asks (LIB-020).
+        ed.store.mark_unsaved(&id);
+    }
+    emit_list(core);
+    Ok((id, path))
 }
 
 /// Whether the canvas grows to fit objects that stick out of it (EDT-071).
@@ -844,7 +899,7 @@ pub fn save_capture(
     scale: f64,
     app: Option<&str>,
 ) -> Result<PathBuf, String> {
-    write_library_item(core, image, meta, scale, app).map(|(path, _, _)| path)
+    write_library_item(core, image, meta, scale, app, None).map(|(path, _, _)| path)
 }
 
 /// A new library document from pixels (a capture, a pasted image).
@@ -857,7 +912,7 @@ fn add_image(
 ) -> Result<(String, PathBuf), String> {
     let ed = editor(core);
     let autosave = core.settings.get_bool("library.autosaveImages");
-    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app)?;
+    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app, None)?;
     let doc = DocStore::from_image(
         path.clone(),
         if autosave { Kind::Library } else { Kind::External },
@@ -882,6 +937,7 @@ fn write_library_item(
     meta: Value,
     scale: f64,
     app: Option<&str>,
+    picture: Option<&(Picture, [f64; 2])>,
 ) -> Result<(PathBuf, Document, Vec<u8>), String> {
     let ed = editor(core);
     // Off (LIB-020): the capture waits in the app's data until it is saved.
@@ -893,16 +949,30 @@ fn write_library_item(
     };
     let path = xs_library::new_item_path(&folder, app, chrono::Local::now(), "xshot");
     let dpi = (96.0 * scale).round();
-    let document = Document::new(image.width(), image.height(), dpi);
+    let mut document = Document::new(image.width(), image.height(), dpi);
     let png = xs_image::encode::png(image, dpi, true)?;
-    let thumb = xs_image::encode::thumbnail(image, xs_core::document::THUMB_SIZE);
+    let mut images = BTreeMap::new();
+    let mut shown = std::borrow::Cow::Borrowed(image);
+    if let Some((pic, [x, y])) = picture {
+        let props = objects::image_object(&pic.name, [*x, *y, pic.width as f64, pic.height as f64])?;
+        document.objects.push(Object {
+            id: document.next_object_id(),
+            kind: "image".to_string(),
+            props,
+        });
+        images.insert(pic.name.clone(), pic.bytes.clone());
+        let mut base = Base::from_image(image.clone());
+        base.add_image(&pic.name, &pic.bytes)?;
+        shown = std::borrow::Cow::Owned(xs_image::render(&document, &base));
+    }
+    let thumb = xs_image::encode::thumbnail(&shown, xs_core::document::THUMB_SIZE);
     let file = xs_core::document::Xshot {
         manifest: xs_core::document::Manifest::current(),
         document: document.clone(),
         base_png: png.clone(),
         meta: meta.clone(),
         thumb_png: xs_image::encode::png(&thumb, 0.0, true)?,
-        images: Default::default(),
+        images,
     };
     {
         let _guard = ed.writing.lock().unwrap();

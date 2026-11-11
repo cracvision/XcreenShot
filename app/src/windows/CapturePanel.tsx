@@ -291,13 +291,14 @@ function CommonOptions<T extends Common>({
         />
         {t("ui.panel.copy")}
       </label>
-      {/* CAP-047 arrives with the editor; the reason is in the tooltip (CAP-002). */}
-      <label className="panel-check disabled" title={t("ui.panel.cursor_later")}>
-        <input type="checkbox" checked={false} disabled aria-describedby={`${id}-cursor`} />
+      {/* The pointer arrives as its own object, to move or delete (CAP-047). */}
+      <label className="panel-check" title={t("ui.panel.cursor_help")}>
+        <input
+          type="checkbox"
+          checked={value.cursor}
+          onChange={(e) => onChange({ cursor: e.target.checked })}
+        />
         {t("ui.panel.cursor")}
-        <span id={`${id}-cursor`} className="sr-only">
-          {t("ui.panel.cursor_later")}
-        </span>
       </label>
     </>
   );

@@ -259,6 +259,7 @@ pub fn shoot(
         app: pid.map(|p| platform::app_info(p, "")),
         window_title: title,
         window_id: None,
+        pointer: None,
         warnings: Vec::new(),
     })
 }

@@ -163,7 +163,7 @@ The commands that take a capture (`fullscreen`, `region`, `window`, `universal`,
 | `--open editor\|none` | `none` | Show the capture in XcreenShot. Agents never open windows unless they ask. |
 | `--out <path>` | — | Also write a PNG there (folders are created). |
 | `--delay <s>` | `0` | Wait before capturing (0–60). The app shows a countdown; Esc or its Cancel button ends the capture with `cancelled`. |
-| `--cursor true` | `false` | Include the pointer. Not yet: it arrives with the editor and is reported in `warnings`. |
+| `--cursor true` | `false` | Include the pointer, with its real shape: a floating image object of the document (move or delete it with `document.update_object` / `document.delete_object`), laid flat on the image copied to the clipboard and on `--out`. Not on macOS yet (reported in `warnings`). |
 
 `universal`, `image` and `capture` start from the capture panel settings (read them with `capture.settings`; Open in is usually `editor`) and these options override them, so pass `--open none` to keep windows closed. `fullscreen`, `region` and `window` always use the defaults above when called from the CLI or MCP.
 

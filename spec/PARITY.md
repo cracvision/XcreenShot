@@ -54,7 +54,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-044 | iPhone o iPad | M3 | Could | — |
 | CAP-045 | Abrir en | M1 | Must | En curso |
 | CAP-046 | Copiar al portapapeles | M1 | Must | En curso |
-| CAP-047 | Capturar cursor | M1 | Must | — |
+| CAP-047 | Capturar cursor | M1 | Must | En curso |
 | CAP-048 | Retardo | M1 | Must | En curso |
 | CAP-049 | Intervalo | M3 | Should | — |
 | CAP-050 | Programada | M3 | Should | — |

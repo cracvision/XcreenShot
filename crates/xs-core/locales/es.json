@@ -887,7 +887,7 @@
       "open_none": "Nada (solo guardar)",
       "copy": "Copiar al portapapeles",
       "cursor": "Capturar cursor",
-      "cursor_later": "Llega con el editor, donde el cursor es un objeto que puedes mover o borrar.",
+      "cursor_help": "El puntero llega como un objeto aparte: puedes moverlo o borrarlo.",
       "delay5": "Retardo de 5 s",
       "timing": "Tiempo",
       "timing_none": "Ninguno",

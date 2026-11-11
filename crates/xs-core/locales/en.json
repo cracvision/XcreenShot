@@ -887,7 +887,7 @@
       "open_none": "Nothing (save only)",
       "copy": "Copy to clipboard",
       "cursor": "Capture cursor",
-      "cursor_later": "Arrives with the editor, where the cursor is an object you can move or delete.",
+      "cursor_help": "The pointer arrives as its own object: you can move it or delete it.",
       "delay5": "5-second delay",
       "timing": "Timing",
       "timing_none": "None",

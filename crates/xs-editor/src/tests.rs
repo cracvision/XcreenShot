@@ -1449,3 +1449,66 @@ fn dragging_out_hands_over_flat_pngs_and_leaves_the_originals() {
     assert_eq!(files[1], other);
     assert!(files_for_drag(&e.core, &[], &[e.outside.path().join("gone.png")], &out).is_err());
 }
+
+#[test]
+fn a_captured_pointer_is_its_own_object() {
+    let e = env();
+    // A red 4×4 "pointer" at (10, 20) of a white capture (CAP-047).
+    let pointer = Pointer {
+        image: image::RgbaImage::from_pixel(4, 4, image::Rgba([255, 0, 0, 255])),
+        x: 10,
+        y: 20,
+    };
+    let (doc, path) = add_capture_with(
+        &e.core,
+        &white(100, 50),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Test"),
+        Some(&pointer),
+    )
+    .unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"].as_array().map(Vec::len), Some(1));
+    assert!(
+        !info["dirty"].as_bool().unwrap(),
+        "it arrives as captured, not as a change"
+    );
+    // The file has it from the start, and its pixels are not in the base image.
+    let file = Xshot::read(&path).unwrap();
+    assert_eq!(file.document.objects[0].kind, "image");
+    assert_eq!(file.images.len(), 1);
+    assert_eq!(
+        xs_image::encode::decode(&file.base_png)
+            .unwrap()
+            .get_pixel(11, 21)
+            .0,
+        [255, 255, 255, 255]
+    );
+    let out = e.outside.path().join("with.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    assert_eq!(
+        image::open(&out).unwrap().to_rgba8().get_pixel(11, 21).0,
+        [255, 0, 0, 255]
+    );
+    // Deleting it leaves no trace.
+    cli(
+        &e.core,
+        "document.delete_object",
+        json!({"documentId": doc, "objectId": file.document.objects[0].id}),
+    );
+    let out = e.outside.path().join("without.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    assert_eq!(
+        image::open(&out).unwrap().to_rgba8().get_pixel(11, 21).0,
+        [255, 255, 255, 255]
+    );
+}

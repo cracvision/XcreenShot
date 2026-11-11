@@ -116,6 +116,13 @@ pub struct Doc {
 }
 
 impl Doc {
+    /// The same, with pictures already in its `images/` folder (a captured pointer,
+    /// CAP-047). Its base must already know them.
+    pub fn with_images(mut self, images: BTreeMap<String, Vec<u8>>) -> Doc {
+        self.images = Arc::new(images);
+        self
+    }
+
     fn new(
         path: Option<PathBuf>,
         kind: Kind,

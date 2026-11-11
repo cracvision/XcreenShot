@@ -29,12 +29,16 @@ pub struct Frozen {
     pub frames: Vec<Frame>,
     pub windows: Vec<WindowRect>,
     pub pointer: Option<(i32, i32)>,
+    /// The pointer's picture when the screens were frozen (CAP-047).
+    pub cursor: Option<crate::pointer::ScreenPointer>,
 }
 
 /// Takes every monitor as it is right now (CAP-013, APP-048).
 pub fn freeze(lang: Lang) -> Result<Frozen, CommandError> {
     let started = Instant::now();
     let pointer = platform::cursor_position();
+    // Where the pointer is when the capture starts, not where the crosshair ends (CAP-047).
+    let cursor = crate::pointer::grab();
     let list = monitors().map_err(|e| failed(lang, e))?;
     let mut frames = Vec::with_capacity(list.len());
     for (m, _) in &list {
@@ -74,6 +78,7 @@ pub fn freeze(lang: Lang) -> Result<Frozen, CommandError> {
         frames,
         windows,
         pointer,
+        cursor,
     })
 }
 
@@ -186,6 +191,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
                 app: window.map(|w| platform::app_info(w.pid, &w.app)),
                 window_title: window.map(|w| w.title.clone()),
                 window_id: None,
+                pointer: frozen.cursor.clone(),
                 warnings: Vec::new(),
             };
             finish(core, ctx, shot, opts)
@@ -193,7 +199,8 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         Some("window") => {
             let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
             // The whole window, even if covered (CAP-027): taken live, not from the frames.
-            let shot = crate::capture_window(&crate::WindowTarget::Id(id), lang)?;
+            let mut shot = crate::capture_window(&crate::WindowTarget::Id(id), lang)?;
+            shot.pointer = frozen.cursor.clone();
             finish(core, ctx, shot, opts)
         }
         _ => Err(

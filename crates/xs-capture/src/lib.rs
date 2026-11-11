@@ -13,6 +13,7 @@ pub mod multi;
 mod multi_win;
 pub mod panel;
 pub mod platform;
+pub mod pointer;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -89,6 +90,8 @@ pub struct Shot {
     pub window_title: Option<String>,
     /// The window it shows, for "Repeat last area" (CAP-007).
     pub window_id: Option<u32>,
+    /// The pointer when the image was taken, with "Capture cursor" (CAP-047).
+    pub pointer: Option<pointer::ScreenPointer>,
     pub warnings: Vec<String>,
 }
 
@@ -214,6 +217,7 @@ pub fn capture_fullscreen(which: &str, lang: Lang) -> Result<Shot, CommandError>
         app,
         window_title,
         window_id: None,
+        pointer: None,
         warnings,
     })
 }
@@ -250,6 +254,7 @@ pub fn capture_region(area: Rect, lang: Lang) -> Result<Shot, CommandError> {
         app: window.as_ref().map(window_app),
         window_title: window.and_then(|w| w.title().ok()),
         window_id: None,
+        pointer: None,
         warnings: Vec::new(),
     })
 }
@@ -337,6 +342,7 @@ pub fn capture_window(target: &WindowTarget, lang: Lang) -> Result<Shot, Command
         app: Some(window_app(&window)),
         window_title: window.title().ok(),
         window_id: window.id().ok(),
+        pointer: None,
         warnings: Vec::new(),
     })
 }
@@ -431,23 +437,42 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let now = chrono::Local::now();
     let host = core.host();
     let mut warnings = shot.warnings.clone();
-    if opts.cursor {
-        // The pointer becomes an editable object of the document (CAP-047), which
-        // needs the editor's document model (EDT-, next M1 build).
-        warnings.push("cursor: arrives with the editor".to_string());
-    }
+    // The pointer, if asked for and inside the image (CAP-047): a floating image in
+    // the document, and laid over the image that leaves without the editor.
+    let pointer = if opts.cursor {
+        if cfg!(not(windows)) {
+            warnings.push("cursor: not available on this system yet".to_string());
+        }
+        let area = Rect {
+            width: shot.image.width(),
+            height: shot.image.height(),
+            ..shot.rect
+        };
+        shot.pointer.as_ref().and_then(|p| p.within(area))
+    } else {
+        None
+    };
+    let flat = pointer.as_ref().map(|p| pointer::flatten(&shot.image, p));
+    let outgoing = flat.as_ref().unwrap_or(&shot.image);
 
     // 1-2. Keep it safe first: a `.xshot` in the library, open for the editor (LIB-020).
     let meta = metadata(core, &shot, now);
     let app = shot.app.as_ref().map(|a| a.name.as_str());
-    let (document_id, path) = xs_editor::add_capture(core, &shot.image, meta.clone(), shot.scale as f64, app)
-        .map_err(|e| failed(lang, e))?;
+    let (document_id, path) = xs_editor::add_capture_with(
+        core,
+        &shot.image,
+        meta.clone(),
+        shot.scale as f64,
+        app,
+        pointer.as_ref(),
+    )
+    .map_err(|e| failed(lang, e))?;
     let mut files = vec![path.to_string_lossy().into_owned()];
 
     // 3. Clipboard.
     let mut copied = false;
     if opts.copy {
-        match copy_to_clipboard(&shot.image) {
+        match copy_to_clipboard(outgoing) {
             Ok(()) => copied = true,
             Err(e) => {
                 tracing::warn!(error = %e, "clipboard copy failed");
@@ -466,7 +491,7 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
             std::fs::create_dir_all(parent).map_err(|e| failed(lang, e))?;
         }
         let dpi = (96.0 * shot.scale as f64).round();
-        let png = xs_image::encode::png(&shot.image, dpi, false).map_err(|e| failed(lang, e))?;
+        let png = xs_image::encode::png(outgoing, dpi, false).map_err(|e| failed(lang, e))?;
         std::fs::write(out, png).map_err(|e| failed(lang, e))?;
         files.push(out.to_string_lossy().into_owned());
     }
@@ -499,7 +524,7 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     });
 
     // 4-6. Open, confirm.
-    host.capture_finished(&result, thumbnail_png(&shot.image).as_deref(), opts.open_editor);
+    host.capture_finished(&result, thumbnail_png(outgoing).as_deref(), opts.open_editor);
     if ctx.source.is_automation() && core.settings.get_bool("automation.notifyOnCapture") {
         let source = tr(lang, &format!("source.{}", source_key(ctx.source)), &[]);
         host.notify(
@@ -585,10 +610,14 @@ fn run_capture(
         core.host().hide_for_capture(true);
     }
     let shot = take(ctx.lang);
+    // Without a selection, the pointer of the moment the image is taken (CAP-047).
+    let pointer = opts.cursor.then(pointer::grab).flatten();
     if hide {
         core.host().hide_for_capture(false);
     }
-    finish(core, ctx, shot?, &opts)
+    let mut shot = shot?;
+    shot.pointer = pointer;
+    finish(core, ctx, shot, &opts)
 }
 
 /// Interactive capture (CAP-009, CAP-025, CAP-027), after the delay.
@@ -937,6 +966,7 @@ mod tests {
             }),
             window_title: Some("notes.txt".into()),
             window_id: None,
+            pointer: None,
             warnings: vec![],
         };
         let m = metadata(&core, &shot, chrono::Local::now());
