@@ -465,6 +465,27 @@ impl SettingsStore {
         Ok(changed)
     }
 
+    /// Puts the settings of `section` (all, with `None`) back to their defaults
+    /// (APP-010). Returns the keys that changed, with their default.
+    pub fn reset(&self, section: Option<&str>, keep: &[&str]) -> std::io::Result<Vec<(String, Value)>> {
+        let mut changed = Vec::new();
+        {
+            let mut values = self.values.write().unwrap();
+            for d in &self.defs {
+                if section.is_some_and(|s| s != d.section) || !self.available(d) || keep.contains(&d.key) {
+                    continue;
+                }
+                if values.remove(d.key).is_some_and(|old| old != d.default) {
+                    changed.push((d.key.to_string(), d.default.clone()));
+                }
+            }
+        }
+        if !changed.is_empty() {
+            self.save()?;
+        }
+        Ok(changed)
+    }
+
     /// Replaces a value from an external source of truth (e.g. the OS login items list)
     /// without the automation checks.
     pub fn sync_external(&self, key: &str, value: Value) -> bool {

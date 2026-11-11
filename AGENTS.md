@@ -68,6 +68,7 @@ xcreenshot app ping --json
 | `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
 | `app.open_logs` | `xcreenshot app open-logs` | Opens the logs folder. |
+| `app.open_data_folder` | `xcreenshot app open-data-folder [--open false]` | Opens the app's local data folder; returns it (`data`) and the settings folder (`config`). |
 | `app.mcp_config` | `xcreenshot app mcp-config --json` | How an MCP client starts XcreenShot: the installed CLI (`command`), `args` (`["mcp"]`), a JSON block for the client's configuration (`config`) and the command that adds it to Claude Code (`claudeCode`). `not_found` if the CLI is not installed next to the app. |
 | `app.permissions` | `xcreenshot app permissions --json` | OS permission states (macOS: screen recording, accessibility, camera, microphone, notifications; Windows: whether the system blocks XcreenShot's notifications). |
 | `app.request_permission` | `xcreenshot app request-permission <permission>` | Shows the OS request, or opens System Settings when the OS no longer asks. |
@@ -75,6 +76,8 @@ xcreenshot app ping --json
 | `settings.open` | `xcreenshot settings open [--section <id>] [--key <key>]` | Opens Preferences, optionally at a section or setting. |
 | `settings.get` | `xcreenshot settings get <key>` | Reads a setting. |
 | `settings.set` | `xcreenshot settings set <key> <value>` | Changes a setting. Values are parsed as JSON when possible (`true`, `5`), else as text. |
+| `settings.reset` | `xcreenshot settings reset [--section capture] --yes` | Puts a section's settings back to their defaults; without `--section`, every setting, the shortcut profile and every shortcut. Captures, the library and saved styles are never touched. Destructive: needs `--yes`. |
+| `app.warnings` | `xcreenshot app warnings [--reset true]` | How many warnings were answered with "Don't ask again" and how many hints were seen (`hidden`); with `--reset true`, shows them all again. |
 | `settings.list` | `xcreenshot settings list --json` | Every setting with type, default, current value and lock state. |
 | `settings.schema` | `xcreenshot settings schema --json` | Setting definitions. |
 | `shortcuts.list` | `xcreenshot shortcuts list --json` | Every assignable shortcut, its combination and status. |

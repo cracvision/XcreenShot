@@ -734,11 +734,17 @@ kbd {
   grid-column: 2;
 }
 
-.library-location .path {
+/* Long paths wrap instead of pushing the buttons out of the window (LIB-027, APP-009). */
+.setting .path {
   display: block;
   margin-bottom: 4px;
   color: var(--ink);
   word-break: break-all;
+}
+
+.setting .description {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .setting.highlight {
@@ -3189,6 +3195,16 @@ html.overlay-root.overlay-native #root {
 
 .field input {
   width: 100%;
+}
+
+/* ---------- Reset to defaults (APP-010) ---------- */
+.reset-block {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- Dragging out (TRY-015) ---------- */

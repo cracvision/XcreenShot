@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
+import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
 import { AiSection } from "../prefs/AiSection";
 import { LibraryLocation } from "../prefs/LibraryLocation";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
+import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
 import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
 import { useApp } from "../store";
@@ -127,8 +129,19 @@ export function Preferences() {
         </div>
       ));
     }
-    if (section === "shortcuts") return <ShortcutsSection highlightKey={highlight} />;
-    if (section === "ai") return <AiSection highlightKey={highlight} />;
+    if (section === "shortcuts" || section === "ai") {
+      return (
+        <>
+          {section === "shortcuts" ? (
+            <ShortcutsSection highlightKey={highlight} />
+          ) : (
+            <AiSection highlightKey={highlight} />
+          )}
+          <ResetSection section={section} />
+        </>
+      );
+    }
+    if (section === "experimental") return <ExperimentalSection />;
     const rows = inSection(section);
     return (
       <>
@@ -142,20 +155,27 @@ export function Preferences() {
         ))}
         {section === "general" && (
           <>
+            <ShowWarningsAgain />
             <h2>{t("ui.permissions.title")}</h2>
             <PermissionsBlock />
           </>
         )}
         {section === "advanced" && (
-          <div className="row" style={{ marginTop: 16 }}>
-            <button className="btn" onClick={() => void run("app.open_logs")}>
-              {t("menu.open_logs")}
-            </button>
-            <button className="btn" onClick={() => void run("app.diagnostics", { copy: true })}>
-              {t("menu.copy_diagnostics")}
-            </button>
-          </div>
+          <>
+            <div className="row" style={{ marginTop: 16 }}>
+              <button className="btn" onClick={() => void run("app.open_logs")}>
+                {t("menu.open_logs")}
+              </button>
+              <button className="btn" onClick={() => void run("app.diagnostics", { copy: true })}>
+                {t("menu.copy_diagnostics")}
+              </button>
+            </div>
+            <AdvancedExtras />
+            <ResetAll />
+          </>
         )}
+        {/* Every section with settings can go back to its defaults (APP-010). */}
+        {rows.length > 0 && <ResetSection section={section} />}
       </>
     );
   };

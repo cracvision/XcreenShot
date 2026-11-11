@@ -353,8 +353,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-006 | Ventana de Preferencias | M0 | Must | En curso |
 | APP-007 | Sección General | M0 | Must | En curso |
 | APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |
-| APP-009 | Sección Avanzado | M1 | Should | — |
-| APP-010 | Restablecer ajustes y avisos | M1 | Should | — |
+| APP-009 | Sección Avanzado | M1 | Should | En curso |
+| APP-010 | Restablecer ajustes y avisos | M1 | Should | En curso |
 | APP-011 | Exportar e importar ajustes | M2 | Should | — |
 | APP-012 | Tema de la interfaz | M0 | Must | En curso |
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
@@ -374,11 +374,11 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-027 | Registro de comandos | M0 | Must | Win |
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
 | APP-029 | Servidor MCP (herramientas adelantadas por SMT-043; faltan recursos y eventos) | M2 | Should | En curso |
-| APP-030 | Catálogo mínimo de comandos | M1 | Must | — |
+| APP-030 | Catálogo mínimo de comandos | M1 | Must | En curso |
 | APP-031 | Eventos | M1 | Should | — |
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |
 | APP-033 | `AGENTS.md` | M2 | Should | — |
-| APP-034 | Funciones en prueba | M1 | Should | — |
+| APP-034 | Funciones en prueba | M1 | Should | En curso |
 | APP-035 | Configuración administrada | M6 | Should | — |
 | APP-036 | Actualizaciones | M6 | Must | — |
 | APP-037 | Instalador de Windows | M6 | Must | — |

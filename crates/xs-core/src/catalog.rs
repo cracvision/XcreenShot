@@ -81,6 +81,20 @@ impl B {
     }
 }
 
+/// The sections of Preferences (APP-006), in their order.
+pub const SETTING_SECTIONS: [&str; 10] = [
+    "general",
+    "capture",
+    "video",
+    "editor",
+    "library",
+    "share",
+    "ai",
+    "shortcuts",
+    "advanced",
+    "experimental",
+];
+
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library"];
 
@@ -199,6 +213,13 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
         B::new("app.open_logs", &["APP-046"]).scopes(UI_CLI),
+        B::new("app.open_data_folder", &["APP-009", "APP-046"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"open": {"type": "boolean", "default": true, "description": "Open the folder; false only returns where it is"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"data": {"type": "string"}, "config": {"type": "string"}}})),
         B::new("app.mcp_config", &["APP-029", "SMT-043"])
             .scopes(UI_CLI)
             .result(json!({
@@ -232,6 +253,23 @@ pub fn specs() -> Vec<CommandSpec> {
             .positional(&["key", "value"])
             .params(params(json!({"key": {"type": "string"}, "value": {}}), &["key", "value"]))
             .result(json!({"type": "object", "properties": {"key": {"type": "string"}, "value": {}, "changed": {"type": "boolean"}}})),
+        B::new("settings.reset", &["APP-010", "APP-030"])
+            .destructive()
+            .params(params(
+                json!({
+                    "section": {"type": "string", "enum": SETTING_SECTIONS, "description": "Only this section; without it, every setting and every shortcut"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"reset": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("app.warnings", &["APP-010", "APP-014"])
+            .params(params(
+                json!({
+                    "reset": {"type": "boolean", "default": false, "description": "Show again every warning answered with Don't ask again"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"hidden": {"type": "integer"}, "restored": {"type": "integer"}}})),
         B::new("settings.list", &["APP-006"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("settings.schema", &["APP-006"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("shortcuts.list", &["APP-017", "APP-018"])

@@ -31,6 +31,10 @@
       "title": "Open logs folder",
       "description": "Opens the folder with the local log files."
     },
+    "app_open_data_folder": {
+      "title": "Open the app data folder",
+      "description": "Opens the folder where XcreenShot keeps its local data (logs, recovery copies, the library index). Returns it and the settings folder."
+    },
     "app_permissions": {
       "title": "Permission status",
       "description": "Lists the system permissions XcreenShot uses and whether they are granted."
@@ -54,6 +58,14 @@
     "settings_set": {
       "title": "Change setting",
       "description": "Changes a setting. Automation settings can only be changed in Preferences."
+    },
+    "settings_reset": {
+      "title": "Reset settings",
+      "description": "Puts the settings of a section, or every setting and shortcut, back to their defaults. Captures, the library and saved styles are never touched."
+    },
+    "app_warnings": {
+      "title": "Warnings and hints",
+      "description": "Counts the warnings answered with \"Don't ask again\" and the hints already seen; with reset, shows them all again."
     },
     "settings_list": {
       "title": "List settings",
@@ -797,6 +809,32 @@
   "ui": {
     "prefs": {
       "title": "Preferences",
+      "data_folder": "App data folder",
+      "open": "Open",
+      "data_folder_help": "Logs, recovery copies and the library index. Your settings are in {{config}}.",
+      "cli_title": "Terminal command",
+      "copy_path": "Copy path",
+      "path_copied": "Path copied.",
+      "cli_help": "Scripts and agents run XcreenShot with this command (see AGENTS.md).",
+      "cli_missing": "Not installed with this copy of XcreenShot. The installer adds it.",
+      "experimental_intro": "Features that are not final yet. They may change or go away in an update. XcreenShot collects no data when you turn them on.",
+      "experimental_none": "No features on trial in this version.",
+      "reset_section": "Reset this section",
+      "reset_all": "Reset all settings…",
+      "reset": "Reset",
+      "reset_section_title": "Reset {{name}}?",
+      "reset_section_body": "The settings of {{name}} go back to their defaults. Your captures, the library and your saved styles do not change.",
+      "reset_all_title": "Reset all settings?",
+      "reset_all_body": "Every setting of every section, the shortcut profile and every shortcut go back to their defaults. Your captures, the library, saved styles and the accounts of your destinations do not change.",
+      "reset_done_one": "{{count}} setting reset.",
+      "reset_done_other": "{{count}} settings reset.",
+      "warnings_title": "Warnings and hints",
+      "warnings_again": "Show warnings and hints again",
+      "warnings_hidden_one": "{{count}} warning or hint is hidden.",
+      "warnings_hidden_other": "{{count}} warnings or hints are hidden.",
+      "warnings_none": "No warning or hint is hidden.",
+      "warnings_restored_one": "{{count}} will show again.",
+      "warnings_restored_other": "{{count}} will show again.",
       "search": "Search settings",
       "no_results": "No settings match.",
       "empty_section": "Nothing to set here yet. These settings arrive with their features.",
@@ -884,6 +922,7 @@
     },
     "common": {
       "on": "On",
+      "cancel": "Cancel",
       "off": "Off",
       "close": "Close",
       "language": "Language"

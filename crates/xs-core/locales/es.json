@@ -31,6 +31,10 @@
       "title": "Abrir la carpeta de registros",
       "description": "Abre la carpeta con los archivos de registro locales."
     },
+    "app_open_data_folder": {
+      "title": "Abrir la carpeta de datos de la app",
+      "description": "Abre la carpeta donde XcreenShot guarda sus datos locales (registros, copias de recuperación, el índice de la biblioteca). La devuelve junto con la carpeta de ajustes."
+    },
     "app_permissions": {
       "title": "Estado de los permisos",
       "description": "Lista los permisos del sistema que usa XcreenShot y si están concedidos."
@@ -54,6 +58,14 @@
     "settings_set": {
       "title": "Cambiar ajuste",
       "description": "Cambia un ajuste. Los ajustes de automatización solo se cambian en Preferencias."
+    },
+    "settings_reset": {
+      "title": "Restablecer ajustes",
+      "description": "Devuelve los ajustes de una sección, o todos los ajustes y atajos, a su valor por defecto. Nunca toca las capturas, la biblioteca ni los estilos guardados."
+    },
+    "app_warnings": {
+      "title": "Avisos y pistas",
+      "description": "Cuenta los avisos respondidos con \"No volver a preguntar\" y las pistas ya vistas; con reset, vuelve a mostrarlos todos."
     },
     "settings_list": {
       "title": "Listar ajustes",
@@ -797,6 +809,32 @@
   "ui": {
     "prefs": {
       "title": "Preferencias",
+      "data_folder": "Carpeta de datos de la app",
+      "open": "Abrir",
+      "data_folder_help": "Registros, copias de recuperación y el índice de la biblioteca. Tus ajustes están en {{config}}.",
+      "cli_title": "Comando de terminal",
+      "copy_path": "Copiar ruta",
+      "path_copied": "Ruta copiada.",
+      "cli_help": "Los scripts y los agentes usan XcreenShot con este comando (ver AGENTS.md).",
+      "cli_missing": "No está instalado con esta copia de XcreenShot. Lo añade el instalador.",
+      "experimental_intro": "Funciones que todavía no son definitivas. Pueden cambiar o desaparecer en una actualización. XcreenShot no recoge ningún dato cuando las activas.",
+      "experimental_none": "No hay funciones en prueba en esta versión.",
+      "reset_section": "Restablecer esta sección",
+      "reset_all": "Restablecer todos los ajustes…",
+      "reset": "Restablecer",
+      "reset_section_title": "¿Restablecer {{name}}?",
+      "reset_section_body": "Los ajustes de {{name}} vuelven a su valor por defecto. Tus capturas, la biblioteca y tus estilos guardados no cambian.",
+      "reset_all_title": "¿Restablecer todos los ajustes?",
+      "reset_all_body": "Todos los ajustes de todas las secciones, el perfil de atajos y todos los atajos vuelven a su valor por defecto. Tus capturas, la biblioteca, los estilos guardados y las cuentas de tus destinos no cambian.",
+      "reset_done_one": "Se restableció {{count}} ajuste.",
+      "reset_done_other": "Se restablecieron {{count}} ajustes.",
+      "warnings_title": "Avisos y pistas",
+      "warnings_again": "Volver a mostrar avisos y pistas",
+      "warnings_hidden_one": "Hay {{count}} aviso o pista oculto.",
+      "warnings_hidden_other": "Hay {{count}} avisos o pistas ocultos.",
+      "warnings_none": "No hay avisos ni pistas ocultos.",
+      "warnings_restored_one": "{{count}} volverá a aparecer.",
+      "warnings_restored_other": "{{count}} volverán a aparecer.",
       "search": "Buscar ajustes",
       "no_results": "Ningún ajuste coincide.",
       "empty_section": "Todavía no hay nada que configurar aquí. Estos ajustes llegan con sus funciones.",
@@ -884,6 +922,7 @@
     },
     "common": {
       "on": "Activado",
+      "cancel": "Cancelar",
       "off": "Desactivado",
       "close": "Cerrar",
       "language": "Idioma"

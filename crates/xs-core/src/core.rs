@@ -39,6 +39,19 @@ pub trait QuitGuard: Send + Sync {
     fn before_quit(&self);
 }
 
+/// Settings that a "Don't ask again" box turns off, with the value that asks (APP-010).
+const DONT_ASK_SETTINGS: &[(&str, bool)] = &[("library.confirmDelete", true)];
+/// UI memory that holds a "Don't ask again" answer (the flattening warning, EDT-107).
+const DONT_ASK_STATE: &[&str] = &["editor.flattenWarningOff"];
+/// UI memory of the hints already seen: `hint.<id>` (APP-014).
+pub const HINT_PREFIX: &str = "hint.";
+
+/// Something the user asked not to see again (APP-010).
+pub enum Hidden {
+    Setting(&'static str, Value),
+    State(String),
+}
+
 type Services = std::collections::HashMap<std::any::TypeId, Arc<dyn std::any::Any + Send + Sync>>;
 
 pub struct Core {
@@ -159,6 +172,30 @@ impl Core {
 
     pub fn recall(&self, key: &str) -> Option<Value> {
         self.state.read().unwrap().memory.get(key).cloned()
+    }
+
+    pub fn forget(&self, key: &str) {
+        if self.state.write().unwrap().memory.remove(key).is_some() {
+            self.save_state();
+        }
+    }
+
+    /// The warnings answered with "Don't ask again" and the hints already seen (APP-010,
+    /// APP-014): what "Show warnings and hints again" brings back.
+    pub fn hidden_warnings(&self) -> Vec<Hidden> {
+        let mut hidden: Vec<Hidden> = DONT_ASK_SETTINGS
+            .iter()
+            .filter(|(key, ask)| self.settings.get(key) != Some(json!(ask)))
+            .map(|(key, ask)| Hidden::Setting(key, json!(ask)))
+            .collect();
+        let memory = &self.state.read().unwrap().memory;
+        hidden.extend(
+            memory
+                .keys()
+                .filter(|k| DONT_ASK_STATE.contains(&k.as_str()) || k.starts_with(HINT_PREFIX))
+                .map(|k| Hidden::State(k.clone())),
+        );
+        hidden
     }
 
     pub fn lang(&self) -> Lang {
@@ -509,6 +546,15 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
     });
+    // Advanced > App data folder (APP-009): where the app keeps its data and settings.
+    on!("app.open_data_folder", |core, ctx, p| {
+        let data = core.paths.local_dir.clone();
+        if p.get("open").and_then(Value::as_bool).unwrap_or(true) {
+            std::fs::create_dir_all(&data).map_err(|e| CommandError::internal(e.to_string()))?;
+            core.host().open_path(&data)?;
+        }
+        Ok(json!({ "data": data, "config": core.paths.config_dir }))
+    });
     // How an MCP client starts XcreenShot (APP-029): the CLI installed next to the app.
     on!("app.mcp_config", |_core, ctx, _p| {
         let exe = if cfg!(windows) {
@@ -581,6 +627,47 @@ fn build_registry(core: &Arc<Core>) -> Registry {
             core.on_setting_changed(&key, &value);
         }
         Ok(json!({ "key": key, "value": value, "changed": changed }))
+    });
+    on!("settings.reset", |core, ctx, p| {
+        let section = str_param(&p, "section");
+        // The Shortcuts section keeps its profile: its shortcuts go back to that profile's.
+        let keep: &[&str] = if section == Some("shortcuts") {
+            &["shortcuts.profile"]
+        } else {
+            &[]
+        };
+        let changed = core
+            .settings
+            .reset(section, keep)
+            .map_err(|e| CommandError::internal(format!("cannot save settings: {e}")))?;
+        for (key, value) in &changed {
+            tracing::info!(key, source = ?ctx.source, "setting reset");
+            core.on_setting_changed(key, value);
+        }
+        // All settings, or the Shortcuts section: the shortcuts of the profile too.
+        if section.is_none_or(|s| s == "shortcuts") {
+            core.shortcuts.reset(None);
+            core.host().shortcuts_changed();
+        }
+        Ok(json!({ "reset": changed.iter().map(|(k, _)| k).collect::<Vec<_>>() }))
+    });
+    on!("app.warnings", |core, ctx, p| {
+        let hidden = core.hidden_warnings();
+        let reset = p.get("reset").and_then(Value::as_bool).unwrap_or(false);
+        if !reset {
+            return Ok(json!({ "hidden": hidden.len() }));
+        }
+        for w in &hidden {
+            match w {
+                Hidden::Setting(key, value) => {
+                    if core.settings.sync_external(key, value.clone()) {
+                        core.on_setting_changed(key, value);
+                    }
+                }
+                Hidden::State(key) => core.forget(key),
+            }
+        }
+        Ok(json!({ "hidden": 0, "restored": hidden.len() }))
     });
     on!("settings.list", |core, ctx, _p| {
         if let Some(v) = core.host().launch_at_login() {
@@ -752,6 +839,47 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// APP-010: a section's reset leaves the other sections alone; warnings come back.
+    #[test]
+    fn reset_settings_and_warnings() {
+        let core = Core::for_tests(Platform::Windows);
+        let set = |k: &str, v: Value| {
+            call(&core, Source::Ui, "settings.set", json!({"key": k, "value": v})).unwrap()
+        };
+        set("capture.flash", json!(false));
+        set("capture.sound", json!("soft"));
+        set("editor.shrinkToFit", json!(false));
+        let r = call(&core, Source::Ui, "settings.reset", json!({"section": "capture"})).unwrap();
+        let mut keys: Vec<&str> = r["reset"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(Value::as_str)
+            .collect();
+        keys.sort();
+        assert_eq!(keys, ["capture.flash", "capture.sound"]);
+        assert_eq!(core.settings.get("capture.sound"), Some(json!("none")));
+        assert_eq!(core.settings.get("editor.shrinkToFit"), Some(json!(false)));
+        // From the CLI it needs --yes, like every destructive command.
+        assert!(core.registry().spec("settings.reset").unwrap().destructive);
+
+        set("library.confirmDelete", json!(false));
+        core.remember("editor.flattenWarningOff", json!(true));
+        core.remember("hint.first_editor", json!(true));
+        core.remember("capture.magnifierZoom", json!(4));
+        let r = call(&core, Source::Ui, "app.warnings", json!({})).unwrap();
+        assert_eq!(r["hidden"], 3);
+        let r = call(&core, Source::Ui, "app.warnings", json!({"reset": true})).unwrap();
+        assert_eq!(r["restored"], 3);
+        assert_eq!(core.settings.get("library.confirmDelete"), Some(json!(true)));
+        assert!(core.recall("hint.first_editor").is_none());
+        assert_eq!(
+            core.recall("capture.magnifierZoom"),
+            Some(json!(4)),
+            "other memory stays"
+        );
     }
 
     /// APP-027: every menu entry is bound to a registered command.
