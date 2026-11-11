@@ -4,12 +4,26 @@
 // field applies, Esc goes back.
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { arrowFocus } from "../components/arrowFocus";
 import { run } from "../lib/commands";
+import { arrangeSelection } from "./actions";
+import { Icon } from "./icons";
 import { extentPoints, boxOf, reboxed } from "./objects";
 import { evaluate, keepRatio } from "./positionMath";
 import { useEditor, type DocObject } from "./state";
 
 const round = (v: number) => Math.round(v * 100) / 100;
+
+const ALIGN_ACTIONS = [
+  "align_left",
+  "align_hcenter",
+  "align_right",
+  "align_top",
+  "align_vcenter",
+  "align_bottom",
+  "distribute_h",
+  "distribute_v",
+] as const;
 
 /** One field: shows `value`; what is typed is evaluated on it when applied. */
 function Field({
@@ -83,13 +97,39 @@ export function PositionSize() {
         move: [dx, dy],
       }).catch(showError);
     return (
-      <fieldset className="pos-size">
-        <legend>{t("ui.editor.pos.title")}</legend>
-        <div className="pos-grid">
-          <Field label="X" value={x} onApply={(v) => void move(v - x, 0)} />
-          <Field label="Y" value={y} onApply={(v) => void move(0, v - y)} />
-        </div>
-      </fieldset>
+      <>
+        <fieldset className="pos-size">
+          <legend>{t("ui.editor.pos.title")}</legend>
+          <div className="pos-grid">
+            <Field label="X" value={x} onApply={(v) => void move(v - x, 0)} />
+            <Field label="Y" value={y} onApply={(v) => void move(0, v - y)} />
+          </div>
+        </fieldset>
+        {/* Align and distribute the selection (EDT-083). */}
+        <fieldset className="pos-size">
+          <legend>{t("ui.editor.align_title")}</legend>
+          <div
+            className="align-buttons"
+            role="toolbar"
+            aria-label={t("ui.editor.align_title")}
+            onKeyDown={arrowFocus("horizontal")}
+          >
+            {ALIGN_ACTIONS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                className="btn icon small"
+                title={t(`menu.${a}`).replace("&", "")}
+                aria-label={t(`menu.${a}`).replace("&", "")}
+                disabled={a.startsWith("distribute") && objects.length < 3}
+                onClick={() => arrangeSelection(a)}
+              >
+                <Icon name={a} />
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      </>
     );
   }
 

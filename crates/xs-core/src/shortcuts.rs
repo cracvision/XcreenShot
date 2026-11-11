@@ -474,6 +474,39 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"send_backward"}"#,
         ),
         editor("editor.send_back", "editor.action", r#"{"action":"send_back"}"#),
+        // No default (EDT-116): assignable in Preferences > Shortcuts.
+        editor("editor.align_left", "editor.action", r#"{"action":"align_left"}"#),
+        editor(
+            "editor.align_hcenter",
+            "editor.action",
+            r#"{"action":"align_hcenter"}"#,
+        ),
+        editor(
+            "editor.align_right",
+            "editor.action",
+            r#"{"action":"align_right"}"#,
+        ),
+        editor("editor.align_top", "editor.action", r#"{"action":"align_top"}"#),
+        editor(
+            "editor.align_vcenter",
+            "editor.action",
+            r#"{"action":"align_vcenter"}"#,
+        ),
+        editor(
+            "editor.align_bottom",
+            "editor.action",
+            r#"{"action":"align_bottom"}"#,
+        ),
+        editor(
+            "editor.distribute_h",
+            "editor.action",
+            r#"{"action":"distribute_h"}"#,
+        ),
+        editor(
+            "editor.distribute_v",
+            "editor.action",
+            r#"{"action":"distribute_v"}"#,
+        ),
         editor("editor.select_all", "editor.action", r#"{"action":"select_all"}"#),
         editor("editor.deselect", "editor.action", r#"{"action":"deselect"}"#),
         editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),

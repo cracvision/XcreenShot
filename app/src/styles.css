@@ -3317,6 +3317,12 @@ html.overlay-root.overlay-native #root {
   outline-offset: 0;
 }
 
+.align-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .pos-lock {
   display: flex;
   grid-column: 1 / -1;

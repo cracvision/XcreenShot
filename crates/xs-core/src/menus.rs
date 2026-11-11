@@ -230,6 +230,26 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.bring_forward", "menu.bring_forward", "bring_forward"),
                 action("editor.send_backward", "menu.send_backward", "send_backward"),
                 action("editor.send_back", "menu.send_back", "send_back"),
+                Separator,
+                Submenu {
+                    label: "menu.align",
+                    items: vec![
+                        action("editor.align_left", "menu.align_left", "align_left"),
+                        action("editor.align_hcenter", "menu.align_hcenter", "align_hcenter"),
+                        action("editor.align_right", "menu.align_right", "align_right"),
+                        Separator,
+                        action("editor.align_top", "menu.align_top", "align_top"),
+                        action("editor.align_vcenter", "menu.align_vcenter", "align_vcenter"),
+                        action("editor.align_bottom", "menu.align_bottom", "align_bottom"),
+                    ],
+                },
+                Submenu {
+                    label: "menu.distribute",
+                    items: vec![
+                        action("editor.distribute_h", "menu.distribute_h", "distribute_h"),
+                        action("editor.distribute_v", "menu.distribute_v", "distribute_v"),
+                    ],
+                },
             ],
         },
         // Cloud AI (SMT-040, SMT-041): always listed; without it set up they explain

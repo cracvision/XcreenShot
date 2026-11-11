@@ -509,7 +509,8 @@ pub fn specs() -> Vec<CommandSpec> {
                     "objectId": {"type": "string"},
                     "objectIds": {"type": "array", "items": {"type": "string"}},
                     "set": {"type": "object", "description": "Geometry to replace and style properties to change"},
-                    "move": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Move every object by [dx, dy] canvas pixels, in one undo step"}
+                    "move": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Move every object by [dx, dy] canvas pixels, in one undo step"},
+                    "moves": {"type": "object", "description": "A move for each object, {\"o1\": [dx, dy], …}, in one undo step (aligning, EDT-083)"}
                 }),
                 &[],
             ))

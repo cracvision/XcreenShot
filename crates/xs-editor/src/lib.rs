@@ -1500,6 +1500,19 @@ pub fn extension() -> Extension {
                 .get("move")
                 .and_then(Value::as_array)
                 .and_then(|a| Some((a.first()?.as_f64()?, a.get(1)?.as_f64()?)));
+            // A move of its own for each object: aligning and distributing (EDT-083).
+            let own_moves: BTreeMap<String, (f64, f64)> = p
+                .get("moves")
+                .and_then(Value::as_object)
+                .map(|m| {
+                    m.iter()
+                        .filter_map(|(k, v)| {
+                            let a = v.as_array()?;
+                            Some((k.clone(), (a.first()?.as_f64()?, a.get(1)?.as_f64()?)))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
             // Try the change on copies first: it names the undo step and finds errors.
             let mut moved_only = true;
             let copies = editor(&core)
@@ -1532,6 +1545,9 @@ pub fn extension() -> Extension {
                             .ok_or_else(|| CommandError::internal("object vanished"))?;
                         if let Some((dx, dy)) = shift {
                             objects::translate(o, dx, dy);
+                        }
+                        if let Some((dx, dy)) = own_moves.get(oid) {
+                            objects::translate(o, *dx, *dy);
                         }
                         objects::update(o, &set).map_err(|r| {
                             invalid(tr(

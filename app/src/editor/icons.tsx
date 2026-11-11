@@ -21,6 +21,47 @@ function Svg({ children }: { children: ReactNode }) {
 }
 
 const ICONS = {
+  // Align and distribute (EDT-083): a guide line and two bars.
+  align_left: (
+    <Svg>
+      <path d="M4 3v14M7 6h8M7 13h5" />
+    </Svg>
+  ),
+  align_hcenter: (
+    <Svg>
+      <path d="M10 3v14M5 6h10M7 13h6" />
+    </Svg>
+  ),
+  align_right: (
+    <Svg>
+      <path d="M16 3v14M5 6h8M8 13h5" />
+    </Svg>
+  ),
+  align_top: (
+    <Svg>
+      <path d="M3 4h14M6 7v8M13 7v5" />
+    </Svg>
+  ),
+  align_vcenter: (
+    <Svg>
+      <path d="M3 10h14M6 5v10M13 7v6" />
+    </Svg>
+  ),
+  align_bottom: (
+    <Svg>
+      <path d="M3 16h14M6 5v8M13 8v5" />
+    </Svg>
+  ),
+  distribute_h: (
+    <Svg>
+      <path d="M3 3v14M17 3v14M8 6v8M12 6v8" />
+    </Svg>
+  ),
+  distribute_v: (
+    <Svg>
+      <path d="M3 3h14M3 17h14M6 8h8M6 12h8" />
+    </Svg>
+  ),
   capture: (
     <Svg>
       <path d="M3 7V4h3M14 4h3v3M17 13v3h-3M6 16H3v-3" />

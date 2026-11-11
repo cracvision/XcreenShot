@@ -182,6 +182,7 @@ export function useMenuBar(): void {
   const doc = useEditor((s) => s.doc);
   const inLibrary = useMainView((s) => s.view === "library");
   const selected = useEditor((s) => s.selection.length > 0) && !inLibrary;
+  const selectedCount = useEditor((s) => s.selection.length);
   const anyOpen = useEditor((s) => s.documents.length > 0);
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
@@ -242,6 +243,16 @@ export function useMenuBar(): void {
       "send_back",
     ])
       enabled[`editor.${a}`] = selected;
+    for (const a of [
+      "align_left",
+      "align_hcenter",
+      "align_right",
+      "align_top",
+      "align_vcenter",
+      "align_bottom",
+    ])
+      enabled[`editor.${a}`] = selected;
+    for (const a of ["distribute_h", "distribute_v"]) enabled[`editor.${a}`] = selectedCount >= 3;
     enabled["editor.select_all"] = objectCount > 0;
     const checked = {
       "editor.side_panel": panel,
@@ -254,6 +265,7 @@ export function useMenuBar(): void {
   }, [
     hasDoc,
     objectCount,
+    selectedCount,
     canUndo,
     canRedo,
     selected,

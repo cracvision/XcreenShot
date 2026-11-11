@@ -29,6 +29,7 @@ import {
 import { selectedItems, showView, useMainView, useTray } from "../library/state";
 import { focusedTrayItem, neighbour, trayOrder } from "./tray";
 import { extentPoints } from "./objects";
+import { alignMoves, distributeMoves, frameOf, type AlignTo, type Extent } from "./align";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -312,6 +313,41 @@ export async function duplicateSelection(offset?: [number, number]): Promise<str
   }
 }
 
+/** Align or distribute the selection (EDT-083): against the selection's own box with
+ *  two or more, against the canvas with one. One undo step. */
+export function arrangeSelection(action: string): void {
+  const { active, doc, selection } = useEditor.getState();
+  if (!active || !doc) return;
+  const items: Extent[] = doc.objects
+    .filter((o) => selection.includes(o.id))
+    .map((o) => {
+      const pts = extentPoints(o);
+      return {
+        id: o.id,
+        x0: Math.min(...pts.map((p) => p[0])),
+        y0: Math.min(...pts.map((p) => p[1])),
+        x1: Math.max(...pts.map((p) => p[0])),
+        y1: Math.max(...pts.map((p) => p[1])),
+      };
+    })
+    .filter((i) => Number.isFinite(i.x0));
+  if (items.length === 0) return;
+  const canvas: Extent = { id: "", x0: 0, y0: 0, x1: doc.canvas.width, y1: doc.canvas.height };
+  const moves = action.startsWith("distribute")
+    ? distributeMoves(items, action === "distribute_h" ? "h" : "v")
+    : alignMoves(
+        items,
+        action.slice("align_".length) as AlignTo,
+        items.length > 1 ? frameOf(items) : canvas,
+      );
+  if (Object.keys(moves).length === 0) return;
+  run("document.update_object", {
+    documentId: active,
+    objectIds: Object.keys(moves),
+    moves,
+  }).catch(fail);
+}
+
 export function deleteSelection(): void {
   const { active, selection } = useEditor.getState();
   if (!active || selection.length === 0) return;
@@ -493,6 +529,17 @@ export function performAction(action: string): boolean {
           send_back: "back",
         }[action],
       }).catch(fail);
+      return true;
+    case "align_left":
+    case "align_hcenter":
+    case "align_right":
+    case "align_top":
+    case "align_vcenter":
+    case "align_bottom":
+    case "distribute_h":
+    case "distribute_v":
+      if (!selected) return false;
+      arrangeSelection(action);
       return true;
     case "select_all":
       // Every object (EDT-079); locked objects (EDT-085) will stay out.
