@@ -39,8 +39,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
 | Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato, arrastrar a otras apps | Hecha (2026-11-11); entra en la caminata de Carlos |
-| 6 · Lo que falta de captura y app | Cursor, aviso de capturas en negro, sonido y destello, notificaciones con clic, restablecer ajustes, Avanzado, Funciones en prueba, Ayuda y Acerca de, bienvenida, ayuda en pantalla, guías de tamaño, cruceta simplificada, teclas del perfil de compatibilidad | En curso: faltan eventos (APP-031) y tooltips y pistas (APP-014) |
-| 7 · Calidad | Teclado, lector de pantalla y rendimiento en todo M1 | Pendiente |
+| 6 · Lo que falta de captura y app | Cursor, aviso de capturas en negro, sonido y destello, notificaciones con clic, restablecer ajustes, Avanzado, Funciones en prueba, Ayuda y Acerca de, bienvenida, ayuda en pantalla, guías de tamaño, cruceta simplificada, teclas del perfil de compatibilidad, eventos (`events watch`), tooltips y pistas | Hecha en Windows (2026-11-11). APP-025 es solo de macOS |
+| 7 · Calidad | Teclado, lector de pantalla, contraste y movimiento, y rendimiento en todo M1 | En curso |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
 
@@ -58,6 +58,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
     - APP-015: ventana Ayuda con páginas propias en inglés y español (`F1`), Acerca de XcreenShot con licencias (`scripts/licenses.mjs`) y Enviar comentarios.
     - APP-005: bienvenida del primer arranque (solo en equipos donde XcreenShot no arrancó nunca).
     - CAP-020, CAP-019, CAP-014, CAP-066: panel de teclas (`H`/`F1`), guías de tamaño (`G`), cruceta simplificada y las teclas del perfil de compatibilidad.
+    - APP-031: eventos y `xcreenshot events watch` (una línea JSON por evento).
+    - APP-014: nivel de detalle de los tooltips y pistas de una sola vez.
   - Pregunta abierta para Carlos: a dónde lleva **Enviar comentarios** si sus colegas no ven el repositorio (QUESTIONS, APP-015).
 
 - **Plan acordado con Carlos (2026-11-10):** Claude implementa seguido las entregas 5, 6 y 7, que cierran M1 en Windows. Después Carlos hace una **caminata por la app con un instalador**, Claude corrige lo que encuentre y solo entonces escribe **un único guion de pruebas** consolidado. Las tandas pendientes de antes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028) entran en esa caminata. Luego M2 y siguientes con el mismo ciclo; las partes del spec sin escribir se proponen a Carlos antes de construirlas.
