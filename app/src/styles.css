@@ -3191,6 +3191,17 @@ html.overlay-root.overlay-native #root {
   width: 100%;
 }
 
+/* ---------- Dragging out (TRY-015) ---------- */
+/* While the files of a drag are prepared, the pointer says so. */
+body.preparing-drag,
+body.preparing-drag * {
+  cursor: progress !important;
+}
+.strip-item,
+.lib-item {
+  -webkit-user-drag: none;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,

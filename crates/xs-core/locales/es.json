@@ -1211,7 +1211,11 @@
       "path_copied": "Ruta copiada",
       "closed_other": "{{count}} cerradas",
       "closed_one": "{{count}} cerrada",
-      "locate_filter": "El mismo tipo de archivo"
+      "locate_filter": "El mismo tipo de archivo",
+      "drag_preparing_one": "Preparando la imagen para arrastrarla…",
+      "drag_preparing_other": "Preparando {{count}} imágenes para arrastrarlas…",
+      "drag_too_soon": "La imagen no estaba lista al soltar. Vuelve a arrastrarla manteniendo el botón un momento, o cópiala.",
+      "drag_failed": "No se pudo arrastrar: {{reason}}"
     }
   },
   "history": {

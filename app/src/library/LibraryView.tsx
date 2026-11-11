@@ -20,6 +20,7 @@ import { menuPoint, useContextMenu } from "../editor/menus";
 import { xsdocUrl } from "../editor/state";
 import { hint, useShortcut } from "../editor/tools";
 import { askDelete, itemRef, openItems } from "./actions";
+import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
 import { boxOf, clickSelection, columnsOf, moveFocus, overlaps, range } from "./selection";
 import { selectedItems, useLibrary, type LibraryItem } from "./state";
@@ -92,6 +93,7 @@ function Item({
   onPick,
   onOpen,
   onMenu,
+  onPress,
 }: {
   item: LibraryItem;
   selected: boolean;
@@ -99,6 +101,7 @@ function Item({
   onPick: (item: LibraryItem, e: MouseEvent) => void;
   onOpen: (item: LibraryItem) => void;
   onMenu: (item: LibraryItem, e: MouseEvent) => void;
+  onPress: (item: LibraryItem, e: PointerEvent) => void;
 }) {
   const { t, i18n } = useTranslation();
   const date = new Date(item.captured).toLocaleString(i18n.language, {
@@ -121,6 +124,7 @@ function Item({
       onClick={(e) => onPick(item, e)}
       onDoubleClick={() => onOpen(item)}
       onContextMenu={(e) => onMenu(item, e)}
+      onPointerDown={(e) => onPress(item, e)}
     >
       <div className="lib-thumb">
         <img src={thumbUrl(item)} alt="" loading="lazy" draggable={false} />
@@ -184,6 +188,14 @@ function Grid() {
       items: itemMenu(selectedItems(), t),
     });
   };
+
+  // Dragging an item out drags the selection if it is in it, or else only that item,
+  // which becomes the selection (TRY-015).
+  const press = (item: LibraryItem, e: PointerEvent) =>
+    watchDrag(e, () => {
+      if (!useLibrary.getState().selection.includes(item.id)) select([item.id], item.id, item.id);
+      return { docs: [], paths: selectedItems().map((i) => i.path) };
+    });
 
   const layout = () => {
     const els = Array.from(grid.current?.querySelectorAll<HTMLElement>("[data-item]") ?? []);
@@ -281,6 +293,7 @@ function Grid() {
           onPick={pick}
           onOpen={(i) => void openItems([i])}
           onMenu={menu}
+          onPress={press}
         />
       ))}
       {shown && (

@@ -3,6 +3,7 @@
 
 mod countdown;
 mod docs;
+mod drag_out;
 #[cfg(windows)]
 mod freeze_win;
 mod global;
@@ -110,6 +111,33 @@ fn xs_countdown_current(app: AppHandle) -> Option<Value> {
 #[tauri::command]
 fn xs_editor_menus() -> Value {
     xs_core::menus::to_json(&xs_core::menus::app_menu(xs_core::platform::Platform::Windows))
+}
+
+/// Prepares the files of a drag out to other apps (TRY-015): open documents by ID and
+/// library files by path. Returns the files and the picture for the pointer.
+#[tauri::command]
+async fn xs_drag_prepare(
+    state: tauri::State<'_, AppState>,
+    docs: Vec<String>,
+    paths: Vec<String>,
+) -> Result<Value, CommandError> {
+    let core = state.core.clone();
+    tauri::async_runtime::spawn_blocking(move || drag_out::prepare(&core, &docs, &paths))
+        .await
+        .map_err(|e| CommandError::internal(e.to_string()))?
+}
+
+/// Drags prepared files out of the window until they are dropped (TRY-015).
+#[tauri::command]
+async fn xs_drag_start(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    files: Vec<std::path::PathBuf>,
+    image: Option<std::path::PathBuf>,
+) -> Result<&'static str, CommandError> {
+    tauri::async_runtime::spawn_blocking(move || drag_out::start(&app, window, files, image))
+        .await
+        .map_err(|e| CommandError::internal(e.to_string()))?
 }
 
 /// The capture panel fits its content (CAP-001).
@@ -308,7 +336,9 @@ pub fn run() {
             xs_countdown_cancel,
             xs_countdown_current,
             xs_panel_fit,
-            xs_editor_menus
+            xs_editor_menus,
+            xs_drag_prepare,
+            xs_drag_start
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();

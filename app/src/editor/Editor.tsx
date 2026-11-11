@@ -22,6 +22,7 @@ import { useEditor } from "./state";
 import { StatusBar } from "./StatusBar";
 import { Strip } from "./Strip";
 import { Toolbar } from "./Toolbar";
+import { draggingOut } from "../library/dragOut";
 import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
@@ -105,6 +106,11 @@ export function Editor() {
     let off: (() => void) | undefined;
     void getCurrentWebview()
       .onDragDropEvent((e) => {
+        // XcreenShot's own items dragged out (TRY-015) do not open here again.
+        if (draggingOut()) {
+          setDropping(false);
+          return;
+        }
         if (e.payload.type === "enter" || e.payload.type === "over") setDropping(true);
         else if (e.payload.type === "leave") setDropping(false);
         else if (e.payload.type === "drop") {

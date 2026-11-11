@@ -1378,3 +1378,74 @@ fn renaming_from_the_library_moves_the_open_document_and_keeps_the_id() {
     assert_eq!(open["path"], r["path"], "the open document follows its file");
     assert!(!path.exists());
 }
+
+#[test]
+fn dragging_out_hands_over_flat_pngs_and_leaves_the_originals() {
+    let e = env();
+    let out = e.outside.path().join("drag");
+    // A capture with an arrow: a flat PNG named after it, with the arrow (TRY-015).
+    let (doc, xshot) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([100, 100], [300, 100])]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let before = std::fs::read(&xshot).unwrap();
+    let name = cli(&e.core, "document.info", json!({"documentId": doc}))["name"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let files = files_for_drag(&e.core, std::slice::from_ref(&doc), &[], &out).unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].parent(), Some(out.as_path()));
+    assert_eq!(
+        files[0].file_name().unwrap().to_string_lossy(),
+        format!("{name}.png")
+    );
+    let png = image::open(&files[0]).unwrap().to_rgba8();
+    assert_eq!(png.dimensions(), (400, 200));
+    assert_eq!(png.get_pixel(200, 100).0, [0, 0, 255, 255]);
+    assert_eq!(
+        std::fs::read(&xshot).unwrap(),
+        before,
+        "the original does not change"
+    );
+
+    // A PNG from elsewhere without changes goes as it is; with changes, flattened.
+    let loose = external_png(&e);
+    let ext = cli(&e.core, "document.open", json!({"path": loose}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(
+        files_for_drag(&e.core, std::slice::from_ref(&ext), &[], &out).unwrap(),
+        vec![loose.clone()]
+    );
+    call(
+        &e.core,
+        Source::Ui,
+        "document.annotate",
+        json!({"documentId": ext, "objects": [arrow([10, 10], [90, 40])]}),
+    )
+    .unwrap();
+    let files = files_for_drag(&e.core, &[ext], &[], &out).unwrap();
+    assert!(files[0].starts_with(&out));
+    assert_ne!(
+        image::open(&files[0]).unwrap().to_rgba8(),
+        image::open(&loose).unwrap().to_rgba8()
+    );
+
+    // By path, closed: the `.xshot` is flattened and the loose image goes as it is.
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let other = external_png(&e);
+    let files = files_for_drag(&e.core, &[], &[xshot.clone(), other.clone()], &out).unwrap();
+    assert_eq!(files.len(), 2);
+    assert!(files[0].starts_with(&out) && files[0] != out.join(format!("{name}.png")));
+    assert_eq!(
+        image::open(&files[0]).unwrap().to_rgba8().get_pixel(200, 100).0,
+        [0, 0, 255, 255]
+    );
+    assert_eq!(files[1], other);
+    assert!(files_for_drag(&e.core, &[], &[e.outside.path().join("gone.png")], &out).is_err());
+}

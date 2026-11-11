@@ -1211,7 +1211,11 @@
       "path_copied": "Path copied",
       "closed_other": "{{count}} closed",
       "closed_one": "{{count}} closed",
-      "locate_filter": "Same kind of file"
+      "locate_filter": "Same kind of file",
+      "drag_preparing_one": "Preparing the image to drag…",
+      "drag_preparing_other": "Preparing {{count}} images to drag…",
+      "drag_too_soon": "The image was not ready when you let go. Drag it again and hold the button a moment, or copy it.",
+      "drag_failed": "Could not drag: {{reason}}"
     }
   },
   "history": {

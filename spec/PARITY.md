@@ -188,7 +188,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-106 | Formato `.xshot` | M1 | Must | Win |
 | EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | Win |
 | EDT-108 | Cerrar y Cerrar todo | M1 | Must | En curso |
-| EDT-109 | Renombrar, duplicar, eliminar y mostrar | M2 | Should | — |
+| EDT-109 | Renombrar, duplicar, eliminar y mostrar | M2 | Should | En curso |
 | EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
 | EDT-111 | Más formatos de exportación | M2 | Should | — |
 | EDT-112 | Opciones de cada formato | M2 | Should | — |
@@ -287,8 +287,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| LIB-001 | Vista Biblioteca y cambio con el editor | M1 | Must | — |
-| LIB-002 | Cuadrícula, selección y menú contextual | M1 | Must | — |
+| LIB-001 | Vista Biblioteca y cambio con el editor | M1 | Must | En curso |
+| LIB-002 | Cuadrícula, selección y menú contextual | M1 | Must | En curso |
 | LIB-003 | Tamaño de las miniaturas | M2 | Should | — |
 | LIB-004 | Ordenar y vista de lista | M2 | Must | — |
 | LIB-005 | Panel de filtros: tipo y fecha | M2 | Must | — |
@@ -301,14 +301,14 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-012 | Detalles del elemento | M2 | Should | — |
 | LIB-013 | Vista rápida | M2 | Should | — |
 | LIB-014 | Mostrar en la biblioteca | M2 | Should | — |
-| LIB-015 | Eliminar | M1 | Must | — |
+| LIB-015 | Eliminar | M1 | Must | En curso |
 | LIB-016 | Crear desde la biblioteca | M2 | Should | — |
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
 | LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | — |
 | LIB-019 | Guías de pasos en la biblioteca | M5 | Should | — |
 | LIB-020 | Autoguardado de capturas | M1 | Must | En curso |
-| LIB-021 | Guardar como y copia editable | M1 | Must | — |
-| LIB-022 | Índice propio de la biblioteca | M1 | Must | — |
+| LIB-021 | Guardar como y copia editable | M1 | Must | En curso |
+| LIB-022 | Índice propio de la biblioteca | M1 | Must | En curso |
 | LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | — |
 | LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | — |
 | LIB-025 | Bibliotecas grandes | M2 | Must | — |
@@ -321,21 +321,21 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | — |
 | LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | — |
-| TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | — |
+| TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |
 | TRY-003 | Capacidad | M2 | Should | — |
 | TRY-004 | Fijar y desfijar | M2 | Should | — |
 | TRY-005 | Reordenar | M2 | Should | — |
-| TRY-006 | Renombrar | M2 | Should | — |
+| TRY-006 | Renombrar | M2 | Should | En curso |
 | TRY-007 | Tamaño de las miniaturas | M2 | Could | — |
-| TRY-008 | Cerrar elementos | M1 | Must | — |
-| TRY-009 | Eliminar desde la bandeja | M1 | Must | — |
+| TRY-008 | Cerrar elementos | M1 | Must | En curso |
+| TRY-009 | Eliminar desde la bandeja | M1 | Must | En curso |
 | TRY-010 | Duplicar | M2 | Should | — |
 | TRY-011 | Indicador de cambios sin guardar | M1 | Must | En curso |
 | TRY-012 | Selección múltiple y acciones | M2 | Should | — |
-| TRY-013 | Navegación con teclado | M1 | Should | — |
+| TRY-013 | Navegación con teclado | M1 | Should | En curso |
 | TRY-014 | Combinar arrastrando al lienzo | M2 | Must | — |
-| TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | — |
+| TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | En curso |
 | TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | — |
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | — |
 | SHR-018 | Archivo | M1 | Must | En curso |

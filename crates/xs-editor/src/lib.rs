@@ -191,6 +191,59 @@ pub fn final_image(core: &Core, id: &str) -> Result<image::RgbaImage, String> {
     Ok(editor(core).store.snapshot(id)?.render())
 }
 
+/// The files to hand to another app when items are dragged out of XcreenShot
+/// (TRY-015): open documents by ID and files by path. A PNG or JPG without unsaved
+/// changes goes as it is; a `.xshot`, or a document with unsaved changes, is
+/// flattened to a PNG in `out`, named after the document. The originals never change.
+pub fn files_for_drag(
+    core: &Core,
+    docs: &[String],
+    paths: &[PathBuf],
+    out: &Path,
+) -> Result<Vec<PathBuf>, String> {
+    let ed = editor(core);
+    let mut files = Vec::new();
+    let flat = |name: &str, image: &image::RgbaImage, dpi: f64| -> Result<PathBuf, String> {
+        std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
+        let stem = xs_library::file_name(name).unwrap_or_else(|| "XcreenShot".into());
+        let target = xs_library::unique(out, &stem, "png");
+        let bytes = xs_image::encode::png(image, dpi, false)?;
+        write_file(&target, &bytes).map_err(|e| e.to_string())?;
+        Ok(target)
+    };
+    let from_doc = |id: &str, files: &mut Vec<PathBuf>| -> Result<(), String> {
+        let snap = ed.store.snapshot(id)?;
+        let dirty = ed.store.with(id, |d| d.dirty()).unwrap_or(true);
+        match &snap.path {
+            Some(p) if !dirty && snap.format != Format::Xshot && p.is_file() => files.push(p.clone()),
+            _ => files.push(flat(&snap.name, &snap.render(), snap.document.dpi)?),
+        }
+        Ok(())
+    };
+    for id in docs {
+        from_doc(id, &mut files)?;
+    }
+    for path in paths {
+        if let Some(id) = ed.store.find_by_path(path) {
+            from_doc(&id, &mut files)?;
+            continue;
+        }
+        match Format::from_path(path) {
+            Some(Format::Xshot) => {
+                let doc = DocStore::load(path, &ed.library()).map_err(|e| format!("{e:?}"))?;
+                let name = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                files.push(flat(&name, &DocStore::render_doc(&doc)?, doc.document.dpi)?);
+            }
+            Some(_) if path.is_file() => files.push(path.clone()),
+            _ => return Err(format!("not found: {}", path.display())),
+        }
+    }
+    Ok(files)
+}
+
 /// Renames the file of an open document in its folder, keeping its extension
 /// (SMT-041, TRY-006). Never replaces another file.
 fn rename(core: &Core, lang: Lang, p: &Value) -> Result<Value, CommandError> {

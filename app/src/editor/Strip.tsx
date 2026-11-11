@@ -1,9 +1,11 @@
 // Recent tray at the foot of the Editor view (TRY-001, TRY-002, TRY-008, TRY-009,
-// TRY-011, TRY-013): the documents open in the editor, the most recent first. Files
-// moved or deleted outside XcreenShot show "Not found" with Find… and Remove.
+// TRY-011, TRY-013, TRY-015): the documents open in the editor, the most recent
+// first. Files moved or deleted outside XcreenShot show "Not found" with Find… and
+// Remove. An item dragged out hands a file to another app.
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { removeFromTray } from "../library/actions";
+import { watchDrag } from "../library/dragOut";
 import { useTray } from "../library/state";
 import { closeDocument, showDocument } from "./actions";
 import { Icon } from "./icons";
@@ -107,6 +109,10 @@ export function Strip() {
                   showDocument(d.documentId);
                 }}
                 onContextMenu={(e) => menu(d, e)}
+                // Dragged out, it hands a file to another app (TRY-015).
+                onPointerDown={(e) =>
+                  watchDrag(e, () => (d.missing ? null : { docs: [d.documentId], paths: [] }))
+                }
               >
                 <img src={docUrl(d.documentId, "thumb", d.version)} alt="" draggable={false} />
                 {d.missing && (

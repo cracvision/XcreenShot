@@ -29,11 +29,12 @@ export interface DeleteRequest {
   forever: boolean;
 }
 
-/** A notice with Undo, for 10 s (LIB-015, TRY-008). */
+/** A notice at the foot of the window, for 10 s: with Undo (LIB-015, TRY-008),
+ *  another action, or none when it only informs (TRY-015). */
 export interface UndoNotice {
   text: string;
   seq: number;
-  undo: () => Promise<void>;
+  action?: { label: string; run: () => Promise<void> };
 }
 
 export const useFiles = create<{
@@ -47,15 +48,23 @@ let noticeSeq = 0;
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function offerUndo(text: string, undo: () => Promise<void>): void {
+  notify(text, { label: t("ui.files.undo"), run: undo });
+}
+
+/** Shows a notice; returns its number, for `dismissNotice`. */
+export function notify(text: string, action?: UndoNotice["action"]): number {
   clearTimeout(noticeTimer);
   const seq = ++noticeSeq;
-  useFiles.setState({ notice: { text, seq, undo } });
+  useFiles.setState({ notice: action ? { text, seq, action } : { text, seq } });
   noticeTimer = setTimeout(() => {
     if (useFiles.getState().notice?.seq === seq) useFiles.setState({ notice: null });
   }, UNDO_MS);
+  return seq;
 }
 
-export function dismissNotice(): void {
+/** Hides the notice, or only notice `seq` if it is still the one shown. */
+export function dismissNotice(seq?: number): void {
+  if (seq !== undefined && useFiles.getState().notice?.seq !== seq) return;
   clearTimeout(noticeTimer);
   useFiles.setState({ notice: null });
 }
