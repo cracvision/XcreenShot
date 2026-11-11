@@ -67,6 +67,7 @@ xcreenshot app ping --json
 | `app.close_window` | (UI and shortcuts only) | Closes the focused XcreenShot window. |
 | `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
+| `app.welcome` | `xcreenshot app welcome` | Shows the welcome window of the first run again. |
 | `app.help` | `xcreenshot app help [--topic capture]` | Opens the Help window (offline pages) at a topic: `start`, `capture`, `editor`, `library`, `shortcuts`, `permissions`, `automation`, `video`, `share` or `about`. |
 | `app.about` | `xcreenshot app about --json` | Version, build and its date, architecture, channel, data and settings folders, and the only network connections the app makes. `--open true` also shows it. |
 | `app.feedback` | `xcreenshot app feedback` | Opens a feedback draft in the browser with the version and the system filled in; returns its `url`. Nothing is sent by XcreenShot. |

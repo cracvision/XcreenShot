@@ -3197,6 +3197,87 @@ html.overlay-root.overlay-native #root {
   width: 100%;
 }
 
+/* ---------- Welcome (APP-005) ---------- */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100vh;
+  padding: var(--space-6);
+  background: var(--surface);
+}
+
+.welcome header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+
+.welcome header p {
+  margin: 4px 0 0;
+}
+
+.welcome-step {
+  flex: 1;
+  overflow: auto;
+}
+
+.welcome-step h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.welcome-sub {
+  margin: var(--space-4) 0 var(--space-2);
+  font-weight: 600;
+}
+
+.welcome-keys {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.welcome-keys li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 4px 0;
+}
+
+.welcome-keys li > span:first-child {
+  flex: 1;
+}
+
+.welcome-keys kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--control-line);
+  border-radius: 5px;
+  background: var(--surface-sunken);
+  font-family: var(--font-sans);
+}
+
+.welcome-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.welcome-check small {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.welcome .path {
+  display: block;
+  word-break: break-all;
+}
+
+.welcome footer .spacer {
+  flex: 1;
+}
+
 /* ---------- Help and About (APP-015) ---------- */
 .help nav button[aria-current="page"] {
   background: var(--brand-soft);

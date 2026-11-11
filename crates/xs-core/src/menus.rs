@@ -254,6 +254,7 @@ fn help_items() -> Vec<MenuEntry> {
             checked: None,
         },
         MenuEntry::Separator,
+        cmd("welcome", "menu.welcome", "app.welcome"),
         cmd("feedback", "menu.feedback", "app.feedback"),
         MenuEntry::Command {
             id: "about",

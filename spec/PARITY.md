@@ -349,7 +349,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | En curso |
 | APP-003 | Iniciar al iniciar sesión | M0 | Must | Win |
 | APP-004 | Cerrar ventanas y salir | M0 | Must | En curso |
-| APP-005 | Primer arranque | M1 | Should | — |
+| APP-005 | Primer arranque | M1 | Should | En curso |
 | APP-006 | Ventana de Preferencias | M0 | Must | En curso |
 | APP-007 | Sección General | M0 | Must | En curso |
 | APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |

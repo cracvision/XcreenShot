@@ -14,6 +14,7 @@ pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
 pub const MULTI_PANEL: &str = "multicapture";
 pub const HELP: &str = "help";
+pub const WELCOME: &str = "welcome";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -93,6 +94,26 @@ pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str
         .title(title)
         .inner_size(820.0, 600.0)
         .min_inner_size(640.0, 420.0)
+        .theme(theme(app))
+        .build()?;
+    focus(&w);
+    Ok(())
+}
+
+/// The welcome of the first run (APP-005): a small fixed window in the middle.
+pub fn open_welcome(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window(WELCOME) {
+        focus(&w);
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.welcome.title", &[]);
+    let w = WebviewWindowBuilder::new(app, WELCOME, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(560.0, 520.0)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .center()
         .theme(theme(app))
         .build()?;
     focus(&w);

@@ -368,7 +368,8 @@ pub fn run() {
             }
 
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
-            if !first_run_marker.exists() {
+            let first_run = !first_run_marker.exists();
+            if first_run {
                 if !cfg!(debug_assertions) && core.settings.get_bool("general.launchAtLogin") {
                     let _ = handle.autolaunch().enable();
                 }
@@ -393,7 +394,11 @@ pub fn run() {
                 elapsed_ms = started.elapsed().as_millis() as u64,
                 "ready: icon and shortcuts active"
             );
-            if !background {
+            // The first time, the welcome instead of the editor (APP-005); never when
+            // started in the background or by automation.
+            if !background && first_run {
+                windows::open_welcome(&handle)?;
+            } else if !background {
                 windows::show_main(&handle)?;
             }
             // Selection windows wait hidden so the crosshair appears fast (APP-048).

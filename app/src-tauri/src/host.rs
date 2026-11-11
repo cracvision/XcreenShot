@@ -121,6 +121,10 @@ impl Host for TauriHost {
         windows::open_preferences(&self.app, section, key).map_err(internal)
     }
 
+    fn open_welcome(&self) -> Result<(), CommandError> {
+        windows::open_welcome(&self.app).map_err(internal)
+    }
+
     fn open_help(&self, topic: Option<&str>) -> Result<(), CommandError> {
         windows::open_help(&self.app, topic).map_err(internal)
     }

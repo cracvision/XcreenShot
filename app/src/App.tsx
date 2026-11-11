@@ -5,6 +5,7 @@ import { Help } from "./windows/Help";
 import { Countdown } from "./windows/Countdown";
 import { MultiCapture } from "./windows/MultiCapture";
 import { Preferences } from "./windows/Preferences";
+import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
 
 /** Each webview window renders the view named by its label. */
@@ -21,6 +22,8 @@ export function App() {
       return <MultiCapture />;
     case "help":
       return <Help />;
+    case "welcome":
+      return <Welcome />;
     default:
       return <Editor />;
   }

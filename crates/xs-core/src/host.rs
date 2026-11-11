@@ -110,6 +110,10 @@ pub trait Host: Send + Sync {
     fn open_settings(&self, section: Option<&str>, key: Option<&str>) -> Result<(), CommandError> {
         Err(unsupported())
     }
+    /// The welcome window of the first run (APP-005).
+    fn open_welcome(&self) -> Result<(), CommandError> {
+        Err(unsupported())
+    }
     /// The Help window at a topic, or at its first page (APP-015).
     fn open_help(&self, topic: Option<&str>) -> Result<(), CommandError> {
         Err(unsupported())

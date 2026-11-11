@@ -27,6 +27,10 @@
       "title": "Diagnostic information",
       "description": "Collects version, system, monitors, permissions, shortcut conflicts and the last log lines. With copy, puts the text on the clipboard."
     },
+    "app_welcome": {
+      "title": "Show the welcome again",
+      "description": "Shows the welcome window of the first run: language, shortcuts, startup and library."
+    },
     "app_help": {
       "title": "XcreenShot Help",
       "description": "Opens the help pages, which work without a connection, at a topic."
@@ -720,6 +724,7 @@
     "open_library": "Open library"
   },
   "menu": {
+    "welcome": "Show the &welcome again",
     "help_contents": "XcreenShot &Help",
     "feedback": "Send &feedback…",
     "about": "&About XcreenShot",
@@ -822,6 +827,35 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "welcome": {
+      "title": "Welcome to XcreenShot",
+      "permissions_title": "Screen Recording",
+      "skip": "Skip",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Finish",
+      "step": "Step {{n}} of {{total}}",
+      "language_title": "Language",
+      "language_body": "XcreenShot speaks English and Spanish. It starts in the language of your system.",
+      "shortcuts_title": "Shortcuts",
+      "shortcuts_question": "Do you use another capture app on this computer?",
+      "shortcuts_yes": "Yes",
+      "shortcuts_no": "No",
+      "shortcuts_yes_body": "XcreenShot keeps keys that do not clash with it.",
+      "shortcuts_no_body": "You can use the keys people know from other capture tools, starting with PrtScn.",
+      "shortcuts_use_compat": "Use those keys",
+      "shortcuts_compat_on": "Done: the compatibility keys are on.",
+      "shortcuts_main": "Main shortcuts:",
+      "shortcuts_failed": "not active: another app uses it",
+      "startup_title": "Startup and library",
+      "startup_login": "Start XcreenShot when I sign in",
+      "startup_login_help": "It waits next to the clock, so the capture shortcut always works.",
+      "library_where": "Your captures are saved in:",
+      "library_change_later": "You can see it and open it later in Preferences > Library.",
+      "done_title": "All set",
+      "done_body": "Press {{keys}} whenever you want to capture. Everything you set here can be changed in Preferences.",
+      "done_try": "Take a test capture"
+    },
     "help": {
       "title": "XcreenShot Help",
       "topics": "Topics",

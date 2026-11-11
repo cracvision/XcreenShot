@@ -563,6 +563,10 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
     });
+    on!("app.welcome", |core, ctx, _p| {
+        core.host().open_welcome()?;
+        Ok(json!({}))
+    });
     on!("app.help", |core, ctx, p| {
         core.host().open_help(str_param(&p, "topic"))?;
         Ok(json!({}))

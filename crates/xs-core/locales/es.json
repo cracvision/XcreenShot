@@ -27,6 +27,10 @@
       "title": "Información de diagnóstico",
       "description": "Reúne la versión, el sistema, los monitores, los permisos, los atajos en conflicto y las últimas líneas del registro. Con copy, copia el texto al portapapeles."
     },
+    "app_welcome": {
+      "title": "Volver a mostrar la bienvenida",
+      "description": "Muestra la ventana de bienvenida del primer arranque: idioma, atajos, inicio y biblioteca."
+    },
     "app_help": {
       "title": "Ayuda de XcreenShot",
       "description": "Abre las páginas de ayuda, que funcionan sin conexión, en un tema."
@@ -720,6 +724,7 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "welcome": "Volver a mostrar la &bienvenida",
     "help_contents": "A&yuda de XcreenShot",
     "feedback": "Enviar &comentarios…",
     "about": "&Acerca de XcreenShot",
@@ -822,6 +827,35 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "welcome": {
+      "title": "Te damos la bienvenida a XcreenShot",
+      "permissions_title": "Grabación de pantalla",
+      "skip": "Omitir",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "finish": "Terminar",
+      "step": "Paso {{n}} de {{total}}",
+      "language_title": "Idioma",
+      "language_body": "XcreenShot habla inglés y español. Empieza en el idioma de tu sistema.",
+      "shortcuts_title": "Atajos",
+      "shortcuts_question": "¿Usas otra app de captura en este equipo?",
+      "shortcuts_yes": "Sí",
+      "shortcuts_no": "No",
+      "shortcuts_yes_body": "XcreenShot mantiene teclas que no chocan con ella.",
+      "shortcuts_no_body": "Puedes usar las teclas que la gente conoce de otras herramientas de captura, empezando por PrtScn.",
+      "shortcuts_use_compat": "Usar esas teclas",
+      "shortcuts_compat_on": "Hecho: las teclas de compatibilidad están activas.",
+      "shortcuts_main": "Atajos principales:",
+      "shortcuts_failed": "no está activo: lo usa otra app",
+      "startup_title": "Inicio y biblioteca",
+      "startup_login": "Iniciar XcreenShot al iniciar sesión",
+      "startup_login_help": "Espera junto al reloj, así el atajo de captura funciona siempre.",
+      "library_where": "Tus capturas se guardan en:",
+      "library_change_later": "Puedes verla y abrirla más tarde en Preferencias > Biblioteca.",
+      "done_title": "Todo listo",
+      "done_body": "Pulsa {{keys}} cuando quieras capturar. Todo lo de aquí se puede cambiar en Preferencias.",
+      "done_try": "Hacer una captura de prueba"
+    },
     "help": {
       "title": "Ayuda de XcreenShot",
       "topics": "Temas",

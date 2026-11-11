@@ -212,6 +212,7 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("app.diagnostics", &["APP-046"])
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
+        B::new("app.welcome", &["APP-005"]).scopes(UI_CLI),
         B::new("app.help", &["APP-015"])
             .scopes(UI_CLI)
             .assignable()
