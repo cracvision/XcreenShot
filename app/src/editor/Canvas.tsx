@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
 import { applyCrop, duplicateSelection, startNewText, startTextEdit } from "./actions";
-import { canvasMenu, menuPoint } from "./menus";
+import { canvasMenu, lockedMenu, menuPoint } from "./menus";
 import {
   contains,
   corners,
@@ -34,6 +34,7 @@ import {
   type DocObject,
 } from "./state";
 import { TextEditor } from "./TextEditor";
+import { Icon } from "./icons";
 import {
   fitZoom,
   imagePoint,
@@ -390,9 +391,11 @@ export function Canvas({ doc }: Props) {
     return null;
   };
 
-  const hitObject = (p: Point): DocObject | null => {
+  /** The top object under `p`; locked ones only with `locked` (EDT-085). */
+  const hitObject = (p: Point, locked = false): DocObject | null => {
     if (!lay) return null;
-    for (const o of [...shown].reverse()) if (hits(o, p, HIT / lay.scale)) return o;
+    for (const o of [...shown].reverse())
+      if ((locked || !o.locked) && hits(o, p, HIT / lay.scale)) return o;
     return null;
   };
 
@@ -571,7 +574,10 @@ export function Canvas({ doc }: Props) {
     if (!drag) {
       const h = hitHandle(s);
       const handleName = h ? ("crop" in h ? h.crop : "end" in h ? "end" : h.handle) : null;
-      setHover(handleName ?? (!cropRect && hitObject(p) ? "object" : null));
+      setHover(
+        handleName ??
+          (cropRect ? null : hitObject(p) ? "object" : hitObject(p, true) ? "locked" : null),
+      );
       return;
     }
     if (drag.kind === "pan") {
@@ -621,7 +627,9 @@ export function Canvas({ doc }: Props) {
       } else if (d.kind === "band") {
         const r = dragRect(d.start, d.end, false, false);
         if (r.w * scale < DRAG_THRESHOLD && r.h * scale < DRAG_THRESHOLD) return;
-        const inside = doc.objects.filter((o) => inBand(o, r, d.touch)).map((o) => o.id);
+        const inside = doc.objects
+          .filter((o) => !o.locked && inBand(o, r, d.touch))
+          .map((o) => o.id);
         setSelection(d.add ? [...new Set([...selection, ...inside])] : inside);
       } else if (d.kind === "end") {
         const o = committed.get(d.id);
@@ -675,7 +683,14 @@ export function Canvas({ doc }: Props) {
   const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!lay || cropping) return;
-    const hit = hitObject(toCanvas(local(e)));
+    const p = toCanvas(local(e));
+    const hit = hitObject(p);
+    // A locked object offers Unlock (EDT-085).
+    const locked = hit ? null : hitObject(p, true);
+    if (locked) {
+      lockedMenu(locked.id, menuPoint(e));
+      return;
+    }
     if (hit && !selection.includes(hit.id)) setSelection([hit.id]);
     canvasMenu(hit !== null, menuPoint(e));
   };
@@ -743,17 +758,20 @@ export function Canvas({ doc }: Props) {
       ? "grabbing"
       : space
         ? "grab"
-        : hover && resizeCursor[hover]
-          ? resizeCursor[hover]
-          : hover === "object" || drag?.kind === "move"
-            ? "move"
-            : tool === "text"
-              ? "text"
-              : tool === "move"
-                ? "default"
-                : "crosshair";
+        : hover === "locked"
+          ? "not-allowed"
+          : hover && resizeCursor[hover]
+            ? resizeCursor[hover]
+            : hover === "object" || drag?.kind === "move"
+              ? "move"
+              : tool === "text"
+                ? "text"
+                : tool === "move"
+                  ? "default"
+                  : "crosshair";
 
   const drawing = drag?.kind === "draw" && styles ? drag : null;
+  const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
   const scale = lay?.scale ?? 1;
   const editingId = textEdit?.id ?? null;
   const shownCrop = drag?.kind === "crop" ? drag.rect : cropRect;
@@ -856,6 +874,16 @@ export function Canvas({ doc }: Props) {
 
   return (
     <div className="canvas-area">
+      {/* Over a locked object, a small lock by the pointer (EDT-085). */}
+      {hover === "locked" && lockAt && (
+        <span
+          className="lock-badge"
+          style={{ left: lockAt.x + 14, top: lockAt.y + 14 }}
+          aria-hidden="true"
+        >
+          <Icon name="lock" />
+        </span>
+      )}
       <div className="canvas-scroll" ref={scrollRef} onScroll={onScroll}>
         {lay && <div style={{ width: lay.contentWidth, height: lay.contentHeight }} />}
       </div>

@@ -11,7 +11,7 @@ import type { MenuItem } from "../components/Menu";
 import { display } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
-import { performAction, toggleToolbarLabels } from "./actions";
+import { performAction, setLocked, toggleToolbarLabels } from "./actions";
 import { useEditor, usePanel } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
@@ -159,6 +159,22 @@ export function canvasMenu(onObject: boolean, at: Point): void {
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
 }
 
+/** Right click on a locked object: Unlock (EDT-085). */
+export function lockedMenu(id: string, at: Point): void {
+  useContextMenu.setState({
+    open: true,
+    ...at,
+    label: i18next.t("ui.editor.canvas_menu"),
+    items: [
+      {
+        id: "editor.unlock",
+        label: i18next.t("menu.unlock"),
+        onSelect: () => void setLocked([id], false),
+      },
+    ],
+  });
+}
+
 /** Right click on the toolbar: Icons only (EDT-003). */
 export function toolbarMenu(at: Point): void {
   const labels = useApp.getState().settings.find((s) => s.key === "editor.toolbarLabels");
@@ -183,6 +199,7 @@ export function useMenuBar(): void {
   const inLibrary = useMainView((s) => s.view === "library");
   const selected = useEditor((s) => s.selection.length > 0) && !inLibrary;
   const selectedCount = useEditor((s) => s.selection.length);
+  const lockedCount = useEditor((s) => s.doc?.objects.filter((o) => o.locked).length ?? 0);
   const anyOpen = useEditor((s) => s.documents.length > 0);
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
@@ -253,6 +270,8 @@ export function useMenuBar(): void {
     ])
       enabled[`editor.${a}`] = selected;
     for (const a of ["distribute_h", "distribute_v"]) enabled[`editor.${a}`] = selectedCount >= 3;
+    enabled["editor.lock"] = selected;
+    enabled["editor.unlock_all"] = lockedCount > 0;
     enabled["editor.select_all"] = objectCount > 0;
     const checked = {
       "editor.side_panel": panel,
@@ -266,6 +285,7 @@ export function useMenuBar(): void {
     hasDoc,
     objectCount,
     selectedCount,
+    lockedCount,
     canUndo,
     canRedo,
     selected,

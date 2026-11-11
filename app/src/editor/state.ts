@@ -120,8 +120,12 @@ export interface ImageObject {
 }
 
 /** Objects of later builds are kept and drawn by the core, not edited here. */
-export type DocObject =
-  ArrowObject | TextObject | ShapeObject | BlurObject | ImageObject | { id: string; type: "other" };
+export type DocObject = (
+  ArrowObject | TextObject | ShapeObject | BlurObject | ImageObject | { id: string; type: "other" }
+) & {
+  /** Locked: the mouse does not select or move it (EDT-085). */
+  locked?: boolean;
+};
 
 export interface Styles {
   arrow: ArrowStyle;

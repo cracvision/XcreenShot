@@ -348,6 +348,17 @@ export function arrangeSelection(action: string): void {
   }).catch(fail);
 }
 
+/** Locks or unlocks objects, in one undo step (EDT-085). */
+export async function setLocked(ids: string[], locked: boolean): Promise<void> {
+  const { active } = useEditor.getState();
+  if (!active || ids.length === 0) return;
+  await run("document.update_object", {
+    documentId: active,
+    objectIds: ids,
+    set: { locked },
+  }).catch(fail);
+}
+
 export function deleteSelection(): void {
   const { active, selection } = useEditor.getState();
   if (!active || selection.length === 0) return;
@@ -542,10 +553,24 @@ export function performAction(action: string): boolean {
       arrangeSelection(action);
       return true;
     case "select_all":
-      // Every object (EDT-079); locked objects (EDT-085) will stay out.
+      // Every object but the locked ones (EDT-079, EDT-085).
       if (!doc || doc.objects.length === 0) return false;
-      setSelection(doc.objects.map((o) => o.id));
+      setSelection(doc.objects.filter((o) => !o.locked).map((o) => o.id));
       return true;
+    case "lock": {
+      // Locks the selection, or unlocks it when it is all locked already (EDT-085).
+      if (!selected || !doc) return false;
+      const all = doc.objects.filter((o) => selection.includes(o.id)).every((o) => o.locked);
+      void setLocked(selection, !all);
+      if (!all) setSelection([]);
+      return true;
+    }
+    case "unlock_all": {
+      const locked = doc?.objects.filter((o) => o.locked).map((o) => o.id) ?? [];
+      if (locked.length === 0) return false;
+      void setLocked(locked, false);
+      return true;
+    }
     case "deselect":
       if (!selected) return false;
       setSelection([]);

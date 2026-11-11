@@ -68,6 +68,7 @@
       "properties": {
         "id": { "type": "string" },
         "type": { "type": "string", "enum": ["arrow"] },
+        "locked": { "type": "boolean", "description": "Locked: the mouse cannot select or move it (EDT-085)" },
         "from": { "$ref": "#/$defs/point" },
         "to": { "$ref": "#/$defs/point" },
         "style": {
@@ -91,6 +92,7 @@
       "properties": {
         "id": { "type": "string" },
         "type": { "type": "string", "enum": ["image"] },
+        "locked": { "type": "boolean", "description": "Locked: the mouse cannot select or move it (EDT-085)" },
         "image": { "type": "string", "description": "File name inside images/" },
         "rect": {
           "type": "object",

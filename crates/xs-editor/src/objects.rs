@@ -199,6 +199,23 @@ fn origin(kind: &str, p: &Map<String, Value>) -> Option<[f64; 2]> {
 /// Applies `set` (geometry to replace, style properties to change) to `object`.
 /// Fields of the stored object this build does not know are kept.
 pub fn update(object: &mut Object, set: &Map<String, Value>) -> Result<Change, String> {
+    // Locked (EDT-085): kept apart from the geometry and the style, saved in the file.
+    let mut set = set.clone();
+    if let Some(lock) = set.remove("locked") {
+        match lock.as_bool() {
+            Some(true) => {
+                object.props.insert("locked".into(), Value::Bool(true));
+            }
+            Some(false) => {
+                object.props.remove("locked");
+            }
+            None => return Err("locked must be true or false".to_string()),
+        }
+        if set.is_empty() {
+            return Ok(Change::Change);
+        }
+    }
+    let set = &set;
     let keys = geometry_keys(&object.kind).ok_or_else(|| {
         format!(
             "objects of type \"{}\" cannot be changed in this build",

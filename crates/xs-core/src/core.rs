@@ -997,6 +997,42 @@ mod tests {
         );
     }
 
+    /// Every editor action a menu or a shortcut sends is one `editor.action` accepts.
+    #[test]
+    fn editor_actions_of_menus_and_shortcuts_are_accepted() {
+        let mut all = menus::app_menu(Platform::Windows);
+        all.extend(menus::app_menu(Platform::Macos));
+        let mut sent: Vec<String> = Vec::new();
+        fn walk(entries: &[menus::MenuEntry], sent: &mut Vec<String>) {
+            for e in entries {
+                match e {
+                    menus::MenuEntry::Command { command, params, .. } if *command == "editor.action" => {
+                        if let Some(a) = params["action"].as_str() {
+                            sent.push(a.to_string());
+                        }
+                    }
+                    menus::MenuEntry::Submenu { items, .. } => walk(items, sent),
+                    _ => {}
+                }
+            }
+        }
+        walk(&all, &mut sent);
+        let core = Core::for_tests(Platform::Windows);
+        for row in core.shortcut_rows(Lang::En)["rows"].as_array().unwrap() {
+            if row["runs"] == "editor.action" {
+                if let Some(a) = row["params"]["action"].as_str() {
+                    sent.push(a.to_string());
+                }
+            }
+        }
+        for a in sent {
+            assert!(
+                catalog::EDITOR_ACTIONS.contains(&a.as_str()),
+                "editor.action does not accept {a}"
+            );
+        }
+    }
+
     /// APP-027: every menu entry is bound to a registered command.
     #[test]
     fn menus_only_reference_registered_commands() {

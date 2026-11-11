@@ -231,6 +231,9 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.send_backward", "menu.send_backward", "send_backward"),
                 action("editor.send_back", "menu.send_back", "send_back"),
                 Separator,
+                action("editor.lock", "menu.lock", "lock"),
+                action("editor.unlock_all", "menu.unlock_all", "unlock_all"),
+                Separator,
                 Submenu {
                     label: "menu.align",
                     items: vec![

@@ -772,7 +772,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .assignable()
             .positional(&["action"])
             .params(params(
-                json!({"action": {"type": "string", "enum": EDITOR_ACTIONS}}),
+                json!({"action": {"type": "string", "enum": EDITOR_ACTIONS.as_slice()}}),
                 &["action"],
             ))
             .result(json!({"type": "object"})),
@@ -960,7 +960,7 @@ pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 29] = [
+pub const EDITOR_ACTIONS: [&str; 45] = [
     "open",
     "save",
     "save_as",
@@ -990,6 +990,22 @@ pub const EDITOR_ACTIONS: [&str; 29] = [
     "rename_item",
     "show_in_folder",
     "delete_item",
+    "select_all",
+    "duplicate",
+    "bring_front",
+    "bring_forward",
+    "send_backward",
+    "send_back",
+    "lock",
+    "unlock_all",
+    "align_left",
+    "align_hcenter",
+    "align_right",
+    "align_top",
+    "align_vcenter",
+    "align_bottom",
+    "distribute_h",
+    "distribute_v",
 ];
 
 fn library_item() -> Value {

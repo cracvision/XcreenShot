@@ -727,6 +727,8 @@
       "editor_align_bottom": "Align bottom",
       "editor_distribute_h": "Distribute horizontally",
       "editor_distribute_v": "Distribute vertically",
+      "editor_lock": "Lock objects",
+      "editor_unlock_all": "Unlock all objects",
       "editor_deselect": "Deselect",
       "editor_zoom_in": "Zoom in",
       "editor_zoom_out": "Zoom out",
@@ -772,6 +774,9 @@
     "open_library": "Open library"
   },
   "menu": {
+    "lock": "&Lock",
+    "unlock_all": "U&nlock all",
+    "unlock": "Unlock",
     "align": "&Align",
     "distribute": "D&istribute",
     "align_left": "&Left",

@@ -3317,6 +3317,21 @@ html.overlay-root.overlay-native #root {
   outline-offset: 0;
 }
 
+/* A locked object under the pointer (EDT-085). */
+.lock-badge {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
 .align-buttons {
   display: flex;
   flex-wrap: wrap;

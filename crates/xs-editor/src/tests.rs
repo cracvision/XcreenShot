@@ -1580,3 +1580,47 @@ fn duplicates_go_on_top_moved_by_the_offset() {
     );
     assert_eq!(r["order"], json!(["o3", "o1", "o2"]));
 }
+
+#[test]
+fn a_lock_is_saved_and_unlocking_all_is_one_step() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [50, 10]), arrow([10, 40], [50, 40])]}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectIds": ["o1", "o2"], "set": {"locked": true}}),
+    );
+    // It moves and keeps its lock (EDT-085).
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "move": [5, 0]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert!(file.document.objects.iter().all(|o| o.props["locked"] == true));
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectIds": ["o1", "o2"], "set": {"locked": false}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|o| o.get("locked").is_none()));
+    // One Undo locks both again.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|o| o["locked"] == true));
+}

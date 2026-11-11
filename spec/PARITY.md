@@ -164,7 +164,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-082 | Agrupar y desagrupar | M2 | Should | — |
 | EDT-083 | Alinear y distribuir | M2 | Should | En curso |
 | EDT-084 | Ajuste magnético y guías | M2 | Should | — |
-| EDT-085 | Bloquear objetos | M2 | Should | — |
+| EDT-085 | Bloquear objetos | M2 | Should | En curso |
 | EDT-086 | Posición y tamaño numéricos | M2 | Must | En curso |
 | EDT-087 | Mover con el teclado | M2 | Should | En curso |
 | EDT-088 | Duplicar objetos | M2 | Should | En curso |
