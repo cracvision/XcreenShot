@@ -131,6 +131,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | ID | Duda | Propuesta | Estado |
 |---|---|---|---|
 | EDT-079 / EDT-080 | Varios objetos seleccionados: el recuadro común "con tiradores" es de EDT-080 (Should) | Por ahora, un contorno fino en cada objeto y un recuadro común punteado, sin tiradores; se mueven juntos arrastrando o con las flechas, en un solo paso de deshacer (`document.update_object --move`). Los tiradores del recuadro común llegan con EDT-080 | Provisional |
+| EDT-086 | Expresiones en los campos y valores negativos | `+10`, `-5`, `*2` y `/2` cambian el valor actual; un número lo reemplaza. Como `-5` resta, un valor negativo se escribe `=-5`. Con varios objetos solo hay X e Y (los mueve juntos); ancho y alto de un grupo llegan con EDT-080. El alto de un texto sigue a sus líneas y no se escribe. Objeto > Posición y tamaño… llega con el menú Objeto | Provisional |
 | EDT-079 | `Ctrl+A` en la vista Biblioteca | Sigue seleccionando los elementos de la biblioteca; en el editor selecciona todos los objetos. Con Selección o Varita mágica (M2.3) seleccionará los píxeles | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)

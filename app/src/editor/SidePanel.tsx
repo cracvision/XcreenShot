@@ -6,6 +6,7 @@ import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import { applyCrop, loadFonts, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
+import { PositionSize } from "./PositionSize";
 import { CAPS, LINE_STYLES, type Cap, type LineStyle } from "./geometry";
 import { Icon, type IconName } from "./icons";
 import {
@@ -588,7 +589,13 @@ export function SidePanel() {
       what:
         count > 1 ? t("ui.editor.objects_count", { count }) : t(`ui.editor.tool.${target.kind}`),
     });
-    body = <Properties target={target} />;
+    body = (
+      <>
+        <Properties target={target} />
+        {/* Where it is and how big, in numbers (EDT-086). */}
+        {!editing && <PositionSize />}
+      </>
+    );
   } else if (target) {
     title = t("ui.editor.props_tool", { tool: t(`ui.editor.tool.${target.kind}`) });
     body = <Properties target={target} />;

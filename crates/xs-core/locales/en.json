@@ -1124,6 +1124,18 @@
       "toolbar": "Editor toolbar",
       "tools": "Tools",
       "capture": "Capture",
+      "pos": {
+        "title": "Position and size",
+        "width": "Width",
+        "height": "Height",
+        "angle": "Angle",
+        "lock": "Keep proportions",
+        "start_x": "Start X",
+        "start_y": "Start Y",
+        "end_x": "End X",
+        "end_y": "End Y",
+        "length": "Length"
+      },
       "tool_detail": {
         "move": "Select objects to move them, resize them or change them in Properties.",
         "arrow": "Drag on the capture to point at something.",

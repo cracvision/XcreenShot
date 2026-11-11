@@ -1124,6 +1124,18 @@
       "toolbar": "Barra de herramientas del editor",
       "tools": "Herramientas",
       "capture": "Capturar",
+      "pos": {
+        "title": "Posición y tamaño",
+        "width": "Ancho",
+        "height": "Alto",
+        "angle": "Ángulo",
+        "lock": "Mantener proporciones",
+        "start_x": "Inicio X",
+        "start_y": "Inicio Y",
+        "end_x": "Fin X",
+        "end_y": "Fin Y",
+        "length": "Longitud"
+      },
       "tool_detail": {
         "move": "Selecciona objetos para moverlos, cambiarles el tamaño o cambiarlos en Propiedades.",
         "arrow": "Arrastra sobre la captura para señalar algo.",
