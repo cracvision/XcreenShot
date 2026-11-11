@@ -214,9 +214,9 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
 4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**. M2.1 empezada el 2026-11-11:
-   - hecho: selección múltiple (EDT-079: `Shift`/`Ctrl`+clic, recuadro con Mover, `Ctrl+A`, mover varios en un paso) y posición y tamaño numéricos (EDT-086), con sus decisiones en `QUESTIONS.md` (sección "M2, entrega 1");
-   - de paso, arreglado: al soltar, un gesto rápido perdía su último movimiento;
-   - sigue: orden de apilado (EDT-081), duplicar (EDT-088), agrupar (EDT-082), alinear y distribuir (EDT-083), bloquear (EDT-085), transformar varios (EDT-080), aplanar (EDT-091).
+   - hecho: selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083) y bloquear (EDT-085). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1");
+   - de paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; y las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba);
+   - sigue: agrupar (EDT-082), transformar varios e igualar tamaño (EDT-080), aplanar y desaplanar (EDT-091). Después, M2.2 (Paso y Globo).
 
 ## Decisiones vigentes que conviene recordar
 
