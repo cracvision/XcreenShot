@@ -19,6 +19,8 @@ import {
   placeBar,
   placeMagnifier,
   ratioFromKeys,
+  snapToGuides,
+  GUIDE_SIZES,
   resizeByHandle,
   toHex,
   type Handle,
@@ -61,6 +63,12 @@ interface Start {
     windowsOnly?: boolean;
     /** Universal with Selection = Full screen: start adjusting a whole monitor (CAP-010). */
     startFullscreen?: boolean;
+    /** Thin lines, no dimming, no label (CAP-014). */
+    simpleCrosshair?: boolean;
+    /** The compatibility profile's keys on Windows (CAP-066). */
+    compatibility?: boolean;
+    /** Show "H: help" in the hint, the first times (CAP-020). */
+    helpHint?: boolean;
   };
 }
 
@@ -74,6 +82,12 @@ interface Sync {
   pointer: Pt | null;
   sel: Rect | null;
   phase: Phase;
+  /** Size guides and where the drag began (CAP-019). */
+  guides: boolean;
+  anchor: Pt | null;
+  snapped: [number, number] | null;
+  /** The keys panel (CAP-020). */
+  help: boolean;
 }
 
 type Interaction =
@@ -84,6 +98,9 @@ type Interaction =
 
 /** The selection over any screen: the logo's bright blue. */
 const ACCENT = "#0c9afc";
+/** A selection snapped to a standard size (CAP-019): the logo's star. */
+const SNAPPED = "#ffd23f";
+const GUIDE = "rgba(255, 255, 255, 0.55)";
 const OUTLINE = "rgba(0, 0, 0, 0.65)";
 const DIM = "rgba(0, 0, 0, 0.4)";
 const MAG_CSS = 168; // magnifier box, CSS px
@@ -132,7 +149,16 @@ export function Overlay() {
     patchBusy: false,
     color: "",
     finished: false,
+    guides: false,
+    anchor: null as Pt | null,
+    snapped: null as [number, number] | null,
+    help: false,
+    // Frame timing, to notice a slow crosshair (CAP-014, APP-053).
+    asked: 0,
+    lag: { sum: 0, count: 0, since: 0 },
+    slow: false,
   });
+  const [help, setHelp] = useState(false);
 
   const monitor = start?.request.monitors[myIndex] ?? null;
   const desktop = start ? bounding(start.request.monitors.map((m) => m.rect)) : null;
@@ -258,21 +284,57 @@ export function Overlay() {
     if (!canvas || !ctx || !monitor || !start) return;
     const M = monitor.rect;
     const px = Math.max(1, Math.round(monitor.scale));
+    const simple = start.request.simpleCrosshair === true;
+    trackLag(st);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Dim everything except the selection or the detected window (CAP-013, CAP-016).
+    // The simplified crosshair dims nothing and draws thin lines (CAP-014).
     const focus = st.sel ?? (st.phase === "aiming" ? (st.hover?.rect ?? null) : null);
-    ctx.fillStyle = DIM;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!simple) {
+      ctx.fillStyle = DIM;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     const f = focus ? intersect(focus, M) : null;
     if (f) {
-      ctx.clearRect(f.x - M.x, f.y - M.y, f.width, f.height);
-      ctx.lineWidth = 2 * px;
+      if (!simple) ctx.clearRect(f.x - M.x, f.y - M.y, f.width, f.height);
+      ctx.lineWidth = (simple ? 1 : 2) * px;
       ctx.setLineDash(st.sel ? [] : [6 * px, 4 * px]);
-      ctx.strokeStyle = OUTLINE;
-      ctx.strokeRect(f.x - M.x - px, f.y - M.y - px, f.width + 2 * px, f.height + 2 * px);
-      ctx.strokeStyle = ACCENT;
+      if (!simple) {
+        ctx.strokeStyle = OUTLINE;
+        ctx.strokeRect(f.x - M.x - px, f.y - M.y - px, f.width + 2 * px, f.height + 2 * px);
+      }
+      ctx.strokeStyle = st.snapped && st.sel ? SNAPPED : ACCENT;
       ctx.strokeRect(f.x - M.x, f.y - M.y, f.width, f.height);
+      ctx.setLineDash([]);
+    }
+
+    // Standard sizes from where the drag began, toward the pointer (CAP-019).
+    if (st.guides && st.anchor && st.phase === "dragging" && st.pointer) {
+      const a = st.anchor;
+      const sx = st.pointer.x < a.x ? -1 : 1;
+      const sy = st.pointer.y < a.y ? -1 : 1;
+      ctx.lineWidth = px;
+      ctx.setLineDash([4 * px, 4 * px]);
+      ctx.font = `${11 * px}px "Segoe UI", system-ui, sans-serif`;
+      ctx.textBaseline = "middle";
+      for (const [w, h] of GUIDE_SIZES) {
+        const r = fromPoints(a, { x: a.x + sx * w, y: a.y + sy * h });
+        const g = intersect(r, M);
+        if (!g) continue;
+        const exact = st.snapped?.[0] === w && st.snapped?.[1] === h;
+        ctx.strokeStyle = exact ? SNAPPED : GUIDE;
+        ctx.strokeRect(r.x - M.x, r.y - M.y, r.width, r.height);
+        const corner = { x: a.x + sx * w, y: a.y + sy * h };
+        if (contains(M, corner)) {
+          ctx.fillStyle = exact ? SNAPPED : GUIDE;
+          ctx.fillText(
+            `${w}×${h}`,
+            corner.x - M.x + (sx > 0 ? -60 * px : 6 * px),
+            corner.y - M.y + (sy > 0 ? -8 * px : 8 * px),
+          );
+        }
+      }
       ctx.setLineDash([]);
     }
 
@@ -300,12 +362,18 @@ export function Overlay() {
     const p = st.pointer;
     if (p && st.phase !== "adjusting" && contains(M, p)) {
       const l = toLocal(p);
-      ctx.fillStyle = OUTLINE;
-      ctx.fillRect(0, l.y - px, canvas.width, 3 * px);
-      ctx.fillRect(l.x - px, 0, 3 * px, canvas.height);
+      if (!simple) {
+        ctx.fillStyle = OUTLINE;
+        ctx.fillRect(0, l.y - px, canvas.width, 3 * px);
+        ctx.fillRect(l.x - px, 0, 3 * px, canvas.height);
+      }
       ctx.fillStyle = ACCENT;
-      ctx.fillRect(0, l.y, canvas.width, px);
-      ctx.fillRect(l.x, 0, px, canvas.height);
+      ctx.fillRect(0, l.y, canvas.width, simple ? 1 : px);
+      ctx.fillRect(l.x, 0, simple ? 1 : px, canvas.height);
+      if (simple) {
+        drawMagnifier();
+        return;
+      }
 
       // Position or size label (physical pixels).
       const label =
@@ -330,7 +398,10 @@ export function Overlay() {
   }, [monitor, start, toLocal, drawMagnifier]);
 
   const schedule = useCallback(() => {
-    if (!s.current.raf) s.current.raf = requestAnimationFrame(draw);
+    if (!s.current.raf) {
+      s.current.asked = performance.now();
+      s.current.raf = requestAnimationFrame(draw);
+    }
   }, [draw]);
 
   // ---------------------------------------------------------------- session
@@ -343,6 +414,10 @@ export function Overlay() {
       pointer: st.pointer,
       sel: st.sel,
       phase: st.phase,
+      guides: st.guides,
+      anchor: st.anchor,
+      snapped: st.snapped,
+      help: st.help,
     };
     void emit("xs://overlay-sync", msg);
   }, [start]);
@@ -353,7 +428,7 @@ export function Overlay() {
       s.current.finished = true;
       void invoke("xs_overlay_finish", {
         seq: start.seq,
-        outcome: { ...outcome, magnifierZoom: s.current.zoom },
+        outcome: { ...outcome, magnifierZoom: s.current.zoom, slow: s.current.slow },
       });
     },
     [start],
@@ -418,6 +493,15 @@ export function Overlay() {
       st.hover = null;
       st.interaction = null;
       st.phase = "aiming";
+      // Each selection starts without guides or the keys panel (CAP-019, CAP-020).
+      st.guides = false;
+      st.anchor = null;
+      st.snapped = null;
+      st.help = false;
+      setHelp(false);
+      st.asked = 0;
+      st.lag = { sum: 0, count: 0, since: 0 };
+      st.slow = false;
       st.magnifier = payload.request.showMagnifier;
       st.zoom = payload.request.magnifierZoom || 4;
       st.pointer = payload.request.pointer
@@ -495,8 +579,13 @@ export function Overlay() {
       s.current.pointer = m.pointer;
       s.current.sel = m.sel;
       s.current.phase = m.phase;
+      s.current.guides = m.guides;
+      s.current.anchor = m.anchor;
+      s.current.snapped = m.snapped;
+      s.current.help = m.help;
       setSel(m.sel);
       setPhase(m.phase);
+      setHelp(m.help);
       schedule();
     });
     return () => void un.then((f) => f());
@@ -552,9 +641,20 @@ export function Overlay() {
           Math.abs(p.y - it.anchor.y) > DRAG_THRESHOLD;
         if (st.phase === "dragging" || moved) {
           if (st.phase !== "dragging") setPhaseBoth("dragging");
-          const ratio = ratioFromKeys(e.shiftKey, e.altKey);
+          const compat = start.request.compatibility === true;
+          const ratio = ratioFromKeys(e.shiftKey, e.altKey, e.ctrlKey, compat);
           st.lastLock = ratio;
-          const end = ratio ? lockAspect(it.anchor, p, ratio) : p;
+          let end = ratio ? lockAspect(it.anchor, p, ratio) : p;
+          // Near a standard size, with the guides shown, take it exactly (CAP-019).
+          st.snapped = null;
+          if (!ratio && st.guides) {
+            const snap = snapToGuides(it.anchor, end);
+            if (snap) {
+              end = snap.end;
+              st.snapped = snap.size;
+            }
+          }
+          st.anchor = it.anchor;
           st.sel = fromPoints(it.anchor, end);
         }
       } else if (it?.kind === "move" && desktop) {
@@ -640,7 +740,20 @@ export function Overlay() {
         return;
       }
       const key = e.key.toLowerCase();
-      if (key === "m") {
+      const compat = start.request.compatibility === true;
+      if (e.key === "F1" || (key === "h" && !compat)) {
+        // The keys that work now (CAP-020); with the compatibility profile, F1 only.
+        st.help = !st.help;
+        setHelp(st.help);
+        broadcast();
+      } else if (key === "g" && !windowsOnly(start)) {
+        // Standard size guides (CAP-019).
+        st.guides = !st.guides;
+        if (!st.guides) st.snapped = null;
+        setToast(t(st.guides ? "ui.overlay.guides_on" : "ui.overlay.guides_off"));
+        window.setTimeout(() => setToast(null), 1500);
+        broadcast();
+      } else if (key === "m") {
         st.magnifier = !st.magnifier;
       } else if (e.key === "+" || e.key === "=") {
         st.zoom = nextZoom(st.zoom, true);
@@ -741,10 +854,20 @@ export function Overlay() {
           )}
         </div>
       )}
-      {start && phase === "aiming" && (
+      {start && phase === "aiming" && !help && (
         <div className="overlay-hint">
           {windowsOnly(start) ? t("ui.overlay.hint_window") : t("ui.overlay.hint")}
+          {start.request.helpHint &&
+            ` · ${t("ui.overlay.help_hint", { key: start.request.compatibility ? "F1" : "H" })}`}
         </div>
+      )}
+      {start && help && (
+        <KeysHelp
+          phase={phase}
+          windowsOnly={windowsOnly(start)}
+          compatibility={start.request.compatibility === true}
+          monitors={start.request.monitors.length}
+        />
       )}
       {barHere && sel && monitor && desktop && (
         <CaptureBar
@@ -771,6 +894,94 @@ export function Overlay() {
       )}
     </div>
   );
+}
+
+/**
+ * The keys that work at this moment of the selection (CAP-017, CAP-020), as a panel that
+ * never appears in the capture: the capture is cut from the frozen screens.
+ */
+function KeysHelp({
+  phase,
+  windowsOnly: windowOnly,
+  compatibility,
+  monitors,
+}: {
+  phase: Phase;
+  windowsOnly: boolean;
+  compatibility: boolean;
+  monitors: number;
+}) {
+  const { t } = useTranslation();
+  const rows: [string, string][] = [];
+  const k = (keys: string, what: string) => rows.push([keys, t(`ui.overlay.keys.${what}`)]);
+  if (phase === "adjusting") {
+    k("Enter · I", "capture");
+    k("← ↑ → ↓", "move");
+    k("Shift", "move_more");
+    k("Alt + ← ↑ → ↓", "resize");
+    k("⌫", "redo");
+  } else if (windowOnly) {
+    k(t("ui.overlay.keys.click_key"), "click_window");
+    k("Enter", "enter_window");
+  } else {
+    k(t("ui.overlay.keys.drag_key"), "drag");
+    k(t("ui.overlay.keys.click_key"), "click_window");
+    k("Enter", "enter_window");
+    k(compatibility ? "Shift · Ctrl · Ctrl+Shift" : "Shift · Alt · Alt+Shift", "ratio");
+    k("G", "guides");
+    k("F", "fullscreen");
+    if (monitors > 1) k("A", "all_monitors");
+    k("C", "color");
+  }
+  k("M", "magnifier");
+  k("+ −", "zoom");
+  k(compatibility ? "F1" : "H · F1", "help");
+  k("Esc", "cancel");
+  return (
+    <div className="overlay-help" role="dialog" aria-label={t("ui.overlay.keys.title")}>
+      <strong>{t("ui.overlay.keys.title")}</strong>
+      <dl>
+        {rows.map(([keys, what]) => (
+          <div key={what}>
+            <dt>
+              <kbd>{keys}</kbd>
+            </dt>
+            <dd>{what}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/** Below 30 frames a second, a frame waits more than this (CAP-014, APP-053). */
+const SLOW_FRAME_MS = 1000 / 30;
+
+/**
+ * Measures how long each frame waits from the event that asked for it until it is
+ * drawn. Averaged over at least 2 s of moving, above SLOW_FRAME_MS the crosshair is
+ * slow on this computer, and the capture tells XcreenShot so (CAP-014).
+ */
+function trackLag(st: {
+  asked: number;
+  lag: { sum: number; count: number; since: number };
+  slow: boolean;
+}): void {
+  const now = performance.now();
+  if (!st.asked || st.slow) return;
+  const wait = now - st.asked;
+  st.asked = 0;
+  // A pause in moving starts a new window.
+  if (!st.lag.since || wait > 1000) {
+    st.lag = { sum: 0, count: 0, since: now };
+    return;
+  }
+  st.lag.sum += wait;
+  st.lag.count += 1;
+  if (now - st.lag.since >= 2000) {
+    if (st.lag.count >= 20 && st.lag.sum / st.lag.count > SLOW_FRAME_MS) st.slow = true;
+    st.lag = { sum: 0, count: 0, since: now };
+  }
 }
 
 /** Topmost detected window under the pointer, if detection applies (CAP-016). */

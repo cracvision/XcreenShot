@@ -9,6 +9,7 @@ import {
   placeBar,
   placeMagnifier,
   ratioFromKeys,
+  snapToGuides,
   resizeByHandle,
   toHex,
 } from "./geometry";
@@ -110,5 +111,24 @@ describe("magnifier (CAP-015)", () => {
     expect(nextZoom(16, true)).toBe(16);
     expect(nextZoom(2, false)).toBe(2);
     expect(toHex(14, 140, 127)).toBe("#0E8C7F");
+  });
+
+  it("compatibility locks with Ctrl, and Alt holds nothing (CAP-066)", () => {
+    expect(ratioFromKeys(false, false, true, true)).toBeCloseTo(16 / 9);
+    expect(ratioFromKeys(true, false, true, true)).toBeCloseTo(4 / 3);
+    expect(ratioFromKeys(false, true, false, true)).toBeNull();
+    expect(ratioFromKeys(true, false, false, true)).toBe(1);
+    // Coexistence keeps Alt.
+    expect(ratioFromKeys(false, true, true, false)).toBeCloseTo(16 / 9);
+  });
+
+  it("guides snap to a standard size within 8 px, in the drag's direction (CAP-019)", () => {
+    const a = { x: 100, y: 100 };
+    const near = snapToGuides(a, { x: 100 + 1275, y: 100 + 718 });
+    expect(near?.size).toEqual([1280, 720]);
+    expect(near?.end).toEqual({ x: 1380, y: 820 });
+    const up = snapToGuides({ x: 2000, y: 1000 }, { x: 2000 - 645, y: 1000 - 476 });
+    expect(up?.end).toEqual({ x: 1360, y: 520 });
+    expect(snapToGuides(a, { x: 100 + 1260, y: 100 + 718 })).toBeNull();
   });
 });

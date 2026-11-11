@@ -505,6 +505,10 @@
       "label": "Detección automática",
       "description": "Resalta la ventana bajo el puntero para seleccionarla con un clic. Arrastrar funciona siempre."
     },
+    "capture_simpleCrosshair": {
+      "label": "Cruceta simplificada",
+      "description": "Solo líneas finas, sin oscurecer la pantalla ni el rótulo de coordenadas. Para equipos lentos, máquinas virtuales, escritorio remoto y muchos monitores de alta resolución."
+    },
     "editor_deleteCroppedContent": {
       "label": "Eliminar el contenido recortado al guardar",
       "description": "Los documentos guardados conservan solo la imagen recortada, así que un .xshot compartido no contiene nada oculto. Sin esta opción, un recorte posterior puede recuperar lo que se cortó."
@@ -793,6 +797,7 @@
     "capture_saved_library": "Captura guardada en la biblioteca",
     "automation_capture": "Pantalla capturada desde {{source}}",
     "capture_blank": "La captura salió en negro: la ventana protege su contenido (un video protegido o una app que se oculta de las capturas). Si se ejecuta como administrador, abre también XcreenShot como administrador.",
+    "slow_crosshair": "La selección fue lenta en este equipo. Activa la cruceta simplificada en Preferencias > Captura.",
     "action_open": "Abrir",
     "action_folder": "Mostrar en la carpeta"
   },
@@ -1006,6 +1011,31 @@
       "language": "Idioma"
     },
     "overlay": {
+      "help_hint": "{{key}}: ayuda",
+      "guides_on": "Guías de tamaño activadas (G)",
+      "guides_off": "Guías de tamaño desactivadas",
+      "keys": {
+        "title": "Teclas",
+        "drag_key": "Arrastrar",
+        "click_key": "Clic",
+        "drag": "seleccionar un área",
+        "click_window": "tomar la ventana resaltada",
+        "enter_window": "tomar la ventana resaltada",
+        "ratio": "mantener cuadrado, 16:9 o 4:3 al arrastrar",
+        "guides": "guías de tamaños estándar",
+        "fullscreen": "este monitor entero",
+        "all_monitors": "todos los monitores",
+        "color": "copiar el color bajo el puntero",
+        "magnifier": "mostrar u ocultar la lupa",
+        "zoom": "zoom de la lupa",
+        "help": "mostrar u ocultar estas teclas",
+        "cancel": "cancelar",
+        "capture": "capturar",
+        "move": "mover la selección 1 px",
+        "move_more": "con las flechas: 10 px",
+        "resize": "cambiar su tamaño",
+        "redo": "volver a seleccionar"
+      },
       "fullscreen": "Pantalla completa",
       "all_monitors": "Todos los monitores",
       "image": "Capturar",

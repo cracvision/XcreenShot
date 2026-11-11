@@ -301,6 +301,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        def(
+            "capture.simpleCrosshair",
+            "capture",
+            boolean(),
+            json!(false),
+            "CAP-014",
+        ),
         // Capture confirmation (CAP-055); its notification is the Captures category.
         def(
             "capture.sound",

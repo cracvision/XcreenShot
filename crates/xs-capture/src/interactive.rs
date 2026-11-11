@@ -82,6 +82,36 @@ pub fn freeze(lang: Lang) -> Result<Frozen, CommandError> {
     })
 }
 
+/// UI memory: how many selections showed "H: help" (CAP-020).
+const HELP_HINT_KEY: &str = "hint.capture_help";
+/// UI memory: the simplified crosshair was offered once (CAP-014).
+const SLOW_HINT_KEY: &str = "hint.simple_crosshair";
+
+/// Whether this selection shows "H: help", counting it (CAP-020: the first three).
+fn help_hint(core: &Core) -> bool {
+    let shown = core.recall(HELP_HINT_KEY).and_then(|v| v.as_u64()).unwrap_or(0);
+    if shown >= 3 {
+        return false;
+    }
+    core.remember(HELP_HINT_KEY, json!(shown + 1));
+    true
+}
+
+/// The crosshair ran under 30 frames a second: offer the simplified one, once
+/// (CAP-014, APP-053).
+fn offer_simple_crosshair(core: &Core, lang: Lang) {
+    if core.settings.get_bool("capture.simpleCrosshair") || core.recall(SLOW_HINT_KEY).is_some() {
+        return;
+    }
+    core.remember(SLOW_HINT_KEY, json!(true));
+    tracing::info!("slow crosshair: simplified crosshair offered");
+    core.host().notify(
+        "problems",
+        &tr(lang, "app.name", &[]),
+        &tr(lang, "notify.slow_crosshair", &[]),
+    );
+}
+
 /// RGBA to BGRA (the byte order GDI paints), for showing frozen screens natively.
 pub fn to_bgra(rgba: &[u8]) -> Vec<u8> {
     let mut out = rgba.to_vec();
@@ -147,12 +177,20 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         "pointer": frozen.pointer,
         "autoDetect": core.settings.get_bool("capture.autoDetect"),
         "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        // The keys of the selection follow the shortcut profile on Windows (CAP-066).
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        // "H: help" the first three times (CAP-020).
+        "helpHint": help_hint(core),
         "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
     });
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());
     }
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
+    if outcome.get("slow").and_then(Value::as_bool).unwrap_or(false) {
+        offer_simple_crosshair(core, lang);
+    }
     if let Some(zoom) = outcome.get("magnifierZoom").filter(|z| z.is_u64()) {
         core.remember("capture.magnifierZoom", zoom.clone());
     }

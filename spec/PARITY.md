@@ -21,13 +21,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-011 | Ajustar la selección y barra de captura | M1 | Must | En curso |
 | CAP-012 | Rehacer la selección y cambiar de tipo | M1 | Should | En curso |
 | CAP-013 | Pantalla congelada y cruceta | M1 | Must | En curso |
-| CAP-014 | Cruceta simplificada | M1 | Could | — |
+| CAP-014 | Cruceta simplificada | M1 | Could | En curso |
 | CAP-015 | Lupa | M1 | Must | En curso |
 | CAP-016 | Detección automática de ventanas y subáreas | M1 | Must | En curso |
 | CAP-017 | Teclado durante la selección | M1 | Must | En curso |
 | CAP-018 | Bloqueo de proporción | M1 | Should | En curso |
-| CAP-019 | Guías de tamaño estándar | M1 | Could | — |
-| CAP-020 | Ayuda en pantalla durante la captura | M1 | Could | — |
+| CAP-019 | Guías de tamaño estándar | M1 | Could | En curso |
+| CAP-020 | Ayuda en pantalla durante la captura | M1 | Could | En curso |
 | CAP-021 | Varios monitores y DPI mixto | M1 | Must | En curso |
 | CAP-022 | Pantallas HDR | M3 | Should | — |
 | CAP-023 | Ocultar XcreenShot al capturar | M1 | Must | En curso |
@@ -73,7 +73,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-063 | Exportar e importar `.xpreset` | M3 | Should | — |
 | CAP-064 | Presets incorporados | M3 | Should | — |
 | CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | En curso |
-| CAP-066 | Perfil de compatibilidad | M1 | Should | — |
+| CAP-066 | Perfil de compatibilidad | M1 | Should | En curso |
 | CAP-067 | Multicaptura (función propia, adelantada) | M1 | Should | En curso |
 
 ## 02-editor.md

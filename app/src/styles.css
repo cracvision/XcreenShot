@@ -1300,6 +1300,49 @@ html.overlay-root #root {
   pointer-events: none;
 }
 
+/* The keys of the selection (CAP-020): never in a capture, which comes from the
+   frozen screens. */
+.overlay-help {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 320px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgb(20 24 28 / 0.86);
+  color: #fff;
+  font:
+    13px "Segoe UI",
+    system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+
+.overlay-help dl {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+}
+
+.overlay-help dl > div {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+}
+
+.overlay-help dt,
+.overlay-help dd {
+  margin: 0;
+}
+
+.overlay-help kbd {
+  padding: 0 5px;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  border-radius: 4px;
+  font: inherit;
+}
+
 .overlay-top {
   position: absolute;
   top: 16px;

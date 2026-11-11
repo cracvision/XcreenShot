@@ -505,6 +505,10 @@
       "label": "Automatic detection",
       "description": "Highlights the window under the pointer so one click selects it. Dragging always works."
     },
+    "capture_simpleCrosshair": {
+      "label": "Simplified crosshair",
+      "description": "Thin lines only, without darkening the screen or the coordinates label. For slow computers, virtual machines, remote desktops and many high-resolution monitors."
+    },
     "editor_deleteCroppedContent": {
       "label": "Delete cropped content when saving",
       "description": "Saved documents keep only the cropped image, so a shared .xshot holds nothing hidden. Without it, a later crop can recover what was cut."
@@ -793,6 +797,7 @@
     "capture_saved_library": "Capture saved in the library",
     "automation_capture": "Screen captured at the request of {{source}}",
     "capture_blank": "The capture came out black: the window protects its content (a protected video, or an app that hides itself from captures). If it runs as administrator, start XcreenShot as administrator too.",
+    "slow_crosshair": "The selection ran slowly on this computer. Turn on the simplified crosshair in Preferences > Capture.",
     "action_open": "Open",
     "action_folder": "Show in folder"
   },
@@ -1006,6 +1011,31 @@
       "language": "Language"
     },
     "overlay": {
+      "help_hint": "{{key}}: help",
+      "guides_on": "Size guides on (G)",
+      "guides_off": "Size guides off",
+      "keys": {
+        "title": "Keys",
+        "drag_key": "Drag",
+        "click_key": "Click",
+        "drag": "select an area",
+        "click_window": "take the highlighted window",
+        "enter_window": "take the highlighted window",
+        "ratio": "hold square, 16:9 or 4:3 while dragging",
+        "guides": "standard size guides",
+        "fullscreen": "this whole monitor",
+        "all_monitors": "all monitors",
+        "color": "copy the color under the pointer",
+        "magnifier": "show or hide the magnifier",
+        "zoom": "magnifier zoom",
+        "help": "show or hide these keys",
+        "cancel": "cancel",
+        "capture": "capture",
+        "move": "move the selection 1 px",
+        "move_more": "with the arrows: 10 px",
+        "resize": "change its size",
+        "redo": "select again"
+      },
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
       "image": "Capture",
