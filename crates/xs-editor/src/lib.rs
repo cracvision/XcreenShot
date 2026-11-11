@@ -1495,6 +1495,11 @@ pub fn extension() -> Extension {
             let oids = object_ids(&p, ctx.lang)?;
             let kinds = kinds_of(&core, ctx.lang, &id, &oids)?;
             let set = p["set"].as_object().cloned().unwrap_or_default();
+            // Several objects moved together, each from where it is (EDT-079, EDT-087).
+            let shift = p
+                .get("move")
+                .and_then(Value::as_array)
+                .and_then(|a| Some((a.first()?.as_f64()?, a.get(1)?.as_f64()?)));
             // Try the change on copies first: it names the undo step and finds errors.
             let mut moved_only = true;
             let copies = editor(&core)
@@ -1525,6 +1530,9 @@ pub fn extension() -> Extension {
                         let o = doc
                             .object_mut(oid)
                             .ok_or_else(|| CommandError::internal("object vanished"))?;
+                        if let Some((dx, dy)) = shift {
+                            objects::translate(o, dx, dy);
+                        }
                         objects::update(o, &set).map_err(|r| {
                             invalid(tr(
                                 ctx.lang,

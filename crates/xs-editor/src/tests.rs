@@ -1512,3 +1512,30 @@ fn a_captured_pointer_is_its_own_object() {
         [255, 255, 255, 255]
     );
 }
+
+#[test]
+fn several_objects_move_together_in_one_step() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let r = cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [50, 10]), arrow([10, 40], [50, 40])]}),
+    );
+    assert_eq!(r["ids"], json!(["o1", "o2"]));
+    call(
+        &e.core,
+        Source::Ui,
+        "document.update_object",
+        json!({"documentId": doc, "objectIds": ["o1", "o2"], "move": [5, 7]}),
+    )
+    .unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([15.0, 17.0]));
+    assert_eq!(info["objects"][1]["to"], json!([55.0, 47.0]));
+    // One Undo puts both back (EDT-079).
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([10.0, 10.0]));
+    assert_eq!(info["objects"][1]["to"], json!([50.0, 40.0]));
+}

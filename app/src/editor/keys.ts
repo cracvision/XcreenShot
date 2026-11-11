@@ -106,7 +106,16 @@ function nextZone(back: boolean): void {
 /** Arrow keys move the selection 1 px, 10 with Shift (EDT-087, EDT-117). */
 function nudge(dx: number, dy: number): void {
   const { active, doc, selection } = useEditor.getState();
-  if (!active || !doc || selection.length !== 1) return;
+  if (!active || !doc || selection.length === 0) return;
+  if (selection.length > 1) {
+    // Several selected move together, in one undo step (EDT-079, EDT-087).
+    run("document.update_object", {
+      documentId: active,
+      objectIds: selection,
+      move: [dx, dy],
+    }).catch(fail);
+    return;
+  }
   const o = doc.objects.find((x) => x.id === selection[0]);
   if (!o) return;
   const [, set] = moved(o, dx, dy);

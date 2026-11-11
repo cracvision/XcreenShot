@@ -508,9 +508,10 @@ pub fn specs() -> Vec<CommandSpec> {
                     "documentId": document_id(),
                     "objectId": {"type": "string"},
                     "objectIds": {"type": "array", "items": {"type": "string"}},
-                    "set": {"type": "object", "description": "Geometry to replace and style properties to change"}
+                    "set": {"type": "object", "description": "Geometry to replace and style properties to change"},
+                    "move": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Move every object by [dx, dy] canvas pixels, in one undo step"}
                 }),
-                &["set"],
+                &[],
             ))
             .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
         B::new("document.delete_object", &["EDT-119", "EDT-042"])

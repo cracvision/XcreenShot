@@ -24,7 +24,7 @@ import {
 import { arrowGeometry, constrain45, type Point } from "./geometry";
 import { useObjectImages } from "./objectImages";
 import { ArrowShape, BlurShape, ImageShape, ShapeShape, TextShape } from "./ObjectShapes";
-import { boxOf, hits, moved, reboxed } from "./objects";
+import { boxOf, extentPoints, hits, inBand, moved, reboxed } from "./objects";
 import {
   docUrl,
   takeZoomRequest,
@@ -77,7 +77,9 @@ type Drag =
       square: boolean;
       fromCenter: boolean;
     }
-  | { kind: "move"; id: string; start: Point; delta: Point; moved: boolean }
+  | { kind: "move"; ids: string[]; start: Point; delta: Point; moved: boolean }
+  // A selection box drawn with Move over an empty place (EDT-079).
+  | { kind: "band"; start: Point; end: Point; touch: boolean; add: boolean }
   | { kind: "end"; id: string; end: "from" | "to"; other: Point; point: Point }
   | { kind: "resize"; id: string; handle: BoxHandle; start: Box; box: Box }
   | { kind: "rotate"; id: string; start: Box; box: Box }
@@ -343,10 +345,10 @@ export function Canvas({ doc }: Props) {
   // Objects as the canvas shows them: with the gesture in progress applied.
   const shown: DocObject[] = doc.objects.map((o) => {
     if (pending?.version === doc.version && pending.object.id === o.id) return pending.object;
+    if (drag?.kind === "move")
+      return drag.ids.includes(o.id) ? moved(o, drag.delta[0], drag.delta[1])[0] : o;
     if (!drag || !("id" in drag) || drag.id !== o.id) return o;
     switch (drag.kind) {
-      case "move":
-        return moved(o, drag.delta[0], drag.delta[1])[0];
       case "end":
         return o.type === "arrow" ? { ...o, [drag.end]: drag.point } : o;
       case "resize":
@@ -454,10 +456,27 @@ export function Canvas({ doc }: Props) {
     }
     // EDT-022: a click on an object selects it, except with Alt (draw over it).
     const hit = e.altKey && tool !== "move" ? null : hitObject(p);
+    // Shift or Ctrl/Cmd adds an object to the selection, or takes it out (EDT-079).
+    const adding = e.shiftKey || e.ctrlKey || e.metaKey;
+    if (hit && adding) {
+      setSelection(
+        selection.includes(hit.id) ? selection.filter((x) => x !== hit.id) : [...selection, hit.id],
+      );
+      return;
+    }
     if (hit) {
-      setSelection([hit.id]);
+      // Dragging one of several selected objects moves them all.
+      const ids = selection.includes(hit.id) ? selection : [hit.id];
+      if (!selection.includes(hit.id)) setSelection([hit.id]);
       capture();
-      setDrag({ kind: "move", id: hit.id, start: p, delta: [0, 0], moved: false });
+      setDrag({ kind: "move", ids, start: p, delta: [0, 0], moved: false });
+      return;
+    }
+    if (tool === "move") {
+      // An empty place: a selection box (EDT-079).
+      capture();
+      if (!adding) setSelection([]);
+      setDrag({ kind: "band", start: p, end: p, touch: e.altKey, add: adding });
       return;
     }
     if (tool === "arrow" || tool === "shape" || tool === "blur" || tool === "text") {
@@ -477,6 +496,71 @@ export function Canvas({ doc }: Props) {
     setSelection([]);
   };
 
+  /**
+   * The gesture after the pointer reached canvas point `p` with these keys. Used while
+   * moving and again on release, so the last position counts even when the release
+   * comes before the screen caught up with the moves.
+   */
+  const step = (
+    d: Exclude<Drag, { kind: "pan" }>,
+    e: { shiftKey: boolean; altKey: boolean },
+    p: Point,
+  ): Drag => {
+    switch (d.kind) {
+      case "draw":
+        return {
+          ...d,
+          to: d.tool === "arrow" && e.shiftKey ? constrain45(d.from, p) : p,
+          square: e.shiftKey,
+          fromCenter: e.altKey,
+        };
+      case "end":
+        return { ...d, point: e.shiftKey ? constrain45(d.other, p) : p };
+      case "band":
+        return { ...d, end: p, touch: e.altKey };
+      case "move": {
+        let dx = p[0] - d.start[0];
+        let dy = p[1] - d.start[1];
+        // Shift keeps the move horizontal or vertical (EDT-117).
+        if (e.shiftKey) {
+          if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+          else dx = 0;
+        }
+        const isMoved = d.moved || Math.hypot(dx, dy) * (lay?.scale ?? 1) >= DRAG_THRESHOLD;
+        return { ...d, delta: isMoved ? [dx, dy] : [0, 0], moved: isMoved };
+      }
+      case "resize": {
+        // An image keeps its proportions from a corner; Shift frees them (EDT-078).
+        const image = doc.objects.find((o) => o.id === d.id)?.type === "image";
+        const corner = d.handle.length === 2;
+        const keepRatio = image && corner ? !e.shiftKey : e.shiftKey;
+        return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
+      }
+      case "rotate":
+        return { ...d, box: { ...d.start, rotation: rotateTo(d.start, p, e.shiftKey) } };
+      case "crop": {
+        const bounds = ext;
+        let rect: RectBox;
+        if (d.mode === "new") rect = dragRect(d.start, p, e.shiftKey, e.altKey);
+        else if (d.mode === "move") {
+          const dx = Math.min(
+            Math.max(p[0] - d.start[0], bounds.x - d.from.x),
+            bounds.x + bounds.w - d.from.x - d.from.w,
+          );
+          const dy = Math.min(
+            Math.max(p[1] - d.start[1], bounds.y - d.from.y),
+            bounds.y + bounds.h - d.from.y - d.from.h,
+          );
+          rect = { ...d.from, x: d.from.x + dx, y: d.from.y + dy };
+        } else {
+          // Shift keeps the current proportion (EDT-049).
+          rect = resize({ ...d.from, rotation: 0 }, d.mode, p, { keepRatio: e.shiftKey });
+        }
+        return { ...d, rect: clampRect(rect, bounds) };
+      }
+    }
+  };
+
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!lay) return;
     const s = local(e);
@@ -488,72 +572,14 @@ export function Canvas({ doc }: Props) {
       setHover(handleName ?? (!cropRect && hitObject(p) ? "object" : null));
       return;
     }
-    switch (drag.kind) {
-      case "pan":
-        if (scrollRef.current) {
-          scrollRef.current.scrollLeft = drag.left - (e.clientX - drag.x);
-          scrollRef.current.scrollTop = drag.top - (e.clientY - drag.y);
-        }
-        break;
-      case "draw":
-        setDrag({
-          ...drag,
-          to: drag.tool === "arrow" && e.shiftKey ? constrain45(drag.from, p) : p,
-          square: e.shiftKey,
-          fromCenter: e.altKey,
-        });
-        break;
-      case "end":
-        setDrag({ ...drag, point: e.shiftKey ? constrain45(drag.other, p) : p });
-        break;
-      case "move": {
-        let dx = p[0] - drag.start[0];
-        let dy = p[1] - drag.start[1];
-        // Shift keeps the move horizontal or vertical (EDT-117).
-        if (e.shiftKey) {
-          if (Math.abs(dx) > Math.abs(dy)) dy = 0;
-          else dx = 0;
-        }
-        const isMoved = drag.moved || Math.hypot(dx, dy) * lay.scale >= DRAG_THRESHOLD;
-        setDrag({ ...drag, delta: isMoved ? [dx, dy] : [0, 0], moved: isMoved });
-        break;
+    if (drag.kind === "pan") {
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft = drag.left - (e.clientX - drag.x);
+        scrollRef.current.scrollTop = drag.top - (e.clientY - drag.y);
       }
-      case "resize": {
-        // An image keeps its proportions from a corner; Shift frees them (EDT-078).
-        const image = doc.objects.find((o) => o.id === drag.id)?.type === "image";
-        const corner = drag.handle.length === 2;
-        const keepRatio = image && corner ? !e.shiftKey : e.shiftKey;
-        setDrag({
-          ...drag,
-          box: resize(drag.start, drag.handle, p, { keepRatio, fromCenter: e.altKey }),
-        });
-        break;
-      }
-      case "rotate":
-        setDrag({ ...drag, box: { ...drag.start, rotation: rotateTo(drag.start, p, e.shiftKey) } });
-        break;
-      case "crop": {
-        const bounds = ext;
-        let rect: RectBox;
-        if (drag.mode === "new") rect = dragRect(drag.start, p, e.shiftKey, e.altKey);
-        else if (drag.mode === "move") {
-          const dx = Math.min(
-            Math.max(p[0] - drag.start[0], bounds.x - drag.from.x),
-            bounds.x + bounds.w - drag.from.x - drag.from.w,
-          );
-          const dy = Math.min(
-            Math.max(p[1] - drag.start[1], bounds.y - drag.from.y),
-            bounds.y + bounds.h - drag.from.y - drag.from.h,
-          );
-          rect = { ...drag.from, x: drag.from.x + dx, y: drag.from.y + dy };
-        } else {
-          // Shift keeps the current proportion (EDT-049).
-          rect = resize({ ...drag.from, rotation: 0 }, drag.mode, p, { keepRatio: e.shiftKey });
-        }
-        setDrag({ ...drag, rect: clampRect(rect, bounds) });
-        break;
-      }
+      return;
     }
+    setDrag(step(drag, e, p));
   };
 
   const update = async (o: DocObject, set: Record<string, unknown>) => {
@@ -576,11 +602,23 @@ export function Canvas({ doc }: Props) {
         // The new object stays selected to adjust it (EDT-022, editor.autoSelectAfterDraw).
         if (r.ids[0] && setting("editor.autoSelectAfterDraw", true)) setSelection([r.ids[0]]);
       } else if (d.kind === "move" && d.moved) {
-        const o = committed.get(d.id);
-        if (o) {
-          const [next, set] = moved(o, d.delta[0], d.delta[1]);
+        const one = d.ids.length === 1 ? committed.get(d.ids[0] ?? "") : undefined;
+        if (one) {
+          const [next, set] = moved(one, d.delta[0], d.delta[1]);
           await update(next, set);
+        } else {
+          // Several: one command and one undo step (EDT-079).
+          await run("document.update_object", {
+            documentId: id,
+            objectIds: d.ids,
+            move: d.delta,
+          });
         }
+      } else if (d.kind === "band") {
+        const r = dragRect(d.start, d.end, false, false);
+        if (r.w * scale < DRAG_THRESHOLD && r.h * scale < DRAG_THRESHOLD) return;
+        const inside = doc.objects.filter((o) => inBand(o, r, d.touch)).map((o) => o.id);
+        setSelection(d.add ? [...new Set([...selection, ...inside])] : inside);
       } else if (d.kind === "end") {
         const o = committed.get(d.id);
         if (o?.type === "arrow") await update({ ...o, [d.end]: d.point }, { [d.end]: d.point });
@@ -600,9 +638,12 @@ export function Canvas({ doc }: Props) {
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag;
+    const last = drag;
     setDrag(null);
-    if (!d || d.kind === "pan") return;
+    if (!last || last.kind === "pan") return;
+    // Where the pointer was let go, not where the last drawn frame had it.
+    const d = step(last, e, toCanvas(local(e)));
+    if (d.kind === "pan") return;
     if (d.kind === "draw") {
       const s = local(e);
       const click = Math.hypot(s.x - d.startX, s.y - d.startY) < DRAG_THRESHOLD;
@@ -719,6 +760,7 @@ export function Canvas({ doc }: Props) {
   if (autoExpand) {
     const outside = new Set(doc.outside ?? []);
     const ids = [
+      ...(drag?.kind === "move" ? drag.ids : []),
       drag && "id" in drag ? drag.id : null,
       pending?.version === doc.version ? pending.object.id : null,
     ];
@@ -944,7 +986,65 @@ export function Canvas({ doc }: Props) {
                   })}
                 </Group>
               )}
+              {drag?.kind === "band" && (
+                <Line
+                  points={corners({
+                    ...dragRect(drag.start, drag.end, false, false),
+                    rotation: 0,
+                  }).flatMap(toScreen)}
+                  closed
+                  stroke={ACCENT}
+                  strokeWidth={1}
+                  dash={[4, 3]}
+                  fill="rgba(0, 100, 251, 0.08)"
+                />
+              )}
+              {/* Several selected: a thin outline each and a common box (EDT-079). */}
               {!shownCrop &&
+                selection.length > 1 &&
+                (() => {
+                  const marks = shown.filter((o) => selection.includes(o.id));
+                  const pts = marks.flatMap(extentPoints);
+                  if (pts.length === 0) return null;
+                  const xs = pts.map((q) => q[0]);
+                  const ys = pts.map((q) => q[1]);
+                  const all = {
+                    x: Math.min(...xs),
+                    y: Math.min(...ys),
+                    w: Math.max(...xs) - Math.min(...xs),
+                    h: Math.max(...ys) - Math.min(...ys),
+                    rotation: 0,
+                  };
+                  return (
+                    <Group>
+                      {marks.map((o) => (
+                        <Line
+                          key={o.id}
+                          points={
+                            o.type === "arrow"
+                              ? [...toScreen(o.from), ...toScreen(o.to)]
+                              : (() => {
+                                  const box = boxOf(o);
+                                  return box ? corners(box).flatMap(toScreen) : [];
+                                })()
+                          }
+                          closed={o.type !== "arrow"}
+                          stroke={ACCENT}
+                          strokeWidth={1}
+                        />
+                      ))}
+                      <Line
+                        points={corners(all).flatMap(toScreen)}
+                        closed
+                        stroke={ACCENT}
+                        strokeWidth={1}
+                        dash={[4, 3]}
+                      />
+                    </Group>
+                  );
+                })()}
+              {!shownCrop &&
+                selection.length === 1 &&
                 shown
                   .filter((o) => selection.includes(o.id) && o.id !== editingId)
                   .map((o) => {

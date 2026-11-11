@@ -169,6 +169,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.paste_in_place", "menu.paste_in_place", "paste_in_place"),
                 Separator,
                 action("editor.delete", "menu.delete", "delete"),
+                action("editor.select_all", "menu.select_all", "select_all"),
                 action("editor.deselect", "menu.deselect", "deselect"),
             ],
         },

@@ -116,7 +116,7 @@ xcreenshot app ping --json
 | `document.list` | `xcreenshot document list --json` | Open documents in order, with `active` (the one in the editor), `dirty` (unsaved changes), `kind` (`library` or `external`) and size. |
 | `document.info` | `xcreenshot document info [--document-id <id>] --json` | Size, resolution (`dpi`), crop, objects with their geometry and style, capture metadata, `dirty`, and the undo and redo state. |
 | `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (`arrow`, `text`, `shape`, `blur`), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
-| `document.update_object` | `xcreenshot document update-object --document-id <id> --object-id o1 --set '{"to":[300,120]}'` | Changes the geometry or style of one or more objects (`--object-ids`). Style properties not given keep their value. One undo step. |
+| `document.update_object` | `xcreenshot document update-object --document-id <id> --object-id o1 --set '{"to":[300,120]}'` | Changes the geometry or style of one or more objects (`--object-ids`). Style properties not given keep their value. `--move '[dx,dy]'` moves them all by that many pixels, each from where it is. One undo step. |
 | `document.delete_object` | `xcreenshot document delete-object --document-id <id> --object-id o1` | Deletes one or more objects. One undo step. |
 | `document.undo` | `xcreenshot document undo [--document-id <id>]` | Undoes the last change; `label` names it. At least 100 steps per document, kept while it is open. |
 | `document.redo` | `xcreenshot document redo [--document-id <id>]` | Redoes the last undone change. |

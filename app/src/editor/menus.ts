@@ -188,6 +188,7 @@ export function useMenuBar(): void {
   const picked = useLibrary((s) => s.selection.length);
   // In the Library view the document entries do not apply (LIB-001).
   const hasDoc = doc !== null && !inLibrary;
+  const objectCount = inLibrary ? 0 : (doc?.objects.length ?? 0);
   const canUndo = (doc?.canUndo ?? false) && !inLibrary;
   const canRedo = (doc?.canRedo ?? false) && !inLibrary;
 
@@ -221,6 +222,7 @@ export function useMenuBar(): void {
     };
     for (const a of onDoc) enabled[`editor.${a}`] = hasDoc;
     for (const a of ["cut", "copy", "delete", "deselect"]) enabled[`editor.${a}`] = selected;
+    enabled["editor.select_all"] = objectCount > 0;
     const checked = {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
@@ -231,6 +233,7 @@ export function useMenuBar(): void {
     run("editor.menu_state", { enabled, checked }).catch(() => undefined);
   }, [
     hasDoc,
+    objectCount,
     canUndo,
     canRedo,
     selected,

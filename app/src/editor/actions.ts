@@ -422,6 +422,11 @@ export function performAction(action: string): boolean {
       if (!selected) return false;
       deleteSelection();
       return true;
+    case "select_all":
+      // Every object (EDT-079); locked objects (EDT-085) will stay out.
+      if (!doc || doc.objects.length === 0) return false;
+      setSelection(doc.objects.map((o) => o.id));
+      return true;
     case "deselect":
       if (!selected) return false;
       setSelection([]);

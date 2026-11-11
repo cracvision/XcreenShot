@@ -151,3 +151,21 @@ export function fingerprint(o: DocObject): string {
   }
   return (h >>> 0).toString(36);
 }
+
+/**
+ * Whether an object falls in a selection box (EDT-079): all of it, or with `touch`
+ * (Alt) any part of it.
+ */
+export function inBand(
+  o: DocObject,
+  r: { x: number; y: number; w: number; h: number },
+  touch: boolean,
+): boolean {
+  const pts = extentPoints(o);
+  if (pts.length === 0) return false;
+  const xs = pts.map((q) => q[0]);
+  const ys = pts.map((q) => q[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  if (touch) return x1 >= r.x && x0 <= r.x + r.w && y1 >= r.y && y0 <= r.y + r.h;
+  return x0 >= r.x && x1 <= r.x + r.w && y0 >= r.y && y1 <= r.y + r.h;
+}

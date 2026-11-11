@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxOf, fingerprint, hits, moved, outside, reboxed } from "./objects";
+import { boxOf, fingerprint, hits, inBand, moved, outside, reboxed } from "./objects";
 import type { DocObject } from "./state";
 
 const shape = (fill: string | null): DocObject => ({
@@ -94,5 +94,20 @@ describe("objects on the canvas (EDT-022, EDT-042)", () => {
 
   it("fingerprints change with the object", () => {
     expect(fingerprint(text)).not.toBe(fingerprint({ ...text, text: "Adiós" } as DocObject));
+  });
+});
+
+describe("selection box (EDT-079)", () => {
+  const arrowAt = (id: string, from: [number, number], to: [number, number]) =>
+    ({ id, type: "arrow", from, to, style: { color: "#000", width: 4 } }) as unknown as DocObject;
+  const box = { x: 0, y: 0, w: 100, h: 100 };
+
+  it("takes what is wholly inside, or with Alt what it touches", () => {
+    const inside = arrowAt("a", [10, 10], [90, 10]);
+    const half = arrowAt("b", [50, 50], [150, 50]);
+    expect(inBand(inside, box, false)).toBe(true);
+    expect(inBand(half, box, false)).toBe(false);
+    expect(inBand(half, box, true)).toBe(true);
+    expect(inBand(arrowAt("c", [200, 200], [300, 300]), box, true)).toBe(false);
   });
 });

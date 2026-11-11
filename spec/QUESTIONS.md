@@ -126,6 +126,13 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-003 | ¿Se quedan los botones de Deshacer y Rehacer cuando llegan los menús? | Se quedan en la barra | Decidido (Carlos, 2026-10-28) |
 | EDT-071 / EDT-049 | Carlos quiere que, al sacar un objeto del borde, el lienzo crezca para mostrarlo entero. El spec lo dejaba para M2 y solo al pegar o soltar | Adelantado a M1 para dibujar, mover, redimensionar, girar y pegar, con la preferencia `editor.autoExpandCanvas` (por defecto: sí). El lienzo se encoge solo cuando el objeto vuelve, sin bajar de la imagen o del último recorte. Lo que deja fuera un recorte se queda fuera aunque se mueva. Desenfocar no amplía el lienzo, y se ignora lo que sobresale menos de medio píxel. Spec de EDT-071 actualizado | Decidido (Carlos, 2026-10-27) |
 
+## Dudas del equipo de construcción (M2, entrega 1: objetos)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| EDT-079 / EDT-080 | Varios objetos seleccionados: el recuadro común "con tiradores" es de EDT-080 (Should) | Por ahora, un contorno fino en cada objeto y un recuadro común punteado, sin tiradores; se mueven juntos arrastrando o con las flechas, en un solo paso de deshacer (`document.update_object --move`). Los tiradores del recuadro común llegan con EDT-080 | Provisional |
+| EDT-079 | `Ctrl+A` en la vista Biblioteca | Sigue seleccionando los elementos de la biblioteca; en el editor selecciona todos los objetos. Con Selección o Varita mágica (M2.3) seleccionará los píxeles | Provisional |
+
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
 | ID | Duda | Propuesta | Estado |
