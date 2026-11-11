@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-10-28, con la entrega 4c terminada y pendiente de las pruebas de Carlos.
+**Última actualización:** 2026-11-11 (noche), con la entrega 5 terminada y la 6 avanzada.
 
 ## Fuentes
 
@@ -38,8 +38,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
 | Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
-| 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato | Casi hecha (en pausa el 2026-11-11). Falta arrastrar a otras apps (TRY-015) y `PARITY.md` |
-| 6 · Lo que falta de captura y app | Repasar en `PARITY.md` los IDs de captura y app de M1 que siguen pendientes | Pendiente |
+| 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato, arrastrar a otras apps | Hecha (2026-11-11); entra en la caminata de Carlos |
+| 6 · Lo que falta de captura y app | Cursor, aviso de capturas en negro, sonido y destello, notificaciones con clic, restablecer ajustes, Avanzado, Funciones en prueba, Ayuda y Acerca de, bienvenida, ayuda en pantalla, guías de tamaño, cruceta simplificada, teclas del perfil de compatibilidad | En curso: faltan eventos (APP-031) y tooltips y pistas (APP-014) |
 | 7 · Calidad | Teclado, lector de pantalla y rendimiento en todo M1 | Pendiente |
 
 Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelantar el `.xshot` de cada captura y una tira simple; B: un único motor de dibujo en Rust, ADR 0004; C: rama `m1-editor`).
@@ -47,6 +47,18 @@ Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelanta
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
+
+- **Sesión del 2026-11-11 (noche), con la PC libre ("no te detengas hasta completar todas las fases"):**
+  - Entrega 5 terminada: arrastrar de la bandeja o la biblioteca a otras apps (TRY-015, crate `drag`). Probado con el ratón real contra una ventana de prueba propia: un PNG va tal cual, un `.xshot` o un documento con cambios llega aplanado, tres seleccionados dan tres archivos, y soltar sobre XcreenShot no abre nada.
+  - Entrega 6 (cada punto con su commit; decisiones provisionales en `spec/QUESTIONS.md`, sección "entrega 6"):
+    - CAP-047 Capturar cursor: el puntero real llega como imagen flotante que se mueve o borra; al portapapeles va aplanado. La casilla del panel ya está activa.
+    - CAP-024/APP-026: una captura toda negra (contenido protegido) avisa.
+    - CAP-055 y APP-016: sonido al capturar (hecho por la app), destello que nunca sale en la captura, categorías de notificaciones en General, clic en el aviso abre la captura, y Permisos dice si Windows bloquea las notificaciones.
+    - APP-010, APP-009, APP-034: Restablecer esta sección / todos los ajustes (`settings.reset`), Volver a mostrar avisos y pistas (`app.warnings`), carpeta de datos y comando de terminal en Avanzado, sección Funciones en prueba.
+    - APP-015: ventana Ayuda con páginas propias en inglés y español (`F1`), Acerca de XcreenShot con licencias (`scripts/licenses.mjs`) y Enviar comentarios.
+    - APP-005: bienvenida del primer arranque (solo en equipos donde XcreenShot no arrancó nunca).
+    - CAP-020, CAP-019, CAP-014, CAP-066: panel de teclas (`H`/`F1`), guías de tamaño (`G`), cruceta simplificada y las teclas del perfil de compatibilidad.
+  - Pregunta abierta para Carlos: a dónde lleva **Enviar comentarios** si sus colegas no ven el repositorio (QUESTIONS, APP-015).
 
 - **Plan acordado con Carlos (2026-11-10):** Claude implementa seguido las entregas 5, 6 y 7, que cierran M1 en Windows. Después Carlos hace una **caminata por la app con un instalador**, Claude corrige lo que encuentre y solo entonces escribe **un único guion de pruebas** consolidado. Las tandas pendientes de antes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028) entran en esa caminata. Luego M2 y siguientes con el mismo ciclo; las partes del spec sin escribir se proponen a Carlos antes de construirlas.
 - **Limpieza aprobada por Carlos (2026-11-10):** PR #4 cerrado; carpeta `C:\Projects\XcreenShot-snap` y rama `snap-ui` borradas; las 16 capturas de prueba del 2026-10-18 movidas a `OneDrive\Documents\XcreenShot\pruebas`.
