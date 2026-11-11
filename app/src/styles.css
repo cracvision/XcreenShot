@@ -195,6 +195,38 @@
     border: 1px solid CanvasText;
   }
 
+  /* Every control keeps a visible edge and the chosen one stands out (APP-045). */
+  .tb-tool,
+  .seg > button,
+  .strip-item,
+  .lib-item,
+  .menubar-top,
+  .recent-toggle,
+  .hint-bubble,
+  .undo-notice,
+  .overlay-help {
+    border: 1px solid ButtonText;
+  }
+
+  /* The main buttons: system colors, without the gradient behind the text. */
+  .btn.primary,
+  .tb-capture,
+  .overlay-btn {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border: 1px solid HighlightText;
+  }
+
+  .tb-tool[aria-pressed="true"],
+  .seg > button[aria-pressed="true"],
+  .lib-item[aria-selected="true"],
+  .strip .current .strip-item {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
   .nav-indicator {
     background: Highlight;
     forced-color-adjust: none;
@@ -2027,7 +2059,7 @@ html.overlay-root.overlay-native #root {
 .cp-num {
   display: grid;
   gap: 2px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-muted);
 }
 
@@ -3081,7 +3113,7 @@ html.overlay-root.overlay-native #root {
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--surface);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -3171,7 +3203,7 @@ html.overlay-root.overlay-native #root {
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
   color: var(--ink);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
   pointer-events: none;
@@ -3502,6 +3534,7 @@ body.preparing-drag * {
   .multi-item,
   .editor-toast,
   .undo-notice,
+  .hint-bubble,
   .lib-item,
   .drop-hint,
   .countdown-number {
@@ -3519,5 +3552,15 @@ body.preparing-drag * {
   .multi-thumb:hover,
   .lib-item:hover .lib-thumb {
     transform: none;
+  }
+}
+
+/* Reduced transparency (APP-045): the translucent boxes over the frozen screens become
+   opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .overlay-hint,
+  .overlay-help,
+  .overlay-toast {
+    background: rgb(20 24 28);
   }
 }

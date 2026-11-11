@@ -119,7 +119,13 @@ function Item({
       tabIndex={focusable ? 0 : -1}
       data-item={item.id}
       className={`lib-item${selected ? " selected" : ""}`}
-      aria-label={t("ui.library.item_label", { name: item.name, type: typeName(item, t), date })}
+      // Name, type, date and the app it came from (APP-044).
+      aria-label={t(item.app ? "ui.library.item_label_app" : "ui.library.item_label", {
+        name: item.name,
+        type: typeName(item, t),
+        date,
+        app: item.app,
+      })}
       title={[item.name, size, date].filter(Boolean).join("\n")}
       onClick={(e) => onPick(item, e)}
       onDoubleClick={() => onOpen(item)}

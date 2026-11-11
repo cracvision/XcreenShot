@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { hsbToRgb, PALETTE, parseHex, rgbToHsb, THEME_COLORS, toHex, type Hsb } from "./color";
+import { tenStep } from "../lib/numberKeys";
 
 interface EyeDropperResult {
   sRGBHex: string;
@@ -133,6 +134,12 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
           if (Number.isFinite(n)) set(Math.min(max, Math.max(min, n)));
           setTransparent(false);
         }}
+        onKeyDown={(e) =>
+          tenStep(e, (n) => {
+            set(n);
+            setTransparent(false);
+          })
+        }
       />
     </label>
   );

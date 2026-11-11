@@ -14,6 +14,7 @@ import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
 import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
 import { useApp } from "../store";
+import { arrowFocus } from "../components/arrowFocus";
 
 const SECTIONS = [
   "general",
@@ -190,7 +191,7 @@ export function Preferences() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="nav-list" ref={navList}>
+        <div className="nav-list" ref={navList} onKeyDown={arrowFocus("vertical")}>
           <span className="nav-indicator" ref={indicator} aria-hidden="true" />
           {SECTIONS.map((s) => (
             <button

@@ -19,6 +19,7 @@ import {
 } from "../lib/commands";
 import { ShortcutRecorder } from "../prefs/ShortcutRecorder";
 import { useApp } from "../store";
+import { tenStep } from "../lib/numberKeys";
 
 type Tab = PanelSettings["tab"];
 const TABS: Tab[] = ["universal", "image"];
@@ -371,7 +372,10 @@ function ImageOptions({
               title={t("ui.panel.seconds_range")}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commitSeconds}
-              onKeyDown={(e) => e.key === "Enter" && commitSeconds()}
+              onKeyDown={(e) => {
+                tenStep(e, (n) => setDraft(String(n)));
+                if (e.key === "Enter") commitSeconds();
+              }}
             />
           </label>
         )}

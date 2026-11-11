@@ -8,6 +8,7 @@ import { useAppShortcuts } from "../lib/appShortcuts";
 import { isCommandError, run } from "../lib/commands";
 import licenses from "../help/licenses.json";
 import { blocks, helpPage, pieces, TOPICS, type Topic } from "../help/pages";
+import { arrowFocus } from "../components/arrowFocus";
 
 function initialTopic(): Topic {
   const hash = window.location.hash.slice(1);
@@ -194,7 +195,7 @@ export function Help() {
   return (
     <div className="prefs help">
       <nav aria-label={t("ui.help.topics")}>
-        <div className="nav-list">
+        <div className="nav-list" onKeyDown={arrowFocus("vertical")}>
           {all.map((id) => (
             <button
               key={id}

@@ -387,9 +387,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-040 | Requisitos del sistema | M0 | Must | En curso |
 | APP-041 | Windows en ARM | M6 | Should | — |
 | APP-042 | Desinstalación | M6 | Must | — |
-| APP-043 | Navegación con teclado | M1 | Must | — |
-| APP-044 | Lectores de pantalla | M1 | Must | — |
-| APP-045 | Contraste, escalado y movimiento | M1 | Should | — |
+| APP-043 | Navegación con teclado | M1 | Must | En curso |
+| APP-044 | Lectores de pantalla | M1 | Must | En curso |
+| APP-045 | Contraste, escalado y movimiento | M1 | Should | En curso |
 | APP-046 | Registros e información de diagnóstico | M0 | Must | En curso |
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | En curso |
 | APP-048 | Del atajo a la cruceta | M1 | Must | En curso |

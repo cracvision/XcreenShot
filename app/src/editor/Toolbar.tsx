@@ -25,6 +25,7 @@ import { useSetting } from "../store";
 import { hint, useShortcut } from "./tools";
 import { useTooltipLevel } from "../components/tooltips";
 import { ViewSwitch } from "../library/ViewSwitch";
+import { arrowFocus } from "../components/arrowFocus";
 
 function ToolButton({ id, active }: { id: Tool; active: boolean }) {
   const { t } = useTranslation();
@@ -68,6 +69,7 @@ export function Toolbar() {
       className={`editor-toolbar${labels ? "" : " icons-only"}`}
       role="toolbar"
       aria-label={t("ui.editor.toolbar")}
+      onKeyDown={arrowFocus("horizontal")}
       onContextMenu={(e) => {
         e.preventDefault();
         toolbarMenu(menuPoint(e));

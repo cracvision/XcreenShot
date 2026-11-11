@@ -8,6 +8,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { setLanguage } from "../i18n";
+import { tenStep } from "../lib/numberKeys";
 import {
   bounding,
   clampInside,
@@ -1057,6 +1058,7 @@ function CaptureBar({
         className={clamped ? "overlay-clamped" : undefined}
         aria-label={label}
         onKeyDown={(e) => {
+          tenStep(e, (v) => (e.currentTarget.value = String(v)));
           if (e.key === "Enter") {
             e.preventDefault();
             e.stopPropagation();

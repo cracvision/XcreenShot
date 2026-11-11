@@ -10,6 +10,9 @@
 //   node cdp.mjs move x y
 //   node cdp.mjs key <key> <code> [ctrl|shift|alt…]   e.g. key z KeyZ ctrl
 //   node cdp.mjs wheel x y deltaY [ctrl…]
+//   node cdp.mjs media <feature> <value> [out.png]   emulate e.g. forced-colors active,
+//                                                    prefers-reduced-motion reduce
+//                                                    (and take a screenshot)
 import { writeFileSync } from "node:fs";
 
 const PORT = 9333;
@@ -168,6 +171,19 @@ switch (cmd) {
       modifiers: m,
       windowsVirtualKeyCode: vk,
     });
+    break;
+  }
+  case "media": {
+    // Only this page sees it, while this script runs: the system is not touched.
+    const [name, value, out] = args;
+    await main.send("Emulation.setEmulatedMedia", { features: [{ name, value }] });
+    await new Promise((r) => setTimeout(r, 300));
+    if (out) {
+      const r = await main.send("Page.captureScreenshot", { format: "png" });
+      writeFileSync(out, Buffer.from(r.result.data, "base64"));
+      console.log("saved", out);
+    }
+    await main.send("Emulation.setEmulatedMedia", { features: [] });
     break;
   }
   case "wheel": {

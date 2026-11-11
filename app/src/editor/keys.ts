@@ -16,6 +16,7 @@ import {
 import { moved } from "./objects";
 import { requestZoom, useEditor, usePointer, type Tool } from "./state";
 import { useMainView } from "../library/state";
+import { inToolbar } from "../components/arrowFocus";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -316,17 +317,22 @@ export function useEditorKeys(): void {
           case "BracketRight":
             resizeStroke(true);
             break;
+          // In a toolbar the arrows move between its buttons (APP-043).
           case "ArrowLeft":
-            nudge(-step, 0);
+            if (inToolbar(e.target)) handled = false;
+            else nudge(-step, 0);
             break;
           case "ArrowRight":
-            nudge(step, 0);
+            if (inToolbar(e.target)) handled = false;
+            else nudge(step, 0);
             break;
           case "ArrowUp":
-            nudge(0, -step);
+            if (inToolbar(e.target)) handled = false;
+            else nudge(0, -step);
             break;
           case "ArrowDown":
-            nudge(0, step);
+            if (inToolbar(e.target)) handled = false;
+            else nudge(0, step);
             break;
           default:
             handled = false;

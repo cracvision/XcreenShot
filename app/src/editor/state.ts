@@ -2,6 +2,7 @@
 // store mirrors what the `xs://editor` events report and keeps only what belongs to
 // the view (selection, views, open dialogs).
 import { listen } from "@tauri-apps/api/event";
+import i18next from "i18next";
 import { create } from "zustand";
 import { isCommandError, run } from "../lib/commands";
 import type { Rect } from "./boxes";
@@ -247,6 +248,10 @@ export const useEditor = create<EditorState>((set, get) => ({
   error: null,
 
   boot: async () => {
+    // A capture that went to the clipboard says so, also to screen readers (APP-044).
+    await listen<{ result: { copied?: boolean } }>("xs://capture", (e) => {
+      if (e.payload.result.copied) get().showToast(i18next.t("ui.editor.capture_copied"));
+    });
     await listen<{ kind: string; payload: Record<string, unknown> }>("xs://editor", (e) => {
       const { kind, payload } = e.payload;
       switch (kind) {
