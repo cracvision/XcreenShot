@@ -431,6 +431,7 @@ pub fn slots() -> Vec<Slot> {
         s("app.show", Global),
         s("settings.open", Global),
         s("settings.open", App),
+        s("app.help", App),
         s("shortcuts.pause", Global),
         s("app.close_window", App),
         s("app.quit", Global),
@@ -546,6 +547,8 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("app.close_window", App, _, Macos) => "Super+KeyW",
         ("settings.open", App, _, Windows) => "Ctrl+Comma",
         ("settings.open", App, _, Macos) => "Super+Comma",
+        ("app.help", App, _, Windows) => "F1",
+        ("app.help", App, _, Macos) => "Super+Shift+Slash",
         (_, Editor, _, _) => return editor_default(slot.id, profile, platform),
         _ => return None,
     };

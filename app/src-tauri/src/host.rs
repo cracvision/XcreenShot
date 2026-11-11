@@ -121,6 +121,10 @@ impl Host for TauriHost {
         windows::open_preferences(&self.app, section, key).map_err(internal)
     }
 
+    fn open_help(&self, topic: Option<&str>) -> Result<(), CommandError> {
+        windows::open_help(&self.app, topic).map_err(internal)
+    }
+
     fn quit(&self) {
         tracing::info!("quit requested");
         crate::overlay::cancel(&self.app);

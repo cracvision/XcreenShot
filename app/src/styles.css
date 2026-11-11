@@ -3197,6 +3197,67 @@ html.overlay-root.overlay-native #root {
   width: 100%;
 }
 
+/* ---------- Help and About (APP-015) ---------- */
+.help nav button[aria-current="page"] {
+  background: var(--brand-soft);
+}
+
+.help-page {
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+.help-page h2 {
+  margin: var(--space-6) 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.help-page ul {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.3em;
+}
+
+.help-page li + li {
+  margin-top: 4px;
+}
+
+.help-page kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--control-line);
+  border-radius: 5px;
+  background: var(--surface-sunken);
+  font-family: var(--font-sans);
+  font-size: 0.88em;
+  white-space: nowrap;
+}
+
+.about-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px var(--space-4);
+  margin: 0 0 var(--space-4);
+}
+
+.about-facts dt {
+  color: var(--ink-muted);
+}
+
+.about-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.license-summary {
+  columns: 2;
+}
+
+.license-list ul {
+  max-height: 260px;
+  overflow: auto;
+  font-size: 0.9em;
+}
+
 /* ---------- Reset to defaults (APP-010) ---------- */
 .reset-block {
   display: flex;

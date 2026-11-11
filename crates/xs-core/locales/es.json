@@ -27,6 +27,18 @@
       "title": "Información de diagnóstico",
       "description": "Reúne la versión, el sistema, los monitores, los permisos, los atajos en conflicto y las últimas líneas del registro. Con copy, copia el texto al portapapeles."
     },
+    "app_help": {
+      "title": "Ayuda de XcreenShot",
+      "description": "Abre las páginas de ayuda, que funcionan sin conexión, en un tema."
+    },
+    "app_about": {
+      "title": "Acerca de XcreenShot",
+      "description": "Versión, compilación, arquitectura, canal, dónde están los datos y las únicas conexiones de red de la app."
+    },
+    "app_feedback": {
+      "title": "Enviar comentarios",
+      "description": "Abre en el navegador un borrador (una incidencia nueva del proyecto) con la versión y el sistema rellenados. XcreenShot no envía nada por su cuenta."
+    },
     "app_open_logs": {
       "title": "Abrir la carpeta de registros",
       "description": "Abre la carpeta con los archivos de registro locales."
@@ -708,6 +720,9 @@
     "open_library": "Abrir biblioteca"
   },
   "menu": {
+    "help_contents": "A&yuda de XcreenShot",
+    "feedback": "Enviar &comentarios…",
+    "about": "&Acerca de XcreenShot",
     "file": "&Archivo",
     "edit": "&Edición",
     "window": "Ventana",
@@ -807,6 +822,35 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "help": {
+      "title": "Ayuda de XcreenShot",
+      "topics": "Temas",
+      "about": "Acerca de XcreenShot",
+      "version": "Versión",
+      "build": "Compilación",
+      "date": "Fecha",
+      "arch": "Arquitectura",
+      "channel": "Canal",
+      "channel_development": "Compilación de desarrollo",
+      "channel_stable": "Estable",
+      "data": "Datos de la app",
+      "settings": "Ajustes",
+      "managed": "Configuración administrada",
+      "managed_inactive": "Inactiva",
+      "privacy_title": "Privacidad",
+      "privacy": "XcreenShot no recoge datos de uso ni envía telemetría. Solo se conecta a internet para compartir lo que tú eliges compartir, para buscar actualizaciones y, si la activas, para preguntar a la IA en la nube sobre una imagen que tú eliges.",
+      "check": "Comprobar comunicación",
+      "checking": "Comprobando…",
+      "check_ok": "XcreenShot respondió en {{ms}} ms (versión {{version}}).",
+      "check_failed": "Sin respuesta: {{reason}}",
+      "feedback": "Enviar comentarios…",
+      "feedback_help": "Abre un borrador en tu navegador. Tú lo revisas y decides si lo envías.",
+      "copy_diagnostics": "Copiar información de diagnóstico",
+      "licenses_title": "Componentes de terceros",
+      "licenses_help": "XcreenShot está hecho con {{count}} componentes de código abierto. Cada uno conserva su licencia:",
+      "licenses_show": "Mostrar la lista",
+      "feedback_template": "Versión: {{version}}\nSistema: {{system}}\n\nQué pasó:\n\nQué esperaba:\n\nPasos para repetirlo:\n1. \n"
+    },
     "prefs": {
       "title": "Preferencias",
       "data_folder": "Carpeta de datos de la app",

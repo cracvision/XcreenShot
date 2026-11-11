@@ -240,14 +240,26 @@ fn editor_menus() -> Vec<MenuEntry> {
     ]
 }
 
+/// The Help menu (APP-015): the help pages, the logs, feedback and About.
 fn help_items() -> Vec<MenuEntry> {
     vec![
+        cmd("app.help", "menu.help_contents", "app.help"),
+        MenuEntry::Separator,
         cmd("open_logs", "menu.open_logs", "app.open_logs"),
         MenuEntry::Command {
             id: "copy_diagnostics",
             label: "menu.copy_diagnostics",
             command: "app.diagnostics",
             params: json!({ "copy": true }),
+            checked: None,
+        },
+        MenuEntry::Separator,
+        cmd("feedback", "menu.feedback", "app.feedback"),
+        MenuEntry::Command {
+            id: "about",
+            label: "menu.about",
+            command: "app.about",
+            params: json!({ "open": true }),
             checked: None,
         },
     ]

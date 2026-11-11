@@ -36,4 +36,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD: &str = env!("XCREENSHOT_BUILD");
 
 /// "0.2.0 (670038c)": what the user sees in the app, diagnostics and `--version`.
+/// Day of the build's commit (APP-015).
+pub const BUILD_DATE: &str = env!("XCREENSHOT_BUILD_DATE");
 pub const VERSION_FULL: &str = concat!(env!("CARGO_PKG_VERSION"), " (", env!("XCREENSHOT_BUILD"), ")");

@@ -359,7 +359,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-012 | Tema de la interfaz | M0 | Must | En curso |
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
 | APP-014 | Tooltips y pistas | M1 | Should | — |
-| APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | — |
+| APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | En curso |
 | APP-016 | Notificaciones | M1 | Must | En curso |
 | APP-017 | Ámbitos y reglas de los atajos | M0 | Must | En curso |
 | APP-018 | Sección Atajos | M0 | Must | En curso |

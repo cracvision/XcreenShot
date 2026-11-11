@@ -212,6 +212,27 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("app.diagnostics", &["APP-046"])
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
+        B::new("app.help", &["APP-015"])
+            .scopes(UI_CLI)
+            .assignable()
+            .params(params(
+                json!({"topic": {"type": "string", "enum": ["start", "capture", "editor", "library", "shortcuts", "permissions", "automation", "video", "share", "about"]}}),
+                &[],
+            )),
+        B::new("app.about", &["APP-015"])
+            .params(params(
+                json!({"open": {"type": "boolean", "default": false, "description": "Also show it, in the Help window"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+            "version": {"type": "string"}, "build": {"type": "string"}, "date": {"type": "string"},
+            "platform": {"type": "string"}, "arch": {"type": "string"}, "channel": {"type": "string"},
+            "dataDir": {"type": "string"}, "configDir": {"type": "string"}, "managed": {"type": "string"},
+            "network": {"type": "array", "items": {"type": "string"}}
+        }})),
+        B::new("app.feedback", &["APP-015"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"url": {"type": "string"}}})),
         B::new("app.open_logs", &["APP-046"]).scopes(UI_CLI),
         B::new("app.open_data_folder", &["APP-009", "APP-046"])
             .scopes(UI_CLI)

@@ -39,6 +39,23 @@ pub trait QuitGuard: Send + Sync {
     fn before_quit(&self);
 }
 
+/// Where Send feedback… leads (APP-015): a new issue of the project, unless the build
+/// names another page with `XCREENSHOT_FEEDBACK_URL`.
+const FEEDBACK_URL: &str = match option_env!("XCREENSHOT_FEEDBACK_URL") {
+    Some(url) => url,
+    None => "https://github.com/cracvision/XcreenShot/issues/new",
+};
+
+/// Text as a URL query value.
+fn percent_encode(text: &str) -> String {
+    text.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
 /// Settings that a "Don't ask again" box turns off, with the value that asks (APP-010).
 const DONT_ASK_SETTINGS: &[(&str, bool)] = &[("library.confirmDelete", true)];
 /// UI memory that holds a "Don't ask again" answer (the flattening warning, EDT-107).
@@ -545,6 +562,47 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         std::fs::create_dir_all(&dir).map_err(|e| CommandError::internal(e.to_string()))?;
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
+    });
+    on!("app.help", |core, ctx, p| {
+        core.host().open_help(str_param(&p, "topic"))?;
+        Ok(json!({}))
+    });
+    // Help > About XcreenShot (APP-015).
+    on!("app.about", |core, ctx, p| {
+        if p.get("open").and_then(Value::as_bool).unwrap_or(false) {
+            core.host().open_help(Some("about"))?;
+        }
+        Ok(json!({
+        "version": platform::VERSION,
+        "build": platform::BUILD,
+        "date": platform::BUILD_DATE,
+        "platform": Platform::current(),
+        "arch": platform::arch(),
+        "channel": if cfg!(debug_assertions) { "development" } else { "stable" },
+        "dataDir": core.paths.local_dir,
+        "configDir": core.paths.config_dir,
+        // Managed configuration arrives with APP-035 (M6).
+        "managed": "inactive",
+        // The only network connections the app makes (APP-054).
+        "network": ["share", "updates", "cloud_ai"],
+        }))
+    });
+    // Help > Send feedback… (APP-015): a draft the user reviews and sends, nothing more.
+    on!("app.feedback", |core, ctx, _p| {
+        let body = tr(
+            ctx.lang,
+            "ui.help.feedback_template",
+            &[
+                ("version", platform::VERSION_FULL),
+                (
+                    "system",
+                    &format!("{} {}", Platform::current().as_str(), platform::arch()),
+                ),
+            ],
+        );
+        let url = format!("{FEEDBACK_URL}?body={}", percent_encode(&body));
+        core.host().open_uri(&url)?;
+        Ok(json!({ "url": url }))
     });
     // Advanced > App data folder (APP-009): where the app keeps its data and settings.
     on!("app.open_data_folder", |core, ctx, p| {

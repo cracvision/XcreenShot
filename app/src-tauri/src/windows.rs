@@ -13,6 +13,7 @@ pub const MAIN: &str = "main";
 pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
 pub const MULTI_PANEL: &str = "multicapture";
+pub const HELP: &str = "help";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -92,6 +93,26 @@ pub fn open_preferences(app: &AppHandle, section: Option<&str>, key: Option<&str
         .title(title)
         .inner_size(820.0, 600.0)
         .min_inner_size(640.0, 420.0)
+        .theme(theme(app))
+        .build()?;
+    focus(&w);
+    Ok(())
+}
+
+/// The Help window (APP-015) at a topic: the page goes in the address, and an open
+/// window is told with an event.
+pub fn open_help(app: &AppHandle, topic: Option<&str>) -> tauri::Result<()> {
+    let topic = topic.unwrap_or("start");
+    if let Some(w) = app.get_webview_window(HELP) {
+        focus(&w);
+        let _ = w.emit("xs://help", topic);
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.help.title", &[]);
+    let w = WebviewWindowBuilder::new(app, HELP, WebviewUrl::App(format!("index.html#{topic}").into()))
+        .title(title)
+        .inner_size(860.0, 640.0)
+        .min_inner_size(560.0, 400.0)
         .theme(theme(app))
         .build()?;
     focus(&w);

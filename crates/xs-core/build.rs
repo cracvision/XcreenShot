@@ -16,6 +16,9 @@ fn main() {
         "cargo:rustc-env=XCREENSHOT_BUILD={commit}{}",
         if dirty { "+" } else { "" }
     );
+    // The day of that commit, for Help > About (APP-015): the same for every build of it.
+    let date = git(&["log", "-1", "--format=%cs"]).unwrap_or_default();
+    println!("cargo:rustc-env=XCREENSHOT_BUILD_DATE={date}");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     println!("cargo:rerun-if-changed=../../.git/index");
     println!("cargo:rerun-if-changed=../../.git/refs");

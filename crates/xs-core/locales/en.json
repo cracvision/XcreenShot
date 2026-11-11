@@ -27,6 +27,18 @@
       "title": "Diagnostic information",
       "description": "Collects version, system, monitors, permissions, shortcut conflicts and the last log lines. With copy, puts the text on the clipboard."
     },
+    "app_help": {
+      "title": "XcreenShot Help",
+      "description": "Opens the help pages, which work without a connection, at a topic."
+    },
+    "app_about": {
+      "title": "About XcreenShot",
+      "description": "Version, build, architecture, channel, where the data is, and the only network connections the app makes."
+    },
+    "app_feedback": {
+      "title": "Send feedback",
+      "description": "Opens a draft in the browser (a new issue of the project) with the version and the system filled in. XcreenShot sends nothing by itself."
+    },
     "app_open_logs": {
       "title": "Open logs folder",
       "description": "Opens the folder with the local log files."
@@ -708,6 +720,9 @@
     "open_library": "Open library"
   },
   "menu": {
+    "help_contents": "XcreenShot &Help",
+    "feedback": "Send &feedback…",
+    "about": "&About XcreenShot",
     "file": "&File",
     "edit": "&Edit",
     "window": "Window",
@@ -807,6 +822,35 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "help": {
+      "title": "XcreenShot Help",
+      "topics": "Topics",
+      "about": "About XcreenShot",
+      "version": "Version",
+      "build": "Build",
+      "date": "Date",
+      "arch": "Architecture",
+      "channel": "Channel",
+      "channel_development": "Development build",
+      "channel_stable": "Stable",
+      "data": "App data",
+      "settings": "Settings",
+      "managed": "Managed configuration",
+      "managed_inactive": "Inactive",
+      "privacy_title": "Privacy",
+      "privacy": "XcreenShot collects no usage data and sends no telemetry. It only connects to the internet to share what you choose to share, to check for updates and, if you turn it on, to ask the cloud AI about an image you choose.",
+      "check": "Check communication",
+      "checking": "Checking…",
+      "check_ok": "XcreenShot answered in {{ms}} ms (version {{version}}).",
+      "check_failed": "No answer: {{reason}}",
+      "feedback": "Send feedback…",
+      "feedback_help": "Opens a draft in your browser. You review it and decide whether to send it.",
+      "copy_diagnostics": "Copy diagnostic information",
+      "licenses_title": "Third-party components",
+      "licenses_help": "XcreenShot is built on {{count}} open-source components. Each keeps its own license:",
+      "licenses_show": "Show the list",
+      "feedback_template": "Version: {{version}}\nSystem: {{system}}\n\nWhat happened:\n\nWhat I expected:\n\nSteps to repeat it:\n1. \n"
+    },
     "prefs": {
       "title": "Preferences",
       "data_folder": "App data folder",

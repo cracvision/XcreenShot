@@ -110,6 +110,10 @@ pub trait Host: Send + Sync {
     fn open_settings(&self, section: Option<&str>, key: Option<&str>) -> Result<(), CommandError> {
         Err(unsupported())
     }
+    /// The Help window at a topic, or at its first page (APP-015).
+    fn open_help(&self, topic: Option<&str>) -> Result<(), CommandError> {
+        Err(unsupported())
+    }
     /// Starts the quit sequence (APP-004).
     fn quit(&self) {}
     /// Shows what needs a decision before quitting (APP-004), in the main window.
