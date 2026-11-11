@@ -125,6 +125,28 @@ pub fn definitions() -> Vec<SettingDef> {
             json!("system"),
             "APP-013",
         ),
+        // Notification categories (APP-016); Share and Updates arrive with their features.
+        def(
+            "notifications.captures",
+            "general",
+            boolean(),
+            json!(true),
+            "APP-016",
+        ),
+        def(
+            "notifications.problems",
+            "general",
+            boolean(),
+            json!(true),
+            "APP-016",
+        ),
+        def(
+            "notifications.automation",
+            "general",
+            boolean(),
+            json!(true),
+            "APP-016",
+        ),
         def(
             "shortcuts.profile",
             "shortcuts",
@@ -279,6 +301,15 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        // Capture confirmation (CAP-055); its notification is the Captures category.
+        def(
+            "capture.sound",
+            "capture",
+            one_of(&["none", "shutter", "soft"]),
+            json!("none"),
+            "CAP-055",
+        ),
+        def("capture.flash", "capture", boolean(), json!(true), "CAP-055"),
         def(
             "capture.metadata.windowTitle",
             "capture",

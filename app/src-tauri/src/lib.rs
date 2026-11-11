@@ -353,6 +353,7 @@ pub fn run() {
             let handle = app.handle().clone();
             core.set_host(Arc::new(host::TauriHost { app: handle.clone() }));
             permissions::init(core.paths.config_dir.clone());
+            host::setup_notifications(&handle);
             // Recovery copies of unsaved documents every 30 s (EDT-012).
             xs_editor::start_background(&core);
             // The documents open when XcreenShot last ended (EDT-120).

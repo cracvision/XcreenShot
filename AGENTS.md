@@ -69,9 +69,9 @@ xcreenshot app ping --json
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |
 | `app.open_logs` | `xcreenshot app open-logs` | Opens the logs folder. |
 | `app.mcp_config` | `xcreenshot app mcp-config --json` | How an MCP client starts XcreenShot: the installed CLI (`command`), `args` (`["mcp"]`), a JSON block for the client's configuration (`config`) and the command that adds it to Claude Code (`claudeCode`). `not_found` if the CLI is not installed next to the app. |
-| `app.permissions` | `xcreenshot app permissions --json` | OS permission states (macOS: screen recording, accessibility, camera, microphone). |
+| `app.permissions` | `xcreenshot app permissions --json` | OS permission states (macOS: screen recording, accessibility, camera, microphone, notifications; Windows: whether the system blocks XcreenShot's notifications). |
 | `app.request_permission` | `xcreenshot app request-permission <permission>` | Shows the OS request, or opens System Settings when the OS no longer asks. |
-| `app.open_permission_settings` | `xcreenshot app open-permission-settings <permission>` | Opens the System Settings page for a permission (macOS). |
+| `app.open_permission_settings` | `xcreenshot app open-permission-settings <permission>` | Opens the system settings page for a permission (macOS; on Windows, `notifications`, `camera` and `microphone`). |
 | `settings.open` | `xcreenshot settings open [--section <id>] [--key <key>]` | Opens Preferences, optionally at a section or setting. |
 | `settings.get` | `xcreenshot settings get <key>` | Reads a setting. |
 | `settings.set` | `xcreenshot settings set <key> <value>` | Changes a setting. Values are parsed as JSON when possible (`true`, `5`), else as text. |
@@ -167,7 +167,7 @@ The commands that take a capture (`fullscreen`, `region`, `window`, `universal`,
 
 `universal`, `image` and `capture` start from the capture panel settings (read them with `capture.settings`; Open in is usually `editor`) and these options override them, so pass `--open none` to keep windows closed. `fullscreen`, `region` and `window` always use the defaults above when called from the CLI or MCP.
 
-Every capture is saved in the library as an editable `.xshot` document, in a folder per month: `Documents\XcreenShot\2026-10\Chrome 2026-10-12 14.03.22.xshot` on Windows, `~/Pictures/XcreenShot/…` on macOS. The result has `status` (`completed`), `documentId` (for the `document.*` commands), `path` (the `.xshot`, or the `--out` file when given), `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings`. A second capture while one is running fails at once with `busy` (exit 5).
+Every capture is saved in the library as an editable `.xshot` document, in a folder per month: `Documents\XcreenShot\2026-10\Chrome 2026-10-12 14.03.22.xshot` on Windows, `~/Pictures/XcreenShot/…` on macOS. The result has `status` (`completed`), `documentId` (for the `document.*` commands), `path` (the `.xshot`, or the `--out` file when given), `files`, `width`, `height`, `rect`, `copied`, `metadata` (capture time, app and version, window title, OS, display scale…) and `warnings` (for example `blank:` when the system returned only black pixels, as with protected content). A second capture while one is running fails at once with `busy` (exit 5).
 
 ## Documents and objects
 

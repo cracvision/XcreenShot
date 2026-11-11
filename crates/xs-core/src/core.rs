@@ -543,13 +543,18 @@ fn build_registry(core: &Arc<Core>) -> Registry {
     on!("app.open_permission_settings", |core, ctx, p| {
         let perm = Permission::parse(str_param(&p, "permission").unwrap_or_default())
             .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "permission"))?;
-        if Platform::current() != Platform::Macos {
-            return Err(CommandError::new(
+        let uri = if Platform::current() == Platform::Macos {
+            Some(perm.macos_settings_uri())
+        } else {
+            perm.windows_settings_uri()
+        };
+        let uri = uri.ok_or_else(|| {
+            CommandError::new(
                 ErrorCode::NotSupportedOnPlatform,
                 tr(ctx.lang, "errors.macos_only", &[]),
-            ));
-        }
-        core.host().open_uri(perm.macos_settings_uri())?;
+            )
+        })?;
+        core.host().open_uri(uri)?;
         Ok(json!({}))
     });
     on!("settings.open", |core, ctx, p| {

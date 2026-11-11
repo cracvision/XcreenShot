@@ -31,7 +31,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-021 | Varios monitores y DPI mixto | M1 | Must | En curso |
 | CAP-022 | Pantallas HDR | M3 | Should | — |
 | CAP-023 | Ocultar XcreenShot al capturar | M1 | Must | En curso |
-| CAP-024 | Permisos que faltan al capturar | M1 | Must | — |
+| CAP-024 | Permisos que faltan al capturar | M1 | Must | En curso |
 | CAP-025 | Región | M1 | Must | En curso |
 | CAP-026 | Región fija y posición | M3 | Should | — |
 | CAP-027 | Ventana | M1 | Must | En curso |
@@ -62,7 +62,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-052 | Compartir al capturar | M3 | Should | — |
 | CAP-053 | Nombre, formato y carpeta del destino Archivo | M3 | Should | — |
 | CAP-054 | Ruta de la captura | M1 | Must | En curso |
-| CAP-055 | Confirmación de captura | M1 | Should | — |
+| CAP-055 | Confirmación de captura | M1 | Should | En curso |
 | CAP-056 | Metadatos de captura | M1 | Must | En curso |
 | CAP-057 | Anotación rápida de imagen | M3 | Should | — |
 | CAP-058 | Lista de presets | M3 | Must | — |
@@ -360,7 +360,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
 | APP-014 | Tooltips y pistas | M1 | Should | — |
 | APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | — |
-| APP-016 | Notificaciones | M1 | Must | — |
+| APP-016 | Notificaciones | M1 | Must | En curso |
 | APP-017 | Ámbitos y reglas de los atajos | M0 | Must | En curso |
 | APP-018 | Sección Atajos | M0 | Must | En curso |
 | APP-019 | Detección de conflictos | M0 | Must | En curso |

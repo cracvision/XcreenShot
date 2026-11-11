@@ -378,6 +378,31 @@
       "label": "Seguir en segundo plano al cerrar todas las ventanas",
       "description": "Si se desactiva, cerrar la última ventana cierra XcreenShot."
     },
+    "notifications_captures": {
+      "label": "Avisar de las capturas",
+      "description": "Cuando una captura va al portapapeles o a la biblioteca sin abrir ninguna ventana. Un clic en el aviso la abre en el editor."
+    },
+    "notifications_problems": {
+      "label": "Avisar de los problemas",
+      "description": "Atajos que no se pudieron activar, capturas en negro, archivos que no se pudieron guardar."
+    },
+    "notifications_automation": {
+      "label": "Avisar de la automatización",
+      "description": "Cuando la línea de comandos o un agente (MCP) hacen una captura."
+    },
+    "capture_sound": {
+      "label": "Sonido al capturar",
+      "description": "Suena una vez al tomar la captura, con el volumen del sistema. No suena con No molestar activado.",
+      "options": {
+        "none": "Ninguno",
+        "shutter": "Obturador",
+        "soft": "Clic suave"
+      }
+    },
+    "capture_flash": {
+      "label": "Destello en el área capturada",
+      "description": "El área se ilumina un instante. Nunca sale en ninguna captura."
+    },
     "general_theme": {
       "label": "Tema",
       "description": "Aspecto de todas las ventanas de XcreenShot.",
@@ -733,7 +758,11 @@
     "diagnostics_copied": "Información de diagnóstico copiada al portapapeles.",
     "capture_copied": "Captura copiada",
     "capture_saved": "Captura guardada en {{folder}}",
-    "automation_capture": "Pantalla capturada desde {{source}}"
+    "capture_saved_library": "Captura guardada en la biblioteca",
+    "automation_capture": "Pantalla capturada desde {{source}}",
+    "capture_blank": "La captura salió en negro: la ventana protege su contenido (un video protegido o una app que se oculta de las capturas). Si se ejecuta como administrador, abre también XcreenShot como administrador.",
+    "action_open": "Abrir",
+    "action_folder": "Mostrar en la carpeta"
   },
   "source": {
     "ui": "la interfaz",
@@ -805,13 +834,15 @@
         "screen_recording": "Grabación de pantalla",
         "accessibility": "Accesibilidad",
         "camera": "Cámara",
-        "microphone": "Micrófono"
+        "microphone": "Micrófono",
+        "notifications": "Notificaciones"
       },
       "purpose": {
         "screen_recording": "Toda captura de pantalla o ventana y toda grabación, incluido el audio del sistema.",
         "accessibility": "Desplazamiento automático, captura de menús, grabador de pasos y teclas pulsadas en video.",
         "camera": "La cámara en las grabaciones y en las capturas de cámara.",
-        "microphone": "El audio del micrófono en grabaciones y diapositivas narradas."
+        "microphone": "El audio del micrófono en grabaciones y diapositivas narradas.",
+        "notifications": "Avisos de capturas copiadas o guardadas sin abrir ninguna ventana, y de problemas."
       }
     },
     "shortcuts": {

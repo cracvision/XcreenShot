@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next";
 import { run, type PermissionStatus } from "../lib/commands";
 import { useApp } from "../store";
 
+const IS_MAC = navigator.userAgent.includes("Mac");
+
 const BADGE: Record<PermissionStatus["state"], string> = {
   granted: "ok",
   denied: "err",
@@ -18,9 +20,12 @@ export function PermissionsBlock() {
   }
   return (
     <div>
-      <p className="muted" style={{ marginTop: 0 }}>
-        {t("ui.permissions.help")}
-      </p>
+      {/* The help is about the macOS privacy list (APP-024). */}
+      {IS_MAC && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          {t("ui.permissions.help")}
+        </p>
+      )}
       {permissions.map((p) => (
         <div className="permission" key={p.permission}>
           <div className="head">

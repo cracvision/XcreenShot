@@ -1,4 +1,5 @@
-//! macOS permissions (APP-024). Windows needs none in M0 (APP-026 lands in M1).
+//! Permissions (APP-024, APP-026): macOS asks for screen recording and the rest;
+//! Windows only reports whether it blocks XcreenShot's notifications (APP-016).
 
 #[cfg(target_os = "macos")]
 use xs_core::host::PermissionState;
@@ -97,6 +98,8 @@ mod mac {
                 AVAuthorizationStatus::NotDetermined => (PermissionState::NotDetermined, true),
                 _ => (PermissionState::Denied, false),
             },
+            // Checked with the Mac tests (UNUserNotificationCenter).
+            Permission::Notifications => (PermissionState::Granted, false),
         };
         PermissionStatus {
             permission: p,
@@ -115,7 +118,7 @@ mod mac {
                 unsafe { CGRequestScreenCaptureAccess() };
                 true
             }
-            Permission::Accessibility => false,
+            Permission::Accessibility | Permission::Notifications => false,
             Permission::Camera | Permission::Microphone => {
                 if av_status(p) != AVAuthorizationStatus::NotDetermined {
                     return false;
@@ -148,9 +151,40 @@ pub fn all() -> Vec<PermissionStatus> {
     {
         Permission::ALL.into_iter().map(mac::status).collect()
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    {
+        vec![windows_notifications()]
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     {
         Vec::new()
+    }
+}
+
+/// Whether Windows lets XcreenShot show notifications (APP-016): all toasts can be
+/// off, or only XcreenShot's, in Settings > System > Notifications.
+#[cfg(windows)]
+fn windows_notifications() -> PermissionStatus {
+    use xs_core::host::PermissionState;
+    use xs_core::winreg::{read_dword, HKCU};
+    let all_off = read_dword(
+        HKCU,
+        r"Software\Microsoft\Windows\CurrentVersion\PushNotifications",
+        "ToastEnabled",
+    ) == Some(0);
+    let ours_off = read_dword(
+        HKCU,
+        r"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\com.cracvision.xcreenshot",
+        "Enabled",
+    ) == Some(0);
+    PermissionStatus {
+        permission: Permission::Notifications,
+        state: if all_off || ours_off {
+            PermissionState::Denied
+        } else {
+            PermissionState::Granted
+        },
+        can_request: false,
     }
 }
 

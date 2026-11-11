@@ -378,6 +378,31 @@
       "label": "Keep running in the background when all windows are closed",
       "description": "If off, closing the last window quits XcreenShot."
     },
+    "notifications_captures": {
+      "label": "Notify about captures",
+      "description": "When a capture goes to the clipboard or the library without opening a window. Clicking the notification opens it in the editor."
+    },
+    "notifications_problems": {
+      "label": "Notify about problems",
+      "description": "Shortcuts that could not be turned on, black captures, files that could not be saved."
+    },
+    "notifications_automation": {
+      "label": "Notify about automation",
+      "description": "When the command line or an agent (MCP) takes a capture."
+    },
+    "capture_sound": {
+      "label": "Sound when capturing",
+      "description": "Plays once when the capture is taken, at the system volume. Silent while Do not disturb is on.",
+      "options": {
+        "none": "None",
+        "shutter": "Shutter",
+        "soft": "Soft click"
+      }
+    },
+    "capture_flash": {
+      "label": "Flash the captured area",
+      "description": "The area lights up for an instant. It never appears in a capture."
+    },
     "general_theme": {
       "label": "Theme",
       "description": "Appearance of every XcreenShot window.",
@@ -733,7 +758,11 @@
     "diagnostics_copied": "Diagnostic information copied to the clipboard.",
     "capture_copied": "Capture copied",
     "capture_saved": "Capture saved in {{folder}}",
-    "automation_capture": "Screen captured at the request of {{source}}"
+    "capture_saved_library": "Capture saved in the library",
+    "automation_capture": "Screen captured at the request of {{source}}",
+    "capture_blank": "The capture came out black: the window protects its content (a protected video, or an app that hides itself from captures). If it runs as administrator, start XcreenShot as administrator too.",
+    "action_open": "Open",
+    "action_folder": "Show in folder"
   },
   "source": {
     "ui": "the interface",
@@ -805,13 +834,15 @@
         "screen_recording": "Screen Recording",
         "accessibility": "Accessibility",
         "camera": "Camera",
-        "microphone": "Microphone"
+        "microphone": "Microphone",
+        "notifications": "Notifications"
       },
       "purpose": {
         "screen_recording": "Every screen or window capture and every recording, including system audio.",
         "accessibility": "Auto-scroll, menu capture, the Step Recorder and showing keystrokes in video.",
         "camera": "The camera in recordings and camera captures.",
-        "microphone": "Microphone audio in recordings and narrated slides."
+        "microphone": "Microphone audio in recordings and narrated slides.",
+        "notifications": "Notices of captures copied or saved without opening a window, and of problems."
       }
     },
     "shortcuts": {

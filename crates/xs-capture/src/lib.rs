@@ -7,6 +7,7 @@
 //! on-screen selection arrives in build 2.
 
 pub mod compose;
+pub mod feedback;
 pub mod interactive;
 pub mod multi;
 #[cfg(windows)]
@@ -403,6 +404,12 @@ pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) 
     })
 }
 
+/// Whether every pixel is black: what Windows returns for protected content and for
+/// windows that exclude themselves from captures (CAP-024, APP-026).
+pub fn is_blank(image: &RgbaImage) -> bool {
+    image.width() * image.height() > 0 && image.pixels().all(|p| p.0[0] | p.0[1] | p.0[2] == 0)
+}
+
 /// Small PNG preview for the UI (at most 640 px wide).
 fn thumbnail_png(image: &RgbaImage) -> Option<Vec<u8>> {
     let w = image.width().min(640);
@@ -437,6 +444,14 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let now = chrono::Local::now();
     let host = core.host();
     let mut warnings = shot.warnings.clone();
+    // The moment of the capture: its sound and flash (CAP-055).
+    let sound = core.settings.get_str("capture.sound");
+    if sound != "none" {
+        feedback::play(&sound);
+    }
+    if core.settings.get_bool("capture.flash") {
+        feedback::flash(shot.rect);
+    }
     // The pointer, if asked for and inside the image (CAP-047): a floating image in
     // the document, and laid over the image that leaves without the editor.
     let pointer = if opts.cursor {
@@ -452,6 +467,17 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     } else {
         None
     };
+    // All black: the system kept protected content out (CAP-024, APP-026). The
+    // capture finishes anyway, and says so.
+    let blank = is_blank(&shot.image);
+    if blank {
+        warnings.push("blank: the system returned only black pixels (protected content)".to_string());
+        host.notify(
+            "problems",
+            &tr(lang, "app.name", &[]),
+            &tr(lang, "notify.capture_blank", &[]),
+        );
+    }
     let flat = pointer.as_ref().map(|p| pointer::flatten(&shot.image, p));
     let outgoing = flat.as_ref().unwrap_or(&shot.image);
 
@@ -535,14 +561,23 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     } else if !opts.open_editor {
         let body = if copied {
             tr(lang, "notify.capture_copied", &[])
+        } else if opts.out.is_none() && path.starts_with(xs_editor::editor(core).library()) {
+            tr(lang, "notify.capture_saved_library", &[])
         } else {
-            let folder = path
+            let file = opts.out.as_ref().unwrap_or(&path);
+            let folder = file
                 .parent()
                 .map(|d| d.to_string_lossy().into_owned())
                 .unwrap_or_default();
             tr(lang, "notify.capture_saved", &[("folder", &folder)])
         };
-        host.notify("captures", &tr(lang, "app.name", &[]), &body);
+        // A click opens it in the editor; Show in folder, its file (CAP-055).
+        host.notify_opening(
+            "captures",
+            &tr(lang, "app.name", &[]),
+            &body,
+            json!({ "documentId": document_id, "path": path }),
+        );
     }
     Ok(result)
 }
@@ -943,6 +978,19 @@ mod tests {
         );
         let cli = Options::from_params(&json!({"open": "editor", "copy": false}), Source::Cli);
         assert!(!cli.copy && cli.open_editor);
+    }
+
+    #[test]
+    fn black_captures_are_noticed() {
+        assert!(is_blank(&RgbaImage::from_pixel(
+            4,
+            4,
+            image::Rgba([0, 0, 0, 255])
+        )));
+        let mut one = RgbaImage::from_pixel(4, 4, image::Rgba([0, 0, 0, 255]));
+        one.put_pixel(3, 3, image::Rgba([1, 0, 0, 255]));
+        assert!(!is_blank(&one));
+        assert!(!is_blank(&RgbaImage::new(0, 0)));
     }
 
     #[test]

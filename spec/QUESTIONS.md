@@ -126,6 +126,17 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-003 | ¿Se quedan los botones de Deshacer y Rehacer cuando llegan los menús? | Se quedan en la barra | Decidido (Carlos, 2026-10-28) |
 | EDT-071 / EDT-049 | Carlos quiere que, al sacar un objeto del borde, el lienzo crezca para mostrarlo entero. El spec lo dejaba para M2 y solo al pegar o soltar | Adelantado a M1 para dibujar, mover, redimensionar, girar y pegar, con la preferencia `editor.autoExpandCanvas` (por defecto: sí). El lienzo se encoge solo cuando el objeto vuelve, sin bajar de la imagen o del último recorte. Lo que deja fuera un recorte se queda fuera aunque se mueva. Desenfocar no amplía el lienzo, y se ignora lo que sobresale menos de medio píxel. Spec de EDT-071 actualizado | Decidido (Carlos, 2026-10-27) |
 
+## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-055 / APP-008 / APP-016 | La parte "Notificación" de la Confirmación de captura (sección Captura) y la categoría "Capturas" de las notificaciones (sección General) son el mismo interruptor, y APP-008 no deja repetir ajustes | Un solo interruptor, **Avisar de las capturas** (`notifications.captures`), en General. En Captura quedan **Sonido al capturar** (`capture.sound`) y **Destello** (`capture.flash`) | Provisional |
+| CAP-055 | Sonidos propios y "no suena con No molestar" | Dos sonidos hechos por la app a partir de ondas (obturador: dos ráfagas cortas; clic suave: un tono que se apaga), nada copiado. En Windows no suenan si el sistema dice que está en horas tranquilas o presentando (`SHQueryUserNotificationState`); el silencio del sistema ya los apaga. Destello de unos 150 ms que se desvanece; con menos animaciones en el sistema, un borde fijo de 200 ms | Provisional |
+| APP-016 | Clic en la notificación | Abre la captura en el editor (la vuelve a abrir si se cerró). Botones **Abrir** y **Mostrar en la carpeta**. En Windows el clic solo llega mientras la notificación está en pantalla, no desde el Centro de actividades (límite del sistema) | Provisional |
+| APP-016 | Categorías Compartir y Actualizaciones; guardar las notificaciones durante una captura; punto de atención del ícono | Las categorías aparecen con su función (M6 y APP-036). Guardar los avisos mientras dura una selección y el punto de atención del ícono quedan pendientes | Abierta |
+| APP-016 | ¿Cómo sabe la app que Windows bloquea sus notificaciones? | Preferencias > General > Permisos muestra **Notificaciones** con su estado (todas las notificaciones apagadas, o solo las de XcreenShot) y el botón que abre Configuración > Notificaciones | Provisional |
+| CAP-024 / APP-026 | ¿Cómo se detecta que una ventana protegida salió en negro? | Si todos los píxeles de la captura son negros, la captura termina igual, lo dice en `warnings` y avisa en la categoría Problemas. Un trozo negro dentro de una captura mayor no se detecta. **Reiniciar como administrador** llega con las funciones que lo necesitan (desplazamiento automático, M3) | Provisional |
+
 ## Dudas del equipo de construcción (M1, entrega 5: biblioteca y bandeja reciente)
 
 | ID | Duda | Propuesta | Estado |

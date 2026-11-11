@@ -40,6 +40,73 @@ pub fn notify(app: &AppHandle, title: &str, body: &str) {
     }
 }
 
+/// Whether the user wants notifications of this category (APP-016). Categories without
+/// a switch yet (share, updates) are on.
+fn category_on(app: &AppHandle, category: &str) -> bool {
+    let core = &app.state::<crate::AppState>().core;
+    core.settings
+        .get(&format!("notifications.{category}"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true)
+}
+
+/// The kind of notification that opens a capture, with its two actions (CAP-055).
+pub const CAPTURE_ACTIONS: &str = "capture";
+
+/// Registers the notification actions and what a click does (APP-016, CAP-055): a
+/// click or Open shows the capture in the editor; Show in folder, its file.
+pub fn setup_notifications(app: &AppHandle) {
+    use tauri_plugin_notification::{Action, ActionType};
+    let core = app.state::<crate::AppState>().core.clone();
+    let lang = core.settings.lang();
+    let actions = ActionType::builder(CAPTURE_ACTIONS)
+        .actions(vec![
+            Action::builder("open", tr(lang, "notify.action_open", &[])).build(),
+            Action::builder("folder", tr(lang, "notify.action_folder", &[])).build(),
+        ])
+        .build();
+    if let Err(e) = app.notification().register_action_types(vec![actions]) {
+        tracing::warn!(error = %e, "notification actions not registered");
+    }
+    let _ = app.notification().on_action(move |performed| {
+        let Some(open) = performed
+            .notification()
+            .and_then(|n| n.extra().get("open").cloned())
+        else {
+            return;
+        };
+        let core = core.clone();
+        let action = performed.action_id().to_string();
+        // Off the notification thread: opening may read a file.
+        std::thread::spawn(move || {
+            let path = open["path"].as_str().unwrap_or_default().to_string();
+            if action == "folder" {
+                let _ = core.call(
+                    Source::Ui,
+                    "library.show_in_folder",
+                    json!({ "path": path }),
+                    None,
+                );
+                return;
+            }
+            // The capture may have been closed since: open its file again.
+            let opened = core
+                .call(
+                    Source::Ui,
+                    "document.open",
+                    json!({ "path": path, "show": true }),
+                    None,
+                )
+                .ok()
+                .and_then(|r| r["documentId"].as_str().map(String::from))
+                .or_else(|| open["documentId"].as_str().map(String::from));
+            if let Some(id) = opened {
+                let _ = core.call(Source::Ui, "editor.show", json!({ "documentId": id }), None);
+            }
+        });
+    });
+}
+
 impl Host for TauriHost {
     fn show_main_window(&self) -> Result<(), CommandError> {
         windows::show_main(&self.app).map_err(internal)
@@ -212,9 +279,30 @@ impl Host for TauriHost {
         crate::overlay::select(&self.app, request, frames)
     }
 
-    fn notify(&self, _category: &str, title: &str, body: &str) {
-        // Per-category switches arrive with Preferences > Notifications (APP-016).
-        notify(&self.app, title, body);
+    fn notify(&self, category: &str, title: &str, body: &str) {
+        if category_on(&self.app, category) {
+            notify(&self.app, title, body);
+        }
+    }
+
+    fn notify_opening(&self, category: &str, title: &str, body: &str, open: Value) {
+        if !category_on(&self.app, category) {
+            return;
+        }
+        static NEXT: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(1);
+        let shown = self
+            .app
+            .notification()
+            .builder()
+            .id(NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+            .title(title)
+            .body(body)
+            .action_type_id(CAPTURE_ACTIONS)
+            .extra("open", open)
+            .show();
+        if let Err(e) = shown {
+            tracing::warn!(error = %e, "notification failed");
+        }
     }
 
     fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {

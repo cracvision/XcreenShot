@@ -15,14 +15,17 @@ pub enum Permission {
     Accessibility,
     Camera,
     Microphone,
+    /// XcreenShot's notifications, which the system can block (APP-016).
+    Notifications,
 }
 
 impl Permission {
-    pub const ALL: [Permission; 4] = [
+    pub const ALL: [Permission; 5] = [
         Permission::ScreenRecording,
         Permission::Accessibility,
         Permission::Camera,
         Permission::Microphone,
+        Permission::Notifications,
     ];
 
     pub fn parse(s: &str) -> Option<Permission> {
@@ -35,6 +38,17 @@ impl Permission {
             Permission::Accessibility => "accessibility",
             Permission::Camera => "camera",
             Permission::Microphone => "microphone",
+            Permission::Notifications => "notifications",
+        }
+    }
+
+    /// Settings page for this permission on Windows, if it has one.
+    pub fn windows_settings_uri(self) -> Option<&'static str> {
+        match self {
+            Permission::Notifications => Some("ms-settings:notifications"),
+            Permission::Camera => Some("ms-settings:privacy-webcam"),
+            Permission::Microphone => Some("ms-settings:privacy-microphone"),
+            _ => None,
         }
     }
 
@@ -51,6 +65,7 @@ impl Permission {
             Permission::Microphone => {
                 "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
             }
+            Permission::Notifications => "x-apple.systempreferences:com.apple.preference.notifications",
         }
     }
 }
@@ -135,6 +150,13 @@ pub trait Host: Send + Sync {
     /// System notification (APP-016). Categories: `captures`, `share`, `problems`,
     /// `updates`, `automation`.
     fn notify(&self, category: &str, title: &str, body: &str) {}
+    /// A notification that opens something when clicked (APP-016, CAP-055): `open`
+    /// names it, e.g. `{"documentId", "path"}` of a capture. With `folder`, it also
+    /// offers Show in folder.
+    fn notify_opening(&self, category: &str, title: &str, body: &str, open: Value) {
+        let _ = open;
+        self.notify(category, title, body);
+    }
     /// A capture finished; `open_editor` asks to show it (CAP-045, CAP-054).
     fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {}
     /// Hide XcreenShot windows before a capture, and show them again after (CAP-023).
