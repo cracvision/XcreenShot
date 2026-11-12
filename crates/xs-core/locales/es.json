@@ -785,7 +785,8 @@
       "editor_show_in_folder": "Mostrar en el Explorador o el Finder",
       "editor_delete_item": "Mover a la papelera",
       "editor_tool_step": "Herramienta Paso",
-      "editor_tool_callout": "Herramienta Globo"
+      "editor_tool_callout": "Herramienta Globo",
+      "editor_tool_line": "Herramienta Línea"
     }
   },
   "tray": {
@@ -1238,7 +1239,8 @@
         "crop": "Arrastra para quedarte con una parte. No se pierde nada: vuelve a recortar para recuperarlo.",
         "image": "Una imagen sobre la captura.",
         "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande.",
-        "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar."
+        "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar.",
+        "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°."
       },
       "tool": {
         "move": "Mover",
@@ -1249,7 +1251,8 @@
         "crop": "Recortar",
         "image": "Imagen",
         "step": "Paso",
-        "callout": "Globo"
+        "callout": "Globo",
+        "line": "Línea"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1659,7 +1662,13 @@
     "change_callout": "Cambiar globo",
     "delete_callout": "Eliminar globo",
     "cut_callout": "Cortar globo",
-    "paste_callout": "Pegar globo"
+    "paste_callout": "Pegar globo",
+    "draw_line": "Trazar línea",
+    "move_line": "Mover línea",
+    "change_line": "Cambiar línea",
+    "delete_line": "Eliminar línea",
+    "cut_line": "Cortar línea",
+    "paste_line": "Pegar línea"
   },
   "editor": {
     "edited": "{{name}} — Editado"

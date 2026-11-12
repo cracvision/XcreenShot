@@ -2006,3 +2006,30 @@ fn callouts_keep_their_tails_and_fit_their_text() {
     // Its default tail was at (35, 74): x + w / 4, below the body by 24.
     assert_eq!(info["objects"][1]["tails"][0], json!([60.0, 138.0]));
 }
+
+/// EDT-025: a line is drawn without ends, with the Line tool's width, and stays a line.
+#[test]
+fn lines_have_no_ends_and_their_own_style() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "line", "from": [10, 10], "to": [100, 10]}, arrow([10, 50], [100, 50])]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let line = &info["objects"][0];
+    assert_eq!(line["type"], "line");
+    assert_eq!(line["style"]["startCap"], "none");
+    assert_eq!(line["style"]["endCap"], "none");
+    assert_eq!(line["style"]["width"], json!(4.0));
+    assert_eq!(info["objects"][1]["style"]["endCap"], "filled");
+    // An end added to a line keeps it a line.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"endCap": "filled"}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["type"], "line");
+}

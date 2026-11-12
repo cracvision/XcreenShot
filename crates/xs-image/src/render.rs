@@ -501,7 +501,7 @@ fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
 /// Draws one object. Kinds this build does not know are skipped (a newer file).
 fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
     match object.kind.as_str() {
-        "arrow" => {
+        "arrow" | "line" => {
             let Ok(a) = Arrow::from_props(&object.props) else {
                 return;
             };
@@ -640,7 +640,7 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         *e = [e[0].min(x), e[1].min(y), e[2].max(x), e[3].max(y)];
     };
     let rect = match object.kind.as_str() {
-        "arrow" => {
+        "arrow" | "line" => {
             let g = Arrow::from_props(&object.props).ok()?.geometry();
             if let Some([x1, y1, x2, y2]) = g.shaft {
                 add(x1, y1);

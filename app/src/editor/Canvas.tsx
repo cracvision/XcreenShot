@@ -47,6 +47,7 @@ import {
   takeZoomRequest,
   useEditor,
   usePointer,
+  isSegment,
   type CalloutObject,
   type DocDetails,
   type DocObject,
@@ -80,7 +81,7 @@ const ACCENT = "#0064fb";
 
 type BoxHandle = Exclude<Handle, "rotate">;
 
-type ArrowObj = Extract<DocObject, { type: "arrow" }>;
+type ArrowObj = Extract<DocObject, { type: "arrow" | "line" }>;
 
 /** What a press on a handle grabs: the crop box, an arrow end or an object's handle. */
 type HandleHit =
@@ -97,7 +98,7 @@ type HandleHit =
 type Drag =
   | {
       kind: "draw";
-      tool: "arrow" | "shape" | "blur" | "text" | "step" | "callout";
+      tool: "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout";
       from: Point;
       to: Point;
       startX: number;
@@ -430,7 +431,7 @@ export function Canvas({ doc }: Props) {
     if (!drag || !("id" in drag) || drag.id !== o.id) return o;
     switch (drag.kind) {
       case "end":
-        return o.type === "arrow" ? { ...o, [drag.end]: drag.point } : o;
+        return isSegment(o) ? { ...o, [drag.end]: drag.point } : o;
       case "resize":
       case "rotate":
         return reboxed(o, drag.box)[0];
@@ -563,7 +564,7 @@ export function Canvas({ doc }: Props) {
         if (near(center(box), s)) return { anchor: o };
       }
     }
-    if (o.type === "arrow") {
+    if (isSegment(o)) {
       for (const end of ["to", "from"] as const) if (near(o[end], s)) return { object: o, end };
       return null;
     }
@@ -715,6 +716,7 @@ export function Canvas({ doc }: Props) {
     }
     if (
       tool === "arrow" ||
+      tool === "line" ||
       tool === "shape" ||
       tool === "blur" ||
       tool === "text" ||
@@ -751,7 +753,7 @@ export function Canvas({ doc }: Props) {
       case "draw":
         return {
           ...d,
-          to: d.tool === "arrow" && e.shiftKey ? constrain45(d.from, p) : p,
+          to: (d.tool === "arrow" || d.tool === "line") && e.shiftKey ? constrain45(d.from, p) : p,
           square: e.shiftKey,
           fromCenter: e.altKey,
         };
@@ -870,8 +872,8 @@ export function Canvas({ doc }: Props) {
     try {
       if (d.kind === "draw") {
         const object =
-          d.tool === "arrow"
-            ? { type: "arrow", from: d.from, to: d.to }
+          d.tool === "arrow" || d.tool === "line"
+            ? { type: d.tool, from: d.from, to: d.to }
             : d.tool === "step"
               ? // A step is square; a click places it at its size (EDT-035).
                 d.click
@@ -932,7 +934,7 @@ export function Canvas({ doc }: Props) {
         setSelection(d.add ? [...new Set([...selection, ...inside])] : inside);
       } else if (d.kind === "end") {
         const o = committed.get(d.id);
-        if (o?.type === "arrow") await update({ ...o, [d.end]: d.point }, { [d.end]: d.point });
+        if (o && isSegment(o)) await update({ ...o, [d.end]: d.point }, { [d.end]: d.point });
       } else if (d.kind === "resize" || d.kind === "rotate") {
         const o = committed.get(d.id);
         if (o) {
@@ -1177,6 +1179,7 @@ export function Canvas({ doc }: Props) {
   const objectNode = (o: DocObject) => {
     switch (o.type) {
       case "arrow":
+      case "line":
         return (
           <ArrowShape
             key={o.id}
@@ -1255,10 +1258,10 @@ export function Canvas({ doc }: Props) {
   };
   const previews = (
     <>
-      {drawing && styles && drawing.tool === "arrow" && (
+      {drawing && styles && (drawing.tool === "arrow" || drawing.tool === "line") && (
         <ArrowShape
-          g={arrowGeometry(drawing.from, drawing.to, styles.arrow)}
-          style={styles.arrow}
+          g={arrowGeometry(drawing.from, drawing.to, styles[drawing.tool])}
+          style={styles[drawing.tool]}
           scale={scale}
         />
       )}
@@ -1472,14 +1475,14 @@ export function Canvas({ doc }: Props) {
                         <Line
                           key={o.id}
                           points={
-                            o.type === "arrow"
+                            isSegment(o)
                               ? [...toScreen(o.from), ...toScreen(o.to)]
                               : (() => {
                                   const box = boxOf(o);
                                   return box ? corners(box).flatMap(toScreen) : [];
                                 })()
                           }
-                          closed={o.type !== "arrow"}
+                          closed={!isSegment(o)}
                           stroke={ACCENT}
                           strokeWidth={1}
                         />
@@ -1526,7 +1529,7 @@ export function Canvas({ doc }: Props) {
                 shown
                   .filter((o) => selection.includes(o.id) && o.id !== editingId)
                   .map((o) => {
-                    if (o.type === "arrow") {
+                    if (isSegment(o)) {
                       return (["from", "to"] as const).map((end) => {
                         const [x, y] = toScreen(o[end]);
                         return (

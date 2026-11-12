@@ -582,6 +582,7 @@ pub fn slots() -> Vec<Slot> {
         // Tools (EDT-115): a single key.
         tool("editor.tool_move", r#"{"tool":"move"}"#),
         tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
+        tool("editor.tool_line", r#"{"tool":"line"}"#),
         tool("editor.tool_text", r#"{"tool":"text"}"#),
         tool("editor.tool_shape", r#"{"tool":"shape"}"#),
         tool("editor.tool_callout", r#"{"tool":"callout"}"#),
@@ -659,6 +660,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_move", ..) => "KeyV",
         ("editor.tool_arrow", ..) => "KeyA",
         ("editor.tool_text", ..) => "KeyT",
+        ("editor.tool_line", ..) => "KeyL",
         ("editor.tool_shape", ..) => "KeyU",
         ("editor.tool_blur", ..) => "KeyB",
         ("editor.tool_step", ..) => "KeyN",
@@ -1327,14 +1329,14 @@ mod tests {
             .find_slot("editor.tool_arrow", ShortcutScope::Editor)
             .unwrap();
         assert!(store
-            .set(&arrow, Some(acc("L")), false, Profile::Coexistence, Lang::En)
+            .set(&arrow, Some(acc("J")), false, Profile::Coexistence, Lang::En)
             .is_ok());
         // Two editor actions cannot share one.
         let text = store
             .find_slot("editor.tool_text", ShortcutScope::Editor)
             .unwrap();
         assert!(store
-            .set(&text, Some(acc("L")), false, Profile::Coexistence, Lang::En)
+            .set(&text, Some(acc("J")), false, Profile::Coexistence, Lang::En)
             .is_err());
     }
 

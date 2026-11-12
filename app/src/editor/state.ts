@@ -12,7 +12,8 @@ import { aiProgress } from "./aiState";
 import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
-export type Tool = "move" | "arrow" | "text" | "callout" | "shape" | "step" | "blur" | "crop";
+export type Tool =
+  "move" | "arrow" | "line" | "text" | "callout" | "shape" | "step" | "blur" | "crop";
 
 export interface DocSummary {
   documentId: string;
@@ -217,8 +218,17 @@ export interface ImageObject {
 }
 
 /** Objects of later builds are kept and drawn by the core, not edited here. */
+/** A line (EDT-025): an arrow of its own tool, without ends by default. */
+export type LineObject = Omit<ArrowObject, "type"> & { type: "line" };
+
+/** An arrow or a line: the same geometry and handles. */
+export function isSegment(o: { type: string }): o is ArrowObject | LineObject {
+  return o.type === "arrow" || o.type === "line";
+}
+
 export type DocObject = (
   | ArrowObject
+  | LineObject
   | TextObject
   | ShapeObject
   | BlurObject
@@ -235,6 +245,7 @@ export type DocObject = (
 
 export interface Styles {
   arrow: ArrowStyle;
+  line: ArrowStyle;
   text: TextStyle;
   shape: ShapeStyle;
   blur: BlurStyle;

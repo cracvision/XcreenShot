@@ -120,7 +120,7 @@ fn corners(b: &Boxed) -> [[f64; 2]; 4] {
 
 /// Canvas points an object reaches: an arrow's ends or its box's corners.
 pub fn extent(o: &Object, measure: Measure) -> Vec<[f64; 2]> {
-    if o.kind == "arrow" {
+    if o.kind == "arrow" || o.kind == "line" {
         return [xy(o.props.get("from")), xy(o.props.get("to"))]
             .into_iter()
             .flatten()
@@ -202,7 +202,7 @@ fn around(c: [f64; 2], w: f64, h: f64) -> Rect {
 /// The `set` that applies `op` to `o`; empty when it does not change.
 pub fn transformed(o: &Object, op: &Op, measure: Measure) -> Map<String, Value> {
     let mut set = Map::new();
-    if o.kind == "arrow" {
+    if o.kind == "arrow" || o.kind == "line" {
         let (Some(from), Some(to)) = (xy(o.props.get("from")), xy(o.props.get("to"))) else {
             return set;
         };

@@ -8,17 +8,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use xs_core::document::{translate_props, Object};
 use xs_image::callouts::{CalloutObject, CalloutStyle};
-use xs_image::geometry::{Arrow, ArrowStyle};
+use xs_image::geometry::{Arrow, ArrowStyle, Cap};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::steps::{self, StepObject, StepStyle};
 use xs_image::text::{Text, TextStyle};
 
 /// Current style of each tool: what the next object will look like (EDT-014).
 /// Kept between sessions.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Styles {
     pub arrow: ArrowStyle,
+    /// A line: an arrow without ends (EDT-025).
+    pub line: ArrowStyle,
     pub text: TextStyle,
     pub shape: ShapeStyle,
     pub blur: BlurStyle,
@@ -26,11 +28,36 @@ pub struct Styles {
     pub callout: CalloutStyle,
 }
 
+impl Default for Styles {
+    fn default() -> Self {
+        Styles {
+            arrow: ArrowStyle::default(),
+            line: line_style(),
+            text: TextStyle::default(),
+            shape: ShapeStyle::default(),
+            blur: BlurStyle::default(),
+            step: StepStyle::default(),
+            callout: CalloutStyle::default(),
+        }
+    }
+}
+
+/// The Line tool's own default: no ends, thinner (EDT-025).
+pub fn line_style() -> ArrowStyle {
+    ArrowStyle {
+        width: 4.0,
+        start_cap: Cap::None,
+        end_cap: Cap::None,
+        ..ArrowStyle::default()
+    }
+}
+
 impl Styles {
     /// The current style of the tool that draws `kind`.
     pub fn of(&self, kind: &str) -> Option<Value> {
         match kind {
             "arrow" => serde_json::to_value(&self.arrow).ok(),
+            "line" => serde_json::to_value(&self.line).ok(),
             "text" => serde_json::to_value(&self.text).ok(),
             "shape" => serde_json::to_value(&self.shape).ok(),
             "blur" => serde_json::to_value(&self.blur).ok(),
@@ -44,6 +71,7 @@ impl Styles {
     pub fn set(&mut self, kind: &str, changes: &Map<String, Value>) -> Result<Value, String> {
         match kind {
             "arrow" => self.arrow = ArrowStyle::merged(&self.arrow, changes)?,
+            "line" => self.line = ArrowStyle::merged(&self.line, changes)?,
             "text" => self.text = TextStyle::merged(&self.text, changes)?,
             "shape" => self.shape = ShapeStyle::merged(&self.shape, changes)?,
             "blur" => self.blur = BlurStyle::merged(&self.blur, changes)?,
@@ -56,12 +84,12 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["line", "stamp", "highlight", "magnify", "spotlight"];
+const LATER_TYPES: &[&str] = &["stamp", "highlight", "magnify", "spotlight"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
     match kind {
-        "arrow" => Some(&["from", "to"]),
+        "arrow" | "line" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
         "shape" | "blur" | "image" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
@@ -101,7 +129,7 @@ fn merge_style(current: Option<&Value>, changes: &Map<String, Value>) -> Value {
 /// Validates `props` for `kind` and returns them in canonical form.
 fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value>, String> {
     let value = match kind {
-        "arrow" => {
+        "arrow" | "line" => {
             let a = Arrow::from_props(props)?;
             if a.length() < 1.0 {
                 return Err("from and to must be at least 1 pixel apart".to_string());
@@ -284,7 +312,7 @@ fn shape_of(kind: &str, props: &Map<String, Value>) -> Value {
 fn origin(kind: &str, p: &Map<String, Value>) -> Option<[f64; 2]> {
     let xy = |v: &Value| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]);
     match kind {
-        "arrow" => xy(p.get("from")?),
+        "arrow" | "line" => xy(p.get("from")?),
         "text" => xy(p.get("at")?),
         _ => {
             let r = p.get("rect")?;
@@ -554,7 +582,7 @@ mod tests {
         let s = Styles::default();
         let err = |v: Value| new_object(&v, &s).unwrap_err();
         assert!(err(json!({"type": "spiral"})).contains("unknown type"));
-        assert!(err(json!({"type": "line", "from": [0, 0]})).contains("later build"));
+        assert!(err(json!({"type": "stamp", "rect": {}})).contains("later build"));
         assert!(err(json!({"type": "arrow", "from": [0, 0]})).contains("to"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [0, 0]})).contains("1 pixel"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [9, 9], "colour": 1})).contains("colour"));

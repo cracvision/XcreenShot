@@ -106,6 +106,12 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A plain segment (EDT-025).
+  line: (
+    <Svg>
+      <path d="M4 16 16 4" />
+    </Svg>
+  ),
   // A speech bubble (EDT-028).
   callout: (
     <Svg>

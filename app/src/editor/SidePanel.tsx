@@ -118,8 +118,8 @@ interface Target {
   commit: (changes: Record<string, unknown>) => void;
 }
 
-type StyledKind = "arrow" | "text" | "shape" | "blur" | "image" | "step" | "callout";
-const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image", "step", "callout"];
+type StyledKind = "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout";
+const STYLED: StyledKind[] = ["arrow", "line", "text", "shape", "blur", "image", "step", "callout"];
 
 function useTarget(): Target | null {
   const doc = useEditor((s) => s.doc);
@@ -330,7 +330,8 @@ function Properties({ target }: { target: Target }) {
     </>
   );
   switch (kind) {
-    case "arrow": {
+    case "arrow":
+    case "line": {
       const caps = CAPS.map((c) => ({ value: c, label: t(`ui.editor.cap.${c}`) }));
       return (
         <>

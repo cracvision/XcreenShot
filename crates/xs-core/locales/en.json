@@ -785,7 +785,8 @@
       "editor_show_in_folder": "Show in Explorer or Finder",
       "editor_delete_item": "Move to trash",
       "editor_tool_step": "Step tool",
-      "editor_tool_callout": "Callout tool"
+      "editor_tool_callout": "Callout tool",
+      "editor_tool_line": "Line tool"
     }
   },
   "tray": {
@@ -1238,7 +1239,8 @@
         "crop": "Drag to keep a part. Nothing is lost: crop again to bring it back.",
         "image": "A picture over the capture.",
         "step": "Click to place the next number; drag for a bigger marker.",
-        "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point."
+        "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point.",
+        "line": "Drag to draw a line; Shift keeps it straight or at 45°."
       },
       "tool": {
         "move": "Move",
@@ -1249,7 +1251,8 @@
         "crop": "Crop",
         "image": "Image",
         "step": "Step",
-        "callout": "Callout"
+        "callout": "Callout",
+        "line": "Line"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1659,7 +1662,13 @@
     "change_callout": "Change callout",
     "delete_callout": "Delete callout",
     "cut_callout": "Cut callout",
-    "paste_callout": "Paste callout"
+    "paste_callout": "Paste callout",
+    "draw_line": "Draw line",
+    "move_line": "Move line",
+    "change_line": "Change line",
+    "delete_line": "Delete line",
+    "cut_line": "Cut line",
+    "paste_line": "Paste line"
   },
   "editor": {
     "edited": "{{name}} — Edited"

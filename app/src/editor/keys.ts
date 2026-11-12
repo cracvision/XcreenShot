@@ -15,7 +15,7 @@ import {
   startTextEdit,
 } from "./actions";
 import { moved } from "./objects";
-import { requestZoom, useEditor, usePointer, type Tool } from "./state";
+import { isSegment, requestZoom, useEditor, usePointer, type Tool } from "./state";
 import { useMainView } from "../library/state";
 import { inToolbar } from "../components/arrowFocus";
 
@@ -152,8 +152,8 @@ function insert(): void {
     return;
   }
   const object =
-    tool === "arrow"
-      ? { type: "arrow", from: [c[0] - INSERT.w / 2, c[1]], to: [c[0] + INSERT.w / 2, c[1]] }
+    tool === "arrow" || tool === "line"
+      ? { type: tool, from: [c[0] - INSERT.w / 2, c[1]], to: [c[0] + INSERT.w / 2, c[1]] }
       : tool === "shape" || tool === "blur"
         ? { type: tool, rect: { x: c[0] - INSERT.w / 2, y: c[1] - INSERT.h / 2, ...INSERT } }
         : tool === "step"
@@ -170,6 +170,7 @@ function insert(): void {
 /** The style property a picked color goes to, per tool (EDT-117 `I`). */
 const COLOR_KEY: Partial<Record<Tool, string>> = {
   arrow: "color",
+  line: "color",
   text: "color",
   shape: "outline",
   step: "fill",
@@ -210,21 +211,19 @@ function pickCanvasColor(): void {
 /** `[` and `]`: thinner or thicker arrows (EDT-117), 10 % a step. */
 function resizeStroke(up: boolean): void {
   const { tool, selection, active, doc, styles } = useEditor.getState();
-  const arrows = (doc?.objects ?? []).filter((o) => o.type === "arrow" && selection.includes(o.id));
+  const arrows = (doc?.objects ?? []).filter((o) => isSegment(o) && selection.includes(o.id));
   const width = (w: number) =>
     Math.min(100, Math.max(1, Math.round(w * (up ? 1.1 : 1 / 1.1) * 10) / 10));
   if (arrows.length > 0 && active) {
     const first = arrows[0];
-    if (first?.type !== "arrow") return;
+    if (!first || !isSegment(first)) return;
     run("document.update_object", {
       documentId: active,
       objectIds: arrows.map((a) => a.id),
       set: { style: { width: width(first.style.width) } },
     }).catch(fail);
-  } else if (tool === "arrow" && styles) {
-    run("editor.set_style", { tool: "arrow", style: { width: width(styles.arrow.width) } }).catch(
-      fail,
-    );
+  } else if ((tool === "arrow" || tool === "line") && styles) {
+    run("editor.set_style", { tool, style: { width: width(styles[tool].width) } }).catch(fail);
   }
 }
 

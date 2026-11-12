@@ -104,7 +104,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
 | EDT-024 | Flecha | M1 | Must | Win |
-| EDT-025 | Línea | M2 | Should | — |
+| EDT-025 | Línea | M2 | Should | En curso |
 | EDT-026 | Texto | M1 | Must | Win |
 | EDT-027 | Corrector ortográfico | M2 | Should | — |
 | EDT-028 | Globo | M2 | Must | En curso |

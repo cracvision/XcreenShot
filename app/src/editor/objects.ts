@@ -2,7 +2,7 @@
 // it, and the change a move or a handle makes (EDT-022, EDT-042). Pure functions.
 import { corners, type Box, type Rect } from "./boxes";
 import { distanceToSegment, type Point } from "./geometry";
-import type { DocObject, TextObject } from "./state";
+import { isSegment, type DocObject, type TextObject } from "./state";
 
 /** The box of an object drawn in a rectangle (text, shape, blur, image), or null for
  * arrows. */
@@ -29,8 +29,7 @@ export function boxOf(o: DocObject): Box | null {
 
 /** Whether canvas point `p` is on the object; `reach` is the pointer tolerance. */
 export function hits(o: DocObject, p: Point, reach: number): boolean {
-  if (o.type === "arrow")
-    return distanceToSegment(p, o.from, o.to) <= Math.max(o.style.width / 2, reach);
+  if (isSegment(o)) return distanceToSegment(p, o.from, o.to) <= Math.max(o.style.width / 2, reach);
   // A callout is also picked by its tails (EDT-028).
   if (o.type === "callout") {
     const c: Point = [o.rect.x + o.rect.w / 2, o.rect.y + o.rect.h / 2];
@@ -66,7 +65,8 @@ function toLocalAbs(b: Box, p: Point): Point {
 /** The object moved by (`dx`, `dy`), and the `set` for `document.update_object`. */
 export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<string, unknown>] {
   switch (o.type) {
-    case "arrow": {
+    case "arrow":
+    case "line": {
       const from: Point = [o.from[0] + dx, o.from[1] + dy];
       const to: Point = [o.to[0] + dx, o.to[1] + dy];
       return [
@@ -162,7 +162,7 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
 
 /** Canvas points an object reaches, to tell whether it is outside the canvas. */
 export function extentPoints(o: DocObject): Point[] {
-  if (o.type === "arrow") return [o.from, o.to];
+  if (isSegment(o)) return [o.from, o.to];
   const b = boxOf(o);
   if (o.type === "callout" && b) return [...corners(b), ...o.tails];
   return b ? corners(b) : [];

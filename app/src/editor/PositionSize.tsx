@@ -11,7 +11,7 @@ import { arrangeSelection } from "./actions";
 import { Icon } from "./icons";
 import { extentPoints, boxOf, reboxed } from "./objects";
 import { evaluate, keepRatio } from "./positionMath";
-import { useEditor, type DocObject } from "./state";
+import { isSegment, useEditor, type DocObject } from "./state";
 
 const round = (v: number) => Math.round(v * 100) / 100;
 
@@ -186,7 +186,7 @@ export function PositionSize() {
 
   const o = objects[0];
   if (!o) return null;
-  if (o.type === "arrow") {
+  if (isSegment(o)) {
     const [fx, fy] = o.from;
     const [tx, ty] = o.to;
     const length = Math.hypot(tx - fx, ty - fy);

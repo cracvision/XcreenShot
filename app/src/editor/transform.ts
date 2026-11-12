@@ -5,7 +5,7 @@
 import type { Rect } from "./boxes";
 import type { Point } from "./geometry";
 import { boxOf, extentPoints } from "./objects";
-import type { DocObject } from "./state";
+import { isSegment, type DocObject } from "./state";
 
 export type TransformOp =
   | { kind: "scale"; from: Rect; to: Rect; strokes: boolean }
@@ -51,7 +51,7 @@ const grown = (v: number, k: number, min: number, max: number) =>
 
 /** `o` after `op`, as the canvas shows it while the gesture goes on. */
 export function transformed(o: DocObject, op: TransformOp): DocObject {
-  if (o.type === "arrow") {
+  if (isSegment(o)) {
     if (op.kind === "rotate")
       return {
         ...o,

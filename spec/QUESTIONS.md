@@ -157,6 +157,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-028 | Colas | Cada cola sale del centro del cuerpo con la base del ancho elegido; cuerpo y colas comparten un solo contorno. Recta, Curva (los dos lados se curvan hacia el mismo lado) o Flecha (una línea con punta, en el color de la cola). En Pensamiento la cola son tres burbujas. Un globo nuevo sin colas recibe una debajo del cuerpo (encima si no cabe); si al escribir el cuerpo crece y tapa una punta, la punta baja con él | Provisional |
 | EDT-028 | Tiradores | Rombos en las puntas; **+** a la derecha del cuerpo (un clic añade una cola al lado; arrastrar la lleva donde se suelte); rombo del radio en el borde superior (solo Rectángulo redondeado); el ancla es el punto del centro. Doble clic o `Enter` escribe en el globo | Provisional |
 | EDT-028 | Lo que falta del spec | Subrayado, tachado e interlineado del texto, color de la cola en Propiedades (el CLI ya lo acepta: `tailColor`), relleno degradado, sombra y el aviso "Texto oculto" con Ajustar al texto desactivado. Llegan con los estilos (M2.4) o cuando el texto de EDT-026 los tenga | Pendiente |
+| EDT-025 | Línea | Objeto `line` guardado igual que una flecha (`from`, `to` y el mismo estilo), con su propio estilo de herramienta: sin extremos y 4 px. Tecla `L`, después de Flecha en la barra. Las curvas llegan cuando las tenga la Flecha, y "Seleccionar todas las líneas" con EDT-023 | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

@@ -30,8 +30,8 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 8] = [
-    "move", "arrow", "text", "callout", "shape", "step", "blur", "crop",
+pub const AVAILABLE_TOOLS: [&str; 9] = [
+    "move", "arrow", "line", "text", "callout", "shape", "step", "blur", "crop",
 ];
 /// Zoom steps in percent (EDT-007).
 pub const ZOOM_STEPS: [f64; 16] = [
