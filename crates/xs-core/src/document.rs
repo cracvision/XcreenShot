@@ -316,6 +316,9 @@ pub struct XshotSummary {
     /// Capture metadata (CAP-056).
     pub meta: Value,
     pub thumb_png: Vec<u8>,
+    /// What its annotations say (text boxes, callouts), for the library's search
+    /// (LIB-007).
+    pub texts: Vec<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -384,11 +387,19 @@ impl Xshot {
             Some(b) => serde_json::from_slice(&b).map_err(invalid)?,
             None => Value::Object(Map::new()),
         };
+        let texts = document
+            .objects
+            .iter()
+            .filter_map(|o| o.props.get("text").and_then(Value::as_str))
+            .filter(|t| !t.trim().is_empty())
+            .map(str::to_string)
+            .collect();
         Ok(XshotSummary {
             width: document.canvas.width,
             height: document.canvas.height,
             meta,
             thumb_png: read_entry(&mut zip, "thumb.png")?.unwrap_or_default(),
+            texts,
         })
     }
 

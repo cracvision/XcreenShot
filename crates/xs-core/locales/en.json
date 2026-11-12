@@ -566,6 +566,26 @@
     "document_apply_theme": {
       "title": "Apply theme",
       "description": "Gives the selected objects, or all, the colors and font of a theme, in one undo step."
+    },
+    "library_tag": {
+      "title": "Tag items",
+      "description": "Adds and removes tags on library items; their files and dates do not change."
+    },
+    "library_tags": {
+      "title": "Library tags",
+      "description": "Lists the tags with their counts, and renames, merges or deletes a tag on all its items."
+    },
+    "library_favorite": {
+      "title": "Favorites",
+      "description": "Marks or unmarks library items as favorites."
+    },
+    "library_rebuild": {
+      "title": "Rebuild the library index",
+      "description": "Builds the library index again from the files; IDs, tags and favorites come back from each item's sidecar."
+    },
+    "library_check": {
+      "title": "Check the library",
+      "description": "Lists files that cannot be read and metadata files without their item, and whether the folder can be written; can clean up those metadata files."
     }
   },
   "settings": {
@@ -895,7 +915,10 @@
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
-    "template_exists": "There is already a template called {{name}}."
+    "template_exists": "There is already a template called {{name}}.",
+    "invalid_tag": "\"{{tag}}\" is not a valid tag: use 1 to 50 characters.",
+    "too_many_tags": "{{name}} would have more than {{max}} tags.",
+    "tag_exists": "There is already a tag {{tag}}. Merge them?"
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1177,7 +1200,10 @@
     "apply_template": "Apply template…",
     "save_as_template": "Save as template…",
     "import_template": "Template…",
-    "combine_template": "Combine in template…"
+    "combine_template": "Combine in template…",
+    "tags_item": "Tags…",
+    "favorite_item": "Add to favorites",
+    "unfavorite_item": "Remove from favorites"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2608,7 +2634,106 @@
       "item_menu": "Library item",
       "size": "{{width}} × {{height}} px",
       "location": "Location",
-      "location_help": "Each capture is saved here as an .xshot file. Changing the location arrives later."
+      "location_help": "Each capture is saved here as an .xshot file. Changing the location arrives later.",
+      "search": "Search the library",
+      "layout": "View",
+      "layout_grid": "Grid",
+      "layout_list": "List",
+      "results_one": "{{count}} result",
+      "results_other": "{{count}} results",
+      "no_results": "Nothing matches the filters or the search.",
+      "favorite": "Add to favorites",
+      "unfavorite": "Remove from favorites",
+      "sort": {
+        "label": "Sort by",
+        "modified": "Date modified",
+        "captured": "Date captured",
+        "name": "Name",
+        "size": "Size",
+        "type": "Type",
+        "app": "Application",
+        "asc": "Ascending: click to reverse",
+        "desc": "Descending: click to reverse"
+      },
+      "column": {
+        "name": "Name",
+        "captured": "Captured",
+        "modified": "Modified",
+        "size": "Size",
+        "type": "Type",
+        "dimensions": "Dimensions",
+        "app": "Application",
+        "site": "Website",
+        "tags": "Tags"
+      },
+      "filter": {
+        "title": "Filters",
+        "toggle": "Show or hide the filters",
+        "favorites": "Favorites",
+        "types": "Type",
+        "dates": "Date",
+        "apps": "Applications",
+        "sites": "Websites",
+        "tags": "Tags",
+        "type_image": "Images",
+        "type_video": "Videos",
+        "type_gif": "Animated GIFs",
+        "type_guide": "Step guides",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last7": "Last 7 days",
+        "month": "This month",
+        "unknown_app": "Unknown",
+        "no_site": "No website",
+        "none": "Nothing yet",
+        "find": "Find",
+        "clear": "Clear filters",
+        "remove": "Remove the filter {{name}}"
+      },
+      "tags": {
+        "button": "Tags",
+        "title_one": "Tags of {{name}}",
+        "title_many": "Tags of {{count}} items",
+        "none": "No tags yet.",
+        "partial": "{{tag}} (in {{count}} of {{total}})",
+        "add_to_all": "Click to add it to all",
+        "remove": "Remove {{tag}}",
+        "add": "Add a tag",
+        "placeholder": "Type and press Enter or a comma",
+        "done": "Done",
+        "rename": "Rename…",
+        "merge": "Merge with…",
+        "delete": "Delete tag",
+        "select": "Select its items",
+        "rename_title": "Rename the tag {{tag}}",
+        "new_name": "New name",
+        "exists": "There is already a tag {{tag}}. Merge them?",
+        "merge_title": "Merge {{tag}} with another tag",
+        "merge_into": "The tag that stays",
+        "delete_title": "Delete the tag {{tag}}?",
+        "delete_body_one": "{{tag}} is removed from {{count}} item. The item stays.",
+        "delete_body_other": "{{tag}} is removed from {{count}} items. The items stay.",
+        "deleted_one": "{{tag}} removed from {{count}} item.",
+        "deleted_other": "{{tag}} removed from {{count}} items."
+      },
+      "more": "More library actions",
+      "rebuild": "Rebuild the index…",
+      "rebuild_title": "Rebuild the library index?",
+      "rebuild_body": "XcreenShot reads every file of the library again. Nothing is lost: names, tags and favorites live next to each file.",
+      "rebuild_go": "Rebuild",
+      "rebuilding": "Rebuilding the library index…",
+      "rebuilt_one": "Index rebuilt: {{count}} item.",
+      "rebuilt_other": "Index rebuilt: {{count}} items.",
+      "check": "Check the library…",
+      "check_title": "Check the library",
+      "check_ok": "Everything is in order.",
+      "check_damaged_one": "{{count}} file cannot be read:",
+      "check_damaged_other": "{{count}} files cannot be read:",
+      "check_orphans_one": "{{count}} metadata file has no item.",
+      "check_orphans_other": "{{count}} metadata files have no item.",
+      "check_clean": "Clean up",
+      "check_readonly": "XcreenShot cannot write in the library folder. Check its permissions or choose another location.",
+      "check_show": "Show"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

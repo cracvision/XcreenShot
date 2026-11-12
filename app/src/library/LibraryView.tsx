@@ -1,7 +1,7 @@
-// The Library view of the main window (LIB-001, LIB-002, LIB-026): every capture of
-// the library folder, newest first, with selection by mouse and keyboard, a rubber band,
-// the item menu and a status bar. Filters, search, sorting and thumbnail sizes arrive
-// with M2 (LIB-003 to LIB-007).
+// The Library view of the main window (LIB-001, LIB-002, LIB-026): the captures of the
+// library folder as a grid or a list, sorted (LIB-004), filtered from the left pane
+// (LIB-005, LIB-006) and searched (LIB-007); selection by mouse and keyboard, a rubber
+// band, favorites (LIB-011), tags (LIB-009), the item menu and a status bar.
 import {
   useEffect,
   useLayoutEffect,
@@ -13,6 +13,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
+import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import { openCapturePanel, openFiles } from "../editor/actions";
 import { Icon } from "../editor/icons";
@@ -20,6 +21,13 @@ import { menuPoint, useContextMenu } from "../editor/menus";
 import { xsdocUrl } from "../editor/state";
 import { hint, useShortcut } from "../editor/tools";
 import { askDelete, itemRef, openItems } from "./actions";
+import { FilterPane } from "./FilterPane";
+import { editTags, toggleFavorite } from "./marks";
+import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortKey } from "./query";
+import { TagDialogs } from "./TagDialogs";
+import { MaintenanceDialogs } from "./Maintenance";
+import { askRebuild, checkLibrary } from "./maintenanceState";
+import { Menu } from "../components/Menu";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
 import { boxOf, clickSelection, columnsOf, moveFocus, overlaps, range } from "./selection";
@@ -37,9 +45,98 @@ function typeName(item: LibraryItem, t: (key: string) => string): string {
   return t(`ui.library.type_${format}`);
 }
 
+/** The search field (LIB-007): Ctrl+F (Cmd+F) gives it the focus, Esc empties it. */
+function SearchField() {
+  const { t } = useTranslation();
+  const query = useLibrary((s) => s.query);
+  const setQuery = useLibrary((s) => s.setQuery);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const primary = IS_MAC ? e.metaKey : e.ctrlKey;
+      if (primary && !e.shiftKey && !e.altKey && e.code === "KeyF") {
+        e.preventDefault();
+        field.current?.focus();
+        field.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  return (
+    <input
+      ref={field}
+      type="search"
+      className="lib-search"
+      value={query}
+      placeholder={t("ui.library.search")}
+      aria-label={t("ui.library.search")}
+      onChange={(e) => setQuery(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && query) {
+          e.preventDefault();
+          e.stopPropagation();
+          setQuery("");
+        }
+      }}
+    />
+  );
+}
+
+function SortControls() {
+  const { t } = useTranslation();
+  const shape = useLibrary((s) => s.shape);
+  const setShape = useLibrary((s) => s.setShape);
+  const seg = useRef<HTMLDivElement>(null);
+  useIndicator(seg, shape.layout);
+  return (
+    <div className="lib-sort">
+      <select
+        value={shape.sort}
+        aria-label={t("ui.library.sort.label")}
+        onChange={(e) => setShape({ sort: e.target.value as SortKey })}
+      >
+        {SORT_KEYS.map((k) => (
+          <option key={k} value={k}>
+            {t(`ui.library.sort.${k}`)}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="btn icon small"
+        title={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
+        aria-label={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
+        onClick={() => setShape({ order: shape.order === "asc" ? "desc" : "asc" })}
+      >
+        <span className={`lib-dir ${shape.order}`} aria-hidden="true">
+          <Icon name="up" />
+        </span>
+      </button>
+      <div className="seg small" role="radiogroup" aria-label={t("ui.library.layout")} ref={seg}>
+        <span className="seg-indicator" aria-hidden="true" />
+        {(["grid", "list"] as const).map((l) => (
+          <button
+            key={l}
+            type="button"
+            role="radio"
+            aria-checked={shape.layout === l}
+            onClick={() => setShape({ layout: l })}
+          >
+            {t(`ui.library.layout_${l}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LibraryToolbar() {
   const { t } = useTranslation();
   const openKey = useShortcut("editor.open");
+  const pane = useLibrary((s) => s.shape.pane);
+  const setShape = useLibrary((s) => s.setShape);
+  const selected = useLibrary((s) => s.selection.length);
   return (
     <div
       className="editor-toolbar library-toolbar"
@@ -50,6 +147,26 @@ function LibraryToolbar() {
       <button type="button" className="btn primary tb-btn tb-capture" onClick={openCapturePanel}>
         <Icon name="capture" />
         <span className="tb-label">{t("ui.editor.capture")}</span>
+      </button>
+      <button
+        type="button"
+        className="btn tb-btn"
+        aria-pressed={pane}
+        title={t("ui.library.filter.toggle")}
+        onClick={() => setShape({ pane: !pane })}
+      >
+        <span className="tb-label">{t("ui.library.filter.title")}</span>
+      </button>
+      <SearchField />
+      <SortControls />
+      <button
+        type="button"
+        className="btn tb-btn"
+        disabled={selected === 0}
+        title={t("ui.library.tags.button")}
+        onClick={() => editTags(useLibrary.getState().selection)}
+      >
+        <span className="tb-label">{t("ui.library.tags.button")}</span>
       </button>
       <div className="tb-spacer" />
       <div className="tb-group">
@@ -72,6 +189,18 @@ function LibraryToolbar() {
           <span className="tb-label tb-wide">{t("ui.editor.open")}</span>
         </button>
       </div>
+      <Menu
+        label={<Icon name="more" />}
+        ariaLabel={t("ui.library.more")}
+        title={t("ui.library.more")}
+        triggerClass="btn icon"
+        chevron={false}
+        align="end"
+        items={[
+          { id: "rebuild", label: t("ui.library.rebuild"), onSelect: askRebuild },
+          { id: "check", label: t("ui.library.check"), onSelect: () => void checkLibrary() },
+        ]}
+      />
       <LanguageToggle />
       <button
         type="button"
@@ -88,6 +217,7 @@ function LibraryToolbar() {
 
 function Item({
   item,
+  list,
   selected,
   focusable,
   onPick,
@@ -96,6 +226,7 @@ function Item({
   onPress,
 }: {
   item: LibraryItem;
+  list: boolean;
   selected: boolean;
   focusable: boolean;
   onPick: (item: LibraryItem, e: MouseEvent) => void;
@@ -118,7 +249,9 @@ function Item({
       aria-selected={selected}
       tabIndex={focusable ? 0 : -1}
       data-item={item.id}
-      className={`lib-item${selected ? " selected" : ""}`}
+      className={`${list ? "lib-row" : "lib-item"}${selected ? " selected" : ""}${
+        item.favorite ? " favorite" : ""
+      }`}
       // Name, type, date and the app it came from (APP-044).
       aria-label={t(item.app ? "ui.library.item_label_app" : "ui.library.item_label", {
         name: item.name,
@@ -126,22 +259,151 @@ function Item({
         date,
         app: item.app,
       })}
-      title={[item.name, size, date].filter(Boolean).join("\n")}
+      // Name, type, size, date, app and file size (LIB-012).
+      title={[
+        item.name,
+        typeName(item, t),
+        size,
+        date,
+        item.app ?? "",
+        fileSize(item.size, i18n.language),
+      ]
+        .filter(Boolean)
+        .join("\n")}
       onClick={(e) => onPick(item, e)}
       onDoubleClick={() => onOpen(item)}
       onContextMenu={(e) => onMenu(item, e)}
       onPointerDown={(e) => onPress(item, e)}
     >
-      <div className="lib-thumb">
-        <img src={thumbUrl(item)} alt="" loading="lazy" draggable={false} />
-        {item.format !== "xshot" && (
-          <span className="lib-badge" aria-hidden="true">
-            {item.format === "jpeg" ? "JPG" : item.format.toUpperCase()}
+      {list ? (
+        <>
+          <span className="lc lc-name">
+            <Star item={item} />
+            {item.name}
           </span>
-        )}
-      </div>
-      <div className="lib-name">{item.name}</div>
-      <div className="lib-date">{date}</div>
+          <span className="lc">{date}</span>
+          <span className="lc">{shortDate(item.modified, i18n.language)}</span>
+          <span className="lc num">{fileSize(item.size, i18n.language)}</span>
+          <span className="lc">{typeName(item, t)}</span>
+          <span className="lc num">{size}</span>
+          <span className="lc">{item.app ?? ""}</span>
+          <span className="lc">{siteOf(item.url)}</span>
+          <span className="lc">{item.tags.join(", ")}</span>
+        </>
+      ) : (
+        <>
+          <div className="lib-thumb">
+            <img src={thumbUrl(item)} alt="" loading="lazy" draggable={false} />
+            {item.format !== "xshot" && (
+              <span className="lib-badge" aria-hidden="true">
+                {item.format === "jpeg" ? "JPG" : item.format.toUpperCase()}
+              </span>
+            )}
+            <Star item={item} />
+          </div>
+          <div className="lib-name">{item.name}</div>
+          <div className="lib-date">{date}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The favorite star (LIB-011): shown on hover, fixed when it is one. */
+function Star({ item }: { item: LibraryItem }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      className={`lib-star${item.favorite ? " on" : ""}`}
+      tabIndex={-1}
+      aria-pressed={item.favorite}
+      aria-label={t(item.favorite ? "ui.library.unfavorite" : "ui.library.favorite")}
+      title={t(item.favorite ? "ui.library.unfavorite" : "ui.library.favorite")}
+      onClick={(e) => {
+        e.stopPropagation();
+        void toggleFavorite([item.id]);
+      }}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <Icon name="favorites" />
+    </button>
+  );
+}
+
+function shortDate(iso: string, lang: string): string {
+  return new Date(iso).toLocaleString(lang, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function fileSize(bytes: number, lang: string): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let v = bytes;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u += 1;
+  }
+  return `${v.toLocaleString(lang, { maximumFractionDigits: u === 0 ? 0 : 1 })} ${units[u]}`;
+}
+
+function siteOf(url: string | null): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+/** The list's columns (LIB-004): a click on a sortable one sorts, another reverses. */
+const COLUMNS: { key: string; sort?: SortKey }[] = [
+  { key: "name", sort: "name" },
+  { key: "captured", sort: "captured" },
+  { key: "modified", sort: "modified" },
+  { key: "size", sort: "size" },
+  { key: "type", sort: "type" },
+  { key: "dimensions" },
+  { key: "app", sort: "app" },
+  { key: "site" },
+  { key: "tags" },
+];
+
+function ListHeader() {
+  const { t } = useTranslation();
+  const shape = useLibrary((s) => s.shape);
+  const setShape = useLibrary((s) => s.setShape);
+  return (
+    <div className="lib-head" role="presentation">
+      {COLUMNS.map((c) => {
+        const sorted = c.sort === shape.sort;
+        return c.sort ? (
+          <button
+            key={c.key}
+            type="button"
+            className={`lc lc-head${sorted ? " sorted" : ""}`}
+            aria-sort={sorted ? (shape.order === "asc" ? "ascending" : "descending") : "none"}
+            onClick={() =>
+              setShape(
+                sorted
+                  ? { order: shape.order === "asc" ? "desc" : "asc" }
+                  : { sort: c.sort as SortKey },
+              )
+            }
+          >
+            {t(`ui.library.column.${c.key}`)}
+            {sorted && (
+              <span className={`lib-dir ${shape.order}`} aria-hidden="true">
+                <Icon name="up" />
+              </span>
+            )}
+          </button>
+        ) : (
+          <span key={c.key} className="lc lc-head">
+            {t(`ui.library.column.${c.key}`)}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -157,6 +419,7 @@ interface Band {
 function Grid() {
   const { t } = useTranslation();
   const items = useLibrary((s) => s.items);
+  const list = useLibrary((s) => s.shape.layout === "list");
   const selection = useLibrary((s) => s.selection);
   const focus = useLibrary((s) => s.focus);
   const select = useLibrary((s) => s.select);
@@ -280,7 +543,7 @@ function Grid() {
   return (
     <div
       ref={grid}
-      className="library-grid"
+      className={list ? "library-list" : "library-grid"}
       role="listbox"
       aria-multiselectable="true"
       aria-label={t("ui.library.grid")}
@@ -294,6 +557,7 @@ function Grid() {
         <Item
           key={item.id}
           item={item}
+          list={list}
           selected={chosen.has(item.id)}
           focusable={item.id === firstFocusable}
           onPick={pick}
@@ -318,9 +582,94 @@ function Grid() {
   );
 }
 
+/** The active filters as chips with ✕, and Clear filters (LIB-005); the number of
+ * results, announced (LIB-007). */
+function Chips() {
+  const { t, i18n } = useTranslation();
+  const filters = useLibrary((s) => s.filters);
+  const query = useLibrary((s) => s.query);
+  const count = useLibrary((s) => s.count);
+  const setFilters = useLibrary((s) => s.setFilters);
+  const setQuery = useLibrary((s) => s.setQuery);
+  const active = chips(filters);
+  if (active.length === 0 && !query) return null;
+  const label = (section: string, value: string) => {
+    if (section === "favorites") return t("ui.library.filter.favorites");
+    if (section === "types") return t(`ui.library.filter.type_${value}`, value);
+    if (section === "dates")
+      return /^\d/.test(value) ? dateLabel(value, i18n.language) : t(`ui.library.filter.${value}`);
+    if (section === "apps") return value || t("ui.library.filter.unknown_app");
+    if (section === "sites") return value || t("ui.library.filter.no_site");
+    return value;
+  };
+  return (
+    <div className="lib-chips">
+      <span className="lib-results" role="status" aria-live="polite">
+        {t("ui.library.results", { count })}
+      </span>
+      {active.map((c) => (
+        <span key={`${c.section}:${c.value}`} className="lib-chip">
+          {label(c.section, c.value)}
+          <button
+            type="button"
+            className="tag-x"
+            aria-label={t("ui.library.filter.remove", { name: label(c.section, c.value) })}
+            onClick={() =>
+              setFilters(
+                c.section === "favorites"
+                  ? { ...filters, favorites: false }
+                  : toggle(filters, c.section, c.value),
+              )
+            }
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+      {(hasFilters(filters) || query) && (
+        <button
+          type="button"
+          className="btn small"
+          onClick={() => {
+            setQuery("");
+            setFilters(NO_FILTERS);
+          }}
+        >
+          {t("ui.library.filter.clear")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function NoResults() {
+  const { t } = useTranslation();
+  const setFilters = useLibrary((s) => s.setFilters);
+  const setQuery = useLibrary((s) => s.setQuery);
+  return (
+    <div className="editor-empty">
+      <div className="empty-card">
+        <h1>{t("ui.library.no_results")}</h1>
+        <div className="row">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => {
+              setQuery("");
+              setFilters(NO_FILTERS);
+            }}
+          >
+            {t("ui.library.filter.clear")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LibraryStatus() {
   const { t } = useTranslation();
-  const total = useLibrary((s) => s.items.length);
+  const total = useLibrary((s) => s.total);
   const selected = useLibrary((s) => s.selection.length);
   const root = useLibrary((s) => s.root);
   const synced = useLibrary((s) => s.synced);
@@ -365,7 +714,10 @@ function EmptyLibrary() {
 export function LibraryView() {
   const { t } = useTranslation();
   const loaded = useLibrary((s) => s.loaded);
-  const empty = useLibrary((s) => s.items.length === 0);
+  const empty = useLibrary((s) => s.total === 0);
+  const none = useLibrary((s) => s.items.length === 0);
+  const pane = useLibrary((s) => s.shape.pane);
+  const list = useLibrary((s) => s.shape.layout === "list");
 
   useEffect(() => {
     void useLibrary
@@ -385,10 +737,19 @@ export function LibraryView() {
         ) : empty ? (
           <EmptyLibrary />
         ) : (
-          <Grid />
+          <>
+            {pane && <FilterPane />}
+            <div className="library-content">
+              <Chips />
+              {list && !none && <ListHeader />}
+              {none ? <NoResults /> : <Grid />}
+            </div>
+          </>
         )}
       </div>
       <LibraryStatus />
+      <TagDialogs />
+      <MaintenanceDialogs />
     </>
   );
 }

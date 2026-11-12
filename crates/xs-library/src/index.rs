@@ -8,7 +8,9 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde_json::{json, Value};
 
 /// Bumped when the schema changes; an index of another version is rebuilt.
-const VERSION: i64 = 1;
+/// 2: the text of annotations (LIB-007), and the app's name read from CAP-056's
+/// `{name, version, id}`.
+const VERSION: i64 = 2;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS items (
@@ -24,7 +26,8 @@ CREATE TABLE IF NOT EXISTS items (
     app TEXT,
     url TEXT,
     favorite INTEGER NOT NULL DEFAULT 0,
-    tags TEXT NOT NULL DEFAULT '[]'
+    tags TEXT NOT NULL DEFAULT '[]',
+    text TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS items_captured ON items (captured DESC);
 ";
@@ -48,6 +51,8 @@ pub struct Item {
     pub url: Option<String>,
     pub favorite: bool,
     pub tags: Vec<String>,
+    /// What its annotations say, one line each, for the search (LIB-007).
+    pub text: String,
 }
 
 impl Item {
@@ -67,6 +72,7 @@ impl Item {
             url: r.get("url")?,
             favorite: r.get::<_, i64>("favorite")? != 0,
             tags: serde_json::from_str(&tags).unwrap_or_default(),
+            text: r.get("text")?,
         })
     }
 
@@ -143,10 +149,10 @@ impl Index {
 
     pub fn upsert(&self, item: &Item) -> rusqlite::Result<()> {
         self.db.execute(
-            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
              ON CONFLICT(id) DO UPDATE SET path = ?2, name = ?3, format = ?4, size = ?5, modified = ?6,
-               captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13",
+               captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13, text = ?14",
             params![
                 item.id,
                 item.path,
@@ -161,8 +167,28 @@ impl Index {
                 item.url,
                 item.favorite as i64,
                 serde_json::to_string(&item.tags).unwrap_or_else(|_| "[]".into()),
+                item.text,
             ],
         )?;
+        Ok(())
+    }
+
+    /// Tags and favorite of an item (LIB-009, LIB-011): its file and dates stay.
+    pub fn set_marks(&self, id: &str, tags: &[String], favorite: bool) -> rusqlite::Result<()> {
+        self.db.execute(
+            "UPDATE items SET tags = ?2, favorite = ?3 WHERE id = ?1",
+            params![
+                id,
+                serde_json::to_string(tags).unwrap_or_else(|_| "[]".into()),
+                favorite as i64
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Empties the index; a scan fills it again from the files (LIB-023).
+    pub fn clear(&self) -> rusqlite::Result<()> {
+        self.db.execute("DELETE FROM items", [])?;
         Ok(())
     }
 

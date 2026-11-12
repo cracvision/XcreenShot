@@ -240,6 +240,18 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Dudas del equipo de construcción (M2, entrega 7: biblioteca)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| LIB-004 | Orden por defecto y dirección | Fecha de modificación, la más reciente primero. Al cambiar de criterio, fechas y tamaño empiezan de mayor a menor y nombre, tipo y aplicación de la A a la Z; el botón de flecha invierte. Orden, dirección, vista (cuadrícula o lista) y panel de filtros se recuerdan en este equipo. En la lista, todavía no se pueden redimensionar ni ocultar columnas | Provisional |
+| LIB-005 | Tipos y fechas | Solo hay imágenes hasta que lleguen video, GIF y guías; el subfiltro "Con desplazamiento" espera a CAP-036. El árbol de fechas usa la fecha de captura en la zona horaria del equipo. Los accesos rápidos (Hoy, Ayer, Últimos 7 días, Este mes) son valores de la sección Fecha y se suman con los demás | Provisional |
+| LIB-007 | Qué texto de las anotaciones se busca | El de los cuadros de texto y los globos. Los pasos (números) no, porque "1" o "2" coincidirían con casi todo. El índice de la biblioteca pasa a la versión 2 para guardar ese texto: se reconstruye solo la primera vez, sin perder nada | Provisional |
+| LIB-009 | Grafía de una etiqueta | Al añadir una etiqueta que ya existe con otras mayúsculas, se usa la que ya tiene la biblioteca. Las etiquetas se guardan en el índice y en el `.xmeta` de cada elemento | Provisional |
+| LIB-010 | Orden de la lista de etiquetas | En el panel, por número de elementos; `library.tags` admite `--sort name` o `count`. "Seleccionar sus elementos" deja esa etiqueta como único filtro y selecciona todo lo que muestra | Provisional |
+| LIB-023 | Dónde están Reconstruir y Comprobar | En el menú ⋯ de la barra de la Biblioteca (la app no tiene un menú Biblioteca en la barra de menús). La reconstrucción de esta entrega bloquea la lista unos segundos mientras relee la carpeta; la versión en segundo plano, con progreso en la barra de estado, llega con LIB-025 y LIB-026 | Provisional |
+| CAP-056 / LIB-006 | La aplicación de cada captura no llegaba a la Biblioteca | Los metadatos guardan la aplicación como `{name, version, id}` y el índice la leía como texto: siempre quedaba vacía. Arreglado: el índice v2 lee `app.name` (y el texto, en archivos más viejos) | Arreglado |
+
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
 | ID | Duda | Propuesta | Estado |

@@ -3,6 +3,7 @@
 //! `library.*` commands: list, get, delete with Undo, rename and show in the folder.
 
 pub mod index;
+pub mod query;
 pub mod recycle;
 pub mod scan;
 pub mod service;
@@ -173,6 +174,166 @@ fn ids_of(p: &Value) -> Vec<String> {
         .as_array()
         .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
         .unwrap_or_default()
+}
+
+/// `library.list` (LIB-004 to LIB-007, LIB-034): the items that pass the filters and
+/// the search, in order, with the counts of the filter pane.
+fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", param), ("reason", reason)],
+            ),
+        )
+    };
+    let lib = library(core);
+    let all = lib.list();
+    let sort: query::Sort = match p.get("sort") {
+        None | Some(Value::Null) => query::Sort::Modified,
+        Some(v) => serde_json::from_value(v.clone())
+            .map_err(|_| bad("sort", "modified, captured, name, size, type or app"))?,
+    };
+    // Newest and largest first unless asked; names and the rest, A to Z.
+    let descending = match p.get("order").and_then(Value::as_str) {
+        Some("asc") => false,
+        Some("desc") => true,
+        Some(_) => return Err(bad("order", "asc or desc")),
+        None => matches!(
+            sort,
+            query::Sort::Modified | query::Sort::Captured | query::Sort::Size
+        ),
+    };
+    let filters: query::Filters = match p.get("filters") {
+        None | Some(Value::Null) => query::Filters::default(),
+        Some(v) => serde_json::from_value(v.clone()).map_err(|e| bad("filters", &e.to_string()))?,
+    };
+    let search = p.get("query").and_then(Value::as_str).unwrap_or("");
+    let found = query::run(&all, &filters, search, sort, descending, query::today());
+    let offset = p["offset"].as_u64().unwrap_or(0) as usize;
+    let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
+    let items: Vec<Value> = found
+        .items
+        .iter()
+        .skip(offset)
+        .take(limit)
+        .map(|i| i.to_json(lib.root()))
+        .collect();
+    Ok(json!({
+        "root": lib.root(),
+        "synced": synced(lib.root()),
+        "total": all.len(),
+        "count": found.items.len(),
+        "items": items,
+        "facets": found.facets,
+    }))
+}
+
+fn mark_error(lang: Lang, e: service::MarkError) -> CommandError {
+    use service::MarkError;
+    match e {
+        MarkError::NotFound(id) => not_found(lang, &id),
+        MarkError::InvalidTag(t) => CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.invalid_tag", &[("tag", &t)]),
+        ),
+        MarkError::TooMany(name) => CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                lang,
+                "errors.too_many_tags",
+                &[("name", &name), ("max", &service::MAX_TAGS.to_string())],
+            ),
+        ),
+        MarkError::Exists(tag) => CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.tag_exists", &[("tag", &tag)]),
+        )
+        .with_details(json!({ "reason": "exists", "tag": tag })),
+    }
+}
+
+fn strings(p: &Value, key: &str) -> Vec<String> {
+    match p.get(key) {
+        Some(Value::String(s)) => vec![s.clone()],
+        Some(Value::Array(a)) => a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// `library.tag` (LIB-009): adds and removes tags on items; their files and dates
+/// stay as they are.
+fn tag(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lib = library(core);
+    let items = lib
+        .tag(&ids_of(p), &strings(p, "add"), &strings(p, "remove"))
+        .map_err(|e| mark_error(ctx.lang, e))?;
+    changed(core);
+    Ok(json!({ "items": items.iter().map(|i| i.to_json(lib.root())).collect::<Vec<_>>() }))
+}
+
+/// `library.tags` (LIB-010): the tags with their counts, and renaming, merging and
+/// deleting a tag on all its items.
+fn tags(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let lib = library(core);
+    let tag = || {
+        p.get("tag").and_then(Value::as_str).ok_or_else(|| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    lang,
+                    "errors.invalid_param",
+                    &[("param", "tag"), ("reason", "give a tag")],
+                ),
+            )
+        })
+    };
+    let changed_items = match p.get("action").and_then(Value::as_str).unwrap_or("list") {
+        "list" => None,
+        "rename" => {
+            let to = p.get("to").and_then(Value::as_str).unwrap_or_default();
+            let merge = p.get("merge").and_then(Value::as_bool).unwrap_or(false);
+            Some(
+                lib.rename_tag(tag()?, to, merge)
+                    .map_err(|e| mark_error(lang, e))?,
+            )
+        }
+        "merge" => {
+            let into = p.get("into").and_then(Value::as_str).unwrap_or_default();
+            Some(
+                lib.rename_tag(tag()?, into, true)
+                    .map_err(|e| mark_error(lang, e))?,
+            )
+        }
+        "delete" => Some(lib.delete_tag(tag()?)),
+        other => {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    lang,
+                    "errors.invalid_param",
+                    &[("param", "action"), ("reason", other)],
+                ),
+            ))
+        }
+    };
+    if changed_items.is_some() {
+        changed(core);
+    }
+    let mut list = lib.tags();
+    if p.get("sort").and_then(Value::as_str) == Some("count") {
+        list.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| query::natural(&a.0, &b.0)));
+    } else {
+        list.sort_by(|a, b| query::natural(&a.0, &b.0));
+    }
+    Ok(json!({
+        "tags": list.iter().map(|(t, n)| json!({ "tag": t, "count": n })).collect::<Vec<_>>(),
+        "changed": changed_items,
+    }))
 }
 
 fn same_path(a: &Path, b: &Path) -> bool {
@@ -404,23 +565,38 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
                 });
             }};
         }
-        on!("library.list", |core, ctx, p| {
+        on!("library.list", |core, ctx, p| list(&core, ctx, &p));
+        on!("library.tag", |core, ctx, p| tag(&core, ctx, &p));
+        on!("library.rebuild", |core, ctx, _p| {
             let lib = library(&core);
-            let all = lib.list();
-            let offset = p["offset"].as_u64().unwrap_or(0) as usize;
-            let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
-            let items: Vec<Value> = all
-                .iter()
-                .skip(offset)
-                .take(limit)
-                .map(|i| i.to_json(lib.root()))
-                .collect();
+            let items = lib.rebuild();
+            changed(&core);
+            Ok(json!({ "items": items }))
+        });
+        on!("library.check", |core, ctx, p| {
+            let lib = library(&core);
+            let cleaned = match p.get("action").and_then(Value::as_str) {
+                Some("clean") => Some(lib.clean_orphans()),
+                _ => None,
+            };
+            let report = lib.check();
             Ok(json!({
-                "root": lib.root(),
-                "synced": synced(lib.root()),
-                "total": all.len(),
-                "items": items,
+                "damaged": report.damaged,
+                "orphans": report.orphans.len(),
+                "writable": report.writable,
+                "cleaned": cleaned,
             }))
+        });
+        on!("library.tags", |core, ctx, p| tags(&core, ctx, &p));
+        on!("library.favorite", |core, ctx, p| {
+            let lib = library(&core);
+            let ids = ids_of(&p);
+            let value = p.get("value").and_then(Value::as_bool);
+            let set = lib
+                .set_favorite(&ids, value)
+                .map_err(|e| mark_error(ctx.lang, e))?;
+            changed(&core);
+            Ok(json!({ "favorite": set, "count": ids.len() }))
         });
         on!("library.get", |core, ctx, p| {
             let lib = library(&core);

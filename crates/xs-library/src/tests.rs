@@ -43,7 +43,8 @@ fn write_xshot(path: &Path, app: &str, captured: &str) {
         manifest: Manifest::current(),
         document: Document::new(400, 300, 96.0),
         base_png: png(400, 300),
-        meta: json!({ "capturedAt": captured, "app": app, "url": "https://example.com/a" }),
+        // The app as CAP-056 writes it.
+        meta: json!({ "capturedAt": captured, "app": {"name": app, "version": "1.0"}, "url": "https://example.com/a" }),
         thumb_png: png(40, 30),
         images: BTreeMap::new(),
     };
@@ -318,4 +319,220 @@ fn files_outside_the_library_can_be_deleted_by_path_and_brought_back() {
     )
     .unwrap_err();
     assert_eq!(gone.code, ErrorCode::NotFound);
+}
+
+fn write_xshot_with_text(path: &Path, text: &str) {
+    let mut document = Document::new(400, 300, 96.0);
+    document.objects.push(xs_core::document::Object {
+        id: "o1".into(),
+        kind: "callout".into(),
+        props: serde_json::from_value(json!({"text": text, "rect": {"x": 1, "y": 1, "w": 50, "h": 20}}))
+            .unwrap(),
+    });
+    let x = Xshot {
+        manifest: Manifest::current(),
+        document,
+        base_png: png(400, 300),
+        meta: json!({ "app": "Notepad" }),
+        thumb_png: png(40, 30),
+        images: BTreeMap::new(),
+    };
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    x.write(path).unwrap();
+}
+
+fn names(v: &Value) -> Vec<String> {
+    v["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["name"].as_str().unwrap().to_string())
+        .collect()
+}
+
+/// LIB-004, LIB-007: sorting by size both ways and names naturally; the search finds
+/// names, tags and the text of a callout; prefixes cross fields.
+#[test]
+fn sorting_and_searching_the_library() {
+    let e = env();
+    write_png(&e.path("Captura 10.png"), 300, 300);
+    write_png(&e.path("Captura 2.png"), 10, 10);
+    write_xshot(
+        &e.path("Factura cliente.xshot"),
+        "Google Chrome 131",
+        "2026-11-01T00:00:00+00:00",
+    );
+    write_xshot_with_text(&e.path("Notas.xshot"), "Pulsa el botón Guardar");
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En)).unwrap();
+    let by_name = cli("library.list", json!({"sort": "name"}));
+    assert_eq!(
+        names(&by_name),
+        ["Captura 2", "Captura 10", "Factura cliente", "Notas"]
+    );
+    let small_first = cli("library.list", json!({"sort": "size", "order": "asc"}));
+    assert_eq!(names(&small_first)[0], "Captura 2");
+    let large_first = cli("library.list", json!({"sort": "size"}));
+    assert_eq!(names(&large_first).last().unwrap(), "Captura 2");
+    let all = cli("library.list", json!({}));
+    let id_of = |name: &str| {
+        all["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    };
+    cli(
+        "library.tag",
+        json!({"ids": [id_of("Captura 10")], "add": ["facturas", "Cliente"]}),
+    );
+    cli(
+        "library.tag",
+        json!({"ids": [id_of("Factura cliente")], "add": "cliente"}),
+    );
+    let q = |s: &str| names(&cli("library.list", json!({"query": s, "sort": "name"})));
+    assert_eq!(q("factura"), ["Captura 10", "Factura cliente"]);
+    assert_eq!(q("boton guardar"), ["Notas"]);
+    assert_eq!(q("app:chrome tag:cliente"), ["Factura cliente"]);
+    let none = cli("library.list", json!({"query": "zzz"}));
+    assert_eq!(
+        (none["count"].as_u64(), none["total"].as_u64()),
+        (Some(0), Some(4))
+    );
+}
+
+/// LIB-009, LIB-010, LIB-011: tags on several items, counted by the filter; case does
+/// not duplicate; tagging and favorites keep the dates; rename, merge and delete;
+/// marks survive a rebuilt index.
+#[test]
+fn tags_and_favorites() {
+    let e = env();
+    for i in 0..5 {
+        write_png(&e.path(&format!("c{i}.png")), 8, 8);
+    }
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+    let list = cli("library.list", json!({"sort": "name"})).unwrap();
+    let ids: Vec<String> = list["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["id"].as_str().unwrap().to_string())
+        .collect();
+    let modified = list["items"][0]["modified"].clone();
+    cli("library.tag", json!({"ids": ids, "add": ["Cliente A"]})).unwrap();
+    let tagged = cli("library.list", json!({"filters": {"tags": ["Cliente A"]}})).unwrap();
+    assert_eq!(tagged["count"], 5);
+    cli("library.tag", json!({"ids": &ids[..2], "remove": ["cliente a"]})).unwrap();
+    let tags = cli("library.tags", json!({})).unwrap();
+    assert_eq!(tags["tags"][0], json!({"tag": "Cliente A", "count": 3}));
+    // Another case is the same tag.
+    let r = cli("library.tag", json!({"ids": [&ids[4]], "add": ["cliente a"]})).unwrap();
+    assert_eq!(r["items"][0]["tags"], json!(["Cliente A"]));
+    // Too long a tag is refused.
+    assert!(cli("library.tag", json!({"ids": [&ids[0]], "add": ["x".repeat(51)]})).is_err());
+    // Rename; onto an existing tag only with merge, without counting twice.
+    cli(
+        "library.tags",
+        json!({"action": "rename", "tag": "cliente a", "to": "Proyecto X"}),
+    )
+    .unwrap();
+    cli("library.tag", json!({"ids": [&ids[0], &ids[2]], "add": ["Bug"]})).unwrap();
+    cli("library.tag", json!({"ids": [&ids[2]], "add": ["Error"]})).unwrap();
+    let refused = cli(
+        "library.tags",
+        json!({"action": "rename", "tag": "Bug", "to": "error"}),
+    )
+    .unwrap_err();
+    assert_eq!(refused.details.unwrap()["reason"], "exists");
+    cli(
+        "library.tags",
+        json!({"action": "merge", "tag": "Bug", "into": "Error"}),
+    )
+    .unwrap();
+    let tags = cli("library.tags", json!({"sort": "count"})).unwrap();
+    assert_eq!(
+        tags["tags"],
+        json!([{"tag": "Proyecto X", "count": 3}, {"tag": "Error", "count": 2}])
+    );
+    let deleted = cli("library.tags", json!({"action": "delete", "tag": "proyecto x"})).unwrap();
+    assert_eq!(deleted["changed"], 3);
+    // Favorites: three marked; marking all of them again unmarks.
+    let three = &ids[..3];
+    assert_eq!(
+        cli("library.favorite", json!({"ids": three})).unwrap()["favorite"],
+        true
+    );
+    let favs = cli("library.list", json!({"filters": {"favorites": true}})).unwrap();
+    assert_eq!(favs["count"], 3);
+    assert_eq!(favs["facets"]["favorites"], 3);
+    // Dates stay.
+    let again = cli("library.list", json!({"sort": "name"})).unwrap();
+    assert_eq!(again["items"][0]["modified"], modified);
+    // A rebuilt index keeps tags and favorites (LIB-011, LIB-022).
+    drop(core);
+    for suffix in ["", "-journal", "-wal", "-shm"] {
+        let _ = std::fs::remove_file(e.path(&format!("library.db{suffix}")));
+    }
+    let lib = e.open();
+    lib.scan();
+    assert_eq!(lib.list().iter().filter(|i| i.favorite).count(), 3);
+    assert_eq!(
+        lib.list()
+            .iter()
+            .filter(|i| i.tags.contains(&"Error".to_string()))
+            .count(),
+        2
+    );
+}
+
+/// LIB-023: rebuilding the index keeps IDs, tags and favorites; Check finds a
+/// truncated file and a sidecar without its file, and cleans the sidecar.
+#[test]
+fn rebuild_and_check() {
+    let e = env();
+    write_xshot(&e.path("a.xshot"), "Chrome", "2026-11-01T00:00:00+00:00");
+    write_png(&e.path("b.png"), 8, 8);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En)).unwrap();
+    let list = cli("library.list", json!({"sort": "name"}));
+    let a = list["items"][0]["id"].as_str().unwrap().to_string();
+    assert_eq!(list["items"][0]["app"], "Chrome", "the app's name from CAP-056");
+    cli("library.tag", json!({"ids": [a], "add": ["Cliente"]}));
+    cli("library.favorite", json!({"ids": [a]}));
+    assert_eq!(cli("library.rebuild", json!({}))["items"], 2);
+    let again = cli("library.list", json!({"sort": "name"}));
+    assert_eq!(again["items"][0]["id"], a);
+    assert_eq!(again["items"][0]["tags"], json!(["Cliente"]));
+    assert_eq!(again["items"][0]["favorite"], true);
+    // A truncated capture and a lonely sidecar.
+    std::fs::write(e.path("broken.xshot"), b"PK\x03\x04 not a zip").unwrap();
+    std::fs::write(e.path("gone.png.xmeta"), br#"{"id":"x"}"#).unwrap();
+    let report = cli("library.check", json!({}));
+    assert_eq!(report["damaged"].as_array().unwrap().len(), 1);
+    assert_eq!(report["orphans"], 1);
+    assert_eq!(report["writable"], true);
+    let cleaned = cli("library.check", json!({"action": "clean"}));
+    assert_eq!(
+        (cleaned["cleaned"].as_u64(), cleaned["orphans"].as_u64()),
+        (Some(1), Some(0))
+    );
+    // The damaged file does not stop the rest.
+    assert_eq!(cli("library.rebuild", json!({}))["items"], 3);
 }

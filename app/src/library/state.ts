@@ -3,6 +3,16 @@
 // (LIB-022); this store mirrors `library.list` and keeps what belongs to the view.
 import { create } from "zustand";
 import { run } from "../lib/commands";
+import {
+  NO_FACETS,
+  NO_FILTERS,
+  SORT_KEYS,
+  defaultOrder,
+  type Facets,
+  type Filters,
+  type Order,
+  type SortKey,
+} from "./query";
 
 export type MainView = "editor" | "library";
 
@@ -27,7 +37,9 @@ interface LibraryList {
   root: string;
   synced: boolean;
   total: number;
+  count: number;
   items: LibraryItem[];
+  facets: Facets;
 }
 
 function load<T>(key: string, fallback: T, valid: (v: unknown) => v is T): T {
@@ -80,11 +92,39 @@ export const useTray = create<{ visible: boolean; fresh: boolean; toggle: () => 
   }),
 );
 
+/** How the Library view shows the items (LIB-004, LIB-005): remembered. */
+export interface LibraryShape {
+  sort: SortKey;
+  order: Order;
+  layout: "grid" | "list";
+  /** The filter pane is open. */
+  pane: boolean;
+}
+
+const SHAPE_KEY = "xs.library.view";
+const isShape = (v: unknown): v is LibraryShape =>
+  typeof v === "object" &&
+  v !== null &&
+  SORT_KEYS.includes((v as LibraryShape).sort) &&
+  ((v as LibraryShape).order === "asc" || (v as LibraryShape).order === "desc") &&
+  ((v as LibraryShape).layout === "grid" || (v as LibraryShape).layout === "list") &&
+  typeof (v as LibraryShape).pane === "boolean";
+
 interface LibraryState {
   loaded: boolean;
   items: LibraryItem[];
   root: string;
   synced: boolean;
+  /** Items in the library, and those that pass the filters and the search. */
+  total: number;
+  count: number;
+  facets: Facets;
+  shape: LibraryShape;
+  filters: Filters;
+  query: string;
+  setShape: (shape: Partial<LibraryShape>) => void;
+  setFilters: (filters: Filters) => void;
+  setQuery: (query: string) => void;
   selection: string[];
   /** Where Shift+click and Shift+arrows extend from. */
   anchor: string | null;
@@ -96,18 +136,62 @@ interface LibraryState {
 
 let loading: Promise<void> | null = null;
 
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
 export const useLibrary = create<LibraryState>((set, get) => ({
   loaded: false,
   items: [],
   root: "",
   synced: false,
+  total: 0,
+  count: 0,
+  facets: NO_FACETS,
+  shape: load(SHAPE_KEY, { sort: "modified", order: "desc", layout: "grid", pane: true }, isShape),
+  filters: NO_FILTERS,
+  query: "",
+  setShape: (change) => {
+    const shape = { ...get().shape, ...change };
+    // A new sort starts in its own direction unless one is given.
+    if (change.sort && change.sort !== get().shape.sort && !change.order)
+      shape.order = defaultOrder(change.sort);
+    set({ shape });
+    keep(SHAPE_KEY, shape);
+    if (change.sort || change.order)
+      void get()
+        .load()
+        .catch(() => undefined);
+  },
+  setFilters: (filters) => {
+    set({ filters });
+    void get()
+      .load()
+      .catch(() => undefined);
+  },
+  setQuery: (query) => {
+    set({ query });
+    // Searches while typing, once the keys pause (LIB-007).
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(
+      () =>
+        void get()
+          .load()
+          .catch(() => undefined),
+      150,
+    );
+  },
   selection: [],
   anchor: null,
   focus: null,
   load: () => {
     // Changes arriving while a list is on its way ask for one more.
     const next = (loading ?? Promise.resolve()).then(async () => {
-      const r = await run<LibraryList>("library.list");
+      const { shape, filters, query } = get();
+      const r = await run<LibraryList>("library.list", {
+        sort: shape.sort,
+        order: shape.order,
+        filters,
+        query,
+      });
       const ids = new Set(r.items.map((i) => i.id));
       const { selection, focus, anchor } = get();
       set({
@@ -115,6 +199,9 @@ export const useLibrary = create<LibraryState>((set, get) => ({
         items: r.items,
         root: r.root,
         synced: r.synced,
+        total: r.total,
+        count: r.count,
+        facets: r.facets,
         // Items that left the library leave the selection.
         selection: selection.filter((id) => ids.has(id)),
         focus: focus && ids.has(focus) ? focus : null,

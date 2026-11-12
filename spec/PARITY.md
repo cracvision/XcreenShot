@@ -290,14 +290,14 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-001 | Vista Biblioteca y cambio con el editor | M1 | Must | En curso |
 | LIB-002 | Cuadrícula, selección y menú contextual | M1 | Must | En curso |
 | LIB-003 | Tamaño de las miniaturas | M2 | Should | — |
-| LIB-004 | Ordenar y vista de lista | M2 | Must | — |
-| LIB-005 | Panel de filtros: tipo y fecha | M2 | Must | — |
-| LIB-006 | Filtros por aplicación y sitio web | M2 | Should | — |
-| LIB-007 | Campo de búsqueda | M2 | Must | — |
+| LIB-004 | Ordenar y vista de lista | M2 | Must | En curso (Windows: seis criterios, orden natural, dirección, vista Lista con cabeceras que ordenan, se recuerda; falta redimensionar y ocultar columnas) |
+| LIB-005 | Panel de filtros: tipo y fecha | M2 | Must | En curso (Windows: panel plegable con Favoritos, Tipo, Fecha con accesos rápidos y Año ▸ Mes ▸ Día, Aplicaciones, Sitios web y Etiquetas, conteos sobre las demás secciones, fichas y Quitar filtros; faltan los tipos que aún no existen y probar en red) |
+| LIB-006 | Filtros por aplicación y sitio web | M2 | Should | En curso (Windows: sin el ícono de cada aplicación) |
+| LIB-007 | Campo de búsqueda | M2 | Must | En curso (Windows: falta el texto de las guías de pasos, que llegan en M5) |
 | LIB-008 | Buscar el texto de las imágenes | M5 | Should | — |
-| LIB-009 | Etiquetas: añadir y quitar | M2 | Must | — |
-| LIB-010 | Gestionar etiquetas | M2 | Should | — |
-| LIB-011 | Favoritos | M2 | Should | — |
+| LIB-009 | Etiquetas: añadir y quitar | M2 | Must | En curso (Windows: botón Etiquetas y menú contextual; faltan Imagen > Editar etiquetas en el editor y Detalles, LIB-012) |
+| LIB-010 | Gestionar etiquetas | M2 | Should | En curso (Windows: renombrar, fusionar, eliminar y seleccionar; falta unificar mayúsculas al indexar, LIB-031) |
+| LIB-011 | Favoritos | M2 | Should | En curso (Windows: estrella y menú contextual; faltan Detalles y la bandeja, TRY-016) |
 | LIB-012 | Detalles del elemento | M2 | Should | — |
 | LIB-013 | Vista rápida | M2 | Should | — |
 | LIB-014 | Mostrar en la biblioteca | M2 | Should | — |
@@ -309,7 +309,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-020 | Autoguardado de capturas | M1 | Must | En curso |
 | LIB-021 | Guardar como y copia editable | M1 | Must | En curso |
 | LIB-022 | Índice propio de la biblioteca | M1 | Must | En curso |
-| LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | — |
+| LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | En curso (Windows: Reconstruir el índice y Comprobar desde el menú ⋯ de la Biblioteca, `library.rebuild` y `library.check` con limpieza de `.xmeta` huérfanos; faltan el progreso en segundo plano mientras se usa la biblioteca, mover los dañados aparte, el aviso de poco espacio y la entrada en Preferencias) |
 | LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | — |
 | LIB-025 | Bibliotecas grandes | M2 | Must | — |
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
@@ -320,7 +320,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | — |
-| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | — |
+| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list` con orden, filtros y búsqueda, `library.tag`, `library.tags`, `library.favorite`) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |
 | TRY-003 | Capacidad | M2 | Should | — |

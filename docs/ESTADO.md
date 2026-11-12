@@ -48,6 +48,13 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Sesión del 2026-11-12 (madrugada, continuación): M2.7 empezada (Biblioteca).**
+  - Ordenar (seis criterios, orden natural, dirección) y vista **Lista** con cabeceras que ordenan (LIB-004); panel de **filtros** con Favoritos, Tipo, Fecha (Hoy, Ayer, Últimos 7 días, Este mes y Año ▸ Mes ▸ Día), Aplicaciones, Sitios web y Etiquetas, con conteos, fichas y Quitar filtros (LIB-005, LIB-006); **búsqueda** con `Ctrl+F`, sin acentos, por prefijo, frases y `tag:` `app:` `site:` `type:`, que también encuentra el texto de las anotaciones (LIB-007).
+  - **Etiquetas** (editor con fichas, comunes y parciales "en 3 de 5") y su gestión desde el panel: renombrar, fusionar, eliminar, seleccionar (LIB-009, LIB-010). **Favoritos** con la estrella de cada miniatura (LIB-011). Nada de esto cambia la fecha de modificación; se guarda también en el `.xmeta` de cada elemento.
+  - **Reconstruir el índice** y **Comprobar la biblioteca** en el menú ⋯ (LIB-023).
+  - Comandos: `library.list` (orden, filtros, búsqueda y conteos), `library.tag`, `library.tags`, `library.favorite`, `library.rebuild`, `library.check`.
+  - **Arreglado un fallo de M1:** la Biblioteca nunca mostraba la aplicación de las capturas (los metadatos la guardan como `{name, version, id}` y el índice esperaba texto). El índice pasa a la versión 2 y se reconstruye solo la primera vez, sin perder nada.
+  - **Incidente (avisar a Carlos):** dos veces, una llamada mía al CLI de desarrollo arrancó la app de desarrollo con el perfil real de Carlos, porque el CLI abre la app si no la encuentra. Una de esas instancias (de 2:20 a 2:21) reconstruyó el índice de su biblioteca a la versión 2. No se pierde nada: su app instalada lo reconstruirá a su versión al abrirse. Las detuve por PID. Ahora espero a la app con `--no-launch`.
 - **Sesión del 2026-11-12 (madrugada, continuación): plantillas de M2.6 (EDT-095 a EDT-101).**
   - Modelo en [ADR 0007](adr/0007-plantillas.md) (propuesta): una plantilla es un `.xshot` normal con un campo `template` y objetos de siempre con un nombre de lugar; las zonas de imagen son un objeto nuevo (`zone`). Cada cambio rehace el diseño en el núcleo y conserva textos, imágenes, encuadres y lo que el usuario dibujó (se mueve con su sección). Las zonas vacías, sus leyendas y sus números no salen en la imagen final.
   - 11 plantillas incorporadas en 4 familias, con los colores y la fuente del tema activo. Selector (`Ctrl+Shift+T`, Archivo > Nuevo desde plantilla, Aplicar plantilla, Biblioteca > Combinar en plantilla) con miniaturas, búsqueda, "Para N imágenes" y aviso con más de 20.

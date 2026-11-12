@@ -62,6 +62,36 @@ pub fn index_path(root: &Path, local_dir: &Path) -> PathBuf {
     }
 }
 
+/// The report of Check the library (LIB-023).
+#[derive(Debug, Clone, Default)]
+pub struct Check {
+    pub damaged: Vec<PathBuf>,
+    pub orphans: Vec<PathBuf>,
+    pub writable: bool,
+}
+
+/// Most tags an item has (LIB-009).
+pub const MAX_TAGS: usize = 100;
+
+/// A tag as kept (LIB-009): trimmed, 1 to 50 characters.
+pub fn clean_tag(tag: &str) -> Option<String> {
+    let t = tag.trim();
+    (!t.is_empty() && t.chars().count() <= 50).then(|| t.to_string())
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum MarkError {
+    #[error("not found: {0}")]
+    NotFound(String),
+    #[error("invalid tag")]
+    InvalidTag(String),
+    #[error("too many tags")]
+    TooMany(String),
+    /// Renaming onto a tag that exists: merge them?
+    #[error("exists")]
+    Exists(String),
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum RenameError {
     #[error("not found")]
@@ -135,6 +165,220 @@ impl Library {
 
     pub fn get(&self, id: &str) -> Option<Item> {
         self.index.lock().unwrap().get(id).ok().flatten()
+    }
+
+    /// Writes an item's tags and favorite to the index and its sidecar (LIB-022): its
+    /// file and dates do not change (LIB-004, LIB-009, LIB-011).
+    fn save_marks(&self, index: &Index, item: &Item) {
+        let _ = index.set_marks(&item.id, &item.tags, item.favorite);
+        let abs = self.abs(&item.path);
+        let mut meta = xmeta::read(&abs).unwrap_or_else(|| Xmeta {
+            id: item.id.clone(),
+            ..Xmeta::default()
+        });
+        meta.tags = item.tags.clone();
+        meta.favorite = item.favorite;
+        if let Err(e) = xmeta::write(&abs, &meta) {
+            tracing::warn!(error = %e, "could not write a library sidecar");
+        }
+    }
+
+    /// Builds the index again from the files and their sidecars (LIB-023): IDs, tags
+    /// and favorites come back from the `.xmeta`. Returns the number of items.
+    pub fn rebuild(&self) -> usize {
+        {
+            let index = self.index.lock().unwrap();
+            let _ = index.clear();
+        }
+        self.scan();
+        self.list().len()
+    }
+
+    /// What Check the library finds (LIB-023): files that cannot be read, sidecars
+    /// without their file, and whether the folder can be written.
+    pub fn check(&self) -> Check {
+        let mut damaged = Vec::new();
+        for f in scan::walk(&self.root) {
+            let ok = match scan::format_of(&f.abs) {
+                Some("xshot") => Xshot::read_summary(&f.abs).is_ok(),
+                _ => image::ImageReader::open(&f.abs)
+                    .ok()
+                    .and_then(|r| r.with_guessed_format().ok())
+                    .and_then(|r| r.into_dimensions().ok())
+                    .is_some(),
+            };
+            if !ok {
+                damaged.push(f.abs);
+            }
+        }
+        let mut orphans = Vec::new();
+        let mut dirs = vec![self.root.clone()];
+        while let Some(dir) = dirs.pop() {
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for e in entries.flatten() {
+                let path = e.path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if path.extension().is_some_and(|x| x == "xmeta") {
+                    let file = path.with_extension("");
+                    if !file.exists() {
+                        orphans.push(path);
+                    }
+                }
+            }
+        }
+        let probe = self.root.join(format!(".xs-write-test-{}", std::process::id()));
+        let writable = std::fs::write(&probe, b"x").is_ok();
+        let _ = std::fs::remove_file(&probe);
+        Check {
+            damaged,
+            orphans,
+            writable,
+        }
+    }
+
+    /// Removes sidecars whose file is gone (LIB-023: Clean up).
+    pub fn clean_orphans(&self) -> usize {
+        let orphans = self.check().orphans;
+        orphans.iter().filter(|p| std::fs::remove_file(p).is_ok()).count()
+    }
+
+    /// Every tag with its number of items, in the spelling of its first appearance
+    /// (LIB-010).
+    pub fn tags(&self) -> Vec<(String, usize)> {
+        let all = self.list();
+        let mut out: Vec<(String, usize)> = Vec::new();
+        for t in all.iter().flat_map(|i| &i.tags) {
+            match out.iter_mut().find(|(k, _)| k.to_lowercase() == t.to_lowercase()) {
+                Some((_, n)) => *n += 1,
+                None => out.push((t.clone(), 1)),
+            }
+        }
+        out
+    }
+
+    /// Adds and removes tags on items (LIB-009). A tag keeps the spelling it already
+    /// has in the library; case does not make a new one.
+    pub fn tag(&self, ids: &[String], add: &[String], remove: &[String]) -> Result<Vec<Item>, MarkError> {
+        let known = self.tags();
+        let add: Vec<String> = add
+            .iter()
+            .map(|t| {
+                let t = clean_tag(t).ok_or_else(|| MarkError::InvalidTag(t.clone()))?;
+                Ok(known
+                    .iter()
+                    .find(|(k, _)| k.to_lowercase() == t.to_lowercase())
+                    .map_or(t, |(k, _)| k.clone()))
+            })
+            .collect::<Result<_, MarkError>>()?;
+        let remove: Vec<String> = remove.iter().map(|t| t.trim().to_lowercase()).collect();
+        let index = self.index.lock().unwrap();
+        let mut items = Vec::new();
+        for id in ids {
+            let mut item = index
+                .get(id)
+                .ok()
+                .flatten()
+                .ok_or_else(|| MarkError::NotFound(id.clone()))?;
+            item.tags.retain(|t| !remove.contains(&t.to_lowercase()));
+            for t in &add {
+                if !item.tags.iter().any(|x| x.to_lowercase() == t.to_lowercase()) {
+                    item.tags.push(t.clone());
+                }
+            }
+            if item.tags.len() > MAX_TAGS {
+                return Err(MarkError::TooMany(item.name.clone()));
+            }
+            items.push(item);
+        }
+        for item in &items {
+            self.save_marks(&index, item);
+        }
+        Ok(items)
+    }
+
+    /// Renames a tag on all its items (LIB-010). Onto another tag that exists, only
+    /// with `merge`; a change of case only is allowed. Returns the items changed.
+    pub fn rename_tag(&self, from: &str, to: &str, merge: bool) -> Result<usize, MarkError> {
+        let to = clean_tag(to).ok_or_else(|| MarkError::InvalidTag(to.to_string()))?;
+        let (from_l, to_l) = (from.trim().to_lowercase(), to.to_lowercase());
+        if from_l != to_l {
+            if let Some((other, _)) = self.tags().into_iter().find(|(k, _)| k.to_lowercase() == to_l) {
+                if !merge {
+                    return Err(MarkError::Exists(other));
+                }
+            }
+        }
+        // The other tag's spelling stays when merging.
+        let spelling = self
+            .tags()
+            .into_iter()
+            .find(|(k, _)| k.to_lowercase() == to_l && from_l != to_l)
+            .map_or(to, |(k, _)| k);
+        let index = self.index.lock().unwrap();
+        let mut changed = 0;
+        for mut item in index.all().unwrap_or_default() {
+            if !item.tags.iter().any(|t| t.to_lowercase() == from_l) {
+                continue;
+            }
+            let mut tags: Vec<String> = Vec::new();
+            for t in &item.tags {
+                let t = if t.to_lowercase() == from_l || t.to_lowercase() == to_l {
+                    spelling.clone()
+                } else {
+                    t.clone()
+                };
+                if !tags.iter().any(|x| x.to_lowercase() == t.to_lowercase()) {
+                    tags.push(t);
+                }
+            }
+            item.tags = tags;
+            self.save_marks(&index, &item);
+            changed += 1;
+        }
+        Ok(changed)
+    }
+
+    /// Removes a tag from all its items (LIB-010). Returns how many had it.
+    pub fn delete_tag(&self, tag: &str) -> usize {
+        let low = tag.trim().to_lowercase();
+        let index = self.index.lock().unwrap();
+        let mut changed = 0;
+        for mut item in index.all().unwrap_or_default() {
+            let before = item.tags.len();
+            item.tags.retain(|t| t.to_lowercase() != low);
+            if item.tags.len() != before {
+                self.save_marks(&index, &item);
+                changed += 1;
+            }
+        }
+        changed
+    }
+
+    /// Marks or unmarks items as favorites (LIB-011). Without a value: all of them,
+    /// unless all already are, then none. Returns the value set.
+    pub fn set_favorite(&self, ids: &[String], value: Option<bool>) -> Result<bool, MarkError> {
+        let index = self.index.lock().unwrap();
+        let mut items = Vec::new();
+        for id in ids {
+            items.push(
+                index
+                    .get(id)
+                    .ok()
+                    .flatten()
+                    .ok_or_else(|| MarkError::NotFound(id.clone()))?,
+            );
+        }
+        let value = value.unwrap_or_else(|| !items.iter().all(|i| i.favorite));
+        for mut item in items {
+            if item.favorite != value {
+                item.favorite = value;
+                self.save_marks(&index, &item);
+            }
+        }
+        Ok(value)
     }
 
     /// The item of a file, if it is in the library.
@@ -397,6 +641,7 @@ fn build(f: &Found, id: String, favorite: bool, tags: Vec<String>) -> Item {
         url: info.url,
         favorite,
         tags,
+        text: info.text,
     }
 }
 

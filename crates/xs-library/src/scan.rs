@@ -29,6 +29,8 @@ pub struct Info {
     pub height: Option<u32>,
     pub app: Option<String>,
     pub url: Option<String>,
+    /// Its annotations' text, one per line (LIB-007).
+    pub text: String,
 }
 
 /// The format of an item file, or `None` for anything else (`.xmeta`, the index,
@@ -134,8 +136,17 @@ pub fn info(found: &Found) -> Info {
                     .filter(|s| !s.is_empty())
                     .map(str::to_string)
             };
-            info.app = text("app");
+            // CAP-056 keeps the app as {name, version, id}; older files, as its name.
+            info.app = summary.meta["app"]["name"]
+                .as_str()
+                .or_else(|| summary.meta["app"].as_str())
+                .filter(|s| !s.trim().is_empty())
+                .map(str::to_string);
             info.url = text("url");
+            info.text = summary.texts.join(
+                "
+",
+            );
             if let Some(t) = text("capturedAt").and_then(|t| chrono::DateTime::parse_from_rfc3339(&t).ok()) {
                 info.captured = t.timestamp_millis();
             }

@@ -1361,9 +1361,20 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(json!({"key": {"type": "string", "minLength": 1}}), &["key"]))
             .result(ai_key_status()),
         // The library (LIB-); the rest of the area arrives with M2 (LIB-034).
-        B::new("library.list", &["LIB-001", "LIB-002", "LIB-022", "LIB-034"])
+        B::new("library.list", &["LIB-001", "LIB-002", "LIB-004", "LIB-005", "LIB-006", "LIB-007", "LIB-022", "LIB-034"])
             .params(params(
                 json!({
+                    "sort": {"type": "string", "enum": ["modified", "captured", "name", "size", "type", "app"], "default": "modified"},
+                    "order": {"type": "string", "enum": ["asc", "desc"], "description": "Default: newest and largest first, names A to Z"},
+                    "query": {"type": "string", "description": "Search (LIB-007): words by prefix in any field, a quoted phrase, tag:, app:, site:, type: (image, video, gif, guide); no case or accents"},
+                    "filters": {"type": "object", "description": "{types, dates (2026, 2026-11, 2026-11-12, today, yesterday, last7, month), apps, sites, tags, favorites}: values of a section add up, sections cross", "properties": {
+                        "types": {"type": "array", "items": {"type": "string"}},
+                        "dates": {"type": "array", "items": {"type": "string"}},
+                        "apps": {"type": "array", "items": {"type": "string"}},
+                        "sites": {"type": "array", "items": {"type": "string"}},
+                        "tags": {"type": "array", "items": {"type": "string"}},
+                        "favorites": {"type": "boolean"}
+                    }},
                     "offset": {"type": "integer", "minimum": 0, "default": 0},
                     "limit": {"type": "integer", "minimum": 1, "description": "Default: all"}
                 }),
@@ -1374,10 +1385,68 @@ pub fn specs() -> Vec<CommandSpec> {
                 "properties": {
                     "root": {"type": "string"},
                     "synced": {"type": "boolean"},
-                    "total": {"type": "integer"},
-                    "items": {"type": "array", "items": library_item()}
+                    "total": {"type": "integer", "description": "Items in the library"},
+                    "count": {"type": "integer", "description": "Items that pass the filters and the search"},
+                    "items": {"type": "array", "items": library_item()},
+                    "facets": {"type": "object", "description": "Counts of each filter value over the other sections: types, dates (years, months, days), quickDates, apps, sites, tags, favorites"}
                 }
             })),
+        B::new("library.tag", &["LIB-009", "LIB-034"])
+            .mutates()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "add": {"type": ["array", "string"], "items": {"type": "string"}, "description": "Tags to add: 1 to 50 characters; case does not make a new tag"},
+                    "remove": {"type": ["array", "string"], "items": {"type": "string"}}
+                }),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"items": {"type": "array", "items": library_item()}}})),
+        B::new("library.tags", &["LIB-010", "LIB-034"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["list", "rename", "merge", "delete"], "default": "list"},
+                    "tag": {"type": "string"},
+                    "to": {"type": "string", "description": "rename: the new name"},
+                    "merge": {"type": "boolean", "default": false, "description": "rename onto a tag that exists: merge them"},
+                    "into": {"type": "string", "description": "merge: the tag that stays"},
+                    "sort": {"type": "string", "enum": ["name", "count"], "default": "name"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "tags": {"type": "array", "description": "{tag, count}"},
+                "changed": {"type": ["integer", "null"], "description": "Items changed"}
+            }})),
+        B::new("library.rebuild", &["LIB-023", "LIB-034"])
+            .mutates()
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"items": {"type": "integer"}}})),
+        B::new("library.check", &["LIB-023", "LIB-034"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": ["report", "clean"], "default": "report", "description": "clean: delete sidecars whose file is gone"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "damaged": {"type": "array", "items": {"type": "string"}, "description": "Files that cannot be read"},
+                "orphans": {"type": "integer", "description": "Sidecars (.xmeta) without their file"},
+                "writable": {"type": "boolean"},
+                "cleaned": {"type": ["integer", "null"]}
+            }})),
+        B::new("library.favorite", &["LIB-011", "LIB-034"])
+            .mutates()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "value": {"type": "boolean", "description": "Without it: all become favorites, unless all already are"}
+                }),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"favorite": {"type": "boolean"}, "count": {"type": "integer"}}})),
         B::new("library.get", &["LIB-034"])
             .params(params(json!({"id": {"type": "string"}}), &["id"]))
             .positional(&["id"])

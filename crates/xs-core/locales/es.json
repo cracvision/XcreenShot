@@ -566,6 +566,26 @@
     "document_apply_theme": {
       "title": "Aplicar tema",
       "description": "Da a los objetos seleccionados, o a todos, los colores y la fuente de un tema, en un solo paso de Deshacer."
+    },
+    "library_tag": {
+      "title": "Etiquetar elementos",
+      "description": "Añade y quita etiquetas en elementos de la biblioteca; sus archivos y fechas no cambian."
+    },
+    "library_tags": {
+      "title": "Etiquetas de la biblioteca",
+      "description": "Lista las etiquetas con su número de elementos, y renombra, fusiona o elimina una etiqueta en todos sus elementos."
+    },
+    "library_favorite": {
+      "title": "Favoritos",
+      "description": "Marca o desmarca elementos de la biblioteca como favoritos."
+    },
+    "library_rebuild": {
+      "title": "Reconstruir el índice",
+      "description": "Vuelve a crear el índice de la biblioteca a partir de los archivos; IDs, etiquetas y favoritos vuelven del archivo de metadatos de cada elemento."
+    },
+    "library_check": {
+      "title": "Comprobar la biblioteca",
+      "description": "Lista los archivos que no se pueden leer y los archivos de metadatos sin su elemento, y si se puede escribir en la carpeta; puede limpiar esos archivos de metadatos."
     }
   },
   "settings": {
@@ -895,7 +915,10 @@
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
-    "template_exists": "Ya hay una plantilla llamada {{name}}."
+    "template_exists": "Ya hay una plantilla llamada {{name}}.",
+    "invalid_tag": "\"{{tag}}\" no es una etiqueta válida: usa de 1 a 50 caracteres.",
+    "too_many_tags": "{{name}} tendría más de {{max}} etiquetas.",
+    "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?"
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1177,7 +1200,10 @@
     "apply_template": "Aplicar plantilla…",
     "save_as_template": "Guardar como plantilla…",
     "import_template": "Plantilla…",
-    "combine_template": "Combinar en plantilla…"
+    "combine_template": "Combinar en plantilla…",
+    "tags_item": "Etiquetas…",
+    "favorite_item": "Marcar como favorito",
+    "unfavorite_item": "Quitar de favoritos"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2608,7 +2634,106 @@
       "item_menu": "Elemento de la biblioteca",
       "size": "{{width}} × {{height}} px",
       "location": "Ubicación",
-      "location_help": "Cada captura se guarda aquí como archivo .xshot. Cambiar la ubicación llegará más adelante."
+      "location_help": "Cada captura se guarda aquí como archivo .xshot. Cambiar la ubicación llegará más adelante.",
+      "search": "Buscar en la biblioteca",
+      "layout": "Vista",
+      "layout_grid": "Cuadrícula",
+      "layout_list": "Lista",
+      "results_one": "{{count}} resultado",
+      "results_other": "{{count}} resultados",
+      "no_results": "Nada coincide con los filtros o la búsqueda.",
+      "favorite": "Marcar como favorito",
+      "unfavorite": "Quitar de favoritos",
+      "sort": {
+        "label": "Ordenar por",
+        "modified": "Fecha de modificación",
+        "captured": "Fecha de captura",
+        "name": "Nombre",
+        "size": "Tamaño",
+        "type": "Tipo",
+        "app": "Aplicación",
+        "asc": "Ascendente: clic para invertir",
+        "desc": "Descendente: clic para invertir"
+      },
+      "column": {
+        "name": "Nombre",
+        "captured": "Captura",
+        "modified": "Modificación",
+        "size": "Tamaño",
+        "type": "Tipo",
+        "dimensions": "Dimensiones",
+        "app": "Aplicación",
+        "site": "Sitio web",
+        "tags": "Etiquetas"
+      },
+      "filter": {
+        "title": "Filtros",
+        "toggle": "Mostrar u ocultar los filtros",
+        "favorites": "Favoritos",
+        "types": "Tipo",
+        "dates": "Fecha",
+        "apps": "Aplicaciones",
+        "sites": "Sitios web",
+        "tags": "Etiquetas",
+        "type_image": "Imágenes",
+        "type_video": "Videos",
+        "type_gif": "GIF animados",
+        "type_guide": "Guías de pasos",
+        "today": "Hoy",
+        "yesterday": "Ayer",
+        "last7": "Últimos 7 días",
+        "month": "Este mes",
+        "unknown_app": "Desconocida",
+        "no_site": "Sin sitio web",
+        "none": "Nada todavía",
+        "find": "Buscar",
+        "clear": "Quitar filtros",
+        "remove": "Quitar el filtro {{name}}"
+      },
+      "tags": {
+        "button": "Etiquetas",
+        "title_one": "Etiquetas de {{name}}",
+        "title_many": "Etiquetas de {{count}} elementos",
+        "none": "Sin etiquetas todavía.",
+        "partial": "{{tag}} (en {{count}} de {{total}})",
+        "add_to_all": "Clic para añadirla a todos",
+        "remove": "Quitar {{tag}}",
+        "add": "Añadir una etiqueta",
+        "placeholder": "Escribe y pulsa Enter o una coma",
+        "done": "Listo",
+        "rename": "Renombrar…",
+        "merge": "Fusionar con…",
+        "delete": "Eliminar etiqueta",
+        "select": "Seleccionar sus elementos",
+        "rename_title": "Renombrar la etiqueta {{tag}}",
+        "new_name": "Nombre nuevo",
+        "exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?",
+        "merge_title": "Fusionar {{tag}} con otra etiqueta",
+        "merge_into": "La etiqueta que se queda",
+        "delete_title": "¿Eliminar la etiqueta {{tag}}?",
+        "delete_body_one": "Se quita {{tag}} de {{count}} elemento. El elemento se queda.",
+        "delete_body_other": "Se quita {{tag}} de {{count}} elementos. Los elementos se quedan.",
+        "deleted_one": "Se quitó {{tag}} de {{count}} elemento.",
+        "deleted_other": "Se quitó {{tag}} de {{count}} elementos."
+      },
+      "more": "Más acciones de la biblioteca",
+      "rebuild": "Reconstruir el índice…",
+      "rebuild_title": "¿Reconstruir el índice de la biblioteca?",
+      "rebuild_body": "XcreenShot vuelve a leer cada archivo de la biblioteca. No se pierde nada: los nombres, las etiquetas y los favoritos están junto a cada archivo.",
+      "rebuild_go": "Reconstruir",
+      "rebuilding": "Reconstruyendo el índice de la biblioteca…",
+      "rebuilt_one": "Índice reconstruido: {{count}} elemento.",
+      "rebuilt_other": "Índice reconstruido: {{count}} elementos.",
+      "check": "Comprobar la biblioteca…",
+      "check_title": "Comprobar la biblioteca",
+      "check_ok": "Todo está en orden.",
+      "check_damaged_one": "{{count}} archivo no se puede leer:",
+      "check_damaged_other": "{{count}} archivos no se pueden leer:",
+      "check_orphans_one": "{{count}} archivo de metadatos no tiene su elemento.",
+      "check_orphans_other": "{{count}} archivos de metadatos no tienen su elemento.",
+      "check_clean": "Limpiar",
+      "check_readonly": "XcreenShot no puede escribir en la carpeta de la biblioteca. Revisa sus permisos o elige otra ubicación.",
+      "check_show": "Mostrar"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

@@ -4,6 +4,7 @@ import { shortcutOf } from "../editor/menus";
 import { askDelete, askRename, copyPath, itemRef, openItems, showInFolder } from "./actions";
 import type { LibraryItem } from "./state";
 import { openPicker } from "../editor/templateUi";
+import { editTags, toggleFavorite } from "./marks";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -20,6 +21,18 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       label: t("menu.combine_template"),
       shortcut: shortcutOf("editor.new_from_template"),
       onSelect: () => openPicker(items.map((i) => i.path)),
+    },
+    // LIB-009, LIB-011.
+    {
+      id: "tags",
+      label: t("menu.tags_item"),
+      separator: true,
+      onSelect: () => editTags(items.map((i) => i.id)),
+    },
+    {
+      id: "favorite",
+      label: t(items.every((i) => i.favorite) ? "menu.unfavorite_item" : "menu.favorite_item"),
+      onSelect: () => void toggleFavorite(items.map((i) => i.id)),
     },
     {
       id: "rename",
