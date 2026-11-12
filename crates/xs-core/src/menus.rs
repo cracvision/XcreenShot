@@ -147,6 +147,12 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.show_in_folder", "menu.show_in_folder", "show_in_folder"),
                 action("editor.delete_item", "menu.delete_item", "delete_item"),
                 Separator,
+                // A theme from a .xtheme file (EDT-018).
+                Submenu {
+                    label: "menu.import",
+                    items: vec![action("editor.import_theme", "menu.import_theme", "import_theme")],
+                },
+                Separator,
                 cmd("file_preferences", "menu.preferences", "settings.open"),
                 Separator,
                 action("editor.close", "menu.close", "close"),

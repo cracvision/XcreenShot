@@ -156,6 +156,20 @@ const ICONS = {
     </Svg>
   ),
   // Flat bars standing in for an interface (EDT-041).
+  // Favorites (EDT-016): a star.
+  favorites: (
+    <Svg>
+      <path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7L10 2.8Z" />
+    </Svg>
+  ),
+  // More actions: three dots.
+  more: (
+    <Svg>
+      <circle cx="5" cy="10" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
   // Selection (EDT-043): a dashed box.
   select: (
     <Svg>

@@ -849,7 +849,9 @@
       "editor_tool_wand": "Magic wand tool",
       "editor_invert_selection": "Invert selection",
       "editor_float_selection": "Float selection",
-      "editor_crop_selection": "Crop to selection"
+      "editor_crop_selection": "Crop to selection",
+      "editor_tool_favorites": "Favorites tool",
+      "editor_import_theme": "Import theme"
     }
   },
   "tray": {
@@ -960,7 +962,9 @@
     "step_renumber": "Renumber",
     "invert_selection": "Invert selection",
     "float_selection": "Float selection",
-    "crop_selection": "Crop to selection"
+    "crop_selection": "Crop to selection",
+    "import": "Import",
+    "import_theme": "Theme…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -1316,7 +1320,8 @@
         "fill": "Click to fill an area of similar color, or make it transparent.",
         "eraser": "Drag to erase the image; the canvas color shows. Objects stay.",
         "select": "Drag to select pixels; drag inside to move them. Shift adds, Alt subtracts.",
-        "wand": "Click to select an area of similar color. Shift adds, Alt subtracts."
+        "wand": "Click to select an area of similar color. Shift adds, Alt subtracts.",
+        "favorites": "Your starred styles of every tool: click one to draw with it."
       },
       "tool": {
         "move": "Move",
@@ -1338,7 +1343,8 @@
         "fill": "Fill",
         "eraser": "Eraser",
         "select": "Selection",
-        "wand": "Magic wand"
+        "wand": "Magic wand",
+        "favorites": "Favorites"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1677,6 +1683,59 @@
           "21": "Down",
           "22": "Down and right"
         }
+      },
+      "styles": {
+        "title": "Saved styles",
+        "current": "Current style (not saved)",
+        "add": "Save as a new style",
+        "update": "Update with the current style",
+        "rename": "Rename…",
+        "rename_title": "Rename style",
+        "delete": "Delete",
+        "favorite": "Add to favorites",
+        "unfavorite": "Remove from favorites",
+        "reset": "Reset styles",
+        "reset_title": "Reset the styles of {{tool}}?",
+        "reset_body": "The styles you added to this tool go away and the theme's come back. Other tools keep theirs.",
+        "name": "Name",
+        "none": "This tool has no saved styles.",
+        "no_favorites": "No favorites yet. Star a style of any tool and it shows here."
+      },
+      "themes": {
+        "theme": "Theme",
+        "more": "Theme and styles",
+        "new": "New theme…",
+        "edit": "Edit…",
+        "duplicate": "Duplicate",
+        "rename": "Rename…",
+        "rename_title": "Rename theme",
+        "delete": "Delete",
+        "export": "Export…",
+        "import": "Import…",
+        "file": "XcreenShot theme",
+        "imported": "Theme imported.",
+        "exported": "Theme exported.",
+        "missing_font": "Theme imported. The font {{font}} is not installed: the system font is used meanwhile.",
+        "conflict_title": "A theme with that name exists",
+        "conflict_body": "You already have a theme called \"{{name}}\".",
+        "keep_both": "Keep both",
+        "replace": "Replace",
+        "new_title": "New theme",
+        "edit_title": "Edit theme",
+        "untitled": "Untitled theme",
+        "colors": "Colors",
+        "add_color": "Add color",
+        "remove_color": "Remove color",
+        "up": "Move up",
+        "down": "Move down",
+        "color_twice": "That color is already in the theme.",
+        "font": "Font",
+        "system_font": "System font",
+        "shadow": "Shadow",
+        "preview": "Preview",
+        "save": "Save",
+        "save_title": "Save the theme?",
+        "save_body": "The theme's saved styles will be replaced. Favorites do not change."
       }
     },
     "multi": {

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { AiDialogs } from "./AiDialogs";
 import { FileDialogs } from "../library/FileDialogs";
+import { ThemeConflict } from "./StylesTab";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
 
@@ -250,6 +251,7 @@ export function Dialogs() {
       <Recovery />
       <FlattenBlur />
       <StepValue />
+      <ThemeConflict />
       <ErrorMessage />
       <AiDialogs />
       <FileDialogs />

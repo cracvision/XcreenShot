@@ -77,9 +77,14 @@ pub fn sample(tool: &str, style: &Value) -> Option<RgbaImage> {
         kind: tool.to_string(),
         props,
     });
-    // Tools that work on what is below show the page; the rest float on nothing.
+    // Tools that work on what is below show the page; the rest a light plain one, so
+    // dark and light colors both show in either theme of the app.
     let below = matches!(tool, "highlight" | "blur" | "spotlight" | "magnify");
-    let base = if below { page() } else { RgbaImage::new(W, H) };
+    let base = if below {
+        page()
+    } else {
+        RgbaImage::from_pixel(W, H, image::Rgba([228, 231, 237, 255]))
+    };
     Some(xs_image::render(&doc, &Base::from_image(base)))
 }
 

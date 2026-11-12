@@ -33,6 +33,7 @@ import { extentPoints } from "./objects";
 import { alignMoves, distributeMoves, frameOf, type AlignTo, type Extent } from "./align";
 import { textBox } from "./callouts";
 import { selectionAction, selectPixels } from "./pixelSelection";
+import { importTheme } from "./themesUi";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -88,8 +89,13 @@ export async function openFiles(paths?: string[]): Promise<void> {
         ],
       }));
     if (!chosen) return;
+    const all = Array.isArray(chosen) ? chosen : [chosen];
+    // A theme file is imported (EDT-018); the rest are opened.
+    for (const path of all.filter((p) => /\.xtheme$/i.test(p))) await importTheme(path);
+    const docs = all.filter((p) => !/\.xtheme$/i.test(p));
+    if (docs.length === 0) return;
     // All are opened; the last one is shown (EDT-105), in the Editor view.
-    for (const path of Array.isArray(chosen) ? chosen : [chosen]) {
+    for (const path of docs) {
       await run("document.open", { path, show: true });
     }
     showView("editor");
@@ -635,6 +641,9 @@ export function performAction(action: string): boolean {
     case "distribute_v":
       if (!selected) return false;
       arrangeSelection(action);
+      return true;
+    case "import_theme":
+      void importTheme();
       return true;
     case "invert_selection":
       if (!pixels) return false;

@@ -94,13 +94,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | Win |
 | EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
-| EDT-015 | Estilos guardados | M2 | Must | — |
-| EDT-016 | Favoritos | M2 | Should | — |
-| EDT-017 | Temas | M2 | Should | — |
-| EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | — |
+| EDT-015 | Estilos guardados | M2 | Must | En curso (falta la vista previa junto al puntero) |
+| EDT-016 | Favoritos | M2 | Should | En curso (faltan los efectos favoritos, con EDT-054) |
+| EDT-017 | Temas | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | En curso (faltan el doble clic en el archivo y `policy.themes`) |
 | EDT-019 | Selector de color | M1 | Must | Win |
 | EDT-020 | Degradados | M2 | Should | — |
-| EDT-021 | Sombra de los objetos | M2 | Should | En curso (falta la sombra por defecto de cada herramienta, con los temas EDT-017) |
+| EDT-021 | Sombra de los objetos | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
 | EDT-024 | Flecha | M1 | Must | Win |

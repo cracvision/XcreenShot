@@ -34,7 +34,8 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 19] = [
+pub const AVAILABLE_TOOLS: [&str; 20] = [
+    "favorites",
     "move",
     "arrow",
     "line",
@@ -2198,6 +2199,26 @@ fn theme_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             lib.index_of(&id)
                 .ok_or_else(|| bad("id", "there is no such theme"))?;
             lib.active = id;
+        }
+        "preview" => {
+            // How a theme not saved yet looks: its first arrow, callout, shape and step.
+            use base64::Engine as _;
+            let theme = theme_from(p.get("theme").ok_or_else(|| bad("theme", "give its settings"))?);
+            themes::check(&theme).map_err(|r| bad("theme", &r))?;
+            let mut samples = Map::new();
+            for tool in ["arrow", "callout", "shape", "step"] {
+                let Some(first) = themes::generated(&theme, tool).into_iter().next() else {
+                    continue;
+                };
+                let style = themes::whole(tool, &first).map_err(|r| bad("theme", &r))?;
+                if let Some(png) =
+                    samples::sample(tool, &style).and_then(|i| xs_image::encode::png(&i, 0.0, true).ok())
+                {
+                    let data = base64::engine::general_purpose::STANDARD.encode(png);
+                    samples.insert(tool.to_string(), json!(format!("data:image/png;base64,{data}")));
+                }
+            }
+            return Ok(json!({ "samples": samples }));
         }
         "save" => {
             let theme = theme_from(p.get("theme").ok_or_else(|| bad("theme", "give its settings"))?);

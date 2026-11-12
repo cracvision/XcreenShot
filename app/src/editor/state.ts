@@ -13,6 +13,7 @@ import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
 export type Tool =
+  | "favorites"
   | "move"
   | "arrow"
   | "line"
@@ -619,6 +620,10 @@ interface EditorState {
   flattenAsk: { all: boolean } | null;
   /** A Photo fill's progress (0–1) while it takes long (EDT-045). */
   fillProgress: number | null;
+  /** Bumped when themes, saved styles or favorites change (EDT-015 to EDT-018). */
+  themesVersion: number;
+  /** An imported theme has the name of one of the user's (EDT-018). */
+  themeConflict: { path: string; name: string } | null;
   /** The group a double click entered, outermost first (EDT-082). */
   entered: string[];
   /** Last view of each document in this session. */
@@ -673,6 +678,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   selection: [],
   flattenAsk: null,
   fillProgress: null,
+  themesVersion: 0,
+  themeConflict: null,
   stepEdit: null,
   entered: [],
   views: {},
@@ -717,6 +724,9 @@ export const useEditor = create<EditorState>((set, get) => ({
           }
           break;
         }
+        case "themes":
+          set({ themesVersion: get().themesVersion + 1 });
+          break;
         case "progress": {
           // A long fill's progress; null when it ends (EDT-045).
           if (payload.task === "fill")

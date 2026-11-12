@@ -46,6 +46,7 @@ import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
 import { selectPixels } from "./pixelSelection";
 import { StampBrowser } from "./StampBrowser";
+import { StylesTab } from "./StylesTab";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -1611,11 +1612,10 @@ export function SidePanel() {
       <PanelTabs tab={tab} setTab={setTab} />
       <div className="side-body" role="tabpanel">
         {tab === "styles" ? (
-          tool === "stamp" || target?.kind === "stamp" ? (
-            <StampBrowser />
-          ) : (
-            <p className="muted">{t("ui.editor.styles_soon")}</p>
-          )
+          <>
+            <StylesTab />
+            {(tool === "stamp" || target?.kind === "stamp") && <StampBrowser />}
+          </>
         ) : (
           <section aria-label={title}>
             <h2 className="side-title">{title}</h2>

@@ -534,6 +534,11 @@ pub fn slots() -> Vec<Slot> {
         ),
         editor("editor.select_all", "editor.action", r#"{"action":"select_all"}"#),
         editor("editor.deselect", "editor.action", r#"{"action":"deselect"}"#),
+        editor(
+            "editor.import_theme",
+            "editor.action",
+            r#"{"action":"import_theme"}"#,
+        ),
         // Pixel selection (EDT-044).
         editor(
             "editor.invert_selection",
@@ -596,6 +601,7 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"delete_item"}"#,
         ),
         // Tools (EDT-115): a single key.
+        tool("editor.tool_favorites", r#"{"tool":"favorites"}"#),
         tool("editor.tool_move", r#"{"tool":"move"}"#),
         tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
         tool("editor.tool_line", r#"{"tool":"line"}"#),
@@ -675,6 +681,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
         ("editor.redo_alt", _, Macos) => return None,
         // Compatibility on macOS: Control and a letter per tool (EDT-115).
+        ("editor.tool_favorites", Compatibility, Macos) => "Ctrl+KeyR",
         ("editor.tool_move", Compatibility, Macos) => "Ctrl+KeyV",
         ("editor.tool_arrow", Compatibility, Macos) => "Ctrl+KeyA",
         ("editor.tool_text", Compatibility, Macos) => "Ctrl+KeyT",
@@ -692,6 +699,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_magnify", Compatibility, Macos) => "Ctrl+KeyM",
         ("editor.tool_callout", Compatibility, Macos) => "Ctrl+KeyD",
         ("editor.tool_crop", Compatibility, Macos) => "Ctrl+KeyC",
+        ("editor.tool_favorites", ..) => "KeyF",
         ("editor.tool_move", ..) => "KeyV",
         ("editor.tool_arrow", ..) => "KeyA",
         ("editor.tool_text", ..) => "KeyT",

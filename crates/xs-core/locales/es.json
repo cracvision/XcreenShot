@@ -849,7 +849,9 @@
       "editor_tool_wand": "Herramienta Varita mágica",
       "editor_invert_selection": "Invertir selección",
       "editor_float_selection": "Convertir en imagen flotante",
-      "editor_crop_selection": "Recortar a la selección"
+      "editor_crop_selection": "Recortar a la selección",
+      "editor_tool_favorites": "Herramienta Favoritos",
+      "editor_import_theme": "Importar tema"
     }
   },
   "tray": {
@@ -960,7 +962,9 @@
     "step_renumber": "Renumerar",
     "invert_selection": "Invertir selección",
     "float_selection": "Convertir en imagen flotante",
-    "crop_selection": "Recortar a la selección"
+    "crop_selection": "Recortar a la selección",
+    "import": "Importar",
+    "import_theme": "Tema…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -1316,7 +1320,8 @@
         "fill": "Haz clic para rellenar una zona de color parecido, o dejarla transparente.",
         "eraser": "Arrastra para borrar la imagen; se ve el color del lienzo. Los objetos no cambian.",
         "select": "Arrastra para seleccionar píxeles; arrastra dentro para moverlos. Shift añade, Alt resta.",
-        "wand": "Haz clic para seleccionar una zona de color parecido. Shift añade, Alt resta."
+        "wand": "Haz clic para seleccionar una zona de color parecido. Shift añade, Alt resta.",
+        "favorites": "Tus estilos con estrella de todas las herramientas: haz clic en uno para dibujar con él."
       },
       "tool": {
         "move": "Mover",
@@ -1338,7 +1343,8 @@
         "fill": "Relleno",
         "eraser": "Borrador",
         "select": "Selección",
-        "wand": "Varita mágica"
+        "wand": "Varita mágica",
+        "favorites": "Favoritos"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1677,6 +1683,59 @@
           "21": "Abajo",
           "22": "Abajo a la derecha"
         }
+      },
+      "styles": {
+        "title": "Estilos guardados",
+        "current": "Estilo actual (sin guardar)",
+        "add": "Guardar como estilo nuevo",
+        "update": "Actualizar con el estilo actual",
+        "rename": "Renombrar…",
+        "rename_title": "Renombrar estilo",
+        "delete": "Eliminar",
+        "favorite": "Añadir a favoritos",
+        "unfavorite": "Quitar de favoritos",
+        "reset": "Restablecer estilos",
+        "reset_title": "¿Restablecer los estilos de {{tool}}?",
+        "reset_body": "Se quitan los estilos que añadiste a esta herramienta y vuelven los del tema. Las demás herramientas conservan los suyos.",
+        "name": "Nombre",
+        "none": "Esta herramienta no tiene estilos guardados.",
+        "no_favorites": "Aún no hay favoritos. Marca con la estrella un estilo de cualquier herramienta y aparecerá aquí."
+      },
+      "themes": {
+        "theme": "Tema",
+        "more": "Tema y estilos",
+        "new": "Nuevo tema…",
+        "edit": "Editar…",
+        "duplicate": "Duplicar",
+        "rename": "Renombrar…",
+        "rename_title": "Renombrar tema",
+        "delete": "Eliminar",
+        "export": "Exportar…",
+        "import": "Importar…",
+        "file": "Tema de XcreenShot",
+        "imported": "Tema importado.",
+        "exported": "Tema exportado.",
+        "missing_font": "Tema importado. La fuente {{font}} no está instalada: mientras tanto se usa la del sistema.",
+        "conflict_title": "Ya hay un tema con ese nombre",
+        "conflict_body": "Ya tienes un tema llamado «{{name}}».",
+        "keep_both": "Conservar ambos",
+        "replace": "Reemplazar",
+        "new_title": "Nuevo tema",
+        "edit_title": "Editar tema",
+        "untitled": "Tema sin nombre",
+        "colors": "Colores",
+        "add_color": "Añadir color",
+        "remove_color": "Quitar color",
+        "up": "Subir",
+        "down": "Bajar",
+        "color_twice": "Ese color ya está en el tema.",
+        "font": "Fuente",
+        "system_font": "Fuente del sistema",
+        "shadow": "Sombra",
+        "preview": "Vista previa",
+        "save": "Guardar",
+        "save_title": "¿Guardar el tema?",
+        "save_body": "Se sustituirán los estilos guardados de este tema. Los favoritos no cambian."
       }
     },
     "multi": {

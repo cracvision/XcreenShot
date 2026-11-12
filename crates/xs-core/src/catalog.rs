@@ -982,7 +982,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .positional(&["action"])
             .params(params(
                 json!({
-                    "action": {"type": "string", "enum": ["activate", "save", "duplicate", "rename", "delete", "export", "import"]},
+                    "action": {"type": "string", "enum": ["activate", "save", "preview", "duplicate", "rename", "delete", "export", "import"], "description": "preview: how `theme` would look, without saving it (PNG samples)"},
                     "id": {"type": "string", "description": "The theme; save without it creates one"},
                     "theme": {"type": "object", "description": "save: {name, colors (2 to 8, none twice), font (empty: the system's), shadow, shadowOff (tools)}; its styles are made again", "properties": {
                         "name": {"type": "string"},
@@ -1162,7 +1162,8 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 19] = [
+pub const TOOLS: [&str; 20] = [
+    "favorites",
     "move",
     "arrow",
     "line",
@@ -1186,7 +1187,7 @@ pub const TOOLS: [&str; 19] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 55] = [
+pub const EDITOR_ACTIONS: [&str; 56] = [
     "open",
     "save",
     "save_as",
@@ -1242,6 +1243,7 @@ pub const EDITOR_ACTIONS: [&str; 55] = [
     "invert_selection",
     "float_selection",
     "crop_selection",
+    "import_theme",
 ];
 
 fn library_item() -> Value {

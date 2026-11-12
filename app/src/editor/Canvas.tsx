@@ -1191,7 +1191,7 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "pen", points: [p], straight: e.shiftKey });
       return;
     }
-    if (tool === "move") {
+    if (tool === "move" || tool === "favorites") {
       // An empty place: a selection box (EDT-079).
       capture();
       if (!adding) setSelection([]);
@@ -1790,7 +1790,7 @@ export function Canvas({ doc }: Props) {
                     ? "move"
                     : tool === "text"
                       ? "text"
-                      : tool === "move"
+                      : tool === "move" || tool === "favorites"
                         ? "default"
                         : "crosshair";
 
