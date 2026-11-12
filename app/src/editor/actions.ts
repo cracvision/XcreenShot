@@ -39,6 +39,7 @@ import { turnOnEffect } from "./effects";
 import { useExportDialog } from "./exportOptions";
 import { useBatchDialog } from "./batchExport";
 import { usePrintDialog } from "./printState";
+import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
@@ -737,6 +738,10 @@ export function performAction(action: string): boolean {
       return true;
     case "toolbar_labels":
       toggleToolbarLabels();
+      return true;
+    case "customize_toolbar":
+      // View > Toolbar > Customize (EDT-004).
+      useToolbar.setState({ customizing: true });
       return true;
     case "pixel_grid": {
       // View > Pixel grid (EDT-008).

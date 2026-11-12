@@ -1134,6 +1134,19 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object"})),
+        B::new("editor.toolbar", &["EDT-003", "EDT-004"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["get", "set", "reset"], "default": "get"},
+                    "items": {"type": "array", "items": {"type": "string"}, "description": "For set: tool:<id>, action:<editor action> (commands and action:effect_…), sep or space, in order"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "default": {"type": "array", "items": {"type": "string"}},
+                "available": {"type": "object", "description": "{tools, actions, effects} that can go on it"}
+            }})),
         B::new("editor.clipboard", &["EDT-103", "EDT-104"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {
@@ -1412,7 +1425,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 96] = [
+pub const EDITOR_ACTIONS: [&str; 97] = [
     "open",
     "save",
     "save_as",
@@ -1499,6 +1512,8 @@ pub const EDITOR_ACTIONS: [&str; 96] = [
     // View > Pixel grid and Full screen (EDT-008, EDT-009).
     "pixel_grid",
     "fullscreen",
+    // View > Toolbar > Customize (EDT-004).
+    "customize_toolbar",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

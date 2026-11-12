@@ -27,6 +27,7 @@ import { draggingOut } from "../library/dragOut";
 import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
+import { ToolbarCustomizer } from "./ToolbarCustomizer";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
@@ -134,6 +135,7 @@ export function Editor() {
       ) : (
         <>
           <Toolbar />
+          <ToolbarCustomizer />
           <div className="editor-main">
             {doc ? <Canvas key={doc.documentId} doc={doc} /> : <Empty dropping={dropping} />}
             <SidePanel />

@@ -20,6 +20,7 @@ import { isSegment, requestZoom, useEditor, usePointer, type Tool } from "./stat
 import { useMainView } from "../library/state";
 import { inToolbar } from "../components/arrowFocus";
 import { toggleFullscreen, useFullscreen } from "./fullscreen";
+import { barTools, useToolbar } from "./toolbarLayout";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -307,7 +308,8 @@ export function useEditorKeys(): void {
         const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
         if (digit) {
           // Ctrl+1…9: the tool in that place of the bar (EDT-115).
-          const tool = state.tools[Number(digit[1]) - 1];
+          const onBar = barTools(useToolbar.getState().data?.items ?? []);
+          const tool = (onBar.length ? onBar : state.tools)[Number(digit[1]) - 1];
           if (tool) selectTool(tool);
         } else if (e.code === "Enter" || e.code === "NumpadEnter") {
           insert();

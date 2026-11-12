@@ -381,6 +381,7 @@ export function useMenuBar(): void {
     enabled["editor.snap"] = !inLibrary;
     enabled["editor.new_image"] = true;
     enabled["editor.batch_export"] = true;
+    enabled["editor.customize_toolbar"] = !inLibrary;
     enabled["editor.pixel_grid"] = hasDoc;
     enabled["editor.fullscreen"] = true;
     enabled["editor.print"] = hasDoc;

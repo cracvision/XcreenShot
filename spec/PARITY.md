@@ -82,8 +82,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 |---|---|---|---|---|
 | EDT-001 | Ventana principal | M1 | Must | En curso |
 | EDT-002 | Menús del editor | M1 | Must | Win |
-| EDT-003 | Barra de herramientas y menú Más | M1 | Must | En curso |
-| EDT-004 | Personalizar la barra de herramientas | M2 | Should | — |
+| EDT-003 | Barra de herramientas y menú Más | M1 | Must | En curso (Windows: barra por defecto, Más agrupado y hueco temporal; falta la búsqueda en Más) |
+| EDT-004 | Personalizar la barra de herramientas | M2 | Should | En curso (Windows hecho; faltan los destinos de compartir, con `SHR-`, y que viaje en la exportación de ajustes, APP-011) |
 | EDT-005 | Panel lateral | M1 | Must | En curso |
 | EDT-006 | Barra de edición rápida | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-007 | Zoom y vista | M1 | Must | Win |

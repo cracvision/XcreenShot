@@ -542,6 +542,10 @@
     "document_print": {
       "title": "Imprimir",
       "description": "Reparte la imagen final en el papel como un PDF (papel, orientación, márgenes, tamaño, páginas entre líneas de texto) y lo abre en el visor del sistema para imprimirlo con su diálogo."
+    },
+    "editor_toolbar": {
+      "title": "Barra de herramientas",
+      "description": "Lee o cambia lo que muestra la barra del editor, en orden: herramientas, comandos, efectos, separadores y espacios flexibles; reset vuelve a la barra por defecto."
     }
   },
   "settings": {
@@ -1139,7 +1143,8 @@
     "batch_export": "Exportar por lotes…",
     "print": "Imprimir…",
     "pixel_grid": "Cuadrícula de píxeles",
-    "fullscreen": "Pantalla completa"
+    "fullscreen": "Pantalla completa",
+    "customize_toolbar": "Personalizar…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2355,6 +2360,35 @@
         "no_styles": "No hay estilos guardados",
         "more": "Más propiedades",
         "value": "Valor"
+      },
+      "more": "Más",
+      "more_group": {
+        "annotation": "Anotación",
+        "pixels": "Píxeles",
+        "image": "Imagen"
+      },
+      "toolbar_item": {
+        "save": "Guardar",
+        "save_as": "Guardar como",
+        "export": "Exportar",
+        "new_from_clipboard": "Nueva desde el portapapeles",
+        "copy_all": "Copiar todo",
+        "revert": "Volver al original",
+        "trim": "Recortar bordes",
+        "undo": "Deshacer",
+        "redo": "Rehacer",
+        "print": "Imprimir"
+      },
+      "customize": {
+        "title": "Personalizar la barra de herramientas",
+        "hint": "Arrastra elementos a la barra, muévelos por ella o sácalos. Un clic añade un elemento al final. En la barra, Alt+flechas mueve el elemento con el foco y Supr lo quita.",
+        "add_hint": "Arrástralo a la barra, o haz clic para añadirlo al final",
+        "tools": "Herramientas",
+        "commands": "Comandos",
+        "effects": "Efectos",
+        "separator": "Separador",
+        "space": "Espacio flexible",
+        "reset": "Restaurar valores por defecto"
       }
     },
     "multi": {

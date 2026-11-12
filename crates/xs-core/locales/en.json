@@ -542,6 +542,10 @@
     "document_print": {
       "title": "Print",
       "description": "Lays the final image out on paper as a PDF (paper, orientation, margins, size, pages between lines of text) and opens it in the system's viewer to print with its dialog."
+    },
+    "editor_toolbar": {
+      "title": "Toolbar",
+      "description": "Reads or changes what the editor toolbar shows, in order: tools, commands, effects, separators and flexible spaces; reset goes back to the default."
     }
   },
   "settings": {
@@ -1139,7 +1143,8 @@
     "batch_export": "Batch export…",
     "print": "Print…",
     "pixel_grid": "Pixel grid",
-    "fullscreen": "Full screen"
+    "fullscreen": "Full screen",
+    "customize_toolbar": "Customize…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2355,6 +2360,35 @@
         "no_styles": "No saved styles",
         "more": "More properties",
         "value": "Value"
+      },
+      "more": "More",
+      "more_group": {
+        "annotation": "Annotation",
+        "pixels": "Pixels",
+        "image": "Image"
+      },
+      "toolbar_item": {
+        "save": "Save",
+        "save_as": "Save as",
+        "export": "Export",
+        "new_from_clipboard": "New from clipboard",
+        "copy_all": "Copy all",
+        "revert": "Revert to original",
+        "trim": "Trim edges",
+        "undo": "Undo",
+        "redo": "Redo",
+        "print": "Print"
+      },
+      "customize": {
+        "title": "Customize the toolbar",
+        "hint": "Drag items onto the toolbar, move them along it, or drag them off. A click adds an item at the end. On the bar, Alt+arrows move the focused item and Delete takes it off.",
+        "add_hint": "Drag onto the toolbar, or click to add it at the end",
+        "tools": "Tools",
+        "commands": "Commands",
+        "effects": "Effects",
+        "separator": "Separator",
+        "space": "Flexible space",
+        "reset": "Restore defaults"
       }
     },
     "multi": {

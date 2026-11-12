@@ -4366,6 +4366,108 @@ body.preparing-drag * {
   background: var(--surface-sunken);
 }
 
+/* The toolbar the user arranges (EDT-003, EDT-004). */
+.tb-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tb-custom.customizing {
+  padding: 2px 6px;
+  border: 1px dashed var(--brand);
+  border-radius: 10px;
+}
+
+.tb-item {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+}
+
+.tb-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.tb-item-static {
+  display: contents;
+}
+
+.tb-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.tb-space {
+  flex: 1;
+  min-width: 16px;
+}
+
+.tb-custom.customizing .tb-space {
+  min-width: 28px;
+  height: 24px;
+  border: 1px dashed var(--control-line);
+  border-radius: 6px;
+}
+
+.tb-temp {
+  outline: 1px dashed var(--control-line);
+  outline-offset: 2px;
+}
+
+.tb-customizer {
+  display: grid;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-raised);
+  animation: fade-in var(--dur-fast) var(--ease-spring) both;
+}
+
+.tbc-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.tbc-groups h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.tbc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tbc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--control-line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: grab;
+}
+
+.tbc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,
@@ -4404,7 +4506,8 @@ body.preparing-drag * {
     transition-duration: 0.01ms;
   }
 
-  .quick-bar {
+  .quick-bar,
+  .tb-customizer {
     animation: fade-in var(--dur-instant) linear both;
   }
 

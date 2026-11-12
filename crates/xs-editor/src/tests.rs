@@ -3915,3 +3915,42 @@ fn printing_lays_pages_out_as_a_pdf() {
         "only the selection: {ratio}"
     );
 }
+
+/// EDT-003, EDT-004: the toolbar starts with the tools of EDT-003; a new order is kept
+/// (a tool once), unknown items are refused, and reset brings the default back.
+#[test]
+fn toolbar_layout_is_kept_and_reset() {
+    let e = env();
+    let r = cli(&e.core, "editor.toolbar", json!({}));
+    assert_eq!(r["items"], r["default"]);
+    assert_eq!(r["items"][1], "tool:move");
+    let r = cli(
+        &e.core,
+        "editor.toolbar",
+        json!({"action": "set", "items": ["tool:move", "tool:eraser", "sep", "tool:eraser", "action:print", "action:effect_border", "space"]}),
+    );
+    assert_eq!(
+        r["items"],
+        json!([
+            "tool:move",
+            "tool:eraser",
+            "sep",
+            "action:print",
+            "action:effect_border",
+            "space"
+        ])
+    );
+    assert_eq!(
+        cli(&e.core, "editor.toolbar", json!({}))["items"][1],
+        "tool:eraser"
+    );
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "editor.toolbar",
+        json!({"action": "set", "items": ["tool:nope"]}),
+    );
+    assert!(bad.is_err());
+    let r = cli(&e.core, "editor.toolbar", json!({"action": "reset"}));
+    assert_eq!(r["items"], r["default"]);
+}

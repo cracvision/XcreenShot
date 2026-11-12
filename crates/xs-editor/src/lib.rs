@@ -4325,6 +4325,7 @@ pub fn extension() -> Extension {
             Ok(json!({ "count": oids.len() }))
         });
         on!("document.new", |core, ctx, p| new_image(&core, ctx, &p));
+        on!("editor.toolbar", |core, ctx, p| toolbar_command(&core, ctx, &p));
         on!("document.batch_export", |core, ctx, p| batch_export(
             &core, ctx, &p
         ));
@@ -5131,6 +5132,111 @@ fn print_document(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         core.host().open_path(&path)?;
     }
     Ok(json!({ "path": path, "pages": count }))
+}
+
+/// The toolbar of EDT-003: the tools it shows when nobody changed it (EDT-004).
+pub const TOOLBAR_DEFAULT: [&str; 10] = [
+    "tool:favorites",
+    "tool:move",
+    "tool:arrow",
+    "tool:text",
+    "tool:callout",
+    "tool:shape",
+    "tool:step",
+    "tool:blur",
+    "tool:crop",
+    "tool:select",
+];
+const TOOLBAR_KEY: &str = "editor.toolbar";
+/// Commands that can go on the toolbar (EDT-004), as `action:<editor action>`.
+const TOOLBAR_ACTIONS: [&str; 10] = [
+    "save",
+    "save_as",
+    "export",
+    "new_from_clipboard",
+    "copy_all",
+    "revert",
+    "trim",
+    "undo",
+    "redo",
+    "print",
+];
+
+/// Whether `item` can be on the toolbar: a tool of this build, a command, an effect
+/// (`action:effect_…`), a separator or a flexible space (EDT-004).
+fn toolbar_item_ok(item: &str) -> bool {
+    match item.split_once(':') {
+        Some(("tool", t)) => AVAILABLE_TOOLS.contains(&t),
+        Some(("action", a)) => {
+            TOOLBAR_ACTIONS.contains(&a)
+                || (a.starts_with("effect_") && xs_core::catalog::EDITOR_ACTIONS.contains(&a))
+        }
+        _ => item == "sep" || item == "space",
+    }
+}
+
+/// `editor.toolbar` (EDT-003, EDT-004): what the toolbar shows, in order; `set` keeps
+/// a new order, `reset` goes back to the default. Kept between sessions.
+fn toolbar_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let current = || -> Vec<String> {
+        core.recall(TOOLBAR_KEY)
+            .and_then(|v| serde_json::from_value::<Vec<String>>(v).ok())
+            .map(|items| items.into_iter().filter(|i| toolbar_item_ok(i)).collect())
+            .unwrap_or_else(|| TOOLBAR_DEFAULT.iter().map(|s| s.to_string()).collect())
+    };
+    match p.get("action").and_then(Value::as_str).unwrap_or("get") {
+        "get" => {}
+        "set" => {
+            let items: Vec<String> = p
+                .get("items")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .ok_or_else(|| {
+                    invalid(tr(
+                        lang,
+                        "errors.invalid_param",
+                        &[("param", "items"), ("reason", "a list of toolbar items")],
+                    ))
+                })?;
+            if let Some(bad) = items.iter().find(|i| !toolbar_item_ok(i)) {
+                return Err(invalid(tr(
+                    lang,
+                    "errors.invalid_param",
+                    &[("param", "items"), ("reason", bad.as_str())],
+                )));
+            }
+            // A tool appears once.
+            let mut seen = std::collections::HashSet::new();
+            let items: Vec<String> = items
+                .into_iter()
+                .filter(|i| i == "sep" || i == "space" || seen.insert(i.clone()))
+                .collect();
+            core.remember(TOOLBAR_KEY, json!(items));
+        }
+        "reset" => core.forget(TOOLBAR_KEY),
+        other => {
+            return Err(invalid(tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", "action"), ("reason", other)],
+            )))
+        }
+    }
+    let effects: Vec<&str> = xs_core::catalog::EDITOR_ACTIONS
+        .iter()
+        .copied()
+        .filter(|a| a.starts_with("effect_"))
+        .collect();
+    Ok(json!({
+        "items": current(),
+        "default": TOOLBAR_DEFAULT,
+        "available": {
+            "tools": AVAILABLE_TOOLS,
+            "actions": TOOLBAR_ACTIONS,
+            "effects": effects,
+        },
+    }))
 }
 
 /// File > New image (EDT-103): a blank canvas of the size, color and resolution

@@ -323,6 +323,47 @@ const ICONS = {
       <path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5" />
     </Svg>
   ),
+  // Toolbar commands (EDT-004): XcreenShot's own simple drawings.
+  save_as: (
+    <Svg>
+      <path d="M4 3.5h8.5L15.5 6.5V9" />
+      <path d="M3.5 4v12a.5.5 0 00.5.5h5" />
+      <path d="M6.5 3.5v3.5h5" />
+      <path d="M11.5 16.5l1-3 4-4 2 2-4 4z" />
+    </Svg>
+  ),
+  export: (
+    <Svg>
+      <path d="M10 12.5V3.5M6.5 7l3.5-3.5L13.5 7" />
+      <path d="M4 11v4.5a1 1 0 001 1h10a1 1 0 001-1V11" />
+    </Svg>
+  ),
+  print: (
+    <Svg>
+      <path d="M6 7.5V3.5h8v4" />
+      <rect x="3.5" y="7.5" width="13" height="6.5" rx="1.5" />
+      <path d="M6 12h8v4.5H6z" />
+    </Svg>
+  ),
+  revert: (
+    <Svg>
+      <path d="M4.5 8.5A6 6 0 1 1 6 14" />
+      <path d="M4 4.5v4h4" />
+    </Svg>
+  ),
+  trim: (
+    <Svg>
+      <path d="M5 2.5v12.5h12.5" />
+      <path d="M2.5 5H15v12.5" strokeDasharray="2 2" />
+    </Svg>
+  ),
+  paste_new: (
+    <Svg>
+      <path d="M7 4H5a1 1 0 00-1 1v11a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1h-2" />
+      <rect x="7" y="2.5" width="6" height="3" rx="1" />
+      <path d="M10 9v5M7.5 11.5h5" />
+    </Svg>
+  ),
   copy: (
     <Svg>
       <rect x="6.5" y="6.5" width="10" height="10" rx="1.5" />

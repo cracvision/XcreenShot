@@ -373,13 +373,20 @@ fn editor_menus() -> Vec<MenuEntry> {
                 },
                 Submenu {
                     label: "menu.toolbar",
-                    items: vec![MenuEntry::Command {
-                        id: "editor.toolbar_labels",
-                        label: "menu.toolbar_labels",
-                        command: "editor.action",
-                        params: json!({ "action": "toolbar_labels" }),
-                        checked: Some("editor.toolbar_labels"),
-                    }],
+                    items: vec![
+                        action(
+                            "editor.customize_toolbar",
+                            "menu.customize_toolbar",
+                            "customize_toolbar",
+                        ),
+                        MenuEntry::Command {
+                            id: "editor.toolbar_labels",
+                            label: "menu.toolbar_labels",
+                            command: "editor.action",
+                            params: json!({ "action": "toolbar_labels" }),
+                            checked: Some("editor.toolbar_labels"),
+                        },
+                    ],
                 },
             ],
         },
@@ -629,6 +636,6 @@ mod tests {
         assert_eq!(file[2]["kind"], "separator");
         let view = menus[3]["items"].as_array().unwrap();
         let toolbar = view.iter().find(|i| i["kind"] == "submenu").unwrap();
-        assert_eq!(toolbar["items"][0]["checked"], "editor.toolbar_labels");
+        assert_eq!(toolbar["items"][1]["checked"], "editor.toolbar_labels");
     }
 }

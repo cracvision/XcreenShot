@@ -1,11 +1,10 @@
-// Editor toolbar (EDT-001, EDT-003): Capture, the tools of this build, Undo and Redo
+// Editor toolbar (EDT-001, EDT-003, EDT-004): Capture, the items the user arranged
+// (tools, commands, effects; the rest in More), Undo and Redo
 // (they stay with the menus: Carlos, 2026-10-28), and the share area (Copy all,
 // Share ▾). Tooltips show the current shortcut (APP-014).
-import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { Menu } from "../components/Menu";
-import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import {
   copyAll,
@@ -15,47 +14,22 @@ import {
   redo,
   saveActive,
   saveAs,
-  selectTool,
   undo,
 } from "./actions";
 import { Icon } from "./icons";
-import { useEditor, type Tool } from "./state";
+import { useEditor } from "./state";
+import { CustomBar } from "./CustomBar";
 import { menuPoint, toolbarMenu } from "./menus";
 import { useSetting } from "../store";
 import { hint, useShortcut } from "./tools";
-import { useTooltipLevel } from "../components/tooltips";
 import { ViewSwitch } from "../library/ViewSwitch";
 import { arrowFocus } from "../components/arrowFocus";
 
-function ToolButton({ id, active }: { id: Tool; active: boolean }) {
-  const { t } = useTranslation();
-  const name = t(`ui.editor.tool.${id}`);
-  const shortcut = useShortcut(`editor.tool_${id}`);
-  // Detailed tooltips also say what the tool does (APP-014).
-  const detailed = useTooltipLevel() === "detailed";
-  return (
-    <button
-      type="button"
-      className="tb-tool"
-      aria-pressed={active}
-      title={hint(name, shortcut, detailed ? t(`ui.editor.tool_detail.${id}`) : undefined)}
-      onClick={() => selectTool(id)}
-    >
-      <Icon name={id} />
-      <span className="tb-label">{name}</span>
-    </button>
-  );
-}
-
 export function Toolbar() {
   const { t } = useTranslation();
-  const tool = useEditor((s) => s.tool);
-  const tools = useEditor((s) => s.tools);
   const doc = useEditor((s) => s.doc);
   const hasDoc = doc !== null;
   const labels = useSetting("editor.toolbarLabels", true);
-  const toolGroup = useRef<HTMLDivElement>(null);
-  useIndicator(toolGroup, `${tool}:${labels}`);
   const keys = {
     undo: useShortcut("editor.undo"),
     redo: useShortcut("editor.redo"),
@@ -87,17 +61,7 @@ export function Toolbar() {
         <Icon name="capture" />
         <span className="tb-label">{t("ui.editor.capture")}</span>
       </button>
-      <div
-        className="tb-group seg brand tb-tools"
-        role="group"
-        aria-label={t("ui.editor.tools")}
-        ref={toolGroup}
-      >
-        <span className="seg-indicator" aria-hidden="true" />
-        {tools.map((id: Tool) => (
-          <ToolButton key={id} id={id} active={tool === id} />
-        ))}
-      </div>
+      <CustomBar />
       <div className="tb-group">
         <button
           type="button"
