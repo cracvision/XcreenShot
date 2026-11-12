@@ -3438,6 +3438,85 @@ html.overlay-root.overlay-native #root {
   pointer-events: none;
 }
 
+/* Effects tab (EDT-053). */
+.effects-tab {
+  display: grid;
+  gap: 10px;
+}
+
+.fx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fx-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.fx-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.fx-item[draggable="true"] {
+  cursor: grab;
+}
+
+.fx-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.fx-name {
+  flex: 1;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fx-name:disabled {
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.fx-name[aria-expanded="true"] {
+  font-weight: 600;
+}
+
+.fx-options {
+  display: grid;
+  gap: 8px;
+  padding: 4px 0 12px 12px;
+  border-left: 2px solid var(--line);
+  margin-left: 20px;
+}
+
+.fx-filter {
+  display: grid;
+  gap: 4px;
+}
+
+/* The final image with its effects, in the status bar (EDT-053). */
+.status-fx {
+  color: var(--ink-muted);
+}
+
 /* A fill: Solid or Gradient (EDT-020). */
 .fill-picker {
   display: grid;

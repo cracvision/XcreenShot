@@ -577,6 +577,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   baseView?: { x: number; y: number; width: number; height: number } | null;
   /** Simplify (EDT-041): how the original shows under the simplified shapes. */
   simplify?: { showOriginal: boolean; opacity: number };
+  /** The effect stack (EDT-053): `{type, enabled, …}` in order. */
+  effects?: (Record<string, unknown> & { type: string; enabled?: boolean })[];
   /** The pixel selection, if there is one (EDT-043). */
   pixelSelection?: PixelSelectionInfo | null;
   /** Edits of pixels not yet saved (ADR 0005): the core shows them in the image. */
@@ -630,6 +632,8 @@ interface EditorState {
   flattenAsk: { all: boolean } | null;
   /** A Photo fill's progress (0–1) while it takes long (EDT-045). */
   fillProgress: number | null;
+  /** The size of the image with its effects, when it has some (EDT-053). */
+  fxSize: [number, number] | null;
   /** Bumped when themes, saved styles or favorites change (EDT-015 to EDT-018). */
   themesVersion: number;
   /** The active theme's colors, for the color selector (EDT-019). */
@@ -705,6 +709,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   flattenAsk: null,
   fillProgress: null,
   themesVersion: 0,
+  fxSize: null,
   themeColors: [],
   colors: { mine: [], recent: [] },
   themeConflict: null,
@@ -897,7 +902,7 @@ export function takeZoomRequest(id: string): ZoomRequest | null {
 export interface PanelLayout {
   visible: boolean;
   width: number;
-  tab: "props" | "styles";
+  tab: "props" | "styles" | "effects";
 }
 
 const PANEL_KEY = "xs.editor.panel";

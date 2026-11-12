@@ -280,12 +280,24 @@ impl Snapshot {
         manifest.extra = self.manifest_extra.clone();
         // Pictures this build inserted that no object shows any more (an insertion
         // undone) stay out of the file; anything else is carried along.
-        let used: std::collections::BTreeSet<&str> = document
+        let mut used: std::collections::BTreeSet<&str> = document
             .objects
             .iter()
             .chain(document.flattened.iter().flat_map(|l| &l.objects))
             .filter_map(|o| o.props.get("image").and_then(Value::as_str))
             .collect();
+        // Watermark pictures of the document's and the floating images' effects (EDT-066).
+        let stacks = std::iter::once(&document.effects).chain(
+            document
+                .objects
+                .iter()
+                .filter_map(|o| o.props.get("effects").and_then(Value::as_array)),
+        );
+        for e in stacks.flatten() {
+            if let Some(name) = e.get("image").and_then(Value::as_str) {
+                used.insert(name);
+            }
+        }
         let images = self
             .images
             .iter()

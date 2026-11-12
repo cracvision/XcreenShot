@@ -39,6 +39,7 @@ import {
 } from "./boxes";
 import { arrowGeometry, constrain45, type Point } from "./geometry";
 import { useObjectImages, useShadowImages } from "./objectImages";
+import { useFinalPreview } from "./finalPreview";
 import { sampleUrl, STYLED_TOOLS } from "./themesUi";
 import {
   ArrowShape,
@@ -404,6 +405,9 @@ export function Canvas({ doc }: Props) {
   const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
   const objectImages = useObjectImages(doc.documentId, doc.objects, doc.version);
   const shadowImages = useShadowImages(doc.documentId, doc.objects);
+  // The image with its effects over the canvas, unless something is being changed
+  // (EDT-053): then the editable layers show.
+  const finalView = useFinalPreview(doc);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [space, setSpace] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
@@ -1798,6 +1802,7 @@ export function Canvas({ doc }: Props) {
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
   const fillProgress = useEditor((s) => s.fillProgress);
+  const showFx = Boolean(finalView) && !drag && !textEdit && tool !== "crop" && !cropRect;
   // A sample of the current style by the pointer, when asked for (EDT-015).
   const previewOn = useSetting("editor.cursorStylePreview", false);
   const previewTool = (STYLED_TOOLS as readonly string[]).includes(tool) ? tool : null;
@@ -2172,7 +2177,7 @@ export function Canvas({ doc }: Props) {
                     fillPatternScaleX={1 / scale}
                     fillPatternScaleY={1 / scale}
                   />
-                  {doc.canvas.color && (
+                  {doc.canvas.color && !showFx && (
                     <Rect
                       width={canvasSize.width}
                       height={canvasSize.height}
@@ -2183,7 +2188,7 @@ export function Canvas({ doc }: Props) {
                   {doc.simplify && !doc.canvas.color && (
                     <Rect width={canvasSize.width} height={canvasSize.height} fill="#ffffff" />
                   )}
-                  {base && (
+                  {base && !showFx && (
                     <KImage
                       image={base}
                       x={baseAt.x - doc.crop.x}
@@ -2203,19 +2208,28 @@ export function Canvas({ doc }: Props) {
                 {/* Objects are cut at the edge, except the one being drawn or dragged:
                     it shows whole and the canvas grows to fit it when the gesture ends
                     (EDT-071). Each is cut on its own to keep their order. */}
-                {shown.map((o) =>
-                  free.has(o.id) ? (
-                    <Group key={o.id}>
-                      {shadowNode(o)}
-                      {objectNode(o)}
-                    </Group>
-                  ) : (
-                    <Group key={o.id} {...clip}>
-                      {shadowNode(o)}
-                      {objectNode(o)}
-                    </Group>
-                  ),
+                {showFx && finalView && (
+                  <KImage
+                    image={finalView.image}
+                    x={-finalView.origin[0]}
+                    y={-finalView.origin[1]}
+                    listening={false}
+                  />
                 )}
+                {!showFx &&
+                  shown.map((o) =>
+                    free.has(o.id) ? (
+                      <Group key={o.id}>
+                        {shadowNode(o)}
+                        {objectNode(o)}
+                      </Group>
+                    ) : (
+                      <Group key={o.id} {...clip}>
+                        {shadowNode(o)}
+                        {objectNode(o)}
+                      </Group>
+                    ),
+                  )}
                 {autoExpand ? previews : <Group {...clip}>{previews}</Group>}
                 <Group {...clip}>{blurPreview}</Group>
                 {pixelAnts}

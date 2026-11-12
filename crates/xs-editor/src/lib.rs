@@ -1406,6 +1406,34 @@ fn effects_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         .to_string();
     let target = p.get("objectId").and_then(Value::as_str).map(str::to_string);
     let index = p.get("index").and_then(Value::as_u64).map(|i| i as usize);
+    // A watermark picture given as a file goes inside the document (EDT-066), so it
+    // looks the same on another computer. Before the step: storing it takes the lock.
+    let mut owned = p.clone();
+    let keep_picture = |e: &mut Value| -> Result<(), CommandError> {
+        let Some(path) = e.get("path").and_then(Value::as_str).map(str::to_string) else {
+            return Ok(());
+        };
+        let img = std::fs::read(&path)
+            .ok()
+            .and_then(|b| xs_image::encode::decode(&b).ok())
+            .ok_or_else(|| bad("path", "it is not a PNG or JPG picture"))?;
+        let name = store_picture(core, &id, &img, lang)?;
+        if let Some(m) = e.as_object_mut() {
+            m.remove("path");
+            m.insert("source".into(), json!("image"));
+            m.insert("image".into(), json!(name));
+        }
+        Ok(())
+    };
+    if let Some(e) = owned.get_mut("effect") {
+        keep_picture(e)?;
+    }
+    if let Some(list) = owned.get_mut("effects").and_then(Value::as_array_mut) {
+        for e in list.iter_mut() {
+            keep_picture(e)?;
+        }
+    }
+    let p = &owned;
     let checked = |e: &Value| -> Result<Value, CommandError> {
         let mut e = e.clone();
         if !e.is_object() {

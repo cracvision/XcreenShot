@@ -1773,7 +1773,203 @@
         "mine": "Mis degradados",
         "mine_help": "Haz clic para usarlo; clic derecho o Supr lo quita.",
         "save": "Guardar en Mis degradados"
-      }
+      },
+      "fx": {
+        "title": "Efectos",
+        "target_document": "Efectos del documento",
+        "target_image": "Efectos de la imagen flotante elegida",
+        "remove_all": "Quitar todos",
+        "selection": "Aplicar a la selección:",
+        "value": "valor",
+        "remove": "Quitar de la pila",
+        "with_effects": "{{w}} × {{h}} con efectos",
+        "border": {
+          "name": "Borde",
+          "color": "Color",
+          "width": "Grosor",
+          "position": "Posición"
+        },
+        "edges": {
+          "name": "Bordes decorativos",
+          "style": "Estilo",
+          "size": "Tamaño",
+          "sides_top": "Arriba",
+          "sides_bottom": "Abajo",
+          "sides_left": "Izquierda",
+          "sides_right": "Derecha",
+          "randomness": "Aleatoriedad",
+          "shadow": "Sombra del borde",
+          "shadowColor": "Color de la sombra",
+          "shadowAngle": "Dirección de la sombra",
+          "variant": "Otra variante"
+        },
+        "shadow": {
+          "name": "Sombra",
+          "angle": "Dirección",
+          "distance": "Distancia",
+          "blur": "Desenfoque",
+          "opacity": "Opacidad",
+          "color": "Color",
+          "background": "Fondo"
+        },
+        "perspective": {
+          "name": "Perspectiva",
+          "style": "Estilo",
+          "horizontal": "Horizontal",
+          "vertical": "Vertical",
+          "depth": "Profundidad"
+        },
+        "pageCurl": {
+          "name": "Página doblada",
+          "corner": "Esquina",
+          "size": "Tamaño",
+          "color": "Color del reverso"
+        },
+        "reflection": {
+          "name": "Reflejo",
+          "size": "Tamaño",
+          "opacity": "Opacidad inicial",
+          "gap": "Separación"
+        },
+        "fade": {
+          "name": "Desvanecer bordes",
+          "size": "Tamaño",
+          "intensity": "Intensidad",
+          "sides_top": "Arriba",
+          "sides_bottom": "Abajo",
+          "sides_left": "Izquierda",
+          "sides_right": "Derecha"
+        },
+        "filters": {
+          "name": "Filtros",
+          "soften": "Suavizar",
+          "sharpen": "Enfocar",
+          "grayscale": "Escala de grises",
+          "sepia": "Sepia",
+          "mono": "Monocromo (umbral)",
+          "invert": "Invertir colores",
+          "opacity": "Opacidad",
+          "baseOnly": "Solo la imagen base (sin las anotaciones)"
+        },
+        "color": {
+          "name": "Ajuste de color",
+          "brightness": "Brillo",
+          "contrast": "Contraste",
+          "hue": "Matiz",
+          "saturation": "Saturación",
+          "gamma": "Gamma",
+          "reset": "Restablecer"
+        },
+        "replace": {
+          "name": "Reemplazo de color",
+          "mode": "Modo",
+          "a": "Color A",
+          "b": "Color B",
+          "tolerance": "Tolerancia"
+        },
+        "watermark": {
+          "name": "Marca de agua",
+          "source": "Origen",
+          "text": "Texto",
+          "size": "Tamaño",
+          "color": "Color",
+          "position": "Posición",
+          "margin": "Margen",
+          "scale": "Escala",
+          "opacity": "Opacidad",
+          "rotation": "Giro",
+          "layer": "Capa",
+          "choose": "Elegir imagen…"
+        },
+        "details": {
+          "name": "Detalles de captura",
+          "fields_app": "Aplicación y versión",
+          "fields_url": "URL",
+          "fields_title": "Título de la ventana",
+          "fields_date": "Fecha y hora",
+          "fields_os": "Sistema operativo",
+          "fields_user": "Usuario",
+          "fields_computer": "Equipo",
+          "customText": "Texto propio",
+          "dateFormat": "Formato de fecha",
+          "dateCustom": "Formato personalizado (strftime)",
+          "placement": "Ubicación",
+          "side": "Franja",
+          "corner": "Esquina",
+          "size": "Tamaño",
+          "color": "Color del texto",
+          "background": "Fondo",
+          "align": "Alineación",
+          "padding": "Margen interior",
+          "notice": "Estos datos se convierten en píxeles de la imagen que compartas."
+        },
+        "trim": {
+          "name": "Recortar bordes",
+          "tolerance": "Tolerancia"
+        },
+        "corners": {
+          "name": "Esquinas redondeadas",
+          "shape": "Forma",
+          "radius": "Radio"
+        },
+        "scale": {
+          "name": "Escalar",
+          "mode": "Por",
+          "value": "Valor"
+        },
+        "rotate": {
+          "name": "Girar",
+          "angle": "Ángulo"
+        },
+        "spotlight": {
+          "name": "Foco y lupa"
+        },
+        "opt": {
+          "outside": "Exterior",
+          "inside": "Interior",
+          "torn": "Rasgado",
+          "wavy": "Ondulado",
+          "sawtooth": "Dientes de sierra",
+          "bevel": "Biselado",
+          "fade": "Desvanecido",
+          "scallop": "Festón",
+          "transparent": "Transparente",
+          "canvas": "Color del lienzo",
+          "perspective": "Perspectiva",
+          "skew": "Sesgo",
+          "bottomRight": "Abajo a la derecha",
+          "bottomLeft": "Abajo a la izquierda",
+          "topRight": "Arriba a la derecha",
+          "topLeft": "Arriba a la izquierda",
+          "top": "Arriba",
+          "bottom": "Abajo",
+          "left": "Izquierda",
+          "right": "Derecha",
+          "center": "Centro",
+          "tile": "Mosaico",
+          "replace": "Reemplazar",
+          "swap": "Intercambiar",
+          "text": "Texto",
+          "image": "Imagen",
+          "above": "Encima de todo",
+          "below": "Debajo de las anotaciones",
+          "system": "El del sistema",
+          "iso": "ISO 8601",
+          "custom": "Personalizado",
+          "band": "Franja",
+          "overlay": "Superpuesta",
+          "radius": "Radio",
+          "circle": "Círculo",
+          "percent": "Porcentaje",
+          "longest": "Lado mayor (px)",
+          "width": "Ancho (px)",
+          "height": "Alto (px)",
+          "90": "90°",
+          "180": "180°",
+          "270": "270°"
+        }
+      },
+      "tab_effects": "Efectos"
     },
     "multi": {
       "title": "Multicaptura",

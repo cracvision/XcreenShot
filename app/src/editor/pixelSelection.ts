@@ -48,7 +48,7 @@ export async function selectPixels(params: Record<string, unknown>): Promise<voi
 /** Runs an action on the selected pixels (EDT-044), filling the gap as the tool that
  * selected says (EDT-045). */
 export async function selectionAction(
-  action: "delete" | "cut" | "copy" | "move" | "float" | "crop",
+  action: "delete" | "cut" | "copy" | "move" | "float" | "crop" | "effect",
   extra: Record<string, unknown> = {},
 ): Promise<{ changed: boolean; ids?: string[] } | null> {
   const { doc, tool, styles, showError } = useEditor.getState();

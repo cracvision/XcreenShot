@@ -1773,7 +1773,203 @@
         "mine": "My gradients",
         "mine_help": "Click to use it; right-click or Delete removes it.",
         "save": "Save in My gradients"
-      }
+      },
+      "fx": {
+        "title": "Effects",
+        "target_document": "Effects of the document",
+        "target_image": "Effects of the selected floating image",
+        "remove_all": "Remove all",
+        "selection": "Apply to the selection:",
+        "value": "value",
+        "remove": "Remove from the stack",
+        "with_effects": "{{w}} × {{h}} with effects",
+        "border": {
+          "name": "Border",
+          "color": "Color",
+          "width": "Thickness",
+          "position": "Position"
+        },
+        "edges": {
+          "name": "Decorative edges",
+          "style": "Style",
+          "size": "Size",
+          "sides_top": "Top",
+          "sides_bottom": "Bottom",
+          "sides_left": "Left",
+          "sides_right": "Right",
+          "randomness": "Randomness",
+          "shadow": "Edge shadow",
+          "shadowColor": "Shadow color",
+          "shadowAngle": "Shadow direction",
+          "variant": "Another variant"
+        },
+        "shadow": {
+          "name": "Shadow",
+          "angle": "Direction",
+          "distance": "Distance",
+          "blur": "Blur",
+          "opacity": "Opacity",
+          "color": "Color",
+          "background": "Background"
+        },
+        "perspective": {
+          "name": "Perspective",
+          "style": "Style",
+          "horizontal": "Horizontal",
+          "vertical": "Vertical",
+          "depth": "Depth"
+        },
+        "pageCurl": {
+          "name": "Page curl",
+          "corner": "Corner",
+          "size": "Size",
+          "color": "Back color"
+        },
+        "reflection": {
+          "name": "Reflection",
+          "size": "Size",
+          "opacity": "Starting opacity",
+          "gap": "Gap"
+        },
+        "fade": {
+          "name": "Fade edges",
+          "size": "Size",
+          "intensity": "Intensity",
+          "sides_top": "Top",
+          "sides_bottom": "Bottom",
+          "sides_left": "Left",
+          "sides_right": "Right"
+        },
+        "filters": {
+          "name": "Filters",
+          "soften": "Soften",
+          "sharpen": "Sharpen",
+          "grayscale": "Grayscale",
+          "sepia": "Sepia",
+          "mono": "Black and white (threshold)",
+          "invert": "Invert colors",
+          "opacity": "Opacity",
+          "baseOnly": "Base image only (not the annotations)"
+        },
+        "color": {
+          "name": "Color adjustment",
+          "brightness": "Brightness",
+          "contrast": "Contrast",
+          "hue": "Hue",
+          "saturation": "Saturation",
+          "gamma": "Gamma",
+          "reset": "Reset"
+        },
+        "replace": {
+          "name": "Color replacement",
+          "mode": "Mode",
+          "a": "Color A",
+          "b": "Color B",
+          "tolerance": "Tolerance"
+        },
+        "watermark": {
+          "name": "Watermark",
+          "source": "Source",
+          "text": "Text",
+          "size": "Size",
+          "color": "Color",
+          "position": "Position",
+          "margin": "Margin",
+          "scale": "Scale",
+          "opacity": "Opacity",
+          "rotation": "Rotation",
+          "layer": "Layer",
+          "choose": "Choose picture…"
+        },
+        "details": {
+          "name": "Capture details",
+          "fields_app": "Application and version",
+          "fields_url": "URL",
+          "fields_title": "Window title",
+          "fields_date": "Date and time",
+          "fields_os": "Operating system",
+          "fields_user": "User",
+          "fields_computer": "Computer",
+          "customText": "Own text",
+          "dateFormat": "Date format",
+          "dateCustom": "Custom format (strftime)",
+          "placement": "Placement",
+          "side": "Band",
+          "corner": "Corner",
+          "size": "Size",
+          "color": "Text color",
+          "background": "Background",
+          "align": "Alignment",
+          "padding": "Padding",
+          "notice": "These details become pixels of the image you share."
+        },
+        "trim": {
+          "name": "Trim borders",
+          "tolerance": "Tolerance"
+        },
+        "corners": {
+          "name": "Rounded corners",
+          "shape": "Shape",
+          "radius": "Radius"
+        },
+        "scale": {
+          "name": "Scale",
+          "mode": "By",
+          "value": "Value"
+        },
+        "rotate": {
+          "name": "Rotate",
+          "angle": "Angle"
+        },
+        "spotlight": {
+          "name": "Spotlight and lens"
+        },
+        "opt": {
+          "outside": "Outside",
+          "inside": "Inside",
+          "torn": "Torn",
+          "wavy": "Wavy",
+          "sawtooth": "Sawtooth",
+          "bevel": "Bevel",
+          "fade": "Faded",
+          "scallop": "Scallop",
+          "transparent": "Transparent",
+          "canvas": "Canvas color",
+          "perspective": "Perspective",
+          "skew": "Skew",
+          "bottomRight": "Bottom right",
+          "bottomLeft": "Bottom left",
+          "topRight": "Top right",
+          "topLeft": "Top left",
+          "top": "Top",
+          "bottom": "Bottom",
+          "left": "Left",
+          "right": "Right",
+          "center": "Center",
+          "tile": "Tile",
+          "replace": "Replace",
+          "swap": "Swap",
+          "text": "Text",
+          "image": "Picture",
+          "above": "Above everything",
+          "below": "Below the annotations",
+          "system": "The system's",
+          "iso": "ISO 8601",
+          "custom": "Custom",
+          "band": "Band",
+          "overlay": "Over the image",
+          "radius": "Radius",
+          "circle": "Circle",
+          "percent": "Percentage",
+          "longest": "Longest side (px)",
+          "width": "Width (px)",
+          "height": "Height (px)",
+          "90": "90°",
+          "180": "180°",
+          "270": "270°"
+        }
+      },
+      "tab_effects": "Effects"
     },
     "multi": {
       "title": "Multi-capture",

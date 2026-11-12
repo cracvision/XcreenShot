@@ -8,6 +8,7 @@ import { Icon } from "./icons";
 import { outside } from "./objects";
 import { requestZoom, useEditor, usePointer } from "./state";
 import { useDraft } from "./useDraft";
+import { hasEffects } from "./finalPreview";
 import { parseZoom, ZOOM_STEPS } from "./view";
 
 function PointerPosition({ width, height }: { width: number; height: number }) {
@@ -72,6 +73,7 @@ function RecentButton() {
 export function StatusBar() {
   const { t } = useTranslation();
   const doc = useEditor((s) => s.doc);
+  const fxSize = useEditor((s) => s.fxSize);
   const zoom = useEditor((s) => (s.active ? s.views[s.active]?.zoom : undefined));
   const [draft, setDraft] = useDraft(zoom ? `${Math.round(zoom * 10) / 10} %` : "");
   if (!doc)
@@ -92,6 +94,15 @@ export function StatusBar() {
       <RecentButton />
       <span className="status-item" title={t("ui.editor.prop.size")}>
         {doc.canvas.width} × {doc.canvas.height} px
+        {fxSize &&
+          hasEffects(doc) &&
+          (fxSize[0] !== doc.canvas.width || fxSize[1] !== doc.canvas.height) && (
+            // The result is bigger (or smaller) with its effects (EDT-053).
+            <span className="status-fx">
+              {" → "}
+              {t("ui.editor.fx.with_effects", { w: fxSize[0], h: fxSize[1] })}
+            </span>
+          )}
       </span>
       <PointerPosition width={doc.canvas.width} height={doc.canvas.height} />
       <OutsideObjects />
