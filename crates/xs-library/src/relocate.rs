@@ -94,6 +94,30 @@ fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Moves the files of `from` named in `files` (and their sidecars) to the same place
+/// under `to`: Retry after a move that left them behind (LIB-028).
+pub fn move_files(from: &Path, to: &Path, files: &[PathBuf]) -> Moved {
+    let mut out = Moved::default();
+    for file in files {
+        let Ok(rel) = file.strip_prefix(from) else {
+            out.failed.push(file.clone());
+            continue;
+        };
+        let dst = to.join(rel);
+        match move_file(file, &dst) {
+            Ok(()) => {
+                let side = xmeta::path_of(file);
+                if side.exists() {
+                    let _ = move_file(&side, &xmeta::path_of(&dst));
+                }
+                out.moved += 1;
+            }
+            Err(_) => out.failed.push(file.clone()),
+        }
+    }
+    out
+}
+
 /// Moves every item of `from` (and its sidecar) to the same place under `to`. Items
 /// that arrive meanwhile (a capture) move too. `progress` gets (done, total); when
 /// `cancel` turns on, what was moved goes back and the move stops.

@@ -115,11 +115,16 @@ export function docRef(doc: DocSummary): FileRef {
 /** Opens items in the editor and shows it (LIB-001): already open ones are only
  * selected (TRY-002). The last one is shown. */
 export async function openItems(items: LibraryItem[]): Promise<void> {
+  // LIB-029: an item only in the cloud downloads as it opens; a notice says so.
+  const cloud = items.some((i) => i.cloud);
+  const seq = cloud ? notify(t("ui.library.downloading", { count: items.length })) : undefined;
   try {
     for (const item of items) await run("document.open", { path: item.path, show: true });
     if (items.length > 0) showView("editor");
   } catch (e) {
     fail(e);
+  } finally {
+    if (seq !== undefined) dismissNotice(seq);
   }
 }
 

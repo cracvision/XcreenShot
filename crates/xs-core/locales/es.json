@@ -3058,7 +3058,17 @@
         "importing": "Importando a la biblioteca…",
         "progress": "{{what}}: {{done}} de {{total}}",
         "export_done": "Exportación terminada."
-      }
+      },
+      "columns": "Columnas",
+      "column_resize": "Ancho de {{column}}",
+      "no_room": "No hay espacio libre suficiente en ese disco: la biblioteca necesita {{need}} y hay {{free}}.",
+      "big_sync": "La biblioteca ocupa {{size}}: ocupará también ese espacio en el servicio de sincronización.",
+      "retry": "Reintentar",
+      "left_seconds": "falta menos de un minuto",
+      "left_minutes_one": "falta unos {{count}} minuto",
+      "left_minutes_other": "faltan unos {{count}} minutos",
+      "downloading_one": "Descargando de la nube…",
+      "downloading_other": "Descargando {{count}} elementos de la nube…"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

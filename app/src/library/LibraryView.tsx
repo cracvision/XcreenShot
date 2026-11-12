@@ -2,6 +2,7 @@
 // library folder as a grid or a list, sorted (LIB-004), filtered from the left pane
 // (LIB-005, LIB-006) and searched (LIB-007); selection by mouse and keyboard, a rubber
 // band, favorites (LIB-011), tags (LIB-009), the item menu and a status bar.
+import { COLUMNS, MIN_WIDTH, shownColumns, template } from "./columns";
 import { listen } from "@tauri-apps/api/event";
 import {
   keepStatusExpanded,
@@ -17,6 +18,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
@@ -292,6 +294,8 @@ function LibraryToolbar() {
   );
 }
 
+const NO_HIDDEN: string[] = [];
+
 function Item({
   item,
   list,
@@ -312,6 +316,7 @@ function Item({
   onPress: (item: LibraryItem, e: PointerEvent) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const hidden = useLibrary((s) => s.shape.hidden) ?? NO_HIDDEN;
   const date = new Date(item.captured).toLocaleString(i18n.language, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -360,14 +365,18 @@ function Item({
             {item.cloud && <CloudBadge />}
             {item.conflict && <ConflictBadge />}
           </span>
-          <span className="lc">{date}</span>
-          <span className="lc">{shortDate(item.modified, i18n.language)}</span>
-          <span className="lc num">{fileSize(item.size, i18n.language)}</span>
-          <span className="lc">{typeName(item, t)}</span>
-          <span className="lc num">{size}</span>
-          <span className="lc">{item.app ?? ""}</span>
-          <span className="lc">{siteOf(item.url)}</span>
-          <span className="lc">{item.tags.join(", ")}</span>
+          {!hidden.includes("captured") && <span className="lc">{date}</span>}
+          {!hidden.includes("modified") && (
+            <span className="lc">{shortDate(item.modified, i18n.language)}</span>
+          )}
+          {!hidden.includes("size") && (
+            <span className="lc num">{fileSize(item.size, i18n.language)}</span>
+          )}
+          {!hidden.includes("type") && <span className="lc">{typeName(item, t)}</span>}
+          {!hidden.includes("dimensions") && <span className="lc num">{size}</span>}
+          {!hidden.includes("app") && <span className="lc">{item.app ?? ""}</span>}
+          {!hidden.includes("site") && <span className="lc">{siteOf(item.url)}</span>}
+          {!hidden.includes("tags") && <span className="lc">{item.tags.join(", ")}</span>}
         </>
       ) : (
         <>
@@ -450,26 +459,79 @@ function siteOf(url: string | null): string {
   }
 }
 
-/** The list's columns (LIB-004): a click on a sortable one sorts, another reverses. */
-const COLUMNS: { key: string; sort?: SortKey }[] = [
-  { key: "name", sort: "name" },
-  { key: "captured", sort: "captured" },
-  { key: "modified", sort: "modified" },
-  { key: "size", sort: "size" },
-  { key: "type", sort: "type" },
-  { key: "dimensions" },
-  { key: "app", sort: "app" },
-  { key: "site" },
-  { key: "tags" },
-];
-
+/** The list's header (LIB-004): a click on a sortable column sorts, another reverses;
+ * the edge of a column drags its width; the right-click menu shows and hides columns. */
 function ListHeader() {
   const { t } = useTranslation();
   const shape = useLibrary((s) => s.shape);
   const setShape = useLibrary((s) => s.setShape);
+  const columns = shownColumns(shape.hidden);
+  const menu = (e: MouseEvent) => {
+    e.preventDefault();
+    const hidden = shape.hidden ?? [];
+    useContextMenu.setState({
+      open: true,
+      ...menuPoint(e),
+      label: t("ui.library.columns"),
+      items: COLUMNS.filter((c) => c.key !== "name").map((c) => ({
+        id: c.key,
+        label: t(`ui.library.column.${c.key}`),
+        checked: !hidden.includes(c.key),
+        onSelect: () =>
+          setShape({
+            hidden: hidden.includes(c.key) ? hidden.filter((k) => k !== c.key) : [...hidden, c.key],
+          }),
+      })),
+    });
+  };
+  const resize = (key: string, e: PointerEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cell = e.currentTarget.parentElement;
+    if (!cell) return;
+    const start = { x: e.clientX, width: cell.getBoundingClientRect().width };
+    const list = cell.closest<HTMLElement>(".library-content");
+    let width = start.width;
+    const move = (m: globalThis.PointerEvent) => {
+      width = Math.max(MIN_WIDTH, start.width + m.clientX - start.x);
+      // Live while dragging; kept when let go.
+      list?.style.setProperty(
+        "--lib-cols",
+        template(columns, { ...(useLibrary.getState().shape.widths ?? {}), [key]: width }),
+      );
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      // Letting go over the header is not a click that sorts.
+      const eat = (c: globalThis.MouseEvent) => {
+        c.stopPropagation();
+        c.preventDefault();
+      };
+      window.addEventListener("click", eat, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener("click", eat, true), 300);
+      setShape({ widths: { ...(useLibrary.getState().shape.widths ?? {}), [key]: width } });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const edge = (key: string) => (
+    <span
+      className="lc-resize"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t("ui.library.column_resize", { column: t(`ui.library.column.${key}`) })}
+      onPointerDown={(e) => resize(key, e)}
+      onDoubleClick={() =>
+        setShape({
+          widths: Object.fromEntries(Object.entries(shape.widths ?? {}).filter(([k]) => k !== key)),
+        })
+      }
+    />
+  );
   return (
-    <div className="lib-head" role="presentation">
-      {COLUMNS.map((c) => {
+    <div className="lib-head" role="presentation" onContextMenu={menu}>
+      {columns.map((c) => {
         const sorted = c.sort === shape.sort;
         return c.sort ? (
           <button
@@ -491,10 +553,12 @@ function ListHeader() {
                 <Icon name="up" />
               </span>
             )}
+            {edge(c.key)}
           </button>
         ) : (
           <span key={c.key} className="lc lc-head">
             {t(`ui.library.column.${c.key}`)}
+            {edge(c.key)}
           </span>
         );
       })}
@@ -1023,6 +1087,8 @@ export function LibraryView() {
   const pane = useLibrary((s) => s.shape.pane);
   const details = useLibrary((s) => s.shape.details === true);
   const list = useLibrary((s) => s.shape.layout === "list");
+  const hidden = useLibrary((s) => s.shape.hidden) ?? NO_HIDDEN;
+  const widths = useLibrary((s) => s.shape.widths);
 
   useEffect(() => {
     void useLibrary
@@ -1044,7 +1110,10 @@ export function LibraryView() {
         ) : (
           <>
             {pane && <FilterPane />}
-            <div className="library-content">
+            <div
+              className="library-content"
+              style={{ "--lib-cols": template(shownColumns(hidden), widths) } as CSSProperties}
+            >
               <Chips />
               {list && !none && <ListHeader />}
               {none ? <NoResults /> : <Grid />}

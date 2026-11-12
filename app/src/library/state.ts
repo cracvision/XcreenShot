@@ -121,6 +121,9 @@ export interface LibraryShape {
   details?: boolean;
   /** Thumbnail size, 50 to 300 % of 160 px (LIB-003). */
   zoom?: number;
+  /** Widths the user gave the list's columns, in px, and those hidden (LIB-004). */
+  widths?: Record<string, number>;
+  hidden?: string[];
 }
 
 const SHAPE_KEY = "xs.library.view";

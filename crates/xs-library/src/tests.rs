@@ -778,3 +778,44 @@ fn import_copies_into_the_month_with_the_folder_tag() {
     assert_eq!(tagged["count"], 4);
     assert!(cli("library.import", json!({"paths": []})).is_err());
 }
+
+/// LIB-028: Retry moves the files a move left behind (with their sidecars), and the
+/// folder check says how big the library is and whether there is room.
+#[test]
+fn retry_moves_what_was_left_and_the_check_measures_room() {
+    let e = env();
+    let to = tempfile::tempdir().unwrap();
+    write_png(&e.path("2026-11/left.png"), 8, 8);
+    std::fs::write(e.path("2026-11/left.png.xmeta"), "{}").unwrap();
+    let r = relocate::move_files(
+        e.root.path(),
+        to.path(),
+        &[e.path("2026-11/left.png"), e.path("elsewhere.png")],
+    );
+    assert_eq!(r.moved, 1);
+    assert_eq!(r.failed.len(), 1, "a file outside the old library is not moved");
+    assert!(to.path().join("2026-11").join("left.png").exists());
+    assert!(
+        to.path().join("2026-11").join("left.png.xmeta").exists(),
+        "with its sidecar"
+    );
+
+    write_png(&e.path("a.png"), 8, 8);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let target = tempfile::tempdir().unwrap();
+    let i = core
+        .call(
+            Source::Ui,
+            "library.location",
+            json!({"action": "inspect", "path": target.path()}),
+            Some(Lang::En),
+        )
+        .unwrap();
+    assert!(i["size"].as_u64().unwrap() > 0);
+    assert_eq!(i["enough"], json!(true), "{i}");
+    assert_eq!(i["bigSync"], json!(false));
+}

@@ -3058,7 +3058,17 @@
         "importing": "Importing into the library…",
         "progress": "{{what}}: {{done}} of {{total}}",
         "export_done": "Export finished."
-      }
+      },
+      "columns": "Columns",
+      "column_resize": "Width of {{column}}",
+      "no_room": "There is not enough free space on that disk: the library needs {{need}} and there is {{free}}.",
+      "big_sync": "The library takes {{size}}: it will take that space in the sync service too.",
+      "retry": "Retry",
+      "left_seconds": "less than a minute left",
+      "left_minutes_one": "about {{count}} minute left",
+      "left_minutes_other": "about {{count}} minutes left",
+      "downloading_one": "Downloading from the cloud…",
+      "downloading_other": "Downloading {{count}} items from the cloud…"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

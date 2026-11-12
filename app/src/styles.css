@@ -5304,9 +5304,12 @@ body.preparing-drag * {
 .lib-head,
 .lib-row {
   display: grid;
-  grid-template-columns:
+  /* LIB-004: the columns shown, with the widths the user dragged. */
+  grid-template-columns: var(
+    --lib-cols,
     minmax(180px, 2.2fr) minmax(130px, 1.1fr) minmax(130px, 1.1fr) 80px 120px 110px
-    minmax(90px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr);
+      minmax(90px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr)
+  );
   align-items: center;
   gap: 8px;
 }
@@ -5349,6 +5352,30 @@ body.preparing-drag * {
   font-size: 12.5px;
 }
 
+/* The edge of a column: drag to resize, double-click to go back (LIB-004). */
+.lc-resize {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  bottom: 4px;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.lc-resize::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 0;
+  bottom: 2px;
+  width: 1px;
+  background: var(--line);
+}
+
+.lc-head:hover .lc-resize::after {
+  background: var(--brand);
+}
+
 .lc.num {
   font-variant-numeric: tabular-nums;
 }
@@ -5370,6 +5397,7 @@ body.preparing-drag * {
 }
 
 .lc-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;

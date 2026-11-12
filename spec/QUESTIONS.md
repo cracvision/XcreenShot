@@ -277,6 +277,9 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | LIB-003 | ¿Dónde se guarda el tamaño de las miniaturas? | Con el resto de la forma de la vista Biblioteca (orden, filtros abiertos, Detalles), en este equipo. Pasos de 10 %; el deslizador se oculta en la vista Lista | Provisional |
 | LIB-026 | ¿Qué es "plegada"? | Plegada, la barra es una sola línea con los conteos, la ubicación y el nombre de la tarea en curso; desplegada añade la ruta y una fila por tarea con su progreso y Cancelar | Provisional |
 | APP-023 | ¿Ventana propia o diálogo? | Un diálogo grande en la ventana principal (como Preferencias de un vistazo), con `Ctrl+/` y en Ayuda. El PDF se dibuja con el motor de texto de la app a 150 ppp en A4 (una página con los atajos de hoy); las teclas contextuales (selección en pantalla, lienzo) salen en el diálogo, no en el PDF | Provisional |
+| LIB-028 | ¿Cuánto espacio hace falta para mover? | El tamaño de la biblioteca más un 5 %. En el mismo disco no se pide nada, porque mover es renombrar. El tiempo restante se calcula con lo que tardaron los primeros elementos | Provisional |
+| LIB-029 | "Con progreso" al abrir un archivo solo en la nube | Un aviso "Descargando de la nube…" mientras el servicio lo descarga (Windows no dice el porcentaje a la app que abre el archivo) | Provisional |
+| LIB-004 | Columnas | Clic derecho en la cabecera para mostrar u ocultar (el Nombre siempre se ve); arrastrar el borde de una cabecera cambia su ancho y doble clic lo devuelve; se guardan con la forma de la vista | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

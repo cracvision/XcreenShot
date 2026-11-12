@@ -1638,7 +1638,11 @@ pub fn specs() -> Vec<CommandSpec> {
                 "synced": {"type": "boolean"},
                 "moving": {"type": "boolean"},
                 "items": {"type": "integer", "description": "inspect: items in the folder"},
-                "library": {"type": "boolean", "description": "inspect: it holds a library of XcreenShot"}
+                "library": {"type": "boolean", "description": "inspect: it holds a library of XcreenShot"},
+                "size": {"type": "integer", "description": "inspect: bytes of the current library"},
+                "free": {"type": ["integer", "null"], "description": "inspect: bytes free on that folder's disk"},
+                "enough": {"type": "boolean", "description": "inspect: room to move the library there (always on the same disk)"},
+                "bigSync": {"type": "boolean", "description": "inspect: a synced folder and a library of more than 5 GB"}
             }})),
         B::new("library.relocate", &["LIB-028"])
             .scopes(UI)
@@ -1647,7 +1651,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 json!({
                     "path": {"type": "string", "description": "The new folder"},
                     "mode": {"type": "string", "enum": ["move", "empty", "use"], "default": "move", "description": "move the items there, start an empty library there, or use the library already there"},
-                    "cancel": {"type": "boolean", "description": "Cancel the move in progress: what was moved goes back"}
+                    "cancel": {"type": "boolean", "description": "Cancel the move in progress: what was moved goes back"},
+                    "retry": {"type": "array", "items": {"type": "string"}, "description": "Files the last move left behind, to move again"}
                 }),
                 &[],
             ))

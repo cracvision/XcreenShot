@@ -96,3 +96,77 @@ fn full_name(_login: &str) -> Option<String> {
 fn full_name(_login: &str) -> Option<String> {
     None
 }
+
+/// The nearest folder of `path` that exists (itself, or a parent).
+fn existing(path: &std::path::Path) -> Option<std::path::PathBuf> {
+    path.ancestors()
+        .find(|p| p.exists())
+        .map(std::path::Path::to_path_buf)
+}
+
+/// Bytes free for the user on the disk of `path` (LIB-028), or `None` if unknown.
+pub fn free_space(path: &std::path::Path) -> Option<u64> {
+    let dir = existing(path)?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+        let wide: Vec<u16> = dir.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        let (mut avail, mut total, mut free) = (0u64, 0u64, 0u64);
+        // SAFETY: a NUL-terminated path and three valid out pointers.
+        let ok = unsafe { GetDiskFreeSpaceExW(wide.as_ptr(), &mut avail, &mut total, &mut free) };
+        (ok != 0).then_some(avail)
+    }
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let c = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
+        let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+        // SAFETY: a NUL-terminated path and a valid out pointer.
+        let ok = unsafe { libc::statvfs(c.as_ptr(), &mut st) } == 0;
+        ok.then(|| st.f_bavail as u64 * st.f_frsize as u64)
+    }
+}
+
+/// Whether two paths are on the same disk: a move between them is a rename that needs
+/// no free space (LIB-028).
+pub fn same_volume(a: &std::path::Path, b: &std::path::Path) -> bool {
+    let (Some(a), Some(b)) = (existing(a), existing(b)) else {
+        return false;
+    };
+    #[cfg(windows)]
+    {
+        let root = |p: &std::path::Path| {
+            std::fs::canonicalize(p)
+                .unwrap_or_else(|_| p.to_path_buf())
+                .components()
+                .next()
+                .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+        };
+        root(&a).is_some() && root(&a) == root(&b)
+    }
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::fs::MetadataExt;
+        match (std::fs::metadata(&a), std::fs::metadata(&b)) {
+            (Ok(x), Ok(y)) => x.dev() == y.dev(),
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod space_tests {
+    use super::*;
+
+    #[test]
+    fn free_space_and_volumes() {
+        let dir = std::env::temp_dir();
+        assert!(free_space(&dir).is_some_and(|b| b > 0));
+        assert!(
+            free_space(&dir.join("not-there-yet").join("deeper")).is_some(),
+            "from the nearest folder"
+        );
+        assert!(same_volume(&dir, &dir.join("x")));
+    }
+}

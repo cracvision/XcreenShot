@@ -271,6 +271,8 @@ fn ctx_is_relocate(p: &Value) -> bool {
 }
 
 /// The move in progress, to cancel it (LIB-028).
+/// The last move of the library, for Retry of what it left behind (LIB-028).
+static LAST_MOVE: std::sync::Mutex<Option<(PathBuf, PathBuf)>> = std::sync::Mutex::new(None);
 static MOVING: std::sync::Mutex<Option<Arc<std::sync::atomic::AtomicBool>>> = std::sync::Mutex::new(None);
 
 /// Uses `to` as the library from now on: kept, opened, indexed and followed; open
@@ -341,6 +343,11 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
         "inspect" => {
             let dir = path()?;
             let i = relocate::inspect(&dir);
+            // LIB-028: is there room for a move? On the same disk it is a rename.
+            let size: u64 = lib.list().iter().map(|i| i.size).sum();
+            let free = xs_core::platform::free_space(&dir);
+            let same_disk = xs_core::platform::same_volume(&dir, lib.root());
+            let enough = same_disk || free.is_none_or(|f| f > size + size / 20);
             Ok(json!({
                 "path": dir,
                 "exists": i.exists,
@@ -349,7 +356,30 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
                 "writable": i.writable,
                 "synced": synced(&dir),
                 "same": same_path(&dir, lib.root()),
+                "size": size,
+                "free": free,
+                "sameDisk": same_disk,
+                "enough": enough,
+                // LIB-029: more than 5 GB into a synced folder takes room in the service.
+                "bigSync": synced(&dir) && size > 5 * 1024 * 1024 * 1024,
             }))
+        }
+        "retry" => {
+            // LIB-028: the files a move left behind, tried again into the library.
+            let Some((from, to)) = LAST_MOVE.lock().unwrap().clone() else {
+                return Ok(json!({ "moved": 0, "failed": [] }));
+            };
+            let files: Vec<PathBuf> = p
+                .get("retry")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(PathBuf::from)
+                .collect();
+            let r = relocate::move_files(&from, &to, &files);
+            changed(core);
+            Ok(json!({ "moved": r.moved, "failed": r.failed }))
         }
         "cancel" => {
             if let Some(flag) = MOVING.lock().unwrap().as_ref() {
@@ -395,6 +425,7 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
                         *MOVING.lock().unwrap() = None;
                         if !r.cancelled {
                             switch_to(&core, &from, &to);
+                            *LAST_MOVE.lock().unwrap() = Some((from.clone(), to.clone()));
                         }
                         changed(&core);
                         let at = if r.cancelled { &from } else { &to };
@@ -1043,6 +1074,10 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
             p["relocate"] = json!(true);
             if p.get("cancel").and_then(Value::as_bool) == Some(true) {
                 p["action"] = json!("cancel");
+            }
+            // LIB-028: Retry what a move left behind.
+            if p.get("retry").is_some() {
+                p["action"] = json!("retry");
             }
             location_command(&core, ctx, &p)
         });
