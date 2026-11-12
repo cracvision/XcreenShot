@@ -12,10 +12,12 @@ export interface FinalView {
 
 type Stack = { enabled?: boolean }[] | undefined;
 
-/** Whether the document or one of its floating images has an effect on. */
+/** Whether the document or one of its floating images has an effect on, or the canvas
+ * has rounded corners (EDT-075): the core draws them. */
 export function hasEffects(doc: DocDetails): boolean {
   const on = (s: Stack) => (s ?? []).some((e) => e.enabled !== false);
   return (
+    doc.canvas.cornerRadius > 0 ||
     on(doc.effects) ||
     doc.objects.some((o) => o.type === "image" && on((o as unknown as { effects?: Stack }).effects))
   );

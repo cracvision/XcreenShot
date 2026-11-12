@@ -269,7 +269,9 @@ impl Snapshot {
         let (kx0, ky0) = (c.x.max(0), c.y.max(0));
         let kx1 = (c.x + c.width as i64).min(self.base.width as i64);
         let ky1 = (c.y + c.height as i64).min(self.base.height as i64);
-        let base_png = if drop_cropped && !whole && kx1 > kx0 && ky1 > ky0 {
+        let dropping = drop_cropped && !whole && kx1 > kx0 && ky1 > ky0;
+        document.original_changed |= dropping || replaced || baked.is_some();
+        let base_png = if dropping {
             let kept = image::imageops::crop_imm(
                 baked.as_ref().unwrap_or(&self.base.to_image()),
                 kx0 as u32,
@@ -441,11 +443,23 @@ impl DocStore {
                 } else {
                     ("image/jpeg", 96.0)
                 };
+                // A picture without transparency gets a white canvas, like a capture
+                // (EDT-074); its pixels are read later, only its format is looked at.
+                let has_alpha = image::ImageReader::new(std::io::Cursor::new(&bytes))
+                    .with_guessed_format()
+                    .ok()
+                    .and_then(|r| r.into_decoder().ok())
+                    .map(|d| image::ImageDecoder::color_type(&d).has_alpha())
+                    .unwrap_or(true);
+                let mut document = Document::new(w, h, dpi);
+                if !has_alpha {
+                    document.canvas.color = Some("#FFFFFF".to_string());
+                }
                 let mut doc = Doc::new(
                     Some(path.to_path_buf()),
                     Kind::External,
                     format,
-                    Document::new(w, h, dpi),
+                    document,
                     json!({}),
                     BaseSource {
                         bytes: Arc::new(bytes),

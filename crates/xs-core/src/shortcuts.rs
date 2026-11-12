@@ -555,6 +555,61 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"crop_selection"}"#,
         ),
+        // The Image menu (EDT-069 to EDT-077) and Object > Flip (EDT-073).
+        editor(
+            "editor.resize_image",
+            "editor.action",
+            r#"{"action":"resize_image"}"#,
+        ),
+        editor(
+            "editor.canvas_size",
+            "editor.action",
+            r#"{"action":"canvas_size"}"#,
+        ),
+        editor(
+            "editor.canvas_color",
+            "editor.action",
+            r#"{"action":"canvas_color"}"#,
+        ),
+        editor(
+            "editor.rotate_right",
+            "editor.action",
+            r#"{"action":"rotate_right"}"#,
+        ),
+        editor(
+            "editor.rotate_left",
+            "editor.action",
+            r#"{"action":"rotate_left"}"#,
+        ),
+        editor("editor.rotate_180", "editor.action", r#"{"action":"rotate_180"}"#),
+        editor(
+            "editor.rotate_custom",
+            "editor.action",
+            r#"{"action":"rotate_custom"}"#,
+        ),
+        editor(
+            "editor.flip_horizontal",
+            "editor.action",
+            r#"{"action":"flip_horizontal"}"#,
+        ),
+        editor(
+            "editor.flip_vertical",
+            "editor.action",
+            r#"{"action":"flip_vertical"}"#,
+        ),
+        editor("editor.corners", "editor.action", r#"{"action":"corners"}"#),
+        editor("editor.resolution", "editor.action", r#"{"action":"resolution"}"#),
+        editor("editor.revert", "editor.action", r#"{"action":"revert"}"#),
+        editor(
+            "editor.flip_objects_horizontal",
+            "editor.action",
+            r#"{"action":"flip_objects_horizontal"}"#,
+        ),
+        editor(
+            "editor.flip_objects_vertical",
+            "editor.action",
+            r#"{"action":"flip_objects_vertical"}"#,
+        ),
         editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
         editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
         editor(
@@ -680,6 +735,9 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         // shortcut that would never let it through (spec/QUESTIONS.md).
         ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
         ("editor.redo_alt", _, Macos) => return None,
+        // Compatibility on macOS: Cmd+R asks for the angle (EDT-116).
+        ("editor.rotate_custom", Compatibility, Macos) => "Super+KeyR",
+        ("editor.rotate_right", Compatibility, Macos) => return None,
         // Compatibility on macOS: Control and a letter per tool (EDT-115).
         ("editor.tool_favorites", Compatibility, Macos) => "Ctrl+KeyR",
         ("editor.tool_move", Compatibility, Macos) => "Ctrl+KeyV",
@@ -760,6 +818,10 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.deselect" => "Ctrl+KeyD",
                 "editor.invert_selection" => "Ctrl+Shift+KeyI",
                 "editor.float_selection" => "Ctrl+Shift+KeyJ",
+                "editor.crop_selection" => "Ctrl+Shift+KeyK",
+                "editor.resize_image" => "Ctrl+Shift+KeyR",
+                "editor.canvas_size" => "Ctrl+Alt+KeyK",
+                "editor.rotate_right" => "Ctrl+KeyR",
                 "editor.zoom_in" => "Ctrl+Equal",
                 "editor.zoom_out" => "Ctrl+Minus",
                 "editor.zoom_actual" => "Ctrl+Digit0",

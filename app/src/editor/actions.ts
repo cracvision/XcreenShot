@@ -34,6 +34,8 @@ import { alignMoves, distributeMoves, frameOf, type AlignTo, type Extent } from 
 import { textBox } from "./callouts";
 import { selectionAction, selectPixels } from "./pixelSelection";
 import { importTheme } from "./themesUi";
+import { openImageDialog } from "./imageMenu";
+import { turnOnEffect } from "./effects";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -747,7 +749,55 @@ export function performAction(action: string): boolean {
       if (!doc) return false;
       void openAi("name");
       return true;
+    // The Image menu (EDT-069 to EDT-077) and Edit > Revert to original (EDT-076).
+    case "resize_image":
+      if (!doc) return false;
+      openImageDialog("resize");
+      return true;
+    case "rotate_custom":
+      if (!doc) return false;
+      openImageDialog("rotate");
+      return true;
+    case "canvas_size":
+    case "canvas_color":
+    case "corners":
+    case "resolution":
+    case "revert":
+      if (!doc) return false;
+      openImageDialog(action);
+      return true;
+    case "rotate_right":
+    case "rotate_left":
+    case "rotate_180": {
+      if (!doc) return false;
+      const degrees = action === "rotate_right" ? 90 : action === "rotate_left" ? -90 : 180;
+      run("document.rotate", { documentId: doc.documentId, degrees }).catch(fail);
+      return true;
+    }
+    case "flip_horizontal":
+    case "flip_vertical":
+      if (!doc) return false;
+      run("document.flip", {
+        documentId: doc.documentId,
+        direction: action === "flip_horizontal" ? "horizontal" : "vertical",
+      }).catch(fail);
+      return true;
+    case "flip_objects_horizontal":
+    case "flip_objects_vertical":
+      // Object > Flip: only the selected objects (EDT-073).
+      if (!doc || !selected) return false;
+      run("document.flip", {
+        documentId: doc.documentId,
+        direction: action === "flip_objects_horizontal" ? "horizontal" : "vertical",
+        objectIds: selection,
+      }).catch(fail);
+      return true;
     default:
+      // Image > Effects (EDT-053): `effect_page_curl` turns on pageCurl.
+      if (action.startsWith("effect_"))
+        return turnOnEffect(
+          action.slice(7).replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()),
+        );
       return false;
   }
 }

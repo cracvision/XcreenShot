@@ -190,7 +190,111 @@ fn editor_menus() -> Vec<MenuEntry> {
                     "menu.float_selection",
                     "float_selection",
                 ),
+                Separator,
+                // EDT-076: undoable, after a confirmation.
+                action("editor.revert", "menu.revert", "revert"),
+            ],
+        },
+        // The image as a whole (EDT-069 to EDT-077).
+        Submenu {
+            label: "menu.image",
+            items: vec![
+                action("editor.resize_image", "menu.resize_image", "resize_image"),
+                action("editor.canvas_size", "menu.canvas_size", "canvas_size"),
+                action("editor.canvas_color", "menu.canvas_color", "canvas_color"),
+                Separator,
+                Submenu {
+                    label: "menu.rotate",
+                    items: vec![
+                        action("editor.rotate_right", "menu.rotate_right", "rotate_right"),
+                        action("editor.rotate_left", "menu.rotate_left", "rotate_left"),
+                        action("editor.rotate_180", "menu.rotate_180", "rotate_180"),
+                        Separator,
+                        action("editor.rotate_custom", "menu.rotate_custom", "rotate_custom"),
+                    ],
+                },
+                Submenu {
+                    label: "menu.flip",
+                    items: vec![
+                        action(
+                            "editor.flip_horizontal",
+                            "menu.flip_horizontal",
+                            "flip_horizontal",
+                        ),
+                        action("editor.flip_vertical", "menu.flip_vertical", "flip_vertical"),
+                    ],
+                },
+                Separator,
                 action("editor.crop_selection", "menu.crop_selection", "crop_selection"),
+                Separator,
+                action("editor.corners", "menu.corners", "corners"),
+                action("editor.resolution", "menu.resolution", "resolution"),
+                Separator,
+                Submenu {
+                    label: "menu.effects",
+                    items: vec![
+                        action(
+                            "editor.effect_border",
+                            "ui.editor.fx.border.name",
+                            "effect_border",
+                        ),
+                        action("editor.effect_edges", "ui.editor.fx.edges.name", "effect_edges"),
+                        action(
+                            "editor.effect_shadow",
+                            "ui.editor.fx.shadow.name",
+                            "effect_shadow",
+                        ),
+                        action(
+                            "editor.effect_perspective",
+                            "ui.editor.fx.perspective.name",
+                            "effect_perspective",
+                        ),
+                        action(
+                            "editor.effect_page_curl",
+                            "ui.editor.fx.pageCurl.name",
+                            "effect_page_curl",
+                        ),
+                        action(
+                            "editor.effect_reflection",
+                            "ui.editor.fx.reflection.name",
+                            "effect_reflection",
+                        ),
+                        action("editor.effect_fade", "ui.editor.fx.fade.name", "effect_fade"),
+                        action(
+                            "editor.effect_filters",
+                            "ui.editor.fx.filters.name",
+                            "effect_filters",
+                        ),
+                        action("editor.effect_color", "ui.editor.fx.color.name", "effect_color"),
+                        action(
+                            "editor.effect_replace",
+                            "ui.editor.fx.replace.name",
+                            "effect_replace",
+                        ),
+                        action(
+                            "editor.effect_watermark",
+                            "ui.editor.fx.watermark.name",
+                            "effect_watermark",
+                        ),
+                        action(
+                            "editor.effect_details",
+                            "ui.editor.fx.details.name",
+                            "effect_details",
+                        ),
+                        action("editor.effect_trim", "ui.editor.fx.trim.name", "effect_trim"),
+                        action(
+                            "editor.effect_corners",
+                            "ui.editor.fx.corners.name",
+                            "effect_corners",
+                        ),
+                        action("editor.effect_scale", "ui.editor.fx.scale.name", "effect_scale"),
+                        action(
+                            "editor.effect_rotate",
+                            "ui.editor.fx.rotate.name",
+                            "effect_rotate",
+                        ),
+                    ],
+                },
             ],
         },
         Submenu {
@@ -259,6 +363,23 @@ fn editor_menus() -> Vec<MenuEntry> {
                 Separator,
                 action("editor.lock", "menu.lock", "lock"),
                 action("editor.unlock_all", "menu.unlock_all", "unlock_all"),
+                Separator,
+                // Only the selected objects (EDT-073).
+                Submenu {
+                    label: "menu.flip",
+                    items: vec![
+                        action(
+                            "editor.flip_objects_horizontal",
+                            "menu.flip_horizontal",
+                            "flip_objects_horizontal",
+                        ),
+                        action(
+                            "editor.flip_objects_vertical",
+                            "menu.flip_vertical",
+                            "flip_objects_vertical",
+                        ),
+                    ],
+                },
                 Separator,
                 Submenu {
                     label: "menu.align",
@@ -456,6 +577,7 @@ mod tests {
             [
                 "menu.file",
                 "menu.edit",
+                "menu.image",
                 "menu.view",
                 "menu.object",
                 "menu.ai",
@@ -467,7 +589,7 @@ mod tests {
         assert_eq!(file[0]["command"], "editor.action");
         assert_eq!(file[0]["params"], json!({ "action": "open" }));
         assert_eq!(file[1]["kind"], "separator");
-        let view = menus[2]["items"].as_array().unwrap();
+        let view = menus[3]["items"].as_array().unwrap();
         let toolbar = view.iter().find(|i| i["kind"] == "submenu").unwrap();
         assert_eq!(toolbar["items"][0]["checked"], "editor.toolbar_labels");
     }

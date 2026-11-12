@@ -1397,18 +1397,29 @@ function CropProperties() {
 function DocumentProperties({ doc }: { doc: DocDetails }) {
   const { t } = useTranslation();
   return (
-    <dl className="doc-props">
-      <dt>{t("ui.editor.prop.size")}</dt>
-      <dd>
-        {doc.canvas.width} × {doc.canvas.height} px
-      </dd>
-      <dt>{t("ui.editor.prop.resolution")}</dt>
-      <dd>{t("ui.editor.dpi", { dpi: Math.round(doc.dpi) })}</dd>
-      <dt>{t("ui.editor.prop.canvas_color")}</dt>
-      <dd>{doc.canvas.color ?? t("ui.editor.transparent")}</dd>
-      <dt>{t("ui.editor.prop.file")}</dt>
-      <dd className="path">{doc.path ?? "—"}</dd>
-    </dl>
+    <>
+      <dl className="doc-props">
+        <dt>{t("ui.editor.prop.size")}</dt>
+        <dd>
+          {doc.canvas.width} × {doc.canvas.height} px
+        </dd>
+        <dt>{t("ui.editor.prop.resolution")}</dt>
+        <dd>{t("ui.editor.dpi", { dpi: Math.round(doc.dpi) })}</dd>
+        <dt>{t("ui.editor.prop.file")}</dt>
+        <dd className="path">{doc.path ?? "—"}</dd>
+      </dl>
+      {/* The canvas color, editable here too (EDT-074). */}
+      <ColorPicker
+        label={t("ui.editor.prop.canvas_color")}
+        value={doc.canvas.color ?? null}
+        allowTransparent
+        onCommit={(color) =>
+          void run("document.canvas", { documentId: doc.documentId, color }).catch((e) =>
+            useEditor.getState().showError(e),
+          )
+        }
+      />
+    </>
   );
 }
 

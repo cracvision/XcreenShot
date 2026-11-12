@@ -63,7 +63,11 @@
         }
       }
     },
-    "effects": { "type": "array", "items": { "type": "object" } }
+    "effects": { "type": "array", "items": { "type": "object" } },
+    "originalChanged": {
+      "type": "boolean",
+      "description": "base.png is no longer the image as captured or opened: a save merged edits into it or left out cropped pixels (EDT-050, EDT-076). Absent means false."
+    }
   },
   "$defs": {
     "shadow": {

@@ -21,6 +21,7 @@ import {
 import { useEditor, usePanel, type FlatLayer, type StepObject } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
+import { TYPES } from "./effects";
 
 interface Point {
   x: number;
@@ -249,6 +250,23 @@ export function toolbarMenu(at: Point): void {
   });
 }
 
+/** Entries of the Image menu that apply to any document shown. */
+const IMAGE_ACTIONS = [
+  "resize_image",
+  "canvas_size",
+  "canvas_color",
+  "rotate_right",
+  "rotate_left",
+  "rotate_180",
+  "rotate_custom",
+  "flip_horizontal",
+  "flip_vertical",
+  "corners",
+  "resolution",
+  "revert",
+  ...TYPES.map((t) => `effect_${t.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`),
+];
+
 /** Tells the menu bar which entries apply now, and runs what it orders. */
 export function useMenuBar(): void {
   const doc = useEditor((s) => s.doc);
@@ -348,6 +366,10 @@ export function useMenuBar(): void {
     enabled["editor.unflatten_all"] = canUnflatten;
     for (const a of ["cut", "copy", "delete", "deselect"])
       enabled[`editor.${a}`] = (enabled[`editor.${a}`] ?? false) || hasPixels;
+    // The Image menu (EDT-069 to EDT-077) and Image > Effects (EDT-053).
+    for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc;
+    enabled["editor.flip_objects_horizontal"] = selected;
+    enabled["editor.flip_objects_vertical"] = selected;
     enabled["editor.invert_selection"] = hasPixels;
     enabled["editor.float_selection"] = pixelsOnImage;
     enabled["editor.crop_selection"] = pixelsOnImage;

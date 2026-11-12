@@ -3,7 +3,17 @@
 // one command when the gesture ends.
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Circle, Ellipse, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
+import {
+  Circle,
+  Ellipse,
+  Group,
+  Image as KImage,
+  Layer,
+  Line,
+  Rect,
+  Stage,
+  Text,
+} from "react-konva";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
@@ -114,7 +124,10 @@ type HandleHit =
   // A polygon's corner (EDT-030).
   | { vertex: ShapeObject; index: number }
   | { anchor: CalloutObject }
-  | { zone: MagnifyObject };
+  | { zone: MagnifyObject }
+  // The canvas's edges and its rounded corners' rhombus (EDT-070, EDT-075).
+  | { canvas: BoxHandle }
+  | { canvasRadius: true };
 
 type Drag =
   | {
@@ -177,7 +190,37 @@ type Drag =
       startY: number;
     }
   // Selected pixels being dragged (EDT-044).
-  | { kind: "pxmove"; start: Point; delta: Point; moved: boolean };
+  | { kind: "pxmove"; start: Point; delta: Point; moved: boolean }
+  // The canvas resized by a handle (EDT-070), or its corners rounded (EDT-075).
+  | { kind: "canvas"; handle: BoxHandle; start: Box; box: Box; fromCenter: boolean }
+  | { kind: "cradius"; value: number; startX: number; startY: number };
+
+/** What stays put when the canvas is resized by a handle (EDT-070). */
+const ANCHOR_OF: Record<BoxHandle, string> = {
+  e: "left",
+  w: "right",
+  n: "bottom",
+  s: "top",
+  ne: "bottomLeft",
+  nw: "bottomRight",
+  se: "topLeft",
+  sw: "topRight",
+};
+
+/** How far the corners' rhombus sits from the top-right corner at radius 0, in screen
+ * pixels (EDT-075). */
+const CORNER_GAP = 16;
+
+/** The size or radius by the pointer while a handle is dragged. */
+function DragLabel({ x, y, text }: { x: number; y: number; text: string }) {
+  const w = text.length * 7 + 14;
+  return (
+    <Group x={x + 14} y={y + 14} listening={false}>
+      <Rect width={w} height={22} cornerRadius={5} fill="rgba(16, 16, 28, 0.88)" />
+      <Text x={7} y={5} text={text} fontSize={12} fill="#ffffff" />
+    </Group>
+  );
+}
 
 /** The eraser's tip around the pointer, in screen pixels: dark and light, so it shows
  * on any image (EDT-048). */
@@ -745,6 +788,16 @@ export function Canvas({ doc }: Props) {
   const committed = new Map(doc.objects.map((o) => [o.id, o]));
   const plusPoint = (box: Box) => plusAt(box, lay?.scale ?? 1);
   const radiusPoint = (box: Box, radius: number) => radiusAt(box, radius, lay?.scale ?? 1);
+  // With Move and nothing selected, the canvas has handles to resize it and a rhombus
+  // for its rounded corners (EDT-070, EDT-075).
+  const canvasEdit =
+    tool === "move" && selection.length === 0 && !doc.pixelSelection && !cropping && !textEdit;
+  const canvasBox: Box = { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height, rotation: 0 };
+  /** The rhombus for radius `r`: on the diagonal from the top-right corner. */
+  const cornerPoint = (r: number): Point => {
+    const o = r + CORNER_GAP / (lay?.scale ?? 1);
+    return [canvasSize.width - o, o];
+  };
   /** A selected callout's tails, +, radius and anchor (EDT-028). */
   const calloutHandles = (o: CalloutObject, box: Box) => {
     const c = toScreen(center(box));
@@ -856,6 +909,12 @@ export function Canvas({ doc }: Props) {
       const box: Box = { ...cropRect, rotation: 0 };
       for (const h of RESIZE_HANDLES)
         if (near(handlePoint(box, h, 0), s)) return { crop: h as BoxHandle };
+      return null;
+    }
+    if (canvasEdit) {
+      if (near(cornerPoint(doc.canvas.cornerRadius), s)) return { canvasRadius: true };
+      for (const h of RESIZE_HANDLES)
+        if (near(handlePoint(canvasBox, h, 0), s)) return { canvas: h as BoxHandle };
       return null;
     }
     if (selection.length > 1) {
@@ -1033,6 +1092,22 @@ export function Canvas({ doc }: Props) {
         mode: modeOf(Boolean(doc.pixelSelection), e),
         ...(target ? { objectId: target } : {}),
       });
+      return;
+    }
+    if (handle && "canvas" in handle) {
+      capture();
+      setDrag({
+        kind: "canvas",
+        handle: handle.canvas,
+        start: canvasBox,
+        box: canvasBox,
+        fromCenter: e.altKey,
+      });
+      return;
+    }
+    if (handle && "canvasRadius" in handle) {
+      capture();
+      setDrag({ kind: "cradius", value: doc.canvas.cornerRadius, startX: s.x, startY: s.y });
       return;
     }
     if (handle && "multi" in handle) {
@@ -1315,6 +1390,19 @@ export function Canvas({ doc }: Props) {
         return { ...d, point: p };
       case "vertex":
         return { ...d, point: p };
+      case "canvas":
+        // Alt from the center, Shift keeps the proportion (EDT-070).
+        return {
+          ...d,
+          fromCenter: e.altKey,
+          box: resize(d.start, d.handle, p, { keepRatio: e.shiftKey, fromCenter: e.altKey }),
+        };
+      case "cradius": {
+        // Along the diagonal; at most half the shorter side (EDT-075).
+        const most = Math.floor(Math.min(canvasSize.width, canvasSize.height) / 2);
+        const along = (canvasSize.width - p[0] + p[1]) / 2 - CORNER_GAP / (lay?.scale ?? 1);
+        return { ...d, value: Math.round(Math.max(0, Math.min(most, along))) };
+      }
       case "radius": {
         const [lx] = toLocal(d.box, p);
         const most = Math.min(200, d.box.w / 2, d.box.h / 2);
@@ -1372,13 +1460,15 @@ export function Canvas({ doc }: Props) {
       const handleName = h
         ? "crop" in h
           ? h.crop
-          : "multi" in h
-            ? h.multi
-            : "end" in h || "tail" in h || "radius" in h || "vertex" in h
-              ? "end"
-              : "anchor" in h || "zone" in h
-                ? "anchor"
-                : h.handle
+          : "canvas" in h
+            ? h.canvas
+            : "multi" in h
+              ? h.multi
+              : "end" in h || "tail" in h || "radius" in h || "vertex" in h || "canvasRadius" in h
+                ? "end"
+                : "anchor" in h || "zone" in h
+                  ? "anchor"
+                  : h.handle
         : null;
       setHover(
         handleName ??
@@ -1540,6 +1630,19 @@ export function Canvas({ doc }: Props) {
           objectId: d.id,
           set: refit(box, pts),
         });
+      } else if (d.kind === "canvas") {
+        const width = Math.round(d.box.w);
+        const height = Math.round(d.box.h);
+        if (width === canvasSize.width && height === canvasSize.height) return;
+        await run("document.canvas_size", {
+          documentId: id,
+          width,
+          height,
+          anchor: d.fromCenter ? "center" : ANCHOR_OF[d.handle],
+        });
+      } else if (d.kind === "cradius") {
+        if (d.value === doc.canvas.cornerRadius) return;
+        await run("document.canvas", { documentId: id, cornerRadius: d.value });
       } else if (d.kind === "radius") {
         await run("document.update_object", {
           documentId: id,
@@ -1646,6 +1749,13 @@ export function Canvas({ doc }: Props) {
         void finish({ ...d, click });
         return;
       }
+    }
+    if (d.kind === "cradius") {
+      // A click rounds the corners 20 px (EDT-075).
+      const s = local(e);
+      const click = Math.hypot(s.x - d.startX, s.y - d.startY) < DRAG_THRESHOLD;
+      void finish(click ? { ...d, value: 20 } : d);
+      return;
     }
     if (d.kind === "crop" && d.mode === "new") {
       const s = local(e);
@@ -2305,6 +2415,82 @@ export function Canvas({ doc }: Props) {
                   })}
                 </Group>
               )}
+              {canvasEdit &&
+                lay &&
+                (() => {
+                  // The canvas's handles and rhombus (EDT-070, EDT-075).
+                  const box = drag?.kind === "canvas" ? drag.box : canvasBox;
+                  const r = drag?.kind === "cradius" ? drag.value : doc.canvas.cornerRadius;
+                  const [rx, ry] = toScreen(cornerPoint(r));
+                  const [x0, y0] = toScreen([box.x, box.y]);
+                  return (
+                    <Group listening={false}>
+                      {drag?.kind === "canvas" && (
+                        <Line
+                          points={corners(box).flatMap(toScreen)}
+                          closed
+                          stroke={ACCENT}
+                          strokeWidth={1.5}
+                          dash={[5, 4]}
+                        />
+                      )}
+                      {drag?.kind === "cradius" && (
+                        <Rect
+                          x={x0}
+                          y={y0}
+                          width={box.w * lay.scale}
+                          height={box.h * lay.scale}
+                          cornerRadius={r * lay.scale}
+                          stroke={ACCENT}
+                          strokeWidth={1.5}
+                          dash={[5, 4]}
+                        />
+                      )}
+                      {drag?.kind !== "cradius" &&
+                        RESIZE_HANDLES.map((h) => {
+                          const [x, y] = toScreen(handlePoint(box, h, 0));
+                          return (
+                            <Rect
+                              key={h}
+                              x={x}
+                              y={y}
+                              width={HANDLE - 2}
+                              height={HANDLE - 2}
+                              offsetX={(HANDLE - 2) / 2}
+                              offsetY={(HANDLE - 2) / 2}
+                              fill="#ffffff"
+                              stroke={ACCENT}
+                              strokeWidth={1.5}
+                            />
+                          );
+                        })}
+                      {drag?.kind !== "canvas" && (
+                        <Rect
+                          x={rx}
+                          y={ry}
+                          width={HANDLE - 2}
+                          height={HANDLE - 2}
+                          offsetX={(HANDLE - 2) / 2}
+                          offsetY={(HANDLE - 2) / 2}
+                          rotation={45}
+                          fill={r > 0 ? ACCENT : "#ffffff"}
+                          stroke={r > 0 ? "#ffffff" : ACCENT}
+                          strokeWidth={1.5}
+                        />
+                      )}
+                      {drag?.kind === "canvas" && (
+                        <DragLabel
+                          {...(() => {
+                            const [x, y] = toScreen(handlePoint(box, drag.handle, 0));
+                            return { x, y };
+                          })()}
+                          text={`${Math.round(box.w)} × ${Math.round(box.h)} px`}
+                        />
+                      )}
+                      {drag?.kind === "cradius" && <DragLabel x={rx} y={ry} text={`${r} px`} />}
+                    </Group>
+                  );
+                })()}
               {drag?.kind === "band" && (
                 <Line
                   points={corners({

@@ -1305,7 +1305,7 @@ pub const TOOLS: [&str; 20] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 56] = [
+pub const EDITOR_ACTIONS: [&str; 86] = [
     "open",
     "save",
     "save_as",
@@ -1362,6 +1362,38 @@ pub const EDITOR_ACTIONS: [&str; 56] = [
     "float_selection",
     "crop_selection",
     "import_theme",
+    // The Image menu (EDT-069 to EDT-077) and Object > Flip (EDT-073).
+    "resize_image",
+    "canvas_size",
+    "canvas_color",
+    "rotate_right",
+    "rotate_left",
+    "rotate_180",
+    "rotate_custom",
+    "flip_horizontal",
+    "flip_vertical",
+    "corners",
+    "resolution",
+    "revert",
+    "flip_objects_horizontal",
+    "flip_objects_vertical",
+    // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
+    "effect_border",
+    "effect_edges",
+    "effect_shadow",
+    "effect_perspective",
+    "effect_page_curl",
+    "effect_reflection",
+    "effect_fade",
+    "effect_filters",
+    "effect_color",
+    "effect_replace",
+    "effect_watermark",
+    "effect_details",
+    "effect_trim",
+    "effect_corners",
+    "effect_scale",
+    "effect_rotate",
 ];
 
 fn library_item() -> Value {

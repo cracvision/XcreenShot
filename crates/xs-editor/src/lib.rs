@@ -985,6 +985,11 @@ fn write_library_item(
     let path = xs_library::new_item_path(&folder, app, chrono::Local::now(), "xshot");
     let dpi = (96.0 * scale).round();
     let mut document = Document::new(image.width(), image.height(), dpi);
+    // An opaque capture has a white canvas; one with transparency (a window with
+    // rounded corners) keeps it transparent (EDT-074).
+    if image.pixels().all(|p| p.0[3] == 255) {
+        document.canvas.color = Some("#FFFFFF".to_string());
+    }
     let png = xs_image::encode::png(image, dpi, true)?;
     let mut images = BTreeMap::new();
     let mut shown = std::borrow::Cow::Borrowed(image);
@@ -1644,6 +1649,7 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
                 .unwrap_or(true);
             next = Document::new(size.0, size.1, dpi);
             next.canvas.color = opaque.then(|| "#FFFFFF".to_string());
+            next.original_changed = doc.original_changed;
             "history.revert"
         }
         "canvas" => {
@@ -2255,6 +2261,9 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             }
             if let Some((name, rect)) = &crop_patch {
                 pixels::add_patch(doc, *rect, name.clone());
+                // Outside the shape stays transparent, not the canvas color: that is
+                // how an image is cut to a circle (EDT-044, EDT-074).
+                doc.canvas.color = None;
             }
             if let Some(r) = crop {
                 crop_to(doc, base_size, r).ok_or_else(|| CommandError::internal("empty crop"))?;

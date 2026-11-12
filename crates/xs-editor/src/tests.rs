@@ -731,7 +731,7 @@ fn the_canvas_grows_to_fit_an_object_and_shrinks_back() {
     let (w, h) = size(&e, &doc);
     assert!((450..=460).contains(&w), "grows just enough: {w}");
     assert_eq!(h, 200, "only where the arrow sticks out");
-    // The new area is the canvas color (transparent): the export shows it.
+    // The new area is the canvas color, white for an opaque capture (EDT-074).
     let out = e.outside.path().join("grown.png");
     cli(
         &e.core,
@@ -740,7 +740,7 @@ fn the_canvas_grows_to_fit_an_object_and_shrinks_back() {
     );
     let png = image::open(&out).unwrap().to_rgba8();
     assert_eq!(png.width() as u64, w);
-    assert_eq!(png.get_pixel(w as u32 - 1, 10).0[3], 0);
+    assert_eq!(png.get_pixel(w as u32 - 1, 10).0, [255, 255, 255, 255]);
     assert_eq!(png.get_pixel(10, 10).0, [255, 255, 255, 255]);
     // Back inside: the canvas is the image again (Carlos, 2026-10-27).
     cli(
@@ -2320,7 +2320,8 @@ fn fill_changes_the_image_not_the_objects() {
         "document.fill",
         json!({"documentId": doc, "at": [5, 5], "color": null}),
     );
-    assert_eq!(rendered(&e, &doc).get_pixel(300, 150).0[3], 0);
+    // The white canvas of an opaque capture shows through (EDT-074).
+    assert_eq!(rendered(&e, &doc).get_pixel(300, 150).0, [255, 255, 255, 255]);
     cli(&e.core, "document.save", json!({"documentId": doc}));
     let file = Xshot::read(&path).unwrap();
     assert!(file.document.patches.is_empty());
@@ -2351,7 +2352,11 @@ fn fill_changes_the_image_not_the_objects() {
     assert_ne!(info["objects"][1]["image"], picture);
     let img = rendered(&e, &doc);
     assert_eq!(img.get_pixel(190, 100).0, [0, 0, 255, 255]);
-    assert_eq!(img.get_pixel(300, 150).0[3], 0, "the image did not change");
+    assert_eq!(
+        img.get_pixel(300, 150).0,
+        [255, 255, 255, 255],
+        "the image did not change: still transparent over the white canvas"
+    );
     let bad = call(
         &e.core,
         Source::Cli,
@@ -2397,6 +2402,12 @@ fn global_fill_reaches_parts_that_do_not_touch() {
 fn erasing_shows_the_canvas_color() {
     let e = env();
     let (doc, _) = capture(&e);
+    // An opaque capture starts with a white canvas (EDT-074): transparent first.
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "color": null}),
+    );
     // Red pixels, so white shows.
     cli(
         &e.core,
@@ -2553,7 +2564,11 @@ fn acting_on_selected_pixels() {
         json!({"documentId": doc, "action": "move", "offset": [40, 0], "gapFill": "transparent"}),
     );
     let img = rendered(&e, &doc);
-    assert_eq!(img.get_pixel(65, 50).0[3], 0, "transparent where it was");
+    assert_eq!(
+        img.get_pixel(65, 50).0,
+        [255, 255, 255, 255],
+        "transparent where it was: the white canvas shows (EDT-074)"
+    );
     assert_eq!(img.get_pixel(170, 50).0, [30, 110, 220, 255], "moved");
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(
@@ -3190,6 +3205,7 @@ fn resizing_turning_and_reverting_the_image() {
     cli(&e.core, "document.save", json!({"documentId": doc}));
     let file = Xshot::read(&path).unwrap();
     assert!(file.document.base_image.is_none());
+    assert!(file.document.original_changed, "Revert to original will warn");
     assert_eq!(xs_image::encode::png_size(&file.base_png), Some((1000, 500)));
     // A quarter turn and back: exactly the same image.
     let before = rendered(&e, &doc);
@@ -3386,4 +3402,39 @@ fn flipping_the_image_and_objects() {
     cli(&e.core, "document.undo", json!({"documentId": doc}));
     cli(&e.core, "document.undo", json!({"documentId": doc}));
     assert_eq!(rendered(&e, &doc).get_pixel(10, 900).0, [0, 0, 255, 255]);
+}
+
+/// EDT-074: an opaque capture gets a white canvas, one with transparency keeps it
+/// transparent; Transparent and an eraser then leave transparency in the PNG.
+#[test]
+fn captures_start_with_a_white_canvas_unless_transparent() {
+    let e = env();
+    let (opaque, _) = add_capture(&e.core, &white(40, 20), json!({"mode": "region"}), 1.0, None).unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": opaque}));
+    assert_eq!(info["canvas"]["color"], "#FFFFFF");
+    let mut rounded = white(40, 20);
+    rounded.put_pixel(0, 0, image::Rgba([0, 0, 0, 0]));
+    let (clear, _) = add_capture(&e.core, &rounded, json!({"mode": "window"}), 1.0, None).unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": clear}));
+    assert!(info["canvas"]["color"].is_null());
+    // Transparent, then erase: transparent in the exported PNG.
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": opaque, "color": null}),
+    );
+    cli(
+        &e.core,
+        "document.erase",
+        json!({"documentId": opaque, "points": [[10, 10]], "width": 6, "shape": "square"}),
+    );
+    let out = e.outside.path().join("erased.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": opaque, "format": "png", "path": out}),
+    );
+    let png = image::open(&out).unwrap().to_rgba8();
+    assert_eq!(png.get_pixel(10, 10).0[3], 0);
+    assert_eq!(png.get_pixel(30, 10).0, [255, 255, 255, 255]);
 }

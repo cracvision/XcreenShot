@@ -73,10 +73,8 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         [id, "final"] => editor.store.snapshot(id).ok().and_then(|snap| {
             let (image, origin) = snap.render_with_origin();
             let png = xs_image::encode::png(&image, 0.0, true).ok()?;
-            return Some((std::sync::Arc::new(png), "image/png")).map(|b| {
-                FINAL_ORIGIN.with(|o| o.set(origin));
-                b
-            });
+            FINAL_ORIGIN.with(|o| o.set(origin));
+            Some((std::sync::Arc::new(png), "image/png"))
         }),
         // An object's shadow (EDT-021); `document.info` says where it goes (`shadowAt`).
         [id, "shadow", object] => editor.store.snapshot(id).ok().and_then(|snap| {

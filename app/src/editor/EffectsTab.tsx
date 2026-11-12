@@ -13,76 +13,9 @@ import { useEditor } from "./state";
 import { Dialog } from "../components/Dialog";
 import { useContextMenu } from "./menus";
 import { sampleUrl } from "./themesUi";
+import { DEFAULTS, TYPES } from "./effects";
 
 type Effect = Record<string, unknown> & { type: string; enabled?: boolean };
-
-/** The effects of the panel, in order (EDT-053). */
-const TYPES = [
-  "border",
-  "edges",
-  "shadow",
-  "perspective",
-  "pageCurl",
-  "reflection",
-  "fade",
-  "filters",
-  "color",
-  "replace",
-  "watermark",
-  "details",
-  "trim",
-  "corners",
-  "scale",
-  "rotate",
-] as const;
-
-/** What an effect starts with when it is turned on for the first time. */
-const DEFAULTS: Record<string, Record<string, unknown>> = {
-  border: { color: "#1F2430", width: 2, position: "outside" },
-  edges: { style: "torn", size: 16, sides: { bottom: true }, randomness: 50, shadow: false },
-  shadow: {
-    angle: 45,
-    distance: 10,
-    blur: 20,
-    opacity: 50,
-    color: "#000000",
-    background: "transparent",
-  },
-  perspective: { style: "perspective", horizontal: 15, vertical: 0, depth: 50 },
-  pageCurl: { corner: "bottomRight", size: 20, color: "#D9D9D9" },
-  reflection: { size: 30, opacity: 40, gap: 0 },
-  fade: { size: 40, intensity: 100, sides: { top: true, bottom: true, left: true, right: true } },
-  filters: { grayscale: { on: true } },
-  color: { brightness: 0, contrast: 0, hue: 0, saturation: 0, gamma: 1 },
-  replace: { mode: "replace", a: "#FFFFFF", b: null, tolerance: 5 },
-  watermark: {
-    source: "text",
-    text: "XcreenShot",
-    size: 36,
-    color: "#FFFFFF",
-    position: "bottomRight",
-    margin: 20,
-    scale: 100,
-    opacity: 30,
-    rotation: 0,
-    layer: "above",
-  },
-  details: {
-    placement: "band",
-    side: "bottom",
-    fields: { app: true, url: true, title: true, date: true },
-    size: 12,
-    color: "#FFFFFF",
-    background: "#1F2430CC",
-    align: "left",
-    padding: 8,
-    dateFormat: "system",
-  },
-  trim: { tolerance: 5 },
-  corners: { shape: "radius", radius: 20 },
-  scale: { mode: "percent", value: 50 },
-  rotate: { angle: 90 },
-};
 
 type Field =
   | { k: string; kind: "number"; min: number; max: number; step?: number; unit?: string }

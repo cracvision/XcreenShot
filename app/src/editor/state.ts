@@ -572,6 +572,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   dpi: number;
   objects: DocObject[];
   base: { width: number; height: number; mime: string };
+  /** base.png is no longer the image as captured or opened (EDT-050, EDT-076). */
+  originalChanged?: boolean;
   /** With flattened objects, the canvas shows a view of the image that may start
    * before the original pixels, in base pixels (EDT-091). */
   baseView?: { x: number; y: number; width: number; height: number } | null;

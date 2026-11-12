@@ -170,6 +170,11 @@ pub struct Document {
     /// resizing, turning or flipping the image (ADR 0006). A written file has none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base_image: Option<String>,
+    /// `base.png` is no longer the image as captured or opened: a save merged edits
+    /// into it or left out cropped pixels (EDT-050, EDT-076, ADR 0006). Revert to
+    /// original warns about it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub original_changed: bool,
     /// How the original shows under simplified shapes (EDT-041).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub simplify: Option<SimplifyView>,
@@ -210,6 +215,7 @@ impl Document {
             flattened: Vec::new(),
             patches: Vec::new(),
             base_image: None,
+            original_changed: false,
             simplify: None,
             effects: Vec::new(),
             extra: Map::new(),

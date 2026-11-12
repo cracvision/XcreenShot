@@ -10,6 +10,7 @@ import { requestZoom, useEditor, usePointer } from "./state";
 import { useDraft } from "./useDraft";
 import { hasEffects } from "./finalPreview";
 import { parseZoom, ZOOM_STEPS } from "./view";
+import { openImageDialog } from "./imageMenu";
 
 function PointerPosition({ width, height }: { width: number; height: number }) {
   const point = usePointer((s) => s.point);
@@ -92,7 +93,14 @@ export function StatusBar() {
   return (
     <footer className="status-bar">
       <RecentButton />
-      <span className="status-item" title={t("ui.editor.prop.size")}>
+      {/* A click opens Resize image (EDT-069); the resolution opens its dialog (EDT-077). */}
+      <button
+        type="button"
+        className="status-item status-button"
+        title={t("menu.resize_image")}
+        aria-label={`${t("ui.editor.prop.size")}: ${doc.canvas.width} × ${doc.canvas.height} px`}
+        onClick={() => openImageDialog("resize")}
+      >
         {doc.canvas.width} × {doc.canvas.height} px
         {fxSize &&
           hasEffects(doc) &&
@@ -103,7 +111,26 @@ export function StatusBar() {
               {t("ui.editor.fx.with_effects", { w: fxSize[0], h: fxSize[1] })}
             </span>
           )}
-      </span>
+      </button>
+      <button
+        type="button"
+        className="status-item status-button"
+        title={t("menu.resolution")}
+        onClick={() => openImageDialog("resolution")}
+      >
+        {t("ui.editor.dpi", { dpi: Math.round(doc.dpi) })}
+      </button>
+      {doc.canvas.cornerRadius > 0 && (
+        // The radius of the rounded corners (EDT-075).
+        <button
+          type="button"
+          className="status-item status-button"
+          title={t("menu.corners")}
+          onClick={() => openImageDialog("corners")}
+        >
+          {t("ui.editor.image.status_radius", { r: Math.round(doc.canvas.cornerRadius) })}
+        </button>
+      )}
       <PointerPosition width={doc.canvas.width} height={doc.canvas.height} />
       <OutsideObjects />
       <span className="grow" />
