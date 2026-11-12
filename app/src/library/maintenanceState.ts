@@ -17,6 +17,24 @@ export function fail(e: unknown): void {
   useEditor.getState().showError(e);
 }
 
+/** The conflict copy being resolved (LIB-029). */
+export const useResolve = create<{ item: { id: string; name: string } | null }>(() => ({
+  item: null,
+}));
+
+export function askResolve(item: { id: string; name: string }): void {
+  useResolve.setState({ item });
+}
+
+export async function resolveConflict(id: string, keep: "this" | "original" | "both") {
+  useResolve.setState({ item: null });
+  try {
+    await run("library.resolve", { id, keep });
+  } catch (e) {
+    fail(e);
+  }
+}
+
 export function askRebuild(): void {
   useMaintenance.setState({ dialog: "rebuild" });
 }

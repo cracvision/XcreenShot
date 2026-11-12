@@ -5,6 +5,7 @@ import { askDelete, askRename, copyPath, itemRef, openItems, showInFolder } from
 import type { LibraryItem } from "./state";
 import { openPicker } from "../editor/templateUi";
 import { editTags, toggleFavorite } from "./marks";
+import { askResolve } from "./maintenanceState";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -22,6 +23,17 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       shortcut: shortcutOf("editor.new_from_template"),
       onSelect: () => openPicker(items.map((i) => i.path)),
     },
+    // A sync conflict (LIB-029).
+    ...(one?.conflict
+      ? [
+          {
+            id: "resolve",
+            label: t("menu.resolve_conflict"),
+            separator: true,
+            onSelect: () => askResolve({ id: one.id, name: one.name }),
+          },
+        ]
+      : []),
     // LIB-009, LIB-011.
     {
       id: "tags",

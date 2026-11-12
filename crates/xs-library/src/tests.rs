@@ -631,3 +631,58 @@ fn tags_from_another_computer_arrive_by_the_sidecar() {
     );
     assert!(!now.cloud);
 }
+
+/// LIB-029: a conflict copy beside its original shows as a conflict; Resolve keeps
+/// both, this copy (taking the original's name) or the original.
+#[test]
+fn sync_conflict_copies_are_resolved() {
+    let e = env();
+    write_png(&e.path("Informe.png"), 4, 4);
+    write_png(&e.path("Informe (Ana's conflicted copy 2026-11-12).png"), 6, 6);
+    write_png(&e.path("Plan.png"), 4, 4);
+    write_png(&e.path("Plan-LAPTOP-ANA.png"), 8, 8);
+    write_png(&e.path("Solo (Ana's conflicted copy).png"), 4, 4);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En)).unwrap();
+    let list = cli("library.list", json!({"sort": "name"}));
+    let by_name = |name: &str| {
+        list["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()
+            .clone()
+    };
+    let copy = by_name("Informe (Ana's conflicted copy 2026-11-12)");
+    assert_eq!(copy["conflict"], true);
+    assert_eq!(copy["conflictOf"], by_name("Informe")["id"]);
+    assert_eq!(by_name("Plan-LAPTOP-ANA")["conflict"], true);
+    assert!(
+        by_name("Solo (Ana's conflicted copy)")["conflict"].is_null(),
+        "no original beside it"
+    );
+    // Keep this copy: it takes the original's name, the original goes.
+    let r = cli("library.resolve", json!({"id": copy["id"], "keep": "this"}));
+    assert_eq!(r["kept"], copy["id"]);
+    assert!(e.path("Informe.png").exists());
+    assert!(!e.path("Informe (Ana's conflicted copy 2026-11-12).png").exists());
+    assert_eq!(
+        library(&core).get(copy["id"].as_str().unwrap()).unwrap().name,
+        "Informe"
+    );
+    // Keep both: the copy gets a name of its own and is no longer a conflict.
+    let plan = by_name("Plan-LAPTOP-ANA");
+    cli("library.resolve", json!({"id": plan["id"], "keep": "both"}));
+    assert!(e.path("Plan (2).png").exists() && e.path("Plan.png").exists());
+    let again = cli("library.list", json!({}));
+    assert!(again["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| i["conflict"].is_null()));
+}

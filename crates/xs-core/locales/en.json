@@ -602,6 +602,10 @@
     "library_reveal": {
       "title": "Show in library",
       "description": "Shows the Library view with the item selected and in view, clearing the filters that hide it."
+    },
+    "library_resolve": {
+      "title": "Resolve a sync conflict",
+      "description": "Keeps the conflict copy, the original or both, when a sync service made a copy of an item changed on two computers."
     }
   },
   "settings": {
@@ -1223,7 +1227,8 @@
     "tags_item": "Tags…",
     "favorite_item": "Add to favorites",
     "unfavorite_item": "Remove from favorites",
-    "show_in_library": "Show in library"
+    "show_in_library": "Show in library",
+    "resolve_conflict": "Resolve conflict…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2787,7 +2792,16 @@
         "box": "Box",
         "icloud": "iCloud Drive"
       },
-      "service_has": "has a library"
+      "service_has": "has a library",
+      "conflict": "Conflict",
+      "conflict_help": "The sync service made this copy because the item changed on two computers.",
+      "resolve_title": "Resolve the conflict of {{name}}",
+      "resolve_this": "Keep this copy",
+      "resolve_this_help": "The original goes to the trash and this copy takes its name.",
+      "resolve_original": "Keep the original",
+      "resolve_original_help": "This copy goes to the trash.",
+      "resolve_both": "Keep both",
+      "resolve_both_help": "This copy gets a name of its own."
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

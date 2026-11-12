@@ -4987,10 +4987,15 @@ body.preparing-drag * {
   margin-top: 6px;
 }
 
-.lib-cloud {
+.lib-flags {
   position: absolute;
   left: 6px;
   bottom: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.lib-cloud {
   padding: 1px 8px;
   border-radius: var(--radius-pill);
   background: var(--surface-raised);
@@ -5001,8 +5006,12 @@ body.preparing-drag * {
 }
 
 .lc-name .lib-cloud {
-  position: static;
   box-shadow: none;
+}
+
+.lib-conflict {
+  background: var(--warning);
+  color: var(--surface);
 }
 
 .check-list {

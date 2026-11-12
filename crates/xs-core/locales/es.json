@@ -602,6 +602,10 @@
     "library_reveal": {
       "title": "Mostrar en la biblioteca",
       "description": "Muestra la vista Biblioteca con el elemento seleccionado y a la vista, y quita los filtros que lo ocultan."
+    },
+    "library_resolve": {
+      "title": "Resolver un conflicto de sincronización",
+      "description": "Se queda con la copia en conflicto, con el original o con las dos, cuando un servicio de sincronización hizo una copia de un elemento cambiado en dos equipos."
     }
   },
   "settings": {
@@ -1223,7 +1227,8 @@
     "tags_item": "Etiquetas…",
     "favorite_item": "Marcar como favorito",
     "unfavorite_item": "Quitar de favoritos",
-    "show_in_library": "Mostrar en la biblioteca"
+    "show_in_library": "Mostrar en la biblioteca",
+    "resolve_conflict": "Resolver conflicto…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2787,7 +2792,16 @@
         "box": "Box",
         "icloud": "iCloud Drive"
       },
-      "service_has": "tiene una biblioteca"
+      "service_has": "tiene una biblioteca",
+      "conflict": "Conflicto",
+      "conflict_help": "El servicio de sincronización hizo esta copia porque el elemento cambió en dos equipos.",
+      "resolve_title": "Resolver el conflicto de {{name}}",
+      "resolve_this": "Quedarme con esta copia",
+      "resolve_this_help": "El original va a la papelera y esta copia toma su nombre.",
+      "resolve_original": "Quedarme con el original",
+      "resolve_original_help": "Esta copia va a la papelera.",
+      "resolve_both": "Conservar las dos",
+      "resolve_both_help": "Esta copia recibe un nombre propio."
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

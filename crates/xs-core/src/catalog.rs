@@ -1425,6 +1425,17 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(library_item()),
+        B::new("library.resolve", &["LIB-029", "LIB-034"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string", "description": "A conflict copy (conflict: true in library.list)"},
+                    "keep": {"type": "string", "enum": ["this", "original", "both"], "default": "both"}
+                }),
+                &["id"],
+            ))
+            .result(json!({"type": "object", "properties": {"kept": {"type": "string"}, "undo": {"type": ["string", "null"]}}})),
         B::new("library.tag", &["LIB-009", "LIB-034"])
             .mutates()
             .params(params(

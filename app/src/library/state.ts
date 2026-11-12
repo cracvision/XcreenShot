@@ -33,6 +33,9 @@ export interface LibraryItem {
   tags: string[];
   /** Only in the cloud: not downloaded on this computer (LIB-029). */
   cloud?: boolean;
+  /** A copy a sync service made beside its original (LIB-029). */
+  conflict?: boolean;
+  conflictOf?: string;
 }
 
 interface LibraryList {

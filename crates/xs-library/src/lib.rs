@@ -2,6 +2,7 @@
 //! (LIB-020), the index kept in step with the folder (LIB-022), thumbnails, and the
 //! `library.*` commands: list, get, delete with Undo, rename and show in the folder.
 
+pub mod conflict;
 pub mod index;
 pub mod query;
 pub mod recycle;
@@ -241,12 +242,13 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
     let found = query::run(&all, &filters, search, sort, descending, query::today());
     let offset = p["offset"].as_u64().unwrap_or(0) as usize;
     let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
+    let conflicts = conflicts_of(&all);
     let items: Vec<Value> = found
         .items
         .iter()
         .skip(offset)
         .take(limit)
-        .map(|i| i.to_json(lib.root()))
+        .map(|i| with_conflict(i.to_json(lib.root()), &conflicts, &i.id))
         .collect();
     Ok(json!({
         "root": lib.root(),
@@ -408,6 +410,100 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
         }
         other => Err(bad("action", other)),
     }
+}
+
+/// Conflict copies of a sync service beside their original (LIB-029): copy ID →
+/// original ID.
+fn conflicts_of(all: &[Item]) -> std::collections::HashMap<String, String> {
+    let split = |path: &str| {
+        let (dir, file) = path.rsplit_once('/').unwrap_or(("", path));
+        let (stem, ext) = file.rsplit_once('.').unwrap_or((file, ""));
+        (dir.to_string(), stem.to_string(), ext.to_lowercase())
+    };
+    let by_name: std::collections::HashMap<(String, String, String), &str> = all
+        .iter()
+        .map(|i| {
+            let (d, s, e) = split(&i.path);
+            ((d, s.to_lowercase(), e), i.id.as_str())
+        })
+        .collect();
+    let mut out = std::collections::HashMap::new();
+    for i in all {
+        let (dir, stem, ext) = split(&i.path);
+        for base in conflict::original_stems(&stem) {
+            if let Some(orig) = by_name.get(&(dir.clone(), base.to_lowercase(), ext.clone())) {
+                if *orig != i.id {
+                    out.insert(i.id.clone(), (*orig).to_string());
+                    break;
+                }
+            }
+        }
+    }
+    out
+}
+
+fn with_conflict(mut v: Value, conflicts: &std::collections::HashMap<String, String>, id: &str) -> Value {
+    if let Some(orig) = conflicts.get(id) {
+        v["conflict"] = json!(true);
+        v["conflictOf"] = json!(orig);
+    }
+    v
+}
+
+/// `library.resolve` (LIB-029): a conflict copy and its original become one: keep the
+/// copy (the original goes to the trash and the copy takes its name), keep the
+/// original (the copy goes to the trash) or keep both (the copy gets a name of its own).
+fn resolve(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let lib = library(core);
+    let id = p
+        .get("id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let all = lib.list();
+    let orig_id = conflicts_of(&all)
+        .remove(&id)
+        .ok_or_else(|| not_found(lang, &id))?;
+    let orig = lib.get(&orig_id).ok_or_else(|| not_found(lang, &orig_id))?;
+    let trash = |ids: &[String]| {
+        lib.delete(ids, false)
+            .map(|(undo, _)| undo)
+            .map_err(|e| CommandError::internal(e.to_string()))
+    };
+    let free_name = |base: &str| -> Result<Item, CommandError> {
+        for n in 2..100 {
+            match lib.rename(&id, &format!("{base} ({n})")) {
+                Ok(item) => return Ok(item),
+                Err(service::RenameError::Exists(_)) => continue,
+                Err(e) => return Err(CommandError::internal(e.to_string())),
+            }
+        }
+        Err(CommandError::internal("no free name"))
+    };
+    let (kept, undo) = match p.get("keep").and_then(Value::as_str).unwrap_or("both") {
+        "original" => (orig_id.clone(), trash(std::slice::from_ref(&id))?),
+        "this" => {
+            let undo = trash(std::slice::from_ref(&orig_id))?;
+            let item = lib
+                .rename(&id, &orig.name)
+                .map_err(|e| CommandError::internal(e.to_string()))?;
+            (item.id, undo)
+        }
+        "both" => (free_name(&orig.name)?.id, None),
+        other => {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    lang,
+                    "errors.invalid_param",
+                    &[("param", "keep"), ("reason", other)],
+                ),
+            ))
+        }
+    };
+    changed(core);
+    Ok(json!({ "kept": kept, "undo": undo }))
 }
 
 /// `library.search` (LIB-034): `library.list` with a parameter for each field (LIB-005,
@@ -784,6 +880,7 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         }
         on!("library.list", |core, ctx, p| list(&core, ctx, &p));
         on!("library.search", |core, ctx, p| search(&core, ctx, &p));
+        on!("library.resolve", |core, ctx, p| resolve(&core, ctx, &p));
         on!("library.reveal", |core, ctx, p| {
             let lib = library(&core);
             let item = match (

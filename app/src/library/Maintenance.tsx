@@ -4,14 +4,52 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { run } from "../lib/commands";
 import { useEditor } from "../editor/state";
-import { fail, useMaintenance, type Report } from "./maintenanceState";
+import { fail, resolveConflict, useMaintenance, useResolve, type Report } from "./maintenanceState";
+
+/** Resolve a sync conflict (LIB-029): keep this copy, the original or both. */
+function ResolveDialog() {
+  const { t } = useTranslation();
+  const item = useResolve((s) => s.item);
+  if (!item) return null;
+  const option = (keep: "this" | "original" | "both", primary = false) => (
+    <button
+      type="button"
+      className={`btn move-option${primary ? " primary" : ""}`}
+      {...(primary ? { "data-autofocus": true } : {})}
+      onClick={() => void resolveConflict(item.id, keep)}
+    >
+      <strong>{t(`ui.library.resolve_${keep}`)}</strong>
+      <span>{t(`ui.library.resolve_${keep}_help`)}</span>
+    </button>
+  );
+  return (
+    <Dialog
+      title={t("ui.library.resolve_title", { name: item.name })}
+      onCancel={() => useResolve.setState({ item: null })}
+      actions={
+        <button type="button" className="btn" onClick={() => useResolve.setState({ item: null })}>
+          {t("ui.editor.cancel")}
+        </button>
+      }
+    >
+      <p className="muted">{t("ui.library.conflict_help")}</p>
+      <div className="move-options">
+        {option("both", true)}
+        {option("this")}
+        {option("original")}
+      </div>
+    </Dialog>
+  );
+}
 
 export function MaintenanceDialogs() {
   const { t } = useTranslation();
+  const resolving = useResolve((s) => s.item !== null);
   const dialog = useMaintenance((s) => s.dialog);
   const report = useMaintenance((s) => s.report);
   const [busy, setBusy] = useState(false);
   const close = () => useMaintenance.setState({ dialog: null });
+  if (resolving) return <ResolveDialog />;
   if (dialog === "rebuild")
     return (
       <Dialog

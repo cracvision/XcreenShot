@@ -286,6 +286,7 @@ function Item({
             <Star item={item} />
             {item.name}
             {item.cloud && <CloudBadge />}
+            {item.conflict && <ConflictBadge />}
           </span>
           <span className="lc">{date}</span>
           <span className="lc">{shortDate(item.modified, i18n.language)}</span>
@@ -306,7 +307,12 @@ function Item({
               </span>
             )}
             <Star item={item} />
-            {item.cloud && <CloudBadge />}
+            {(item.cloud || item.conflict) && (
+              <span className="lib-flags">
+                {item.cloud && <CloudBadge />}
+                {item.conflict && <ConflictBadge />}
+              </span>
+            )}
           </div>
           <div className="lib-name">{item.name}</div>
           <div className="lib-date">{date}</div>
@@ -322,6 +328,16 @@ function CloudBadge() {
   return (
     <span className="lib-cloud" title={t("ui.library.cloud_help")}>
       {t("ui.library.cloud")}
+    </span>
+  );
+}
+
+/** A copy a sync service made (LIB-029): Resolve in its menu. */
+function ConflictBadge() {
+  const { t } = useTranslation();
+  return (
+    <span className="lib-cloud lib-conflict" title={t("ui.library.conflict_help")}>
+      {t("ui.library.conflict")}
     </span>
   );
 }
