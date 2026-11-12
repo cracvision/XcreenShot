@@ -430,6 +430,14 @@
     "document_erase": {
       "title": "Erase",
       "description": "Erases the image, or a floating image, along a stroke: the canvas color shows through."
+    },
+    "document_select_pixels": {
+      "title": "Select pixels",
+      "description": "Selects pixels of the image or of a floating image with a rectangle, ellipse, polygon, freehand loop or the magic wand; adds, subtracts, inverts or drops the selection."
+    },
+    "document_selection_action": {
+      "title": "Act on selected pixels",
+      "description": "Deletes, cuts, copies, moves, floats or crops to the selected pixels, filling the gap they leave."
     }
   },
   "settings": {
@@ -1833,7 +1841,12 @@
     "cut_simplify": "Cut simplified shape",
     "paste_simplify": "Paste simplified shape",
     "fill": "Fill",
-    "erase": "Erase"
+    "erase": "Erase",
+    "delete_pixels": "Delete pixels",
+    "cut_pixels": "Cut pixels",
+    "move_pixels": "Move pixels",
+    "float_pixels": "Float selection",
+    "crop_selection": "Crop to selection"
   },
   "editor": {
     "edited": "{{name}} — Edited"

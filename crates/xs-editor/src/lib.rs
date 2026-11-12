@@ -22,9 +22,10 @@ use std::time::{Duration, Instant};
 
 use serde_json::{json, Map, Value};
 use xs_core::core::{Extension, QuitGuard};
-use xs_core::document::{Document, Object};
+use xs_core::document::{Document, Object, PixelRect};
 use xs_core::i18n::tr;
 use xs_core::{CommandError, CommandResult, Context, Core, ErrorCode, Lang, Source};
+use xs_image::selection::Mask;
 use xs_image::Base;
 
 use crate::objects::Styles;
@@ -1375,6 +1376,433 @@ fn changed(core: &Core, ctx: &Context, id: &str) {
     }
 }
 
+/// Crops `doc` to `[x0, y0, x1, y1]` of its canvas (EDT-049), keeping the objects on
+/// the image. `None` if nothing would be left. The new canvas size.
+fn crop_to(doc: &mut Document, base: (u32, u32), r: [i64; 4]) -> Option<(u32, u32)> {
+    // Non-destructive (EDT-050): the canvas is a window over the original pixels, and
+    // can grow back up to their edges, or to the canvas grown for objects (EDT-071).
+    let old = doc.crop;
+    let (ex0, ey0) = (old.x.min(0), old.y.min(0));
+    let ex1 = (old.x + old.width as i64).max(base.0 as i64);
+    let ey1 = (old.y + old.height as i64).max(base.1 as i64);
+    let nx0 = (old.x + r[0]).clamp(ex0, ex1);
+    let ny0 = (old.y + r[1]).clamp(ey0, ey1);
+    let nx1 = (old.x + r[2]).clamp(ex0, ex1);
+    let ny1 = (old.y + r[3]).clamp(ey0, ey1);
+    if nx1 - nx0 < 1 || ny1 - ny0 < 1 {
+        return None;
+    }
+    let (dx, dy) = ((nx0 - old.x) as f64, (ny0 - old.y) as f64);
+    for o in &mut doc.objects {
+        objects::translate(o, -dx, -dy);
+    }
+    doc.crop_history.push(old);
+    doc.crop = xs_core::document::PixelRect {
+        x: nx0,
+        y: ny0,
+        width: (nx1 - nx0) as u32,
+        height: (ny1 - ny0) as u32,
+    };
+    doc.canvas.width = doc.crop.width;
+    doc.canvas.height = doc.crop.height;
+    // The crop is what the user chose; what it leaves outside stays there.
+    doc.frame = None;
+    doc.outside = fit::outside_canvas(doc);
+    Some((doc.canvas.width, doc.canvas.height))
+}
+
+/// The pixels of a floating image's picture.
+fn picture_pixels(
+    core: &Core,
+    id: &str,
+    doc: &Document,
+    oid: &str,
+    lang: Lang,
+) -> Result<image::RgbaImage, CommandError> {
+    let object = doc.objects.iter().find(|o| o.id == oid).ok_or_else(|| {
+        CommandError::new(
+            ErrorCode::NotFound,
+            tr(lang, "errors.object_not_found", &[("id", oid)]),
+        )
+    })?;
+    let name = match (
+        object.kind.as_str(),
+        object.props.get("image").and_then(Value::as_str),
+    ) {
+        ("image", Some(name)) => name.to_string(),
+        _ => {
+            return Err(invalid(tr(
+                lang,
+                "errors.invalid_param",
+                &[
+                    ("param", "objectId"),
+                    ("reason", "only a floating image has pixels"),
+                ],
+            )))
+        }
+    };
+    editor(core)
+        .store
+        .image_file(id, &name)
+        .and_then(|bytes| xs_image::encode::decode(&bytes).ok())
+        .ok_or_else(|| CommandError::internal("picture missing"))
+}
+
+/// Stores `img` in the document's `images/` folder under a name of its own.
+fn store_picture(core: &Core, id: &str, img: &image::RgbaImage, lang: Lang) -> Result<String, CommandError> {
+    let png = xs_image::encode::png(img, 0.0, true).map_err(|e| internal(lang, "", e))?;
+    let name = format!("{}{:016x}.png", store::INSERTED, content_hash(&png));
+    editor(core)
+        .store
+        .add_images(id, &BTreeMap::from([(name.clone(), png)]))
+        .map_err(|e| internal(lang, "", e))?;
+    Ok(name)
+}
+
+/// `document.select_pixels` (EDT-043, EDT-046): draws, combines, inverts or drops the
+/// pixel selection.
+fn select_pixels(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    use xs_image::selection::{Combine, Shape};
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let current = ed.store.with(&id, |d| d.pixel_selection.clone()).flatten();
+    let shape = p.get("shape").and_then(Value::as_str).unwrap_or("rectangle");
+    let done = |sel: Option<pixels::PixelSelection>| -> CommandResult {
+        let info = ed
+            .store
+            .with(&id, |d| {
+                d.pixel_selection = sel.filter(|s| !s.mask.is_empty());
+                d.pixel_selection.as_ref().and_then(|s| s.info(&d.document))
+            })
+            .flatten();
+        emit_document(core, &id);
+        Ok(json!({ "bounds": info.as_ref().map(|i| i["bounds"].clone()) }))
+    };
+    match shape {
+        "none" => return done(None),
+        "invert" => {
+            let cur = current.ok_or_else(|| bad("shape", "there is no selection to invert"))?;
+            return done(Some(pixels::PixelSelection::new(
+                cur.target.clone(),
+                cur.mask.inverted(),
+                None,
+            )));
+        }
+        _ => {}
+    }
+    let target = p.get("objectId").and_then(Value::as_str).map(str::to_string);
+    let doc = ed
+        .store
+        .with(&id, |d| d.document.clone())
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+    let picture = match &target {
+        Some(oid) => Some(picture_pixels(core, &id, &doc, oid, lang)?),
+        None => None,
+    };
+    let pixels = pixels::target_pixels(&doc, &base, target.as_deref(), picture)
+        .ok_or_else(|| CommandError::internal("no pixels"))?;
+    let to_target = pixels::to_canvas(&doc, target.as_deref(), pixels.width(), pixels.height())
+        .and_then(|t| t.invert())
+        .ok_or_else(|| bad("objectId", "this floating image has no size"))?;
+    let point = |v: &Value| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]);
+    let rect = || -> Result<[f64; 4], CommandError> {
+        let r = p.get("rect").ok_or_else(|| bad("rect", "give {x, y, w, h}"))?;
+        let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+        let (x, y, w, h) = (n("x"), n("y"), n("w"), n("h"));
+        // A box dragged up or left.
+        Ok([x.min(x + w), y.min(y + h), w.abs(), h.abs()])
+    };
+    let mut drawn: Option<(String, [f64; 4])> = None;
+    let part = match shape {
+        "rectangle" | "ellipse" => {
+            let mut r = rect()?;
+            // Snap to object (EDT-043), on the image.
+            if p.get("snap").and_then(Value::as_bool).unwrap_or(false) && target.is_none() {
+                let level = p.get("level").and_then(Value::as_f64).unwrap_or(50.0);
+                let (cx, cy) = (doc.crop.x as f64, doc.crop.y as f64);
+                let inside = [
+                    (r[0] + cx).max(0.0).floor() as u32,
+                    (r[1] + cy).max(0.0).floor() as u32,
+                    r[2].ceil().max(0.0) as u32,
+                    r[3].ceil().max(0.0) as u32,
+                ];
+                if let Some(b) = xs_image::selection::snap(&pixels, inside, level) {
+                    r = [b[0] as f64 - cx, b[1] as f64 - cy, b[2] as f64, b[3] as f64];
+                }
+            }
+            drawn = Some((shape.to_string(), r));
+            pixels::Part::Shape(if shape == "ellipse" {
+                Shape::Ellipse(r)
+            } else {
+                Shape::Rectangle(r)
+            })
+        }
+        "polygon" | "freehand" => {
+            let points: Vec<[f64; 2]> = p
+                .get("points")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(point).collect())
+                .unwrap_or_default();
+            if points.len() < 3 {
+                return Err(bad("points", "give at least three [x, y]"));
+            }
+            pixels::Part::Shape(Shape::Polygon(points))
+        }
+        "wand" => pixels::Part::Color {
+            at: p
+                .get("at")
+                .and_then(point)
+                .ok_or_else(|| bad("at", "give [x, y]"))?,
+            tolerance: p.get("tolerance").and_then(Value::as_f64).unwrap_or(15.0),
+            global: p.get("global").and_then(Value::as_bool).unwrap_or(false),
+        },
+        "all" => pixels::Part::All,
+        other => return Err(bad("shape", other)),
+    };
+    let antialias = p.get("antialias").and_then(Value::as_bool).unwrap_or(true);
+    let mut mask = pixels::part_mask(&part, &pixels, to_target, antialias);
+    let feather = p.get("feather").and_then(Value::as_f64).unwrap_or(0.0);
+    if feather > 0.0 {
+        mask = mask.feathered(feather);
+    }
+    let how = match p.get("mode").and_then(Value::as_str) {
+        Some("add") => Combine::Add,
+        Some("subtract") => Combine::Subtract,
+        _ => Combine::Replace,
+    };
+    let joined = match current.filter(|c| c.target == target && how != Combine::Replace) {
+        Some(c) => {
+            drawn = None;
+            c.mask.combine(&mask, how)
+        }
+        None if how == Combine::Subtract => Mask::empty(mask.width, mask.height),
+        None => mask,
+    };
+    done(Some(pixels::PixelSelection::new(target, joined, drawn)))
+}
+
+/// `document.selection_action` (EDT-044, EDT-045): what to do with the selected pixels.
+fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    use xs_image::selection::Gap;
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let sel = ed
+        .store
+        .with(&id, |d| d.pixel_selection.clone())
+        .flatten()
+        .ok_or_else(|| bad("documentId", "there is no pixel selection"))?;
+    let action = p.get("action").and_then(Value::as_str).unwrap_or_default();
+    let doc = ed
+        .store
+        .with(&id, |d| d.document.clone())
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let gap = match p.get("gapFill").and_then(Value::as_str) {
+        Some("transparent") => Gap::Transparent,
+        Some("canvas") => doc
+            .canvas
+            .color
+            .as_deref()
+            .and_then(xs_image::color::Rgba::parse)
+            .map(Gap::Color)
+            .unwrap_or(Gap::Transparent),
+        _ => Gap::Smart,
+    };
+    let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+    let picture = match &sel.target {
+        Some(oid) => Some(picture_pixels(core, &id, &doc, oid, lang)?),
+        None => None,
+    };
+    let pixels = pixels::target_pixels(&doc, &base, sel.target.as_deref(), picture)
+        .ok_or_else(|| CommandError::internal("no pixels"))?;
+    let mask = sel.mask.as_ref();
+    if (pixels.width(), pixels.height()) != (mask.width, mask.height) {
+        return Err(bad("documentId", "the selection no longer fits the image"));
+    }
+    let base_only = || {
+        if sel.target.is_some() {
+            Err(bad("action", "this works on the image, not on a floating image"))
+        } else {
+            Ok(())
+        }
+    };
+    // Copy, and the first half of Cut (EDT-044).
+    if action == "copy" || action == "cut" {
+        let (cut, _) = xs_image::selection::selected_pixels(&pixels, mask)
+            .ok_or_else(|| bad("documentId", "nothing is selected"))?;
+        copy_image(&cut).map_err(|e| internal(lang, "", e))?;
+        if action == "copy" {
+            return Ok(json!({ "changed": false }));
+        }
+    }
+    let mut next = Some(sel.clone());
+    let mut made: Vec<String> = Vec::new();
+    let (changed_px, label) = match action {
+        "delete" | "cut" => (
+            pixels::delete(&pixels, mask, gap),
+            if action == "cut" {
+                "history.cut_pixels"
+            } else {
+                "history.delete_pixels"
+            },
+        ),
+        "move" => {
+            let off = p
+                .get("offset")
+                .and_then(|v| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]))
+                .ok_or_else(|| bad("offset", "give [dx, dy]"))?;
+            let to_target = pixels::to_canvas(&doc, sel.target.as_deref(), mask.width, mask.height)
+                .and_then(|t| t.invert())
+                .ok_or_else(|| CommandError::internal("no transform"))?;
+            let mut v = [
+                xs_image::selection::Point::from_xy(0.0, 0.0),
+                xs_image::selection::Point::from_xy(off[0] as f32, off[1] as f32),
+            ];
+            to_target.map_points(&mut v);
+            let (dx, dy) = ((v[1].x - v[0].x).round() as i64, (v[1].y - v[0].y).round() as i64);
+            match pixels::shift(&pixels, mask, dx, dy, gap) {
+                Some((c, moved)) => {
+                    let shape = sel
+                        .shape
+                        .clone()
+                        .map(|(k, r)| (k, [r[0] + off[0], r[1] + off[1], r[2], r[3]]));
+                    next = Some(pixels::PixelSelection::new(sel.target.clone(), moved, shape));
+                    (Some(c), "history.move_pixels")
+                }
+                None => (None, "history.move_pixels"),
+            }
+        }
+        "float" | "crop" => {
+            base_only()?;
+            next = None;
+            (
+                None,
+                if action == "float" {
+                    "history.float_pixels"
+                } else {
+                    "history.crop_selection"
+                },
+            )
+        }
+        other => return Err(bad("action", other)),
+    };
+    // The new pixels, stored before the step that shows them.
+    let stored = match (&changed_px, &sel.target) {
+        (Some(c), None) => Some(store_picture(
+            core,
+            &id,
+            &pixels::cut_area(&c.pixels, c.area),
+            lang,
+        )?),
+        (Some(c), Some(_)) => Some(store_picture(core, &id, &c.pixels, lang)?),
+        (None, _) => None,
+    };
+    // Float: the pixels as a new floating image where they were, and the gap filled.
+    let mut float: Option<(String, Map<String, Value>)> = None;
+    let mut float_gap: Option<(String, PixelRect)> = None;
+    let mut crop: Option<[i64; 4]> = None;
+    let mut crop_patch: Option<(String, PixelRect)> = None;
+    if action == "float" || action == "crop" {
+        let (cut, at) = xs_image::selection::selected_pixels(&pixels, mask)
+            .ok_or_else(|| bad("documentId", "nothing is selected"))?;
+        let (cx, cy) = (doc.crop.x, doc.crop.y);
+        if action == "float" {
+            let name = store_picture(core, &id, &cut, lang)?;
+            let props = objects::image_object(
+                &name,
+                [
+                    (at[0] as i64 - cx) as f64,
+                    (at[1] as i64 - cy) as f64,
+                    at[2] as f64,
+                    at[3] as f64,
+                ],
+            )
+            .map_err(invalid)?;
+            float = Some((name, props));
+            if let Some(c) = pixels::delete(&pixels, mask, gap) {
+                let gap_name = store_picture(core, &id, &pixels::cut_area(&c.pixels, c.area), lang)?;
+                float_gap = Some((gap_name, pixels::rect_of(c.area)));
+            }
+        } else {
+            crop = Some([
+                at[0] as i64 - cx,
+                at[1] as i64 - cy,
+                (at[0] + at[2]) as i64 - cx,
+                (at[1] + at[3]) as i64 - cy,
+            ]);
+            // Outside a shape that is not a rectangle, the pixels go (a circle crop).
+            if mask.bounds().is_some_and(|b| {
+                (b[1]..b[1] + b[3]).any(|y| (b[0]..b[0] + b[2]).any(|x| mask.at(x, y) < 255))
+            }) {
+                let name = store_picture(core, &id, &cut, lang)?;
+                crop_patch = Some((name, pixels::rect_of(at)));
+            }
+        }
+    }
+    if changed_px.is_none() && float.is_none() && crop.is_none() {
+        return Ok(json!({ "changed": false }));
+    }
+    let base_size = ed.store.with(&id, |d| d.base_size).unwrap_or((1, 1));
+    let auto = auto_expand(core);
+    ed.store
+        .mutate(&id, label, |doc| {
+            match (&sel.target, &changed_px, &stored) {
+                (None, Some(c), Some(name)) => pixels::add_patch(doc, pixels::rect_of(c.area), name.clone()),
+                (Some(oid), Some(_), Some(name)) => {
+                    let o = doc
+                        .objects
+                        .iter_mut()
+                        .find(|o| &o.id == oid)
+                        .ok_or_else(|| CommandError::internal("object gone"))?;
+                    o.props.insert("image".into(), json!(name));
+                }
+                _ => {}
+            }
+            if let Some((name, rect)) = &float_gap {
+                pixels::add_patch(doc, *rect, name.clone());
+            }
+            if let Some((_, props)) = &float {
+                let oid = doc.next_object_id();
+                doc.objects.push(Object {
+                    id: oid.clone(),
+                    kind: "image".to_string(),
+                    props: props.clone(),
+                });
+                made.push(oid);
+                if auto {
+                    fit::fit_canvas(doc);
+                }
+            }
+            if let Some((name, rect)) = &crop_patch {
+                pixels::add_patch(doc, *rect, name.clone());
+            }
+            if let Some(r) = crop {
+                crop_to(doc, base_size, r).ok_or_else(|| CommandError::internal("empty crop"))?;
+            }
+            Ok::<_, CommandError>(())
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    ed.store.with(&id, |d| d.pixel_selection = next);
+    changed(core, ctx, &id);
+    Ok(json!({ "changed": true, "ids": made }))
+}
+
 /// Fill (`fill`) or Eraser on the image or on the floating image `objectId` (EDT-047,
 /// EDT-048): the new pixels become a patch or a new picture (ADR 0005).
 fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResult {
@@ -2157,6 +2585,13 @@ pub fn extension() -> Extension {
         // Pixel tools (EDT-047, EDT-048; ADR 0005): one undo step each.
         on!("document.fill", |core, ctx, p| pixel_edit(&core, ctx, &p, true));
         on!("document.erase", |core, ctx, p| pixel_edit(&core, ctx, &p, false));
+        // Pixel selection (EDT-043 to EDT-046).
+        on!("document.select_pixels", |core, ctx, p| select_pixels(
+            &core, ctx, &p
+        ));
+        on!("document.selection_action", |core, ctx, p| selection_action(
+            &core, ctx, &p
+        ));
         // Stacking order (EDT-081): one undo step.
         on!("document.arrange", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
@@ -2418,41 +2853,13 @@ pub fn extension() -> Extension {
             let result = editor(&core)
                 .store
                 .mutate(&id, "history.crop", |doc| {
-                    // Non-destructive (EDT-050): the canvas is a window over the original
-                    // pixels, and can grow back up to their edges, or to the canvas grown
-                    // for objects (EDT-071).
-                    let old = doc.crop;
-                    let (ex0, ey0) = (old.x.min(0), old.y.min(0));
-                    let ex1 = (old.x + old.width as i64).max(base.0 as i64);
-                    let ey1 = (old.y + old.height as i64).max(base.1 as i64);
-                    let nx0 = (old.x + x0).clamp(ex0, ex1);
-                    let ny0 = (old.y + y0).clamp(ey0, ey1);
-                    let nx1 = (old.x + x1).clamp(ex0, ex1);
-                    let ny1 = (old.y + y1).clamp(ey0, ey1);
-                    if nx1 - nx0 < 1 || ny1 - ny0 < 1 {
-                        return Err(invalid(tr(
+                    crop_to(doc, base, [x0, y0, x1, y1]).ok_or_else(|| {
+                        invalid(tr(
                             ctx.lang,
                             "errors.invalid_param",
                             &[("param", "rect"), ("reason", "the crop leaves no image")],
-                        )));
-                    }
-                    let (dx, dy) = ((nx0 - old.x) as f64, (ny0 - old.y) as f64);
-                    for o in &mut doc.objects {
-                        objects::translate(o, -dx, -dy);
-                    }
-                    doc.crop_history.push(old);
-                    doc.crop = xs_core::document::PixelRect {
-                        x: nx0,
-                        y: ny0,
-                        width: (nx1 - nx0) as u32,
-                        height: (ny1 - ny0) as u32,
-                    };
-                    doc.canvas.width = doc.crop.width;
-                    doc.canvas.height = doc.crop.height;
-                    // The crop is what the user chose; what it leaves outside stays there.
-                    doc.frame = None;
-                    doc.outside = fit::outside_canvas(doc);
-                    Ok::<_, CommandError>((doc.canvas.width, doc.canvas.height))
+                        ))
+                    })
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
             changed(&core, ctx, &id);

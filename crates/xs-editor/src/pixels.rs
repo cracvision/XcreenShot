@@ -137,3 +137,201 @@ pub fn add_patch(doc: &mut Document, rect: PixelRect, image: String) {
         extra: Default::default(),
     });
 }
+
+// ---------------------------------------------------------------------------
+// Pixel selections (EDT-043 to EDT-046)
+
+use serde_json::{json, Value};
+use std::sync::Arc;
+use xs_image::selection::{self, Gap, Mask, Shape};
+use xs_image::Transform;
+
+/// The pixel selection of an open document: on the image (`target` `None`, in base
+/// pixels) or on a floating image (its picture's pixels). Not part of the document
+/// and not an undo step.
+#[derive(Debug, Clone)]
+pub struct PixelSelection {
+    pub target: Option<String>,
+    pub mask: Arc<Mask>,
+    outline: Arc<Vec<Vec<[u32; 2]>>>,
+    /// The rectangle or ellipse drawn alone, in canvas pixels, for its numeric
+    /// position and size (EDT-086).
+    pub shape: Option<(String, [f64; 4])>,
+}
+
+impl PixelSelection {
+    pub fn new(target: Option<String>, mask: Mask, shape: Option<(String, [f64; 4])>) -> PixelSelection {
+        let outline = mask.outline();
+        PixelSelection {
+            target,
+            mask: Arc::new(mask),
+            outline: Arc::new(outline),
+            shape,
+        }
+    }
+
+    /// What the editor draws: the outline and bounds in canvas pixels.
+    pub fn info(&self, doc: &Document) -> Option<Value> {
+        let to_canvas = to_canvas(doc, self.target.as_deref(), self.mask.width, self.mask.height)?;
+        let map = |x: f32, y: f32| {
+            let mut p = [tiny_point(x, y)];
+            to_canvas.map_points(&mut p);
+            [round2(p[0].x), round2(p[0].y)]
+        };
+        let outline: Vec<Vec<[f64; 2]>> = self
+            .outline
+            .iter()
+            .map(|l| l.iter().map(|p| map(p[0] as f32, p[1] as f32)).collect())
+            .collect();
+        let b = self.mask.bounds()?;
+        let corners = [
+            map(b[0] as f32, b[1] as f32),
+            map((b[0] + b[2]) as f32, b[1] as f32),
+            map((b[0] + b[2]) as f32, (b[1] + b[3]) as f32),
+            map(b[0] as f32, (b[1] + b[3]) as f32),
+        ];
+        let x0 = corners.iter().map(|c| c[0]).fold(f64::INFINITY, f64::min);
+        let y0 = corners.iter().map(|c| c[1]).fold(f64::INFINITY, f64::min);
+        let x1 = corners.iter().map(|c| c[0]).fold(f64::NEG_INFINITY, f64::max);
+        let y1 = corners.iter().map(|c| c[1]).fold(f64::NEG_INFINITY, f64::max);
+        Some(json!({
+            "target": self.target,
+            "bounds": {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0},
+            "outline": outline,
+            "shape": self.shape.as_ref().map(|(k, r)| json!({"type": k, "rect": {"x": r[0], "y": r[1], "w": r[2], "h": r[3]}})),
+        }))
+    }
+}
+
+fn tiny_point(x: f32, y: f32) -> xs_image::selection::Point {
+    xs_image::selection::Point::from_xy(x, y)
+}
+
+fn round2(v: f32) -> f64 {
+    (v as f64 * 100.0).round() / 100.0
+}
+
+/// From the target's pixels to canvas pixels: the image is offset by the crop; a
+/// floating image is stretched and turned (EDT-078).
+pub fn to_canvas(doc: &Document, target: Option<&str>, width: u32, height: u32) -> Option<Transform> {
+    match target {
+        None => Some(Transform::from_translate(-doc.crop.x as f32, -doc.crop.y as f32)),
+        Some(id) => {
+            let o = doc.objects.iter().find(|o| o.id == id)?;
+            let io = ImageObject::from_props(&o.props).ok()?;
+            let r = io.rect;
+            if width == 0 || height == 0 || r.w <= 0.0 || r.h <= 0.0 {
+                return None;
+            }
+            let (cx, cy) = ((r.x + r.w / 2.0) as f32, (r.y + r.h / 2.0) as f32);
+            Some(
+                Transform::from_rotate_at(io.rotation as f32, cx, cy)
+                    .pre_translate(r.x as f32, r.y as f32)
+                    .pre_scale((r.w / width as f64) as f32, (r.h / height as f64) as f32),
+            )
+        }
+    }
+}
+
+/// A part to select, in canvas pixels (EDT-043, EDT-046).
+#[derive(Debug, Clone)]
+pub enum Part {
+    Shape(Shape),
+    /// The magic wand at a point.
+    Color {
+        at: [f64; 2],
+        tolerance: f64,
+        global: bool,
+    },
+    All,
+}
+
+/// The mask `part` selects on `pixels` (the target's), with `to_target` taking canvas
+/// pixels there.
+pub fn part_mask(part: &Part, pixels: &RgbaImage, to_target: Transform, antialias: bool) -> Mask {
+    let (w, h) = pixels.dimensions();
+    match part {
+        Part::Shape(s) => Mask::of_shape(w, h, s, to_target, antialias),
+        Part::Color {
+            at,
+            tolerance,
+            global,
+        } => {
+            let mut p = [tiny_point(at[0] as f32, at[1] as f32)];
+            to_target.map_points(&mut p);
+            if p[0].x < 0.0 || p[0].y < 0.0 {
+                return Mask::empty(w, h);
+            }
+            Mask::of_color(pixels, (p[0].x as u32, p[0].y as u32), *tolerance, *global)
+        }
+        Part::All => Mask::full(w, h),
+    }
+}
+
+/// The pixels a selection works on: the image without objects (base pixels), or a
+/// floating image's picture.
+pub fn target_pixels(
+    doc: &Document,
+    base: &Base,
+    target: Option<&str>,
+    picture: Option<RgbaImage>,
+) -> Option<RgbaImage> {
+    match target {
+        None => Some(image_in_base(doc, base)),
+        Some(_) => picture,
+    }
+}
+
+/// What an action on the selection does to the target's pixels (EDT-044, EDT-045):
+/// the new pixels and, for the image, the rectangle that changed.
+pub struct Changed {
+    pub pixels: RgbaImage,
+    pub area: [u32; 4],
+}
+
+/// Deletes the selected pixels, leaving `gap`.
+pub fn delete(pixels: &RgbaImage, mask: &Mask, gap: Gap) -> Option<Changed> {
+    let area = mask.bounds()?;
+    let mut out = pixels.clone();
+    selection::fill_gap(&mut out, mask, gap);
+    Some(Changed { pixels: out, area })
+}
+
+/// Moves the selected pixels by whole pixels, leaving `gap` where they were; the
+/// moved selection too.
+pub fn shift(pixels: &RgbaImage, mask: &Mask, dx: i64, dy: i64, gap: Gap) -> Option<(Changed, Mask)> {
+    let (cut, at) = selection::selected_pixels(pixels, mask)?;
+    let mut out = pixels.clone();
+    selection::fill_gap(&mut out, mask, gap);
+    image::imageops::overlay(&mut out, &cut, at[0] as i64 + dx, at[1] as i64 + dy);
+    let moved = mask.shifted(dx, dy);
+    let (w, h) = (pixels.width() as i64, pixels.height() as i64);
+    let x0 = (at[0] as i64).min(at[0] as i64 + dx).clamp(0, w);
+    let y0 = (at[1] as i64).min(at[1] as i64 + dy).clamp(0, h);
+    let x1 = (at[0] as i64 + at[2] as i64)
+        .max(at[0] as i64 + at[2] as i64 + dx)
+        .clamp(0, w);
+    let y1 = (at[1] as i64 + at[3] as i64)
+        .max(at[1] as i64 + at[3] as i64 + dy)
+        .clamp(0, h);
+    if x1 <= x0 || y1 <= y0 {
+        return None;
+    }
+    let area = [x0 as u32, y0 as u32, (x1 - x0) as u32, (y1 - y0) as u32];
+    Some((Changed { pixels: out, area }, moved))
+}
+
+/// The part `area` of `img`.
+pub fn cut_area(img: &RgbaImage, area: [u32; 4]) -> RgbaImage {
+    pixels::cut(img, area)
+}
+
+/// `[x, y, w, h]` as a rectangle of base pixels.
+pub fn rect_of(area: [u32; 4]) -> PixelRect {
+    PixelRect {
+        x: area[0] as i64,
+        y: area[1] as i64,
+        width: area[2],
+        height: area[3],
+    }
+}

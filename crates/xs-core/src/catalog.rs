@@ -614,6 +614,40 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["points"],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}}})),
+        B::new("document.select_pixels", &["EDT-043", "EDT-046", "EDT-119"])
+            .positional(&["shape"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "shape": {"type": "string", "enum": ["rectangle", "ellipse", "polygon", "freehand", "wand", "all", "invert", "none"], "default": "rectangle", "description": "What to select: a drawn shape, the magic wand at `at`, everything; invert or drop the selection"},
+                    "rect": {"type": "object", "description": "Rectangle or ellipse, in canvas pixels", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"}}},
+                    "points": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}, "description": "Polygon or freehand loop, in canvas pixels; it closes by itself"},
+                    "at": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Magic wand: the pixel clicked, in canvas pixels"},
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 100, "default": 15, "description": "Magic wand: how different a color may be, %"},
+                    "global": {"type": "boolean", "default": false, "description": "Magic wand: every pixel of that color, touching or not"},
+                    "mode": {"type": "string", "enum": ["replace", "add", "subtract"], "default": "replace"},
+                    "antialias": {"type": "boolean", "default": true, "description": "Smooth edges"},
+                    "feather": {"type": "number", "minimum": 0, "maximum": 50, "default": 0, "description": "Soft edges, px"},
+                    "snap": {"type": "boolean", "default": false, "description": "Rectangle or ellipse: shrink to the visual element inside it"},
+                    "level": {"type": "number", "minimum": 0, "maximum": 100, "default": 50, "description": "Snap: from the smallest element to the widest group"},
+                    "objectId": {"type": "string", "description": "Select on this floating image instead of the image"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"bounds": {"description": "The rectangle around the selection, in canvas pixels; null without one"}}})),
+        B::new("document.selection_action", &["EDT-044", "EDT-045", "EDT-119"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["delete", "cut", "copy", "move", "float", "crop"], "description": "delete or cut leave the gap filled; copy puts the pixels on the clipboard; move takes them by `offset`; float makes them a floating image; crop crops to them"},
+                    "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "move: [dx, dy] in canvas pixels"},
+                    "gapFill": {"type": "string", "enum": ["smart", "transparent", "canvas"], "default": "smart", "description": "What fills the place the pixels leave"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "ids": {"type": "array", "items": {"type": "string"}, "description": "float: the new floating image"}}})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(

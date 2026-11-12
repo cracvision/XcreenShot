@@ -114,6 +114,8 @@ pub struct Doc {
     pub editable_copy: Option<PathBuf>,
     /// The next value of each step sequence, after the last placed or edited (EDT-035).
     pub step_next: BTreeMap<String, u64>,
+    /// The pixel selection (EDT-043): not in the file, not an undo step.
+    pub pixel_selection: Option<crate::pixels::PixelSelection>,
     last_used: u64,
 }
 
@@ -157,6 +159,7 @@ impl Doc {
             view: None,
             editable_copy: None,
             step_next: BTreeMap::new(),
+            pixel_selection: None,
             last_used: 0,
         }
     }
@@ -730,6 +733,8 @@ impl DocStore {
             "version": d.version,
             // What the next step of each sequence will show (EDT-035).
             "stepNext": crate::steps::next_values(&d.document, &d.step_next),
+            // The pixel selection, in canvas pixels (EDT-043).
+            "pixelSelection": d.pixel_selection.as_ref().and_then(|s| s.info(&d.document)),
             "shown": d.shown,
             "view": d.view,
         });

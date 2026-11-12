@@ -2448,3 +2448,201 @@ fn erasing_shows_the_canvas_color() {
         .unwrap();
     assert_eq!(rendered(&e, &doc).get_pixel(200, 140).0, [255, 255, 255, 255]);
 }
+
+/// A white 200 × 120 capture with a blue button at 60,40 (80 × 24).
+fn with_button(e: &Env) -> String {
+    let mut img = white(200, 120);
+    for y in 40..64 {
+        for x in 60..140 {
+            img.put_pixel(x, y, image::Rgba([30, 110, 220, 255]));
+        }
+    }
+    add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, None)
+        .unwrap()
+        .0
+}
+
+/// EDT-043: shapes select, combine and show their outline; Snap to object fits a loose
+/// box to the button; Invert and none.
+#[test]
+fn pixel_selections_combine_and_snap() {
+    let e = env();
+    let doc = with_button(&e);
+    let r = cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 10, "y": 10, "w": 30, "h": 20}}),
+    );
+    assert_eq!(r["bounds"], json!({"x": 10.0, "y": 10.0, "w": 30.0, "h": 20.0}));
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 30, "y": 20, "w": 30, "h": 20}, "mode": "add"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let sel = &info["pixelSelection"];
+    assert_eq!(
+        sel["bounds"],
+        json!({"x": 10.0, "y": 10.0, "w": 50.0, "h": 30.0}),
+        "the union"
+    );
+    assert_eq!(sel["outline"].as_array().unwrap().len(), 1);
+    assert!(sel["shape"].is_null(), "no longer one rectangle");
+    // A loose box around the button snaps to it.
+    let r = cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 45, "y": 30, "w": 110, "h": 45}, "snap": true}),
+    );
+    assert_eq!(r["bounds"], json!({"x": 60.0, "y": 40.0, "w": 80.0, "h": 24.0}));
+    // The magic wand on the background, inverted: the button.
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "wand", "at": [5, 5], "tolerance": 0}),
+    );
+    let r = cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "invert"}),
+    );
+    assert_eq!(r["bounds"], json!({"x": 60.0, "y": 40.0, "w": 80.0, "h": 24.0}));
+    let r = cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "none"}),
+    );
+    assert!(r["bounds"].is_null());
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["pixelSelection"].is_null());
+    assert!(!info["canUndo"].as_bool().unwrap(), "selecting is no undo step");
+}
+
+/// EDT-044, EDT-045: delete fills the gap; move takes the pixels and the selection;
+/// float makes a floating image; crop to an ellipse leaves transparent corners.
+#[test]
+fn acting_on_selected_pixels() {
+    let e = env();
+    let doc = with_button(&e);
+    let select_button = || {
+        cli(
+            &e.core,
+            "document.select_pixels",
+            json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 56, "y": 36, "w": 88, "h": 32}}),
+        )
+    };
+    // Delete with Smart fill: a plain background without a mark.
+    select_button();
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "delete"}),
+    );
+    let img = rendered(&e, &doc);
+    assert!(
+        img.pixels().all(|p| p.0[0] >= 254 && p.0[2] >= 254),
+        "no button left"
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["undoLabel"], "Delete pixels");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    // Move 40 px right, Transparent behind.
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "move", "offset": [40, 0], "gapFill": "transparent"}),
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(65, 50).0[3], 0, "transparent where it was");
+    assert_eq!(img.get_pixel(170, 50).0, [30, 110, 220, 255], "moved");
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["pixelSelection"]["bounds"]["x"],
+        json!(96.0),
+        "the selection went too"
+    );
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    // Float: a floating image of the button, the gap filled.
+    select_button();
+    let r = cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "float"}),
+    );
+    assert_eq!(r["ids"], json!(["o1"]));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["type"], "image");
+    assert_eq!(
+        info["objects"][0]["rect"],
+        json!({"x": 56.0, "y": 36.0, "w": 88.0, "h": 32.0})
+    );
+    assert!(info["pixelSelection"].is_null());
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(100, 50).0, [30, 110, 220, 255], "it still shows");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    // Crop to an ellipse: transparent corners.
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "ellipse", "rect": {"x": 40, "y": 20, "w": 120, "h": 80}}),
+    );
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "crop"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(120), Some(80))
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(1, 1).0[3], 0, "outside the circle");
+    assert_eq!(img.get_pixel(60, 40).0, [30, 110, 220, 255]);
+    // Nothing selected: an error.
+    let none = call(
+        &e.core,
+        Source::Cli,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "delete"}),
+    );
+    assert!(none.is_err());
+}
+
+/// EDT-043: a selection on a floating image changes only that image.
+#[test]
+fn selecting_on_a_floating_image() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let red = red_png(&e, 40, 20);
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red], "center": [200, 100]}),
+    );
+    // The image is at 180,90 (40 × 20): its left half.
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 180, "y": 90, "w": 20, "h": 20}, "objectId": "o1"}),
+    );
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "delete", "gapFill": "transparent"}),
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(
+        img.get_pixel(185, 100).0,
+        [255, 255, 255, 255],
+        "the white capture shows"
+    );
+    assert_eq!(img.get_pixel(215, 100).0, [255, 0, 0, 255]);
+    let crop = call(
+        &e.core,
+        Source::Cli,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "crop"}),
+    );
+    assert!(crop.is_err(), "crop works on the image");
+}

@@ -430,6 +430,14 @@
     "document_erase": {
       "title": "Borrar",
       "description": "Borra la imagen, o una imagen flotante, a lo largo de un trazo: se ve el color del lienzo."
+    },
+    "document_select_pixels": {
+      "title": "Seleccionar píxeles",
+      "description": "Selecciona píxeles de la imagen o de una imagen flotante con un rectángulo, una elipse, un polígono, un lazo a mano alzada o la varita mágica; añade, resta, invierte o quita la selección."
+    },
+    "document_selection_action": {
+      "title": "Actuar sobre los píxeles seleccionados",
+      "description": "Borra, corta, copia, mueve, separa como imagen flotante o recorta a los píxeles seleccionados, rellenando el hueco que dejan."
     }
   },
   "settings": {
@@ -1833,7 +1841,12 @@
     "cut_simplify": "Cortar forma simplificada",
     "paste_simplify": "Pegar forma simplificada",
     "fill": "Rellenar",
-    "erase": "Borrar"
+    "erase": "Borrar",
+    "delete_pixels": "Borrar píxeles",
+    "cut_pixels": "Cortar píxeles",
+    "move_pixels": "Mover píxeles",
+    "float_pixels": "Convertir en imagen flotante",
+    "crop_selection": "Recortar a la selección"
   },
   "editor": {
     "edited": "{{name}} — Editado"

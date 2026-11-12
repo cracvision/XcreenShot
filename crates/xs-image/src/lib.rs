@@ -14,6 +14,7 @@ pub mod magnify;
 pub mod pens;
 pub mod pixels;
 pub mod render;
+pub mod selection;
 pub mod shapes;
 pub mod simplify;
 pub mod spotlights;
@@ -22,3 +23,4 @@ pub mod steps;
 pub mod text;
 
 pub use render::{object_bounds, render, Base};
+pub use tiny_skia::Transform;
