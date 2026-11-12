@@ -166,6 +166,11 @@ fn editor_menus() -> Vec<MenuEntry> {
                 Separator,
                 action("editor.rename_item", "menu.rename_item", "rename_item"),
                 action("editor.show_in_folder", "menu.show_in_folder", "show_in_folder"),
+                action(
+                    "editor.show_in_library",
+                    "menu.show_in_library",
+                    "show_in_library",
+                ),
                 action("editor.delete_item", "menu.delete_item", "delete_item"),
                 Separator,
                 // A theme from a .xtheme file (EDT-018).

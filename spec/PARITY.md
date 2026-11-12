@@ -300,7 +300,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-011 | Favoritos | M2 | Should | En curso (Windows: estrella y menú contextual; faltan Detalles y la bandeja, TRY-016) |
 | LIB-012 | Detalles del elemento | M2 | Should | — |
 | LIB-013 | Vista rápida | M2 | Should | — |
-| LIB-014 | Mostrar en la biblioteca | M2 | Should | — |
+| LIB-014 | Mostrar en la biblioteca | M2 | Should | En curso (Windows: Archivo > Mostrar en la biblioteca y `library.reveal`: cambia a la Biblioteca, selecciona y desplaza hasta el elemento, quita los filtros con aviso; falta Deshacer en el aviso y la entrada en el menú de la bandeja, TRY-016) |
 | LIB-015 | Eliminar | M1 | Must | En curso |
 | LIB-016 | Crear desde la biblioteca | M2 | Should | — |
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
@@ -320,7 +320,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | — |
-| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list` con orden, filtros y búsqueda, `library.tag`, `library.tags`, `library.favorite`) |
+| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; faltan `library.export`, LIB-018 y LIB-033, y `library.import`, LIB-024) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |
 | TRY-003 | Capacidad | M2 | Should | — |

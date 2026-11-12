@@ -122,6 +122,10 @@ interface LibraryState {
   shape: LibraryShape;
   filters: Filters;
   query: string;
+  /** An item to bring into view and focus (LIB-014), once. */
+  reveal: string | null;
+  /** The filters were cleared to show it. */
+  revealNotice: boolean;
   setShape: (shape: Partial<LibraryShape>) => void;
   setFilters: (filters: Filters) => void;
   setQuery: (query: string) => void;
@@ -149,6 +153,8 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   shape: load(SHAPE_KEY, { sort: "modified", order: "desc", layout: "grid", pane: true }, isShape),
   filters: NO_FILTERS,
   query: "",
+  reveal: null,
+  revealNotice: false,
   setShape: (change) => {
     const shape = { ...get().shape, ...change };
     // A new sort starts in its own direction unless one is given.
@@ -218,6 +224,22 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       anchor: anchor === undefined ? s.anchor : anchor,
     })),
 }));
+
+/** Show in library (LIB-014): the Library view, with the item selected and in view;
+ * the filters and the search are cleared if they hide it, with a notice. */
+export async function revealInLibrary(id: string): Promise<void> {
+  if (!id) return;
+  showView("library");
+  const lib = useLibrary.getState();
+  if (!lib.loaded) await lib.load();
+  if (!useLibrary.getState().items.some((i) => i.id === id)) {
+    useLibrary.setState({ filters: NO_FILTERS, query: "" });
+    await useLibrary.getState().load();
+    useLibrary.setState({ revealNotice: true });
+  }
+  useLibrary.getState().select([id], id, id);
+  useLibrary.setState({ reveal: id });
+}
 
 /** The items selected, in the order of the grid. */
 export function selectedItems(): LibraryItem[] {

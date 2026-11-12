@@ -1391,6 +1391,40 @@ pub fn specs() -> Vec<CommandSpec> {
                     "facets": {"type": "object", "description": "Counts of each filter value over the other sections: types, dates (years, months, days), quickDates, apps, sites, tags, favorites"}
                 }
             })),
+        B::new("library.search", &["LIB-034", "LIB-005", "LIB-007"])
+            .positional(&["query"])
+            .params(params(
+                json!({
+                    "query": {"type": "string", "description": "Words of the name, tags, app, site or annotations (LIB-007 rules)"},
+                    "tag": {"type": ["string", "array"], "items": {"type": "string"}},
+                    "type": {"type": ["string", "array"], "items": {"type": "string"}, "description": "image, video, gif, guide"},
+                    "app": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Part of the application's name"},
+                    "site": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Part of the website"},
+                    "from": {"type": "string", "description": "First capture day, YYYY-MM-DD"},
+                    "to": {"type": "string", "description": "Last capture day, YYYY-MM-DD"},
+                    "favorite": {"type": "boolean"},
+                    "sort": {"type": "string", "enum": ["modified", "captured", "name", "size", "type", "app"]},
+                    "order": {"type": "string", "enum": ["asc", "desc"]},
+                    "offset": {"type": "integer", "minimum": 0},
+                    "limit": {"type": "integer", "minimum": 1}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "total": {"type": "integer"},
+                "count": {"type": "integer"},
+                "items": {"type": "array", "items": library_item()}
+            }})),
+        B::new("library.reveal", &["LIB-014", "LIB-034"])
+            .scopes(UI_CLI_MCP)
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "path": {"type": "string", "description": "A file of the library, instead of its ID"}
+                }),
+                &[],
+            ))
+            .result(library_item()),
         B::new("library.tag", &["LIB-009", "LIB-034"])
             .mutates()
             .params(params(
@@ -1616,7 +1650,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 101] = [
+pub const EDITOR_ACTIONS: [&str; 102] = [
     "open",
     "save",
     "save_as",
@@ -1696,6 +1730,8 @@ pub const EDITOR_ACTIONS: [&str; 101] = [
     // File > New image and New from clipboard (EDT-103, EDT-104).
     "new_image",
     "new_from_clipboard",
+    // File > Show in library (LIB-014).
+    "show_in_library",
     // File > New from template, Apply template, Save as template, Import > Template
     // (EDT-095, EDT-101).
     "new_from_template",

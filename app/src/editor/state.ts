@@ -9,7 +9,7 @@ import type { Rect } from "./boxes";
 import type { ArrowStyle, LineStyle, Point } from "./geometry";
 import type { View } from "./view";
 import { aiProgress } from "./aiState";
-import { showView, useLibrary, useTray, type MainView } from "../library/state";
+import { revealInLibrary, showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
 export type Tool =
@@ -875,6 +875,10 @@ export const useEditor = create<EditorState>((set, get) => ({
         case "view":
           // Abrir biblioteca from the tray icon, `editor.show --view` (LIB-001).
           showView(payload.view as MainView);
+          break;
+        case "library_reveal":
+          // Show in library (LIB-014).
+          void revealInLibrary(String(payload.id ?? ""));
           break;
         case "library":
           // The folder changed: the Library view, and the tray's "Not found" (TRY-002).

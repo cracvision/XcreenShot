@@ -536,3 +536,71 @@ fn rebuild_and_check() {
     // The damaged file does not stop the rest.
     assert_eq!(cli("library.rebuild", json!({}))["items"], 3);
 }
+
+/// LIB-034: `library search --tag cliente --type image` returns only images with that
+/// tag, with ID, name and path; app, site and a range of days; reveal by path.
+#[test]
+fn search_by_fields_and_reveal() {
+    let e = env();
+    write_xshot(
+        &e.path("2026-11/a.xshot"),
+        "Google Chrome",
+        "2026-11-03T10:00:00+00:00",
+    );
+    write_xshot(&e.path("2026-10/b.xshot"), "Code", "2026-10-20T10:00:00+00:00");
+    write_png(&e.path("c.png"), 8, 8);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En)).unwrap();
+    let all = cli("library.list", json!({"sort": "name"}));
+    let ids: Vec<String> = all["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["id"].as_str().unwrap().to_string())
+        .collect();
+    cli(
+        "library.tag",
+        json!({"ids": [&ids[0], &ids[2]], "add": ["Cliente"]}),
+    );
+    let r = cli("library.search", json!({"tag": "cliente", "type": "image"}));
+    assert_eq!(r["count"], 2);
+    let first = &r["items"][0];
+    assert!(first["id"].is_string() && first["name"].is_string() && first["path"].is_string());
+    let names = |v: &Value| -> Vec<String> {
+        v["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["name"].as_str().unwrap().to_string())
+            .collect()
+    };
+    assert_eq!(names(&cli("library.search", json!({"app": "chrome"}))), ["a"]);
+    assert_eq!(
+        names(&cli(
+            "library.search",
+            json!({"site": "example.com", "sort": "name"})
+        )),
+        ["a", "b"]
+    );
+    assert_eq!(
+        names(&cli(
+            "library.search",
+            json!({"from": "2026-10-01", "to": "2026-10-31"})
+        )),
+        ["b"]
+    );
+    let shown = cli("library.reveal", json!({"path": e.path("2026-10/b.xshot")}));
+    assert_eq!(shown["name"], "b");
+    assert!(core
+        .call(
+            Source::Cli,
+            "library.reveal",
+            json!({"id": "nope"}),
+            Some(Lang::En)
+        )
+        .is_err());
+}

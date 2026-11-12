@@ -620,6 +620,11 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
         editor("editor.new_image", "editor.action", r#"{"action":"new_image"}"#),
         editor(
+            "editor.show_in_library",
+            "editor.action",
+            r#"{"action":"show_in_library"}"#,
+        ),
+        editor(
             "editor.new_from_template",
             "editor.action",
             r#"{"action":"new_from_template"}"#,
@@ -836,6 +841,9 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.next_item", _, Macos) => "Super+BracketRight",
         ("editor.delete_item", _, Macos) => "Super+Backspace",
         ("editor.rename_item", _, Macos) => return None,
+        // LIB-014: none on Windows, where Ctrl+Shift+L is the share link.
+        ("editor.show_in_library", _, Macos) => "Shift+Super+KeyL",
+        ("editor.show_in_library", ..) => return None,
         ("editor.delete_alt", ..) => "Backspace",
         _ => {
             let windows = match id {

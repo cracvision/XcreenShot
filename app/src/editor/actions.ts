@@ -666,6 +666,11 @@ export function performAction(action: string): boolean {
     case "import_theme":
       void importTheme();
       return true;
+    case "show_in_library":
+      // LIB-014: only documents of the library.
+      if (!doc?.path || doc.kind !== "library") return false;
+      run("library.reveal", { path: doc.path }).catch(fail);
+      return true;
     case "import_template":
       void importTemplate();
       return true;

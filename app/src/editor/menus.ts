@@ -379,6 +379,7 @@ export function useMenuBar(): void {
   const picked = useLibrary((s) => s.selection.length);
   // In the Library view the document entries do not apply (LIB-001).
   const hasDoc = doc !== null && !inLibrary;
+  const libraryDoc = doc?.kind === "library";
   const objectCount = inLibrary ? 0 : (doc?.objects.length ?? 0);
   const canUnflatten = !inLibrary && (doc?.flattened ?? []).some((l) => !l.permanent);
   // A pixel selection (EDT-044): on the image, or on a floating image.
@@ -465,6 +466,7 @@ export function useMenuBar(): void {
     enabled["editor.apply_template"] = hasDoc && !inLibrary;
     enabled["editor.save_as_template"] = hasDoc && !inLibrary;
     enabled["editor.import_template"] = true;
+    enabled["editor.show_in_library"] = hasDoc && libraryDoc;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;
@@ -484,6 +486,7 @@ export function useMenuBar(): void {
     run("editor.menu_state", { enabled, checked }).catch(() => undefined);
   }, [
     hasDoc,
+    libraryDoc,
     objectCount,
     selectedCount,
     lockedCount,

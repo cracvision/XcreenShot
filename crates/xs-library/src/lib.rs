@@ -390,6 +390,45 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
     }
 }
 
+/// `library.search` (LIB-034): `library.list` with a parameter for each field (LIB-005,
+/// LIB-007): text, tags, type, app, site, a range of days and favorites.
+fn search(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let words = |key: &str| strings(p, key);
+    let mut query: Vec<String> = p
+        .get("query")
+        .and_then(Value::as_str)
+        .map(|q| vec![q.to_string()])
+        .unwrap_or_default();
+    // An app or a site is matched by part of its name, as in the search field.
+    for (key, prefix) in [("app", "app:"), ("site", "site:")] {
+        for v in words(key) {
+            query.push(format!("{prefix}\"{v}\""));
+        }
+    }
+    let mut tags = words("tag");
+    tags.extend(words("tags"));
+    let mut types = words("type");
+    types.extend(words("types"));
+    let filters = json!({
+        "tags": tags,
+        "types": types,
+        "favorites": p.get("favorite").and_then(Value::as_bool).unwrap_or(false),
+        "from": p.get("from"),
+        "to": p.get("to"),
+    });
+    let mut params = json!({ "query": query.join(" "), "filters": filters });
+    for key in ["sort", "order", "offset", "limit"] {
+        if let Some(v) = p.get(key) {
+            params[key] = v.clone();
+        }
+    }
+    let mut r = list(core, ctx, &params)?;
+    if let Some(o) = r.as_object_mut() {
+        o.remove("facets");
+    }
+    Ok(r)
+}
+
 fn mark_error(lang: Lang, e: service::MarkError) -> CommandError {
     use service::MarkError;
     match e {
@@ -724,6 +763,24 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
             }};
         }
         on!("library.list", |core, ctx, p| list(&core, ctx, &p));
+        on!("library.search", |core, ctx, p| search(&core, ctx, &p));
+        on!("library.reveal", |core, ctx, p| {
+            let lib = library(&core);
+            let item = match (
+                p.get("id").and_then(Value::as_str),
+                p.get("path").and_then(Value::as_str),
+            ) {
+                (Some(id), _) => lib.get(id).ok_or_else(|| not_found(ctx.lang, id))?,
+                (None, Some(path)) => lib
+                    .find(Path::new(path))
+                    .ok_or_else(|| not_found(ctx.lang, path))?,
+                _ => return Err(not_found(ctx.lang, "")),
+            };
+            core.host()
+                .editor_event("library_reveal", json!({ "id": item.id }));
+            let _ = core.host().show_main_window();
+            Ok(item.to_json(lib.root()))
+        });
         on!("library.tag", |core, ctx, p| tag(&core, ctx, &p));
         on!("library.location", |core, ctx, p| {
             match p.get("action").and_then(Value::as_str) {

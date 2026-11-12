@@ -594,6 +594,14 @@
     "library_relocate": {
       "title": "Change the library location",
       "description": "Moves the library to another folder, starts an empty one there or uses the one already there."
+    },
+    "library_search": {
+      "title": "Search the library",
+      "description": "Finds library items by text, tags, type, application, website, capture days and favorites."
+    },
+    "library_reveal": {
+      "title": "Show in library",
+      "description": "Shows the Library view with the item selected and in view, clearing the filters that hide it."
     }
   },
   "settings": {
@@ -1065,7 +1073,8 @@
       "editor_new_from_template": "New from template",
       "editor_apply_template": "Apply template",
       "editor_save_as_template": "Save as template",
-      "editor_import_template": "Import template"
+      "editor_import_template": "Import template",
+      "editor_show_in_library": "Show in library"
     }
   },
   "tray": {
@@ -1213,7 +1222,8 @@
     "combine_template": "Combine in template…",
     "tags_item": "Tags…",
     "favorite_item": "Add to favorites",
-    "unfavorite_item": "Remove from favorites"
+    "unfavorite_item": "Remove from favorites",
+    "show_in_library": "Show in library"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2763,7 +2773,9 @@
       "moved_other": "Library moved: {{count}} items.",
       "move_cancelled": "Move cancelled: everything is back in its place.",
       "move_failed_one": "{{count}} file could not be moved and stayed where it was.",
-      "move_failed_other": "{{count}} files could not be moved and stayed where they were."
+      "move_failed_other": "{{count}} files could not be moved and stayed where they were.",
+      "revealed_filters": "The filters were cleared to show the item.",
+      "not_in_library": "This file is not in the library: use Show in folder."
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

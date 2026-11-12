@@ -594,6 +594,14 @@
     "library_relocate": {
       "title": "Cambiar la ubicación de la biblioteca",
       "description": "Mueve la biblioteca a otra carpeta, empieza una vacía allí o usa la que ya hay."
+    },
+    "library_search": {
+      "title": "Buscar en la biblioteca",
+      "description": "Encuentra elementos de la biblioteca por texto, etiquetas, tipo, aplicación, sitio web, días de captura y favoritos."
+    },
+    "library_reveal": {
+      "title": "Mostrar en la biblioteca",
+      "description": "Muestra la vista Biblioteca con el elemento seleccionado y a la vista, y quita los filtros que lo ocultan."
     }
   },
   "settings": {
@@ -1065,7 +1073,8 @@
       "editor_new_from_template": "Nuevo desde plantilla",
       "editor_apply_template": "Aplicar plantilla",
       "editor_save_as_template": "Guardar como plantilla",
-      "editor_import_template": "Importar plantilla"
+      "editor_import_template": "Importar plantilla",
+      "editor_show_in_library": "Mostrar en la biblioteca"
     }
   },
   "tray": {
@@ -1213,7 +1222,8 @@
     "combine_template": "Combinar en plantilla…",
     "tags_item": "Etiquetas…",
     "favorite_item": "Marcar como favorito",
-    "unfavorite_item": "Quitar de favoritos"
+    "unfavorite_item": "Quitar de favoritos",
+    "show_in_library": "Mostrar en la biblioteca"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2763,7 +2773,9 @@
       "moved_other": "Biblioteca movida: {{count}} elementos.",
       "move_cancelled": "Movimiento cancelado: todo volvió a su sitio.",
       "move_failed_one": "{{count}} archivo no se pudo mover y quedó donde estaba.",
-      "move_failed_other": "{{count}} archivos no se pudieron mover y quedaron donde estaban."
+      "move_failed_other": "{{count}} archivos no se pudieron mover y quedaron donde estaban.",
+      "revealed_filters": "Se quitaron los filtros para mostrar el elemento.",
+      "not_in_library": "Este archivo no está en la biblioteca: usa Mostrar en la carpeta."
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

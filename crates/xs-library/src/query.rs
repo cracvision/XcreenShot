@@ -42,6 +42,9 @@ pub struct Filters {
     pub sites: Vec<String>,
     pub tags: Vec<String>,
     pub favorites: bool,
+    /// A range of capture days, `YYYY-MM-DD`, both included (LIB-034).
+    pub from: Option<String>,
+    pub to: Option<String>,
 }
 
 impl Filters {
@@ -274,11 +277,18 @@ impl Checked<'_> {
         if on(Section::Types) && !f.types.is_empty() && !f.types.iter().any(|t| t == kind(item)) {
             return false;
         }
-        if on(Section::Dates) && !f.dates.is_empty() {
+        if on(Section::Dates) && (!f.dates.is_empty() || f.from.is_some() || f.to.is_some()) {
             let Some(day) = day_of(item.captured) else {
                 return false;
             };
-            if !f.dates.iter().any(|d| date_matches(day, d, self.today)) {
+            if !f.dates.is_empty() && !f.dates.iter().any(|d| date_matches(day, d, self.today)) {
+                return false;
+            }
+            let parse = |s: &Option<String>| {
+                s.as_deref()
+                    .and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+            };
+            if parse(&f.from).is_some_and(|from| day < from) || parse(&f.to).is_some_and(|to| day > to) {
                 return false;
             }
         }

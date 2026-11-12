@@ -466,6 +466,14 @@ function Grid() {
   const rowHeight = list ? ROW : tileHeight + box.gap;
   const span = visibleSpan(items.length, columns, rowHeight, scroll, box.height);
 
+  // Show in library (LIB-014): bring the item into view and give it the focus.
+  const reveal = useLibrary((s) => s.reveal);
+  useLayoutEffect(() => {
+    if (!reveal) return;
+    keyed.current = true;
+    useLibrary.setState({ reveal: null });
+  }, [reveal]);
+
   useLayoutEffect(() => {
     if (!keyed.current || !focus) return;
     const el = grid.current?.querySelector<HTMLElement>(`[data-item="${focus}"]`);
@@ -703,6 +711,23 @@ function Chips() {
   );
 }
 
+/** "The filters were cleared to show the item" (LIB-014). */
+function RevealNotice() {
+  const { t } = useTranslation();
+  const shown = useLibrary((s) => s.revealNotice);
+  useEffect(() => {
+    if (!shown) return;
+    const timer = setTimeout(() => useLibrary.setState({ revealNotice: false }), 4000);
+    return () => clearTimeout(timer);
+  }, [shown]);
+  if (!shown) return null;
+  return (
+    <div className="editor-toast" role="status">
+      {t("ui.library.revealed_filters")}
+    </div>
+  );
+}
+
 function NoResults() {
   const { t } = useTranslation();
   const setFilters = useLibrary((s) => s.setFilters);
@@ -810,6 +835,7 @@ export function LibraryView() {
       </div>
       <LibraryStatus />
       <TagDialogs />
+      <RevealNotice />
       <MaintenanceDialogs />
     </>
   );
