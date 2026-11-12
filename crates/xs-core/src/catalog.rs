@@ -684,6 +684,61 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object"})),
+        B::new("document.resize", &["EDT-069", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "width": {"type": "number", "minimum": 1, "description": "New width of the image, px (alone: the height keeps the proportion)"},
+                    "height": {"type": "number", "minimum": 1},
+                    "percent": {"type": "number", "exclusiveMinimum": 0, "description": "Instead of width and height"},
+                    "resample": {"type": "string", "enum": ["auto", "bicubic", "bilinear", "lanczos", "nearest"], "default": "auto"},
+                    "resampleImage": {"type": "boolean", "default": true, "description": "false: the pixels stay and only the resolution changes"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"width": {"type": "integer"}, "height": {"type": "integer"}, "dpi": {"type": "number"}}})),
+        B::new("document.rotate", &["EDT-072", "EDT-119"])
+            .mutates()
+            .positional(&["degrees"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "degrees": {"type": "number", "minimum": -359.9, "maximum": 359.9, "description": "Clockwise; 90, 180, 270 or any angle"},
+                    "background": {"type": "string", "enum": ["transparent", "canvas"], "default": "transparent", "description": "The new corners of an angle that is not a quarter turn"}
+                }),
+                &["degrees"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.revert", &["EDT-076", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("document.canvas", &["EDT-074", "EDT-075", "EDT-077", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "color": {"type": ["string", "null"], "description": "Canvas color #RRGGBB(AA); null is transparent"},
+                    "cornerRadius": {"type": ["number", "string"], "description": "Rounded corners, px, or \"circle\" (first a centered square)"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "description": "Resolution: the pixels do not change"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.canvas_size", &["EDT-070", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "width": {"type": "number", "minimum": 1, "maximum": 50000},
+                    "height": {"type": "number", "minimum": 1, "maximum": 50000},
+                    "anchor": {"type": "string", "enum": ["topLeft", "top", "topRight", "left", "center", "right", "bottomLeft", "bottom", "bottomRight"], "default": "center", "description": "What stays put: the canvas grows or shrinks on the other sides"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(

@@ -478,6 +478,26 @@
     "editor_saved_effect": {
       "title": "Efecto guardado",
       "description": "Aplica un efecto guardado (o lo añade al final), guarda la pila actual como uno, lo renombra, actualiza, elimina, mueve o lo añade a Favoritos."
+    },
+    "document_resize": {
+      "title": "Cambiar tamaño de la imagen",
+      "description": "Cambia el tamaño de la imagen remuestreando sus píxeles (o solo su resolución); los objetos se escalan con ella, también el tamaño de letra."
+    },
+    "document_rotate": {
+      "title": "Girar la imagen",
+      "description": "Gira la imagen y sus objetos 90°, 180°, 270° o cualquier ángulo; el lienzo crece para que quepa."
+    },
+    "document_revert": {
+      "title": "Volver al original",
+      "description": "Descarta todas las ediciones (objetos, efectos, recortes, tamaño y lienzo) y deja la imagen como se capturó o abrió. Deshacer las recupera."
+    },
+    "document_canvas": {
+      "title": "Lienzo",
+      "description": "Pone el color del lienzo (o transparente), sus esquinas redondeadas (o un círculo) y la resolución."
+    },
+    "document_canvas_size": {
+      "title": "Tamaño del lienzo",
+      "description": "Pone el tamaño del lienzo alrededor de un ancla: crecer añade espacio, reducir oculta lo que queda fuera (se puede recuperar)."
     }
   },
   "settings": {
@@ -2239,7 +2259,12 @@
     "float_pixels": "Convertir en imagen flotante",
     "crop_selection": "Recortar a la selección",
     "effects": "Cambiar efectos",
-    "effect_selection": "Efecto en la selección"
+    "effect_selection": "Efecto en la selección",
+    "resize": "Cambiar tamaño de la imagen",
+    "rotate": "Girar",
+    "revert": "Volver al original",
+    "canvas": "Cambiar lienzo",
+    "canvas_size": "Tamaño del lienzo"
   },
   "editor": {
     "edited": "{{name}} — Editado"

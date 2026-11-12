@@ -166,6 +166,10 @@ pub struct Document {
     /// into `base.png`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub patches: Vec<Patch>,
+    /// The original pixels are this picture of `images/` instead of `base.png`: after
+    /// resizing, turning or flipping the image (ADR 0006). A written file has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_image: Option<String>,
     /// How the original shows under simplified shapes (EDT-041).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub simplify: Option<SimplifyView>,
@@ -205,6 +209,7 @@ impl Document {
             objects: Vec::new(),
             flattened: Vec::new(),
             patches: Vec::new(),
+            base_image: None,
             simplify: None,
             effects: Vec::new(),
             extra: Map::new(),

@@ -92,6 +92,8 @@ pub struct Doc {
     /// Size of the original pixels, known without decoding them.
     pub base_size: (u32, u32),
     base: Option<Base>,
+    /// Which pixels `base` holds: `base.png` (`None`) or a picture (ADR 0006).
+    base_key: Option<String>,
     /// Parts of the `.xshot` this build only carries along.
     manifest_extra: Map<String, Value>,
     /// The `images/` folder: pictures of floating images (EDT-078) and what this
@@ -146,6 +148,7 @@ impl Doc {
             meta,
             base_source,
             base_size,
+            base_key: None,
             base: None,
             manifest_extra: Map::new(),
             images: Arc::default(),
@@ -162,6 +165,22 @@ impl Doc {
             pixel_selection: None,
             last_used: 0,
         }
+    }
+
+    /// The bytes of one picture of its `images/` folder.
+    pub fn images_file(&self, name: &str) -> Option<Vec<u8>> {
+        self.images.get(name).cloned()
+    }
+
+    /// Size of the original pixels: of `base.png`, or of the picture that replaced it
+    /// (ADR 0006).
+    pub fn base_dims(&self) -> (u32, u32) {
+        self.document
+            .base_image
+            .as_ref()
+            .and_then(|n| self.images.get(n))
+            .and_then(|b| xs_image::encode::png_size(b))
+            .unwrap_or(self.base_size)
     }
 
     pub fn dirty(&self) -> bool {
@@ -242,8 +261,9 @@ impl Snapshot {
         // file no longer has what it hid (EDT-091).
         let baked = xs_image::render::baked_base(&self.document, &self.base);
         document.flattened.retain(|l| l.permanent.is_none());
-        // Edits of pixels too (ADR 0005).
+        // Edits of pixels too (ADR 0005), and a replaced image (ADR 0006).
         document.patches.clear();
+        let replaced = document.base_image.take().is_some();
         // The part of the original pixels under the canvas; the canvas may also reach
         // past them, where it grew to fit objects (EDT-071).
         let (kx0, ky0) = (c.x.max(0), c.y.max(0));
@@ -270,7 +290,7 @@ impl Snapshot {
             xs_image::encode::png(&kept, self.document.dpi, true)?
         } else if let Some(baked) = &baked {
             xs_image::encode::png(baked, self.document.dpi, true)?
-        } else if self.base_source.mime == "image/png" {
+        } else if self.base_source.mime == "image/png" && !replaced {
             self.base_source.bytes.as_ref().clone()
         } else {
             xs_image::encode::png(&self.base.to_image(), self.document.dpi, true)?
@@ -595,14 +615,25 @@ impl DocStore {
 
     /// Decoded pixels of a document, decoding them if needed (outside the lock).
     pub fn base(&self, id: &str) -> Result<Base, String> {
-        let (source, images) = {
+        let (source, images, key) = {
             let mut inner = self.inner.lock().unwrap();
             inner.touch(id);
             let doc = inner.get_mut(id).ok_or("document closed")?;
-            if let Some(b) = &doc.base {
+            // The original pixels: base.png, or the picture that replaced it (ADR 0006).
+            let key = doc.document.base_image.clone();
+            if let Some(b) = doc.base.as_ref().filter(|_| doc.base_key == key) {
                 return Ok(b.clone());
             }
-            (doc.base_source.bytes.clone(), doc.images.clone())
+            let source = match &key {
+                Some(name) => Arc::new(
+                    doc.images
+                        .get(name)
+                        .cloned()
+                        .ok_or("the image's picture is missing")?,
+                ),
+                None => doc.base_source.bytes.clone(),
+            };
+            (source, doc.images.clone(), key)
         };
         let mut base = Base::from_image(xs_image::encode::decode(&source)?);
         for (name, bytes) in images.iter() {
@@ -612,6 +643,7 @@ impl DocStore {
         let mut inner = self.inner.lock().unwrap();
         if let Some(doc) = inner.get_mut(id) {
             doc.base = Some(base.clone());
+            doc.base_key = key;
         }
         inner.evict(id);
         Ok(base)
@@ -619,7 +651,11 @@ impl DocStore {
 
     /// The final image of a document read from disk and not in the store.
     pub fn render_doc(doc: &Doc) -> Result<image::RgbaImage, String> {
-        let mut base = Base::from_image(xs_image::encode::decode(&doc.base_source.bytes)?);
+        let source = match &doc.document.base_image {
+            Some(name) => doc.images.get(name).ok_or("the image's picture is missing")?,
+            None => doc.base_source.bytes.as_ref(),
+        };
+        let mut base = Base::from_image(xs_image::encode::decode(source)?);
         for (name, bytes) in doc.images.iter() {
             let _ = base.add_image(name, bytes);
         }
@@ -710,7 +746,7 @@ impl DocStore {
     pub fn info(&self, id: &str) -> Option<Value> {
         let inner = self.inner.lock().unwrap();
         let d = inner.docs.iter().find(|d| d.id == id)?;
-        let (bw, bh) = d.base_size;
+        let (bw, bh) = d.base_dims();
         let mut v = serde_json::to_value(&d.document).unwrap_or_default();
         // Text boxes: their laid-out size, for the canvas's handles (EDT-026).
         if let Some(objects) = v.get_mut("objects").and_then(Value::as_array_mut) {

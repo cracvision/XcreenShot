@@ -8,6 +8,7 @@
 
 pub mod fit;
 pub mod flatten;
+pub mod image_ops;
 pub mod objects;
 pub mod pixels;
 pub mod recovery;
@@ -1545,6 +1546,185 @@ fn effects_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     Ok(json!({ "effects": stack }))
 }
 
+/// The original pixels with the edits of pixels (ADR 0005), without the flattened
+/// layers: what resizing and turning work on (ADR 0006).
+fn pixels_with_patches(doc: &Document, base: &Base) -> image::RgbaImage {
+    let view = Document {
+        flattened: Vec::new(),
+        ..doc.clone()
+    };
+    xs_image::render::image_in_base(&view, base)
+}
+
+/// `document.resize`, `document.rotate`, `document.revert`, `document.canvas` and
+/// `document.canvas_size` (EDT-069, EDT-070, EDT-072, EDT-074 to EDT-077).
+fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandResult {
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let doc = ed
+        .store
+        .with(&id, |d| d.document.clone())
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let measure = |props: &Map<String, Value>| {
+        let t = xs_image::text::Text::from_props(props).ok()?;
+        let l = xs_image::text::layout(&t, doc.dpi);
+        Some((f64::from(l.width), f64::from(l.height)))
+    };
+    let num = |k: &str| p.get(k).and_then(Value::as_f64);
+    // The new document, and the new original pixels when they change.
+    let mut next = doc.clone();
+    let mut pixels: Option<image::RgbaImage> = None;
+    let label = match which {
+        "resize" => {
+            let (cw, ch) = (doc.canvas.width as f64, doc.canvas.height as f64);
+            let (kx, ky) = match (num("percent"), num("width"), num("height")) {
+                (Some(pc), _, _) => (pc / 100.0, pc / 100.0),
+                (None, Some(w), Some(h)) => (w / cw, h / ch),
+                (None, Some(w), None) => (w / cw, w / cw),
+                (None, None, Some(h)) => (h / ch, h / ch),
+                _ => return Err(bad("width", "give width, height or percent")),
+            };
+            if !(kx > 0.0 && ky > 0.0 && kx * cw <= 50_000.0 && ky * ch <= 50_000.0) {
+                return Err(bad("width", "the size must be between 1 and 50000 px"));
+            }
+            if let Some(dpi) = num("dpi") {
+                next.dpi = dpi.clamp(1.0, 10_000.0);
+            }
+            // Without resampling only the resolution changes (EDT-069).
+            if p.get("resampleImage").and_then(Value::as_bool) == Some(false) {
+                if num("dpi").is_none() {
+                    next.dpi = (doc.dpi / kx).clamp(1.0, 10_000.0);
+                }
+            } else {
+                let how =
+                    image_ops::Resample::parse(p.get("resample").and_then(Value::as_str).unwrap_or("auto"))
+                        .ok_or_else(|| bad("resample", "auto, bicubic, bilinear, lanczos or nearest"))?;
+                let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+                let src = pixels_with_patches(&doc, &base);
+                pixels = Some(image_ops::resize(&mut next, &src, kx, ky, how, &measure));
+            }
+            "history.resize"
+        }
+        "rotate" => {
+            let degrees = num("degrees").ok_or_else(|| bad("degrees", "give the angle"))?;
+            if !(-360.0..=360.0).contains(&degrees) {
+                return Err(bad("degrees", "between -359.9 and 359.9"));
+            }
+            let background = match p.get("background").and_then(Value::as_str) {
+                Some("canvas") => doc
+                    .canvas
+                    .color
+                    .as_deref()
+                    .and_then(xs_image::color::Rgba::parse)
+                    .map(|c| [c.r, c.g, c.b, c.a]),
+                _ => None,
+            };
+            let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+            let src = pixels_with_patches(&doc, &base);
+            pixels = Some(image_ops::rotate(&mut next, &src, degrees, background, &measure));
+            "history.rotate"
+        }
+        "revert" => {
+            // The image as captured or opened (EDT-076): base.png, no edits.
+            let (bytes, size) = ed
+                .store
+                .with(&id, |d| (d.base_source.bytes.clone(), d.base_size))
+                .ok_or_else(|| CommandError::internal("document closed"))?;
+            let dpi = xs_image::encode::png_dpi(&bytes).unwrap_or(doc.dpi);
+            let opaque = xs_image::encode::decode(&bytes)
+                .map(|i| i.pixels().all(|p| p.0[3] == 255))
+                .unwrap_or(true);
+            next = Document::new(size.0, size.1, dpi);
+            next.canvas.color = opaque.then(|| "#FFFFFF".to_string());
+            "history.revert"
+        }
+        "canvas" => {
+            if let Some(c) = p.get("color") {
+                next.canvas.color = match c {
+                    Value::Null => None,
+                    Value::String(s) => {
+                        xs_image::color::Rgba::parse(s)
+                            .ok_or_else(|| bad("color", "use #RRGGBB, #RRGGBBAA or null"))?;
+                        Some(s.clone())
+                    }
+                    _ => return Err(bad("color", "use #RRGGBB, #RRGGBBAA or null")),
+                };
+            }
+            match p.get("cornerRadius") {
+                Some(Value::String(s)) if s == "circle" => {
+                    // A circle: first a centered square (EDT-075).
+                    let (w, h) = (doc.canvas.width as i64, doc.canvas.height as i64);
+                    let side = w.min(h);
+                    let (x0, y0) = ((w - side) / 2, (h - side) / 2);
+                    let base_size = ed.store.with(&id, |d| d.base_dims()).unwrap_or((1, 1));
+                    crop_to(&mut next, base_size, [x0, y0, x0 + side, y0 + side])
+                        .ok_or_else(|| bad("cornerRadius", "nothing would be left"))?;
+                    next.canvas.corner_radius = side as f64 / 2.0;
+                }
+                Some(v) => {
+                    let r = v
+                        .as_f64()
+                        .ok_or_else(|| bad("cornerRadius", "a number of px or \"circle\""))?;
+                    let max = doc.canvas.width.min(doc.canvas.height) as f64 / 2.0;
+                    next.canvas.corner_radius = r.clamp(0.0, max);
+                }
+                None => {}
+            }
+            if let Some(dpi) = num("dpi") {
+                if !(1.0..=10_000.0).contains(&dpi) {
+                    return Err(bad("dpi", "between 1 and 10000"));
+                }
+                next.dpi = dpi;
+            }
+            "history.canvas"
+        }
+        "canvas_size" => {
+            let (w, h) = (
+                num("width").unwrap_or(doc.canvas.width as f64),
+                num("height").unwrap_or(doc.canvas.height as f64),
+            );
+            if !(1.0..=50_000.0).contains(&w) || !(1.0..=50_000.0).contains(&h) {
+                return Err(bad("width", "the size must be between 1 and 50000 px"));
+            }
+            let anchor = p.get("anchor").and_then(Value::as_str).unwrap_or("center");
+            image_ops::canvas_size(&mut next, w.round() as u32, h.round() as u32, anchor);
+            "history.canvas_size"
+        }
+        other => return Err(bad("command", other)),
+    };
+    let stored = match &pixels {
+        Some(img) => Some(store_picture(core, &id, img, lang)?),
+        None => None,
+    };
+    ed.store
+        .mutate(&id, label, |d| {
+            *d = next.clone();
+            if let Some(name) = &stored {
+                d.base_image = Some(name.clone());
+            }
+            Ok::<_, CommandError>(())
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    // A selection of pixels no longer fits new pixels.
+    if pixels.is_some() || which == "revert" {
+        ed.store.with(&id, |d| d.pixel_selection = None);
+    }
+    changed(core, ctx, &id);
+    let info = ed
+        .store
+        .with(&id, |d| json!({"width": d.document.canvas.width, "height": d.document.canvas.height, "dpi": d.document.dpi}))
+        .unwrap_or_default();
+    Ok(info)
+}
+
 /// Crops `doc` to `[x0, y0, x1, y1]` of its canvas (EDT-049), keeping the objects on
 /// the image. `None` if nothing would be left. The new canvas size.
 fn crop_to(doc: &mut Document, base: (u32, u32), r: [i64; 4]) -> Option<(u32, u32)> {
@@ -1982,7 +2162,7 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     if changed_px.is_none() && float.is_none() && crop.is_none() {
         return Ok(json!({ "changed": false }));
     }
-    let base_size = ed.store.with(&id, |d| d.base_size).unwrap_or((1, 1));
+    let base_size = ed.store.with(&id, |d| d.base_dims()).unwrap_or((1, 1));
     let auto = auto_expand(core);
     ed.store
         .mutate(&id, label, |doc| {
@@ -3416,6 +3596,25 @@ pub fn extension() -> Extension {
         on!("document.selection_action", |core, ctx, p| selection_action(
             &core, ctx, &p
         ));
+        // Image and canvas (EDT-069 to EDT-077; ADR 0006).
+        on!("document.resize", |core, ctx, p| image_command(
+            &core, ctx, &p, "resize"
+        ));
+        on!("document.rotate", |core, ctx, p| image_command(
+            &core, ctx, &p, "rotate"
+        ));
+        on!("document.revert", |core, ctx, p| image_command(
+            &core, ctx, &p, "revert"
+        ));
+        on!("document.canvas", |core, ctx, p| image_command(
+            &core, ctx, &p, "canvas"
+        ));
+        on!("document.canvas_size", |core, ctx, p| image_command(
+            &core,
+            ctx,
+            &p,
+            "canvas_size"
+        ));
         // Effects (EDT-053 to EDT-068).
         on!("document.effects", |core, ctx, p| effects_command(&core, ctx, &p));
         // Saved effects (EDT-054).
@@ -3690,7 +3889,7 @@ pub fn extension() -> Extension {
                 (num("x") + num("w")).ceil() as i64,
                 (num("y") + num("h")).ceil() as i64,
             );
-            let base = editor(&core).store.with(&id, |d| d.base_size).unwrap_or((1, 1));
+            let base = editor(&core).store.with(&id, |d| d.base_dims()).unwrap_or((1, 1));
             let result = editor(&core)
                 .store
                 .mutate(&id, "history.crop", |doc| {

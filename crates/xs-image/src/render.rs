@@ -882,8 +882,16 @@ pub fn render(doc: &Document, base: &Base) -> RgbaImage {
 /// in it. Without effects, the same as [`render`].
 pub fn render_final(doc: &Document, base: &Base, meta: &serde_json::Value) -> (RgbaImage, [i64; 2]) {
     let active = doc.effects.iter().any(crate::fx::enabled);
+    // The canvas's rounded corners come first; effects follow their shape (EDT-075).
+    let radius = doc.canvas.corner_radius;
     if !active {
-        return (render(doc, base), [0, 0]);
+        let img = render(doc, base);
+        let img = if radius > 0.0 {
+            crate::fx::round_corners(img, radius)
+        } else {
+            img
+        };
+        return (img, [0, 0]);
     }
     let picture = |name: &str| base.images.get(name).map(|p| straight(p));
     let ctx = crate::fx::Ctx {
@@ -904,7 +912,11 @@ pub fn render_final(doc: &Document, base: &Base, meta: &serde_json::Value) -> (R
         }
     }
     draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
-    let out = crate::fx::apply(&doc.effects, straight(&pm), &ctx);
+    let mut img = straight(&pm);
+    if radius > 0.0 {
+        img = crate::fx::round_corners(img, radius);
+    }
+    let out = crate::fx::apply(&doc.effects, img, &ctx);
     (out.image, out.origin)
 }
 

@@ -51,9 +51,14 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                         .map(|png| (std::sync::Arc::new(png), "image/png"))
                 })
             } else {
-                editor
-                    .store
-                    .with(id, |d| (d.base_source.bytes.clone(), d.base_source.mime))
+                // The picture that replaced the original pixels, if any (ADR 0006).
+                editor.store.with(id, |d| match &d.document.base_image {
+                    Some(name) => d
+                        .images_file(name)
+                        .map(|b| (std::sync::Arc::new(b), "image/png"))
+                        .unwrap_or((d.base_source.bytes.clone(), d.base_source.mime)),
+                    None => (d.base_source.bytes.clone(), d.base_source.mime),
+                })
             }
         }
         // Text and blur as Rust draws them (ADR 0004); the canvas places them.

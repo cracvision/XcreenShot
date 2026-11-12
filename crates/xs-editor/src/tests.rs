@@ -3155,3 +3155,164 @@ fn saved_effects_replace_or_add() {
     assert_eq!(info["effects"][0]["type"], "border");
     assert_eq!(info["effects"].as_array().unwrap().len(), 1);
 }
+
+/// EDT-069, EDT-072, EDT-076 (ADR 0006): resizing scales pixels and objects (text
+/// too) and is saved into base.png; turning a quarter and back gives the original;
+/// reverting drops every edit and Undo brings them back.
+#[test]
+fn resizing_turning_and_reverting_the_image() {
+    let e = env();
+    let (doc, path) = add_capture(&e.core, &white(2000, 1000), json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([100, 100], [300, 100]),
+            {"type": "text", "at": [500, 500], "text": "Hola", "style": {"size": 20}}]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.resize",
+        json!({"documentId": doc, "percent": 50}),
+    );
+    assert_eq!(
+        (r["width"].as_u64(), r["height"].as_u64()),
+        (Some(1000), Some(500))
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"][1]["style"]["size"],
+        json!(10.0),
+        "the text is 10 pt"
+    );
+    assert_eq!(info["objects"][0]["to"], json!([150.0, 50.0]));
+    assert_eq!(info["base"]["width"], 1000, "new original pixels");
+    // Saved: base.png has them, the file no picture in their place.
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert!(file.document.base_image.is_none());
+    assert_eq!(xs_image::encode::png_size(&file.base_png), Some((1000, 500)));
+    // A quarter turn and back: exactly the same image.
+    let before = rendered(&e, &doc);
+    cli(
+        &e.core,
+        "document.rotate",
+        json!({"documentId": doc, "degrees": 90}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(500), Some(1000))
+    );
+    cli(
+        &e.core,
+        "document.rotate",
+        json!({"documentId": doc, "degrees": -90}),
+    );
+    assert_eq!(rendered(&e, &doc), before);
+    // Revert, then Undo.
+    cli(&e.core, "document.revert", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["objects"].as_array().unwrap().is_empty());
+    assert_eq!(info["undoLabel"], "Revert to original");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"].as_array().unwrap().len(), 2);
+}
+
+/// EDT-069: nearest neighbour doubles pixels without mixing; without resampling only
+/// the resolution changes.
+#[test]
+fn resampling_options() {
+    let e = env();
+    let img = image::RgbaImage::from_fn(4, 2, |x, _| {
+        if x % 2 == 0 {
+            image::Rgba([255, 0, 0, 255])
+        } else {
+            image::Rgba([0, 0, 255, 255])
+        }
+    });
+    let (doc, _) = add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.resize",
+        json!({"documentId": doc, "percent": 200, "resample": "nearest"}),
+    );
+    let out = rendered(&e, &doc);
+    assert_eq!(out.dimensions(), (8, 4));
+    assert_eq!(out.get_pixel(1, 0).0, [255, 0, 0, 255]);
+    assert_eq!(out.get_pixel(2, 0).0, [0, 0, 255, 255]);
+    let dpi = cli(&e.core, "document.info", json!({"documentId": doc}))["dpi"]
+        .as_f64()
+        .unwrap();
+    cli(
+        &e.core,
+        "document.resize",
+        json!({"documentId": doc, "percent": 50, "resampleImage": false}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["width"], 8, "same pixels");
+    assert_eq!(info["dpi"].as_f64().unwrap(), dpi * 2.0, "twice the resolution");
+}
+
+/// EDT-070, EDT-074, EDT-075, EDT-077: canvas size around an anchor and back;
+/// transparent canvas; rounded corners and a circle; resolution without new pixels.
+#[test]
+fn canvas_color_size_corners_and_resolution() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(800, 600), json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.canvas_size",
+        json!({"documentId": doc, "width": 1000, "height": 1000, "anchor": "center"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["crop"],
+        json!({"x": -100, "y": -200, "width": 1000, "height": 1000})
+    );
+    cli(
+        &e.core,
+        "document.canvas_size",
+        json!({"documentId": doc, "width": 800, "height": 600, "anchor": "center"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["crop"],
+        json!({"x": 0, "y": 0, "width": 800, "height": 600}),
+        "back without loss"
+    );
+    // Rounded corners: transparent corners in the image that leaves.
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "cornerRadius": 20}),
+    );
+    assert_eq!(rendered(&e, &doc).get_pixel(0, 0).0[3], 0);
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "cornerRadius": "circle"}),
+    );
+    let out = rendered(&e, &doc);
+    assert_eq!(out.dimensions(), (600, 600));
+    assert_eq!(out.get_pixel(300, 300).0[3], 255);
+    assert_eq!(out.get_pixel(30, 30).0[3], 0);
+    // Resolution: same pixels, a new value in the PNG.
+    cli(&e.core, "document.canvas", json!({"documentId": doc, "dpi": 300}));
+    let target = e.outside.path().join("dpi.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "path": target, "format": "png"}),
+    );
+    let png = std::fs::read(&target).unwrap();
+    assert_eq!(xs_image::encode::png_dpi(&png).map(|d| d.round()), Some(300.0));
+    // A transparent canvas: erasing leaves transparency.
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "color": null}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["canvas"]["color"].is_null());
+}

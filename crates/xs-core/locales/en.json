@@ -478,6 +478,26 @@
     "editor_saved_effect": {
       "title": "Saved effect",
       "description": "Applies a saved effect (or adds it at the end), saves the current stack as one, renames, updates, deletes, moves it, or adds it to Favorites."
+    },
+    "document_resize": {
+      "title": "Resize image",
+      "description": "Changes the size of the image, resampling its pixels (or only its resolution); objects scale with it, text sizes too."
+    },
+    "document_rotate": {
+      "title": "Rotate image",
+      "description": "Turns the image and its objects 90°, 180°, 270° or any angle; the canvas grows to hold it."
+    },
+    "document_revert": {
+      "title": "Revert to original",
+      "description": "Drops every edit (objects, effects, crops, size and canvas) and leaves the image as captured or opened. Undo brings them back."
+    },
+    "document_canvas": {
+      "title": "Canvas",
+      "description": "Sets the canvas color (or transparent), its rounded corners (or a circle) and the resolution."
+    },
+    "document_canvas_size": {
+      "title": "Canvas size",
+      "description": "Sets the canvas size around an anchor: growing adds space, shrinking hides what falls out (it can come back)."
     }
   },
   "settings": {
@@ -2239,7 +2259,12 @@
     "float_pixels": "Float selection",
     "crop_selection": "Crop to selection",
     "effects": "Change effects",
-    "effect_selection": "Effect on selection"
+    "effect_selection": "Effect on selection",
+    "resize": "Resize image",
+    "rotate": "Rotate",
+    "revert": "Revert to original",
+    "canvas": "Change canvas",
+    "canvas_size": "Canvas size"
   },
   "editor": {
     "edited": "{{name}} — Edited"

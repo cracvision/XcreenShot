@@ -67,7 +67,13 @@ fn text_image(
 
 /// `img` turned `deg` degrees around its center, in a box that holds it.
 fn turned(img: &RgbaImage, deg: f64) -> RgbaImage {
-    if deg.abs() < 0.01 {
+    turn(img, deg, None)
+}
+
+/// `img` turned `deg` degrees clockwise in a box that holds it, smoothly; the new
+/// corners transparent or `background` (EDT-072).
+pub fn turn(img: &RgbaImage, deg: f64, background: Option<[u8; 4]>) -> RgbaImage {
+    if deg.abs() < 0.01 && background.is_none() {
         return img.clone();
     }
     let (w, h) = (img.width() as f64, img.height() as f64);
@@ -76,9 +82,15 @@ fn turned(img: &RgbaImage, deg: f64) -> RgbaImage {
         (w * c.abs() + h * s.abs()).ceil(),
         (w * s.abs() + h * c.abs()).ceil(),
     );
-    let (Some(src), Some(mut dst)) = (premultiplied(img), Pixmap::new(bw as u32, bh as u32)) else {
+    let (Some(src), Some(mut dst)) = (
+        premultiplied(img),
+        Pixmap::new(bw.max(1.0) as u32, bh.max(1.0) as u32),
+    ) else {
         return img.clone();
     };
+    if let Some([r, g, b, a]) = background {
+        dst.fill(tiny_skia::Color::from_rgba8(r, g, b, a));
+    }
     let t = Transform::from_translate((bw / 2.0) as f32, (bh / 2.0) as f32)
         .pre_rotate(deg as f32)
         .pre_translate((-w / 2.0) as f32, (-h / 2.0) as f32);

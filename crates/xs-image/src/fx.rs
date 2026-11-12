@@ -748,6 +748,11 @@ fn replace(mut img: RgbaImage, e: &Value) -> RgbaImage {
 // ---------------------------------------------------------------------------
 // Transform effects (EDT-068)
 
+/// The canvas's own rounded corners (EDT-075): transparent outside a radius.
+pub fn round_corners(img: RgbaImage, radius: f64) -> RgbaImage {
+    corners(img, &serde_json::json!({"shape": "radius", "radius": radius}))
+}
+
 /// Rounded corners: a radius in px, or a circle (an ellipse fitted to the image).
 fn corners(mut img: RgbaImage, e: &Value) -> RgbaImage {
     let (w, h) = (img.width() as f64, img.height() as f64);
