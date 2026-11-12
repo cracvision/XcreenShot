@@ -7232,6 +7232,7 @@ dependencies = [
 name = "xs-image"
 version = "0.2.0"
 dependencies = [
+ "chrono",
  "cosmic-text",
  "image",
  "png 0.17.16",
