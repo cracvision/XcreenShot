@@ -15,6 +15,8 @@ mod multi_win;
 pub mod panel;
 pub mod platform;
 pub mod pointer;
+pub mod preset_cmds;
+pub mod presets;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -673,7 +675,7 @@ const LAST_AREA_KEY: &str = "capture.lastArea";
 /// Runs one capture command with resolved parameters, one at a time, and remembers
 /// it for "Repeat last capture" (CAP-007). The capture panel steps aside meanwhile
 /// (CAP-001, CAP-023).
-fn dispatch(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
+pub(crate) fn dispatch(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Value) -> CommandResult {
     // Multi-capture holds the mouse: finish it first (CAP-067).
     if multi::capturing(core) {
         return Err(
@@ -902,6 +904,17 @@ pub fn extension() -> Extension {
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
         });
+        // CAP-058 to CAP-064; their shortcut rows exist from the start (CAP-062).
+        preset_cmds::register(reg, &weak);
+        if let Some(core) = weak.upgrade() {
+            let lang = core.lang();
+            let rows = presets::load(&core)
+                .presets
+                .iter()
+                .map(|p| (presets::slot_of(&p.id), presets::display_name(p, lang)))
+                .collect();
+            core.shortcuts.set_extra(rows);
+        }
         let w = weak;
         reg.handle("capture.reset_settings", move |_ctx, _p| {
             let core = upgrade(&w)?;

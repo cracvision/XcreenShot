@@ -97,7 +97,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 ];
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library", "tray"];
+pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library", "tray", "preset"];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -467,6 +467,115 @@ pub fn specs() -> Vec<CommandSpec> {
                     "image": {"type": "object"}
                 }),
                 &[],
+            ))
+            .result(json!({"type": "object"})),
+        // Presets (CAP-058 to CAP-064).
+        B::new("preset.list", &["CAP-058", "APP-030"])
+            .result(json!({"type": "object", "properties": {"presets": {"type": "array", "description": "In order: id, name, kind, settings, summary, builtin, shortcut, shortcutDisplay, slot, running, warnings"}}})),
+        B::new("preset.run", &["CAP-058", "CAP-062", "APP-030"])
+            .scopes(ALL)
+            .mutates()
+            .interactive()
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "description": "The preset's name, any case"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The capture's result"})),
+        B::new("preset.create", &["CAP-059"])
+            .mutates()
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "name": {"type": "string", "description": "1 to 64 characters; a taken one gets \" (2)\". Without it, a name that says what it does"},
+                    "kind": {"type": "string", "enum": ["universal", "image"], "default": "image"},
+                    "settings": {"type": "object", "description": "The tab's settings (capture.settings shows them); missing ones take their defaults"},
+                    "fromCurrent": {"type": "boolean", "description": "Copy the capture panel's active tab"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.update", &["CAP-060"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "settings": {"type": "object", "description": "Settings to change; the rest stay"},
+                    "fromCurrent": {"type": "boolean", "description": "Take the panel's active tab (same kind only)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.rename", &["CAP-060"])
+            .mutates()
+            .positional(&["id", "to"])
+            .params(params(
+                json!({"id": {"type": "string"}, "to": {"type": "string", "description": "The new name; its shortcut stays"}}),
+                &["id", "to"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.duplicate", &["CAP-060"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}, "name": {"type": "string"}}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("preset.delete", &["CAP-060"])
+            .mutates()
+            .destructive()
+            .positional(&["ids"])
+            .params(params(
+                json!({"ids": {"type": "array", "items": {"type": "string"}}, "id": {"type": "string"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}, "undo": {"type": "string", "description": "For preset.restore"}}})),
+        B::new("preset.restore", &["CAP-060"])
+            .mutates()
+            .positional(&["undo"])
+            .params(params(json!({"undo": {"type": "string"}}), &["undo"]))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "integer"}}})),
+        B::new("preset.move", &["CAP-061"])
+            .mutates()
+            .positional(&["id", "index"])
+            .params(params(
+                json!({"id": {"type": "string"}, "index": {"type": "integer", "minimum": 0, "description": "0 = first"}}),
+                &["id", "index"],
+            ))
+            .result(json!({"type": "object", "properties": {"index": {"type": "integer"}}})),
+        B::new("preset.restore_builtins", &["CAP-064"])
+            .mutates()
+            .params(params(
+                json!({"reset": {"type": "boolean", "default": false, "description": "Also put back the settings and name of the ones that were changed"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "array"}, "modified": {"type": "array"}}})),
+        B::new("preset.export", &["CAP-063", "APP-030"])
+            .positional(&["ids"])
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Without it, every preset"},
+                    "out": {"type": "string", "description": "The .xpreset file to write; without it, the file comes back as data"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.import", &["CAP-063", "APP-030"])
+            .mutates()
+            .destructive()
+            .positional(&["paths"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": ".xpreset files"},
+                    "dryRun": {"type": "boolean", "description": "Only list what the files bring"},
+                    "only": {"type": "array", "items": {"type": "string"}, "description": "Only these names"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "skip"], "default": "keepBoth"},
+                    "convertShortcuts": {"type": "boolean", "default": true}
+                }),
+                &["paths"],
             ))
             .result(json!({"type": "object"})),
         B::new("capture.reset_settings", &["CAP-003"])

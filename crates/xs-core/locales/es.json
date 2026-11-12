@@ -666,6 +666,54 @@
     "library_merge": {
       "title": "Fusionar otra biblioteca",
       "description": "Copia los elementos de otra biblioteca a esta con sus etiquetas y favoritos. Los archivos que ya están aquí no se copian dos veces; la otra carpeta no cambia."
+    },
+    "preset_list": {
+      "title": "Presets",
+      "description": "Todos los presets de captura en orden, con su resumen y su atajo."
+    },
+    "preset_run": {
+      "title": "Ejecutar preset",
+      "description": "Captura con los ajustes propios de un preset; los del panel de captura no cambian."
+    },
+    "preset_create": {
+      "title": "Nuevo preset",
+      "description": "Crea un preset con la pestaña activa del panel o con los ajustes dados."
+    },
+    "preset_update": {
+      "title": "Editar preset",
+      "description": "Cambia los ajustes de un preset o toma los de la pestaña activa del panel."
+    },
+    "preset_rename": {
+      "title": "Cambiar nombre del preset",
+      "description": "Cambia el nombre de un preset; su atajo se conserva."
+    },
+    "preset_duplicate": {
+      "title": "Duplicar preset",
+      "description": "Copia un preset justo debajo, sin su atajo."
+    },
+    "preset_delete": {
+      "title": "Eliminar presets",
+      "description": "Elimina presets y libera sus atajos; preset.restore los recupera."
+    },
+    "preset_restore": {
+      "title": "Deshacer eliminar presets",
+      "description": "Recupera los presets eliminados en su lugar, con sus atajos."
+    },
+    "preset_move": {
+      "title": "Mover preset",
+      "description": "Pone un preset en otro lugar de la lista."
+    },
+    "preset_restore_builtins": {
+      "title": "Restaurar presets incorporados",
+      "description": "Vuelve a crear los presets que vienen con la app y se eliminaron."
+    },
+    "preset_export": {
+      "title": "Exportar presets",
+      "description": "Guarda presets en un archivo .xpreset, sin ningún secreto."
+    },
+    "preset_import": {
+      "title": "Importar presets",
+      "description": "Añade los presets de archivos .xpreset; los atajos de la otra plataforma se convierten."
     }
   },
   "settings": {
@@ -1018,7 +1066,10 @@
     "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?",
     "library_moving": "La biblioteca se está moviendo. Espera a que termine o cancélalo.",
     "image_too_large": "{{name}} mide {{width}} × {{height}} px. XcreenShot abre imágenes de hasta 32.000 px por lado y 500 megapíxeles.",
-    "library_merging": "Se está fusionando otra biblioteca con esta. Espera a que termine o cancélalo."
+    "library_merging": "Se está fusionando otra biblioteca con esta. Espera a que termine o cancélalo.",
+    "preset_not_found": "No hay ningún preset \"{{name}}\".",
+    "preset_unusable": "El preset \"{{name}}\" no puede capturar: {{reason}}. Edítalo.",
+    "preset_file": "No se puede importar \"{{name}}\": {{reason}}. No se importó nada."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1041,7 +1092,8 @@
     },
     "group": {
       "app": "App",
-      "capture": "Captura"
+      "capture": "Captura",
+      "presets": "Presets"
     },
     "slot": {
       "capture_window": "Captura de ventana",
@@ -1179,7 +1231,9 @@
     "capture_repeat_last": "Repetir última captura",
     "capture_panel": "Abrir panel de captura",
     "capture_multi": "Multicaptura",
-    "open_library": "Abrir biblioteca"
+    "open_library": "Abrir biblioteca",
+    "presets": "Presets",
+    "presets_empty": "Sin presets"
   },
   "menu": {
     "flatten": "A&planar",
@@ -1613,7 +1667,8 @@
       "k_zones": "Pasar a la siguiente zona de la ventana",
       "k_quick": "Vista rápida (biblioteca y bandeja)",
       "k_details": "Detalles (biblioteca)",
-      "k_sheet": "Esta hoja"
+      "k_sheet": "Esta hoja",
+      "sheet_group_presets": "Presets (globales)"
     },
     "common": {
       "on": "Activado",
@@ -3411,5 +3466,29 @@
     "interface": "Interfaz",
     "labels": "Etiquetas",
     "arrows": "Flechas"
+  },
+  "presets": {
+    "builtin": {
+      "region_clipboard": "Región al portapapeles"
+    },
+    "selection": {
+      "region": "Región",
+      "window": "Ventana",
+      "fullscreen": "Pantalla completa"
+    },
+    "kind": {
+      "universal": "Universal",
+      "image": "Imagen"
+    },
+    "universal_name": "Universal: {{selection}}",
+    "summary": {
+      "editor": "Editor",
+      "no_editor": "Sin editor",
+      "clipboard": "Portapapeles",
+      "cursor": "Cursor",
+      "delay": "{{seconds}} s"
+    },
+    "copy_name": "{{name}} (copia)",
+    "warning_settings": "Algunos de sus ajustes no existen en esta versión. Edítalo."
   }
 }

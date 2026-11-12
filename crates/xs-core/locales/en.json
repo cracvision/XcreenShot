@@ -666,6 +666,54 @@
     "library_merge": {
       "title": "Merge another library",
       "description": "Copies another library's items into this one with their tags and favorites. Files already here are not copied twice; the other folder does not change."
+    },
+    "preset_list": {
+      "title": "Presets",
+      "description": "Every capture preset in order, with its summary and shortcut."
+    },
+    "preset_run": {
+      "title": "Run preset",
+      "description": "Captures with a preset's own settings; the capture panel's settings do not change."
+    },
+    "preset_create": {
+      "title": "New preset",
+      "description": "Creates a preset from the panel's active tab or from given settings."
+    },
+    "preset_update": {
+      "title": "Edit preset",
+      "description": "Changes a preset's settings, or takes those of the panel's active tab."
+    },
+    "preset_rename": {
+      "title": "Rename preset",
+      "description": "Renames a preset; its shortcut stays."
+    },
+    "preset_duplicate": {
+      "title": "Duplicate preset",
+      "description": "Copies a preset just below it, without its shortcut."
+    },
+    "preset_delete": {
+      "title": "Delete presets",
+      "description": "Deletes presets and frees their shortcuts; preset.restore brings them back."
+    },
+    "preset_restore": {
+      "title": "Undo delete presets",
+      "description": "Brings back deleted presets in their place, with their shortcuts."
+    },
+    "preset_move": {
+      "title": "Move preset",
+      "description": "Puts a preset in another place of the list."
+    },
+    "preset_restore_builtins": {
+      "title": "Restore built-in presets",
+      "description": "Creates again the presets that come with the app and were deleted."
+    },
+    "preset_export": {
+      "title": "Export presets",
+      "description": "Saves presets in an .xpreset file, without any secret."
+    },
+    "preset_import": {
+      "title": "Import presets",
+      "description": "Adds the presets of .xpreset files; shortcuts from the other platform are converted."
     }
   },
   "settings": {
@@ -1018,7 +1066,10 @@
     "tag_exists": "There is already a tag {{tag}}. Merge them?",
     "library_moving": "The library is being moved. Wait until it finishes or cancel it.",
     "image_too_large": "{{name}} is {{width}} × {{height}} px. XcreenShot opens images up to 32,000 px per side and 500 megapixels.",
-    "library_merging": "Another library is being merged into this one. Wait until it finishes or cancel it."
+    "library_merging": "Another library is being merged into this one. Wait until it finishes or cancel it.",
+    "preset_not_found": "There is no preset \"{{name}}\".",
+    "preset_unusable": "The preset \"{{name}}\" cannot capture: {{reason}}. Edit it.",
+    "preset_file": "\"{{name}}\" cannot be imported: {{reason}}. Nothing was imported."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1041,7 +1092,8 @@
     },
     "group": {
       "app": "App",
-      "capture": "Capture"
+      "capture": "Capture",
+      "presets": "Presets"
     },
     "slot": {
       "capture_window": "Window Capture",
@@ -1179,7 +1231,9 @@
     "capture_repeat_last": "Repeat Last Capture",
     "capture_panel": "Open Capture Panel",
     "capture_multi": "Multi-capture",
-    "open_library": "Open library"
+    "open_library": "Open library",
+    "presets": "Presets",
+    "presets_empty": "No presets"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -1613,7 +1667,8 @@
       "k_zones": "Go to the next area of the window",
       "k_quick": "Quick view (library and tray)",
       "k_details": "Details (library)",
-      "k_sheet": "This sheet"
+      "k_sheet": "This sheet",
+      "sheet_group_presets": "Presets (global)"
     },
     "common": {
       "on": "On",
@@ -3411,5 +3466,29 @@
     "interface": "Interface",
     "labels": "Labels",
     "arrows": "Arrows"
+  },
+  "presets": {
+    "builtin": {
+      "region_clipboard": "Region to clipboard"
+    },
+    "selection": {
+      "region": "Region",
+      "window": "Window",
+      "fullscreen": "Full screen"
+    },
+    "kind": {
+      "universal": "Universal",
+      "image": "Image"
+    },
+    "universal_name": "Universal: {{selection}}",
+    "summary": {
+      "editor": "Editor",
+      "no_editor": "No editor",
+      "clipboard": "Clipboard",
+      "cursor": "Cursor",
+      "delay": "{{seconds}} s"
+    },
+    "copy_name": "{{name}} (copy)",
+    "warning_settings": "Some of its settings do not exist in this version. Edit it."
   }
 }

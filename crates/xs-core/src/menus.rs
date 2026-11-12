@@ -19,6 +19,14 @@ pub enum MenuEntry {
         label: &'static str,
         items: Vec<MenuEntry>,
     },
+    /// Runs `command` with `params`, with a text of the user's (a preset's name).
+    /// `id` names its shortcut row, if it has one.
+    Named {
+        id: String,
+        text: String,
+        command: &'static str,
+        params: Value,
+    },
     /// Disabled informational row (e.g. "No captures yet").
     Placeholder {
         label: &'static str,
@@ -52,10 +60,25 @@ fn cmd(id: &'static str, label: &'static str, command: &'static str) -> MenuEntr
     }
 }
 
-/// Quick menu of the XcreenShot icon (APP-002) with its capture entries (CAP-005).
-/// The status block, video, quick annotation, presets and Recent items arrive with
-/// their features.
-pub fn tray_menu() -> Vec<MenuEntry> {
+/// Quick menu of the XcreenShot icon (APP-002) with its capture entries (CAP-005) and
+/// the presets, `(id, name)` in their order (CAP-058). The status block, video, quick
+/// annotation and Recent items arrive with their features.
+pub fn tray_menu(presets: &[(String, String)]) -> Vec<MenuEntry> {
+    let preset_items = if presets.is_empty() {
+        vec![MenuEntry::Placeholder {
+            label: "tray.presets_empty",
+        }]
+    } else {
+        presets
+            .iter()
+            .map(|(id, name)| MenuEntry::Named {
+                id: format!("preset.{id}"),
+                text: name.clone(),
+                command: "preset.run",
+                params: json!({ "id": id }),
+            })
+            .collect()
+    };
     vec![
         cmd("capture_universal", "tray.capture_universal", "capture.universal"),
         cmd("capture_image", "tray.capture_image", "capture.image"),
@@ -64,6 +87,10 @@ pub fn tray_menu() -> Vec<MenuEntry> {
             "tray.capture_repeat_last",
             "capture.repeat_last",
         ),
+        MenuEntry::Submenu {
+            label: "tray.presets",
+            items: preset_items,
+        },
         MenuEntry::Command {
             id: "capture_panel",
             label: "tray.capture_panel",
@@ -594,6 +621,19 @@ pub fn to_json(entries: &[MenuEntry]) -> Value {
                 MenuEntry::Submenu { label, items } => {
                     Some(json!({ "kind": "submenu", "label": label, "items": to_json(items) }))
                 }
+                MenuEntry::Named {
+                    id,
+                    text,
+                    command,
+                    params,
+                } => Some(json!({
+                    "kind": "command",
+                    "id": id,
+                    "text": text,
+                    "command": command,
+                    "params": params,
+                    "checked": null,
+                })),
                 MenuEntry::Placeholder { label } => Some(json!({ "kind": "placeholder", "label": label })),
                 MenuEntry::Separator => Some(json!({ "kind": "separator" })),
                 // System items (macOS only) have no place in a drawn menu.
@@ -608,7 +648,7 @@ pub fn commands_in(entries: &[MenuEntry]) -> Vec<&'static str> {
     let mut out = Vec::new();
     for e in entries {
         match e {
-            MenuEntry::Command { command, .. } => out.push(*command),
+            MenuEntry::Command { command, .. } | MenuEntry::Named { command, .. } => out.push(*command),
             MenuEntry::Submenu { items, .. } => out.extend(commands_in(items)),
             _ => {}
         }

@@ -216,6 +216,30 @@ pub fn build_items(
                     &refs,
                 )?));
             }
+            MenuEntry::Named {
+                id,
+                text,
+                command,
+                params,
+            } => {
+                // A preset (CAP-058): its own name and its shortcut.
+                actions.insert(id.clone(), (command.to_string(), params.clone()));
+                let accel = match shortcuts {
+                    Shortcuts::Accelerators => core
+                        .shortcuts
+                        .slot_by_key(&format!("{id}@global"))
+                        .and_then(|slot| core.shortcuts.binding(&slot, core.profile()))
+                        .map(|a| a.to_string()),
+                    Shortcuts::None => None,
+                };
+                items.push(Box::new(MenuItem::with_id(
+                    app,
+                    id.as_str(),
+                    text,
+                    true,
+                    accel.as_deref(),
+                )?));
+            }
             MenuEntry::Placeholder { label } => {
                 items.push(Box::new(MenuItem::new(
                     app,
@@ -250,7 +274,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let menu = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu(),
+        &xs_core::menus::tray_menu(&xs_capture::presets::menu_items(core)),
         Shortcuts::Accelerators,
         &mut actions,
     )?;
@@ -337,7 +361,7 @@ pub fn refresh(app: &AppHandle) {
     if let Ok(menu) = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu(),
+        &xs_core::menus::tray_menu(&xs_capture::presets::menu_items(core)),
         Shortcuts::Accelerators,
         &mut actions,
     ) {

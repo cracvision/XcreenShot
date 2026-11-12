@@ -380,6 +380,10 @@ impl Core {
     /// Name of a shortcut row: its own when it runs a command with fixed parameters
     /// (CAP-065), otherwise the command's title.
     pub fn slot_title(&self, slot: &crate::shortcuts::Slot, lang: Lang) -> String {
+        // A preset's row is called like the preset (CAP-062).
+        if let Some(title) = self.shortcuts.extra_title(slot) {
+            return title;
+        }
         if slot.has_own_title() {
             return tr(
                 lang,
@@ -1186,7 +1190,7 @@ mod tests {
     fn menus_only_reference_registered_commands() {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
-        let mut all = menus::tray_menu();
+        let mut all = menus::tray_menu(&[]);
         all.extend(menus::app_menu(Platform::Windows));
         all.extend(menus::app_menu(Platform::Macos));
         for id in menus::commands_in(&all) {
@@ -1204,7 +1208,7 @@ mod tests {
             let core = Core::for_tests(platform);
             for slot in core.shortcuts.slots() {
                 for lang in [Lang::En, Lang::Es] {
-                    let title = core.slot_title(slot, lang);
+                    let title = core.slot_title(&slot, lang);
                     assert!(!title.starts_with("shortcuts.slot."), "{} has no name", slot.id);
                 }
             }

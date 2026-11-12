@@ -14,7 +14,7 @@ pub struct PdfSheet(pub Option<DrawPdf>);
 pub type DrawPdf = Box<dyn Fn(&Value) -> Result<Vec<u8>, String> + Send + Sync>;
 
 /// The groups of the sheet, in order.
-const GROUPS: &[&str] = &["capture", "app", "editor", "tools"];
+const GROUPS: &[&str] = &["capture", "presets", "app", "editor", "tools"];
 
 /// The sheet's data: title, profile, platform, date and the groups with their rows
 /// (only the actions that have a shortcut).

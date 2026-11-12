@@ -377,6 +377,11 @@ impl Slot {
     }
 }
 
+/// The key of a preset's row (`preset.<id>@global`, CAP-062).
+pub fn is_preset_key(key: &str) -> bool {
+    key.starts_with("preset.")
+}
+
 /// Assignable slots that exist in this build. Owners add theirs as features land.
 pub fn slots() -> Vec<Slot> {
     use ShortcutScope::*;
@@ -1121,6 +1126,9 @@ pub struct ShortcutStore {
     path: Option<PathBuf>,
     platform: Platform,
     slots: Vec<Slot>,
+    /// Rows that come and go with the user's things, with their own title: one per
+    /// capture preset (CAP-062, APP-022).
+    extra: RwLock<Vec<(Slot, String)>>,
     stored: RwLock<Stored>,
     statuses: RwLock<HashMap<String, Status>>,
     paused: AtomicBool,
@@ -1137,6 +1145,7 @@ impl ShortcutStore {
             path: Some(path),
             platform: Platform::current(),
             slots: slots(),
+            extra: RwLock::new(Vec::new()),
             stored: RwLock::new(stored),
             statuses: RwLock::new(HashMap::new()),
             paused: AtomicBool::new(false),
@@ -1149,6 +1158,7 @@ impl ShortcutStore {
             path: None,
             platform,
             slots: slots(),
+            extra: RwLock::new(Vec::new()),
             stored: RwLock::new(Stored::default()),
             statuses: RwLock::new(HashMap::new()),
             paused: AtomicBool::new(false),
@@ -1160,15 +1170,49 @@ impl ShortcutStore {
         self.platform
     }
 
-    pub fn slots(&self) -> &[Slot] {
-        &self.slots
+    /// Every row: the app's, then the presets' (CAP-062).
+    pub fn slots(&self) -> Vec<Slot> {
+        let mut all = self.slots.clone();
+        all.extend(self.extra.read().unwrap().iter().map(|(s, _)| *s));
+        all
+    }
+
+    /// The rows of the user's things (one per preset) and their titles; they replace
+    /// the ones there were (CAP-062).
+    pub fn set_extra(&self, rows: Vec<(Slot, String)>) {
+        *self.extra.write().unwrap() = rows;
+    }
+
+    /// The title of a row of the user's things.
+    pub fn extra_title(&self, slot: &Slot) -> Option<String> {
+        self.extra
+            .read()
+            .unwrap()
+            .iter()
+            .find(|(s, _)| s == slot)
+            .map(|(_, t)| t.clone())
+    }
+
+    /// Forgets the shortcut of a row that is gone (a deleted preset), so the keys are
+    /// free again (CAP-060).
+    pub fn forget(&self, key: &str) -> Option<Option<Accelerator>> {
+        let old = self.stored.write().unwrap().overrides.remove(key);
+        self.save();
+        old
+    }
+
+    /// Puts back a row's shortcut as it was (Undo of a delete, CAP-060).
+    pub fn put_back(&self, key: &str, acc: Option<Accelerator>) {
+        self.stored
+            .write()
+            .unwrap()
+            .overrides
+            .insert(key.to_string(), acc);
+        self.save();
     }
 
     pub fn find_slot(&self, id: &str, scope: ShortcutScope) -> Option<Slot> {
-        self.slots
-            .iter()
-            .copied()
-            .find(|s| s.id == id && s.scope == scope)
+        self.slots().into_iter().find(|s| s.id == id && s.scope == scope)
     }
 
     /// The user's own shortcuts: slot key → shortcut, or `None` where a default was
@@ -1179,7 +1223,7 @@ impl ShortcutStore {
 
     /// The slot with this key (`<id>` or `<id>@<scope>`).
     pub fn slot_by_key(&self, key: &str) -> Option<Slot> {
-        self.slots.iter().find(|s| s.key() == key).copied()
+        self.slots().into_iter().find(|s| s.key() == key)
     }
 
     /// The user's shortcuts become `wanted` (APP-011): what equals the profile's default
@@ -1187,9 +1231,11 @@ impl ShortcutStore {
     pub fn replace_overrides(&self, wanted: &BTreeMap<String, Option<Accelerator>>, profile: Profile) {
         {
             let mut stored = self.stored.write().unwrap();
-            stored.overrides.clear();
+            // A preset's shortcut goes with its preset, not with the app's (APP-021).
+            stored.overrides.retain(|k, _| is_preset_key(k));
+            let all = self.slots();
             for (key, acc) in wanted {
-                let Some(slot) = self.slots.iter().find(|s| s.key() == *key) else {
+                let Some(slot) = all.iter().find(|s| s.key() == *key) else {
                     continue;
                 };
                 if *acc != default_for(slot, profile, self.platform) {
@@ -1213,9 +1259,9 @@ impl ShortcutStore {
     }
 
     pub fn bindings(&self, profile: Profile) -> Vec<(Slot, Accelerator)> {
-        self.slots
-            .iter()
-            .filter_map(|s| self.binding(s, profile).map(|a| (*s, a)))
+        self.slots()
+            .into_iter()
+            .filter_map(|s| self.binding(&s, profile).map(|a| (s, a)))
             .collect()
     }
 
@@ -1295,7 +1341,8 @@ impl ShortcutStore {
                 Some(s) => {
                     stored.overrides.remove(&s.key());
                 }
-                None => stored.overrides.clear(),
+                // Presets keep theirs: they belong to the preset (CAP-062, APP-021).
+                None => stored.overrides.retain(|k, _| is_preset_key(k)),
             }
         }
         self.save();
@@ -1307,6 +1354,7 @@ impl ShortcutStore {
         let mut changes = Vec::new();
         let mut conflicts = Vec::new();
         for slot in &self.slots {
+            // The presets' rows have no profile default and keep their shortcut.
             let before = self.binding(slot, from);
             let after = if reset_custom || !self.is_custom(slot) {
                 default_for(slot, to, self.platform)
@@ -1405,10 +1453,9 @@ impl ShortcutStore {
 
     /// Global shortcuts that could not be activated, for the single startup notice (APP-019).
     pub fn failed(&self, profile: Profile) -> Vec<Slot> {
-        self.slots
-            .iter()
+        self.slots()
+            .into_iter()
             .filter(|s| s.scope == ShortcutScope::Global && self.status(s, profile).is_conflict())
-            .copied()
             .collect()
     }
 }
