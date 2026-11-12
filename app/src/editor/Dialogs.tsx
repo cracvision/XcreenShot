@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { AiDialogs } from "./AiDialogs";
 import { ImageDialogs } from "./ImageDialogs";
+import { ExportDialog } from "./ExportDialog";
 import { FileDialogs } from "../library/FileDialogs";
 import { ThemeConflict } from "./StylesTab";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
@@ -257,6 +258,7 @@ export function Dialogs() {
       <AiDialogs />
       <FileDialogs />
       <ImageDialogs />
+      <ExportDialog />
     </>
   );
 }

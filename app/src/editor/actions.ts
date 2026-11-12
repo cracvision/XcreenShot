@@ -36,6 +36,7 @@ import { selectionAction, selectPixels } from "./pixelSelection";
 import { importTheme } from "./themesUi";
 import { openImageDialog } from "./imageMenu";
 import { turnOnEffect } from "./effects";
+import { useExportDialog } from "./exportOptions";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -135,20 +136,12 @@ export async function saveAs(): Promise<void> {
 }
 
 /** Export, and the File destination of Share (SHR-018): a copy in PNG or JPG. */
-export async function exportImage(): Promise<void> {
+/** File > Export (EDT-110 to EDT-112): the Export dialog chooses the format and its
+ * options, then asks where. */
+export function exportImage(): Promise<void> {
   const { active, doc } = useEditor.getState();
-  if (!active || !doc) return;
-  try {
-    const path = await save({ defaultPath: doc.name, filters: filters(false) });
-    if (!path) return;
-    const format = /\.jpe?g$/i.test(path) ? "jpg" : "png";
-    // The system dialog already asked before replacing a file.
-    await run("document.export", { documentId: active, format, path, onConflict: "replace" });
-    rememberFormat(path);
-    useEditor.getState().showToast(t("ui.editor.exported"));
-  } catch (e) {
-    fail(e);
-  }
+  if (active && doc) useExportDialog.setState({ ids: [active] });
+  return Promise.resolve();
 }
 
 export async function copyAll(): Promise<void> {

@@ -4164,6 +4164,21 @@ body.preparing-drag * {
   outline-offset: 1px;
 }
 
+/* Export: ICO sizes in columns (EDT-112). */
+.ico-sizes {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ico-sizes legend {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,

@@ -181,7 +181,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-099 | Secciones | M2 | Should | — |
 | EDT-100 | Aplicar un tema a objetos existentes | M2 | Could | — |
 | EDT-101 | Plantillas propias `.xtemplate` | M2 | Should | — |
-| EDT-102 | Paginación al imprimir y en PDF | M2 | Should | — |
+| EDT-102 | Paginación al imprimir y en PDF | M2 | Should | En curso (PDF hecho; faltan las plantillas y la impresión) |
 | EDT-103 | Nueva imagen | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-104 | Nueva desde el portapapeles | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-105 | Abrir, arrastrar y soltar archivos | M1 | Must | En curso |
@@ -190,8 +190,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-108 | Cerrar y Cerrar todo | M1 | Must | En curso |
 | EDT-109 | Renombrar, duplicar, eliminar y mostrar | M2 | Should | En curso |
 | EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
-| EDT-111 | Más formatos de exportación | M2 | Should | — |
-| EDT-112 | Opciones de cada formato | M2 | Should | — |
+| EDT-111 | Más formatos de exportación | M2 | Should | En curso (Windows: PNG, JPG, GIF, BMP, TIFF, PDF, ICO y PSD; faltan WebP y HEIC, y varias miniaturas de la bandeja o la biblioteca en un archivo) |
+| EDT-112 | Opciones de cada formato | M2 | Should | En curso (faltan JPG progresivo, tramado en GIF y TIFF con compresión JPEG) |
 | EDT-113 | Exportación por lotes | M2 | Should | — |
 | EDT-114 | Imprimir y configurar página | M2 | Should | — |
 | EDT-115 | Atajos de herramientas | M1 | Must | Win |
