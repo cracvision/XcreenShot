@@ -676,31 +676,22 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
     }
 }
 
-fn canvas(doc: &Document, base: &Base) -> Pixmap {
-    let (w, h) = (doc.canvas.width.max(1), doc.canvas.height.max(1));
-    let mut pm = Pixmap::new(w, h).expect("canvas size");
-    let color = doc.canvas.color.as_deref().and_then(Rgba::parse);
-    // Simplify (EDT-041): the original dimmed, or hidden, over a plain background.
-    let original = match &doc.simplify {
-        Some(v) if v.show_original => (v.opacity / 100.0).clamp(0.0, 1.0),
+/// The canvas color, white under Simplify without one (EDT-041, EDT-074).
+fn background(doc: &Document) -> Option<tiny_skia::Color> {
+    match doc.canvas.color.as_deref().and_then(Rgba::parse) {
+        Some(c) => Some(tiny_skia::Color::from_rgba8(c.r, c.g, c.b, c.a)),
+        None if doc.simplify.is_some() => Some(tiny_skia::Color::WHITE),
+        None => None,
+    }
+}
+
+/// How much the image shows: Simplify dims or hides it (EDT-041).
+fn image_opacity(doc: &Document) -> f32 {
+    match &doc.simplify {
+        Some(v) if v.show_original => (v.opacity / 100.0).clamp(0.0, 1.0) as f32,
         Some(_) => 0.0,
         None => 1.0,
-    };
-    match (color, doc.simplify.is_some()) {
-        (Some(c), _) => pm.fill(tiny_skia::Color::from_rgba8(c.r, c.g, c.b, c.a)),
-        (None, true) => pm.fill(tiny_skia::Color::WHITE),
-        (None, false) => {}
     }
-    if original > 0.0 {
-        if let Some((window, x, y)) = base_window(doc, base) {
-            let p = PixmapPaint {
-                opacity: original as f32,
-                ..PixmapPaint::default()
-            };
-            pm.draw_pixmap(x, y, window.as_ref(), &p, Transform::identity(), None);
-        }
-    }
-    pm
 }
 
 fn straight(pm: &Pixmap) -> RgbaImage {
@@ -847,13 +838,83 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
 /// The final image of `doc` over `base`, straight RGBA: the flattened objects, then the
 /// objects (EDT-091).
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
-    let mut pm = canvas(doc, base);
-    let all: Vec<Object> = flattened_objects(doc)
-        .into_iter()
-        .chain(doc.objects.iter().cloned())
-        .collect();
-    draw_all(&mut pm, &all, doc.dpi, &base.images);
+    let mut pm = image_layer(doc, base);
+    draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
     straight(&pm)
+}
+
+/// What the image shows under the objects: the original pixels, the flattened layers
+/// and the edits of pixels (EDT-091, ADR 0005), over the canvas color. Where an edit
+/// left pixels transparent, the canvas color shows (EDT-048).
+fn image_layer(doc: &Document, base: &Base) -> Pixmap {
+    let (w, h) = (doc.canvas.width.max(1), doc.canvas.height.max(1));
+    let mut image = Pixmap::new(w, h).expect("canvas size");
+    if let Some((window, x, y)) = base_window(doc, base) {
+        image.draw_pixmap(
+            x,
+            y,
+            window.as_ref(),
+            &PixmapPaint::default(),
+            Transform::identity(),
+            None,
+        );
+    }
+    draw_all(&mut image, &flattened_objects(doc), doc.dpi, &base.images);
+    for p in &doc.patches {
+        let Some(picture) = base.images.get(&p.image) else {
+            continue;
+        };
+        // A patch replaces its rectangle, transparent parts too.
+        let paint = PixmapPaint {
+            blend_mode: tiny_skia::BlendMode::Source,
+            ..PixmapPaint::default()
+        };
+        image.draw_pixmap(
+            (p.rect.x - doc.crop.x) as i32,
+            (p.rect.y - doc.crop.y) as i32,
+            picture.as_ref().as_ref(),
+            &paint,
+            Transform::identity(),
+            None,
+        );
+    }
+    let mut pm = Pixmap::new(w, h).expect("canvas size");
+    if let Some(c) = background(doc) {
+        pm.fill(c);
+    }
+    let opacity = image_opacity(doc);
+    if opacity > 0.0 {
+        let paint = PixmapPaint {
+            opacity,
+            ..PixmapPaint::default()
+        };
+        pm.draw_pixmap(0, 0, image.as_ref(), &paint, Transform::identity(), None);
+    }
+    pm
+}
+
+/// The image without the objects, over the original pixels' own area, in base pixels:
+/// what pixel tools work on (ADR 0005).
+pub fn image_in_base(doc: &Document, base: &Base) -> RgbaImage {
+    let view = Document {
+        canvas: Canvas {
+            width: base.width,
+            height: base.height,
+            color: None,
+            corner_radius: 0.0,
+            extra: Default::default(),
+        },
+        crop: PixelRect {
+            x: 0,
+            y: 0,
+            width: base.width,
+            height: base.height,
+        },
+        objects: Vec::new(),
+        simplify: None,
+        ..doc.clone()
+    };
+    straight(&image_layer(&view, base))
 }
 
 /// Draws `objects` in order. Spotlights change the outside once, where the topmost of
@@ -930,6 +991,8 @@ pub fn flattened_view(doc: &Document, base: &Base) -> Option<(RgbaImage, i64, i6
         },
         crop: r,
         objects: Vec::new(),
+        // The editor dims the original itself under Simplify (EDT-041).
+        simplify: None,
         ..doc.clone()
     };
     Some((render(&view, base), r.x, r.y))
@@ -938,7 +1001,7 @@ pub fn flattened_view(doc: &Document, base: &Base) -> Option<(RgbaImage, i64, i6
 /// Where [`flattened_view`] is, in base pixels, for original pixels of `width` ×
 /// `height`. `None` without flattened layers.
 pub fn flattened_view_rect(doc: &Document, width: u32, height: u32) -> Option<PixelRect> {
-    if doc.flattened.is_empty() {
+    if doc.flattened.is_empty() && doc.patches.is_empty() {
         return None;
     }
     let image = [0.0, 0.0, width as f64, height as f64];
@@ -980,7 +1043,7 @@ pub fn baked_base(doc: &Document, base: &Base) -> Option<RgbaImage> {
         .filter(|f| f.permanent.is_some())
         .cloned()
         .collect();
-    if permanent.is_empty() {
+    if permanent.is_empty() && doc.patches.is_empty() {
         return None;
     }
     let view = Document {
@@ -999,6 +1062,7 @@ pub fn baked_base(doc: &Document, base: &Base) -> Option<RgbaImage> {
         },
         objects: Vec::new(),
         flattened: permanent,
+        simplify: None,
         ..doc.clone()
     };
     Some(render(&view, base))
@@ -1021,12 +1085,8 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
             if b.style.blur_type == BlurType::Solid {
                 return None;
             }
-            let mut pm = canvas(doc, base);
-            let under: Vec<Object> = flattened_objects(doc)
-                .into_iter()
-                .chain(doc.objects[..index].iter().cloned())
-                .collect();
-            draw_all(&mut pm, &under, doc.dpi, &base.images);
+            let mut pm = image_layer(doc, base);
+            draw_all(&mut pm, &doc.objects[..index], doc.dpi, &base.images);
             let (patch, x, y) = blur_patch(&pm, &b)?;
             Some((straight(&patch), x, y))
         }
@@ -1035,27 +1095,19 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         // The topmost spotlight: the whole canvas with the outside changed, from its top
         // left corner. The others draw nothing of their own (EDT-039).
         "spotlight" => {
-            let below: Vec<Object> = flattened_objects(doc)
-                .into_iter()
-                .chain(doc.objects[..=index].iter().cloned())
-                .collect();
             if doc.objects[index + 1..].iter().any(|o| o.kind == "spotlight") {
                 return None;
             }
-            let mut pm = canvas(doc, base);
-            draw_all(&mut pm, &below, doc.dpi, &base.images);
+            let mut pm = image_layer(doc, base);
+            draw_all(&mut pm, &doc.objects[..=index], doc.dpi, &base.images);
             Some((straight(&pm), 0, 0))
         }
         // A lens, over what is below it, in a picture centered on the middle of its zone
         // and lens (EDT-038).
         "magnify" => {
             let m = MagnifyObject::from_props(&object.props).ok()?;
-            let mut below = canvas(doc, base);
-            let under: Vec<Object> = flattened_objects(doc)
-                .into_iter()
-                .chain(doc.objects[..index].iter().cloned())
-                .collect();
-            draw_all(&mut below, &under, doc.dpi, &base.images);
+            let mut below = image_layer(doc, base);
+            draw_all(&mut below, &doc.objects[..index], doc.dpi, &base.images);
             let [x0, y0, x1, y1] = m.span();
             let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
             let pad = m.style.outline_width + 2.0;

@@ -422,6 +422,14 @@
     "document_simplify_view": {
       "title": "Vista de Simplificar",
       "description": "Muestra u oculta la imagen original bajo las formas simplificadas."
+    },
+    "document_fill": {
+      "title": "Rellenar",
+      "description": "Rellena el píxel pulsado y los contiguos de color parecido con un color o con transparencia, en la imagen o en una imagen flotante."
+    },
+    "document_erase": {
+      "title": "Borrar",
+      "description": "Borra la imagen, o una imagen flotante, a lo largo de un trazo: se ve el color del lienzo."
     }
   },
   "settings": {
@@ -1561,7 +1569,8 @@
         "show_original": "Mostrar original",
         "original_opacity": "Opacidad del original",
         "lock_on_exit": "Bloquear al salir"
-      }
+      },
+      "unflatten_edited": "Encima se rellenó o se borró, así que ya forma parte de la imagen."
     },
     "multi": {
       "title": "Multicaptura",
@@ -1803,7 +1812,9 @@
     "change_simplify": "Cambiar forma simplificada",
     "delete_simplify": "Eliminar forma simplificada",
     "cut_simplify": "Cortar forma simplificada",
-    "paste_simplify": "Pegar forma simplificada"
+    "paste_simplify": "Pegar forma simplificada",
+    "fill": "Rellenar",
+    "erase": "Borrar"
   },
   "editor": {
     "edited": "{{name}} — Editado"

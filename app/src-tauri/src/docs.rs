@@ -32,7 +32,9 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         [id, "base"] => {
             let flat = editor
                 .store
-                .with(id, |d| !d.document.flattened.is_empty())
+                .with(id, |d| {
+                    !d.document.flattened.is_empty() || !d.document.patches.is_empty()
+                })
                 .unwrap_or(false);
             if flat {
                 editor.store.snapshot(id).ok().and_then(|snap| {

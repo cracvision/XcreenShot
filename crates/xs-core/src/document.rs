@@ -96,6 +96,17 @@ pub fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
     }
 }
 
+/// An edit of pixels (ADR 0005): a rectangle of the image, in base pixels, whose pixels
+/// (a picture of `images/`) replace what is there after the flattened layers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Patch {
+    pub rect: PixelRect,
+    pub image: String,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
 /// Simplify (EDT-041): whether the original image shows under the simplified shapes,
 /// and how strongly. Without it the image shows as usual.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -151,6 +162,10 @@ pub struct Document {
     /// Objects merged into the image, oldest first (EDT-091).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub flattened: Vec<Flattened>,
+    /// Edits of pixels, oldest first (ADR 0005). A written file has none: they merge
+    /// into `base.png`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patches: Vec<Patch>,
     /// How the original shows under simplified shapes (EDT-041).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub simplify: Option<SimplifyView>,
@@ -189,6 +204,7 @@ impl Document {
             dpi,
             objects: Vec::new(),
             flattened: Vec::new(),
+            patches: Vec::new(),
             simplify: None,
             effects: Vec::new(),
             extra: Map::new(),

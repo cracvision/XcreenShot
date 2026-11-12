@@ -2278,3 +2278,165 @@ fn simplify_shapes_palettes_and_the_original() {
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(info["objects"][1]["style"]["fill"], "#112233");
 }
+
+fn rendered(e: &Env, doc: &str) -> image::RgbaImage {
+    editor(&e.core).store.snapshot(doc).unwrap().render()
+}
+
+/// EDT-047: Fill changes the image under the objects in one undo step; Transparent
+/// leaves no pixels; Global reaches parts that do not touch; a floating image changes
+/// alone (ADR 0005).
+#[test]
+fn fill_changes_the_image_not_the_objects() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([20, 50], [120, 50])]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [300, 150], "color": "#00FF00", "tolerance": 0}),
+    );
+    assert_eq!(r, json!({"changed": true}));
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(300, 150).0, [0, 255, 0, 255]);
+    assert_eq!(img.get_pixel(70, 50).0, [0, 0, 255, 255], "the arrow is not filled");
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["undoLabel"], "Fill");
+    assert_eq!(info["objects"].as_array().unwrap().len(), 1);
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(rendered(&e, &doc).get_pixel(300, 150).0, [255, 255, 255, 255]);
+    cli(&e.core, "document.redo", json!({"documentId": doc}));
+    // Transparent, then saved: it is in the base and the file has no patches.
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [5, 5], "color": null}),
+    );
+    assert_eq!(rendered(&e, &doc).get_pixel(300, 150).0[3], 0);
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert!(file.document.patches.is_empty());
+    let base = xs_image::encode::decode(&file.base_png).unwrap();
+    assert_eq!(base.get_pixel(300, 150).0[3], 0);
+    // Outside the pixels: nothing.
+    let r = cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [-5, 5], "color": "#000000"}),
+    );
+    assert_eq!(r, json!({"changed": false}));
+    // A floating image changes alone, into a new picture.
+    let red = red_png(&e, 40, 20);
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red], "center": [200, 100]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let picture = info["objects"][1]["image"].clone();
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [190, 100], "color": "#0000FF", "objectId": "o2"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_ne!(info["objects"][1]["image"], picture);
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(190, 100).0, [0, 0, 255, 255]);
+    assert_eq!(img.get_pixel(300, 150).0[3], 0, "the image did not change");
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.fill",
+        json!({"documentId": doc, "at": [70, 50], "color": "#000000", "objectId": "o1"}),
+    );
+    assert!(bad.is_err(), "an arrow has no pixels to fill");
+}
+
+/// EDT-047: Global fills every part of that color.
+#[test]
+fn global_fill_reaches_parts_that_do_not_touch() {
+    let e = env();
+    let mut img = white(100, 40);
+    for (x0, x1) in [(10, 20), (60, 70)] {
+        for y in 10..20 {
+            for x in x0..x1 {
+                img.put_pixel(x, y, image::Rgba([0, 0, 255, 255]));
+            }
+        }
+    }
+    let (doc, _) = add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [15, 15], "color": "#00FF00"}),
+    );
+    assert_eq!(rendered(&e, &doc).get_pixel(65, 15).0, [0, 0, 255, 255]);
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [15, 15], "color": "#00FF00", "global": true}),
+    );
+    let out = rendered(&e, &doc);
+    assert_eq!(out.get_pixel(65, 15).0, [0, 255, 0, 255]);
+    assert_eq!(out.get_pixel(40, 30).0, [255, 255, 255, 255]);
+}
+
+/// EDT-048: the eraser shows the canvas color, or transparency without one; objects
+/// stay; a flattened layer erased over can no longer be unflattened (EDT-091).
+#[test]
+fn erasing_shows_the_canvas_color() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    // Red pixels, so white shows.
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [5, 5], "color": "#FF0000"}),
+    );
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([20, 150], [380, 150]), arrow([20, 100], [120, 100])]}),
+    );
+    cli(
+        &e.core,
+        "document.flatten",
+        json!({"documentId": doc, "objectIds": ["o2"]}),
+    );
+    cli(
+        &e.core,
+        "document.erase",
+        json!({"documentId": doc, "points": [[10, 150], [390, 150]], "width": 30}),
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(200, 140).0[3], 0, "transparent without a canvas color");
+    assert_eq!(img.get_pixel(200, 150).0, [0, 0, 255, 255], "the arrow stays");
+    assert_eq!(img.get_pixel(200, 60).0, [255, 0, 0, 255]);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["undoLabel"], "Erase");
+    assert!(info["flattened"][0]["permanent"].is_null(), "not touched");
+    // Over the flattened arrow: it stays flat.
+    cli(
+        &e.core,
+        "document.erase",
+        json!({"documentId": doc, "points": [[60, 100]], "width": 10, "shape": "square"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["flattened"][0]["permanent"], "edited");
+    // With a canvas color, it shows.
+    editor(&e.core)
+        .store
+        .mutate(&doc, "history.fill", |d| {
+            d.canvas.color = Some("#FFFFFF".into());
+            Ok::<_, ()>(())
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(rendered(&e, &doc).get_pixel(200, 140).0, [255, 255, 255, 255]);
+}

@@ -12,6 +12,7 @@ pub mod geometry;
 pub mod highlights;
 pub mod magnify;
 pub mod pens;
+pub mod pixels;
 pub mod render;
 pub mod shapes;
 pub mod simplify;

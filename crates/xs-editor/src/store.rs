@@ -233,6 +233,8 @@ impl Snapshot {
         // file no longer has what it hid (EDT-091).
         let baked = xs_image::render::baked_base(&self.document, &self.base);
         document.flattened.retain(|l| l.permanent.is_none());
+        // Edits of pixels too (ADR 0005).
+        document.patches.clear();
         // The part of the original pixels under the canvas; the canvas may also reach
         // past them, where it grew to fit objects (EDT-071).
         let (kx0, ky0) = (c.x.max(0), c.y.max(0));

@@ -584,6 +584,36 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.fill", &["EDT-047", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "at": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "The pixel clicked, in canvas pixels"},
+                    "color": {"type": ["string", "null"], "description": "#RRGGBB or #RRGGBBAA; null makes the pixels transparent (the canvas color shows)"},
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 100, "default": 10, "description": "How different a color may be from the clicked one and still fill, %; 0 = only that exact color"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "default": 100},
+                    "global": {"type": "boolean", "default": false, "description": "Every pixel of that color in the image, touching or not"},
+                    "objectId": {"type": "string", "description": "A floating image to fill instead of the image (`at` is still in canvas pixels)"}
+                }),
+                &["at"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False when the click is outside the pixels"}}})),
+        B::new("document.erase", &["EDT-048", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "points": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}, "minItems": 1, "description": "The stroke, in canvas pixels"},
+                    "width": {"type": "number", "minimum": 1, "maximum": 200, "default": 20, "description": "Thickness, px"},
+                    "shape": {"type": "string", "enum": ["round", "square"], "default": "round"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "default": 100, "description": "How much it erases, %"},
+                    "antialias": {"type": "boolean", "default": true, "description": "Smooth edges"},
+                    "objectId": {"type": "string", "description": "A floating image to erase instead of the image"}
+                }),
+                &["points"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}}})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(

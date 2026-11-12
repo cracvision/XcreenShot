@@ -9,6 +9,7 @@
 pub mod fit;
 pub mod flatten;
 pub mod objects;
+pub mod pixels;
 pub mod recovery;
 pub mod steps;
 pub mod store;
@@ -1372,6 +1373,114 @@ fn changed(core: &Core, ctx: &Context, id: &str) {
     }
 }
 
+/// Fill (`fill`) or Eraser on the image or on the floating image `objectId` (EDT-047,
+/// EDT-048): the new pixels become a patch or a new picture (ADR 0005).
+fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResult {
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let point = |v: &Value| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]);
+    let num = |key: &str, default: f64| p.get(key).and_then(Value::as_f64).unwrap_or(default);
+    let tool = if fill {
+        let at = p
+            .get("at")
+            .and_then(point)
+            .ok_or_else(|| bad("at", "give [x, y]"))?;
+        let color = match p.get("color") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(
+                v.as_str()
+                    .and_then(xs_image::color::Rgba::parse)
+                    .ok_or_else(|| bad("color", "use #RRGGBB, #RRGGBBAA or null"))?,
+            ),
+        };
+        pixels::Tool::Fill {
+            at,
+            color,
+            tolerance: num("tolerance", 10.0),
+            opacity: num("opacity", 100.0),
+            global: p.get("global").and_then(Value::as_bool).unwrap_or(false),
+        }
+    } else {
+        let points: Vec<[f64; 2]> = p
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(point).collect())
+            .unwrap_or_default();
+        if points.is_empty() {
+            return Err(bad("points", "give at least one [x, y]"));
+        }
+        pixels::Tool::Erase {
+            points,
+            width: num("width", 20.0),
+            square: p.get("shape").and_then(Value::as_str) == Some("square"),
+            opacity: num("opacity", 100.0),
+            antialias: p.get("antialias").and_then(Value::as_bool).unwrap_or(true),
+        }
+    };
+    let ed = editor(core);
+    let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+    let doc = ed
+        .store
+        .with(&id, |d| d.document.clone())
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let target = p.get("objectId").and_then(Value::as_str).map(str::to_string);
+    // The new pixels, and the rectangle of the image they go on (none for a picture).
+    let made = match &target {
+        Some(oid) => {
+            let object = doc.objects.iter().find(|o| &o.id == oid).ok_or_else(|| {
+                CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(lang, "errors.object_not_found", &[("id", oid)]),
+                )
+            })?;
+            let name = object.props.get("image").and_then(Value::as_str);
+            let picture = match (object.kind.as_str(), name) {
+                ("image", Some(name)) => ed.store.image_file(&id, name),
+                _ => return Err(bad("objectId", "only a floating image has pixels to change")),
+            }
+            .and_then(|bytes| xs_image::encode::decode(&bytes).ok())
+            .ok_or_else(|| CommandError::internal("picture missing"))?;
+            pixels::edit_picture(object, picture, &tool).map(|img| (img, None))
+        }
+        None => pixels::edit_image(&doc, &base, &tool).map(|e| (e.pixels, Some(e.rect))),
+    };
+    let Some((img, rect)) = made else {
+        return Ok(json!({ "changed": false }));
+    };
+    let png = xs_image::encode::png(&img, 0.0, true).map_err(|e| internal(lang, "", e))?;
+    let name = format!("{}{:016x}.png", store::INSERTED, content_hash(&png));
+    ed.store
+        .add_images(&id, &BTreeMap::from([(name.clone(), png)]))
+        .map_err(|e| internal(lang, "", e))?;
+    let label = if fill { "history.fill" } else { "history.erase" };
+    ed.store
+        .mutate(&id, label, |doc| {
+            match (&target, rect) {
+                (Some(oid), _) => {
+                    let o = doc
+                        .objects
+                        .iter_mut()
+                        .find(|o| &o.id == oid)
+                        .ok_or_else(|| CommandError::internal("object gone"))?;
+                    o.props.insert("image".into(), json!(name));
+                }
+                (None, Some(rect)) => pixels::add_patch(doc, rect, name.clone()),
+                (None, None) => {}
+            }
+            Ok::<_, CommandError>(())
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    changed(core, ctx, &id);
+    Ok(json!({ "changed": true }))
+}
+
 fn set_tool_style(
     core: &Core,
     tool: &str,
@@ -2043,6 +2152,9 @@ pub fn extension() -> Extension {
             changed(&core, ctx, &id);
             Ok(json!({ "ids": ids }))
         });
+        // Pixel tools (EDT-047, EDT-048; ADR 0005): one undo step each.
+        on!("document.fill", |core, ctx, p| pixel_edit(&core, ctx, &p, true));
+        on!("document.erase", |core, ctx, p| pixel_edit(&core, ctx, &p, false));
         // Stacking order (EDT-081): one undo step.
         on!("document.arrange", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;

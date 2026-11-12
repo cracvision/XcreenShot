@@ -16,7 +16,7 @@ M2.3 trae herramientas que **cambian píxeles**: Relleno (EDT-047), Borrador (ED
 
 1. **Cada edición de píxeles es un parche.** Un parche es un rectángulo de la imagen, en píxeles de `base.png` (un recorte no lo mueve), con sus píxeles **ya resueltos**: lo que se ve allí después de la edición. Se guarda como una imagen más de la carpeta `images/` y el documento lleva la lista `patches` (el más antiguo primero).
 2. **Orden de dibujo:** color del lienzo → `base.png` → capas aplanadas → parches (cada uno **sustituye** su rectángulo, también con transparencia) → objetos. Así un parche ve lo aplanado de debajo, y una herramienta que trabaja "sobre la imagen" ve lo mismo que el usuario.
-3. **Lo aplanado bajo un parche queda fijo.** Si una edición toca una capa aplanada que se podía desaplanar, esa capa pasa a ser permanente con el motivo "pintado" (EDT-091), porque el parche ya contiene sus píxeles.
+3. **Lo aplanado bajo un parche queda fijo.** Si una edición toca una capa aplanada que se podía desaplanar, esa capa pasa a ser permanente con el motivo "editado" (`edited`, EDT-091), porque el parche ya contiene sus píxeles.
 4. **Deshacer sigue siendo el documento.** Añadir o quitar un parche cambia `document.json`; las imágenes de `images/` no se borran mientras algún paso de Deshacer las use. No hace falta guardar la imagen entera en cada paso: solo la zona tocada.
 5. **Al guardar, los parches se funden en `base.png`**, junto con las capas aplanadas permanentes, y el archivo queda sin parches. Lo borrado no viaja en el `.xshot` (lo mismo que con un desenfoque aplanado).
 6. **Imágenes flotantes:** editarlas crea una imagen nueva en `images/` y el objeto pasa a apuntar a ella. Deshacer devuelve el nombre anterior.

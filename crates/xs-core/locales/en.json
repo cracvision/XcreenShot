@@ -422,6 +422,14 @@
     "document_simplify_view": {
       "title": "Simplify view",
       "description": "Shows or hides the original image under simplified shapes."
+    },
+    "document_fill": {
+      "title": "Fill",
+      "description": "Fills the clicked pixel and the touching pixels of a similar color with a color or with transparency, on the image or on a floating image."
+    },
+    "document_erase": {
+      "title": "Erase",
+      "description": "Erases the image, or a floating image, along a stroke: the canvas color shows through."
     }
   },
   "settings": {
@@ -1561,7 +1569,8 @@
         "show_original": "Show original",
         "original_opacity": "Original opacity",
         "lock_on_exit": "Lock on exit"
-      }
+      },
+      "unflatten_edited": "It was filled or erased over, so it is now part of the image."
     },
     "multi": {
       "title": "Multi-capture",
@@ -1803,7 +1812,9 @@
     "change_simplify": "Change simplified shape",
     "delete_simplify": "Delete simplified shape",
     "cut_simplify": "Cut simplified shape",
-    "paste_simplify": "Paste simplified shape"
+    "paste_simplify": "Paste simplified shape",
+    "fill": "Fill",
+    "erase": "Erase"
   },
   "editor": {
     "edited": "{{name}} — Edited"
