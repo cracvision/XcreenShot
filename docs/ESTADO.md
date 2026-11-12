@@ -48,6 +48,13 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Sesión del 2026-11-12 (madrugada, continuación): M2.3 terminada.**
+  - Herramientas de píxeles con parches (ADR 0005, propuesta): cada edición guarda solo la zona tocada; Deshacer sigue funcionando con el documento y al guardar se funden en `base.png`. La imagen se compone ahora sobre el color del lienzo, así que lo borrado lo deja ver.
+  - Relleno (EDT-047, `G`) y Borrador (EDT-048, `E`, con `[` y `]` y el contorno del puntero a tamaño real).
+  - Selección (EDT-043, `Q`: rectángulo, elipse, polígono, mano alzada; `Shift` añade, `Alt` resta; Ajustar al objeto; calado; posición y tamaño numéricos) y Varita mágica (EDT-046, `W`). Hormigas en movimiento, arrastrar dentro mueve los píxeles, menú contextual y menú Edición: Invertir (`Ctrl+Shift+I`), Convertir en imagen flotante (`Ctrl+Shift+J`), Recortar a la selección.
+  - Relleno del hueco (EDT-045): inteligente rápido (nítido en interfaces) y Fotográfico (con trozos de la imagen; progreso y `Esc`), transparente o color del lienzo.
+  - Comandos nuevos: `document.fill`, `document.erase`, `document.select_pixels`, `document.selection_action`, `editor.cancel`.
+  - Arreglado de paso: tras Deshacer, el lienzo podía volver a mostrar un gesto ya terminado (la versión del documento vuelve a un número anterior); `scripts/dev/cdp.mjs key "]"` abría el menú contextual (código de tecla).
 - **Sesión del 2026-11-11/12 (madrugada): M2.2 empezada.**
   - Paso (EDT-035): marcadores numerados en seis formas con el valor siempre derecho; Editar valor, Reiniciar secuencia y Renumerar (`document.steps`).
   - Globo (EDT-028): nueve formas, hasta ocho colas (recta, curva, flecha; burbujas en Pensamiento), un solo contorno, sombreado, radio, Ajustar al texto; tiradores de puntas, **+**, radio y ancla.
@@ -226,6 +233,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
    - **M2.1 terminada (2026-11-11):** selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083), bloquear (EDT-085), agrupar (EDT-082), transformar varios con Igualar ancho/alto (EDT-080) y aplanar/desaplanar (EDT-091). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1"). Falta en EDT-091 el criterio del Borrador: llega con las herramientas de píxeles (M2.3).
    - De paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba); y el diálogo Recuperar trabajo se salía del panel con rutas largas.
+   - **M2.3 terminada (2026-11-12):** Relleno (EDT-047), Borrador (EDT-048), Selección (EDT-043) y sus acciones (EDT-044), relleno del hueco con calidad Rápida y Fotográfica (EDT-045) y Varita mágica (EDT-046). Decisiones en `QUESTIONS.md` (sección "M2, entrega 3") y [ADR 0005](adr/0005-herramientas-de-pixeles.md) (propuesta, pendiente de Carlos). Pruebas en [`tests/manual/EDT-047-048.md`](../tests/manual/EDT-047-048.md) y [`tests/manual/EDT-043-046.md`](../tests/manual/EDT-043-046.md). Quedan para su ID: relleno degradado (EDT-020), aplicar efecto a la selección (EDT-053), guardar e imprimir la selección (EDT-110, EDT-114), guardar como sello (EDT-032) y mantener la selección al cambiar el tamaño (EDT-069).
+   - **Siguiente: M2.4 · Estilos** (EDT-015 Must, EDT-016 a EDT-021).
    - **M2.2 en curso:** hechos Paso (EDT-035, `N`), Globo (EDT-028, `C`), Línea (EDT-025, `L`), Resaltador (EDT-036, `H`), Lápiz (EDT-037, `P`), Lupa (EDT-038, `M`), Foco (EDT-039, `O`) y más formas (EDT-030: rectángulo redondeado, triángulo, rombo y polígono). Decisiones en `QUESTIONS.md` (sección "M2, entrega 2"). Hechos también Sellos (EDT-031: 60 sellos propios, tecla `S`) y Simplificar (EDT-041, `Y`). **Esperan a Carlos:** Emoji (EDT-033: elegir un conjunto de emoji de terceros) y los sellos propios en SVG y paquetes `.xstamps` (EDT-032/034: aprobar un intérprete de SVG). Ver QUESTIONS.
 
 ## Decisiones vigentes que conviene recordar
