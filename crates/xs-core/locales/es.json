@@ -1641,6 +1641,25 @@
         "quality_help": "Rápida, para interfaces y fondos planos; Fotográfica, para fotos y texturas (más lenta).",
         "filling": "Rellenando…",
         "esc_cancels": "Esc cancela"
+      },
+      "shadow": {
+        "title": "Sombra",
+        "direction": "Dirección de la sombra",
+        "advanced": "Ajustes avanzados",
+        "angle": "Ángulo",
+        "distance": "Distancia",
+        "blur": "Desenfoque",
+        "cell": {
+          "00": "Arriba a la izquierda",
+          "01": "Arriba",
+          "02": "Arriba a la derecha",
+          "10": "Izquierda",
+          "11": "Alrededor",
+          "12": "Derecha",
+          "20": "Abajo a la izquierda",
+          "21": "Abajo",
+          "22": "Abajo a la derecha"
+        }
       }
     },
     "multi": {

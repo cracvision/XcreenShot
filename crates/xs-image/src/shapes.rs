@@ -103,6 +103,9 @@ fn check_color(name: &str, c: &str) -> Result<(), String> {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct ShapeStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub shape_type: ShapeKind,
     /// `None` is Transparent: only the outline (EDT-029).
     pub fill: Option<String>,
@@ -119,6 +122,7 @@ impl Default for ShapeStyle {
     /// A hollow coral rectangle, from the default theme (EDT-017).
     fn default() -> Self {
         ShapeStyle {
+            shadow: None,
             shape_type: ShapeKind::Rectangle,
             fill: None,
             outline: "#F2545B".to_string(),
@@ -266,12 +270,18 @@ impl BlurObject {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct ImageStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub opacity: f64,
 }
 
 impl Default for ImageStyle {
     fn default() -> Self {
-        ImageStyle { opacity: 100.0 }
+        ImageStyle {
+            shadow: None,
+            opacity: 100.0,
+        }
     }
 }
 

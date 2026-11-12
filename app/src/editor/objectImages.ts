@@ -2,7 +2,7 @@
 // pictures of floating images (EDT-078).
 import { useEffect, useState } from "react";
 import { fingerprint } from "./objects";
-import { imageUrl, objectUrl, type DocObject } from "./state";
+import { imageUrl, objectUrl, shadowUrl, type DocObject } from "./state";
 
 const images = new Map<string, HTMLImageElement>();
 
@@ -45,6 +45,41 @@ export function useObjectImages(
       },
     ];
   });
+  const key = wanted.map((w) => w.url).join("|");
+  useEffect(() => {
+    let alive = true;
+    for (const { id, url } of wanted) {
+      if (images.has(url)) continue;
+      const el = new window.Image();
+      el.crossOrigin = "anonymous";
+      el.onload = () => {
+        images.set(url, el);
+        if (alive) setLast((m) => new Map(m).set(id, el));
+      };
+      el.src = url;
+    }
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const out = new Map<string, HTMLImageElement>();
+  for (const { id, url } of wanted) {
+    const image = images.get(url) ?? last.get(id);
+    if (image) out.set(id, image);
+  }
+  return out;
+}
+
+/** The shadows Rust draws (EDT-021): object id → image, for the objects that have one. */
+export function useShadowImages(
+  documentId: string,
+  objects: DocObject[],
+): Map<string, HTMLImageElement> {
+  const [last, setLast] = useState(new Map<string, HTMLImageElement>());
+  const wanted = objects
+    .filter((o) => o.shadowAt)
+    .map((o) => ({ id: o.id, url: shadowUrl(documentId, o.id, fingerprint(o)) }));
   const key = wanted.map((w) => w.url).join("|");
   useEffect(() => {
     let alive = true;

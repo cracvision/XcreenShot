@@ -2677,3 +2677,45 @@ fn photo_quality_fills_and_cancel_is_safe() {
     );
     assert!(style.is_err(), "fast or photo");
 }
+
+/// EDT-021: a shape with a shadow down and to the right darkens there and not on the
+/// other side; the editor learns where the shadow goes; bad values are refused.
+#[test]
+fn objects_cast_shadows() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{
+            "type": "shape", "rect": {"x": 100, "y": 50, "w": 80, "h": 60},
+            "style": {"shapeType": "rectangle", "fill": "#2D7FF9", "outline": "#2D7FF9",
+                      "shadow": {"color": "#000000", "angle": 45, "distance": 10, "opacity": 30, "blur": 20}}
+        }]}),
+    );
+    let img = rendered(&e, &doc);
+    let below_right = img.get_pixel(185, 115).0;
+    let above_left = img.get_pixel(95, 45).0;
+    assert!(below_right[0] < 245, "shadowed: {below_right:?}");
+    assert!(above_left[0] >= 250, "no shadow there: {above_left:?}");
+    // Soft and light: never black.
+    assert!(below_right[0] > 150, "30 % opacity: {below_right:?}");
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["objects"][0]["shadowAt"].is_array());
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"shadow": {"distance": 80}}}}),
+    );
+    assert!(bad.is_err(), "distance goes to 50");
+    // Removing it.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"shadow": null}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["objects"][0]["shadowAt"].is_null());
+    assert_eq!(rendered(&e, &doc).get_pixel(185, 115).0[0], 255);
+}

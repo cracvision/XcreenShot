@@ -16,6 +16,7 @@ pub mod pens;
 pub mod pixels;
 pub mod render;
 pub mod selection;
+pub mod shadows;
 pub mod shapes;
 pub mod simplify;
 pub mod spotlights;

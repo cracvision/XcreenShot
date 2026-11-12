@@ -420,6 +420,7 @@ fn step_text(s: &StepObject, dpi: f64) -> Option<Pixmap> {
             text: s.value.clone(),
             rotation: 0.0,
             style: TextStyle {
+                shadow: None,
                 font: text::default_font().to_string(),
                 size: (px * 72.0 / dpi.max(1.0)).clamp(1.0, 1000.0),
                 bold: true,
@@ -925,9 +926,45 @@ fn draw_all(pm: &mut Pixmap, objects: &[Object], dpi: f64, images: &BTreeMap<Str
         if Some(i) == top {
             draw_spotlights(pm, objects);
         } else {
+            // Its shadow first, under it (EDT-021).
+            if let Some((layer, x, y)) = shadow_layer(object, dpi, images) {
+                pm.draw_pixmap(
+                    x,
+                    y,
+                    layer.as_ref(),
+                    &PixmapPaint::default(),
+                    Transform::identity(),
+                    None,
+                );
+            }
             draw_object(pm, object, dpi, images);
         }
     }
+}
+
+/// The shadow of `object` and where it goes, in canvas pixels (EDT-021).
+fn shadow_layer(
+    object: &Object,
+    dpi: f64,
+    images: &BTreeMap<String, Arc<Pixmap>>,
+) -> Option<(Pixmap, i32, i32)> {
+    let shadow = crate::shadows::Shadow::of(object)?;
+    let bounds = object_bounds(object, dpi)?;
+    crate::shadows::layer(object, &shadow, bounds, |pm, o| draw_object(pm, o, dpi, images))
+}
+
+/// Where the shadow of `object` goes, `[x, y, w, h]` in canvas pixels: the editor
+/// places [`shadow_image`] there (EDT-021).
+pub fn shadow_place(object: &Object, dpi: f64) -> Option<[i32; 4]> {
+    let shadow = crate::shadows::Shadow::of(object)?;
+    Some(crate::shadows::place(&shadow, object_bounds(object, dpi)?))
+}
+
+/// The shadow of object `id` as the editor shows it (EDT-021).
+pub fn shadow_image(doc: &Document, base: &Base, id: &str) -> Option<RgbaImage> {
+    let object = doc.objects.iter().find(|o| o.id == id)?;
+    let (layer, _, _) = shadow_layer(object, doc.dpi, &base.images)?;
+    Some(straight(&layer))
 }
 
 /// The outside of every spotlight in `objects`, with the topmost one's settings.

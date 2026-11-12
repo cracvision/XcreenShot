@@ -39,6 +39,8 @@ import {
   type SimpleKind,
   type GapFill,
   type SelectStyle,
+  type Shadow,
+  WITH_SHADOW,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -310,6 +312,19 @@ function SelectField<T extends string>(props: {
 }
 
 function Properties({ target }: { target: Target }) {
+  const shadowed = (WITH_SHADOW as readonly string[]).includes(target.kind);
+  const shadows = target.styles.map((s) => (s.shadow ?? null) as Shadow | null);
+  const first = JSON.stringify(shadows[0] ?? null);
+  const mixed = shadows.some((s) => JSON.stringify(s) !== first);
+  return (
+    <>
+      <KindProperties target={target} />
+      {shadowed && <ShadowSection value={shadows[0]} mixed={mixed} commit={target.commit} />}
+    </>
+  );
+}
+
+function KindProperties({ target }: { target: Target }) {
   const { t } = useTranslation();
   const fonts = useEditor((s) => s.fonts);
   const { kind, styles, commit } = target;
@@ -883,6 +898,118 @@ function Properties({ target }: { target: Target }) {
       );
   }
 }
+
+/** The nine cells of the shadow grid (EDT-021): row and column, -1 to 1. */
+const SHADOW_CELLS: [number, number][] = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, -1],
+  [0, 0],
+  [0, 1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+];
+
+/** The grid cell a shadow is in: its direction, or the center when it has none. */
+function shadowCell(s: Shadow | null | undefined): string | null {
+  if (!s) return null;
+  if (s.distance === 0) return "0,0";
+  const a = (Math.round(s.angle / 45) * 45) % 360;
+  const col = Math.round(Math.cos((a * Math.PI) / 180));
+  const row = Math.round(Math.sin((a * Math.PI) / 180));
+  return `${row},${col}`;
+}
+
+/** Shadow (EDT-021): a 3 × 3 grid of directions and, folded, its settings. */
+function ShadowSection(props: {
+  value: Shadow | null | undefined;
+  mixed: boolean;
+  commit: (changes: Record<string, unknown>) => void;
+}) {
+  const { t } = useTranslation();
+  const { value, mixed, commit } = props;
+  const cell = mixed ? null : shadowCell(value);
+  const current: Shadow = value ?? DEFAULT_SHADOW;
+  const set = (changes: Partial<Shadow>) => commit({ shadow: { ...current, ...changes } });
+  const pick = (row: number, col: number) => {
+    const key = `${row},${col}`;
+    // The active cell again: no shadow.
+    if (key === cell) return commit({ shadow: null });
+    if (row === 0 && col === 0) return set({ distance: 0 });
+    const angle = (((Math.atan2(row, col) * 180) / Math.PI + 360) % 360) as number;
+    set({ angle: Math.round(angle), distance: current.distance || DEFAULT_SHADOW.distance });
+  };
+  return (
+    <fieldset className="shadow-section">
+      <legend>{t("ui.editor.shadow.title")}</legend>
+      <div className="shadow-grid" role="group" aria-label={t("ui.editor.shadow.direction")}>
+        {SHADOW_CELLS.map(([row, col]) => (
+          <button
+            key={`${row},${col}`}
+            type="button"
+            className="shadow-cell"
+            aria-pressed={cell === `${row},${col}`}
+            aria-label={t(`ui.editor.shadow.cell.${row + 1}${col + 1}`)}
+            title={t(`ui.editor.shadow.cell.${row + 1}${col + 1}`)}
+            onClick={() => pick(row, col)}
+          >
+            <span className="shadow-dot" style={{ translate: `${col * 4}px ${row * 4}px` }} />
+          </button>
+        ))}
+      </div>
+      {value && !mixed && (
+        <details className="shadow-more">
+          <summary>{t("ui.editor.shadow.advanced")}</summary>
+          <ColorPicker
+            label={t("ui.editor.prop.color")}
+            value={current.color}
+            onCommit={(color) => color && set({ color })}
+          />
+          <NumberField
+            label={t("ui.editor.shadow.angle")}
+            value={current.angle}
+            min={0}
+            max={359}
+            step={1}
+            unit="°"
+            onCommit={(angle) => set({ angle })}
+          />
+          <NumberField
+            label={t("ui.editor.shadow.distance")}
+            value={current.distance}
+            min={0}
+            max={50}
+            step={1}
+            unit="px"
+            onCommit={(distance) => set({ distance })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.opacity")}
+            value={current.opacity}
+            min={0}
+            max={100}
+            step={1}
+            unit="%"
+            onCommit={(opacity) => set({ opacity })}
+          />
+          <NumberField
+            label={t("ui.editor.shadow.blur")}
+            value={current.blur}
+            min={0}
+            max={50}
+            step={1}
+            unit="px"
+            onCommit={(blur) => set({ blur })}
+          />
+        </details>
+      )}
+    </fieldset>
+  );
+}
+
+const DEFAULT_SHADOW: Shadow = { color: "#000000", angle: 45, distance: 6, opacity: 50, blur: 8 };
 
 /** A rectangle or ellipse selection in numbers (EDT-043, EDT-086): typing a size
  * selects exactly that. */

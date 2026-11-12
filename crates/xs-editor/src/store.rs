@@ -706,6 +706,14 @@ impl DocStore {
                 }
             }
         }
+        // Shadows (EDT-021): where the editor places each one.
+        if let Some(objects) = v.get_mut("objects").and_then(Value::as_array_mut) {
+            for (o, object) in objects.iter_mut().zip(&d.document.objects) {
+                if let Some(at) = xs_image::render::shadow_place(object, d.document.dpi) {
+                    o["shadowAt"] = json!(at);
+                }
+            }
+        }
         // Flattened layers (EDT-091): where each is on the canvas, for Unflatten.
         if let Some(layers) = v.get_mut("flattened").and_then(Value::as_array_mut) {
             for (l, layer) in layers.iter_mut().zip(&d.document.flattened) {

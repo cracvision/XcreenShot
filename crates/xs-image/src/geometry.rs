@@ -38,6 +38,9 @@ pub enum LineStyle {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct ArrowStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub color: String,
     /// 1–100 px.
     pub width: f64,
@@ -52,6 +55,7 @@ impl Default for ArrowStyle {
     /// The arrow of the default theme (EDT-017: coral #F2545B).
     fn default() -> Self {
         ArrowStyle {
+            shadow: None,
             color: "#F2545B".to_string(),
             width: 6.0,
             start_cap: Cap::None,

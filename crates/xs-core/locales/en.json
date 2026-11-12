@@ -1641,6 +1641,25 @@
         "quality_help": "Fast suits interfaces and flat backgrounds; Photo, photos and textures (slower).",
         "filling": "Filling…",
         "esc_cancels": "Esc cancels"
+      },
+      "shadow": {
+        "title": "Shadow",
+        "direction": "Shadow direction",
+        "advanced": "Advanced",
+        "angle": "Angle",
+        "distance": "Distance",
+        "blur": "Blur",
+        "cell": {
+          "00": "Up and left",
+          "01": "Up",
+          "02": "Up and right",
+          "10": "Left",
+          "11": "All around",
+          "12": "Right",
+          "20": "Down and left",
+          "21": "Down",
+          "22": "Down and right"
+        }
       }
     },
     "multi": {

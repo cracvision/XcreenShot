@@ -59,6 +59,9 @@ pub enum VAlign {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct CalloutStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub shape: CalloutShape,
     /// `None` is Transparent.
     pub fill: Option<String>,
@@ -94,6 +97,7 @@ impl Default for CalloutStyle {
     /// A white rounded box with a coral outline (EDT-017).
     fn default() -> Self {
         CalloutStyle {
+            shadow: None,
             shape: CalloutShape::RoundedRectangle,
             fill: Some("#FFFFFF".to_string()),
             shading: false,
@@ -161,6 +165,7 @@ impl CalloutStyle {
     /// The text of the callout as a text box style.
     pub fn text_style(&self) -> TextStyle {
         TextStyle {
+            shadow: None,
             font: self.font.clone(),
             size: self.size,
             bold: self.bold,
@@ -550,6 +555,7 @@ pub fn draw(pm: &mut Pixmap, c: &CalloutObject, dpi: f64) {
         // Arrow tails: a line from the body's center, under the body.
         if s.tail_style == TailStyle::Arrow && shape != CalloutShape::Arrow {
             let style = ArrowStyle {
+                shadow: None,
                 color: String::new(),
                 width: ow.clamp(2.0, 100.0),
                 start_cap: Cap::None,

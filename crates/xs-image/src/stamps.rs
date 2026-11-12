@@ -1164,6 +1164,7 @@ pub fn draw(pm: &mut Pixmap, s: &StampObject, dpi: f64) {
                         text: t.to_string(),
                         rotation: 0.0,
                         style: TextStyle {
+                            shadow: None,
                             font: text::default_font().to_string(),
                             size: (px * 72.0 / dpi.max(1.0)).clamp(1.0, 1000.0),
                             bold: true,

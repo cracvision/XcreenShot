@@ -56,6 +56,13 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                 .ok()
                 .map(|png| (std::sync::Arc::new(png), "image/png"))
         }),
+        // An object's shadow (EDT-021); `document.info` says where it goes (`shadowAt`).
+        [id, "shadow", object] => editor.store.snapshot(id).ok().and_then(|snap| {
+            let image = xs_image::render::shadow_image(&snap.document, &snap.base, object)?;
+            xs_image::encode::png(&image, 0.0, true)
+                .ok()
+                .map(|png| (std::sync::Arc::new(png), "image/png"))
+        }),
         // A stamp of the collection (EDT-031), in the app's language.
         ["stamp", id] => {
             let lang = if core.lang() == xs_core::Lang::Es {

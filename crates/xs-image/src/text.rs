@@ -32,6 +32,9 @@ pub enum TextAlign {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct TextStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     /// Family name; a family that is not installed is drawn with a fallback and kept.
     pub font: String,
     /// Points, 1–1000, decimals allowed.
@@ -56,6 +59,7 @@ pub fn default_font() -> &'static str {
 impl Default for TextStyle {
     fn default() -> Self {
         TextStyle {
+            shadow: None,
             font: default_font().to_string(),
             size: 14.0,
             bold: false,

@@ -228,6 +228,8 @@ pub struct StampStyle {
     pub stamp: String,
     pub color: Option<String>,
     pub opacity: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<xs_image::shadows::Shadow>,
 }
 
 impl Default for StampStyle {
@@ -236,6 +238,7 @@ impl Default for StampStyle {
             stamp: "check".to_string(),
             color: None,
             opacity: 100.0,
+            shadow: None,
         }
     }
 }
@@ -317,6 +320,15 @@ impl Styles {
 
     /// Changes the current style of the tool that draws `kind`.
     pub fn set(&mut self, kind: &str, changes: &Map<String, Value>) -> Result<Value, String> {
+        let mut next = self.clone();
+        next.set_unchecked(kind, changes)?;
+        let style = next.of(kind).ok_or_else(|| "style".to_string())?;
+        check_shadow(Some(&style))?;
+        *self = next;
+        Ok(style)
+    }
+
+    fn set_unchecked(&mut self, kind: &str, changes: &Map<String, Value>) -> Result<(), String> {
         match kind {
             "arrow" => self.arrow = ArrowStyle::merged(&self.arrow, changes)?,
             "line" => self.line = ArrowStyle::merged(&self.line, changes)?,
@@ -339,7 +351,7 @@ impl Styles {
             "wand" => self.wand = WandStyle::merged(&self.wand, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
-        self.of(kind).ok_or_else(|| "style".to_string())
+        Ok(())
     }
 }
 
@@ -436,7 +448,7 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
                 "stamp": props.get("stamp").cloned().unwrap_or(Value::Null),
                 "art": s.art,
                 "ink": s.ink,
-                "style": {"color": s.color, "opacity": s.opacity}
+                "style": stamp_style(&s, props)
             })
         }
         "simplify" => {
@@ -469,7 +481,31 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
         }
         k => return Err(format!("objects of type \"{k}\" cannot be changed in this build")),
     };
+    check_shadow(value.get("style"))?;
     Ok(value.as_object().cloned().unwrap_or_default())
+}
+
+/// A stamp's style: its color, opacity and shadow (EDT-031, EDT-021).
+fn stamp_style(s: &xs_image::stamps::StampObject, props: &Map<String, Value>) -> Value {
+    let mut style = json!({"color": s.color, "opacity": s.opacity});
+    if let Some(shadow) = props
+        .get("style")
+        .and_then(|st| st.get("shadow"))
+        .filter(|v| !v.is_null())
+    {
+        style["shadow"] = shadow.clone();
+    }
+    style
+}
+
+/// The values of a style's shadow, if it has one (EDT-021).
+fn check_shadow(style: Option<&Value>) -> Result<(), String> {
+    match style.and_then(|s| s.get("shadow")).filter(|v| !v.is_null()) {
+        Some(v) => serde_json::from_value::<xs_image::shadows::Shadow>(v.clone())
+            .map_err(|e| format!("shadow: {e}"))?
+            .check(),
+        None => Ok(()),
+    }
 }
 
 /// Validates one object of `document.annotate` and fills what is missing from the

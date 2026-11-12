@@ -482,7 +482,36 @@ export type DocObject = (
   locked?: boolean;
   /** The groups it belongs to, outermost first (EDT-082). */
   groups?: string[];
+  /** Where its shadow goes, `[x, y, w, h]` in canvas pixels (EDT-021). */
+  shadowAt?: [number, number, number, number];
 };
+
+/** An object's shadow (EDT-021): `angle` turns clockwise from the right. */
+export interface Shadow {
+  color: string;
+  angle: number;
+  distance: number;
+  opacity: number;
+  blur: number;
+}
+
+/** The kinds that can have a shadow (EDT-021). */
+export const WITH_SHADOW = [
+  "arrow",
+  "line",
+  "text",
+  "callout",
+  "shape",
+  "stamp",
+  "step",
+  "pen",
+  "image",
+] as const;
+
+/** An object's shadow as Rust draws it (EDT-021). */
+export function shadowUrl(documentId: string, objectId: string, version: string): string {
+  return xsdocUrl(`${documentId}/shadow/${objectId}?v=${version}`);
+}
 
 export interface Styles {
   arrow: ArrowStyle;
@@ -621,6 +650,9 @@ interface EditorState {
 let zoomSeq = 0;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
+/** Document events received so far: a load that started before one is older than it. */
+let docEvents = 0;
+
 async function loadDoc(id: string | null): Promise<DocDetails | null> {
   if (!id) return null;
   try {
@@ -673,8 +705,14 @@ export const useEditor = create<EditorState>((set, get) => ({
           set({ documents, active });
           if (changed) {
             set({ selection: [], cropRect: null, textEdit: null });
+            const seen = docEvents;
             void loadDoc(active).then((doc) => {
-              if (get().active === active) set({ doc });
+              // A change reported meanwhile is newer than what this load read.
+              if (
+                get().active === active &&
+                (docEvents === seen || get().doc?.documentId !== active)
+              )
+                set({ doc });
             });
           }
           break;
@@ -688,6 +726,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         case "document": {
           const doc = payload as unknown as DocDetails;
           if (doc.documentId !== get().active) break;
+          docEvents += 1;
           // When the canvas moves over the image (a crop, or growing to fit objects,
           // EDT-049, EDT-071), the view keeps the image in place.
           const before = get().doc;

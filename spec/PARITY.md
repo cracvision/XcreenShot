@@ -100,7 +100,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | — |
 | EDT-019 | Selector de color | M1 | Must | Win |
 | EDT-020 | Degradados | M2 | Should | — |
-| EDT-021 | Sombra de los objetos | M2 | Should | — |
+| EDT-021 | Sombra de los objetos | M2 | Should | En curso (falta la sombra por defecto de cada herramienta, con los temas EDT-017) |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
 | EDT-024 | Flecha | M1 | Must | Win |

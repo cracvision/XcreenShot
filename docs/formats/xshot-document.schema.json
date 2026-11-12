@@ -66,6 +66,17 @@
     "effects": { "type": "array", "items": { "type": "object" } }
   },
   "$defs": {
+    "shadow": {
+      "type": "object",
+      "description": "Object shadow (EDT-021), in the style of arrows, lines, text, callouts, shapes, stamps, steps, pen strokes and floating images. Absent: no shadow",
+      "properties": {
+        "color": { "type": "string" },
+        "angle": { "type": "number", "minimum": 0, "maximum": 360, "description": "Clockwise from the right: 90 is down" },
+        "distance": { "type": "number", "minimum": 0, "maximum": 50, "description": "0: all around" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 100 },
+        "blur": { "type": "number", "minimum": 0, "maximum": 50 }
+      }
+    },
     "pixelRect": {
       "type": "object",
       "required": ["x", "y", "width", "height"],
@@ -101,7 +112,8 @@
             "startCap": { "$ref": "#/$defs/cap" },
             "endCap": { "$ref": "#/$defs/cap" },
             "lineStyle": { "type": "string", "enum": ["solid", "dash", "dot", "dashDot"] },
-            "opacity": { "type": "number", "minimum": 0, "maximum": 100 }
+            "opacity": { "type": "number", "minimum": 0, "maximum": 100 },
+            "shadow": { "$ref": "#/$defs/shadow" }
           }
         }
       }
@@ -130,7 +142,10 @@
         "style": {
           "type": "object",
           "required": ["opacity"],
-          "properties": { "opacity": { "type": "number", "minimum": 0, "maximum": 100 } }
+          "properties": {
+            "opacity": { "type": "number", "minimum": 0, "maximum": 100 },
+            "shadow": { "$ref": "#/$defs/shadow" }
+          }
         }
       }
     },

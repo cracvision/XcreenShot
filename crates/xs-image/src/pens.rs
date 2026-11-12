@@ -23,6 +23,9 @@ pub enum PenTip {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct PenStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub color: String,
     /// 1–100 px.
     pub width: f64,
@@ -39,6 +42,7 @@ pub struct PenStyle {
 impl Default for PenStyle {
     fn default() -> Self {
         PenStyle {
+            shadow: None,
             color: "#F2545B".to_string(),
             width: 4.0,
             opacity: 100.0,

@@ -38,7 +38,7 @@ import {
   type Rect as RectBox,
 } from "./boxes";
 import { arrowGeometry, constrain45, type Point } from "./geometry";
-import { useObjectImages } from "./objectImages";
+import { useObjectImages, useShadowImages } from "./objectImages";
 import {
   ArrowShape,
   BlurShape,
@@ -402,6 +402,7 @@ export function Canvas({ doc }: Props) {
   const base = useBaseImage(doc.documentId, flatKey);
   const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
   const objectImages = useObjectImages(doc.documentId, doc.objects, doc.version);
+  const shadowImages = useShadowImages(doc.documentId, doc.objects);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [space, setSpace] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
@@ -1831,6 +1832,26 @@ export function Canvas({ doc }: Props) {
 
   const clip = { clipX: ext.x, clipY: ext.y, clipWidth: ext.w, clipHeight: ext.h };
 
+  // An object's shadow, as Rust draws it (EDT-021). It follows a move; during other
+  // gestures it waits for the new one.
+  const shadowNode = (o: DocObject) => {
+    const committed = doc.objects.find((x) => x.id === o.id);
+    const at = committed?.shadowAt;
+    const image = shadowImages.get(o.id);
+    if (!at || !image) return null;
+    const moving = drag?.kind === "move" && drag.ids.includes(o.id) ? drag.delta : null;
+    if (o !== committed && !moving) return null;
+    return (
+      <KImage
+        image={image}
+        x={at[0] + (moving?.[0] ?? 0)}
+        y={at[1] + (moving?.[1] ?? 0)}
+        width={at[2]}
+        height={at[3]}
+        listening={false}
+      />
+    );
+  };
   const objectNode = (o: DocObject) => {
     switch (o.type) {
       case "arrow":
@@ -2163,9 +2184,13 @@ export function Canvas({ doc }: Props) {
                     (EDT-071). Each is cut on its own to keep their order. */}
                 {shown.map((o) =>
                   free.has(o.id) ? (
-                    objectNode(o)
+                    <Group key={o.id}>
+                      {shadowNode(o)}
+                      {objectNode(o)}
+                    </Group>
                   ) : (
                     <Group key={o.id} {...clip}>
+                      {shadowNode(o)}
                       {objectNode(o)}
                     </Group>
                   ),

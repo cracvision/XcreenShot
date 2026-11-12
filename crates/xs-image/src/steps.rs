@@ -170,6 +170,9 @@ pub enum StepShape {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct StepStyle {
+    /// Shadow (EDT-021); none when absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<crate::shadows::Shadow>,
     pub sequence: Sequence,
     pub shape: StepShape,
     /// `None` is Transparent.
@@ -187,6 +190,7 @@ impl Default for StepStyle {
     /// A coral circle with a white number, from the default theme (EDT-017).
     fn default() -> Self {
         StepStyle {
+            shadow: None,
             sequence: Sequence::Number,
             shape: StepShape::Circle,
             fill: Some("#F2545B".to_string()),

@@ -180,6 +180,12 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-045 | Relleno del hueco | Opción de Selección y Varita (por defecto Relleno inteligente). Relleno inteligente rápido: donde los píxeles de los dos lados del hueco, en la fila o en la columna, son del mismo color, el hueco lo toma nítido (así un botón borrado sobre una interfaz no deja mancha); en lo demás, una superficie suave entre los bordes (de grueso a fino). "Color del lienzo" sin color de lienzo = transparente. **Fotográfica**: rellena con trozos de 7 × 7 px de la zona de alrededor (una ventana del tamaño del hueco a cada lado), de grueso a fino; el resultado es siempre el mismo para el mismo hueco. Si tarda más de 300 ms aparece "Rellenando…" con una barra sobre el lienzo; `Esc` (o `editor.cancel`) lo detiene y la imagen queda como estaba. Calidad es una opción de Selección y de Varita, junto a "Rellenar el hueco con" | Provisional |
 | EDT-046 | Varita mágica | Herramienta `wand`, tecla `W` (`Control`+`W` en Compatibilidad de macOS). Tolerancia = diferencia máxima por canal (como Relleno), vecinos en 4 direcciones, por defecto 15 %. Trabaja sobre la imagen tal como se ve sin objetos, o sobre la imagen flotante en la que se hace clic | Provisional |
 
+## Dudas del equipo de construcción (M2, entrega 4: estilos)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| EDT-021 | Sombra de los objetos | Campo `shadow` en el estilo (`color`, `angle`, `distance`, `opacity`, `blur`); sin él, no hay sombra. El ángulo gira en el sentido de las agujas del reloj desde la derecha (90° = abajo); la celda central es distancia 0. Al elegir una celda se conserva la distancia anterior o se usan 6 px; los valores iniciales son negro, 50 % y desenfoque 8 px. Rust la dibuja (desenfoque gaussiano con sigma = desenfoque / 2) para exportar y para el editor, que la muestra como una imagen bajo el objeto; mientras se arrastra el objeto, la sombra lo acompaña, y durante otros gestos reaparece al terminar. Las sombras por defecto de cada herramienta llegan con los temas (EDT-017) | Provisional |
+
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
 | ID | Duda | Propuesta | Estado |
