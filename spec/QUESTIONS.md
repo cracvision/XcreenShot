@@ -168,6 +168,12 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-032 / EDT-034 | Sellos propios y paquetes `.xstamps` | Pendientes. Necesitan una carpeta de sellos del usuario y, para SVG, un intérprete de SVG (por ejemplo la biblioteca `resvg`): es una dependencia nueva que hay que aprobar. PNG, JPG y WebP no la necesitan | Pendiente de Carlos (SVG) |
 | EDT-041 | Simplificar | Objeto `simplify` (`rect`, `rotation`) con siete formas planas que dibuja Rust. Las paletas viven en el estilo de la herramienta (se conservan entre sesiones): tres de serie (Neutral, Océano, Cálido); elegir una pone su primer color, y **Guardar como paleta nueva** guarda la paleta en uso más el color elegido. **Mostrar original** es del documento (`simplify`) y también afecta a lo que se exporta: lo que se ve es lo que sale; oculto, las formas quedan sobre el color del lienzo o blanco. **Bloquear al salir** es una preferencia. Tecla `Y`. Pendiente: modo Dibujar/Mover con `Shift` (hoy un clic en una forma la selecciona y la mueve, como en las demás herramientas), editar un color de la paleta y Reemplazar esta paleta | Provisional |
 
+## Dudas del equipo de construcción (M2, entrega 3: píxeles)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| EDT-043 a EDT-048 | Cómo cambian los píxeles las herramientas de M2.3 | ADR 0005 (`docs/adr/0005-herramientas-de-pixeles.md`): cada edición es un parche (la zona tocada, ya resuelta) que se dibuja sobre la imagen y lo aplanado; Deshacer sigue funcionando con el documento; al guardar, los parches se funden en `base.png` y lo borrado no viaja en el archivo | Propuesta: pendiente de Carlos (se construye así de forma provisional) |
+
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
 | ID | Duda | Propuesta | Estado |
