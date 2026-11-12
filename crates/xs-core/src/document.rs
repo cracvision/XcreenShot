@@ -530,6 +530,36 @@ mod tests {
         assert_eq!(back.document.next_object_id(), "o2");
     }
 
+    /// APP-055: an `.xshot` is a plain ZIP: any ZIP reader finds `document.json` (JSON)
+    /// and `base.png` (the PNG as it was written), stored with ordinary methods.
+    #[test]
+    fn an_xshot_is_a_plain_zip_with_json_and_png() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a.xshot");
+        let mut x = sample();
+        x.base_png = b"\x89PNG\r\n\x1a\nrest".to_vec();
+        x.write(&path).unwrap();
+        let mut zip = zip::ZipArchive::new(std::fs::File::open(&path).unwrap()).unwrap();
+        let mut names: Vec<String> = zip.file_names().map(|n| n.unwrap().to_string()).collect();
+        names.sort();
+        for name in ["document.json", "base.png", "manifest.json", "meta.json"] {
+            assert!(names.iter().any(|n| n == name), "{name} in {names:?}");
+        }
+        let mut json = String::new();
+        let mut entry = zip.by_name("document.json").unwrap();
+        assert!(matches!(
+            entry.compression(),
+            zip::CompressionMethod::Stored | zip::CompressionMethod::Deflated
+        ));
+        entry.read_to_string(&mut json).unwrap();
+        drop(entry);
+        let doc: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(doc["objects"][0]["id"], json!("o1"));
+        let mut png = Vec::new();
+        zip.by_name("base.png").unwrap().read_to_end(&mut png).unwrap();
+        assert!(png.starts_with(b"\x89PNG"));
+    }
+
     #[test]
     fn keeps_unknown_fields_of_a_newer_minor_version() {
         let mut x = sample();

@@ -996,3 +996,72 @@ fn walk_files(dir: &Path) -> Vec<(PathBuf, u64)> {
     out.sort();
     out
 }
+
+/// Copies a folder with everything in it.
+fn copy_dir(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for e in std::fs::read_dir(from).unwrap().flatten() {
+        let p = e.path();
+        let target = to.join(e.file_name());
+        if p.is_dir() {
+            copy_dir(&p, &target);
+        } else {
+            std::fs::copy(&p, &target).unwrap();
+        }
+    }
+}
+
+/// The names of the files under `dir`, relative, without the index.
+fn names_in(dir: &Path) -> Vec<String> {
+    walk_files(dir)
+        .into_iter()
+        .map(|(p, _)| p.strip_prefix(dir).unwrap().to_string_lossy().replace('\\', "/"))
+        .filter(|n| !n.starts_with("library.db"))
+        .collect()
+}
+
+/// LIB-032, APP-055: a library folder copied to another computer (another place, another
+/// app data folder) shows every item with its ID, tags and favorite, with or without
+/// its index; no file is renamed, duplicated or added.
+#[test]
+fn a_copied_library_works_on_another_computer() {
+    let e = env();
+    write_png_n(&e.path("2026-10/a.png"), 1);
+    write_xshot(&e.path("2026-11/b.xshot"), "Excel", "2026-11-02T10:00:00+00:00");
+    write_png_n(&e.path("c.png"), 3);
+    let lib = e.open();
+    lib.scan();
+    let a = lib.find(&e.path("2026-10/a.png")).unwrap();
+    let b = lib.find(&e.path("2026-11/b.xshot")).unwrap();
+    lib.tag(std::slice::from_ref(&a.id), &["Cliente".to_string()], &[])
+        .unwrap();
+    lib.set_favorite(std::slice::from_ref(&b.id), Some(true)).unwrap();
+    let marks = |lib: &Library| {
+        let mut v: Vec<(String, String, Vec<String>, bool)> = lib
+            .list()
+            .into_iter()
+            .map(|i| (i.path, i.id, i.tags, i.favorite))
+            .collect();
+        v.sort();
+        v
+    };
+    let before = marks(&lib);
+    drop(lib);
+
+    for keep_index in [true, false] {
+        let elsewhere = tempfile::tempdir().unwrap();
+        let root = elsewhere.path().join("Mi biblioteca");
+        copy_dir(e.root.path(), &root);
+        if !keep_index {
+            for n in ["library.db", "library.db-wal", "library.db-shm"] {
+                let _ = std::fs::remove_file(root.join(n));
+            }
+        }
+        let files = names_in(&root);
+        let data = tempfile::tempdir().unwrap();
+        let lib = Library::open(root.clone(), data.path()).holding_deletes();
+        lib.scan();
+        assert_eq!(marks(&lib), before, "index kept: {keep_index}");
+        assert_eq!(names_in(&root), files, "nothing renamed or added");
+    }
+}

@@ -5,7 +5,9 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
-import { run } from "../lib/commands";
+import { open } from "@tauri-apps/plugin-dialog";
+import { isCommandError, run } from "../lib/commands";
+import { ImportSettingsButton } from "../prefs/SettingsTransfer";
 import { useApp } from "../store";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -97,6 +99,30 @@ function Startup() {
   const settings = useApp((s) => s.settings);
   const login = settings.find((s) => s.key === "general.launchAtLogin");
   const [root, setRoot] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [settingsNote, setSettingsNote] = useState("");
+  // APP-055, LIB-032: the library copied or synced from another computer, used as it is.
+  const chooseExisting = async () => {
+    setNote("");
+    const dir = await open({ directory: true, title: t("ui.welcome.library_choose") });
+    if (typeof dir !== "string") return;
+    try {
+      const i = await run<{ path: string; items: number; library: boolean; same: boolean }>(
+        "library.location",
+        { action: "inspect", path: dir },
+      );
+      if (i.same) return;
+      if (!i.library && i.items === 0) {
+        setNote(t("ui.welcome.library_none"));
+        return;
+      }
+      await run("library.relocate", { path: i.path, mode: "use" });
+      setRoot(i.path);
+      setNote(t("ui.welcome.library_used", { count: i.items }));
+    } catch (e) {
+      setNote(isCommandError(e) ? e.message : String(e));
+    }
+  };
   useEffect(() => {
     run<{ root: string }>("library.list", { limit: 1 })
       .then((r) => setRoot(r.root))
@@ -129,8 +155,20 @@ function Startup() {
           <p className="welcome-sub">{t("ui.welcome.library_where")}</p>
           <code className="path">{root}</code>
           <p className="muted">{t("ui.welcome.library_change_later")}</p>
+          <p className="muted">{t("ui.welcome.library_existing_help")}</p>
+          <div className="welcome-actions">
+            <button type="button" className="btn" onClick={() => void chooseExisting()}>
+              {t("ui.welcome.library_existing")}
+            </button>
+          </div>
+          {note && <p role="status">{note}</p>}
         </>
       )}
+      <p className="muted">{t("ui.welcome.settings_import_help")}</p>
+      <div className="welcome-actions">
+        <ImportSettingsButton onStatus={setSettingsNote} onError={setSettingsNote} />
+      </div>
+      {settingsNote && <p role="status">{settingsNote}</p>}
     </>
   );
 }

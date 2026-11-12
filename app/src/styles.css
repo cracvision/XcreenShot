@@ -4125,6 +4125,43 @@ html.overlay-root.overlay-native #root {
   font-weight: 600;
 }
 
+/* Use an existing library, Import settings (APP-055). */
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Help > Move XcreenShot to another computer (APP-055). */
+.move-computer {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 560px;
+}
+
+.move-computer h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.move-computer p {
+  margin: 0 0 var(--space-2);
+}
+
+.mc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mc-row .path {
+  flex: 1 1 240px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .welcome-keys {
   margin: 0;
   padding: 0;

@@ -2,6 +2,7 @@
 // The only work done here is asking the system for a file name and showing the
 // answer of the command.
 import { openShortcutSheet } from "./sheetData";
+import { openMoveComputer } from "../library/moveComputerState";
 import { duplicateDocs, duplicateItems, trayTargets } from "./trayActions";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import i18next from "i18next";
@@ -535,6 +536,7 @@ const IN_LIBRARY = new Set([
   "rename_item",
   "duplicate_item",
   "shortcut_sheet",
+  "move_computer",
   "print",
   "show_in_folder",
   "delete_item",
@@ -593,6 +595,10 @@ export function performAction(action: string): boolean {
     case "shortcut_sheet":
       // APP-023.
       openShortcutSheet();
+      return true;
+    case "move_computer":
+      // APP-055.
+      openMoveComputer();
       return true;
     case "pin_item": {
       // TRY-004: the tray item with the focus (and the selection it is in), or the

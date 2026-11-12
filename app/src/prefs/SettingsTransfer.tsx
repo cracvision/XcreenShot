@@ -50,7 +50,6 @@ export function SettingsTransfer() {
   const tt = (k: string, o?: Record<string, unknown>) => t(`ui.prefs.transfer.${k}`, o ?? {});
   const [exporting, setExporting] = useState(false);
   const [chosen, setChosen] = useState<Group[]>([...GROUPS]);
-  const [importing, setImporting] = useState<{ path: string; preview: Preview } | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
@@ -64,19 +63,6 @@ export function SettingsTransfer() {
       await run("settings.export", { out: path, groups: chosen });
       setExporting(false);
       setStatus(tt("exported"));
-    } catch (e) {
-      setError(String((e as { message?: string }).message ?? e));
-    }
-  };
-
-  const pick = async () => {
-    setError("");
-    const path = await open({ filters: [{ name: tt("file_type"), extensions: ["xsettings"] }] });
-    if (typeof path !== "string") return;
-    try {
-      const preview = await run<Preview>("settings.import", { path, dryRun: true });
-      setChosen(GROUPS.filter((g) => preview.groups[g] !== undefined));
-      setImporting({ path, preview });
     } catch (e) {
       setError(String((e as { message?: string }).message ?? e));
     }
@@ -97,9 +83,13 @@ export function SettingsTransfer() {
           >
             {tt("export")}
           </button>
-          <button type="button" className="btn" onClick={() => void pick()}>
-            {tt("import")}
-          </button>
+          <ImportSettingsButton
+            onStatus={(text) => {
+              setError("");
+              setStatus(text);
+            }}
+            onError={setError}
+          />
         </div>
         <div className="description" role="status">
           {error ? <span className="warning-text">{error}</span> : status || tt("help")}
@@ -129,6 +119,37 @@ export function SettingsTransfer() {
           <GroupChecks groups={[...GROUPS]} chosen={chosen} set={setChosen} />
         </Dialog>
       )}
+    </>
+  );
+}
+
+/** Import settings… (APP-011): choose an .xsettings file, see what each group changes,
+ * import. Also in the welcome, for a new computer (APP-055). */
+export function ImportSettingsButton(props: {
+  onStatus: (text: string) => void;
+  onError: (text: string) => void;
+}) {
+  const { t } = useTranslation();
+  const tt = (k: string) => t(`ui.prefs.transfer.${k}`);
+  const [chosen, setChosen] = useState<Group[]>([...GROUPS]);
+  const [importing, setImporting] = useState<{ path: string; preview: Preview } | null>(null);
+  const pick = async () => {
+    props.onError("");
+    const path = await open({ filters: [{ name: tt("file_type"), extensions: ["xsettings"] }] });
+    if (typeof path !== "string") return;
+    try {
+      const preview = await run<Preview>("settings.import", { path, dryRun: true });
+      setChosen(GROUPS.filter((g) => preview.groups[g] !== undefined));
+      setImporting({ path, preview });
+    } catch (e) {
+      props.onError(String((e as { message?: string }).message ?? e));
+    }
+  };
+  return (
+    <>
+      <button type="button" className="btn" onClick={() => void pick()}>
+        {tt("import")}
+      </button>
       {importing && (
         <ImportDialog
           path={importing.path}
@@ -137,7 +158,7 @@ export function SettingsTransfer() {
           setChosen={setChosen}
           done={(text) => {
             setImporting(null);
-            setStatus(text);
+            props.onStatus(text);
           }}
           cancel={() => setImporting(null)}
         />

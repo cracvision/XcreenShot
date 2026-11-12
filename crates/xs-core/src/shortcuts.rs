@@ -704,6 +704,11 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"shortcut_sheet"}"#,
         ),
         editor(
+            "editor.move_computer",
+            "editor.action",
+            r#"{"action":"move_computer"}"#,
+        ),
+        editor(
             "editor.show_in_folder",
             "editor.action",
             r#"{"action":"show_in_folder"}"#,

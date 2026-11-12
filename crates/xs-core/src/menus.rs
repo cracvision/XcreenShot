@@ -511,6 +511,8 @@ fn help_items() -> Vec<MenuEntry> {
         },
         MenuEntry::Separator,
         cmd("welcome", "menu.welcome", "app.welcome"),
+        // APP-055.
+        action("editor.move_computer", "menu.move_computer", "move_computer"),
         cmd("feedback", "menu.feedback", "app.feedback"),
         MenuEntry::Command {
             id: "about",

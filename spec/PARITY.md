@@ -318,7 +318,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-029 | Biblioteca en una carpeta sincronizada | M2 | Must | En curso (Windows: Cambiar… ofrece las carpetas de OneDrive (personal y trabajo), Dropbox, Google Drive, Box e iCloud y dice si ya tienen una biblioteca; los archivos solo en la nube no se leen al indexar ni al hacer miniaturas, llevan la insignia "En la nube" y la búsqueda por etiqueta los encuentra; las etiquetas de otro equipo llegan por el `.xmeta`. Las copias en conflicto junto a su original llevan la insignia "Conflicto" y Resolver (quedarse con una o conservar las dos, `library.resolve`). Abrir un elemento solo en la nube avisa mientras se descarga; mover allí una biblioteca de más de 5 GB avisa del espacio en el servicio) |
 | LIB-030 | Biblioteca en una ubicación de red | M2 | Should | — |
 | LIB-031 | Fusionar bibliotecas | M2 | Should | En curso (Windows: Biblioteca > ⋯ > Fusionar otra biblioteca… y, en Preferencias > Biblioteca > Cambiar…, "Fusionarla con la mía" cuando la carpeta ya tiene una; copia con sus `.xmeta`, sin tocar la otra carpeta; los duplicados por contenido no se copian y le pasan sus etiquetas y favorito al de aquí; nombre ocupado con " (2)"; etiquetas unidas sin distinguir mayúsculas; progreso en la barra de estado, Cancelar que quita lo copiado e informe final; `library.merge` en el CLI y MCP) |
-| LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
+| LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | En curso (Windows: la carpeta copiada a otro sitio y con otro perfil, con su índice o sin él, muestra todo con sus IDs, etiquetas y favoritos, sin renombrar ni añadir archivos; se elige en la bienvenida (Usar una biblioteca existente…) o en Preferencias > Biblioteca > Cambiar…; falta probar la carpeta de Windows en un Mac) |
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | En curso (Windows: ⋯ > Exportar toda la biblioteca…, toda o lo filtrado, PNG o JPG, subcarpetas, `metadatos.csv`, progreso, Cancelar y resumen; `library.export`. Videos y guías llegan con M3 y M4) |
 | LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; más `library.export` (LIB-018, LIB-033), `library.import` (LIB-024), `library.duplicate` (TRY-010), `library.resolve` (LIB-029) y `library.open_url` (LIB-012)) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
@@ -349,7 +349,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | En curso |
 | APP-003 | Iniciar al iniciar sesión | M0 | Must | Win |
 | APP-004 | Cerrar ventanas y salir | M0 | Must | En curso |
-| APP-005 | Primer arranque | M1 | Should | En curso |
+| APP-005 | Primer arranque | M1 | Should | En curso (M2: el paso Inicio y biblioteca ofrece Usar una biblioteca existente… e Importar ajustes…, APP-055) |
 | APP-006 | Ventana de Preferencias | M0 | Must | En curso |
 | APP-007 | Sección General | M0 | Must | En curso |
 | APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |
@@ -399,7 +399,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-052 | Escala de la biblioteca | M2 | Must | En curso (Windows: búsqueda y filtros sobre 50.000 elementos en 33 a 136 ms en release; con 20.000 en depuración, primeras miniaturas en 0,7 s y recorrido completo sin fotogramas de más de 100 ms; falta medir 50.000 con el instalador y la reconstrucción en segundo plano) |
 | APP-053 | Cruceta con varios monitores 4K | M1 | Must | En curso |
 | APP-054 | Local y privado | M0 | Must | En curso |
-| APP-055 | Portabilidad de datos y migración entre equipos | M2 | Should | — |
+| APP-055 | Portabilidad de datos y migración entre equipos | M2 | Should | En curso (Windows: Ayuda > Mover XcreenShot a otro equipo… explica los dos pasos con Mostrar la carpeta (o que ya está sincronizada) y Exportar ajustes…, y qué hacer en el equipo nuevo; la bienvenida ofrece Usar una biblioteca existente… e Importar ajustes…; una carpeta con biblioteca ofrece Usarla o Fusionarla (LIB-031); un `.xshot` se abre con el lector ZIP de Windows y trae `document.json` y `base.png`; falta el criterio Windows → Mac) |
 
 ## 06-inteligentes.md
 

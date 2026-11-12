@@ -1159,7 +1159,8 @@
       "editor_show_in_library": "Show in library",
       "editor_pin_item": "Pin or unpin in the tray",
       "editor_duplicate_item": "Duplicate the item",
-      "editor_shortcut_sheet": "Keyboard shortcuts sheet"
+      "editor_shortcut_sheet": "Keyboard shortcuts sheet",
+      "editor_move_computer": "Move XcreenShot to another computer"
     }
   },
   "tray": {
@@ -1320,7 +1321,8 @@
     "duplicate_item": "Duplicate",
     "details_tray": "Details",
     "create": "Create",
-    "shortcut_sheet": "Keyboard shortcuts"
+    "shortcut_sheet": "Keyboard shortcuts",
+    "move_computer": "Move XcreenShot to another computer…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -1403,7 +1405,14 @@
       "library_change_later": "You can see it and open it later in Preferences > Library.",
       "done_title": "All set",
       "done_body": "Press {{keys}} whenever you want to capture. Everything you set here can be changed in Preferences.",
-      "done_try": "Take a test capture"
+      "done_try": "Take a test capture",
+      "library_existing": "Use an existing library…",
+      "library_existing_help": "Coming from another computer? Choose your copied or synced library folder: it is used as it is, with its tags.",
+      "library_choose": "Choose the folder of your library",
+      "library_none": "That folder has no XcreenShot library or images. Choose the folder you copied.",
+      "library_used_one": "Now your library is this folder, with {{count}} item.",
+      "library_used_other": "Now your library is this folder, with {{count}} items.",
+      "settings_import_help": "Bringing your settings in an .xsettings file? Import them here."
     },
     "help": {
       "title": "XcreenShot Help",
@@ -3195,6 +3204,22 @@
       "drag_preparing_other": "Preparing {{count}} images to drag…",
       "drag_too_soon": "The image was not ready when you let go. Drag it again and hold the button a moment, or copy it.",
       "drag_failed": "Could not drag: {{reason}}"
+    },
+    "move_computer": {
+      "title": "Move XcreenShot to another computer",
+      "intro": "Your captures and your settings can go with you. On this computer:",
+      "library_title": "1. Take the library",
+      "library_copy": "Copy this whole folder to an external drive or a network folder (with its hidden files):",
+      "library_synced": "Your library is in {{service}}: it reaches the other computer on its own. There, wait until it is downloaded.",
+      "library_synced_generic": "Your library is in a synced folder: it reaches the other computer on its own. There, wait until it is downloaded.",
+      "show": "Show the folder",
+      "settings_title": "2. Take the settings",
+      "settings_help": "Preferences, shortcuts, themes, saved effects and the toolbar go in one .xsettings file. No passwords, keys or captures.",
+      "export": "Export settings…",
+      "exported": "Settings saved in {{name}}.",
+      "new_title": "3. On the new computer",
+      "new_steps": "Install XcreenShot. In the welcome, choose Use an existing library and pick the copied folder, then Import settings with the .xsettings file. Later, Preferences > Library > Change… and Preferences > Advanced > Import do the same.",
+      "formats": "Everything is in open formats: .xshot files are ZIPs with the image as PNG, so any program can read them."
     }
   },
   "history": {

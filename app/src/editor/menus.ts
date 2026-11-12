@@ -425,6 +425,7 @@ export function useMenuBar(): void {
       "editor.rename_item": inLibrary ? picked === 1 : hasDoc && hasFile,
       "editor.pin_item": !inLibrary && hasDoc,
       "editor.shortcut_sheet": true,
+      "editor.move_computer": true,
       "editor.duplicate_item": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.show_in_folder": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.delete_item": inLibrary ? picked > 0 : hasDoc && hasFile,

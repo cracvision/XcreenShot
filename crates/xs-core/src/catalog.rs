@@ -1858,7 +1858,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 105] = [
+pub const EDITOR_ACTIONS: [&str; 106] = [
     "open",
     "save",
     "save_as",
@@ -1889,6 +1889,7 @@ pub const EDITOR_ACTIONS: [&str; 105] = [
     "pin_item",
     "duplicate_item",
     "shortcut_sheet",
+    "move_computer",
     "show_in_folder",
     "delete_item",
     "select_all",

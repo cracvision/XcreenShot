@@ -1159,7 +1159,8 @@
       "editor_show_in_library": "Mostrar en la biblioteca",
       "editor_pin_item": "Fijar o desfijar en la bandeja",
       "editor_duplicate_item": "Duplicar el elemento",
-      "editor_shortcut_sheet": "Hoja de atajos de teclado"
+      "editor_shortcut_sheet": "Hoja de atajos de teclado",
+      "editor_move_computer": "Mover XcreenShot a otro equipo"
     }
   },
   "tray": {
@@ -1320,7 +1321,8 @@
     "duplicate_item": "Duplicar",
     "details_tray": "Detalles",
     "create": "Crear",
-    "shortcut_sheet": "Atajos de teclado"
+    "shortcut_sheet": "Atajos de teclado",
+    "move_computer": "Mover XcreenShot a otro equipo…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -1403,7 +1405,14 @@
       "library_change_later": "Puedes verla y abrirla más tarde en Preferencias > Biblioteca.",
       "done_title": "Todo listo",
       "done_body": "Pulsa {{keys}} cuando quieras capturar. Todo lo de aquí se puede cambiar en Preferencias.",
-      "done_try": "Hacer una captura de prueba"
+      "done_try": "Hacer una captura de prueba",
+      "library_existing": "Usar una biblioteca existente…",
+      "library_existing_help": "¿Vienes de otro equipo? Elige la carpeta de tu biblioteca copiada o sincronizada: se usa tal cual, con sus etiquetas.",
+      "library_choose": "Elige la carpeta de tu biblioteca",
+      "library_none": "Esa carpeta no tiene una biblioteca de XcreenShot ni imágenes. Elige la carpeta que copiaste.",
+      "library_used_one": "Ahora tu biblioteca es esta carpeta, con {{count}} elemento.",
+      "library_used_other": "Ahora tu biblioteca es esta carpeta, con {{count}} elementos.",
+      "settings_import_help": "¿Traes tus ajustes en un archivo .xsettings? Impórtalos aquí."
     },
     "help": {
       "title": "Ayuda de XcreenShot",
@@ -3195,6 +3204,22 @@
       "drag_preparing_other": "Preparando {{count}} imágenes para arrastrarlas…",
       "drag_too_soon": "La imagen no estaba lista al soltar. Vuelve a arrastrarla manteniendo el botón un momento, o cópiala.",
       "drag_failed": "No se pudo arrastrar: {{reason}}"
+    },
+    "move_computer": {
+      "title": "Mover XcreenShot a otro equipo",
+      "intro": "Tus capturas y tus ajustes pueden ir contigo. En este equipo:",
+      "library_title": "1. Llevar la biblioteca",
+      "library_copy": "Copia esta carpeta entera a un disco externo o a una carpeta de red (con sus archivos ocultos):",
+      "library_synced": "Tu biblioteca está en {{service}}: llega sola al otro equipo. Allí, espera a que termine de descargarse.",
+      "library_synced_generic": "Tu biblioteca está en una carpeta sincronizada: llega sola al otro equipo. Allí, espera a que termine de descargarse.",
+      "show": "Mostrar la carpeta",
+      "settings_title": "2. Llevar los ajustes",
+      "settings_help": "Preferencias, atajos, temas, efectos guardados y la barra de herramientas van en un archivo .xsettings. Sin contraseñas, claves ni capturas.",
+      "export": "Exportar ajustes…",
+      "exported": "Ajustes guardados en {{name}}.",
+      "new_title": "3. En el equipo nuevo",
+      "new_steps": "Instala XcreenShot. En la bienvenida, elige Usar una biblioteca existente y escoge la carpeta copiada; después, Importar ajustes con el archivo .xsettings. Más tarde, Preferencias > Biblioteca > Cambiar… y Preferencias > Avanzado > Importar hacen lo mismo.",
+      "formats": "Todo está en formatos abiertos: los .xshot son archivos ZIP con la imagen en PNG, así que cualquier programa puede leerlos."
     }
   },
   "history": {
