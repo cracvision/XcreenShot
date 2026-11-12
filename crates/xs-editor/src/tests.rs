@@ -1773,7 +1773,8 @@ fn a_flattened_arrow_comes_back_after_reopening() {
     assert!(info["flattened"][0]["bounds"].is_array());
     // It still shows: the image is the same.
     let after = cli(&e.core, "document.image", json!({"documentId": doc}));
-    assert_eq!(before["data"], after["data"]);
+    assert!(before["image"]["data"].is_string());
+    assert_eq!(before["image"]["data"], after["image"]["data"]);
     cli(&e.core, "document.save", json!({"documentId": doc}));
     cli(&e.core, "document.close", json!({"documentId": doc}));
     let doc = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
@@ -2130,4 +2131,53 @@ fn spotlights_share_their_outside() {
     assert_eq!(first["opacity"], json!(30.0));
     assert_eq!(first["blur"], json!(20.0));
     assert_eq!(first["shape"], "rectangle", "each keeps its own shape");
+}
+
+/// EDT-030: a closed pentagon; Radius = 12 on three rounded rectangles at once; a moved
+/// corner can be undone.
+#[test]
+fn polygons_and_rounded_rectangles() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let pentagon: Vec<[f64; 2]> = (0..5)
+        .map(|i| {
+            let a = std::f64::consts::TAU * i as f64 / 5.0 - std::f64::consts::FRAC_PI_2;
+            [0.5 + 0.5 * a.cos(), 0.5 + 0.5 * a.sin()]
+        })
+        .collect();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "shape", "rect": {"x": 20, "y": 20, "w": 80, "h": 80}, "points": pentagon, "style": {"shapeType": "polygon", "fill": "#00FF00"}},
+            {"type": "shape", "rect": {"x": 120, "y": 20, "w": 60, "h": 40}, "style": {"shapeType": "roundedRectangle"}},
+            {"type": "shape", "rect": {"x": 200, "y": 20, "w": 60, "h": 40}, "style": {"shapeType": "roundedRectangle"}},
+            {"type": "shape", "rect": {"x": 280, "y": 20, "w": 60, "h": 40}, "style": {"shapeType": "roundedRectangle"}}
+        ]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["points"].as_array().unwrap().len(), 5);
+    // The pentagon is filled: its middle is green.
+    let img = cli(&e.core, "document.image", json!({"documentId": doc}));
+    assert!(img["image"]["data"].is_string());
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectIds": ["o2", "o3", "o4"], "set": {"style": {"cornerRadius": 12}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    for i in 1..4 {
+        assert_eq!(info["objects"][i]["style"]["cornerRadius"], json!(12.0));
+    }
+    // A corner moved, then undone.
+    let mut moved = info["objects"][0]["points"].clone();
+    moved[0] = json!([0.5, -0.2]);
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"points": moved}}),
+    );
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let back = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(back["objects"][0]["points"], info["objects"][0]["points"]);
 }

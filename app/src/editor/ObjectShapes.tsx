@@ -105,20 +105,65 @@ function Outline(props: {
   );
 }
 
+/** The corners of a triangle, a diamond or a polygon filling `box`, or null for the
+ * shapes Konva draws itself (EDT-030). The same as `shape_path` in Rust. */
+function shapePoints(o: ShapeObject, box: { x: number; y: number; w: number; h: number }) {
+  const { x, y, w, h } = box;
+  switch (o.style.shapeType) {
+    case "triangle":
+      return [x + w / 2, y, x + w, y + h, x, y + h];
+    case "diamond":
+      return [x + w / 2, y, x + w, y + h / 2, x + w / 2, y + h, x, y + h / 2];
+    case "polygon":
+      return o.points && o.points.length >= 3
+        ? o.points.flatMap((p) => [x + p[0] * w, y + p[1] * h])
+        : null;
+    default:
+      return null;
+  }
+}
+
+/** One of a shape's two layers: its fill over `box`, or its outline along it. */
+function ShapeLayer(props: {
+  o: ShapeObject;
+  box: { x: number; y: number; w: number; h: number };
+  radius: number;
+  extra: Konva.ShapeConfig;
+}) {
+  const { o, box, radius, extra } = props;
+  const pts = shapePoints(o, box);
+  if (pts) return <Line points={pts} closed {...extra} />;
+  if (o.style.shapeType === "roundedRectangle")
+    return (
+      <Rect
+        x={box.x}
+        y={box.y}
+        width={Math.max(box.w, 0)}
+        height={Math.max(box.h, 0)}
+        cornerRadius={Math.max(0, Math.min(radius, box.w / 2, box.h / 2))}
+        {...extra}
+      />
+    );
+  return <Outline ellipse={o.style.shapeType === "ellipse"} box={box} extra={extra} />;
+}
+
 export function ShapeShape({ o, scale }: { o: ShapeObject; scale: number }) {
   const { rect, style } = o;
-  const ellipse = style.shapeType === "ellipse";
   const local = { x: -rect.w / 2, y: -rect.h / 2, w: rect.w, h: rect.h };
   const inner = innerRect(local, style.outlineWidth);
   const lineDash = dash(style.lineStyle, style.outlineWidth);
+  const radius = style.cornerRadius ?? 0;
   return (
     <Group x={rect.x + rect.w / 2} y={rect.y + rect.h / 2} rotation={o.rotation} listening={false}>
       <Translucent opacity={style.opacity} scale={scale}>
-        {style.fill && <Outline ellipse={ellipse} box={local} extra={{ fill: style.fill }} />}
+        {style.fill && (
+          <ShapeLayer o={o} box={local} radius={radius} extra={{ fill: style.fill }} />
+        )}
         {style.outlineWidth > 0 && (
-          <Outline
-            ellipse={ellipse}
+          <ShapeLayer
+            o={o}
             box={inner}
+            radius={Math.max(0, radius - style.outlineWidth / 2)}
             extra={{
               stroke: style.outline,
               strokeWidth: style.outlineWidth,

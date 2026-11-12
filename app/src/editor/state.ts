@@ -77,7 +77,16 @@ export interface TextObject {
   layout: { width: number; height: number };
 }
 
-export type ShapeKind = "rectangle" | "ellipse";
+export type ShapeKind =
+  "rectangle" | "ellipse" | "roundedRectangle" | "triangle" | "diamond" | "polygon";
+export const SHAPE_KINDS: ShapeKind[] = [
+  "rectangle",
+  "ellipse",
+  "roundedRectangle",
+  "triangle",
+  "diamond",
+  "polygon",
+];
 
 /** Shape properties of M1 (EDT-029). */
 export interface ShapeStyle {
@@ -88,6 +97,8 @@ export interface ShapeStyle {
   outlineWidth: number;
   lineStyle: LineStyle;
   opacity: number;
+  /** Rounded rectangle (EDT-030). */
+  cornerRadius: number;
 }
 
 export interface ShapeObject {
@@ -96,6 +107,8 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+  /** A polygon's corners, as shares of its box (EDT-030). */
+  points?: Point[];
 }
 
 /** Spotlight (EDT-039). */

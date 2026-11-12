@@ -55,6 +55,7 @@ import {
   isSegment,
   type CalloutObject,
   type MagnifyObject,
+  type ShapeObject,
   type DocDetails,
   type DocObject,
 } from "./state";
@@ -63,6 +64,7 @@ import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
 import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
 import { hasRadius, MAX_TAILS } from "./callouts";
+import { corners as polyCorners, fromPoints as polyFromPoints, refit, sideAt } from "./polygon";
 import {
   fitZoom,
   imagePoint,
@@ -98,7 +100,9 @@ type HandleHit =
   | { multi: Handle }
   // A callout's tail tip, its + (a new tail), its corner radius, its anchor (EDT-028).
   | { tail: CalloutObject; index: number | null }
-  | { radius: CalloutObject }
+  | { radius: CalloutObject | ShapeObject }
+  // A polygon's corner (EDT-030).
+  | { vertex: ShapeObject; index: number }
   | { anchor: CalloutObject }
   | { zone: MagnifyObject };
 
@@ -137,6 +141,7 @@ type Drag =
   // A callout's tail tip (index null: a new one), radius or body alone (EDT-028).
   | { kind: "tail"; id: string; index: number | null; point: Point; start: Point }
   | { kind: "radius"; id: string; box: Box; value: number }
+  | { kind: "vertex"; id: string; index: number; point: Point }
   | { kind: "anchor"; id: string; start: Point; delta: Point }
   // A lens's zone, moved alone (EDT-038).
   | { kind: "zone"; id: string; start: Point; delta: Point }
@@ -225,6 +230,21 @@ function handlesOf(o: DocObject): Handle[] {
   return [];
 }
 
+/** A polygon being drawn (EDT-030): its corners so far and a line to the pointer. */
+function PolygonDraft({ points, scale }: { points: Point[]; scale: number }) {
+  const at = usePointer((s) => s.point);
+  const line = at ? [...points, at] : points;
+  return (
+    <Line
+      points={line.flat()}
+      stroke={ACCENT}
+      strokeWidth={1.5 / scale}
+      dash={[6 / scale, 4 / scale]}
+      listening={false}
+    />
+  );
+}
+
 /** Whether a lens sits away from its zone (EDT-038). */
 function lensAway(o: MagnifyObject): boolean {
   const z = o.source;
@@ -285,6 +305,48 @@ export function Canvas({ doc }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [space, setSpace] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
+  /** A polygon being drawn, a corner per click (EDT-030). Another tool or document
+   * drops it. */
+  const [polyDraft, setPolyDraft] = useState<{ doc: string; points: Point[] } | null>(null);
+  const poly =
+    polyDraft && polyDraft.doc === doc.documentId && tool === "shape" ? polyDraft.points : null;
+  const setPoly = (points: Point[] | null) =>
+    setPolyDraft(points ? { doc: doc.documentId, points } : null);
+  const closePolygon = async (pts: Point[]) => {
+    setPoly(null);
+    // A double click also clicked twice on its corner.
+    const kept = pts.filter((p, i) => {
+      const prev = pts[i - 1];
+      return !prev || Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 0.5;
+    });
+    if (kept.length < 3) return;
+    const { rect, points } = polyFromPoints(kept);
+    try {
+      const r = await run<{ ids: string[] }>("document.annotate", {
+        documentId: doc.documentId,
+        objects: [{ type: "shape", rect, points, style: { shapeType: "polygon" } }],
+      });
+      if (r.ids[0] && setting("editor.autoSelectAfterDraw", true)) setSelection([r.ids[0]]);
+    } catch (err) {
+      showError(err);
+    }
+  };
+  // Enter closes it, Backspace takes the last corner away, Esc cancels it.
+  useEffect(() => {
+    if (!poly) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") void closePolygon(poly);
+      else if (e.key === "Backspace") setPoly(poly.length > 1 ? poly.slice(0, -1) : null);
+      else if (e.key === "Escape") setPoly(null);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poly]);
+
   /** What a finished gesture showed, until the core reports the change. */
   const [pending, setPending] = useState<{ version: number; object: DocObject } | null>(null);
 
@@ -480,7 +542,18 @@ export function Canvas({ doc }: Props) {
         return { ...o, tails };
       }
       case "radius":
+        if (o.type === "shape") return { ...o, style: { ...o.style, cornerRadius: drag.value } };
         return o.type === "callout" ? { ...o, style: { ...o.style, cornerRadius: drag.value } } : o;
+      case "vertex": {
+        // The corner follows the pointer; the box grows or shrinks around them all.
+        const box = boxOf(o);
+        if (o.type !== "shape" || !box || !o.points) return o;
+        const pts = polyCorners(box, o.points).map((q, k): Point =>
+          k === drag.index ? drag.point : q,
+        );
+        const { rect, points } = refit(box, pts);
+        return { ...o, rect, points };
+      }
       case "anchor":
         // The body moves; the tails stay where they point (EDT-028). A lens moves
         // away from its zone (EDT-038).
@@ -566,6 +639,36 @@ export function Canvas({ doc }: Props) {
       </>
     );
   };
+  /** A rounded rectangle's radius and a polygon's corners (EDT-030). */
+  const shapeHandles = (o: ShapeObject, box: Box) => {
+    const diamond = (q: Point, key: string, filled: boolean) => {
+      const [x, y] = toScreen(q);
+      return (
+        <Rect
+          key={key}
+          x={x}
+          y={y}
+          width={HANDLE - 2}
+          height={HANDLE - 2}
+          offsetX={(HANDLE - 2) / 2}
+          offsetY={(HANDLE - 2) / 2}
+          rotation={45 + box.rotation}
+          fill={filled ? ACCENT : "#ffffff"}
+          stroke={filled ? "#ffffff" : ACCENT}
+          strokeWidth={1.5}
+        />
+      );
+    };
+    return (
+      <>
+        {o.style.shapeType === "roundedRectangle" &&
+          diamond(radiusPoint(box, o.style.cornerRadius), "radius", false)}
+        {o.style.shapeType === "polygon" &&
+          o.points &&
+          polyCorners(box, o.points).map((q, i) => diamond(q, `v${i}`, true))}
+      </>
+    );
+  };
   /** The box around several selected objects, as they are stored (EDT-080). */
   const multiBox = (): Box | null => {
     if (selection.length < 2) return null;
@@ -606,6 +709,19 @@ export function Canvas({ doc }: Props) {
     if (o.type === "magnify" && !o.locked && lensAway(o)) {
       const z = o.source;
       if (near([z.x + z.w / 2, z.y + z.h / 2], s)) return { zone: o };
+    }
+    // A polygon's corners and a rounded rectangle's radius (EDT-030).
+    if (o.type === "shape" && !o.locked) {
+      const box = boxOf(o);
+      if (box && o.style.shapeType === "polygon" && o.points) {
+        const pts = polyCorners(box, o.points);
+        for (let i = pts.length - 1; i >= 0; i--) {
+          const q = pts[i];
+          if (q && near(q, s)) return { vertex: o, index: i };
+        }
+      }
+      if (box && o.style.shapeType === "roundedRectangle")
+        if (near(radiusPoint(box, o.style.cornerRadius), s)) return { radius: o };
     }
     if (o.type === "callout" && !o.locked) {
       const box = boxOf(o);
@@ -704,6 +820,26 @@ export function Canvas({ doc }: Props) {
         return;
       }
     }
+    if (handle && "vertex" in handle) {
+      const o = handle.vertex;
+      const box = boxOf(o);
+      // Alt+click takes a corner away, down to three (EDT-030).
+      if (e.altKey) {
+        if (box && o.points && o.points.length > 3) {
+          const pts = polyCorners(box, o.points).filter((_, k) => k !== handle.index);
+          void run("document.update_object", {
+            documentId: doc.documentId,
+            objectId: o.id,
+            set: refit(box, pts),
+          }).catch(showError);
+        }
+        return;
+      }
+      const at = box && o.points ? polyCorners(box, o.points)[handle.index] : undefined;
+      capture();
+      setDrag({ kind: "vertex", id: o.id, index: handle.index, point: at ?? p });
+      return;
+    }
     if (handle && "zone" in handle) {
       capture();
       setDrag({ kind: "zone", id: handle.zone.id, start: p, delta: [0, 0] });
@@ -737,6 +873,36 @@ export function Canvas({ doc }: Props) {
         );
         return;
       }
+    }
+    // Alt+click on a side of the selected polygon adds a corner there (EDT-030).
+    if (e.altKey && selection.length === 1) {
+      const sel = shown.find((o) => o.id === selection[0]);
+      const box = sel ? boxOf(sel) : null;
+      if (sel?.type === "shape" && sel.style.shapeType === "polygon" && sel.points && box) {
+        const pts = polyCorners(box, sel.points);
+        const side = sideAt(pts, p, (HANDLE / 2 + 2) / lay.scale);
+        if (side >= 0) {
+          const next = [...pts.slice(0, side + 1), p, ...pts.slice(side + 1)];
+          void run("document.update_object", {
+            documentId: doc.documentId,
+            objectId: sel.id,
+            set: refit(box, next),
+          }).catch(showError);
+          return;
+        }
+      }
+    }
+    // A polygon is drawn a corner per click (EDT-030).
+    if (tool === "shape" && styles?.shape.shapeType === "polygon") {
+      const draft = poly ?? [];
+      const first = draft[0];
+      if (draft.length >= 3 && first && near(first, s)) {
+        void closePolygon(draft);
+        return;
+      }
+      const last = draft[draft.length - 1];
+      setPoly([...draft, e.shiftKey && last ? constrain45(last, p) : p]);
+      return;
     }
     // EDT-022: a click on an object selects it, except with Alt (draw over it).
     const hit = e.altKey && tool !== "move" ? null : hitObject(p);
@@ -878,6 +1044,8 @@ export function Canvas({ doc }: Props) {
         return { ...d, angle: normalized(rotateTo(d.start, p, e.shiftKey)) };
       case "tail":
         return { ...d, point: p };
+      case "vertex":
+        return { ...d, point: p };
       case "radius": {
         const [lx] = toLocal(d.box, p);
         const most = Math.min(200, d.box.w / 2, d.box.h / 2);
@@ -928,7 +1096,7 @@ export function Canvas({ doc }: Props) {
           ? h.crop
           : "multi" in h
             ? h.multi
-            : "end" in h || "tail" in h || "radius" in h
+            : "end" in h || "tail" in h || "radius" in h || "vertex" in h
               ? "end"
               : "anchor" in h || "zone" in h
                 ? "anchor"
@@ -1065,6 +1233,16 @@ export function Canvas({ doc }: Props) {
         } else if (inside) tails = c.tails.filter((_, k) => k !== d.index);
         else tails = c.tails.map((t, k): Point => (k === d.index ? point : t));
         await run("document.update_object", { documentId: id, objectId: d.id, set: { tails } });
+      } else if (d.kind === "vertex") {
+        const o = committed.get(d.id);
+        const box = o ? boxOf(o) : null;
+        if (o?.type !== "shape" || !box || !o.points) return;
+        const pts = polyCorners(box, o.points).map((q, k): Point => (k === d.index ? d.point : q));
+        await run("document.update_object", {
+          documentId: id,
+          objectId: d.id,
+          set: refit(box, pts),
+        });
       } else if (d.kind === "radius") {
         await run("document.update_object", {
           documentId: id,
@@ -1179,6 +1357,10 @@ export function Canvas({ doc }: Props) {
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const p = toCanvas(local(e));
+    if (poly) {
+      if (poly.length >= 3) void closePolygon(poly);
+      return;
+    }
     // On a group: enter it, and select what was clicked inside (EDT-082).
     {
       const hit = hitObject(p);
@@ -1431,6 +1613,7 @@ export function Canvas({ doc }: Props) {
         />
       )}
       {dashedBox("text")}
+      {poly && <PolygonDraft points={poly} scale={scale} />}
       {dashedBox("step")}
       {dashedBox("callout")}
       {dashedBox("magnify")}
@@ -1795,6 +1978,7 @@ export function Canvas({ doc }: Props) {
                             );
                           })}
                         {o.type === "callout" && calloutHandles(o, box)}
+                        {o.type === "shape" && shapeHandles(o, box)}
                         {o.type === "magnify" &&
                           lensAway(o) &&
                           (() => {

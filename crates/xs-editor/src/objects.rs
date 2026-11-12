@@ -111,7 +111,8 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
     match kind {
         "arrow" | "line" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
-        "shape" | "blur" | "image" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
+        "shape" => Some(&["rect", "rotation", "points"]),
+        "blur" | "image" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
         "magnify" => Some(&["source", "at"]),
@@ -167,7 +168,11 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
         }
         "shape" => {
             let s = ShapeObject::from_props(props)?;
-            json!({"rect": s.rect, "rotation": s.rotation, "style": s.style})
+            let mut v = json!({"rect": s.rect, "rotation": s.rotation, "style": s.style});
+            if !s.points.is_empty() {
+                v["points"] = json!(s.points);
+            }
+            v
         }
         "blur" => {
             let b = BlurObject::from_props(props)?;

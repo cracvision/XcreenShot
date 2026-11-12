@@ -33,6 +33,7 @@ import {
   type LensShape,
   SPOT_SHAPES,
   type SpotShape,
+  SHAPE_KINDS,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -307,7 +308,7 @@ function Properties({ target }: { target: Target }) {
     <SelectField
       label={t("ui.editor.prop.shape_type")}
       value={v<ShapeKind>("shapeType")}
-      options={(["rectangle", "ellipse"] as const).map((s) => ({
+      options={(kind === "shape" ? SHAPE_KINDS : (["rectangle", "ellipse"] as const)).map((s) => ({
         value: s,
         label: t(`ui.editor.shape.${s}`),
       }))}
@@ -422,6 +423,18 @@ function Properties({ target }: { target: Target }) {
       return (
         <>
           {shapeType}
+          {/* Rounded rectangle: its corners, in all the selected ones (EDT-030). */}
+          {v<ShapeKind>("shapeType") === "roundedRectangle" && (
+            <NumberField
+              label={t("ui.editor.prop.corner_radius")}
+              value={num("cornerRadius")}
+              min={0}
+              max={500}
+              step={1}
+              unit="px"
+              onCommit={(cornerRadius) => commit({ cornerRadius })}
+            />
+          )}
           <ColorPicker
             label={t("ui.editor.prop.fill")}
             value={v<string | null>("fill") ?? null}

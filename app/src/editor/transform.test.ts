@@ -37,6 +37,7 @@ const shape = (id: string, x: number): DocObject => ({
     outlineWidth: 2,
     lineStyle: "solid",
     opacity: 100,
+    cornerRadius: 0,
   },
 });
 

@@ -226,13 +226,71 @@ pub(crate) fn turned(r: Rect, rotation: f64) -> Transform {
     )
 }
 
-/// Path of a rectangle or ellipse filling `r` (before rotation).
+/// Path of a rectangle or ellipse filling `r` (before rotation). Blurs use it.
 fn outline_path(kind: ShapeKind, r: Rect) -> Option<tiny_skia::Path> {
     let rect =
         tiny_skia::Rect::from_xywh(r.x as f32, r.y as f32, r.w.max(0.01) as f32, r.h.max(0.01) as f32)?;
     match kind {
-        ShapeKind::Rectangle => Some(PathBuilder::from_rect(rect)),
         ShapeKind::Ellipse => PathBuilder::from_oval(rect),
+        _ => Some(PathBuilder::from_rect(rect)),
+    }
+}
+
+/// A shape's path filling `r` (its box, or the box its outline runs along), before
+/// rotation (EDT-029, EDT-030). `radius` is a rounded rectangle's, for that box.
+fn shape_path(s: &ShapeObject, r: Rect, radius: f64) -> Option<tiny_skia::Path> {
+    let (x, y, w, h) = (r.x as f32, r.y as f32, r.w.max(0.01) as f32, r.h.max(0.01) as f32);
+    let poly = |pts: &[(f32, f32)]| {
+        let mut pb = PathBuilder::new();
+        for (i, p) in pts.iter().enumerate() {
+            if i == 0 {
+                pb.move_to(p.0, p.1);
+            } else {
+                pb.line_to(p.0, p.1);
+            }
+        }
+        pb.close();
+        pb.finish()
+    };
+    match s.style.shape_type {
+        ShapeKind::Rectangle | ShapeKind::Ellipse => outline_path(s.style.shape_type, r),
+        ShapeKind::RoundedRectangle => {
+            let q = (radius as f32).clamp(0.0, w.min(h) / 2.0);
+            if q <= 0.0 {
+                return outline_path(ShapeKind::Rectangle, r);
+            }
+            let k = 0.552_284_8 * q;
+            let mut pb = PathBuilder::new();
+            pb.move_to(x + q, y);
+            pb.line_to(x + w - q, y);
+            pb.cubic_to(x + w - q + k, y, x + w, y + q - k, x + w, y + q);
+            pb.line_to(x + w, y + h - q);
+            pb.cubic_to(x + w, y + h - q + k, x + w - q + k, y + h, x + w - q, y + h);
+            pb.line_to(x + q, y + h);
+            pb.cubic_to(x + q - k, y + h, x, y + h - q + k, x, y + h - q);
+            pb.line_to(x, y + q);
+            pb.cubic_to(x, y + q - k, x + q - k, y, x + q, y);
+            pb.close();
+            pb.finish()
+        }
+        ShapeKind::Triangle => poly(&[(x + w / 2.0, y), (x + w, y + h), (x, y + h)]),
+        ShapeKind::Diamond => poly(&[
+            (x + w / 2.0, y),
+            (x + w, y + h / 2.0),
+            (x + w / 2.0, y + h),
+            (x, y + h / 2.0),
+        ]),
+        ShapeKind::Polygon => {
+            if s.points.len() < 3 {
+                return outline_path(ShapeKind::Rectangle, r);
+            }
+            let pts: Vec<(f32, f32)> = s
+                .points
+                .iter()
+                .map(|p| (x + p[0] as f32 * w, y + p[1] as f32 * h))
+                .collect();
+            poly(&pts)
+        }
     }
 }
 
@@ -424,7 +482,7 @@ fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
     let t = turned(s.rect, s.rotation);
     blend_layer(pm, s.style.opacity, |pm| {
         if let Some(fill) = s.style.fill.as_deref().and_then(Rgba::parse) {
-            if let Some(path) = outline_path(s.style.shape_type, s.rect) {
+            if let Some(path) = shape_path(s, s.rect, s.style.corner_radius) {
                 pm.fill_path(&path, &paint(fill), FillRule::Winding, t, None);
             }
         }
@@ -432,7 +490,7 @@ fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
         if w > 0.0 {
             let inner = inner_rect(s.rect, w);
             if let (Some(path), Some(color)) = (
-                outline_path(s.style.shape_type, inner),
+                shape_path(s, inner, (s.style.corner_radius - w / 2.0).max(0.0)),
                 Rgba::parse(&s.style.outline),
             ) {
                 let dash = dash(s.style.line_style, w);

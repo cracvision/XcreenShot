@@ -14,6 +14,7 @@ const shape = (fill: string | null): DocObject => ({
     outlineWidth: 4,
     lineStyle: "solid",
     opacity: 100,
+    cornerRadius: 0,
   },
 });
 

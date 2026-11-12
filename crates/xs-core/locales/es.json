@@ -1419,7 +1419,11 @@
       },
       "shape": {
         "rectangle": "Rectángulo",
-        "ellipse": "Elipse"
+        "ellipse": "Elipse",
+        "roundedRectangle": "Rectángulo redondeado",
+        "triangle": "Triángulo",
+        "diamond": "Rombo",
+        "polygon": "Polígono"
       },
       "blur": {
         "blur": "Desenfoque",

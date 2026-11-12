@@ -71,6 +71,13 @@ pub fn pixel_bounds(r: Rect, rotation: f64, width: u32, height: u32) -> Option<[
 pub enum ShapeKind {
     Rectangle,
     Ellipse,
+    /// Corners of `cornerRadius` (EDT-030).
+    RoundedRectangle,
+    /// Pointing up.
+    Triangle,
+    Diamond,
+    /// Its `points`, in its box (EDT-030).
+    Polygon,
 }
 
 fn merged<T: Serialize + for<'de> Deserialize<'de>>(
@@ -104,6 +111,8 @@ pub struct ShapeStyle {
     pub outline_width: f64,
     pub line_style: LineStyle,
     pub opacity: f64,
+    /// Rounded rectangle: the corners' radius, at most half the shorter side (EDT-030).
+    pub corner_radius: f64,
 }
 
 impl Default for ShapeStyle {
@@ -116,6 +125,7 @@ impl Default for ShapeStyle {
             outline_width: 4.0,
             line_style: LineStyle::Solid,
             opacity: 100.0,
+            corner_radius: 12.0,
         }
     }
 }
@@ -130,6 +140,9 @@ impl ShapeStyle {
         if !(0.0..=100.0).contains(&s.outline_width) {
             return Err("outlineWidth must be between 0 and 100".to_string());
         }
+        if !(0.0..=10_000.0).contains(&s.corner_radius) {
+            return Err("cornerRadius must be between 0 and 10000".to_string());
+        }
         if !(0.0..=100.0).contains(&s.opacity) {
             return Err("opacity must be between 0 and 100".to_string());
         }
@@ -142,6 +155,9 @@ pub struct ShapeObject {
     pub rect: Rect,
     pub rotation: f64,
     pub style: ShapeStyle,
+    /// A polygon's corners, each `[u, v]` from 0 to 1 across its box, so it turns and
+    /// stretches with the box (EDT-030).
+    pub points: Vec<[f64; 2]>,
 }
 
 impl ShapeObject {
@@ -151,10 +167,22 @@ impl ShapeObject {
             Some(_) => return Err("style must be an object".to_string()),
             None => ShapeStyle::default(),
         };
+        let points = match props.get("points") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(Value::Array(a)) => a
+                .iter()
+                .map(|p| crate::geometry::point(Some(p), "each point"))
+                .collect::<Result<Vec<_>, _>>()?,
+            Some(_) => return Err("points must be a list of [u, v]".to_string()),
+        };
+        if style.shape_type == ShapeKind::Polygon && !points.is_empty() && points.len() < 3 {
+            return Err("a polygon needs at least 3 points".to_string());
+        }
         Ok(ShapeObject {
             rect: rect(props.get("rect"))?,
             rotation: rotation(props),
             style,
+            points,
         })
     }
 }
