@@ -618,6 +618,12 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.fit_canvas", "editor.action", r#"{"action":"fit_canvas"}"#),
         editor("editor.trim", "editor.action", r#"{"action":"trim"}"#),
         editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
+        editor("editor.new_image", "editor.action", r#"{"action":"new_image"}"#),
+        editor(
+            "editor.new_from_clipboard",
+            "editor.action",
+            r#"{"action":"new_from_clipboard"}"#,
+        ),
         editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
         editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
         editor(
@@ -804,6 +810,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         _ => {
             let windows = match id {
                 "editor.open" => "Ctrl+KeyO",
+                "editor.new_image" => "Ctrl+KeyN",
+                "editor.new_from_clipboard" => "Ctrl+Shift+KeyN",
                 "editor.save" => "Ctrl+KeyS",
                 "editor.save_as" => "Ctrl+Shift+KeyS",
                 "editor.export" => "Ctrl+Alt+Shift+KeyS",

@@ -496,6 +496,8 @@ const IN_LIBRARY = new Set([
   "open_item",
   "recover",
   "toolbar_labels",
+  "new_image",
+  "new_from_clipboard",
 ]);
 
 /** What an editor menu entry or shortcut does (`editor.action`, EDT-002, EDT-116).
@@ -763,6 +765,16 @@ export function performAction(action: string): boolean {
     case "rotate_custom":
       if (!doc) return false;
       openImageDialog("rotate");
+      return true;
+    case "new_image":
+      // File > New image (EDT-103), also from the Library view.
+      openImageDialog("new_image");
+      return true;
+    case "new_from_clipboard":
+      // EDT-104: the document opens in the editor.
+      run("document.new_from_clipboard")
+        .then(() => showView("editor"))
+        .catch(fail);
       return true;
     case "canvas_size":
     case "canvas_color":

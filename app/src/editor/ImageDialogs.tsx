@@ -17,12 +17,15 @@ import {
   keepRatio,
   shown,
   toPx,
+  QUICK_SIZES,
+  useClipboard,
   useImageDialog,
   wheelAngle,
   type Anchor,
   type Unit,
 } from "./imageMenu";
-import { useEditor, xsdocUrl, type DocDetails } from "./state";
+import { useEditor, xsdocUrl, type DocDetails, type Fill } from "./state";
+import { useApp } from "../store";
 
 const UNIT_KEY = "xs.editor.sizeUnit";
 
@@ -89,7 +92,15 @@ function NumberInput(props: {
   );
 }
 
-function UnitSelect({ value, onChange }: { value: Unit; onChange: (u: Unit) => void }) {
+function UnitSelect({
+  value,
+  onChange,
+  units = UNITS,
+}: {
+  value: Unit;
+  onChange: (u: Unit) => void;
+  units?: Unit[];
+}) {
   const { t } = useTranslation();
   return (
     <div className="prop-field">
@@ -103,7 +114,7 @@ function UnitSelect({ value, onChange }: { value: Unit; onChange: (u: Unit) => v
           onChange(u);
         }}
       >
-        {UNITS.map((u) => (
+        {units.map((u) => (
           <option key={u} value={u}>
             {t(`ui.editor.image.unit_${u}`)}
           </option>
@@ -629,6 +640,119 @@ function Trim({ doc }: { doc: DocDetails }) {
   );
 }
 
+function settingOf<T>(key: string, fallback: T): T {
+  const v = useApp.getState().settings.find((s) => s.key === key)?.value;
+  return (v === undefined ? fallback : v) as T;
+}
+
+/** File > New image (EDT-103): size, quick sizes, canvas color and resolution. */
+function NewImage() {
+  const { t } = useTranslation();
+  const clip = useClipboard((s) => s.info);
+  // No percent: there is no image to take it from.
+  const [picked, setUnit] = useState<Unit>(lastUnit);
+  const unit: Unit = picked === "percent" ? "px" : picked;
+  const [w, setW] = useState(() => settingOf("editor.newImage.width", 1280));
+  const [h, setH] = useState(() => settingOf("editor.newImage.height", 720));
+  const [dpi, setDpi] = useState(96);
+  const [fill, setFill] = useState<Fill | null>(() =>
+    settingOf<string | null>("editor.newImage.color", "#FFFFFF"),
+  );
+  const [remember, setRemember] = useState(false);
+  const W = Math.round(w);
+  const H = Math.round(h);
+  const valid = W >= 1 && H >= 1 && W <= 50_000 && H <= 50_000 && dpi >= 1 && dpi <= 10_000;
+  const quick = (key: string) => {
+    if (key === "clipboard" && clip?.image) {
+      setW(clip.image.width);
+      setH(clip.image.height);
+      return;
+    }
+    const q = QUICK_SIZES.find((s) => s.key === key);
+    if (!q) return;
+    setW(q.w);
+    setH(q.h);
+    setDpi(q.dpi ?? 96);
+  };
+  const ok = () => {
+    closeImageDialog();
+    run("document.new", { width: W, height: H, color: fill, dpi, remember }).catch(fail);
+  };
+  return (
+    <Dialog
+      title={t("ui.editor.image.new_title")}
+      onCancel={closeImageDialog}
+      actions={
+        <>
+          <button type="button" className="btn primary" disabled={!valid} onClick={ok}>
+            {t("ui.editor.image.create")}
+          </button>
+          <button type="button" className="btn" onClick={closeImageDialog}>
+            {t("ui.editor.cancel")}
+          </button>
+        </>
+      }
+    >
+      <div className="image-form">
+        <div className="prop-field">
+          <label htmlFor="new-quick">{t("ui.editor.image.quick")}</label>
+          <select id="new-quick" value="" onChange={(e) => quick(e.target.value)}>
+            <option value="">—</option>
+            {QUICK_SIZES.map((q) => (
+              <option key={q.key} value={q.key}>
+                {t(`ui.editor.image.quick_${q.key}`, { w: q.w, h: q.h })}
+              </option>
+            ))}
+            {clip?.image && (
+              <option value="clipboard">{t("ui.editor.image.quick_clipboard", clip.image)}</option>
+            )}
+          </select>
+        </div>
+        <UnitSelect value={unit} onChange={setUnit} units={["px", "in", "cm"]} />
+        <div className="image-sides">
+          <NumberInput
+            id="new-w"
+            label={t("ui.editor.image.width")}
+            value={shown(fromPx(w, unit, w, dpi), unit)}
+            autoFocus
+            suffix={suffixOf(unit)}
+            onValue={(v) => v > 0 && setW(toPx(v, unit, w, dpi))}
+          />
+          <NumberInput
+            id="new-h"
+            label={t("ui.editor.image.height")}
+            value={shown(fromPx(h, unit, h, dpi), unit)}
+            suffix={suffixOf(unit)}
+            onValue={(v) => v > 0 && setH(toPx(v, unit, h, dpi))}
+          />
+        </div>
+        <FillPicker
+          label={t("ui.editor.prop.canvas_color")}
+          value={fill}
+          allowTransparent
+          onCommit={setFill}
+        />
+        <NumberInput
+          id="new-dpi"
+          label={t("ui.editor.image.resolution")}
+          value={String(dpi)}
+          suffix={t("ui.editor.image.dpi_unit")}
+          onValue={(v) => v > 0 && setDpi(v)}
+        />
+        <label className="panel-check">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          {t("ui.editor.image.remember")}
+        </label>
+      </div>
+      <p className="muted">{t("ui.editor.image.result_new", { w: W, h: H })}</p>
+    </Dialog>
+  );
+}
+
 /** Edit > Revert to original (EDT-076): asks first; Undo brings the edits back. */
 function Revert({ doc }: { doc: DocDetails }) {
   const { t } = useTranslation();
@@ -661,6 +785,8 @@ function Revert({ doc }: { doc: DocDetails }) {
 export function ImageDialogs() {
   const open = useImageDialog((s) => s.open);
   const doc = useEditor((s) => s.doc);
+  // A new image needs no document (EDT-103).
+  if (open === "new_image") return <NewImage />;
   if (!open || !doc) return null;
   // A key per document: a dialog never keeps another document's values.
   const key = `${open}:${doc.documentId}`;

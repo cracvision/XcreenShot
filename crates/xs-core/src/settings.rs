@@ -253,6 +253,28 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-071",
         ),
         def("editor.snap", "editor", boolean(), json!(true), "EDT-084"),
+        // A new image (EDT-103): its size and canvas color (null: transparent).
+        def(
+            "editor.newImage.width",
+            "editor",
+            json!({"type": "integer", "minimum": 1, "maximum": 50000}),
+            json!(1280),
+            "EDT-103",
+        ),
+        def(
+            "editor.newImage.height",
+            "editor",
+            json!({"type": "integer", "minimum": 1, "maximum": 50000}),
+            json!(720),
+            "EDT-103",
+        ),
+        def(
+            "editor.newImage.color",
+            "editor",
+            json!({"type": ["string", "null"]}),
+            json!("#FFFFFF"),
+            "EDT-103",
+        ),
         def(
             "editor.deleteCroppedContent",
             "editor",

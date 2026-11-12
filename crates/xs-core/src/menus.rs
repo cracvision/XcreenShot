@@ -137,6 +137,13 @@ fn editor_menus() -> Vec<MenuEntry> {
         Submenu {
             label: "menu.file",
             items: vec![
+                action("editor.new_image", "menu.new_image", "new_image"),
+                action(
+                    "editor.new_from_clipboard",
+                    "menu.new_from_clipboard",
+                    "new_from_clipboard",
+                ),
+                Separator,
                 action("editor.open", "menu.open", "open"),
                 Separator,
                 action("editor.save", "menu.save", "save"),
@@ -600,8 +607,8 @@ mod tests {
         let file = &menus[0]["items"];
         assert_eq!(file[0]["kind"], "command");
         assert_eq!(file[0]["command"], "editor.action");
-        assert_eq!(file[0]["params"], json!({ "action": "open" }));
-        assert_eq!(file[1]["kind"], "separator");
+        assert_eq!(file[0]["params"], json!({ "action": "new_image" }));
+        assert_eq!(file[2]["kind"], "separator");
         let view = menus[3]["items"].as_array().unwrap();
         let toolbar = view.iter().find(|i| i["kind"] == "submenu").unwrap();
         assert_eq!(toolbar["items"][0]["checked"], "editor.toolbar_labels");

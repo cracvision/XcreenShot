@@ -946,9 +946,21 @@ fn add_image(
     scale: f64,
     app: Option<&str>,
 ) -> Result<(String, PathBuf), String> {
+    add_image_with(core, image, meta, scale, app, None)
+}
+
+/// [`add_image`] with the canvas of a new image (EDT-103).
+fn add_image_with(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+    fill: Option<&Value>,
+) -> Result<(String, PathBuf), String> {
     let ed = editor(core);
     let autosave = core.settings.get_bool("library.autosaveImages");
-    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app, None)?;
+    let (path, document, png) = write_library_item_with(core, image, meta.clone(), scale, app, None, fill)?;
     let doc = DocStore::from_image(
         path.clone(),
         if autosave { Kind::Library } else { Kind::External },
@@ -975,6 +987,39 @@ fn write_library_item(
     app: Option<&str>,
     picture: Option<&(Picture, [f64; 2])>,
 ) -> Result<(PathBuf, Document, Vec<u8>), String> {
+    write_library_item_with(core, image, meta, scale, app, picture, None)
+}
+
+/// A canvas fill: `"#RRGGBB(AA)"`, a gradient or null (transparent), checked. The
+/// canvas's color and gradient (EDT-074).
+fn canvas_fill(v: &Value) -> Result<(Option<String>, Option<Value>), String> {
+    match v {
+        Value::Null => Ok((None, None)),
+        Value::String(s) => {
+            xs_image::color::Rgba::parse(s).ok_or("use #RRGGBB, #RRGGBBAA, a gradient or null")?;
+            Ok((Some(s.clone()), None))
+        }
+        Value::Object(_) => {
+            let fill: xs_image::paint::Fill = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
+            fill.check("color")?;
+            let first = fill.main_color().ok_or("a gradient needs colors")?;
+            Ok((Some(first.to_hex()), Some(v.clone())))
+        }
+        _ => Err("use #RRGGBB, #RRGGBBAA, a gradient or null".into()),
+    }
+}
+
+/// [`write_library_item`] with the canvas of a new image (EDT-103) instead of the
+/// default one.
+fn write_library_item_with(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+    picture: Option<&(Picture, [f64; 2])>,
+    fill: Option<&Value>,
+) -> Result<(PathBuf, Document, Vec<u8>), String> {
     let ed = editor(core);
     // Off (LIB-020): the capture waits in the app's data until it is saved.
     // Multi-capture saves to the library either way (CAP-067).
@@ -991,6 +1036,11 @@ fn write_library_item(
     if image.pixels().all(|p| p.0[3] == 255) {
         document.canvas.color = Some("#FFFFFF".to_string());
     }
+    if let Some(fill) = fill {
+        let (color, gradient) = canvas_fill(fill)?;
+        document.canvas.color = color;
+        document.canvas.gradient = gradient;
+    }
     let png = xs_image::encode::png(image, dpi, true)?;
     let mut images = BTreeMap::new();
     let mut shown = std::borrow::Cow::Borrowed(image);
@@ -1005,6 +1055,9 @@ fn write_library_item(
         let mut base = Base::from_image(image.clone());
         base.add_image(&pic.name, &pic.bytes)?;
         shown = std::borrow::Cow::Owned(xs_image::render(&document, &base));
+    } else if fill.is_some() {
+        // A new image shows its canvas (EDT-103).
+        shown = std::borrow::Cow::Owned(xs_image::render(&document, &Base::from_image(image.clone())));
     }
     let thumb = xs_image::encode::thumbnail(&shown, xs_core::document::THUMB_SIZE);
     let file = xs_core::document::Xshot {
@@ -4313,6 +4366,20 @@ pub fn extension() -> Extension {
             }
             Ok(json!({ "count": oids.len() }))
         });
+        on!("document.new", |core, ctx, p| new_image(&core, ctx, &p));
+        on!("document.new_from_clipboard", |core, ctx, _p| new_from_clipboard(
+            &core, ctx
+        ));
+        // What the clipboard has, for menus that need it (EDT-103, EDT-104).
+        on!("editor.clipboard", |_core, _ctx, _p| {
+            let (image, text) = read_clipboard();
+            let files = clipboard_files();
+            Ok(json!({
+                "image": image.as_ref().map(|i| json!({"width": i.width(), "height": i.height()})),
+                "files": files.len(),
+                "text": text.is_some(),
+            }))
+        });
         on!("document.paste", |core, ctx, p| {
             let ed = editor(&core);
             let target = match p.get("documentId").and_then(Value::as_str) {
@@ -4722,6 +4789,147 @@ fn objects_image(snap: &store::Snapshot, ids: &[String]) -> Option<image::RgbaIm
         }
     }
     (x1 > x0 && y1 > y0).then(|| image::imageops::crop_imm(&img, x0, y0, x1 - x0, y1 - y0).to_image())
+}
+
+/// File > New image (EDT-103): a blank canvas of the size, color and resolution
+/// given, or of the remembered ones; with `remember`, these become the defaults.
+fn new_image(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let setting = |k: &str| core.settings.get(k).unwrap_or(Value::Null);
+    let side = |k: &str, fallback: u64| -> Result<u32, CommandError> {
+        let v = p
+            .get(k)
+            .and_then(Value::as_f64)
+            .or_else(|| setting(&format!("editor.newImage.{k}")).as_f64())
+            .unwrap_or(fallback as f64)
+            .round();
+        if !(1.0..=50_000.0).contains(&v) {
+            return Err(bad(k, "between 1 and 50000 px"));
+        }
+        Ok(v as u32)
+    };
+    let (w, h) = (side("width", 1280)?, side("height", 720)?);
+    let fill = match p.get("color") {
+        Some(v) => v.clone(),
+        None => setting("editor.newImage.color"),
+    };
+    canvas_fill(&fill).map_err(|e| bad("color", &e))?;
+    let dpi = p.get("dpi").and_then(Value::as_f64).unwrap_or(96.0);
+    if !(1.0..=10_000.0).contains(&dpi) {
+        return Err(bad("dpi", "between 1 and 10000"));
+    }
+    if p.get("remember").and_then(Value::as_bool) == Some(true) {
+        // A gradient is not remembered: the setting keeps a color or transparent.
+        let color = if fill.is_object() {
+            setting("editor.newImage.color")
+        } else {
+            fill.clone()
+        };
+        for (k, v) in [
+            ("editor.newImage.width", json!(w)),
+            ("editor.newImage.height", json!(h)),
+            ("editor.newImage.color", color),
+        ] {
+            core.settings.set(k, v, ctx.source, lang)?;
+        }
+    }
+    let blank = image::RgbaImage::new(w, h);
+    let name = tr(lang, "editor.new_image_name", &[]);
+    let (id, path) = add_image_with(
+        core,
+        &blank,
+        json!({ "source": "newImage" }),
+        dpi / 96.0,
+        Some(&name),
+        Some(&fill),
+    )
+    .map_err(|e| internal(lang, "", e))?;
+    activate(core, &id);
+    let _ = core.host().show_main_window();
+    Ok(json!({ "documentId": id, "path": path, "width": w, "height": h }))
+}
+
+/// File > New from clipboard (EDT-104): the clipboard's image, image file or text as a
+/// new document of the library.
+fn new_from_clipboard(core: &Arc<Core>, ctx: &Context) -> CommandResult {
+    let lang = ctx.lang;
+    let ed = editor(core);
+    let (image, text) = read_clipboard();
+    let from_file = clipboard_files().into_iter().find_map(|f| {
+        let bytes = std::fs::read(&f).ok()?;
+        xs_image::encode::decode(&bytes).ok()
+    });
+    let name = tr(lang, "editor.clipboard_name", &[]);
+    let meta = json!({ "source": "clipboard" });
+    let id = if let Some(img) = image.or(from_file) {
+        add_image(core, &img, meta, 1.0, Some(&name))
+            .map_err(|e| internal(lang, "", e))?
+            .0
+    } else if let Some(text) = text {
+        // Text: a canvas that fits it, with a text object (EDT-104).
+        const PAD: f64 = 20.0;
+        let (kind, props) = objects::new_object(
+            &json!({"type": "text", "at": [PAD, PAD], "text": text}),
+            &ed.styles(),
+        )
+        .map_err(|r| {
+            invalid(tr(
+                lang,
+                "errors.invalid_object",
+                &[("index", "1"), ("reason", &r)],
+            ))
+        })?;
+        let size = xs_image::text::Text::from_props(&props)
+            .ok()
+            .map(|t| xs_image::text::layout(&t, 96.0))
+            .map(|l| (f64::from(l.width), f64::from(l.height)))
+            .unwrap_or((200.0, 40.0));
+        let (w, h) = (
+            (size.0 + 2.0 * PAD).ceil().clamp(1.0, 50_000.0) as u32,
+            (size.1 + 2.0 * PAD).ceil().clamp(1.0, 50_000.0) as u32,
+        );
+        let white = image::RgbaImage::from_pixel(w, h, image::Rgba([255, 255, 255, 255]));
+        let (id, _) = add_image(core, &white, meta, 1.0, Some(&name)).map_err(|e| internal(lang, "", e))?;
+        ed.store
+            .mutate(&id, "history.paste", |d| {
+                let oid = d.next_object_id();
+                d.objects.push(Object { id: oid, kind, props });
+                Ok::<_, CommandError>(())
+            })
+            .ok_or_else(|| CommandError::internal("document closed"))??;
+        id
+    } else {
+        return Err(CommandError::new(
+            ErrorCode::NotFound,
+            tr(lang, "errors.nothing_to_paste", &[]),
+        ));
+    };
+    activate(core, &id);
+    let _ = core.host().show_main_window();
+    let path = ed.store.with(&id, |d| d.path.clone()).flatten();
+    Ok(json!({ "documentId": id, "path": path }))
+}
+
+/// Image files copied in the file manager (EDT-104).
+fn clipboard_files() -> Vec<PathBuf> {
+    arboard::Clipboard::new()
+        .ok()
+        .and_then(|mut cb| cb.get().file_list().ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|p| {
+            p.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| ["png", "jpg", "jpeg"].contains(&e.to_ascii_lowercase().as_str()))
+        })
+        .collect()
 }
 
 fn read_clipboard() -> (Option<image::RgbaImage>, Option<String>) {

@@ -39,7 +39,7 @@ export interface SettingEntry {
   section: string;
   label: string;
   description: string;
-  schema: { type?: string; enum?: string[] };
+  schema: { type?: string | string[]; enum?: string[]; minimum?: number; maximum?: number };
   default: unknown;
   value: unknown;
   locked: boolean;

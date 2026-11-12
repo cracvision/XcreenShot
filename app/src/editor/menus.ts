@@ -22,6 +22,7 @@ import { useEditor, usePanel, type FlatLayer, type StepObject } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
 import { TYPES } from "./effects";
+import { useClipboard, type ClipboardInfo } from "./imageMenu";
 
 interface Point {
   x: number;
@@ -286,6 +287,8 @@ export function useMenuBar(): void {
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
   const snap = useSetting("editor.snap", true);
+  const clip = useClipboard((s) => s.info);
+  const hasClip = Boolean(clip && (clip.image || clip.files > 0 || clip.text));
   const tray = useTray((s) => s.visible);
   const inTray = useEditor((s) => s.documents.filter((d) => d.shown).length);
   const hasPrev = useEditor((s) => neighbour(s.documents, s.active, -1) !== null);
@@ -373,6 +376,8 @@ export function useMenuBar(): void {
     // The Image menu (EDT-069 to EDT-077) and Image > Effects (EDT-053).
     for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc;
     enabled["editor.snap"] = !inLibrary;
+    enabled["editor.new_image"] = true;
+    enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;
     enabled["editor.invert_selection"] = hasPixels;
@@ -401,6 +406,7 @@ export function useMenuBar(): void {
     panel,
     labels,
     snap,
+    hasClip,
     tray,
     inLibrary,
     inTray,
@@ -411,6 +417,18 @@ export function useMenuBar(): void {
     hasPixels,
     pixelsOnImage,
   ]);
+
+  // What the clipboard has, when the window gets the focus (EDT-104).
+  useEffect(() => {
+    const read = () =>
+      void run<ClipboardInfo>("editor.clipboard")
+        .then((info) => useClipboard.setState({ info }))
+        .catch(() => undefined);
+    // Not at startup: only once the window is in use.
+    if (document.hasFocus()) read();
+    window.addEventListener("focus", read);
+    return () => window.removeEventListener("focus", read);
+  }, []);
 
   useEffect(() => {
     const off = listen<{ kind: string; payload: { action?: string } }>("xs://editor", (e) => {

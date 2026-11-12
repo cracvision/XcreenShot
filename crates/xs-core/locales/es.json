@@ -518,6 +518,18 @@
     "document_cut_out": {
       "title": "Quitar franja o añadir espacio",
       "description": "Quita una franja de todo el ancho (o de todo el alto) y junta las partes, rectas o con un hueco rasgado, ondulado o en zigzag; o añade ese espacio. Los objetos de después de la franja se mueven con ella; los que la cruzan se quedan y se avisa."
+    },
+    "document_new": {
+      "title": "Nueva imagen",
+      "description": "Crea un documento en blanco en la biblioteca, del tamaño, color de lienzo y resolución indicados (o los recordados)."
+    },
+    "document_new_from_clipboard": {
+      "title": "Nueva desde el portapapeles",
+      "description": "Crea un documento con la imagen, el archivo de imagen o el texto del portapapeles (un lienzo a su medida con un objeto de texto)."
+    },
+    "editor_clipboard": {
+      "title": "Qué hay en el portapapeles",
+      "description": "Dice si el portapapeles tiene una imagen (y su tamaño), archivos de imagen o texto."
     }
   },
   "settings": {
@@ -747,6 +759,18 @@
     "editor_snap": {
       "label": "Ajuste magnético",
       "description": "Al mover o cambiar de tamaño un objeto, sus bordes y su centro se alinean con el lienzo y con los demás objetos, y con espacios iguales entre ellos. Mantén Ctrl (Cmd) para moverlo libremente."
+    },
+    "editor_newImage_width": {
+      "label": "Ancho de una imagen nueva",
+      "description": "En píxeles; Archivo > Nueva imagen empieza con él."
+    },
+    "editor_newImage_height": {
+      "label": "Alto de una imagen nueva",
+      "description": "En píxeles."
+    },
+    "editor_newImage_color": {
+      "label": "Color del lienzo de una imagen nueva",
+      "description": "#RRGGBB, o vacío para transparente."
     }
   },
   "errors": {
@@ -938,7 +962,9 @@
       "editor_fit_canvas": "Ajustar el lienzo al contenido",
       "editor_trim": "Recortar bordes",
       "editor_snap": "Ajuste magnético",
-      "editor_tool_cutout": "Herramienta Quitar franja"
+      "editor_tool_cutout": "Herramienta Quitar franja",
+      "editor_new_image": "Nueva imagen",
+      "editor_new_from_clipboard": "Nueva desde el portapapeles"
     }
   },
   "tray": {
@@ -1071,7 +1097,9 @@
     "crop_to_canvas": "Recortar al lienzo",
     "fit_canvas": "Ajustar el lienzo al contenido",
     "trim": "Recortar bordes…",
-    "snap": "Ajuste magnético"
+    "snap": "Ajuste magnético",
+    "new_image": "Nueva imagen…",
+    "new_from_clipboard": "Nueva desde el portapapeles"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2134,7 +2162,19 @@
         "status_radius": "Esquinas {{r}} px",
         "trim_title": "Recortar bordes",
         "tolerance": "Tolerancia (de 0 a 20 %)",
-        "trim_hint": "Quita alrededor de la imagen los bordes del color de la esquina de arriba a la izquierda, o transparentes. Como un recorte, se puede deshacer y lo quitado puede volver."
+        "trim_hint": "Quita alrededor de la imagen los bordes del color de la esquina de arriba a la izquierda, o transparentes. Como un recorte, se puede deshacer y lo quitado puede volver.",
+        "new_title": "Nueva imagen",
+        "create": "Crear",
+        "quick": "Tamaños rápidos",
+        "quick_hd": "Full HD ({{w}} × {{h}})",
+        "quick_hd720": "HD ({{w}} × {{h}})",
+        "quick_square": "Cuadrado ({{w}} × {{h}})",
+        "quick_social": "Vista previa de enlace ({{w}} × {{h}})",
+        "quick_a4": "A4 a 150 PPP",
+        "quick_letter": "Carta a 150 PPP",
+        "quick_clipboard": "Igual que el portapapeles ({{width}} × {{height}})",
+        "remember": "Recordar como valores por defecto",
+        "result_new": "Un lienzo de {{w}} × {{h}} px en la biblioteca."
       },
       "cutout": {
         "direction": "Dirección",
@@ -2419,7 +2459,9 @@
     "no_borders": "No hay bordes uniformes que recortar.",
     "nothing_to_crop": "No sobresale del lienzo nada que se pueda recortar ({{count}} anotaciones sobresalen y no se recortan).",
     "still_sticking": "{{count}} anotaciones siguen sobresaliendo del lienzo: no se recortan.",
-    "crossing_strip": "{{count}} objetos cruzan la franja y se quedan donde estaban."
+    "crossing_strip": "{{count}} objetos cruzan la franja y se quedan donde estaban.",
+    "new_image_name": "Imagen nueva",
+    "clipboard_name": "Portapapeles"
   },
   "stamps": {
     "indicators": "Indicadores",

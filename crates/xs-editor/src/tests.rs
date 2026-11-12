@@ -3689,3 +3689,52 @@ fn cutting_out_strips_and_adding_space() {
         (Some(600), Some(1000))
     );
 }
+
+/// EDT-103: New image with 800 × 600 and Transparent makes a transparent canvas of
+/// that size; Remember makes the next one start with the same values.
+#[test]
+fn new_images_and_remembered_defaults() {
+    let e = env();
+    let r = cli(
+        &e.core,
+        "document.new",
+        json!({"width": 800, "height": 600, "color": null, "remember": true}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(800), Some(600))
+    );
+    assert!(info["canvas"]["color"].is_null(), "transparent");
+    assert_eq!(rendered(&e, &doc).get_pixel(10, 10).0[3], 0);
+    assert_eq!(
+        info["name"].as_str().map(|n| n.starts_with("New image")),
+        Some(true)
+    );
+    // The next one, without values, takes the remembered ones.
+    let r = cli(&e.core, "document.new", json!({}));
+    let info = cli(&e.core, "document.info", json!({"documentId": r["documentId"]}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(800), Some(600))
+    );
+    assert!(info["canvas"]["color"].is_null());
+    // A color and a resolution.
+    let r = cli(
+        &e.core,
+        "document.new",
+        json!({"width": 100, "height": 50, "color": "#0064FB", "dpi": 144}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    assert_eq!(rendered(&e, &doc).get_pixel(5, 5).0, [0, 100, 251, 255]);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["dpi"], json!(144.0));
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.new",
+        json!({"width": 0, "height": 10}),
+    );
+    assert!(bad.is_err());
+}

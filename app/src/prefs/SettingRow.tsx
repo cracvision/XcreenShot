@@ -40,6 +40,46 @@ export function SettingRow({ setting, highlighted }: Props) {
         onChange={(e) => void change(e.target.checked)}
       />
     );
+  } else if (setting.schema.type === "integer") {
+    // A whole number, saved when the field is left (APP-006).
+    control = (
+      <input
+        id={id}
+        type="number"
+        key={String(setting.value)}
+        defaultValue={Number(setting.value)}
+        min={setting.schema.minimum}
+        max={setting.schema.maximum}
+        disabled={setting.locked}
+        aria-describedby={`${id}-desc`}
+        onBlur={(e) => {
+          const v = Math.round(Number(e.target.value));
+          if (Number.isFinite(v) && v !== setting.value) void change(v);
+        }}
+      />
+    );
+  } else if (
+    !setting.schema.enum &&
+    (setting.schema.type === "string" ||
+      (Array.isArray(setting.schema.type) && setting.schema.type.includes("string")))
+  ) {
+    // Free text; empty is null when allowed.
+    const nullable = Array.isArray(setting.schema.type) && setting.schema.type.includes("null");
+    control = (
+      <input
+        id={id}
+        type="text"
+        key={String(setting.value)}
+        defaultValue={setting.value === null ? "" : String(setting.value ?? "")}
+        disabled={setting.locked}
+        aria-describedby={`${id}-desc`}
+        onBlur={(e) => {
+          const text = e.target.value.trim();
+          const v = text === "" && nullable ? null : text;
+          if (v !== setting.value) void change(v);
+        }}
+      />
+    );
   } else if (setting.schema.enum) {
     control = (
       <select

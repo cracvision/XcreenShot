@@ -10,7 +10,8 @@ export type ImageDialog =
   | "resolution"
   | "canvas_color"
   | "revert"
-  | "trim";
+  | "trim"
+  | "new_image";
 
 export const useImageDialog = create<{ open: ImageDialog | null }>(() => ({ open: null }));
 
@@ -21,6 +22,26 @@ export function openImageDialog(dialog: ImageDialog): void {
 export function closeImageDialog(): void {
   useImageDialog.setState({ open: null });
 }
+
+/** What the clipboard has (`editor.clipboard`): for New image's size and to enable
+ * New from clipboard (EDT-103, EDT-104). Read again when the window gets the focus. */
+export interface ClipboardInfo {
+  image: { width: number; height: number } | null;
+  files: number;
+  text: boolean;
+}
+
+export const useClipboard = create<{ info: ClipboardInfo | null }>(() => ({ info: null }));
+
+/** Quick sizes of New image (EDT-103): name key, size and, for paper, resolution. */
+export const QUICK_SIZES: { key: string; w: number; h: number; dpi?: number }[] = [
+  { key: "hd", w: 1920, h: 1080 },
+  { key: "hd720", w: 1280, h: 720 },
+  { key: "square", w: 1080, h: 1080 },
+  { key: "social", w: 1200, h: 630 },
+  { key: "a4", w: 1240, h: 1754, dpi: 150 },
+  { key: "letter", w: 1275, h: 1650, dpi: 150 },
+];
 
 /** Units of Resize image and Canvas size (EDT-069, EDT-070). */
 export type Unit = "percent" | "px" | "in" | "cm";

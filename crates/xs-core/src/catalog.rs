@@ -734,6 +734,21 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.new", &["EDT-103", "EDT-119"])
+            .params(params(
+                json!({
+                    "width": {"type": "integer", "minimum": 1, "maximum": 50000, "description": "Defaults to editor.newImage.width"},
+                    "height": {"type": "integer", "minimum": 1, "maximum": 50000, "description": "Defaults to editor.newImage.height"},
+                    "color": {"type": ["string", "object", "null"], "description": "Canvas color #RRGGBB(AA), a gradient, or null for transparent; defaults to editor.newImage.color"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "default": 96},
+                    "remember": {"type": "boolean", "default": false, "description": "Make the size and color the defaults"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}, "path": {"type": "string"}}})),
+        B::new("document.new_from_clipboard", &["EDT-104", "EDT-119"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}, "path": {"type": ["string", "null"]}}})),
         B::new("document.cut_out", &["EDT-052", "EDT-119"])
             .mutates()
             .params(params(
@@ -1074,6 +1089,13 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object"})),
+        B::new("editor.clipboard", &["EDT-103", "EDT-104"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "image": {"type": ["object", "null"], "description": "{width, height} of the image in the clipboard"},
+                "files": {"type": "integer", "description": "Image files copied in the file manager"},
+                "text": {"type": "boolean"}
+            }})),
         B::new("editor.cancel", &["EDT-045"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean", "description": "Whether something was running"}}})),
@@ -1345,7 +1367,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 90] = [
+pub const EDITOR_ACTIONS: [&str; 92] = [
     "open",
     "save",
     "save_as",
@@ -1422,6 +1444,9 @@ pub const EDITOR_ACTIONS: [&str; 90] = [
     "trim",
     // Image > Snapping (EDT-084).
     "snap",
+    // File > New image and New from clipboard (EDT-103, EDT-104).
+    "new_image",
+    "new_from_clipboard",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

@@ -518,6 +518,18 @@
     "document_cut_out": {
       "title": "Cut out or add space",
       "description": "Removes a strip of the whole width (or height) and joins the parts, straight or with a torn, wavy or zigzag gap; or adds that much space. Objects after the strip move with it; those across it stay and are reported."
+    },
+    "document_new": {
+      "title": "New image",
+      "description": "Creates a blank document of the size, canvas color and resolution given (or the remembered ones) in the library."
+    },
+    "document_new_from_clipboard": {
+      "title": "New from clipboard",
+      "description": "Creates a document from the clipboard's image, image file or text (a canvas that fits it, with a text object)."
+    },
+    "editor_clipboard": {
+      "title": "What the clipboard has",
+      "description": "Says whether the clipboard has an image (and its size), image files or text."
     }
   },
   "settings": {
@@ -747,6 +759,18 @@
     "editor_snap": {
       "label": "Snap objects into place",
       "description": "When you move or resize an object, its edges and center line up with the canvas and other objects, and with equal spaces between them. Hold Ctrl (Cmd) to move freely."
+    },
+    "editor_newImage_width": {
+      "label": "Width of a new image",
+      "description": "In pixels; File > New image starts with it."
+    },
+    "editor_newImage_height": {
+      "label": "Height of a new image",
+      "description": "In pixels."
+    },
+    "editor_newImage_color": {
+      "label": "Canvas color of a new image",
+      "description": "#RRGGBB, or empty for transparent."
     }
   },
   "errors": {
@@ -938,7 +962,9 @@
       "editor_fit_canvas": "Fit canvas to content",
       "editor_trim": "Trim edges",
       "editor_snap": "Snapping",
-      "editor_tool_cutout": "Cut out tool"
+      "editor_tool_cutout": "Cut out tool",
+      "editor_new_image": "New image",
+      "editor_new_from_clipboard": "New from clipboard"
     }
   },
   "tray": {
@@ -1071,7 +1097,9 @@
     "crop_to_canvas": "Crop to canvas",
     "fit_canvas": "Fit canvas to content",
     "trim": "Trim edges…",
-    "snap": "Snapping"
+    "snap": "Snapping",
+    "new_image": "New image…",
+    "new_from_clipboard": "New from clipboard"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2134,7 +2162,19 @@
         "status_radius": "Corners {{r}} px",
         "trim_title": "Trim edges",
         "tolerance": "Tolerance (0 to 20 %)",
-        "trim_hint": "Removes borders of the color of the top-left corner, or transparent ones, around the image. Like a crop, it can be undone and what goes can come back."
+        "trim_hint": "Removes borders of the color of the top-left corner, or transparent ones, around the image. Like a crop, it can be undone and what goes can come back.",
+        "new_title": "New image",
+        "create": "Create",
+        "quick": "Quick sizes",
+        "quick_hd": "Full HD ({{w}} × {{h}})",
+        "quick_hd720": "HD ({{w}} × {{h}})",
+        "quick_square": "Square ({{w}} × {{h}})",
+        "quick_social": "Link preview ({{w}} × {{h}})",
+        "quick_a4": "A4 at 150 dpi",
+        "quick_letter": "Letter at 150 dpi",
+        "quick_clipboard": "Same as the clipboard ({{width}} × {{height}})",
+        "remember": "Remember as defaults",
+        "result_new": "A canvas of {{w}} × {{h}} px in the library."
       },
       "cutout": {
         "direction": "Direction",
@@ -2419,7 +2459,9 @@
     "no_borders": "There are no uniform borders to trim.",
     "nothing_to_crop": "Nothing sticks out of the canvas that can be cut ({{count}} annotations stick out and are not cut).",
     "still_sticking": "{{count}} annotations still stick out of the canvas: they are not cut.",
-    "crossing_strip": "{{count}} objects cross the strip and stay where they were."
+    "crossing_strip": "{{count}} objects cross the strip and stay where they were.",
+    "new_image_name": "New image",
+    "clipboard_name": "Clipboard"
   },
   "stamps": {
     "indicators": "Indicators",

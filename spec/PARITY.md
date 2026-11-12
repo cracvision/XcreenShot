@@ -182,8 +182,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-100 | Aplicar un tema a objetos existentes | M2 | Could | — |
 | EDT-101 | Plantillas propias `.xtemplate` | M2 | Should | — |
 | EDT-102 | Paginación al imprimir y en PDF | M2 | Should | — |
-| EDT-103 | Nueva imagen | M2 | Should | — |
-| EDT-104 | Nueva desde el portapapeles | M2 | Should | — |
+| EDT-103 | Nueva imagen | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-104 | Nueva desde el portapapeles | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-105 | Abrir, arrastrar y soltar archivos | M1 | Must | En curso |
 | EDT-106 | Formato `.xshot` | M1 | Must | Win |
 | EDT-107 | Guardar, Guardar como y Guardar todo | M1 | Must | Win |
