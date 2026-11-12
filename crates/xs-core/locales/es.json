@@ -534,6 +534,14 @@
     "document_batch_export": {
       "title": "Exportar por lotes",
       "description": "Exporta muchos archivos de una vez a un formato, con un efecto guardado o una pila añadidos, a una carpeta o junto a cada original, conservando los nombres o numerándolos. Los originales no cambian; editor.cancel lo detiene."
+    },
+    "document_print_pages": {
+      "title": "Páginas para imprimir",
+      "description": "La imagen final (o una parte del lienzo) repartida en el papel: la imagen de cada página y dónde va, en milímetros."
+    },
+    "document_print": {
+      "title": "Imprimir",
+      "description": "Reparte la imagen final en el papel como un PDF (papel, orientación, márgenes, tamaño, páginas entre líneas de texto) y lo abre en el visor del sistema para imprimirlo con su diálogo."
     }
   },
   "settings": {
@@ -973,7 +981,8 @@
       "editor_tool_cutout": "Herramienta Quitar franja",
       "editor_new_image": "Nueva imagen",
       "editor_new_from_clipboard": "Nueva desde el portapapeles",
-      "editor_batch_export": "Exportar por lotes"
+      "editor_batch_export": "Exportar por lotes",
+      "editor_print": "Imprimir"
     }
   },
   "tray": {
@@ -1109,7 +1118,8 @@
     "snap": "Ajuste magnético",
     "new_image": "Nueva imagen…",
     "new_from_clipboard": "Nueva desde el portapapeles",
-    "batch_export": "Exportar por lotes…"
+    "batch_export": "Exportar por lotes…",
+    "print": "Imprimir…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2289,6 +2299,34 @@
         "done_failed_one": "{{count}} archivo no se pudo exportar:",
         "done_failed_other": "{{count}} archivos no se pudieron exportar:",
         "done_cancelled": "Cancelado: los archivos ya exportados se quedan; ninguno quedó a medias."
+      },
+      "print": {
+        "title": "Imprimir",
+        "paper": "Papel",
+        "paper_a4": "A4",
+        "paper_letter": "Carta",
+        "paper_legal": "Legal",
+        "paper_a3": "A3",
+        "orientation": "Orientación",
+        "margin": "Márgenes",
+        "size": "Tamaño",
+        "size_fit": "Ajustar a la página",
+        "size_actual": "Tamaño real (según su resolución)",
+        "size_percent": "Porcentaje",
+        "percent": "Porcentaje",
+        "position": "Posición",
+        "position_center": "Centrada",
+        "position_topLeft": "Arriba a la izquierda",
+        "what": "Imprimir",
+        "what_all": "El documento completo",
+        "what_selection": "La selección",
+        "pages_one": "{{count}} página",
+        "pages_other": "{{count}} páginas",
+        "print": "Imprimir…",
+        "preparing": "Preparando las páginas…",
+        "preview": "Vista previa",
+        "page_label": "Página {{n}}",
+        "opened": "Las páginas se abrieron en tu visor de PDF: imprímelas desde allí (Ctrl+P)."
       }
     },
     "multi": {

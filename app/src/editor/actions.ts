@@ -38,6 +38,7 @@ import { openImageDialog } from "./imageMenu";
 import { turnOnEffect } from "./effects";
 import { useExportDialog } from "./exportOptions";
 import { useBatchDialog } from "./batchExport";
+import { usePrintDialog } from "./printState";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -764,6 +765,11 @@ export function performAction(action: string): boolean {
     case "new_image":
       // File > New image (EDT-103), also from the Library view.
       openImageDialog("new_image");
+      return true;
+    case "print":
+      // File > Print (EDT-114).
+      if (!doc) return false;
+      usePrintDialog.setState({ open: true });
       return true;
     case "batch_export": {
       // EDT-113: the selection of the Library view, or the document shown.

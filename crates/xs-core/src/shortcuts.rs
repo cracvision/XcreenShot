@@ -624,6 +624,7 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"batch_export"}"#,
         ),
+        editor("editor.print", "editor.action", r#"{"action":"print"}"#),
         editor(
             "editor.new_from_clipboard",
             "editor.action",
@@ -816,6 +817,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
             let windows = match id {
                 "editor.open" => "Ctrl+KeyO",
                 "editor.new_image" => "Ctrl+KeyN",
+                "editor.print" => "Ctrl+KeyP",
                 "editor.new_from_clipboard" => "Ctrl+Shift+KeyN",
                 "editor.save" => "Ctrl+KeyS",
                 "editor.save_as" => "Ctrl+Shift+KeyS",

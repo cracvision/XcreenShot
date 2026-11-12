@@ -3,6 +3,8 @@
 :root {
   color-scheme: light;
   --surface: #f6f6fd;
+  /* Paper in print previews (EDT-114): white in both themes. */
+  --paper: #ffffff;
   --surface-raised: #ffffff;
   --surface-sunken: #ececf8;
   --line: #dcdbf0;
@@ -4244,6 +4246,37 @@ body.preparing-drag * {
 .batch-failed {
   max-height: 140px;
   overflow: auto;
+}
+
+/* Print (EDT-114): options beside a preview of the pages. */
+.print-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.print-preview {
+  max-height: 56vh;
+  overflow: auto;
+}
+
+.print-thumbs {
+  display: grid;
+  gap: 10px;
+}
+
+.print-thumb {
+  position: relative;
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.print-thumb img {
+  position: absolute;
 }
 
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */

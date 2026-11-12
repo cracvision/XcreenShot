@@ -734,6 +734,27 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.print_pages", &["EDT-114", "EDT-102"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "setup": {"type": "object", "description": "{paper: a4 | letter | legal | a3, orientation: auto | portrait | landscape, margin (mm), size: fit | actual | percent, percent, position: center | topLeft}"},
+                    "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}: printing a selection"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"pages": {"type": "array", "description": "{png (base64), paper {w, h}, at {x, y}, size {w, h}} in millimeters"}}})),
+        B::new("document.print", &["EDT-114", "EDT-102", "EDT-119"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "setup": {"type": "object", "description": "As document.print_pages"},
+                    "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}"},
+                    "open": {"type": "boolean", "default": true, "description": "Open the PDF in the system's viewer to print it"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "pages": {"type": "integer"}}})),
         B::new("document.batch_export", &["EDT-113", "EDT-119"])
             .params(params(
                 json!({
@@ -1391,7 +1412,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 93] = [
+pub const EDITOR_ACTIONS: [&str; 94] = [
     "open",
     "save",
     "save_as",
@@ -1473,6 +1494,8 @@ pub const EDITOR_ACTIONS: [&str; 93] = [
     "new_from_clipboard",
     // File > Batch export (EDT-113).
     "batch_export",
+    // File > Print (EDT-114).
+    "print",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

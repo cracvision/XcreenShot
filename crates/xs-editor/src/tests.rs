@@ -3879,3 +3879,39 @@ fn batch_names_with_numbers_prefix_and_suffix() {
         "Chrome 2026"
     );
 }
+
+/// EDT-114: a 1920 × 1080 capture fitted to A4 landscape prints on one page; a tall
+/// one at its own size on several; a selection prints only its part. The PDF has the
+/// paper's exact size.
+#[test]
+fn printing_lays_pages_out_as_a_pdf() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(1920, 1080), json!({"mode": "region"}), 1.0, None).unwrap();
+    let r = cli(
+        &e.core,
+        "document.print",
+        json!({"documentId": doc, "setup": {"paper": "a4", "size": "fit"}, "open": false}),
+    );
+    assert_eq!(r["pages"], 1);
+    let pdf = std::fs::read(r["path"].as_str().unwrap()).unwrap();
+    let text = String::from_utf8_lossy(&pdf);
+    assert!(text.contains("/MediaBox [0 0 841.89 595.28]"), "A4 landscape");
+    let (tall, _) = add_capture(&e.core, &white(800, 6000), json!({"mode": "region"}), 1.0, None).unwrap();
+    let r = cli(
+        &e.core,
+        "document.print",
+        json!({"documentId": tall, "setup": {"paper": "letter", "size": "actual"}, "open": false}),
+    );
+    assert!(r["pages"].as_u64().unwrap() > 1);
+    let preview = cli(
+        &e.core,
+        "document.print_pages",
+        json!({"documentId": doc, "rect": {"x": 0, "y": 0, "w": 400, "h": 300}}),
+    );
+    let page = &preview["pages"][0];
+    let ratio = page["size"]["w"].as_f64().unwrap() / page["size"]["h"].as_f64().unwrap();
+    assert!(
+        (ratio - 400.0 / 300.0).abs() < 0.01,
+        "only the selection: {ratio}"
+    );
+}

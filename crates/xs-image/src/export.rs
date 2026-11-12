@@ -695,6 +695,27 @@ fn layout(p: &Page, o: &Options) -> Vec<Placed> {
 
 fn pdf(pages: &[Page], o: &Options, bg: Rgba) -> Result<Vec<u8>, String> {
     let placed: Vec<Placed> = pages.iter().flat_map(|p| layout(p, o)).collect();
+    write_pdf(&placed, bg, o.pdf_lossless, o.quality)
+}
+
+/// A PDF of the printed pages (EDT-114): each paper with its picture where it goes,
+/// without loss, for the system's PDF viewer to print.
+pub fn print_pdf(pages: &[PrintPage], bg: Rgba) -> Result<Vec<u8>, String> {
+    let pt = 72.0 / 25.4;
+    let placed: Vec<Placed> = pages
+        .iter()
+        .map(|p| Placed {
+            image: p.image.clone(),
+            page: (p.paper.0 * pt, p.paper.1 * pt),
+            // PDF measures from the bottom.
+            at: (p.at.0 * pt, (p.paper.1 - p.at.1 - p.size.1) * pt),
+            size: (p.size.0 * pt, p.size.1 * pt),
+        })
+        .collect();
+    write_pdf(&placed, bg, true, 90)
+}
+
+fn write_pdf(placed: &[Placed], bg: Rgba, lossless: bool, quality: u8) -> Result<Vec<u8>, String> {
     let mut out: Vec<u8> = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec();
     let mut offsets: Vec<usize> = Vec::new();
     let mut object = |out: &mut Vec<u8>, body: &[u8]| {
@@ -725,7 +746,7 @@ fn pdf(pages: &[Page], o: &Options, bg: Rgba) -> Result<Vec<u8>, String> {
             )
             .as_bytes(),
         );
-        let pic = pdf_image(&p.image, bg, o.pdf_lossless, o.quality)?;
+        let pic = pdf_image(&p.image, bg, lossless, quality)?;
         let mut body = format!(
             "<< /Type /XObject /Subtype /Image /Width {} /Height {} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter {} /Length {} >>\nstream\n",
             pic.width,
@@ -759,6 +780,115 @@ fn pdf(pages: &[Page], o: &Options, bg: Rgba) -> Result<Vec<u8>, String> {
         .as_bytes(),
     );
     Ok(out)
+}
+
+// ---------------------------------------------------------------------------
+// Printing (EDT-114): pages in millimeters, with the same breaks as PDF (EDT-102).
+
+/// How to print: paper, orientation, margins, size and position (EDT-114).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PrintSetup {
+    /// "a4", "letter", "legal" or "a3".
+    pub paper: String,
+    /// "auto", "portrait" or "landscape".
+    pub orientation: String,
+    /// Millimeters.
+    pub margin: f64,
+    /// "fit" (the whole image on the page), "actual" (by its resolution) or "percent".
+    pub size: String,
+    pub percent: f64,
+    /// "center" or "topLeft".
+    pub position: String,
+}
+
+impl Default for PrintSetup {
+    fn default() -> Self {
+        PrintSetup {
+            paper: "a4".into(),
+            orientation: "auto".into(),
+            margin: 10.0,
+            size: "fit".into(),
+            percent: 100.0,
+            position: "center".into(),
+        }
+    }
+}
+
+/// One printed page: its picture, the paper and where the picture goes, in mm from
+/// the paper's top-left corner.
+pub struct PrintPage {
+    pub image: RgbaImage,
+    pub paper: (f64, f64),
+    pub at: (f64, f64),
+    pub size: (f64, f64),
+}
+
+fn paper_mm(name: &str) -> (f64, f64) {
+    match name {
+        "letter" => (215.9, 279.4),
+        "legal" => (215.9, 355.6),
+        "a3" => (297.0, 420.0),
+        _ => (210.0, 297.0),
+    }
+}
+
+/// The pages to print `img` on (EDT-114): fitted to one page, or at its own size (or
+/// a percentage) split into pages between lines of text when taller than the paper
+/// (EDT-102). Never wider than the paper.
+pub fn print_pages(img: &RgbaImage, dpi: f64, s: &PrintSetup) -> Vec<PrintPage> {
+    let mm = 25.4 / if dpi > 0.0 { dpi } else { 96.0 };
+    let (iw, ih) = (img.width() as f64 * mm, img.height() as f64 * mm);
+    let (mut pw, mut ph) = paper_mm(&s.paper);
+    let landscape = match s.orientation.as_str() {
+        "landscape" => true,
+        "portrait" => false,
+        _ => iw > ih,
+    };
+    if landscape {
+        std::mem::swap(&mut pw, &mut ph);
+    }
+    let m = s.margin.clamp(0.0, pw.min(ph) / 3.0);
+    let (aw, ah) = (pw - 2.0 * m, ph - 2.0 * m);
+    let k = match s.size.as_str() {
+        "actual" => (aw / iw).min(1.0),
+        "percent" => (aw / iw).min(s.percent.clamp(1.0, 1000.0) / 100.0),
+        _ => (aw / iw).min(ah / ih),
+    };
+    let rows = ((ah / (k * mm)).floor() as u32).max(1);
+    let mut out = Vec::new();
+    let mut y = 0;
+    while y < img.height() {
+        let end = (y + rows).min(img.height());
+        let cut = if end < img.height() {
+            break_row(img, y, end, rows / 6)
+        } else {
+            end
+        };
+        let slice = imageops::crop_imm(img, 0, y, img.width(), cut - y).to_image();
+        let size = (iw * k, (cut - y) as f64 * mm * k);
+        let at = if s.position == "topLeft" || !out.is_empty() || cut < img.height() {
+            // A page of a longer image starts at the top.
+            (
+                if s.position == "topLeft" {
+                    m
+                } else {
+                    m + (aw - size.0) / 2.0
+                },
+                m,
+            )
+        } else {
+            (m + (aw - size.0) / 2.0, m + (ah - size.1) / 2.0)
+        };
+        out.push(PrintPage {
+            image: slice,
+            paper: (pw, ph),
+            at,
+            size,
+        });
+        y = cut;
+    }
+    out
 }
 
 #[cfg(test)]
@@ -920,5 +1050,28 @@ mod tests {
         assert!(opts(serde_json::json!({"scale": 500})).check().is_err());
         assert!(opts(serde_json::json!({"icoSizes": [8]})).check().is_err());
         assert!(Options::default().check().is_ok());
+    }
+
+    #[test]
+    fn printing_fits_one_page_or_splits() {
+        // 1920 × 1080 fitted to A4 landscape: one page, centered.
+        let img = sample(1920, 1080);
+        let one = print_pages(&img, 96.0, &PrintSetup::default());
+        assert_eq!(one.len(), 1);
+        assert!(one[0].paper.0 > one[0].paper.1, "landscape");
+        assert!(
+            (one[0].at.0 * 2.0 + one[0].size.0 - one[0].paper.0).abs() < 0.01,
+            "centered"
+        );
+        // A tall image at its own size: several pages from the top.
+        let tall = sample(800, 6000);
+        let setup = PrintSetup {
+            size: "actual".into(),
+            ..PrintSetup::default()
+        };
+        let pages = print_pages(&tall, 96.0, &setup);
+        assert!(pages.len() > 1);
+        assert_eq!(pages.iter().map(|p| p.image.height()).sum::<u32>(), 6000);
+        assert!((pages[1].at.1 - 10.0).abs() < 0.01, "from the top margin");
     }
 }

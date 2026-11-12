@@ -378,6 +378,7 @@ export function useMenuBar(): void {
     enabled["editor.snap"] = !inLibrary;
     enabled["editor.new_image"] = true;
     enabled["editor.batch_export"] = true;
+    enabled["editor.print"] = hasDoc;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;

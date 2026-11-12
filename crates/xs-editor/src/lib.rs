@@ -4328,6 +4328,8 @@ pub fn extension() -> Extension {
         on!("document.batch_export", |core, ctx, p| batch_export(
             &core, ctx, &p
         ));
+        on!("document.print_pages", |core, ctx, p| print_pages(&core, ctx, &p));
+        on!("document.print", |core, ctx, p| print_document(&core, ctx, &p));
         on!("document.new_from_clipboard", |core, ctx, _p| new_from_clipboard(
             &core, ctx
         ));
@@ -5047,6 +5049,88 @@ fn batch_export(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         "skipped": skipped,
         "cancelled": cancelled,
     }))
+}
+
+/// The pages to print a document on (EDT-114, EDT-102): its final image, or the part
+/// of the canvas in `rect`, laid out by `setup`. And the document's name.
+fn print_layout(
+    core: &Core,
+    ctx: &Context,
+    p: &Value,
+) -> Result<(Vec<xs_image::export::PrintPage>, String), CommandError> {
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let setup: xs_image::export::PrintSetup =
+        serde_json::from_value(p.get("setup").cloned().unwrap_or(json!({}))).map_err(|e| {
+            invalid(tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", "setup"), ("reason", &e.to_string())],
+            ))
+        })?;
+    let snap = editor(core)
+        .store
+        .snapshot(&id)
+        .map_err(|e| internal(lang, "", e))?;
+    let (mut image, origin) = snap.render_with_origin();
+    // Print a selection (EDT-114): its rectangle of the canvas.
+    if let Some(r) = p.get("rect") {
+        let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+        let x0 = (n("x").floor() as i64 + origin[0]).clamp(0, image.width() as i64) as u32;
+        let y0 = (n("y").floor() as i64 + origin[1]).clamp(0, image.height() as i64) as u32;
+        let x1 = ((n("x") + n("w")).ceil() as i64 + origin[0]).clamp(0, image.width() as i64) as u32;
+        let y1 = ((n("y") + n("h")).ceil() as i64 + origin[1]).clamp(0, image.height() as i64) as u32;
+        if x1 > x0 && y1 > y0 {
+            image = image::imageops::crop_imm(&image, x0, y0, x1 - x0, y1 - y0).to_image();
+        }
+    }
+    Ok((
+        xs_image::export::print_pages(&image, snap.document.dpi, &setup),
+        snap.name.clone(),
+    ))
+}
+
+/// `document.print_pages` (EDT-114): each page's picture as PNG and where it goes, in
+/// millimeters, for the preview.
+fn print_pages(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    use base64::Engine as _;
+    let (pages, _) = print_layout(core, ctx, p)?;
+    let mut out = Vec::new();
+    for page in pages {
+        let png = xs_image::encode::png(&page.image, 0.0, true).map_err(|e| internal(ctx.lang, "", e))?;
+        out.push(json!({
+            "png": base64::engine::general_purpose::STANDARD.encode(png),
+            "paper": {"w": page.paper.0, "h": page.paper.1},
+            "at": {"x": page.at.0, "y": page.at.1},
+            "size": {"w": page.size.0, "h": page.size.1},
+        }));
+    }
+    Ok(json!({ "pages": out }))
+}
+
+/// `document.print` (EDT-114): the pages as a PDF with that paper, orientation and
+/// margins, opened in the system's viewer to print with its dialog. `open: false`
+/// only writes it.
+fn print_document(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let (pages, name) = print_layout(core, ctx, p)?;
+    let count = pages.len();
+    let bytes =
+        xs_image::export::print_pdf(&pages, flatten_background(core)).map_err(|e| internal(lang, "", e))?;
+    let ed = editor(core);
+    let dir = ed.unsaved_dir().with_file_name("print");
+    let file = xs_library::file_name(&name).unwrap_or_else(|| "XcreenShot".to_string());
+    let path = dir.join(format!("{file}.pdf"));
+    {
+        let _guard = ed.writing.lock().unwrap();
+        std::fs::create_dir_all(&dir)
+            .and_then(|_| write_file(&path, &bytes))
+            .map_err(|e| internal(lang, &file, e.to_string()))?;
+    }
+    if p.get("open").and_then(Value::as_bool) != Some(false) {
+        core.host().open_path(&path)?;
+    }
+    Ok(json!({ "path": path, "pages": count }))
 }
 
 /// File > New image (EDT-103): a blank canvas of the size, color and resolution

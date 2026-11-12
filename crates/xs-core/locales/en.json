@@ -534,6 +534,14 @@
     "document_batch_export": {
       "title": "Batch export",
       "description": "Exports many files at once to one format, with a saved effect or a stack added, into a folder or next to each original, keeping the names or numbering them. The sources do not change; editor.cancel stops it."
+    },
+    "document_print_pages": {
+      "title": "Pages to print",
+      "description": "The final image (or a part of the canvas) laid out on paper: each page's picture and where it goes, in millimeters."
+    },
+    "document_print": {
+      "title": "Print",
+      "description": "Lays the final image out on paper as a PDF (paper, orientation, margins, size, pages between lines of text) and opens it in the system's viewer to print with its dialog."
     }
   },
   "settings": {
@@ -973,7 +981,8 @@
       "editor_tool_cutout": "Cut out tool",
       "editor_new_image": "New image",
       "editor_new_from_clipboard": "New from clipboard",
-      "editor_batch_export": "Batch export"
+      "editor_batch_export": "Batch export",
+      "editor_print": "Print"
     }
   },
   "tray": {
@@ -1109,7 +1118,8 @@
     "snap": "Snapping",
     "new_image": "New image…",
     "new_from_clipboard": "New from clipboard",
-    "batch_export": "Batch export…"
+    "batch_export": "Batch export…",
+    "print": "Print…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2289,6 +2299,34 @@
         "done_failed_one": "{{count}} file could not be exported:",
         "done_failed_other": "{{count}} files could not be exported:",
         "done_cancelled": "Cancelled: the files exported before stay; none was left half-written."
+      },
+      "print": {
+        "title": "Print",
+        "paper": "Paper",
+        "paper_a4": "A4",
+        "paper_letter": "Letter",
+        "paper_legal": "Legal",
+        "paper_a3": "A3",
+        "orientation": "Orientation",
+        "margin": "Margins",
+        "size": "Size",
+        "size_fit": "Fit to the page",
+        "size_actual": "Actual size (by its resolution)",
+        "size_percent": "Percentage",
+        "percent": "Percentage",
+        "position": "Position",
+        "position_center": "Centered",
+        "position_topLeft": "Top left",
+        "what": "Print",
+        "what_all": "The whole document",
+        "what_selection": "The selection",
+        "pages_one": "{{count}} page",
+        "pages_other": "{{count}} pages",
+        "print": "Print…",
+        "preparing": "Preparing the pages…",
+        "preview": "Preview",
+        "page_label": "Page {{n}}",
+        "opened": "The pages opened in your PDF viewer: print them from there (Ctrl+P)."
       }
     },
     "multi": {
