@@ -82,7 +82,10 @@ pub fn layout(mut lines: Vec<Line>) -> Vec<Block> {
             Some((lg, prev)) => {
                 let gap = line.rect[1] - (prev.rect[1] + prev.rect[3]);
                 let size = line.rect[3].max(1.0) / prev.rect[3].max(1.0);
-                *lg != g || gap > (gaps * 1.8).max(heights * 0.6) || !(0.72..=1.4).contains(&size)
+                // The usual gap is never taken as more than half a line: with two
+                // lines there is nothing to compare with.
+                let usual = gaps.min(heights * 0.5);
+                *lg != g || gap > (usual * 1.8).max(heights * 0.6) || !(0.72..=1.4).contains(&size)
             }
         };
         if new_paragraph || blocks.is_empty() {
@@ -191,12 +194,14 @@ pub fn html(blocks: &[Block], join: bool) -> String {
                 out.push_str(if join { " " } else { "<br>" });
             }
             let mut style = String::new();
-            // Black-ish text keeps the reader's own color; colored text keeps its own.
-            if l.color != "#000000" && !is_dark(&l.color) {
+            // Gray or black text takes the reader's own color; colored text keeps its
+            // own (a red word stays red).
+            if is_colored(&l.color) {
                 style.push_str(&format!("color: {};", l.color));
             }
+            // Letter boxes vary with accents and descenders: only clear changes count.
             let rel = l.height / base;
-            if !(0.85..=1.15).contains(&rel) {
+            if !(0.75..=1.35).contains(&rel) {
                 style.push_str(&format!("font-size: {:.2}em;", rel));
             }
             if style.is_empty() {
@@ -214,12 +219,6 @@ pub fn html(blocks: &[Block], join: bool) -> String {
 fn channels(hex: &str) -> [u8; 3] {
     let v = u32::from_str_radix(hex.trim_start_matches('#'), 16).unwrap_or(0);
     [(v >> 16) as u8, (v >> 8) as u8, v as u8]
-}
-
-/// Black-ish text keeps the reader's own color.
-fn is_dark(hex: &str) -> bool {
-    let [r, g, b] = channels(hex);
-    (r as u32 + g as u32 + b as u32) < 150 && !is_colored(hex)
 }
 
 fn is_colored(hex: &str) -> bool {
@@ -308,15 +307,24 @@ mod tests {
     fn the_html_keeps_color_and_size() {
         let mut red = line("rojo", 10.0, 10.0, 60.0, 16.0);
         red.color = "#D01010".into();
+        let mut gray = line("gris", 10.0, 50.0, 60.0, 15.0);
+        gray.color = "#4A4D57".into();
         let blocks = layout(vec![
             line("<Título>", 10.0, 0.0, 200.0, 32.0),
             red,
             line("normal", 10.0, 30.0, 60.0, 16.0),
+            gray,
         ]);
         let h = html(&blocks, false);
         assert!(h.contains("color: #D01010"), "{h}");
         assert!(h.contains("font-size: 2.00em"), "{h}");
         assert!(h.contains("&lt;Título&gt;"), "{h}");
         assert!(!h.contains("color: #000000"));
+        assert!(!h.contains("#4A4D57"), "gray text takes the reader's color: {h}");
+        assert_eq!(
+            h.matches("font-size").count(),
+            1,
+            "15 px next to 16 px is the same size"
+        );
     }
 }

@@ -165,6 +165,11 @@ pub trait Host: Send + Sync {
         let _ = open;
         self.notify(category, title, body);
     }
+    /// Shows the results window of an Extract text (SMT-006).
+    fn open_text_result(&self, id: &str) -> Result<(), CommandError> {
+        let _ = id;
+        Err(unsupported())
+    }
     /// A capture finished; `open_editor` asks to show it (CAP-045, CAP-054).
     fn capture_finished(&self, result: &Value, thumbnail_png: Option<&[u8]>, open_editor: bool) {}
     /// Hide XcreenShot windows before a capture, and show them again after (CAP-023).

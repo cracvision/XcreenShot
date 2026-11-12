@@ -61,11 +61,18 @@ pub struct Stored {
 /// The presets that come with the app, in order (CAP-064). Scrolling, the step
 /// recorder and Extract text arrive with their features.
 pub fn builtins() -> Vec<(&'static str, &'static str, Value)> {
-    vec![(
-        "region_clipboard",
-        "image",
-        json!({"selection": "region", "open": "none", "copy": true, "cursor": false, "timing": "none", "delay": 5}),
-    )]
+    vec![
+        (
+            "region_clipboard",
+            "image",
+            json!({"selection": "region", "open": "none", "copy": true, "cursor": false, "timing": "none", "delay": 5}),
+        ),
+        (
+            "extract_text",
+            "image",
+            json!({"selection": "text", "open": "none", "copy": true, "cursor": false, "timing": "none", "delay": 5}),
+        ),
+    ]
 }
 
 fn builtin_preset(id: &str) -> Option<Preset> {

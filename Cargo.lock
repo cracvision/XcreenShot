@@ -7178,6 +7178,7 @@ dependencies = [
  "xs-core",
  "xs-editor",
  "xs-image",
+ "xs-ocr",
 ]
 
 [[package]]

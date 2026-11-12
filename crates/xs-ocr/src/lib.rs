@@ -207,8 +207,9 @@ pub fn tiles(height: u32, max_side: u32, overlap: u32) -> Vec<(u32, u32, u32, u3
     out
 }
 
-/// Recognizes the text of an image (SMT-003). `languages` empty or `["auto"]`: the
-/// user's languages; otherwise up to 3 tags, and the reading with more letters wins.
+/// Recognizes the text of an image (SMT-003) with up to 3 languages: tags, or `auto`
+/// for the system's preferred ones (empty means `auto`). The reading with more letters
+/// wins; on a tie, the first.
 pub fn recognize(
     image: &RgbaImage,
     languages: &[String],
@@ -224,19 +225,18 @@ pub fn recognize(
         let max_side = win::max_dimension();
         let scale = scale_for(image.width(), image.height(), max_side);
         let gray = prepare(image, scale);
-        let wanted: Vec<Option<String>> = {
-            let chosen: Vec<String> = languages
-                .iter()
-                .filter(|l| l.as_str() != "auto" && !l.is_empty())
-                .take(3)
-                .cloned()
-                .collect();
-            if chosen.is_empty() {
-                vec![None]
-            } else {
-                chosen.into_iter().map(Some).collect()
+        // "auto" is the system's preferred languages; a tag, that language. In order:
+        // when two readings have as many letters, the first wins.
+        let mut wanted: Vec<Option<String>> = Vec::new();
+        for l in languages.iter().filter(|l| !l.is_empty()).take(3) {
+            let item = (l.as_str() != "auto").then(|| l.clone());
+            if !wanted.contains(&item) {
+                wanted.push(item);
             }
-        };
+        }
+        if wanted.is_empty() {
+            wanted.push(None);
+        }
         let mut best: Option<(usize, Vec<RawLine>, String)> = None;
         let mut last_error = None;
         for lang in &wanted {

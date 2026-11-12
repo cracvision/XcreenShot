@@ -97,7 +97,9 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 ];
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library", "tray", "preset"];
+pub const EXTERNAL_AREAS: &[&str] = &[
+    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart",
+];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -174,6 +176,21 @@ const PERMISSIONS: [&str; 4] = ["screen_recording", "accessibility", "camera", "
 pub fn specs() -> Vec<CommandSpec> {
     let section = json!({"type": "string", "enum": crate::settings::SECTIONS});
     let shortcut_scope = json!({"type": "string", "enum": ["global", "app", "editor"]});
+    // Built in parts: as one list, its frame was too big for the main thread of a
+    // debug build (STATUS_STACK_OVERFLOW).
+    let mut all: Vec<B> = Vec::new();
+    all.extend(specs_1(&section, &shortcut_scope));
+    all.extend(specs_2(&section, &shortcut_scope));
+    all.extend(specs_3(&section, &shortcut_scope));
+    all.extend(specs_4(&section, &shortcut_scope));
+    all.extend(specs_5(&section, &shortcut_scope));
+    all.extend(specs_6(&section, &shortcut_scope));
+    all.into_iter().map(|b| b.0).collect()
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
     vec![
         B::new("app.ping", &["APP-027"])
             .scopes(ALL)
@@ -375,6 +392,13 @@ pub fn specs() -> Vec<CommandSpec> {
             .mutates()
             .params(params(json!({"paused": {"type": "boolean"}}), &[]))
             .result(json!({"type": "object", "properties": {"paused": {"type": "boolean"}}})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("shortcuts.set_profile", &["APP-021"])
             .scopes(UI_CLI)
             .mutates()
@@ -469,6 +493,70 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object"})),
+        // Extract text (SMT-003 to SMT-006).
+        B::new("smart.extract_text", &["SMT-005", "SMT-003", "APP-030"])
+            .scopes(ALL)
+            .mutates()
+            .interactive()
+            .positional(&["source"])
+            .params(params(
+                json!({
+                    "source": {"type": "string", "enum": ["screen", "file"], "default": "screen", "description": "screen: the user selects a zone (or rect); file: an image file"},
+                    "path": {"type": "string", "description": "The image file, with source file"},
+                    "rect": {"type": "object", "description": "A rectangle of the desktop in physical pixels, without selecting on screen"},
+                    "language": {"type": ["string", "array"], "items": {"type": "string"}, "description": "auto, or up to 3 languages (es, en, pt, fr, de, ja, zh-Hans…); default: the setting"},
+                    "copy": {"type": "boolean", "description": "Copy the text (default: yes from the app; no from the CLI)"},
+                    "show": {"type": "boolean", "description": "Open the results window (default: the setting; no from the CLI)"},
+                    "delay": {"type": "number", "minimum": 0, "maximum": 60}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "id": {"type": "string"}, "found": {"type": "boolean"}, "words": {"type": "integer"},
+                "language": {"type": "string"}, "text": {"type": "string"}, "html": {"type": "string"},
+                "copied": {"type": "boolean"}
+            }})),
+        B::new("smart.ocr_languages", &["SMT-004"])
+            .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
+        B::new("smart.language_settings", &["SMT-004"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),
+        B::new("smart.text_result", &["SMT-006"])
+            .scopes(UI)
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.text_again", &["SMT-006", "SMT-004"])
+            .scopes(UI)
+            .params(params(
+                json!({"id": {"type": "string"}, "language": {"type": ["string", "array"], "items": {"type": "string"}}}),
+                &["id", "language"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("smart.text_close", &["SMT-006", "SMT-001"])
+            .scopes(UI)
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.show_text", &["SMT-006"])
+            .scopes(UI)
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.copy_text", &["SMT-006"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({"text": {"type": "string"}, "html": {"type": ["string", "null"]}}),
+                &["text"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("smart.save_text", &["SMT-006"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({"path": {"type": "string"}, "text": {"type": "string"}}),
+                &["path", "text"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}}})),
         // Presets (CAP-058 to CAP-064).
         B::new("preset.list", &["CAP-058", "APP-030"])
             .result(json!({"type": "object", "properties": {"presets": {"type": "array", "description": "In order: id, name, kind, settings, summary, builtin, shortcut, shortcutDisplay, slot, running, warnings"}}})),
@@ -519,6 +607,13 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["id", "to"],
             ))
             .result(json!({"type": "object"})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("preset.duplicate", &["CAP-060"])
             .mutates()
             .positional(&["id"])
@@ -872,6 +967,13 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object"})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_4(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("document.trim", &["EDT-051", "EDT-119"])
             .mutates()
             .positional(&["tolerance"])
@@ -1271,6 +1373,13 @@ pub fn specs() -> Vec<CommandSpec> {
             "type": "object",
             "properties": {"fonts": {"type": "array", "items": {"type": "string"}}}
         })),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("editor.select_tool", &["EDT-003", "EDT-119"])
             .scopes(ALL)
             .positional(&["tool"])
@@ -1659,6 +1768,13 @@ pub fn specs() -> Vec<CommandSpec> {
             .result(json!({"type": "object", "properties": {
                 "copies": {"type": "array", "description": "{source, path, id, documentId} of each copy"}
             }})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_6(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("library.import", &["LIB-024", "LIB-034"])
             .mutates()
             .positional(&["paths"])
@@ -1935,9 +2051,6 @@ pub fn specs() -> Vec<CommandSpec> {
             .destructive()
             .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"])),
     ]
-    .into_iter()
-    .map(|b| b.0)
-    .collect()
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.

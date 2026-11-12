@@ -108,7 +108,8 @@ export interface PanelSettings {
     delay5: boolean;
   };
   image: {
-    selection: "region" | "window" | "fullscreen";
+    /** `text`: Extract text (SMT-005). */
+    selection: "region" | "window" | "fullscreen" | "text";
     copy: boolean;
     cursor: boolean;
     open: "editor" | "none";

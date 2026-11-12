@@ -1593,6 +1593,79 @@ html.overlay-root.overlay-native #root {
   position: relative;
 }
 
+/* Extract text: its results window (SMT-006). */
+.text-result {
+  height: 100vh;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.text-result-area {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.45;
+  resize: none;
+  outline: none;
+}
+
+.text-result-area:focus-visible {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand);
+}
+
+.text-result-area.rich p {
+  margin: 0 0 1em;
+}
+
+.text-result-none {
+  overflow: auto;
+}
+
+.text-result-none h1 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.text-result-none ul {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--ink-muted);
+}
+
+.text-result-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.text-result-bar .grow {
+  flex: 1;
+}
+
+.text-result-status {
+  font-size: 12px;
+}
+
+/* Preferences > Capture > Recognition language (SMT-004). */
+.ocr-languages {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
 /* Presets of the capture panel (CAP-058 to CAP-064). */
 .presets {
   display: grid;

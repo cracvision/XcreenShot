@@ -6,6 +6,7 @@ import { Help } from "./windows/Help";
 import { Countdown } from "./windows/Countdown";
 import { MultiCapture } from "./windows/MultiCapture";
 import { Preferences } from "./windows/Preferences";
+import { TextResult } from "./windows/TextResult";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
 
@@ -14,6 +15,8 @@ export function App() {
   // Tooltips off (APP-014) holds in every window except the selection.
   useTooltipsOff();
   if (isOverlay) return <Overlay />;
+  // Extract text: one window per result (SMT-006).
+  if (windowLabel.startsWith("text-")) return <TextResult id={windowLabel.slice(5)} />;
   switch (windowLabel) {
     case "preferences":
       return <Preferences />;

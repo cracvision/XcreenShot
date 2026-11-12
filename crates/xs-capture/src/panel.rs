@@ -84,6 +84,8 @@ impl Default for PanelSettings {
 }
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
+/// The Image tab also has Extract text (SMT-005).
+const IMAGE_SELECTIONS: [&str; 4] = ["region", "window", "fullscreen", "text"];
 
 impl PanelSettings {
     /// Checks every value; returns the offending field.
@@ -98,7 +100,7 @@ impl PanelSettings {
         one_of("tab", &self.tab, &["universal", "image"])?;
         one_of("universal.selection", &self.universal.selection, &SELECTIONS)?;
         one_of("universal.open", &self.universal.open, &["editor", "none"])?;
-        one_of("image.selection", &self.image.selection, &SELECTIONS)?;
+        one_of("image.selection", &self.image.selection, &IMAGE_SELECTIONS)?;
         one_of("image.open", &self.image.open, &["editor", "none"])?;
         one_of("image.timing", &self.image.timing, &["none", "delay"])?;
         if !(1..=60).contains(&self.image.delay) {
@@ -145,6 +147,13 @@ impl PanelSettings {
             ("capture.universal", params, extra)
         } else {
             let mut params = self.image_options();
+            if self.image.selection == "text" {
+                // A zone of the screen whose text is read (SMT-005): the delay and
+                // the clipboard apply; the pointer and Open in do not.
+                params["extract"] = json!(true);
+                params["cursor"] = json!(false);
+                return ("capture.region", params, json!({}));
+            }
             let command = match self.image.selection.as_str() {
                 "window" => {
                     params["target"] = json!("interactive");

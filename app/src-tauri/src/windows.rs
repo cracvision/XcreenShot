@@ -153,6 +153,44 @@ pub fn open_welcome(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// A results window of Extract text (SMT-006): one per extraction, near the pointer,
+/// resizable, without a minimize button. Its label carries the result's id.
+pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
+    let label = format!("text-{id}");
+    if let Some(w) = app.get_webview_window(&label) {
+        focus(&w);
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.extract.title", &[]);
+    let (width, height) = (560.0, 420.0);
+    let w = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(width, height)
+        .min_inner_size(360.0, 260.0)
+        .minimizable(false)
+        .visible(false)
+        .theme(theme(app))
+        .build()?;
+    // Near the zone, which ends under the pointer: below and to the right of it, kept
+    // inside its monitor.
+    let pointer = app.cursor_position().ok();
+    let monitor = pointer
+        .and_then(|p| app.monitor_from_point(p.x, p.y).ok().flatten())
+        .or_else(|| app.primary_monitor().ok().flatten());
+    if let (Some(p), Some(m)) = (pointer, monitor) {
+        let scale = m.scale_factor();
+        let area = m.work_area();
+        let (w_px, h_px) = ((width * scale) as i32, (height * scale) as i32);
+        let max_x = area.position.x + area.size.width as i32 - w_px;
+        let max_y = area.position.y + area.size.height as i32 - h_px;
+        let x = (p.x as i32 + 16).clamp(area.position.x, max_x.max(area.position.x));
+        let y = (p.y as i32 + 16).clamp(area.position.y, max_y.max(area.position.y));
+        let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+    }
+    focus(&w);
+    Ok(())
+}
+
 /// The Help window (APP-015) at a topic: the page goes in the address, and an open
 /// window is told with an event.
 pub fn open_help(app: &AppHandle, topic: Option<&str>) -> tauri::Result<()> {

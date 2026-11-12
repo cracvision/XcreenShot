@@ -7,6 +7,7 @@
 //! on-screen selection arrives in build 2.
 
 pub mod compose;
+pub mod extract;
 pub mod feedback;
 pub mod interactive;
 pub mod multi;
@@ -361,6 +362,11 @@ pub struct Options {
     pub open_editor: bool,
     pub out: Option<PathBuf>,
     pub delay: f64,
+    /// Extract text instead of keeping an image (SMT-005).
+    pub extract: bool,
+    /// Extract text: show its results window (default: the setting, or no for
+    /// automation).
+    pub show: Option<bool>,
 }
 
 impl Options {
@@ -376,6 +382,8 @@ impl Options {
             },
             out: p.get("out").and_then(Value::as_str).map(PathBuf::from),
             delay: p.get("delay").and_then(Value::as_f64).unwrap_or(0.0),
+            extract: p.get("extract").and_then(Value::as_bool).unwrap_or(false),
+            show: p.get("show").and_then(Value::as_bool),
         }
     }
 }
@@ -455,6 +463,20 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     }
     if core.settings.get_bool("capture.flash") {
         feedback::flash(shot.rect);
+    }
+    // Extract text (SMT-005): the zone's text, not an image; the image is kept in the
+    // library only when asked.
+    if opts.extract {
+        if core.settings.get_bool("smart.extractText.saveImage") {
+            let meta = metadata(core, &shot, now);
+            let app = shot.app.as_ref().map(|a| a.name.clone());
+            if let Err(e) =
+                xs_editor::save_capture(core, &shot.image, meta, shot.scale as f64, app.as_deref())
+            {
+                tracing::warn!(error = %e, "extract text: the image was not kept");
+            }
+        }
+        return extract::deliver(core, ctx, shot.image, opts.copy, opts.show);
     }
     // The pointer, if asked for and inside the image (CAP-047): a floating image in
     // the document, and laid over the image that leaves without the editor.
@@ -906,6 +928,8 @@ pub fn extension() -> Extension {
         });
         // CAP-058 to CAP-064; their shortcut rows exist from the start (CAP-062).
         preset_cmds::register(reg, &weak);
+        // Extract text (SMT-003 to SMT-006).
+        extract::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();
             let rows = presets::load(&core)

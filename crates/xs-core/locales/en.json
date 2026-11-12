@@ -714,6 +714,42 @@
     "preset_import": {
       "title": "Import presets",
       "description": "Adds the presets of .xpreset files; shortcuts from the other platform are converted."
+    },
+    "smart_extract_text": {
+      "title": "Extract text",
+      "description": "Reads the text of a zone of the screen or of an image file, on this computer, and copies it."
+    },
+    "smart_ocr_languages": {
+      "title": "Recognition languages",
+      "description": "The languages this computer can read, and which required ones are missing."
+    },
+    "smart_text_result": {
+      "title": "Extracted text",
+      "description": "The result shown in a results window."
+    },
+    "smart_text_again": {
+      "title": "Recognize in another language",
+      "description": "Reads the same zone again with other languages."
+    },
+    "smart_text_close": {
+      "title": "Close extracted text",
+      "description": "Forgets the text and the zone of a results window."
+    },
+    "smart_show_text": {
+      "title": "Show extracted text",
+      "description": "Opens the results window of an extraction."
+    },
+    "smart_copy_text": {
+      "title": "Copy text",
+      "description": "Puts text on the clipboard, with its format when it has one."
+    },
+    "smart_save_text": {
+      "title": "Save as text",
+      "description": "Writes the text to a .txt file in UTF-8."
+    },
+    "smart_language_settings": {
+      "title": "Recognition language settings",
+      "description": "Opens the system's page where a recognition language is added."
     }
   },
   "settings": {
@@ -996,6 +1032,22 @@
     "capture_confirmPresetDelete": {
       "label": "Ask before deleting a preset",
       "description": "A deleted preset can still be brought back with Undo for 10 seconds."
+    },
+    "smart_ocr_languages": {
+      "label": "Recognition language",
+      "description": "Automatic uses the language of the interface and those of the system, and keeps the best reading."
+    },
+    "smart_extractText_showResults": {
+      "label": "Show the results window",
+      "description": "After Extract text, a window with the text to review, copy or save. Off, the text is copied at once and a notification says so."
+    },
+    "smart_extractText_saveImage": {
+      "label": "Keep the image in the library too",
+      "description": "Extract text also saves the zone as a capture in the library."
+    },
+    "smart_extractText_plain": {
+      "label": "Extracted text without format",
+      "description": "Copies only the text, without fonts or colors."
     }
   },
   "errors": {
@@ -1073,7 +1125,11 @@
     "library_merging": "Another library is being merged into this one. Wait until it finishes or cancel it.",
     "preset_not_found": "There is no preset \"{{name}}\".",
     "preset_unusable": "The preset \"{{name}}\" cannot capture: {{reason}}. Edit it.",
-    "preset_file": "\"{{name}}\" cannot be imported: {{reason}}. Nothing was imported."
+    "preset_file": "\"{{name}}\" cannot be imported: {{reason}}. Nothing was imported.",
+    "text_cancelled": "Text extraction cancelled.",
+    "ocr_not_supported": "Text recognition is not available on this system yet.",
+    "ocr_no_language": "This computer has no recognition language for that. Add one in the system settings (Time & language > Language).",
+    "text_result_gone": "That extracted text is no longer open ({{id}})."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1216,7 +1272,8 @@
       "editor_pin_item": "Pin or unpin in the tray",
       "editor_duplicate_item": "Duplicate the item",
       "editor_shortcut_sheet": "Keyboard shortcuts sheet",
-      "editor_move_computer": "Move XcreenShot to another computer"
+      "editor_move_computer": "Move XcreenShot to another computer",
+      "smart_extract_text": "Extract text"
     }
   },
   "tray": {
@@ -1237,7 +1294,8 @@
     "capture_multi": "Multi-capture",
     "open_library": "Open library",
     "presets": "Presets",
-    "presets_empty": "No presets"
+    "presets_empty": "No presets",
+    "extract_text": "Extract text"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -1398,7 +1456,10 @@
     "action_folder": "Show in folder",
     "waiting_moved_title": "Captures in the library",
     "waiting_moved_body_one": "The library is reachable again: {{count}} capture made meanwhile is in it now.",
-    "waiting_moved_body_other": "The library is reachable again: {{count}} captures made meanwhile are in it now."
+    "waiting_moved_body_other": "The library is reachable again: {{count}} captures made meanwhile are in it now.",
+    "text_copied": "Text copied ({{count}} words).",
+    "text_none": "No text was found in the selected zone.",
+    "action_view": "View"
   },
   "source": {
     "ui": "the interface",
@@ -1821,7 +1882,11 @@
         "builtins_reset": "Put them back",
         "builtins_restored": "Built-in presets restored.",
         "builtins_there": "Every built-in preset is there already."
-      }
+      },
+      "sel_text": "Extract text",
+      "copy_text": "Copy the text",
+      "text_no_open": "Extract text opens its results window, not the editor.",
+      "text_no_cursor": "The pointer is not part of the text."
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3352,6 +3417,46 @@
       "new_title": "3. On the new computer",
       "new_steps": "Install XcreenShot. In the welcome, choose Use an existing library and pick the copied folder, then Import settings with the .xsettings file. Later, Preferences > Library > Change… and Preferences > Advanced > Import do the same.",
       "formats": "Everything is in open formats: .xshot files are ZIPs with the image as PNG, so any program can read them."
+    },
+    "extract": {
+      "lang": {
+        "en": "English",
+        "es": "Spanish",
+        "pt": "Portuguese",
+        "fr": "French",
+        "de": "German",
+        "ja": "Japanese",
+        "zh_Hans": "Chinese (simplified)",
+        "zh_Hant": "Chinese (traditional)"
+      },
+      "title": "Extracted text",
+      "text_label": "Extracted text",
+      "copy_all": "Copy all",
+      "copy_close": "Copy and close",
+      "plain": "Without format",
+      "more": "More",
+      "save_txt": "Save as text…",
+      "other_language": "Recognize in another language",
+      "auto": "Automatic",
+      "not_here": "not on this computer",
+      "not_here_help": "Add it in the system settings: Time & language > Language.",
+      "add_language": "Add a language in the system…",
+      "join_lines": "Join each paragraph's lines",
+      "copied": "Copied.",
+      "saved": "Saved.",
+      "reading": "Reading…",
+      "words_one": "{{count}} word · {{language}}",
+      "words_other": "{{count}} words · {{language}}",
+      "none_title": "No text was found in the selected zone",
+      "repeat": "Try again",
+      "file_name": "Extracted text",
+      "file_type": "Text",
+      "tip_contrast": "Raise the contrast or the zoom of what you capture before selecting it.",
+      "tip_straight": "Text turned more than a little is hard to read: straighten it if you can.",
+      "tip_frame": "Leave frames, borders and pictures out of the zone.",
+      "tip_letters": "Very decorative, handwritten or outlined letters are hard to read.",
+      "tip_language": "Try another language in More > Recognize in another language.",
+      "up_to_three": "Up to 3 languages."
     }
   },
   "history": {
@@ -3541,12 +3646,14 @@
   },
   "presets": {
     "builtin": {
-      "region_clipboard": "Region to clipboard"
+      "region_clipboard": "Region to clipboard",
+      "extract_text": "Extract text"
     },
     "selection": {
       "region": "Region",
       "window": "Window",
-      "fullscreen": "Full screen"
+      "fullscreen": "Full screen",
+      "text": "Extract text"
     },
     "kind": {
       "universal": "Universal",

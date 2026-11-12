@@ -714,6 +714,42 @@
     "preset_import": {
       "title": "Importar presets",
       "description": "Añade los presets de archivos .xpreset; los atajos de la otra plataforma se convierten."
+    },
+    "smart_extract_text": {
+      "title": "Extraer texto",
+      "description": "Lee el texto de una zona de la pantalla o de un archivo de imagen, en este equipo, y lo copia."
+    },
+    "smart_ocr_languages": {
+      "title": "Idiomas del reconocimiento",
+      "description": "Los idiomas que este equipo puede leer y cuáles de los obligatorios faltan."
+    },
+    "smart_text_result": {
+      "title": "Texto extraído",
+      "description": "El resultado que muestra una ventana de resultados."
+    },
+    "smart_text_again": {
+      "title": "Reconocer en otro idioma",
+      "description": "Vuelve a leer la misma zona con otros idiomas."
+    },
+    "smart_text_close": {
+      "title": "Cerrar el texto extraído",
+      "description": "Olvida el texto y la zona de una ventana de resultados."
+    },
+    "smart_show_text": {
+      "title": "Ver el texto extraído",
+      "description": "Abre la ventana de resultados de una extracción."
+    },
+    "smart_copy_text": {
+      "title": "Copiar texto",
+      "description": "Pone texto en el portapapeles, con su formato si lo tiene."
+    },
+    "smart_save_text": {
+      "title": "Guardar como texto",
+      "description": "Escribe el texto en un archivo .txt en UTF-8."
+    },
+    "smart_language_settings": {
+      "title": "Ajustes de idiomas de reconocimiento",
+      "description": "Abre la página del sistema donde se añade un idioma de reconocimiento."
     }
   },
   "settings": {
@@ -996,6 +1032,22 @@
     "capture_confirmPresetDelete": {
       "label": "Preguntar antes de eliminar un preset",
       "description": "Un preset eliminado se puede recuperar con Deshacer durante 10 segundos."
+    },
+    "smart_ocr_languages": {
+      "label": "Idioma del reconocimiento",
+      "description": "Automático usa el idioma de la interfaz y los del sistema, y se queda con la mejor lectura."
+    },
+    "smart_extractText_showResults": {
+      "label": "Mostrar la ventana de resultados",
+      "description": "Tras Extraer texto, una ventana con el texto para revisarlo, copiarlo o guardarlo. Desactivado, el texto se copia directamente y una notificación lo dice."
+    },
+    "smart_extractText_saveImage": {
+      "label": "Guardar también la imagen en la biblioteca",
+      "description": "Extraer texto guarda también la zona como captura en la biblioteca."
+    },
+    "smart_extractText_plain": {
+      "label": "Texto extraído sin formato",
+      "description": "Copia solo el texto, sin fuentes ni colores."
     }
   },
   "errors": {
@@ -1073,7 +1125,11 @@
     "library_merging": "Se está fusionando otra biblioteca con esta. Espera a que termine o cancélalo.",
     "preset_not_found": "No hay ningún preset \"{{name}}\".",
     "preset_unusable": "El preset \"{{name}}\" no puede capturar: {{reason}}. Edítalo.",
-    "preset_file": "No se puede importar \"{{name}}\": {{reason}}. No se importó nada."
+    "preset_file": "No se puede importar \"{{name}}\": {{reason}}. No se importó nada.",
+    "text_cancelled": "Se canceló la extracción de texto.",
+    "ocr_not_supported": "El reconocimiento de texto aún no está disponible en este sistema.",
+    "ocr_no_language": "Este equipo no tiene un idioma de reconocimiento para eso. Añade uno en la configuración del sistema (Hora e idioma > Idioma).",
+    "text_result_gone": "Ese texto extraído ya no está abierto ({{id}})."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1216,7 +1272,8 @@
       "editor_pin_item": "Fijar o desfijar en la bandeja",
       "editor_duplicate_item": "Duplicar el elemento",
       "editor_shortcut_sheet": "Hoja de atajos de teclado",
-      "editor_move_computer": "Mover XcreenShot a otro equipo"
+      "editor_move_computer": "Mover XcreenShot a otro equipo",
+      "smart_extract_text": "Extraer texto"
     }
   },
   "tray": {
@@ -1237,7 +1294,8 @@
     "capture_multi": "Multicaptura",
     "open_library": "Abrir biblioteca",
     "presets": "Presets",
-    "presets_empty": "Sin presets"
+    "presets_empty": "Sin presets",
+    "extract_text": "Extraer texto"
   },
   "menu": {
     "flatten": "A&planar",
@@ -1398,7 +1456,10 @@
     "action_folder": "Mostrar en la carpeta",
     "waiting_moved_title": "Capturas en la biblioteca",
     "waiting_moved_body_one": "La biblioteca vuelve a estar disponible: {{count}} captura hecha mientras tanto ya está en ella.",
-    "waiting_moved_body_other": "La biblioteca vuelve a estar disponible: {{count}} capturas hechas mientras tanto ya están en ella."
+    "waiting_moved_body_other": "La biblioteca vuelve a estar disponible: {{count}} capturas hechas mientras tanto ya están en ella.",
+    "text_copied": "Texto copiado ({{count}} palabras).",
+    "text_none": "No se encontró texto en la zona seleccionada.",
+    "action_view": "Ver"
   },
   "source": {
     "ui": "la interfaz",
@@ -1821,7 +1882,11 @@
         "builtins_reset": "Restablecerlos",
         "builtins_restored": "Presets incorporados restaurados.",
         "builtins_there": "Ya están todos los presets incorporados."
-      }
+      },
+      "sel_text": "Extraer texto",
+      "copy_text": "Copiar el texto",
+      "text_no_open": "Extraer texto abre su ventana de resultados, no el editor.",
+      "text_no_cursor": "El puntero no forma parte del texto."
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3352,6 +3417,46 @@
       "new_title": "3. En el equipo nuevo",
       "new_steps": "Instala XcreenShot. En la bienvenida, elige Usar una biblioteca existente y escoge la carpeta copiada; después, Importar ajustes con el archivo .xsettings. Más tarde, Preferencias > Biblioteca > Cambiar… y Preferencias > Avanzado > Importar hacen lo mismo.",
       "formats": "Todo está en formatos abiertos: los .xshot son archivos ZIP con la imagen en PNG, así que cualquier programa puede leerlos."
+    },
+    "extract": {
+      "lang": {
+        "en": "Inglés",
+        "es": "Español",
+        "pt": "Portugués",
+        "fr": "Francés",
+        "de": "Alemán",
+        "ja": "Japonés",
+        "zh_Hans": "Chino simplificado",
+        "zh_Hant": "Chino tradicional"
+      },
+      "title": "Texto extraído",
+      "text_label": "Texto extraído",
+      "copy_all": "Copiar todo",
+      "copy_close": "Copiar y cerrar",
+      "plain": "Sin formato",
+      "more": "Más",
+      "save_txt": "Guardar como texto…",
+      "other_language": "Reconocer en otro idioma",
+      "auto": "Automático",
+      "not_here": "no está en este equipo",
+      "not_here_help": "Añádelo en la configuración del sistema: Hora e idioma > Idioma.",
+      "add_language": "Añadir un idioma en el sistema…",
+      "join_lines": "Unir las líneas de cada párrafo",
+      "copied": "Copiado.",
+      "saved": "Guardado.",
+      "reading": "Leyendo…",
+      "words_one": "{{count}} palabra · {{language}}",
+      "words_other": "{{count}} palabras · {{language}}",
+      "none_title": "No se encontró texto en la zona seleccionada",
+      "repeat": "Repetir",
+      "file_name": "Texto extraído",
+      "file_type": "Texto",
+      "tip_contrast": "Sube el contraste o el zoom de lo que capturas antes de seleccionarlo.",
+      "tip_straight": "El texto girado se lee mal: enderézalo si puedes.",
+      "tip_frame": "Deja fuera de la zona marcos, bordes e imágenes.",
+      "tip_letters": "Las letras muy decorativas, escritas a mano o con contorno se leen mal.",
+      "tip_language": "Prueba con otro idioma en Más > Reconocer en otro idioma.",
+      "up_to_three": "Hasta 3 idiomas."
     }
   },
   "history": {
@@ -3541,12 +3646,14 @@
   },
   "presets": {
     "builtin": {
-      "region_clipboard": "Región al portapapeles"
+      "region_clipboard": "Región al portapapeles",
+      "extract_text": "Extraer texto"
     },
     "selection": {
       "region": "Región",
       "window": "Ventana",
-      "fullscreen": "Pantalla completa"
+      "fullscreen": "Pantalla completa",
+      "text": "Extraer texto"
     },
     "kind": {
       "universal": "Universal",

@@ -79,6 +79,11 @@ pub fn setup_notifications(app: &AppHandle) {
         let action = performed.action_id().to_string();
         // Off the notification thread: opening may read a file.
         std::thread::spawn(move || {
+            // Extract text (SMT-005): View opens its results window.
+            if let Some(id) = open["textResult"].as_str() {
+                let _ = core.call(Source::Ui, "smart.show_text", json!({ "id": id }), None);
+                return;
+            }
             let path = open["path"].as_str().unwrap_or_default().to_string();
             if action == "folder" {
                 let _ = core.call(
@@ -127,6 +132,19 @@ impl Host for TauriHost {
 
     fn open_help(&self, topic: Option<&str>) -> Result<(), CommandError> {
         windows::open_help(&self.app, topic).map_err(internal)
+    }
+
+    fn open_text_result(&self, id: &str) -> Result<(), CommandError> {
+        // Window work belongs on the main thread.
+        let app = self.app.clone();
+        let id = id.to_string();
+        self.app
+            .run_on_main_thread(move || {
+                if let Err(e) = windows::open_text_result(&app, &id) {
+                    tracing::warn!(error = %e, "text results window not opened");
+                }
+            })
+            .map_err(internal)
     }
 
     fn quit(&self) {

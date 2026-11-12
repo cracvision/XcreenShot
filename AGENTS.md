@@ -143,6 +143,20 @@ xcreenshot app ping --json
 | `capture.region` | `xcreenshot capture region --rect '{"x":0,"y":0,"width":800,"height":600}'` | `cursor` boolean; `copy` boolean; `open` `editor` \| `none`; `out` string; `delay` number; `rect` object | Captures a rectangle in physical desktop pixels. Without `--rect` the user selects on screen (interactive; Esc gives exit 4). `--target interactive` on `capture.window` lets the user click a window. _Changes data._ |
 | `capture.window` | `xcreenshot capture window [--target active\|point\|title] [--x N --y N] [--title text]` | `cursor` boolean; `copy` boolean; `open` `editor` \| `none`; `out` string; `delay` number; `target` `active` \| `interactive` \| `point` \| `title`; `x` integer; `y` integer; `title` string | Captures a whole window, even if covered: the active one, the one at a point, or the first whose title or process matches. _Changes data._ |
 
+### smart
+
+| ID | Example | Parameters | What it does |
+|---|---|---|---|
+| `smart.extract_text` | `xcreenshot smart extract-text --json` · `--rect '{"x":0,"y":0,"width":800,"height":300}' --copy false` · `file --path D:/factura.png --language es` | `source` `screen` \| `file` (positional); `path` string; `rect` object; `language` string or array; `copy` boolean; `show` boolean; `delay` number | Extract text (SMT-005): reads the text of a zone of the screen (the user selects it; Esc gives exit 4) or of an image file, on this computer, and returns `text` (paragraphs apart by an empty line), `html` (with colors and relative sizes), `words`, `language` and `found`. From the CLI it opens no window (`show true` opens the results window) and copies the text unless `copy false`. `language`: `auto`, or up to 3 of `es`, `en`, `pt`, `fr`, `de`, `ja`, `zh-Hans`, `zh-Hant` (default: the setting `smart.ocr.languages`). Nothing leaves the computer; the text is never logged. _Changes data. May wait for the user._ |
+| `smart.ocr_languages` | `xcreenshot smart ocr-languages --json` | — | The recognition languages (SMT-004): the required and extra ones, each `available` or not on this computer, the ones installed, and `settingsUri` (the system's page where one is added). _Changes no data._ |
+| `smart.language_settings` | `xcreenshot smart language-settings` | — | Opens the system's page where a recognition language is added (Windows: Time & language > Language). XcreenShot downloads nothing itself. _Changes no data. Not an MCP tool._ |
+| `smart.text_result` | (UI only) | `id` string (required, positional) | The result shown in a results window. _Changes no data._ |
+| `smart.text_again` | (UI only) | `id` string (required); `language` string or array (required) | Reads the same zone again with other languages. _Changes no data._ |
+| `smart.text_close` | (UI only) | `id` string (required) | Forgets the text and the zone of a results window. _Changes no data._ |
+| `smart.show_text` | (UI only) | `id` string (required) | Opens the results window of an extraction. _Changes no data._ |
+| `smart.copy_text` | (UI only) | `text` string (required); `html` string or null | Puts text on the clipboard, with its format when it has one. _Changes data._ |
+| `smart.save_text` | (UI only) | `path` string (required); `text` string (required) | Writes the text to a .txt file in UTF-8. _Changes data._ |
+
 ### preset
 
 | ID | Example | Parameters | What it does |

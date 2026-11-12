@@ -82,6 +82,13 @@ pub fn tray_menu(presets: &[(String, String)]) -> Vec<MenuEntry> {
     vec![
         cmd("capture_universal", "tray.capture_universal", "capture.universal"),
         cmd("capture_image", "tray.capture_image", "capture.image"),
+        MenuEntry::Command {
+            id: "smart.extract_text",
+            label: "tray.extract_text",
+            command: "smart.extract_text",
+            params: json!({ "source": "screen" }),
+            checked: None,
+        },
         cmd(
             "capture_repeat_last",
             "tray.capture_repeat_last",

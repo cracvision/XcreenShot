@@ -10,6 +10,7 @@ import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
 import { SettingsTransfer } from "../prefs/SettingsTransfer";
 import { AiSection } from "../prefs/AiSection";
 import { LibraryLocation } from "../prefs/LibraryLocation";
+import { OcrLanguages } from "../prefs/OcrLanguages";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
 import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
 import { SettingRow } from "../prefs/SettingRow";
@@ -152,9 +153,18 @@ export function Preferences() {
         )}
         {/* Where the library is comes first (LIB-027). */}
         {section === "library" && <LibraryLocation />}
-        {rows.map((s) => (
-          <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
-        ))}
+        {rows.map((s) =>
+          // A list of up to 3 languages has its own control (SMT-004).
+          s.key === "smart.ocr.languages" ? (
+            <OcrLanguages
+              key={s.key}
+              value={Array.isArray(s.value) ? (s.value as string[]) : ["auto"]}
+              highlighted={highlight === s.key}
+            />
+          ) : (
+            <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+          ),
+        )}
         {section === "general" && (
           <>
             <ShowWarningsAgain />

@@ -420,6 +420,12 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.capture", "capture.capture", ""),
         capture("capture.universal", "capture.universal", ""),
         capture("capture.image", "capture.image", ""),
+        // Extract text (SMT-005).
+        capture(
+            "smart.extract_text",
+            "smart.extract_text",
+            r#"{"source":"screen"}"#,
+        ),
         capture("capture.window", "capture.window", r#"{"target":"interactive"}"#),
         capture(
             "capture.active_window",
@@ -766,6 +772,7 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.universal", Global, _, _) => "Ctrl+Alt+Shift+KeyO",
         ("capture.image", Global, Compatibility, Macos) => "Ctrl+Shift+KeyS",
         ("capture.image", Global, _, _) => "Ctrl+Alt+Shift+KeyS",
+        ("smart.extract_text", Global, _, _) => "Ctrl+Alt+Shift+KeyT",
         ("capture.window", Global, Compatibility, Macos) => "Ctrl+Shift+KeyW",
         ("capture.window", Global, _, _) => "Ctrl+Alt+Shift+KeyW",
         ("capture.active_window", Global, _, _) => "Ctrl+Alt+Shift+KeyA",

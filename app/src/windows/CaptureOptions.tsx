@@ -6,24 +6,30 @@ import type { PanelSettings } from "../lib/commands";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
+/** The Image tab also extracts text (SMT-005). */
+const IMAGE_SELECTIONS = [...SELECTIONS, "text"] as const;
 
 interface Common {
-  selection: (typeof SELECTIONS)[number];
+  selection: (typeof IMAGE_SELECTIONS)[number];
   copy: boolean;
   cursor: boolean;
   open: "editor" | "none";
 }
 
-/** Controls shared by both tabs, in the CAP-002 order (Selection … Capture cursor). */
+/** Controls shared by both tabs, in the CAP-002 order (Selection … Capture cursor).
+ * With Extract text, Open in and Capture cursor do not apply: off, with the reason. */
 function CommonOptions<T extends Common>({
   value,
   onChange,
+  selections = SELECTIONS,
 }: {
   value: T;
   onChange: (patch: Partial<Common>) => void;
+  selections?: readonly Common["selection"][];
 }) {
   const { t } = useTranslation();
   const id = useId();
+  const text = value.selection === "text";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>
@@ -33,17 +39,22 @@ function CommonOptions<T extends Common>({
           value={value.selection}
           onChange={(e) => onChange({ selection: e.target.value as Common["selection"] })}
         >
-          {SELECTIONS.map((s) => (
+          {selections.map((s) => (
             <option key={s} value={s}>
               {t(`ui.panel.sel_${s}`)}
             </option>
           ))}
         </select>
       </label>
-      <label className="panel-field" htmlFor={`${id}-open`}>
+      <label
+        className="panel-field"
+        htmlFor={`${id}-open`}
+        title={text ? t("ui.panel.text_no_open") : undefined}
+      >
         <span>{t("ui.panel.open_in")}</span>
         <select
           id={`${id}-open`}
+          disabled={text}
           value={value.open}
           onChange={(e) => onChange({ open: e.target.value as Common["open"] })}
         >
@@ -57,13 +68,17 @@ function CommonOptions<T extends Common>({
           checked={value.copy}
           onChange={(e) => onChange({ copy: e.target.checked })}
         />
-        {t("ui.panel.copy")}
+        {text ? t("ui.panel.copy_text") : t("ui.panel.copy")}
       </label>
       {/* The pointer arrives as its own object, to move or delete (CAP-047). */}
-      <label className="panel-check" title={t("ui.panel.cursor_help")}>
+      <label
+        className={`panel-check${text ? " disabled" : ""}`}
+        title={text ? t("ui.panel.text_no_cursor") : t("ui.panel.cursor_help")}
+      >
         <input
           type="checkbox"
-          checked={value.cursor}
+          disabled={text}
+          checked={value.cursor && !text}
           onChange={(e) => onChange({ cursor: e.target.checked })}
         />
         {t("ui.panel.cursor")}
@@ -82,7 +97,11 @@ export function UniversalOptions({
   const { t } = useTranslation();
   return (
     <>
-      <CommonOptions value={value} onChange={onChange} />
+      {/* Its list has no Extract text, so no patch carries it. */}
+      <CommonOptions
+        value={value}
+        onChange={(p) => onChange(p as Partial<PanelSettings["universal"]>)}
+      />
       <label className="panel-check">
         <input
           type="checkbox"
@@ -113,7 +132,7 @@ export function ImageOptions({
   };
   return (
     <>
-      <CommonOptions value={value} onChange={onChange} />
+      <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
       <div className="panel-row">
         <label className="panel-field" htmlFor={`${id}-timing`}>
           <span>{t("ui.panel.timing")}</span>
