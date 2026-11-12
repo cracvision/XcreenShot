@@ -1883,6 +1883,31 @@ html.overlay-root.overlay-native #root {
 
 /* Bold, italic and alignment: icon buttons in a sunken well, without outlines. A pressed
    toggle fills with the logo's gradient; alignment is a `.seg.brand` whose pill slides. */
+/* Simplify's palette (EDT-041). */
+.simplify-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.simplify-swatches .swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.simplify-swatches .swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+.simplify-swatches .swatch:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 /* The stamp collection (EDT-031). */
 .stamp-browser {
   display: grid;

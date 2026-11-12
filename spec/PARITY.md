@@ -120,7 +120,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-038 | Lupa | M2 | Should | En curso |
 | EDT-039 | Foco | M2 | Should | En curso |
 | EDT-040 | Desenfocar | M1 | Must | Win |
-| EDT-041 | Simplificar | M2 | Should | — |
+| EDT-041 | Simplificar | M2 | Should | En curso |
 | EDT-042 | Mover | M1 | Must | En curso |
 | EDT-043 | Selección | M2 | Must | — |
 | EDT-044 | Acciones sobre la selección | M2 | Must | — |

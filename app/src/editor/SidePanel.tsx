@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
+import { useSetting } from "../store";
 import { applyCrop, loadFonts, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
 import { PositionSize } from "./PositionSize";
@@ -34,6 +35,8 @@ import {
   SPOT_SHAPES,
   type SpotShape,
   SHAPE_KINDS,
+  SIMPLE_KINDS,
+  type SimpleKind,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -141,7 +144,8 @@ type StyledKind =
   | "pen"
   | "magnify"
   | "spotlight"
-  | "stamp";
+  | "stamp"
+  | "simplify";
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -156,6 +160,7 @@ const STYLED: StyledKind[] = [
   "magnify",
   "spotlight",
   "stamp",
+  "simplify",
 ];
 
 function useTarget(): Target | null {
@@ -503,6 +508,8 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "simplify":
+      return <SimplifyProperties v={v} num={num} commit={commit} opacity={opacity} />;
     case "stamp":
       // A stamp's color (its own, or another for monochrome ones) and opacity (EDT-031).
       return (
@@ -787,6 +794,153 @@ function CalloutProperties(props: {
       />
       {check("fitText")}
       {opacity}
+    </>
+  );
+}
+
+/** Simplify (EDT-041): the shape, its palette's colors, text lines, and how the original
+ * shows under the shapes; palettes are saved with the tool. */
+function SimplifyProperties(props: {
+  v: <T>(key: string) => T | undefined;
+  num: (key: string) => number | undefined;
+  commit: (changes: Record<string, unknown>) => void;
+  opacity: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const { v, num, commit, opacity } = props;
+  const tool = useEditor((s) => s.styles?.simplify);
+  const doc = useEditor((s) => s.doc);
+  const lockOnExit = useSetting("editor.simplifyLockOnExit", false);
+  const kind = v<SimpleKind>("kind");
+  const palettes = tool?.palettes ?? [];
+  const palette = palettes.find((p) => p.name === tool?.palette) ?? palettes[0];
+  const setTool = (style: Record<string, unknown>) =>
+    void run("editor.set_style", { tool: "simplify", style }).catch(() => undefined);
+  const view = doc?.simplify ?? { showOriginal: true, opacity: 100 };
+  const setView = (change: Record<string, unknown>) =>
+    doc &&
+    void run("document.simplify_view", { documentId: doc.documentId, ...change }).catch(
+      () => undefined,
+    );
+  const saveNew = () => {
+    // The palette in use plus the color chosen now, as a new palette.
+    const fill = v<string>("fill");
+    const colors = [...(palette?.colors ?? [])];
+    if (fill && !colors.includes(fill)) colors.unshift(fill);
+    let n = palettes.length + 1;
+    while (palettes.some((p) => p.name === t("ui.editor.simplify.palette_n", { n }))) n++;
+    const name = t("ui.editor.simplify.palette_n", { n });
+    setTool({ palettes: [...palettes, { name, colors }], palette: name });
+  };
+  return (
+    <>
+      <SelectField
+        label={t("ui.editor.prop.simple_kind")}
+        value={kind}
+        options={SIMPLE_KINDS.map((k) => ({ value: k, label: t(`ui.editor.simple_kind.${k}`) }))}
+        onCommit={(kind) => commit({ kind })}
+      />
+      <SelectField
+        label={t("ui.editor.simplify.palette")}
+        value={palette?.name}
+        options={palettes.map((p) => ({ value: p.name, label: p.name }))}
+        onCommit={(name) => {
+          // New shapes take the chosen palette's colors.
+          const first = palettes.find((p) => p.name === name)?.colors[0];
+          setTool({ palette: name, ...(first ? { fill: first } : {}) });
+        }}
+      />
+      <div className="simplify-swatches" role="group" aria-label={t("ui.editor.simplify.palette")}>
+        {palette?.colors.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className="swatch"
+            style={{ background: c }}
+            title={c}
+            aria-label={c}
+            aria-pressed={v<string>("fill") === c}
+            onClick={() => commit({ fill: c })}
+          />
+        ))}
+      </div>
+      <button type="button" className="btn small" onClick={saveNew}>
+        {t("ui.editor.simplify.save_palette")}
+      </button>
+      <ColorPicker
+        label={t("ui.editor.prop.fill")}
+        value={v<string>("fill") ?? "#B4BAC4"}
+        mixed={v<string>("fill") === undefined}
+        onCommit={(fill) => fill && commit({ fill })}
+      />
+      {(kind === "textLine" || kind === "paragraph") && (
+        <>
+          <ColorPicker
+            label={t("ui.editor.prop.background")}
+            value={v<string | null>("background") ?? null}
+            mixed={v<string | null>("background") === undefined}
+            allowTransparent
+            onCommit={(background) => commit({ background })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.text_height")}
+            value={num("textHeight")}
+            min={2}
+            max={200}
+            step={1}
+            unit="px"
+            onCommit={(textHeight) => commit({ textHeight })}
+          />
+        </>
+      )}
+      {kind === "paragraph" && (
+        <NumberField
+          label={t("ui.editor.prop.line_spacing")}
+          value={num("lineSpacing")}
+          min={1}
+          max={5}
+          step={0.1}
+          unit="×"
+          onCommit={(lineSpacing) => commit({ lineSpacing })}
+        />
+      )}
+      {opacity}
+      {doc && (
+        <>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={view.showOriginal}
+              onChange={(e) => setView({ showOriginal: e.target.checked })}
+            />
+            {t("ui.editor.simplify.show_original")}
+          </label>
+          {view.showOriginal && (
+            <NumberField
+              label={t("ui.editor.simplify.original_opacity")}
+              value={view.opacity}
+              min={0}
+              max={100}
+              step={1}
+              unit="%"
+              onCommit={(opacity) => setView({ opacity })}
+            />
+          )}
+        </>
+      )}
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={lockOnExit}
+          onChange={(e) =>
+            void run("settings.set", {
+              key: "editor.simplifyLockOnExit",
+              value: e.target.checked,
+            }).catch(() => undefined)
+          }
+        />
+        {t("ui.editor.simplify.lock_on_exit")}
+      </label>
     </>
   );
 }

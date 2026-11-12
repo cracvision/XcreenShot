@@ -520,8 +520,8 @@ export function SpotlightShape(props: {
 /** A stamp as Rust draws it (EDT-031), centered on its box; while it is resized or
  * turned, the picture follows until the new one is ready. */
 export function StampShape(props: {
-  o: StampObject;
-  committed: StampObject;
+  o: Pick<StampObject, "rect" | "rotation">;
+  committed: Pick<StampObject, "rect" | "rotation">;
   image: HTMLImageElement | undefined;
 }) {
   const { o, committed, image } = props;

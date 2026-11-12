@@ -527,6 +527,17 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.simplify_view", &["EDT-041"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "showOriginal": {"type": "boolean", "description": "Show the original image under the simplified shapes"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "description": "How strongly it shows, %"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"showOriginal": {"type": "boolean"}, "opacity": {"type": "number"}}})),
         B::new("editor.stamps", &["EDT-031"])
             .params(params(
                 json!({
@@ -1037,7 +1048,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 14] = [
+pub const TOOLS: [&str; 15] = [
     "move",
     "arrow",
     "line",
@@ -1051,6 +1062,7 @@ pub const TOOLS: [&str; 14] = [
     "magnify",
     "spotlight",
     "blur",
+    "simplify",
     "crop",
 ];
 

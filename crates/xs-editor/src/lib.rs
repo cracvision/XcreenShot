@@ -30,7 +30,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 14] = [
+pub const AVAILABLE_TOOLS: [&str; 15] = [
     "move",
     "arrow",
     "line",
@@ -44,6 +44,7 @@ pub const AVAILABLE_TOOLS: [&str; 14] = [
     "magnify",
     "spotlight",
     "blur",
+    "simplify",
     "crop",
 ];
 /// Zoom steps in percent (EDT-007).
@@ -1594,6 +1595,37 @@ pub fn extension() -> Extension {
             editor(&core).store.with(&id, |d| d.step_next = step_next);
             changed(&core, ctx, &id);
             Ok(json!({ "ids": ids }))
+        });
+        // Simplify (EDT-041): whether the original shows under simplified shapes.
+        on!("document.simplify_view", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let show = p.get("showOriginal").and_then(Value::as_bool);
+            let opacity = p.get("opacity").and_then(Value::as_f64);
+            if opacity.is_some_and(|o| !(0.0..=100.0).contains(&o)) {
+                return Err(invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "opacity"), ("reason", "must be between 0 and 100")],
+                )));
+            }
+            let view = editor(&core)
+                .store
+                .mutate(&id, "history.simplify_view", |doc| {
+                    let v = doc.simplify.get_or_insert(xs_core::document::SimplifyView {
+                        show_original: true,
+                        opacity: 100.0,
+                    });
+                    if let Some(s) = show {
+                        v.show_original = s;
+                    }
+                    if let Some(o) = opacity {
+                        v.opacity = o;
+                    }
+                    Ok::<_, CommandError>(serde_json::to_value(&*v).unwrap_or_default())
+                })
+                .ok_or_else(|| CommandError::internal("document closed"))??;
+            changed(&core, ctx, &id);
+            Ok(view)
         });
         // The stamp collection (EDT-031): categories and stamps, found by words.
         on!("editor.stamps", |_core, ctx, p| {

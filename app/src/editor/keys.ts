@@ -184,6 +184,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   magnify: "outline",
   spotlight: "color",
   stamp: "color",
+  simplify: "fill",
   blur: "color",
 };
 

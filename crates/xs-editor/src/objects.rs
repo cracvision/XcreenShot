@@ -35,6 +35,7 @@ pub struct Styles {
     pub magnify: MagnifyStyle,
     pub spotlight: SpotlightStyle,
     pub stamp: StampStyle,
+    pub simplify: xs_image::simplify::SimplifyToolStyle,
 }
 
 /// The Stamp tool's style (EDT-031): which stamp it places, and its color (`None`: the
@@ -88,6 +89,7 @@ impl Default for Styles {
             magnify: MagnifyStyle::default(),
             spotlight: SpotlightStyle::default(),
             stamp: StampStyle::default(),
+            simplify: xs_image::simplify::SimplifyToolStyle::default(),
         }
     }
 }
@@ -118,6 +120,7 @@ impl Styles {
             "magnify" => serde_json::to_value(&self.magnify).ok(),
             "spotlight" => serde_json::to_value(&self.spotlight).ok(),
             "stamp" => serde_json::to_value(&self.stamp).ok(),
+            "simplify" => serde_json::to_value(&self.simplify).ok(),
             _ => None,
         }
     }
@@ -137,6 +140,9 @@ impl Styles {
             "magnify" => self.magnify = MagnifyStyle::merged(&self.magnify, changes)?,
             "spotlight" => self.spotlight = SpotlightStyle::merged(&self.spotlight, changes)?,
             "stamp" => self.stamp = StampStyle::merged(&self.stamp, changes)?,
+            "simplify" => {
+                self.simplify = xs_image::simplify::SimplifyToolStyle::merged(&self.simplify, changes)?
+            }
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -156,6 +162,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
         "stamp" => Some(&["rect", "rotation", "stamp", "art", "ink"]),
+        "simplify" => Some(&["rect", "rotation"]),
         "magnify" => Some(&["source", "at"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
@@ -237,6 +244,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
                 "ink": s.ink,
                 "style": {"color": s.color, "opacity": s.opacity}
             })
+        }
+        "simplify" => {
+            let s = xs_image::simplify::SimpleObject::from_props(props)?;
+            json!({"rect": s.rect, "rotation": s.rotation, "style": s.style})
         }
         "spotlight" => {
             let s = SpotlightObject::from_props(props)?;

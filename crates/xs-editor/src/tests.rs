@@ -2212,10 +2212,69 @@ fn stamps_are_placed_replaced_and_carried() {
     );
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     let r = &info["objects"][0]["rect"];
-    assert_eq!((r["x"].as_f64(), r["y"].as_f64(), r["h"].as_f64()), (Some(20.0), Some(30.0), Some(120.0)));
+    assert_eq!(
+        (r["x"].as_f64(), r["y"].as_f64(), r["h"].as_f64()),
+        (Some(20.0), Some(30.0), Some(120.0))
+    );
     assert_eq!(r["w"], json!(300.0), "a label is 2.5 times as wide as high");
     assert_eq!(info["objects"][0]["stamp"], "label-new");
     cli(&e.core, "document.save", json!({"documentId": doc}));
     let file = Xshot::read(&path).unwrap();
-    assert!(file.document.objects[0].props["art"]["shapes"].is_array(), "the drawing travels with it");
+    assert!(
+        file.document.objects[0].props["art"]["shapes"].is_array(),
+        "the drawing travels with it"
+    );
+}
+
+/// EDT-041: simplified shapes keep their own style (not the tool's palettes); the
+/// original shows dimmed or hidden under them, in one undo step; a new palette is kept.
+#[test]
+fn simplify_shapes_palettes_and_the_original() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "simplify", "rect": {"x": 10, "y": 10, "w": 120, "h": 12}, "style": {"kind": "textLine"}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let st = &info["objects"][0]["style"];
+    assert_eq!(st["kind"], "textLine");
+    assert!(st.get("palettes").is_none());
+    let v = cli(
+        &e.core,
+        "document.simplify_view",
+        json!({"documentId": doc, "showOriginal": true, "opacity": 40}),
+    );
+    assert_eq!(v["opacity"], json!(40.0));
+    cli(
+        &e.core,
+        "document.simplify_view",
+        json!({"documentId": doc, "showOriginal": false}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["simplify"], json!({"showOriginal": false, "opacity": 40.0}));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["simplify"]["showOriginal"], true);
+    // A palette saved as new, and used.
+    let mut palettes = serde_json::to_value(xs_image::simplify::default_palettes()).unwrap();
+    palettes
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"name": "Mine", "colors": ["#112233", "#445566"]}));
+    cli(
+        &e.core,
+        "editor.set_style",
+        json!({"tool": "simplify", "style": {"palettes": palettes, "palette": "Mine", "fill": "#112233"}}),
+    );
+    let state = cli(&e.core, "editor.state", json!({}));
+    assert_eq!(state["styles"]["simplify"]["palette"], "Mine");
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "simplify", "rect": {"x": 10, "y": 40, "w": 50, "h": 20}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][1]["style"]["fill"], "#112233");
 }

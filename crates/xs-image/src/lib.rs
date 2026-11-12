@@ -14,6 +14,7 @@ pub mod magnify;
 pub mod pens;
 pub mod render;
 pub mod shapes;
+pub mod simplify;
 pub mod spotlights;
 pub mod stamps;
 pub mod steps;

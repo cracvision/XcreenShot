@@ -250,7 +250,18 @@ export function redo(): void {
 }
 
 export function selectTool(tool: Tool): void {
-  if (useEditor.getState().tool !== tool) run("editor.select_tool", { tool }).catch(fail);
+  const { tool: before, doc } = useEditor.getState();
+  // Leaving Simplify locks its shapes when the user asked for it (EDT-041).
+  if (
+    before === "simplify" &&
+    tool !== "simplify" &&
+    doc &&
+    setting("editor.simplifyLockOnExit", false)
+  ) {
+    const ids = doc.objects.filter((o) => o.type === "simplify" && !o.locked).map((o) => o.id);
+    if (ids.length > 0) void setLocked(ids, true);
+  }
+  if (before !== tool) run("editor.select_tool", { tool }).catch(fail);
   // The stamps are chosen in the Styles tab (EDT-031).
   if (tool === "stamp") usePanel.getState().set({ visible: true, tab: "styles" });
 }

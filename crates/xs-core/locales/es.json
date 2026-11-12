@@ -418,6 +418,10 @@
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
+    },
+    "document_simplify_view": {
+      "title": "Vista de Simplificar",
+      "description": "Muestra u oculta la imagen original bajo las formas simplificadas."
     }
   },
   "settings": {
@@ -635,6 +639,10 @@
     "tray_clearUnpinnedOnExit": {
       "label": "Vaciar la bandeja reciente al salir",
       "description": "Al salir de XcreenShot, la bandeja reciente se vacía. Los archivos siguen en la biblioteca."
+    },
+    "editor_simplifyLockOnExit": {
+      "label": "Bloquear las formas simplificadas al salir",
+      "description": "Al dejar la herramienta Simplificar, sus formas se bloquean para no moverlas sin querer."
     }
   },
   "errors": {
@@ -795,7 +803,8 @@
       "editor_tool_pen": "Herramienta Lápiz",
       "editor_tool_magnify": "Herramienta Lupa",
       "editor_tool_spotlight": "Herramienta Foco",
-      "editor_tool_stamp": "Herramienta Sello"
+      "editor_tool_stamp": "Herramienta Sello",
+      "editor_tool_simplify": "Herramienta Simplificar"
     }
   },
   "tray": {
@@ -1254,7 +1263,8 @@
         "pen": "Dibuja a mano alzada; Mayús traza una línea recta.",
         "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio.",
         "spotlight": "Arrastra alrededor de lo importante: el resto se oscurece o se desenfoca.",
-        "stamp": "Elige un sello en Estilos y haz clic para ponerlo; arrastra para otro tamaño."
+        "stamp": "Elige un sello en Estilos y haz clic para ponerlo; arrastra para otro tamaño.",
+        "simplify": "Arrastra para tapar texto y detalles con formas planas."
       },
       "tool": {
         "move": "Mover",
@@ -1271,7 +1281,8 @@
         "pen": "Lápiz",
         "magnify": "Lupa",
         "spotlight": "Foco",
-        "stamp": "Sello"
+        "stamp": "Sello",
+        "simplify": "Simplificar"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1351,7 +1362,11 @@
         "spot_shape": "Forma",
         "outside_color": "Color del exterior",
         "outside_blur": "Desenfoque del exterior",
-        "feather": "Borde suave"
+        "feather": "Borde suave",
+        "simple_kind": "Forma",
+        "background": "Fondo",
+        "text_height": "Altura del texto",
+        "line_spacing": "Interlineado"
       },
       "cap": {
         "none": "Ninguno",
@@ -1529,6 +1544,23 @@
         "all": "Todas",
         "none": "Ningún sello coincide.",
         "own_color": "Color propio"
+      },
+      "simple_kind": {
+        "block": "Bloque",
+        "roundedBlock": "Bloque redondeado",
+        "textLine": "Línea de texto",
+        "paragraph": "Párrafo",
+        "circle": "Círculo",
+        "button": "Botón",
+        "icon": "Ícono"
+      },
+      "simplify": {
+        "palette": "Paleta",
+        "palette_n": "Paleta {{n}}",
+        "save_palette": "Guardar como paleta nueva",
+        "show_original": "Mostrar original",
+        "original_opacity": "Opacidad del original",
+        "lock_on_exit": "Bloquear al salir"
       }
     },
     "multi": {
@@ -1764,7 +1796,14 @@
     "change_stamp": "Cambiar sello",
     "delete_stamp": "Eliminar sello",
     "cut_stamp": "Cortar sello",
-    "paste_stamp": "Pegar sello"
+    "paste_stamp": "Pegar sello",
+    "simplify_view": "Mostrar original",
+    "draw_simplify": "Simplificar",
+    "move_simplify": "Mover forma simplificada",
+    "change_simplify": "Cambiar forma simplificada",
+    "delete_simplify": "Eliminar forma simplificada",
+    "cut_simplify": "Cortar forma simplificada",
+    "paste_simplify": "Pegar forma simplificada"
   },
   "editor": {
     "edited": "{{name}} — Editado"

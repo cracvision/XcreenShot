@@ -26,6 +26,7 @@ export type Tool =
   | "magnify"
   | "spotlight"
   | "blur"
+  | "simplify"
   | "crop";
 
 export interface DocSummary {
@@ -110,6 +111,44 @@ export interface ShapeObject {
   style: ShapeStyle;
   /** A polygon's corners, as shares of its box (EDT-030). */
   points?: Point[];
+}
+
+/** Simplify (EDT-041). */
+export type SimpleKind =
+  "block" | "roundedBlock" | "textLine" | "paragraph" | "circle" | "button" | "icon";
+export const SIMPLE_KINDS: SimpleKind[] = [
+  "block",
+  "roundedBlock",
+  "textLine",
+  "paragraph",
+  "circle",
+  "button",
+  "icon",
+];
+
+export interface Palette {
+  name: string;
+  colors: string[];
+}
+
+export interface SimpleStyle {
+  kind: SimpleKind;
+  fill: string;
+  background: string | null;
+  textHeight: number;
+  lineSpacing: number;
+  opacity: number;
+  /** The tool's: saved palettes and the one in use. */
+  palettes?: Palette[];
+  palette?: string;
+}
+
+export interface SimplifyObject {
+  id: string;
+  type: "simplify";
+  rect: Rect;
+  rotation: number;
+  style: SimpleStyle;
 }
 
 /** Stamps (EDT-031). */
@@ -380,6 +419,7 @@ export type DocObject = (
   | MagnifyObject
   | SpotlightObject
   | StampObject
+  | SimplifyObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -401,6 +441,7 @@ export interface Styles {
   magnify: MagnifyStyle;
   spotlight: SpotlightStyle;
   stamp: StampStyle;
+  simplify: SimpleStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -434,6 +475,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   /** With flattened objects, the canvas shows a view of the image that may start
    * before the original pixels, in base pixels (EDT-091). */
   baseView?: { x: number; y: number; width: number; height: number } | null;
+  /** Simplify (EDT-041): how the original shows under the simplified shapes. */
+  simplify?: { showOriginal: boolean; opacity: number };
   /** What the next step of each sequence shows (EDT-035). */
   stepNext?: Partial<Record<StepSequence, string>>;
   /** Objects merged into the image (EDT-091), oldest first; `bounds` on the canvas. */

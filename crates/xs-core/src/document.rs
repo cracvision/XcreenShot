@@ -96,6 +96,16 @@ pub fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
     }
 }
 
+/// Simplify (EDT-041): whether the original image shows under the simplified shapes,
+/// and how strongly. Without it the image shows as usual.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimplifyView {
+    pub show_original: bool,
+    /// 0–100 %.
+    pub opacity: f64,
+}
+
 /// Objects merged into the image (EDT-091). They are drawn over `base.png` and under
 /// the objects, and can become objects again: the file keeps them as they were.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,6 +151,9 @@ pub struct Document {
     /// Objects merged into the image, oldest first (EDT-091).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub flattened: Vec<Flattened>,
+    /// How the original shows under simplified shapes (EDT-041).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub simplify: Option<SimplifyView>,
     /// Document effects (EDT-053, M2).
     #[serde(default)]
     pub effects: Vec<Value>,
@@ -176,6 +189,7 @@ impl Document {
             dpi,
             objects: Vec::new(),
             flattened: Vec::new(),
+            simplify: None,
             effects: Vec::new(),
             extra: Map::new(),
         }

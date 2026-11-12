@@ -418,6 +418,10 @@
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
+    },
+    "document_simplify_view": {
+      "title": "Simplify view",
+      "description": "Shows or hides the original image under simplified shapes."
     }
   },
   "settings": {
@@ -635,6 +639,10 @@
     "tray_clearUnpinnedOnExit": {
       "label": "Clear the recent tray when quitting",
       "description": "On quitting XcreenShot, the recent tray empties. The files stay in the library."
+    },
+    "editor_simplifyLockOnExit": {
+      "label": "Lock simplified shapes on exit",
+      "description": "When you leave the Simplify tool, its shapes are locked so they do not move by accident."
     }
   },
   "errors": {
@@ -795,7 +803,8 @@
       "editor_tool_pen": "Pen tool",
       "editor_tool_magnify": "Magnify tool",
       "editor_tool_spotlight": "Spotlight tool",
-      "editor_tool_stamp": "Stamp tool"
+      "editor_tool_stamp": "Stamp tool",
+      "editor_tool_simplify": "Simplify tool"
     }
   },
   "tray": {
@@ -1254,7 +1263,8 @@
         "pen": "Draw freehand; Shift draws a straight line.",
         "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere.",
         "spotlight": "Drag around what matters: the rest darkens or blurs.",
-        "stamp": "Pick a stamp in Styles, then click to place it; drag for another size."
+        "stamp": "Pick a stamp in Styles, then click to place it; drag for another size.",
+        "simplify": "Drag to cover text and details with flat shapes."
       },
       "tool": {
         "move": "Move",
@@ -1271,7 +1281,8 @@
         "pen": "Pen",
         "magnify": "Magnify",
         "spotlight": "Spotlight",
-        "stamp": "Stamp"
+        "stamp": "Stamp",
+        "simplify": "Simplify"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1351,7 +1362,11 @@
         "spot_shape": "Shape",
         "outside_color": "Outside color",
         "outside_blur": "Outside blur",
-        "feather": "Soft edge"
+        "feather": "Soft edge",
+        "simple_kind": "Shape",
+        "background": "Background",
+        "text_height": "Text height",
+        "line_spacing": "Line spacing"
       },
       "cap": {
         "none": "None",
@@ -1529,6 +1544,23 @@
         "all": "All",
         "none": "No stamp matches.",
         "own_color": "Own color"
+      },
+      "simple_kind": {
+        "block": "Block",
+        "roundedBlock": "Rounded block",
+        "textLine": "Text line",
+        "paragraph": "Paragraph",
+        "circle": "Circle",
+        "button": "Button",
+        "icon": "Icon"
+      },
+      "simplify": {
+        "palette": "Palette",
+        "palette_n": "Palette {{n}}",
+        "save_palette": "Save as new palette",
+        "show_original": "Show original",
+        "original_opacity": "Original opacity",
+        "lock_on_exit": "Lock on exit"
       }
     },
     "multi": {
@@ -1764,7 +1796,14 @@
     "change_stamp": "Change stamp",
     "delete_stamp": "Delete stamp",
     "cut_stamp": "Cut stamp",
-    "paste_stamp": "Paste stamp"
+    "paste_stamp": "Paste stamp",
+    "simplify_view": "Show original",
+    "draw_simplify": "Simplify",
+    "move_simplify": "Move simplified shape",
+    "change_simplify": "Change simplified shape",
+    "delete_simplify": "Delete simplified shape",
+    "cut_simplify": "Cut simplified shape",
+    "paste_simplify": "Paste simplified shape"
   },
   "editor": {
     "edited": "{{name}} — Edited"

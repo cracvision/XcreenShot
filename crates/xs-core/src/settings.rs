@@ -230,6 +230,13 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "EDT-022",
         ),
+        def(
+            "editor.simplifyLockOnExit",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-041",
+        ),
         def("editor.scaleStrokes", "editor", boolean(), json!(true), "EDT-080"),
         def(
             "editor.autoExpandCanvas",

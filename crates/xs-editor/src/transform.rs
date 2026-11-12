@@ -78,12 +78,11 @@ fn rotation_of(p: &Map<String, Value>) -> f64 {
 pub fn box_of(o: &Object, measure: Measure) -> Option<Boxed> {
     let p = &o.props;
     match o.kind.as_str() {
-        "shape" | "blur" | "image" | "step" | "callout" | "highlight" | "spotlight" | "stamp" => {
-            Some(Boxed {
-                rect: Rect::from_value(p.get("rect")?)?,
-                rotation: rotation_of(p),
-            })
-        }
+        "shape" | "blur" | "image" | "step" | "callout" | "highlight" | "spotlight" | "stamp"
+        | "simplify" => Some(Boxed {
+            rect: Rect::from_value(p.get("rect")?)?,
+            rotation: rotation_of(p),
+        }),
         "text" => {
             let at = xy(p.get("at"))?;
             let (w, h) = measure(p)?;

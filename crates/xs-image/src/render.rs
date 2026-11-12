@@ -20,6 +20,7 @@ use crate::pens::{self, PenObject};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
+use crate::simplify::{self, SimpleObject};
 use crate::spotlights::{self, SpotlightObject};
 use crate::stamps::{self, StampObject};
 use crate::steps::{StepObject, StepShape};
@@ -618,6 +619,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 stamps::draw(pm, &s, dpi);
             }
         }
+        "simplify" => {
+            if let Ok(s) = SimpleObject::from_props(&object.props) {
+                simplify::draw(pm, &s);
+            }
+        }
         "pen" => {
             if let Ok(p) = PenObject::from_props(&object.props) {
                 pens::draw(pm, &p);
@@ -673,18 +679,26 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
 fn canvas(doc: &Document, base: &Base) -> Pixmap {
     let (w, h) = (doc.canvas.width.max(1), doc.canvas.height.max(1));
     let mut pm = Pixmap::new(w, h).expect("canvas size");
-    if let Some(color) = doc.canvas.color.as_deref().and_then(Rgba::parse) {
-        pm.fill(tiny_skia::Color::from_rgba8(color.r, color.g, color.b, color.a));
+    let color = doc.canvas.color.as_deref().and_then(Rgba::parse);
+    // Simplify (EDT-041): the original dimmed, or hidden, over a plain background.
+    let original = match &doc.simplify {
+        Some(v) if v.show_original => (v.opacity / 100.0).clamp(0.0, 1.0),
+        Some(_) => 0.0,
+        None => 1.0,
+    };
+    match (color, doc.simplify.is_some()) {
+        (Some(c), _) => pm.fill(tiny_skia::Color::from_rgba8(c.r, c.g, c.b, c.a)),
+        (None, true) => pm.fill(tiny_skia::Color::WHITE),
+        (None, false) => {}
     }
-    if let Some((window, x, y)) = base_window(doc, base) {
-        pm.draw_pixmap(
-            x,
-            y,
-            window.as_ref(),
-            &PixmapPaint::default(),
-            Transform::identity(),
-            None,
-        );
+    if original > 0.0 {
+        if let Some((window, x, y)) = base_window(doc, base) {
+            let p = PixmapPaint {
+                opacity: original as f32,
+                ..PixmapPaint::default()
+            };
+            pm.draw_pixmap(x, y, window.as_ref(), &p, Transform::identity(), None);
+        }
     }
     pm
 }
@@ -786,6 +800,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
             .ok()
             .map(|s| (s.rect, s.rotation)),
         "stamp" => StampObject::from_props(&object.props)
+            .ok()
+            .map(|s| (s.rect, s.rotation)),
+        "simplify" => SimpleObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
         "highlight" => HighlightObject::from_props(&object.props)
@@ -1059,7 +1076,7 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         // A step, a callout or a stroke as it shows, in a picture centered on the
         // center of its body (of its points for a stroke): `(x, y)` is where its top-left
         // corner goes. The editor places it by that center.
-        "step" | "callout" | "pen" | "stamp" => {
+        "step" | "callout" | "pen" | "stamp" | "simplify" => {
             let b = object_bounds(object, doc.dpi)?;
             let (cx, cy, reach) = match object.kind.as_str() {
                 "step" => {
@@ -1072,6 +1089,10 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
                 }
                 "stamp" => {
                     let r = StampObject::from_props(&object.props).ok()?.rect;
+                    (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
+                }
+                "simplify" => {
+                    let r = SimpleObject::from_props(&object.props).ok()?.rect;
                     (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
                 }
                 _ => ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0, 0.0),
@@ -1462,5 +1483,24 @@ mod tests {
         let at = |cx: i32, cy: i32| pic.get_pixel((cx - x) as u32, (cy - y) as u32).0;
         assert_eq!(at(40, 100), [0, 0, 0, 255]);
         assert_eq!(at(160, 100), [255, 255, 255, 255]);
+    }
+
+    /// EDT-041: with the original shown at 40 % it is dimmed under the shapes; hidden,
+    /// it does not show at all.
+    #[test]
+    fn simplify_shows_the_original_dimmed_or_not() {
+        let base = Base::from_image(RgbaImage::from_pixel(20, 10, image::Rgba([0, 0, 0, 255])));
+        let mut doc = Document::new(20, 10, 96.0);
+        doc.simplify = Some(xs_core::document::SimplifyView {
+            show_original: true,
+            opacity: 40.0,
+        });
+        let dim = render(&doc, &base).get_pixel(5, 5).0;
+        assert!((150..=156).contains(&dim[0]), "40 % black over white: {dim:?}");
+        doc.simplify = Some(xs_core::document::SimplifyView {
+            show_original: false,
+            opacity: 40.0,
+        });
+        assert_eq!(render(&doc, &base).get_pixel(5, 5).0, [255, 255, 255, 255]);
     }
 }

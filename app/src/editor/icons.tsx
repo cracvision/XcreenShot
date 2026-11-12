@@ -155,6 +155,32 @@ const ICONS = {
       <path d="M4 4h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
     </Svg>
   ),
+  // Flat bars standing in for an interface (EDT-041).
+  simplify: (
+    <Svg>
+      <rect x="3" y="4" width="14" height="3" rx="1.5" fill="currentColor" stroke="none" />
+      <rect
+        x="3"
+        y="9"
+        width="10"
+        height="3"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.6"
+      />
+      <rect
+        x="3"
+        y="14"
+        width="7"
+        height="3"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.6"
+      />
+    </Svg>
+  ),
   // A stamp (EDT-031).
   stamp: (
     <Svg>

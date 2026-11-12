@@ -121,7 +121,8 @@ type Drag =
         | "highlight"
         | "magnify"
         | "spotlight"
-        | "stamp";
+        | "stamp"
+        | "simplify";
       from: Point;
       to: Point;
       startX: number;
@@ -227,7 +228,8 @@ function handlesOf(o: DocObject): Handle[] {
     o.type === "image" ||
     o.type === "highlight" ||
     o.type === "spotlight" ||
-    o.type === "stamp"
+    o.type === "stamp" ||
+    o.type === "simplify"
   )
     return [...RESIZE_HANDLES, "rotate"];
   return [];
@@ -970,7 +972,8 @@ export function Canvas({ doc }: Props) {
       tool === "highlight" ||
       tool === "magnify" ||
       tool === "spotlight" ||
-      tool === "stamp"
+      tool === "stamp" ||
+      tool === "simplify"
     ) {
       capture();
       setDrag({
@@ -1504,6 +1507,18 @@ export function Canvas({ doc }: Props) {
         return <ShapeShape key={o.id} o={o} scale={scale} />;
       case "highlight":
         return <HighlightShape key={o.id} o={o} />;
+      case "simplify": {
+        // A simplified shape as Rust draws it, like a stamp (EDT-041).
+        const c = committed.get(o.id);
+        return (
+          <StampShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "simplify" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "stamp": {
         const c = committed.get(o.id);
         return (
@@ -1594,7 +1609,7 @@ export function Canvas({ doc }: Props) {
   };
 
   const dashedBox = (
-    kind: "blur" | "text" | "step" | "callout" | "magnify" | "spotlight" | "stamp",
+    kind: "blur" | "text" | "step" | "callout" | "magnify" | "spotlight" | "stamp" | "simplify",
   ) => {
     if (drawing?.tool !== kind) return null;
     const r = dragRect(
@@ -1644,6 +1659,7 @@ export function Canvas({ doc }: Props) {
       {dashedBox("magnify")}
       {dashedBox("spotlight")}
       {dashedBox("stamp")}
+      {dashedBox("simplify")}
       {drag?.kind === "pen" && styles && (
         <PenPreview
           points={drag.points}
@@ -1735,8 +1751,23 @@ export function Canvas({ doc }: Props) {
                       fill={doc.canvas.color}
                     />
                   )}
+                  {/* Simplify: a plain background, the original dimmed or hidden (EDT-041). */}
+                  {doc.simplify && !doc.canvas.color && (
+                    <Rect width={canvasSize.width} height={canvasSize.height} fill="#ffffff" />
+                  )}
                   {base && (
-                    <KImage image={base} x={baseAt.x - doc.crop.x} y={baseAt.y - doc.crop.y} />
+                    <KImage
+                      image={base}
+                      x={baseAt.x - doc.crop.x}
+                      y={baseAt.y - doc.crop.y}
+                      opacity={
+                        doc.simplify
+                          ? doc.simplify.showOriginal
+                            ? doc.simplify.opacity / 100
+                            : 0
+                          : 1
+                      }
+                    />
                   )}
                 </Group>
                 {/* Objects are cut at the edge, except the one being drawn or dragged:
