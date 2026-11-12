@@ -589,6 +589,7 @@ pub fn slots() -> Vec<Slot> {
         tool("editor.tool_step", r#"{"tool":"step"}"#),
         tool("editor.tool_highlight", r#"{"tool":"highlight"}"#),
         tool("editor.tool_pen", r#"{"tool":"pen"}"#),
+        tool("editor.tool_magnify", r#"{"tool":"magnify"}"#),
         tool("editor.tool_blur", r#"{"tool":"blur"}"#),
         tool("editor.tool_crop", r#"{"tool":"crop"}"#),
     ]
@@ -659,6 +660,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_step", Compatibility, Macos) => "Ctrl+KeyS",
         ("editor.tool_highlight", Compatibility, Macos) => "Ctrl+KeyH",
         ("editor.tool_pen", Compatibility, Macos) => "Ctrl+KeyP",
+        ("editor.tool_magnify", Compatibility, Macos) => "Ctrl+KeyM",
         ("editor.tool_callout", Compatibility, Macos) => "Ctrl+KeyD",
         ("editor.tool_crop", Compatibility, Macos) => "Ctrl+KeyC",
         ("editor.tool_move", ..) => "KeyV",
@@ -670,6 +672,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_step", ..) => "KeyN",
         ("editor.tool_highlight", ..) => "KeyH",
         ("editor.tool_pen", ..) => "KeyP",
+        ("editor.tool_magnify", ..) => "KeyM",
         ("editor.tool_callout", ..) => "KeyC",
         ("editor.tool_crop", ..) => "KeyR",
         ("editor.delete", ..) => "Delete",

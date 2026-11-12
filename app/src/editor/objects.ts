@@ -2,7 +2,7 @@
 // it, and the change a move or a handle makes (EDT-022, EDT-042). Pure functions.
 import { corners, type Box, type Rect } from "./boxes";
 import { distanceToSegment, type Point } from "./geometry";
-import { isSegment, type DocObject, type TextObject } from "./state";
+import { isSegment, lensOf, type DocObject, type TextObject } from "./state";
 
 /** The box of an object drawn in a rectangle (text, shape, blur, image), or null for
  * arrows. */
@@ -15,6 +15,9 @@ export function boxOf(o: DocObject): Box | null {
     case "callout":
     case "highlight":
       return { ...o.rect, rotation: o.rotation };
+    case "magnify":
+      // The lens (EDT-038).
+      return { ...lensOf(o), rotation: 0 };
     case "text":
       return {
         x: o.at[0],
@@ -105,6 +108,14 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
       const points = o.points.map((q): Point => [q[0] + dx, q[1] + dy]);
       return [{ ...o, points }, { points }];
     }
+    case "magnify": {
+      const source = { ...o.source, x: o.source.x + dx, y: o.source.y + dy };
+      const at: Point = [o.at[0] + dx, o.at[1] + dy];
+      return [
+        { ...o, source, at },
+        { source, at },
+      ];
+    }
     case "callout": {
       // The tails go with the body (EDT-028).
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
@@ -155,6 +166,15 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
         { rect, rotation: b.rotation },
       ];
     }
+    case "magnify": {
+      // A bigger lens shows the same zone more enlarged (EDT-038).
+      const zoom = Math.round(Math.min(800, Math.max(110, (b.w / Math.max(1, o.source.w)) * 100)));
+      const at: Point = [b.x + b.w / 2, b.y + b.h / 2];
+      return [
+        { ...o, at, style: { ...o.style, zoom } },
+        { at, style: { zoom } },
+      ];
+    }
     case "callout": {
       // The body changes; the tails keep pointing where they did (EDT-028).
       const rect: Rect = { x: b.x, y: b.y, w: b.w, h: b.h };
@@ -186,6 +206,16 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
 export function extentPoints(o: DocObject): Point[] {
   if (isSegment(o)) return [o.from, o.to];
   if (o.type === "pen") return o.points;
+  if (o.type === "magnify") {
+    const l = lensOf(o);
+    const z = o.source;
+    return [
+      [z.x, z.y],
+      [z.x + z.w, z.y + z.h],
+      [l.x, l.y],
+      [l.x + l.w, l.y + l.h],
+    ];
+  }
   const b = boxOf(o);
   if (o.type === "callout" && b) return [...corners(b), ...o.tails];
   return b ? corners(b) : [];

@@ -5,12 +5,14 @@ import Konva from "konva";
 import { useEffect, useRef } from "react";
 import { Circle, Ellipse, Group, Image as KImage, Line, Rect } from "react-konva";
 import { innerRect, pixelBounds } from "./boxes";
+import { lensOf } from "./state";
 import { dash, type ArrowStyle, type Geometry } from "./geometry";
 import type {
   BlurObject,
   CalloutObject,
   HighlightObject,
   ImageObject,
+  MagnifyObject,
   PenObject,
   ShapeObject,
   StepObject,
@@ -365,6 +367,74 @@ export function PenPreview(props: {
       lineCap={square ? "square" : "round"}
       lineJoin={square ? "miter" : "round"}
       tension={0.3}
+      listening={false}
+    />
+  );
+}
+
+/** A lens as Rust draws it (EDT-038), centered on the middle of its zone and lens.
+ * While it changes, outlines show where the zone and the lens go. */
+export function MagnifyShape(props: {
+  o: MagnifyObject;
+  committed: MagnifyObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  const lens = lensOf(o);
+  const same =
+    JSON.stringify([o.source, o.at, o.style]) ===
+    JSON.stringify([committed.source, committed.at, committed.style]);
+  const span = (m: MagnifyObject) => {
+    const l = lensOf(m);
+    const x0 = Math.min(m.source.x, l.x);
+    const y0 = Math.min(m.source.y, l.y);
+    const x1 = Math.max(m.source.x + m.source.w, l.x + l.w);
+    const y1 = Math.max(m.source.y + m.source.h, l.y + l.h);
+    return [(x0 + x1) / 2, (y0 + y1) / 2] as const;
+  };
+  if (!same || !image) {
+    const round = o.style.shape === "circle";
+    const box = (r: { x: number; y: number; w: number; h: number }, key: string) =>
+      round ? (
+        <Ellipse
+          key={key}
+          x={r.x + r.w / 2}
+          y={r.y + r.h / 2}
+          radiusX={r.w / 2}
+          radiusY={r.h / 2}
+          stroke={o.style.outline}
+          strokeWidth={Math.max(1, o.style.outlineWidth)}
+          dash={[6, 4]}
+          listening={false}
+        />
+      ) : (
+        <Rect
+          key={key}
+          x={r.x}
+          y={r.y}
+          width={r.w}
+          height={r.h}
+          stroke={o.style.outline}
+          strokeWidth={Math.max(1, o.style.outlineWidth)}
+          dash={[6, 4]}
+          listening={false}
+        />
+      );
+    return (
+      <>
+        {box(o.source, "zone")}
+        {box(lens, "lens")}
+      </>
+    );
+  }
+  const [cx, cy] = span(o);
+  return (
+    <KImage
+      image={image}
+      x={cx}
+      y={cy}
+      offsetX={image.naturalWidth / 2}
+      offsetY={image.naturalHeight / 2}
       listening={false}
     />
   );

@@ -106,6 +106,13 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A magnifying glass (EDT-038).
+  magnify: (
+    <Svg>
+      <circle cx="8.5" cy="8.5" r="5" />
+      <path d="m12.5 12.5 4 4M6.5 8.5h4M8.5 6.5v4" />
+    </Svg>
+  ),
   // A pen (EDT-037).
   pen: (
     <Svg>

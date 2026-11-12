@@ -15,6 +15,7 @@ use crate::color::Rgba;
 use crate::effects;
 use crate::geometry::{dash, Arrow, Geometry, Shape};
 use crate::highlights::{self, HighlightObject};
+use crate::magnify::{self, MagnifyObject};
 use crate::pens::{self, PenObject};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
@@ -557,6 +558,13 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 pens::draw(pm, &p);
             }
         }
+        // The lens shows what is below it (EDT-038).
+        "magnify" => {
+            if let Ok(m) = MagnifyObject::from_props(&object.props) {
+                let below = pm.clone();
+                magnify::draw(pm, &below, &m, Transform::identity());
+            }
+        }
         "image" => {
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
@@ -725,6 +733,14 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
             let [x0, y0, x1, y1] = p.bounds();
             add(x0, y0);
             add(x1, y1);
+            None
+        }
+        "magnify" => {
+            let m = MagnifyObject::from_props(&object.props).ok()?;
+            let [x0, y0, x1, y1] = m.span();
+            let o = m.style.outline_width + 1.0;
+            add(x0 - o, y0 - o);
+            add(x1 + o, y1 + o);
             None
         }
         "image" => ImageObject::from_props(&object.props)
@@ -898,6 +914,31 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         }
         // A step as it shows, turned shape and upright value, in a picture centered on
         // the marker's center: `(x, y)` is where its top-left corner goes.
+        // A lens, over what is below it, in a picture centered on the middle of its zone
+        // and lens (EDT-038).
+        "magnify" => {
+            let m = MagnifyObject::from_props(&object.props).ok()?;
+            let mut below = canvas(doc, base);
+            for o in flattened_objects(doc).iter().chain(&doc.objects[..index]) {
+                draw_object(&mut below, o, doc.dpi, &base.images);
+            }
+            let [x0, y0, x1, y1] = m.span();
+            let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+            let pad = m.style.outline_width + 2.0;
+            let (w, h) = (
+                ((x1 - x0) + 2.0 * pad).ceil() as u32,
+                ((y1 - y0) + 2.0 * pad).ceil() as u32,
+            );
+            let (ox, oy) = (cx - w as f64 / 2.0, cy - h as f64 / 2.0);
+            let mut pm = Pixmap::new(w.clamp(1, 16384), h.clamp(1, 16384))?;
+            magnify::draw(
+                &mut pm,
+                &below,
+                &m,
+                Transform::from_translate(-ox as f32, -oy as f32),
+            );
+            Some((straight(&pm), ox.floor() as i32, oy.floor() as i32))
+        }
         // A step, a callout or a stroke as it shows, in a picture centered on the
         // center of its body (of its points for a stroke): `(x, y)` is where its top-left
         // corner goes. The editor places it by that center.
@@ -1262,5 +1303,43 @@ mod tests {
         assert_eq!(half.get_pixel(5, 5).0, [0, 0, 0, 255]);
         let p = half.get_pixel(30, 5).0;
         assert!(p[0] == 255 && p[1] == 255 && (120..=135).contains(&p[2]), "{p:?}");
+    }
+
+    /// EDT-038: a lens at 300 % over a 50 x 50 zone shows it at 150 x 150, also in the
+    /// editor's picture of it.
+    #[test]
+    fn a_lens_enlarges_its_zone() {
+        // Left half black, right half white.
+        let img = RgbaImage::from_fn(200, 200, |x, _| {
+            if x < 100 {
+                image::Rgba([0, 0, 0, 255])
+            } else {
+                image::Rgba([255, 255, 255, 255])
+            }
+        });
+        let base = Base::from_image(img);
+        let mut doc = Document::new(200, 200, 96.0);
+        doc.objects.push(Object {
+            id: "o1".into(),
+            kind: "magnify".into(),
+            props: json!({"source": {"x": 75, "y": 75, "w": 50, "h": 50}, "style": {"zoom": 300, "shape": "square", "outlineWidth": 0}})
+                .as_object()
+                .unwrap()
+                .clone(),
+        });
+        let out = render(&doc, &base);
+        // The lens is 150 wide around x = 100: from 25 to 175. Its left half shows the
+        // zone's black part enlarged, its right half the white.
+        assert_eq!(out.get_pixel(40, 100).0, [0, 0, 0, 255]);
+        assert_eq!(out.get_pixel(160, 100).0, [255, 255, 255, 255]);
+        // Outside the lens nothing changed.
+        assert_eq!(out.get_pixel(10, 100).0, [0, 0, 0, 255]);
+        assert_eq!(out.get_pixel(190, 100).0, [255, 255, 255, 255]);
+        // The editor's picture: the lens moved away keeps the same enlarged content.
+        doc.objects[0].props.insert("at".into(), json!([100, 100]));
+        let (pic, x, y) = object_image(&doc, &base, "o1").unwrap();
+        let at = |cx: i32, cy: i32| pic.get_pixel((cx - x) as u32, (cy - y) as u32).0;
+        assert_eq!(at(40, 100), [0, 0, 0, 255]);
+        assert_eq!(at(160, 100), [255, 255, 255, 255]);
     }
 }

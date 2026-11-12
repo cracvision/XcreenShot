@@ -788,7 +788,8 @@
       "editor_tool_callout": "Herramienta Globo",
       "editor_tool_line": "Herramienta Línea",
       "editor_tool_highlight": "Herramienta Resaltador",
-      "editor_tool_pen": "Herramienta Lápiz"
+      "editor_tool_pen": "Herramienta Lápiz",
+      "editor_tool_magnify": "Herramienta Lupa"
     }
   },
   "tray": {
@@ -1244,7 +1245,8 @@
         "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar.",
         "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°.",
         "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible.",
-        "pen": "Dibuja a mano alzada; Mayús traza una línea recta."
+        "pen": "Dibuja a mano alzada; Mayús traza una línea recta.",
+        "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio."
       },
       "tool": {
         "move": "Mover",
@@ -1258,7 +1260,8 @@
         "callout": "Globo",
         "line": "Línea",
         "highlight": "Resaltador",
-        "pen": "Lápiz"
+        "pen": "Lápiz",
+        "magnify": "Lupa"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1331,7 +1334,10 @@
         "pen_tip": "Punta",
         "smooth": "Suavizar trazo",
         "antialias": "Suavizado de bordes",
-        "editable": "Crear como trazo editable"
+        "editable": "Crear como trazo editable",
+        "lens_shape": "Forma",
+        "zoom": "Aumento",
+        "connectors": "Conectores"
       },
       "cap": {
         "none": "Ninguno",
@@ -1486,7 +1492,13 @@
         "slash": "Barra inclinada",
         "bar": "Barra horizontal"
       },
-      "unflatten_painted": "Se pintó directamente en la imagen, así que no se puede desaplanar."
+      "unflatten_painted": "Se pintó directamente en la imagen, así que no se puede desaplanar.",
+      "lens_shape": {
+        "circle": "Círculo",
+        "square": "Cuadrado",
+        "rectangle": "Rectángulo",
+        "roundedRectangle": "Rectángulo redondeado"
+      }
     },
     "multi": {
       "title": "Multicaptura",
@@ -1703,7 +1715,13 @@
     "change_pen": "Cambiar trazo",
     "delete_pen": "Eliminar trazo",
     "cut_pen": "Cortar trazo",
-    "paste_pen": "Pegar trazo"
+    "paste_pen": "Pegar trazo",
+    "draw_magnify": "Ampliar",
+    "move_magnify": "Mover lupa",
+    "change_magnify": "Cambiar lupa",
+    "delete_magnify": "Eliminar lupa",
+    "cut_magnify": "Cortar lupa",
+    "paste_magnify": "Pegar lupa"
   },
   "editor": {
     "edited": "{{name}} — Editado"

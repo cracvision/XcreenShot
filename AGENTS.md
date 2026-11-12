@@ -115,7 +115,7 @@ xcreenshot app ping --json
 | `document.open` | `xcreenshot document open <path> [--show true]` | Opens a `.xshot`, PNG or JPG file as a document and returns its `documentId`. Opening a file that is already open returns the same id. Without `--show` no window opens. |
 | `document.list` | `xcreenshot document list --json` | Open documents in order, with `active` (the one in the editor), `dirty` (unsaved changes), `kind` (`library` or `external`) and size. |
 | `document.info` | `xcreenshot document info [--document-id <id>] --json` | Size, resolution (`dpi`), crop, objects with their geometry and style, capture metadata, `dirty`, and the undo and redo state. |
-| `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (`arrow`, `line`, `text`, `callout`, `shape`, `step`, `highlight`, `pen`, `blur`), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
+| `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (`arrow`, `line`, `text`, `callout`, `shape`, `step`, `highlight`, `pen`, `magnify`, `blur`), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
 | `document.arrange` | `xcreenshot document arrange --document-id <id> --object-ids '["o1"]' --to back` | Stacking order: `front`, `forward` (one place up), `backward`, `back`. Several keep their order. One undo step. |
 | `document.steps` | `xcreenshot document steps --document-id <id> restart` · `renumber` | Step markers (`type: "step"`, EDT-035): `document.annotate` places one with `at` (its center) or `rect`, and without `value` it takes the next of its sequence (`style.sequence`: number, upper, lower, romanUpper, romanLower). `restart` makes the next one the first value; `renumber` numbers them again by the order they were made (one undo step). `document.info` shows the next value of each sequence in `stepNext`. |
 | `document.flatten` | `xcreenshot document flatten --document-id <id> --object-ids '["o1"]'` · `--all true` | Merges objects into the image, in one undo step: they are no longer objects. `document.info` lists them in `flattened` (layers with their objects in base pixels and their `bounds` on the canvas). Returns the new `layers`: each blur gets a layer of its own that is `permanent` (when the file is written it merges into `base.png`, with the earlier layers it covers); the objects between blurs can come back. |
@@ -141,7 +141,7 @@ xcreenshot app ping --json
 | `editor.show` | `xcreenshot editor show [--view editor\|library] [--document-id <id>]` | Shows the main window in the Editor view (or the Library view with `--view library`), optionally with that document in front. The document shown before is saved if it is in the library. |
 | `editor.state` | `xcreenshot editor state --json` | Active tool, available tools, the current style of each tool, the open documents and how many recoverable items there are. |
 | `editor.fonts` | `xcreenshot editor fonts --json` | Font families installed on this computer, for the `font` of text objects. |
-| `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|line\|text\|callout\|shape\|step\|highlight\|pen\|blur\|crop>` | Makes a tool active. |
+| `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|line\|text\|callout\|shape\|step\|highlight\|pen\|magnify\|blur\|crop>` | Makes a tool active. |
 | `editor.action` | `xcreenshot editor action <open\|save\|save_as\|export\|close\|close_all\|undo\|redo\|cut\|copy\|paste\|paste_in_place\|copy_all\|delete\|deselect\|side_panel\|toolbar_labels\|recover\|ai_ask\|ai_name\|view_editor\|view_library\|tray\|prev_item\|next_item\|close_others\|rename_item\|show_in_folder\|delete_item>` | Does in the editor window what its menu entry does, with the window's selection, view and dialogs. Menus and editor shortcuts run it. To change documents without the window, use the `document.*` commands. |
 | `editor.menu_state` | (UI only) | The editor window reports which menu entries can be used now and which are ticked. |
 | `editor.set_style` | `xcreenshot editor set-style --tool arrow --style '{"color":"#2D7FF9","width":4}'` | Changes the tool's current style: what the next objects drawn by the user or added without a style look like. |
@@ -290,8 +290,12 @@ same style) and its tool starts without ends (EDT-025). A `highlight` (EDT-036) 
 below, so dark text stays dark. A `pen` stroke (EDT-037) is a list of `points`, smoothed
 when it is made by `style.smooth` (0–100 %); its style has `color`, `width` (1–100),
 `opacity`, `tip` (`circle`, `square`, `slash`, `bar`), `antialias` and `editable`
-(with `false` it is painted into the image: a permanent flattened layer). Other object
-types arrive later in M2.
+(with `false` it is painted into the image: a permanent flattened layer). A `magnify`
+lens (EDT-038) shows its zone `source` (`{x, y, w, h}`) enlarged by `style.zoom`
+(110–800 %) around `at` (default: the zone's center; elsewhere, the zone keeps an outline
+and `connectors` join them); style `shape` (`circle`, `square`, `rectangle`,
+`roundedRectangle`), `outline`, `outlineWidth` (0–20), `opacity`. Other object types
+arrive later in M2.
 
 `.xshot` is a ZIP with `manifest.json`, `document.json`, `base.png` (the original
 pixels, never cropped), `meta.json` and `thumb.png`. The schema of `document.json` is

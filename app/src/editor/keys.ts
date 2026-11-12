@@ -158,9 +158,11 @@ function insert(): void {
         ? { type: tool, rect: { x: c[0] - INSERT.w / 2, y: c[1] - INSERT.h / 2, ...INSERT } }
         : tool === "step"
           ? { type: "step", at: c }
-          : tool === "callout"
-            ? { type: "callout", rect: { x: c[0] - 100, y: c[1] - 60, w: 200, h: 60 } }
-            : null;
+          : tool === "magnify"
+            ? { type: "magnify", source: { x: c[0] - 30, y: c[1] - 30, w: 60, h: 60 } }
+            : tool === "callout"
+              ? { type: "callout", rect: { x: c[0] - 100, y: c[1] - 60, w: 200, h: 60 } }
+              : null;
   if (!object) return;
   run<{ ids: string[] }>("document.annotate", { documentId: active, objects: [object] })
     .then((r) => r.ids[0] && setSelection([r.ids[0]]))
@@ -177,6 +179,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   callout: "fill",
   highlight: "color",
   pen: "color",
+  magnify: "outline",
   blur: "color",
 };
 

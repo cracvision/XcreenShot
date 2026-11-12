@@ -120,6 +120,18 @@ fn corners(b: &Boxed) -> [[f64; 2]; 4] {
 
 /// Canvas points an object reaches: an arrow's ends or its box's corners.
 pub fn extent(o: &Object, measure: Measure) -> Vec<[f64; 2]> {
+    if o.kind == "magnify" {
+        if let Ok(m) = xs_image::magnify::MagnifyObject::from_props(&o.props) {
+            let (s, l) = (m.source, m.lens());
+            return vec![
+                [s.x, s.y],
+                [s.x + s.w, s.y + s.h],
+                [l.x, l.y],
+                [l.x + l.w, l.y + l.h],
+            ];
+        }
+        return Vec::new();
+    }
     if o.kind == "pen" {
         return o
             .props
@@ -210,6 +222,33 @@ fn around(c: [f64; 2], w: f64, h: f64) -> Rect {
 /// The `set` that applies `op` to `o`; empty when it does not change.
 pub fn transformed(o: &Object, op: &Op, measure: Measure) -> Map<String, Value> {
     let mut set = Map::new();
+    // A lens: its zone and its center move; its zoom stays (EDT-038).
+    if o.kind == "magnify" {
+        let (Some(at), Some(src)) = (
+            xy(o.props.get("at")),
+            o.props.get("source").and_then(Rect::from_value),
+        ) else {
+            return set;
+        };
+        let c = src.center();
+        let (nc, nat, k) = match *op {
+            Op::Scale { from, to, .. } => {
+                let (sx, sy) = factors(&from, &to);
+                (mapped(c, &from, &to), mapped(at, &from, &to), (sx, sy))
+            }
+            Op::Rotate { center, degrees } => {
+                (turn(c, center, degrees), turn(at, center, degrees), (1.0, 1.0))
+            }
+            Op::Equal { .. } => return set,
+        };
+        let (w, h) = (src.w * k.0, src.h * k.1);
+        set.insert(
+            "source".into(),
+            json!({"x": nc[0] - w / 2.0, "y": nc[1] - h / 2.0, "w": w.max(1.0), "h": h.max(1.0)}),
+        );
+        set.insert("at".into(), json!(nat));
+        return set;
+    }
     // A stroke's points move like a polyline's (EDT-037).
     if o.kind == "pen" {
         let points: Vec<[f64; 2]> = o

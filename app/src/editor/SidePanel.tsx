@@ -29,6 +29,8 @@ import {
   type HighlightShapeKind,
   PEN_TIPS,
   type PenTip,
+  LENS_SHAPES,
+  type LensShape,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -123,7 +125,17 @@ interface Target {
 }
 
 type StyledKind =
-  "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout" | "highlight" | "pen";
+  | "arrow"
+  | "line"
+  | "text"
+  | "shape"
+  | "blur"
+  | "image"
+  | "step"
+  | "callout"
+  | "highlight"
+  | "pen"
+  | "magnify";
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -135,6 +147,7 @@ const STYLED: StyledKind[] = [
   "callout",
   "highlight",
   "pen",
+  "magnify",
 ];
 
 function useTarget(): Target | null {
@@ -470,6 +483,51 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "magnify":
+      // Magnify (EDT-038): shape, zoom, outline and connectors.
+      return (
+        <>
+          <SelectField
+            label={t("ui.editor.prop.lens_shape")}
+            value={v<LensShape>("shape")}
+            options={LENS_SHAPES.map((s) => ({ value: s, label: t(`ui.editor.lens_shape.${s}`) }))}
+            onCommit={(shape) => commit({ shape })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.zoom")}
+            value={num("zoom")}
+            min={110}
+            max={800}
+            step={10}
+            unit="%"
+            onCommit={(zoom) => commit({ zoom })}
+          />
+          <ColorPicker
+            label={t("ui.editor.prop.outline")}
+            value={v<string>("outline") ?? "#000000"}
+            mixed={v<string>("outline") === undefined}
+            onCommit={(outline) => outline && commit({ outline })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.outline_width")}
+            value={num("outlineWidth")}
+            min={0}
+            max={20}
+            step={0.5}
+            unit="px"
+            onCommit={(outlineWidth) => commit({ outlineWidth })}
+          />
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={v<boolean>("connectors") !== false}
+              onChange={(e) => commit({ connectors: e.target.checked })}
+            />
+            {t("ui.editor.prop.connectors")}
+          </label>
+          {opacity}
+        </>
+      );
     case "pen":
       // Pen (EDT-037): color, width, tip, smoothing; editable is how new strokes are made.
       return (

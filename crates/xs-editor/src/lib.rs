@@ -30,7 +30,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 11] = [
+pub const AVAILABLE_TOOLS: [&str; 12] = [
     "move",
     "arrow",
     "line",
@@ -40,6 +40,7 @@ pub const AVAILABLE_TOOLS: [&str; 11] = [
     "step",
     "highlight",
     "pen",
+    "magnify",
     "blur",
     "crop",
 ];

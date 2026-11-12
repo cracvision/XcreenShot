@@ -38,6 +38,7 @@ import {
   CalloutShape,
   HighlightShape,
   ImageShape,
+  MagnifyShape,
   PenPreview,
   PenShape,
   ShapeShape,
@@ -52,6 +53,7 @@ import {
   usePointer,
   isSegment,
   type CalloutObject,
+  type MagnifyObject,
   type DocDetails,
   type DocObject,
 } from "./state";
@@ -96,12 +98,14 @@ type HandleHit =
   // A callout's tail tip, its + (a new tail), its corner radius, its anchor (EDT-028).
   | { tail: CalloutObject; index: number | null }
   | { radius: CalloutObject }
-  | { anchor: CalloutObject };
+  | { anchor: CalloutObject }
+  | { zone: MagnifyObject };
 
 type Drag =
   | {
       kind: "draw";
-      tool: "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout" | "highlight";
+      tool:
+        "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout" | "highlight" | "magnify";
       from: Point;
       to: Point;
       startX: number;
@@ -124,6 +128,8 @@ type Drag =
   | { kind: "tail"; id: string; index: number | null; point: Point; start: Point }
   | { kind: "radius"; id: string; box: Box; value: number }
   | { kind: "anchor"; id: string; start: Point; delta: Point }
+  // A lens's zone, moved alone (EDT-038).
+  | { kind: "zone"; id: string; start: Point; delta: Point }
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
   | { kind: "pan"; x: number; y: number; left: number; top: number }
   // A freehand stroke being drawn (EDT-037); Shift keeps it straight.
@@ -196,9 +202,17 @@ function handlesOf(o: DocObject): Handle[] {
   // A step stays square: its corners (EDT-035).
   if (o.type === "step") return ["nw", "ne", "se", "sw", "rotate"];
   if (o.type === "callout") return [...RESIZE_HANDLES, "rotate"];
+  // A lens: its corners change its zoom (EDT-038).
+  if (o.type === "magnify") return ["nw", "ne", "se", "sw"];
   if (o.type === "shape" || o.type === "blur" || o.type === "image" || o.type === "highlight")
     return [...RESIZE_HANDLES, "rotate"];
   return [];
+}
+
+/** Whether a lens sits away from its zone (EDT-038). */
+function lensAway(o: MagnifyObject): boolean {
+  const z = o.source;
+  return Math.hypot(o.at[0] - (z.x + z.w / 2), o.at[1] - (z.y + z.h / 2)) > 1;
 }
 
 /** Where a callout's + is: beside the middle of its right side (EDT-028). */
@@ -452,11 +466,25 @@ export function Canvas({ doc }: Props) {
       case "radius":
         return o.type === "callout" ? { ...o, style: { ...o.style, cornerRadius: drag.value } } : o;
       case "anchor":
-        // The body moves; the tails stay where they point (EDT-028).
+        // The body moves; the tails stay where they point (EDT-028). A lens moves
+        // away from its zone (EDT-038).
+        if (o.type === "magnify")
+          return { ...o, at: [o.at[0] + drag.delta[0], o.at[1] + drag.delta[1]] };
         return o.type === "callout"
           ? {
               ...o,
               rect: { ...o.rect, x: o.rect.x + drag.delta[0], y: o.rect.y + drag.delta[1] },
+            }
+          : o;
+      case "zone":
+        return o.type === "magnify"
+          ? {
+              ...o,
+              source: {
+                ...o.source,
+                x: o.source.x + drag.delta[0],
+                y: o.source.y + drag.delta[1],
+              },
             }
           : o;
     }
@@ -557,6 +585,12 @@ export function Canvas({ doc }: Props) {
     if (selection.length !== 1) return null;
     const o = shown.find((x) => x.id === selection[0]);
     if (!o) return null;
+    // A lens's zone has a handle of its own (EDT-038).
+    // Only once the lens sits elsewhere: before, a drag from its middle moves the lens.
+    if (o.type === "magnify" && !o.locked && lensAway(o)) {
+      const z = o.source;
+      if (near([z.x + z.w / 2, z.y + z.h / 2], s)) return { zone: o };
+    }
     if (o.type === "callout" && !o.locked) {
       const box = boxOf(o);
       if (box) {
@@ -654,6 +688,11 @@ export function Canvas({ doc }: Props) {
         return;
       }
     }
+    if (handle && "zone" in handle) {
+      capture();
+      setDrag({ kind: "zone", id: handle.zone.id, start: p, delta: [0, 0] });
+      return;
+    }
     if (handle && "anchor" in handle) {
       capture();
       setDrag({ kind: "anchor", id: handle.anchor.id, start: p, delta: [0, 0] });
@@ -702,6 +741,17 @@ export function Canvas({ doc }: Props) {
       );
       return;
     }
+    // Dragging a lens alone moves it away from its zone (EDT-038).
+    if (
+      hit?.type === "magnify" &&
+      !adding &&
+      (selection.length <= 1 || !selection.includes(hit.id))
+    ) {
+      setSelection([hit.id]);
+      capture();
+      setDrag({ kind: "anchor", id: hit.id, start: p, delta: [0, 0] });
+      return;
+    }
     if (hit) {
       // Dragging one of several selected objects moves them all.
       const ids = selection.includes(hit.id) ? selection : unit;
@@ -732,7 +782,8 @@ export function Canvas({ doc }: Props) {
       tool === "text" ||
       tool === "step" ||
       tool === "callout" ||
-      tool === "highlight"
+      tool === "highlight" ||
+      tool === "magnify"
     ) {
       capture();
       setDrag({
@@ -815,7 +866,8 @@ export function Canvas({ doc }: Props) {
         const most = Math.min(200, d.box.w / 2, d.box.h / 2);
         return { ...d, value: Math.round(Math.max(0, Math.min(most, lx + d.box.w / 2))) };
       }
-      case "anchor": {
+      case "anchor":
+      case "zone": {
         let dx = p[0] - d.start[0];
         let dy = p[1] - d.start[1];
         if (e.shiftKey) {
@@ -861,7 +913,7 @@ export function Canvas({ doc }: Props) {
             ? h.multi
             : "end" in h || "tail" in h || "radius" in h
               ? "end"
-              : "anchor" in h
+              : "anchor" in h || "zone" in h
                 ? "anchor"
                 : h.handle
         : null;
@@ -909,16 +961,24 @@ export function Canvas({ doc }: Props) {
                 d.click
                 ? { type: "step", at: d.from }
                 : { type: "step", rect: dragRect(d.from, d.to, true, d.fromCenter) }
-              : d.tool === "callout"
-                ? // A callout: a click makes one of a usual size (EDT-028).
+              : d.tool === "magnify"
+                ? // A lens over the zone dragged; a click, over a small square (EDT-038).
                   {
-                    type: "callout",
-                    text: "",
-                    rect: d.click
-                      ? { x: d.from[0], y: d.from[1], w: 200, h: 60 }
+                    type: "magnify",
+                    source: d.click
+                      ? { x: d.from[0] - 30, y: d.from[1] - 30, w: 60, h: 60 }
                       : dragRect(d.from, d.to, d.square, d.fromCenter),
                   }
-                : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
+                : d.tool === "callout"
+                  ? // A callout: a click makes one of a usual size (EDT-028).
+                    {
+                      type: "callout",
+                      text: "",
+                      rect: d.click
+                        ? { x: d.from[0], y: d.from[1], w: 200, h: 60 }
+                        : dragRect(d.from, d.to, d.square, d.fromCenter),
+                    }
+                  : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
         const r = await run<{ ids: string[] }>("document.annotate", {
           documentId: id,
           objects: [object],
@@ -994,6 +1054,17 @@ export function Canvas({ doc }: Props) {
           objectId: d.id,
           set: { style: { cornerRadius: d.value } },
         });
+      } else if (
+        d.kind === "zone" ||
+        (d.kind === "anchor" && committed.get(d.id)?.type === "magnify")
+      ) {
+        const c = committed.get(d.id);
+        if (c?.type !== "magnify" || (d.delta[0] === 0 && d.delta[1] === 0)) return;
+        const set =
+          d.kind === "zone"
+            ? { source: { ...c.source, x: c.source.x + d.delta[0], y: c.source.y + d.delta[1] } }
+            : { at: [c.at[0] + d.delta[0], c.at[1] + d.delta[1]] };
+        await run("document.update_object", { documentId: id, objectId: d.id, set });
       } else if (d.kind === "anchor") {
         const c = committed.get(d.id);
         if (c?.type !== "callout" || (d.delta[0] === 0 && d.delta[1] === 0)) return;
@@ -1045,8 +1116,8 @@ export function Canvas({ doc }: Props) {
         }
         return;
       }
-      if (click && d.tool !== "step" && d.tool !== "callout") return;
-      if (d.tool === "step" || d.tool === "callout") {
+      if (click && d.tool !== "step" && d.tool !== "callout" && d.tool !== "magnify") return;
+      if (d.tool === "step" || d.tool === "callout" || d.tool === "magnify") {
         void finish({ ...d, click });
         return;
       }
@@ -1222,6 +1293,17 @@ export function Canvas({ doc }: Props) {
         return <ShapeShape key={o.id} o={o} scale={scale} />;
       case "highlight":
         return <HighlightShape key={o.id} o={o} />;
+      case "magnify": {
+        const c = committed.get(o.id);
+        return (
+          <MagnifyShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "magnify" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "pen": {
         const c = committed.get(o.id);
         return (
@@ -1278,7 +1360,7 @@ export function Canvas({ doc }: Props) {
     }
   };
 
-  const dashedBox = (kind: "blur" | "text" | "step" | "callout") => {
+  const dashedBox = (kind: "blur" | "text" | "step" | "callout" | "magnify") => {
     if (drawing?.tool !== kind) return null;
     const r = dragRect(
       drawing.from,
@@ -1323,6 +1405,7 @@ export function Canvas({ doc }: Props) {
       {dashedBox("text")}
       {dashedBox("step")}
       {dashedBox("callout")}
+      {dashedBox("magnify")}
       {drag?.kind === "pen" && styles && (
         <PenPreview
           points={drag.points}
@@ -1683,6 +1766,35 @@ export function Canvas({ doc }: Props) {
                             );
                           })}
                         {o.type === "callout" && calloutHandles(o, box)}
+                        {o.type === "magnify" &&
+                          lensAway(o) &&
+                          (() => {
+                            // The zone: a dashed outline and its own handle (EDT-038).
+                            const z = o.source;
+                            const [zx, zy] = toScreen([z.x + z.w / 2, z.y + z.h / 2]);
+                            return (
+                              <>
+                                <Line
+                                  points={corners({ ...z, rotation: 0 }).flatMap(toScreen)}
+                                  closed
+                                  stroke={ACCENT}
+                                  strokeWidth={1}
+                                  dash={[4, 3]}
+                                />
+                                <Rect
+                                  x={zx}
+                                  y={zy}
+                                  width={HANDLE}
+                                  height={HANDLE}
+                                  offsetX={HANDLE / 2}
+                                  offsetY={HANDLE / 2}
+                                  fill={ACCENT}
+                                  stroke="#ffffff"
+                                  strokeWidth={1.5}
+                                />
+                              </>
+                            );
+                          })()}
                       </Group>
                     );
                   })}

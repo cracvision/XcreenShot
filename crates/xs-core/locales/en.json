@@ -788,7 +788,8 @@
       "editor_tool_callout": "Callout tool",
       "editor_tool_line": "Line tool",
       "editor_tool_highlight": "Highlighter tool",
-      "editor_tool_pen": "Pen tool"
+      "editor_tool_pen": "Pen tool",
+      "editor_tool_magnify": "Magnify tool"
     }
   },
   "tray": {
@@ -1244,7 +1245,8 @@
         "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point.",
         "line": "Drag to draw a line; Shift keeps it straight or at 45°.",
         "highlight": "Drag over what to mark; dark text stays readable.",
-        "pen": "Draw freehand; Shift draws a straight line."
+        "pen": "Draw freehand; Shift draws a straight line.",
+        "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere."
       },
       "tool": {
         "move": "Move",
@@ -1258,7 +1260,8 @@
         "callout": "Callout",
         "line": "Line",
         "highlight": "Highlighter",
-        "pen": "Pen"
+        "pen": "Pen",
+        "magnify": "Magnify"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1331,7 +1334,10 @@
         "pen_tip": "Tip",
         "smooth": "Smooth stroke",
         "antialias": "Smooth edges",
-        "editable": "Create as editable stroke"
+        "editable": "Create as editable stroke",
+        "lens_shape": "Shape",
+        "zoom": "Zoom",
+        "connectors": "Connectors"
       },
       "cap": {
         "none": "None",
@@ -1486,7 +1492,13 @@
         "slash": "Slanted bar",
         "bar": "Horizontal bar"
       },
-      "unflatten_painted": "It was painted into the image, so it cannot be unflattened."
+      "unflatten_painted": "It was painted into the image, so it cannot be unflattened.",
+      "lens_shape": {
+        "circle": "Circle",
+        "square": "Square",
+        "rectangle": "Rectangle",
+        "roundedRectangle": "Rounded rectangle"
+      }
     },
     "multi": {
       "title": "Multi-capture",
@@ -1703,7 +1715,13 @@
     "change_pen": "Change stroke",
     "delete_pen": "Delete stroke",
     "cut_pen": "Cut stroke",
-    "paste_pen": "Paste stroke"
+    "paste_pen": "Paste stroke",
+    "draw_magnify": "Magnify",
+    "move_magnify": "Move lens",
+    "change_magnify": "Change lens",
+    "delete_magnify": "Delete lens",
+    "cut_magnify": "Cut lens",
+    "paste_magnify": "Paste lens"
   },
   "editor": {
     "edited": "{{name}} — Edited"

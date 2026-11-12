@@ -84,10 +84,13 @@ pub fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
             points.iter_mut().for_each(shift);
         }
     }
-    if let Some(r) = props.get_mut("rect").and_then(Value::as_object_mut) {
-        for (key, d) in [("x", dx), ("y", dy)] {
-            if let Some(v) = r.get(key).and_then(Value::as_f64) {
-                r.insert(key.into(), Value::from(v + d));
+    // A box, and a lens's zone (EDT-038).
+    for key in ["rect", "source"] {
+        if let Some(r) = props.get_mut(key).and_then(Value::as_object_mut) {
+            for (k, d) in [("x", dx), ("y", dy)] {
+                if let Some(v) = r.get(k).and_then(Value::as_f64) {
+                    r.insert(k.into(), Value::from(v + d));
+                }
             }
         }
     }

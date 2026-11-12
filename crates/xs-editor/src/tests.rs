@@ -2070,3 +2070,39 @@ fn pen_strokes_are_objects_or_paint() {
     assert_eq!(info["objects"].as_array().unwrap().len(), 1, "no new object");
     assert_eq!(info["flattened"][0]["permanent"], "painted");
 }
+
+/// EDT-038: a lens starts over its zone; moved away, its zone stays; moving the whole
+/// object moves both; the zoom changes the lens at once.
+#[test]
+fn a_lens_and_its_zone() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "magnify", "source": {"x": 175, "y": 75, "w": 50, "h": 50}, "style": {"zoom": 300}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["at"], json!([200.0, 100.0]));
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"at": [250, 100]}}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "move": [10, 0]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let m = &info["objects"][0];
+    assert_eq!(m["source"]["x"], json!(185.0));
+    assert_eq!(m["at"], json!([260.0, 100.0]));
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"zoom": 400}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["style"]["zoom"], json!(400.0));
+}

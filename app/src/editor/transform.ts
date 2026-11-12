@@ -51,6 +51,17 @@ const grown = (v: number, k: number, min: number, max: number) =>
 
 /** `o` after `op`, as the canvas shows it while the gesture goes on. */
 export function transformed(o: DocObject, op: TransformOp): DocObject {
+  if (o.type === "magnify") {
+    // The zone and the lens move; the zoom stays (EDT-038).
+    const c: Point = [o.source.x + o.source.w / 2, o.source.y + o.source.h / 2];
+    const [sx, sy] = op.kind === "scale" ? factors(op.from, op.to) : [1, 1];
+    const nc = op.kind === "rotate" ? turn(c, op.center, op.degrees) : mapped(c, op.from, op.to);
+    const at =
+      op.kind === "rotate" ? turn(o.at, op.center, op.degrees) : mapped(o.at, op.from, op.to);
+    const w = o.source.w * sx;
+    const h = o.source.h * sy;
+    return { ...o, at, source: { x: nc[0] - w / 2, y: nc[1] - h / 2, w, h } };
+  }
   if (o.type === "pen") {
     if (op.kind === "rotate")
       return { ...o, points: o.points.map((q) => turn(q, op.center, op.degrees)) };

@@ -22,6 +22,7 @@ export type Tool =
   | "step"
   | "highlight"
   | "pen"
+  | "magnify"
   | "blur"
   | "crop";
 
@@ -94,6 +95,37 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+}
+
+/** Magnify (EDT-038). */
+export type LensShape = "circle" | "square" | "rectangle" | "roundedRectangle";
+export const LENS_SHAPES: LensShape[] = ["circle", "square", "rectangle", "roundedRectangle"];
+
+export interface MagnifyStyle {
+  shape: LensShape;
+  zoom: number;
+  outline: string;
+  outlineWidth: number;
+  connectors: boolean;
+  opacity: number;
+}
+
+export interface MagnifyObject {
+  id: string;
+  type: "magnify";
+  /** The zone shown. */
+  source: Rect;
+  /** The lens's center. */
+  at: Point;
+  style: MagnifyStyle;
+}
+
+/** The lens: the zone times the zoom, around `at`. */
+export function lensOf(m: Pick<MagnifyObject, "source" | "at" | "style">): Rect {
+  const k = m.style.zoom / 100;
+  const w = m.source.w * k;
+  const h = m.source.h * k;
+  return { x: m.at[0] - w / 2, y: m.at[1] - h / 2, w, h };
 }
 
 /** Pen (EDT-037). */
@@ -286,6 +318,7 @@ export type DocObject = (
   | CalloutObject
   | HighlightObject
   | PenObject
+  | MagnifyObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -304,6 +337,7 @@ export interface Styles {
   callout: CalloutStyle;
   highlight: HighlightStyle;
   pen: PenStyle;
+  magnify: MagnifyStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */

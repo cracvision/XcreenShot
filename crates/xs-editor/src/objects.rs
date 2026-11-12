@@ -10,6 +10,7 @@ use xs_core::document::{translate_props, Object};
 use xs_image::callouts::{CalloutObject, CalloutStyle};
 use xs_image::geometry::{Arrow, ArrowStyle, Cap};
 use xs_image::highlights::{HighlightObject, HighlightStyle};
+use xs_image::magnify::{MagnifyObject, MagnifyStyle};
 use xs_image::pens::{self, PenObject, PenStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::steps::{self, StepObject, StepStyle};
@@ -30,6 +31,7 @@ pub struct Styles {
     pub callout: CalloutStyle,
     pub highlight: HighlightStyle,
     pub pen: PenStyle,
+    pub magnify: MagnifyStyle,
 }
 
 impl Default for Styles {
@@ -44,6 +46,7 @@ impl Default for Styles {
             callout: CalloutStyle::default(),
             highlight: HighlightStyle::default(),
             pen: PenStyle::default(),
+            magnify: MagnifyStyle::default(),
         }
     }
 }
@@ -71,6 +74,7 @@ impl Styles {
             "callout" => serde_json::to_value(&self.callout).ok(),
             "highlight" => serde_json::to_value(&self.highlight).ok(),
             "pen" => serde_json::to_value(&self.pen).ok(),
+            "magnify" => serde_json::to_value(&self.magnify).ok(),
             _ => None,
         }
     }
@@ -87,6 +91,7 @@ impl Styles {
             "callout" => self.callout = CalloutStyle::merged(&self.callout, changes)?,
             "highlight" => self.highlight = HighlightStyle::merged(&self.highlight, changes)?,
             "pen" => self.pen = PenStyle::merged(&self.pen, changes)?,
+            "magnify" => self.magnify = MagnifyStyle::merged(&self.magnify, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -94,7 +99,7 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["stamp", "magnify", "spotlight"];
+const LATER_TYPES: &[&str] = &["stamp", "spotlight"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
@@ -104,6 +109,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "shape" | "blur" | "image" | "highlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
+        "magnify" => Some(&["source", "at"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
     }
@@ -169,6 +175,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let mut style = serde_json::to_value(&s.style).map_err(|e| e.to_string())?;
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
+        }
+        "magnify" => {
+            let m = MagnifyObject::from_props(props)?;
+            json!({"source": m.source, "at": m.at, "style": m.style})
         }
         "pen" => {
             let p = PenObject::from_props(props)?;
@@ -349,6 +359,10 @@ fn origin(kind: &str, p: &Map<String, Value>) -> Option<[f64; 2]> {
     match kind {
         "arrow" | "line" => xy(p.get("from")?),
         "pen" => xy(p.get("points")?.get(0)?),
+        "magnify" => {
+            let r = p.get("source")?;
+            Some([r.get("x")?.as_f64()?, r.get("y")?.as_f64()?])
+        }
         "text" => xy(p.get("at")?),
         _ => {
             let r = p.get("rect")?;
