@@ -625,6 +625,8 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"batch_export"}"#,
         ),
         editor("editor.print", "editor.action", r#"{"action":"print"}"#),
+        editor("editor.pixel_grid", "editor.action", r#"{"action":"pixel_grid"}"#),
+        editor("editor.fullscreen", "editor.action", r#"{"action":"fullscreen"}"#),
         editor(
             "editor.new_from_clipboard",
             "editor.action",
@@ -756,6 +758,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         // shortcut that would never let it through (spec/QUESTIONS.md).
         ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
         ("editor.redo_alt", _, Macos) => return None,
+        // macOS: Control+Cmd+F (EDT-009).
+        ("editor.fullscreen", _, Macos) => "Ctrl+Super+KeyF",
         // Compatibility on Windows: Ctrl+Shift+X quits the app (a global shortcut).
         ("editor.trim", Compatibility, Windows) => return None,
         // Compatibility on macOS: Cmd+R asks for the angle (EDT-116).
@@ -818,6 +822,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.open" => "Ctrl+KeyO",
                 "editor.new_image" => "Ctrl+KeyN",
                 "editor.print" => "Ctrl+KeyP",
+                "editor.pixel_grid" => "Ctrl+Quote",
+                "editor.fullscreen" => "F11",
                 "editor.new_from_clipboard" => "Ctrl+Shift+KeyN",
                 "editor.save" => "Ctrl+KeyS",
                 "editor.save_as" => "Ctrl+Shift+KeyS",

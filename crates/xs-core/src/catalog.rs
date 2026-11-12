@@ -1412,7 +1412,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 94] = [
+pub const EDITOR_ACTIONS: [&str; 96] = [
     "open",
     "save",
     "save_as",
@@ -1496,6 +1496,9 @@ pub const EDITOR_ACTIONS: [&str; 94] = [
     "batch_export",
     // File > Print (EDT-114).
     "print",
+    // View > Pixel grid and Full screen (EDT-008, EDT-009).
+    "pixel_grid",
+    "fullscreen",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

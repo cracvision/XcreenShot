@@ -11,12 +11,13 @@ import {
   Layer,
   Line,
   Rect,
+  Shape,
   Stage,
   Text,
 } from "react-konva";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
-import { setting, useSetting } from "../store";
+import { setting, settingValue, useApp, useSetting } from "../store";
 import {
   applyCrop,
   duplicateSelection,
@@ -448,6 +449,16 @@ export function Canvas({ doc }: Props) {
   const cropState = useEditor((s) => s.cropRect);
   const autoExpand = useSetting("editor.autoExpandCanvas", true);
   const snapOn = useSetting("editor.snap", true);
+  // The pixel grid (EDT-008) and the workspace color (EDT-010).
+  const gridOn = useSetting("editor.pixelGrid", true);
+  const gridFrom = useApp((s) => {
+    const v = settingValue(s.settings, "editor.pixelGridMinZoom");
+    return typeof v === "number" ? v : 600;
+  });
+  const workspace = useApp((s) => {
+    const v = settingValue(s.settings, "editor.workspaceColor");
+    return typeof v === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v) ? v : null;
+  });
   const scaleStrokes = useSetting("editor.scaleStrokes", true);
   const { setSelection, setView, showError } = useEditor.getState();
   // Another document: no group is entered (EDT-082).
@@ -2326,7 +2337,7 @@ export function Canvas({ doc }: Props) {
   );
 
   return (
-    <div className="canvas-area">
+    <div className="canvas-area" style={workspace ? { background: workspace } : undefined}>
       {/* Over a locked object, a small lock by the pointer (EDT-085). */}
       {stylePreview && previewAt && (
         // The current style next to the pointer (EDT-015 `editor.cursorStylePreview`).
@@ -2531,6 +2542,47 @@ export function Canvas({ doc }: Props) {
                   })}
                 </Group>
               )}
+              {gridOn &&
+                lay &&
+                viewport &&
+                view &&
+                view.zoom >= gridFrom &&
+                (() => {
+                  // One physical pixel between the pixels of the image, inverting what is
+                  // below so it shows on any color; never part of the image (EDT-008).
+                  const [x0, y0] = toCanvas({ x: 0, y: 0 });
+                  const [x1, y1] = toCanvas({ x: viewport.width, y: viewport.height });
+                  const left = Math.max(0, Math.floor(x0));
+                  const top = Math.max(0, Math.floor(y0));
+                  const right = Math.min(canvasSize.width, Math.ceil(x1));
+                  const bottom = Math.min(canvasSize.height, Math.ceil(y1));
+                  if (right <= left || bottom <= top) return null;
+                  const [sx0, sy0] = toScreen([left, top]);
+                  const [sx1, sy1] = toScreen([right, bottom]);
+                  return (
+                    <Shape
+                      listening={false}
+                      globalCompositeOperation="difference"
+                      sceneFunc={(ctx) => {
+                        const c = ctx._context;
+                        c.beginPath();
+                        for (let x = left; x <= right; x++) {
+                          const sx = toScreen([x, 0])[0];
+                          c.moveTo(sx, sy0);
+                          c.lineTo(sx, sy1);
+                        }
+                        for (let y = top; y <= bottom; y++) {
+                          const sy = toScreen([0, y])[1];
+                          c.moveTo(sx0, sy);
+                          c.lineTo(sx1, sy);
+                        }
+                        c.lineWidth = 1 / dpr;
+                        c.strokeStyle = "rgba(255, 255, 255, 0.45)";
+                        c.stroke();
+                      }}
+                    />
+                  );
+                })()}
               {canvasEdit &&
                 lay &&
                 (() => {

@@ -23,6 +23,7 @@ import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
 import { TYPES } from "./effects";
 import { useClipboard, type ClipboardInfo } from "./imageMenu";
+import { useFullscreen } from "./fullscreen";
 
 interface Point {
   x: number;
@@ -287,6 +288,8 @@ export function useMenuBar(): void {
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
   const snap = useSetting("editor.snap", true);
+  const grid = useSetting("editor.pixelGrid", true);
+  const fullscreen = useFullscreen((s) => s.on);
   const clip = useClipboard((s) => s.info);
   const hasClip = Boolean(clip && (clip.image || clip.files > 0 || clip.text));
   const tray = useTray((s) => s.visible);
@@ -378,6 +381,8 @@ export function useMenuBar(): void {
     enabled["editor.snap"] = !inLibrary;
     enabled["editor.new_image"] = true;
     enabled["editor.batch_export"] = true;
+    enabled["editor.pixel_grid"] = hasDoc;
+    enabled["editor.fullscreen"] = true;
     enabled["editor.print"] = hasDoc;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
@@ -389,6 +394,8 @@ export function useMenuBar(): void {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
       "editor.snap": snap,
+      "editor.pixel_grid": grid,
+      "editor.fullscreen": fullscreen,
       "editor.tray": tray,
     };
     // The drawn menu bar (Windows) reads it here; the system one (macOS) from the shell.
@@ -408,6 +415,8 @@ export function useMenuBar(): void {
     panel,
     labels,
     snap,
+    grid,
+    fullscreen,
     hasClip,
     tray,
     inLibrary,

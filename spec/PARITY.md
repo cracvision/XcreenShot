@@ -87,9 +87,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-005 | Panel lateral | M1 | Must | En curso |
 | EDT-006 | Barra de edición rápida | M2 | Should | — |
 | EDT-007 | Zoom y vista | M1 | Must | Win |
-| EDT-008 | Cuadrícula de píxeles | M2 | Could | — |
-| EDT-009 | Pantalla completa | M2 | Could | — |
-| EDT-010 | Área de trabajo | M2 | Could | — |
+| EDT-008 | Cuadrícula de píxeles | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-009 | Pantalla completa | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-010 | Área de trabajo | M2 | Could | Hecho en Windows (macOS pendiente) |
 | EDT-011 | Barra de estado | M1 | Should | Win |
 | EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | Win |
 | EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |

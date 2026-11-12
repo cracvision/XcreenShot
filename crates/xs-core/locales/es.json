@@ -787,6 +787,18 @@
     "editor_flattenBackground": {
       "label": "Fondo para formatos sin transparencia",
       "description": "Un color como #FFFFFF: en qué se convierten las zonas transparentes en JPG, BMP y PDF."
+    },
+    "editor_pixelGrid": {
+      "label": "Cuadrícula de píxeles",
+      "description": "Desde un zoom, una retícula fina separa los píxeles de la imagen. Nunca forma parte de la imagen."
+    },
+    "editor_pixelGridMinZoom": {
+      "label": "Cuadrícula de píxeles desde este zoom (%)",
+      "description": "Entre 400 y 1600 %."
+    },
+    "editor_workspaceColor": {
+      "label": "Color del área de trabajo",
+      "description": "\"auto\" sigue el tema claro u oscuro; o un color como #2B2B33."
     }
   },
   "errors": {
@@ -982,7 +994,9 @@
       "editor_new_image": "Nueva imagen",
       "editor_new_from_clipboard": "Nueva desde el portapapeles",
       "editor_batch_export": "Exportar por lotes",
-      "editor_print": "Imprimir"
+      "editor_print": "Imprimir",
+      "editor_pixel_grid": "Cuadrícula de píxeles",
+      "editor_fullscreen": "Pantalla completa"
     }
   },
   "tray": {
@@ -1119,7 +1133,9 @@
     "new_image": "Nueva imagen…",
     "new_from_clipboard": "Nueva desde el portapapeles",
     "batch_export": "Exportar por lotes…",
-    "print": "Imprimir…"
+    "print": "Imprimir…",
+    "pixel_grid": "Cuadrícula de píxeles",
+    "fullscreen": "Pantalla completa"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",

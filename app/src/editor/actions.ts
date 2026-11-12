@@ -39,6 +39,7 @@ import { turnOnEffect } from "./effects";
 import { useExportDialog } from "./exportOptions";
 import { useBatchDialog } from "./batchExport";
 import { usePrintDialog } from "./printState";
+import { toggleFullscreen } from "./fullscreen";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -494,6 +495,7 @@ const IN_LIBRARY = new Set([
   "new_image",
   "new_from_clipboard",
   "batch_export",
+  "fullscreen",
 ]);
 
 /** What an editor menu entry or shortcut does (`editor.action`, EDT-002, EDT-116).
@@ -735,6 +737,16 @@ export function performAction(action: string): boolean {
       return true;
     case "toolbar_labels":
       toggleToolbarLabels();
+      return true;
+    case "pixel_grid": {
+      // View > Pixel grid (EDT-008).
+      const current = useApp.getState().settings.find((s) => s.key === "editor.pixelGrid");
+      run("settings.set", { key: "editor.pixelGrid", value: current?.value === false }).catch(fail);
+      return true;
+    }
+    case "fullscreen":
+      // View > Full screen (EDT-009).
+      void toggleFullscreen();
       return true;
     case "snap": {
       // Image > Snapping (EDT-084).

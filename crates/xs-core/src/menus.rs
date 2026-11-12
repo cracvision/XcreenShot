@@ -338,6 +338,14 @@ fn editor_menus() -> Vec<MenuEntry> {
                     "menu.zoom_original",
                     json!({ "mode": "original" }),
                 ),
+                // A tick (EDT-008).
+                MenuEntry::Command {
+                    id: "editor.pixel_grid",
+                    label: "menu.pixel_grid",
+                    command: "editor.action",
+                    params: json!({ "action": "pixel_grid" }),
+                    checked: Some("editor.pixel_grid"),
+                },
                 Separator,
                 MenuEntry::Command {
                     id: "editor.side_panel",
@@ -355,6 +363,14 @@ fn editor_menus() -> Vec<MenuEntry> {
                 },
                 action("editor.prev_item", "menu.prev_item", "prev_item"),
                 action("editor.next_item", "menu.next_item", "next_item"),
+                // EDT-009.
+                MenuEntry::Command {
+                    id: "editor.fullscreen",
+                    label: "menu.fullscreen",
+                    command: "editor.action",
+                    params: json!({ "action": "fullscreen" }),
+                    checked: Some("editor.fullscreen"),
+                },
                 Submenu {
                     label: "menu.toolbar",
                     items: vec![MenuEntry::Command {

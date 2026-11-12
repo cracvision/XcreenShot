@@ -787,6 +787,18 @@
     "editor_flattenBackground": {
       "label": "Background for formats without transparency",
       "description": "A color like #FFFFFF: what transparent areas become in JPG, BMP and PDF."
+    },
+    "editor_pixelGrid": {
+      "label": "Pixel grid",
+      "description": "From a zoom on, a fine grid separates the pixels of the image. It is never part of the image."
+    },
+    "editor_pixelGridMinZoom": {
+      "label": "Pixel grid from this zoom (%)",
+      "description": "Between 400 and 1600 %."
+    },
+    "editor_workspaceColor": {
+      "label": "Workspace color",
+      "description": "\"auto\" follows the light or dark theme; or a color like #2B2B33."
     }
   },
   "errors": {
@@ -982,7 +994,9 @@
       "editor_new_image": "New image",
       "editor_new_from_clipboard": "New from clipboard",
       "editor_batch_export": "Batch export",
-      "editor_print": "Print"
+      "editor_print": "Print",
+      "editor_pixel_grid": "Pixel grid",
+      "editor_fullscreen": "Full screen"
     }
   },
   "tray": {
@@ -1119,7 +1133,9 @@
     "new_image": "New image…",
     "new_from_clipboard": "New from clipboard",
     "batch_export": "Batch export…",
-    "print": "Print…"
+    "print": "Print…",
+    "pixel_grid": "Pixel grid",
+    "fullscreen": "Full screen"
   },
   "notify": {
     "ping_title": "XcreenShot is working",

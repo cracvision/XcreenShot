@@ -253,6 +253,23 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-071",
         ),
         def("editor.snap", "editor", boolean(), json!(true), "EDT-084"),
+        // The pixel grid from a zoom on (EDT-008).
+        def("editor.pixelGrid", "editor", boolean(), json!(true), "EDT-008"),
+        def(
+            "editor.pixelGridMinZoom",
+            "editor",
+            json!({"type": "integer", "minimum": 400, "maximum": 1600}),
+            json!(600),
+            "EDT-008",
+        ),
+        // Around the canvas: "auto" follows the theme, or a color (EDT-010).
+        def(
+            "editor.workspaceColor",
+            "editor",
+            json!({"type": "string"}),
+            json!("auto"),
+            "EDT-010",
+        ),
         // What fills transparency in JPG, BMP, GIF without it and PDF (EDT-112).
         def(
             "editor.flattenBackground",

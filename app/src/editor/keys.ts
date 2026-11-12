@@ -19,6 +19,7 @@ import { selectPixels } from "./pixelSelection";
 import { isSegment, requestZoom, useEditor, usePointer, type Tool } from "./state";
 import { useMainView } from "../library/state";
 import { inToolbar } from "../components/arrowFocus";
+import { toggleFullscreen, useFullscreen } from "./fullscreen";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -320,6 +321,8 @@ export function useEditorKeys(): void {
             // Cancels the crop, else deselects (EDT-117); with nothing to cancel, closes
             // the editor if the user asked for it (EDT-012). Documents stay open.
             if (state.fillProgress !== null) run("editor.cancel").catch(() => undefined);
+            // Full screen goes first, before closing the editor (EDT-009).
+            else if (useFullscreen.getState().on) void toggleFullscreen();
             else if (state.tool === "crop" && state.cropRect) resetCrop();
             // Leaves the group a double click entered (EDT-082).
             else if (state.entered.length > 0) useEditor.setState({ entered: [] });
