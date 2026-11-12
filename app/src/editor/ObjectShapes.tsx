@@ -10,6 +10,7 @@ import { dash, type ArrowStyle, type Geometry } from "./geometry";
 import type {
   BlurObject,
   CalloutObject,
+  Fill,
   HighlightObject,
   ImageObject,
   MagnifyObject,
@@ -125,15 +126,50 @@ function shapePoints(o: ShapeObject, box: { x: number; y: number; w: number; h: 
 }
 
 /** One of a shape's two layers: its fill over `box`, or its outline along it. */
+/** Konva fill settings for a color or a gradient over `box` (EDT-020), for a node
+ * whose own origin is at `origin`. The same geometry as `Gradient::geometry` in Rust. */
+function fillProps(
+  fill: Fill,
+  box: { x: number; y: number; w: number; h: number },
+  origin: [number, number],
+): Konva.ShapeConfig {
+  if (typeof fill === "string") return { fill };
+  const stops = [...fill.stops]
+    .sort((a, b) => a.pos - b.pos)
+    .flatMap((s) => [s.pos / 100, s.color]);
+  const cx = box.x + box.w / 2 - origin[0];
+  const cy = box.y + box.h / 2 - origin[1];
+  if (fill.type === "radial")
+    return {
+      fillRadialGradientStartPoint: { x: cx, y: cy },
+      fillRadialGradientEndPoint: { x: cx, y: cy },
+      fillRadialGradientStartRadius: 0,
+      fillRadialGradientEndRadius: Math.max(box.w, box.h) / 2,
+      fillRadialGradientColorStops: stops,
+    };
+  const a = (fill.angle * Math.PI) / 180;
+  const dx = Math.cos(a);
+  const dy = Math.sin(a);
+  const half = (box.w * Math.abs(dx) + box.h * Math.abs(dy)) / 2;
+  return {
+    fillLinearGradientStartPoint: { x: cx - dx * half, y: cy - dy * half },
+    fillLinearGradientEndPoint: { x: cx + dx * half, y: cy + dy * half },
+    fillLinearGradientColorStops: stops,
+  };
+}
+
 function ShapeLayer(props: {
   o: ShapeObject;
   box: { x: number; y: number; w: number; h: number };
   radius: number;
   extra: Konva.ShapeConfig;
+  paint?: Fill;
 }) {
-  const { o, box, radius, extra } = props;
+  const { o, box, radius, extra, paint } = props;
   const pts = shapePoints(o, box);
-  if (pts) return <Line points={pts} closed {...extra} />;
+  // Each node has its own origin; the gradient is placed in it.
+  const fillAt = (origin: [number, number]) => (paint ? fillProps(paint, box, origin) : {});
+  if (pts) return <Line points={pts} closed {...extra} {...fillAt([0, 0])} />;
   if (o.style.shapeType === "roundedRectangle")
     return (
       <Rect
@@ -143,9 +179,20 @@ function ShapeLayer(props: {
         height={Math.max(box.h, 0)}
         cornerRadius={Math.max(0, Math.min(radius, box.w / 2, box.h / 2))}
         {...extra}
+        {...fillAt([box.x, box.y])}
       />
     );
-  return <Outline ellipse={o.style.shapeType === "ellipse"} box={box} extra={extra} />;
+  const ellipse = o.style.shapeType === "ellipse";
+  return (
+    <Outline
+      ellipse={ellipse}
+      box={box}
+      extra={{
+        ...extra,
+        ...fillAt(ellipse ? [box.x + box.w / 2, box.y + box.h / 2] : [box.x, box.y]),
+      }}
+    />
+  );
 }
 
 export function ShapeShape({ o, scale }: { o: ShapeObject; scale: number }) {
@@ -158,7 +205,7 @@ export function ShapeShape({ o, scale }: { o: ShapeObject; scale: number }) {
     <Group x={rect.x + rect.w / 2} y={rect.y + rect.h / 2} rotation={o.rotation} listening={false}>
       <Translucent opacity={style.opacity} scale={scale}>
         {style.fill && (
-          <ShapeLayer o={o} box={local} radius={radius} extra={{ fill: style.fill }} />
+          <ShapeLayer o={o} box={local} radius={radius} extra={{}} paint={style.fill} />
         )}
         {style.outlineWidth > 0 && (
           <ShapeLayer

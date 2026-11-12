@@ -399,6 +399,7 @@ h3 {
 /* ---------- Fields ---------- */
 input[type="search"],
 input[type="text"],
+.grad-editor input[type="number"],
 select {
   min-height: 36px;
   min-width: 0;
@@ -413,12 +414,14 @@ select {
 
 input[type="search"]:hover,
 input[type="text"]:hover,
+.grad-editor input[type="number"]:hover,
 select:hover {
   border-color: var(--ink-muted);
 }
 
 input[type="search"]:focus-visible,
 input[type="text"]:focus-visible,
+.grad-editor input[type="number"]:focus-visible,
 select:focus-visible {
   outline: 0;
   border-color: var(--focus);
@@ -3433,6 +3436,96 @@ html.overlay-root.overlay-native #root {
   color: var(--ink);
   box-shadow: var(--shadow-sm);
   pointer-events: none;
+}
+
+/* A fill: Solid or Gradient (EDT-020). */
+.fill-picker {
+  display: grid;
+  gap: 6px;
+}
+
+.fill-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fill-head .prop-label {
+  font-size: 13px;
+}
+
+.seg.small > button {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.grad-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.grad-angle {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.grad-dial {
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  flex: none;
+}
+
+.grad-dial circle {
+  fill: var(--surface);
+  stroke: var(--control-line);
+  stroke-width: 1.5;
+}
+
+.grad-dial line {
+  stroke: var(--brand);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.grad-bar {
+  position: relative;
+  height: 22px;
+  margin: 4px 8px 14px;
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+  cursor: copy;
+}
+
+.grad-stop {
+  position: absolute;
+  bottom: -10px;
+  width: 14px;
+  height: 14px;
+  translate: -50% 0;
+  border: 2px solid var(--surface-raised);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--control-line);
+  cursor: grab;
+  touch-action: none;
+}
+
+.grad-stop[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+.grad-stop-props {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  gap: 8px;
+  align-items: end;
+}
+
+.grad-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* Styles tab (EDT-015 to EDT-018). */

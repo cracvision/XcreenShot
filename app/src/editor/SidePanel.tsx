@@ -7,6 +7,7 @@ import { run } from "../lib/commands";
 import { useSetting } from "../store";
 import { applyCrop, loadFonts, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
+import { FillPicker } from "./FillPicker";
 import { Field, PositionSize } from "./PositionSize";
 import { CAPS, LINE_STYLES, type Cap, type LineStyle } from "./geometry";
 import { Icon, type IconName } from "./icons";
@@ -38,6 +39,7 @@ import {
   SIMPLE_KINDS,
   type SimpleKind,
   type GapFill,
+  type Fill,
   type SelectStyle,
   type Shadow,
   WITH_SHADOW,
@@ -282,7 +284,11 @@ function SharedProperties() {
 /** The value of `key` when every style agrees, else `undefined` (shown as Mixed). */
 function common<T>(styles: Record<string, unknown>[], key: string): T | undefined {
   const first = styles[0]?.[key];
-  return styles.every((s) => s[key] === first) ? (first as T) : undefined;
+  // Objects (a gradient, a shadow) are the same when their values are.
+  const text = JSON.stringify(first ?? null);
+  return styles.every((s) => s[key] === first || JSON.stringify(s[key] ?? null) === text)
+    ? (first as T)
+    : undefined;
 }
 
 function SelectField<T extends string>(props: {
@@ -508,10 +514,10 @@ function KindProperties({ target }: { target: Target }) {
               onCommit={(cornerRadius) => commit({ cornerRadius })}
             />
           )}
-          <ColorPicker
+          <FillPicker
             label={t("ui.editor.prop.fill")}
-            value={v<string | null>("fill") ?? null}
-            mixed={v<string | null>("fill") === undefined}
+            value={v<Fill | null>("fill") ?? null}
+            mixed={v<Fill | null>("fill") === undefined}
             allowTransparent
             onCommit={(fill) => commit({ fill })}
           />
@@ -754,9 +760,9 @@ function KindProperties({ target }: { target: Target }) {
       // Fill (EDT-047): a color or Transparent, how alike, and everywhere or touching.
       return (
         <>
-          <ColorPicker
+          <FillPicker
             label={t("ui.editor.pixel.fill_color")}
-            value={v<string | null>("color") ?? null}
+            value={v<Fill | null>("color") ?? null}
             allowTransparent
             onCommit={(color) => commit({ color })}
           />
@@ -1074,10 +1080,10 @@ function CalloutProperties(props: {
         }))}
         onCommit={(shape) => commit({ shape })}
       />
-      <ColorPicker
+      <FillPicker
         label={t("ui.editor.prop.fill")}
-        value={v<string | null>("fill") ?? null}
-        mixed={v<string | null>("fill") === undefined}
+        value={v<Fill | null>("fill") ?? null}
+        mixed={v<Fill | null>("fill") === undefined}
         allowTransparent
         onCommit={(fill) => commit({ fill })}
       />
@@ -1318,10 +1324,10 @@ function StepProperties(props: {
         options={STEP_SHAPES.map((s) => ({ value: s, label: t(`ui.editor.step_shape.${s}`) }))}
         onCommit={(shape) => commit({ shape })}
       />
-      <ColorPicker
+      <FillPicker
         label={t("ui.editor.prop.fill")}
-        value={v<string | null>("fill") ?? null}
-        mixed={v<string | null>("fill") === undefined}
+        value={v<Fill | null>("fill") ?? null}
+        mixed={v<Fill | null>("fill") === undefined}
         allowTransparent
         onCommit={(fill) => commit({ fill })}
       />

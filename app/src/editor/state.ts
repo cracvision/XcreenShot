@@ -95,11 +95,21 @@ export const SHAPE_KINDS: ShapeKind[] = [
   "polygon",
 ];
 
+/** A gradient (EDT-020): `angle` turns clockwise from the right (90° = top to bottom). */
+export interface Gradient {
+  type: "linear" | "radial";
+  angle: number;
+  stops: { color: string; pos: number }[];
+}
+
+/** A fill: a color or a gradient (EDT-020). */
+export type Fill = string | Gradient;
+
 /** Shape properties of M1 (EDT-029). */
 export interface ShapeStyle {
   shapeType: ShapeKind;
   /** null = transparent: only the outline. */
-  fill: string | null;
+  fill: Fill | null;
   outline: string;
   outlineWidth: number;
   lineStyle: LineStyle;
@@ -195,7 +205,7 @@ export interface PixelSelectionInfo {
 
 /** The Fill tool (EDT-047): `color` null is Transparent. */
 export interface FillStyle {
-  color: string | null;
+  color: Fill | null;
   tolerance: number;
   opacity: number;
   global: boolean;
@@ -349,7 +359,7 @@ export type VAlign = "top" | "middle" | "bottom";
 
 export interface CalloutStyle {
   shape: CalloutShapeKind;
-  fill: string | null;
+  fill: Fill | null;
   shading: boolean;
   outline: string;
   outlineWidth: number;
@@ -402,7 +412,7 @@ export const STEP_SHAPES: StepShapeKind[] = [
 export interface StepStyle {
   sequence: StepSequence;
   shape: StepShapeKind;
-  fill: string | null;
+  fill: Fill | null;
   textColor: string;
   outline: string;
   outlineWidth: number;
@@ -625,7 +635,7 @@ interface EditorState {
   /** The active theme's colors, for the color selector (EDT-019). */
   themeColors: string[];
   /** My colors and recent colors (EDT-019). */
-  colors: { mine: string[]; recent: string[] };
+  colors: { mine: string[]; recent: string[]; gradients?: Gradient[] };
   /** An imported theme has the name of one of the user's (EDT-018). */
   themeConflict: { path: string; name: string } | null;
   /** The group a double click entered, outermost first (EDT-082). */
@@ -747,7 +757,7 @@ export const useEditor = create<EditorState>((set, get) => ({
           void loadThemeColors().then((themeColors) => set({ themeColors }));
           break;
         case "colors":
-          set({ colors: payload as unknown as { mine: string[]; recent: string[] } });
+          set({ colors: payload as unknown as EditorState["colors"] });
           break;
         case "progress": {
           // A long fill's progress; null when it ends (EDT-045).
@@ -840,7 +850,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const recovery = await run<{ items: RecoveryItem[] }>("editor.recovery_list");
     // The color selector's theme colors, My colors and recent ones (EDT-019).
     void loadThemeColors().then((themeColors) => set({ themeColors }));
-    void run<{ mine: string[]; recent: string[] }>("editor.colors")
+    void run<EditorState["colors"]>("editor.colors")
       .then((colors) => set({ colors }))
       .catch(() => undefined);
     set({

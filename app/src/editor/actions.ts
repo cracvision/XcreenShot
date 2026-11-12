@@ -806,7 +806,13 @@ export function startCalloutEdit(o: CalloutObject): void {
         align: o.style.align,
         opacity: 100,
       },
-      callout: { fill: o.style.fill },
+      // The field covers the body with its color, or a gradient's first (EDT-020).
+      callout: {
+        fill:
+          typeof o.style.fill === "object" && o.style.fill
+            ? (o.style.fill.stops[0]?.color ?? null)
+            : o.style.fill,
+      },
     },
   });
 }

@@ -1748,6 +1748,23 @@
         "save": "Guardar",
         "save_title": "¿Guardar el tema?",
         "save_body": "Se sustituirán los estilos guardados de este tema. Los favoritos no cambian."
+      },
+      "gradient": {
+        "solid": "Sólido",
+        "gradient": "Degradado",
+        "type": "Tipo de degradado",
+        "linear": "Lineal",
+        "radial": "Radial",
+        "angle": "Ángulo",
+        "bar_help": "Haz clic para añadir una parada; arrastra una parada para moverla, o lejos de la barra para quitarla.",
+        "stop": "Parada {{n}} en {{pos}} %",
+        "stop_color": "Color de la parada",
+        "position": "Posición (%)",
+        "invert": "Invertir",
+        "remove_stop": "Quitar parada",
+        "mine": "Mis degradados",
+        "mine_help": "Haz clic para usarlo; clic derecho o Supr lo quita.",
+        "save": "Guardar en Mis degradados"
       }
     },
     "multi": {

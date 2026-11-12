@@ -99,7 +99,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-017 | Temas | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | En curso (faltan el doble clic en el archivo y `policy.themes`) |
 | EDT-019 | Selector de color | M1 | Must | Win |
-| EDT-020 | Degradados | M2 | Should | — |
+| EDT-020 | Degradados | M2 | Should | En curso (faltan el color del lienzo, con EDT-074, y el borde de la cámara) |
 | EDT-021 | Sombra de los objetos | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
@@ -126,7 +126,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-044 | Acciones sobre la selección | M2 | Must | En curso (faltan efectos, guardar, imprimir, sello y texto: llegan con sus IDs) |
 | EDT-045 | Relleno del hueco | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-046 | Varita mágica | M2 | Should | Hecho en Windows (macOS pendiente) |
-| EDT-047 | Relleno | M2 | Should | En curso (falta el relleno degradado, con EDT-020) |
+| EDT-047 | Relleno | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-048 | Borrador | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-049 | Recortar | M1 | Must | Win |
 | EDT-050 | Recorte no destructivo | M1 | Must | Win |

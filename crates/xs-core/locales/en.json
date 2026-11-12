@@ -1748,6 +1748,23 @@
         "save": "Save",
         "save_title": "Save the theme?",
         "save_body": "The theme's saved styles will be replaced. Favorites do not change."
+      },
+      "gradient": {
+        "solid": "Solid",
+        "gradient": "Gradient",
+        "type": "Gradient type",
+        "linear": "Linear",
+        "radial": "Radial",
+        "angle": "Angle",
+        "bar_help": "Click to add a stop; drag a stop to move it, or away from the bar to remove it.",
+        "stop": "Stop {{n}} at {{pos}} %",
+        "stop_color": "Stop color",
+        "position": "Position (%)",
+        "invert": "Invert",
+        "remove_stop": "Remove stop",
+        "mine": "My gradients",
+        "mine_help": "Click to use it; right-click or Delete removes it.",
+        "save": "Save in My gradients"
       }
     },
     "multi": {
