@@ -16,6 +16,7 @@ pub mod pixels;
 pub mod quick_view;
 pub mod recovery;
 pub mod samples;
+pub mod sheet_pdf;
 pub mod steps;
 pub mod store;
 mod template_cmds;
@@ -3444,6 +3445,8 @@ pub fn extension() -> Extension {
     Box::new(|reg, weak| {
         if let Some(core) = weak.upgrade() {
             core.add_quit_guard(Arc::new(EditorQuitGuard(weak.clone())));
+            // The shortcut sheet as PDF (APP-023), with the text engine.
+            core.replace_service(xs_core::sheet::PdfSheet(Some(Box::new(sheet_pdf::render))));
             // A smaller tray lets the oldest free items go at once (TRY-003).
             let weak = weak.clone();
             core.on_setting(Arc::new({

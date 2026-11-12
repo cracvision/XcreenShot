@@ -658,6 +658,10 @@
     "settings_import": {
       "title": "Importar ajustes",
       "description": "Aplica un archivo .xsettings, por grupos; los atajos de la otra plataforma se pueden convertir."
+    },
+    "shortcuts_export": {
+      "title": "Exportar la hoja de atajos",
+      "description": "Escribe todos los atajos actuales, agrupados, como un PDF de una o dos páginas A4, una página HTML imprimible o JSON."
     }
   },
   "settings": {
@@ -1145,7 +1149,8 @@
       "editor_import_template": "Importar plantilla",
       "editor_show_in_library": "Mostrar en la biblioteca",
       "editor_pin_item": "Fijar o desfijar en la bandeja",
-      "editor_duplicate_item": "Duplicar el elemento"
+      "editor_duplicate_item": "Duplicar el elemento",
+      "editor_shortcut_sheet": "Hoja de atajos de teclado"
     }
   },
   "tray": {
@@ -1305,7 +1310,8 @@
     "tray_size": "Tamaño de las miniaturas",
     "duplicate_item": "Duplicar",
     "details_tray": "Detalles",
-    "create": "Crear"
+    "create": "Crear",
+    "shortcut_sheet": "Atajos de teclado"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -1558,7 +1564,34 @@
       "profile_apply_reset": "Cambiar y restablecer mis atajos",
       "profile_help_coexistence": "Por defecto. Atajos que no chocan con otras apps de captura ni con el sistema.",
       "profile_help_compatibility": "Los mismos atajos por defecto que la app de captura más habitual en cada plataforma.",
-      "contextual_note": "Las teclas que solo funcionan durante una selección o una grabación aparecen en la hoja de atajos."
+      "contextual_note": "Las teclas que solo funcionan durante una selección o una grabación aparecen en la hoja de atajos.",
+      "sheet_title": "Atajos de teclado de XcreenShot",
+      "sheet_group_capture": "Captura (globales)",
+      "sheet_group_app": "App",
+      "sheet_group_editor": "Editor",
+      "sheet_group_tools": "Herramientas del editor",
+      "sheet_group_contextual": "Durante una selección",
+      "sheet_group_canvas": "En el lienzo y en las listas",
+      "sheet_profile_coexistence": "Perfil Coexistencia",
+      "sheet_profile_compatibility": "Perfil Compatibilidad",
+      "sheet_inactive": "inactivo",
+      "sheet_search": "Buscar atajos",
+      "sheet_print": "Imprimir…",
+      "sheet_pdf": "Guardar como PDF…",
+      "sheet_saved": "Hoja guardada.",
+      "sheet_none": "Ningún atajo coincide.",
+      "k_tool": "Elegir una herramienta de la barra",
+      "k_move": "Mover el objeto elegido",
+      "k_move_more": "Moverlo 10 píxeles",
+      "k_next": "Objeto siguiente",
+      "k_size": "Pincel o texto más pequeño o más grande",
+      "k_eyedropper": "Tomar un color de la imagen",
+      "k_delete": "Borrar el objeto elegido",
+      "k_deselect": "Quitar la selección",
+      "k_zones": "Pasar a la siguiente zona de la ventana",
+      "k_quick": "Vista rápida (biblioteca y bandeja)",
+      "k_details": "Detalles (biblioteca)",
+      "k_sheet": "Esta hoja"
     },
     "common": {
       "on": "Activado",

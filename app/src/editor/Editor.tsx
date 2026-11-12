@@ -1,5 +1,6 @@
 // Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
 // the top; the menu bar, dialogs and notices are shared by both.
+import { ShortcutSheet } from "./ShortcutSheet";
 import { TagDialogs } from "../library/TagDialogs";
 import { askImport } from "../library/importState";
 import { QuickView } from "../library/QuickView";
@@ -187,6 +188,7 @@ export function Editor() {
       <TemplateDialogs />
       <QuickView />
       <TagDialogs />
+      <ShortcutSheet />
       <EditorContextMenu />
       <div className="sr-only" role="status" aria-live="polite">
         {announcement}

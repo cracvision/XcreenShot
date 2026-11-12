@@ -5416,6 +5416,100 @@ button.lc-head:hover,
   width: 100%;
 }
 
+/* ---------- Shortcut sheet (APP-023) ---------- */
+.backdrop .dialog:has(.shortcut-sheet) {
+  width: min(860px, 100%);
+}
+
+.shortcut-sheet {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sheet-meta {
+  margin: 0;
+}
+
+.sheet-search {
+  width: 100%;
+}
+
+.sheet-groups {
+  max-height: 60vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sheet-cols {
+  columns: 2 300px;
+  column-gap: var(--space-6);
+}
+
+.sheet-groups section {
+  break-inside: avoid;
+  margin-bottom: var(--space-3);
+}
+
+.sheet-groups h3 {
+  margin: 0 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.sheet-groups table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.sheet-groups td {
+  padding: 2px 0;
+  vertical-align: top;
+}
+
+.sheet-keys {
+  padding-left: var(--space-3) !important;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sheet-groups kbd {
+  font: inherit;
+  font-weight: 650;
+}
+
+.sheet-groups tr.inactive td {
+  color: var(--ink-muted);
+}
+
+/* Print… prints only the sheet. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .shortcut-sheet,
+  .shortcut-sheet * {
+    visibility: visible;
+  }
+
+  .shortcut-sheet {
+    position: absolute;
+    inset: 0;
+    color: #000;
+  }
+
+  .sheet-search {
+    display: none;
+  }
+
+  .sheet-groups {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 /* ---------- Quick view (LIB-013) ---------- */
 .quick-view {
   position: fixed;

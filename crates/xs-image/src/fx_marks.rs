@@ -65,6 +65,25 @@ fn text_image(
     Some(straight(&pm))
 }
 
+/// A line of text in the app's text engine, `size` in points at `dpi` (the shortcut
+/// sheet, APP-023).
+pub fn label(text: &str, size: f64, bold: bool, color: &str, dpi: f64) -> Option<RgbaImage> {
+    let t = Text {
+        at: [0.0, 0.0],
+        width: None,
+        text: text.to_string(),
+        rotation: 0.0,
+        style: TextStyle {
+            size,
+            bold,
+            color: color.to_string(),
+            ..TextStyle::default()
+        },
+    };
+    let (pm, _) = crate::text::rasterize(&t, dpi)?;
+    Some(straight(&pm))
+}
+
 /// `img` turned `deg` degrees around its center, in a box that holds it.
 fn turned(img: &RgbaImage, deg: f64) -> RgbaImage {
     turn(img, deg, None)

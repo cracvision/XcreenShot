@@ -915,6 +915,33 @@ fn build_registry(core: &Arc<Core>) -> Registry {
     )
     .unwrap_or_default()));
     on!("shortcuts.list", |core, ctx, _p| Ok(core.shortcut_rows(ctx.lang)));
+    on!("shortcuts.export", |core, ctx, p| {
+        let sheet = crate::sheet::sheet(&core, ctx.lang);
+        let Some(out) = str_param(&p, "out") else {
+            return Ok(json!({ "path": null, "sheet": sheet }));
+        };
+        let bad = |reason: &str| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "out"), ("reason", reason)],
+                ),
+            )
+        };
+        let bytes = match str_param(&p, "format").unwrap_or("pdf") {
+            "json" => serde_json::to_vec_pretty(&sheet).map_err(|e| bad(&e.to_string()))?,
+            "html" => crate::sheet::html(&sheet).into_bytes(),
+            _ => {
+                let pdf = core.service(|| crate::sheet::PdfSheet(None));
+                let draw = pdf.0.as_ref().ok_or_else(|| bad("PDF is not available here"))?;
+                draw(&sheet).map_err(|e| bad(&e))?
+            }
+        };
+        crate::paths::write_atomic(std::path::Path::new(out), &bytes).map_err(|e| bad(&e.to_string()))?;
+        Ok(json!({ "path": out, "sheet": sheet }))
+    });
     on!("shortcuts.set", |core, ctx, p| {
         let slot = resolve_slot(
             &core,

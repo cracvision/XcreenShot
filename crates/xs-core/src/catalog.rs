@@ -339,6 +339,18 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("settings.schema", &["APP-006"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("shortcuts.list", &["APP-017", "APP-018"])
             .result(json!({"type": "object", "properties": {"profile": {"type": "string"}, "paused": {"type": "boolean"}, "rows": {"type": "array"}}})),
+        B::new("shortcuts.export", &["APP-023"])
+            .params(params(
+                json!({
+                    "format": {"type": "string", "enum": ["pdf", "html", "json"], "default": "pdf"},
+                    "out": {"type": "string", "description": "The file to write; without it, the sheet comes back as data"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": ["string", "null"]},
+                "sheet": {"type": "object", "description": "title, profile, platform, date, groups [{id, title, rows [{title, keys, scope, inactive}]}]"}
+            }})),
         B::new("shortcuts.set", &["APP-017", "APP-018", "APP-019"])
             .mutates()
             .positional(&["command", "shortcut"])
@@ -1818,7 +1830,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 104] = [
+pub const EDITOR_ACTIONS: [&str; 105] = [
     "open",
     "save",
     "save_as",
@@ -1848,6 +1860,7 @@ pub const EDITOR_ACTIONS: [&str; 104] = [
     "rename_item",
     "pin_item",
     "duplicate_item",
+    "shortcut_sheet",
     "show_in_folder",
     "delete_item",
     "select_all",

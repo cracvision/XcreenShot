@@ -658,6 +658,10 @@
     "settings_import": {
       "title": "Import settings",
       "description": "Applies an .xsettings file, by group; shortcuts from the other platform can be converted."
+    },
+    "shortcuts_export": {
+      "title": "Export the shortcut sheet",
+      "description": "Writes every current shortcut, grouped, as a PDF of one or two A4 pages, a printable HTML page or JSON."
     }
   },
   "settings": {
@@ -1145,7 +1149,8 @@
       "editor_import_template": "Import template",
       "editor_show_in_library": "Show in library",
       "editor_pin_item": "Pin or unpin in the tray",
-      "editor_duplicate_item": "Duplicate the item"
+      "editor_duplicate_item": "Duplicate the item",
+      "editor_shortcut_sheet": "Keyboard shortcuts sheet"
     }
   },
   "tray": {
@@ -1305,7 +1310,8 @@
     "tray_size": "Thumbnail size",
     "duplicate_item": "Duplicate",
     "details_tray": "Details",
-    "create": "Create"
+    "create": "Create",
+    "shortcut_sheet": "Keyboard shortcuts"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -1558,7 +1564,34 @@
       "profile_apply_reset": "Change and reset my shortcuts",
       "profile_help_coexistence": "Default. Shortcuts that do not collide with other capture apps or the system.",
       "profile_help_compatibility": "Same default shortcuts as the most common capture app on each platform.",
-      "contextual_note": "Keys that only work during a selection or a recording appear in the shortcut sheet."
+      "contextual_note": "Keys that only work during a selection or a recording appear in the shortcut sheet.",
+      "sheet_title": "XcreenShot keyboard shortcuts",
+      "sheet_group_capture": "Capture (global)",
+      "sheet_group_app": "App",
+      "sheet_group_editor": "Editor",
+      "sheet_group_tools": "Editor tools",
+      "sheet_group_contextual": "While selecting an area",
+      "sheet_group_canvas": "On the canvas and in lists",
+      "sheet_profile_coexistence": "Coexistence profile",
+      "sheet_profile_compatibility": "Compatibility profile",
+      "sheet_inactive": "inactive",
+      "sheet_search": "Search shortcuts",
+      "sheet_print": "Print…",
+      "sheet_pdf": "Save as PDF…",
+      "sheet_saved": "Sheet saved.",
+      "sheet_none": "No shortcut matches.",
+      "k_tool": "Choose a tool of the bar",
+      "k_move": "Move the selected object",
+      "k_move_more": "Move it 10 pixels",
+      "k_next": "Next object",
+      "k_size": "Smaller or bigger brush or text",
+      "k_eyedropper": "Pick a color from the image",
+      "k_delete": "Delete the selected object",
+      "k_deselect": "Deselect",
+      "k_zones": "Go to the next area of the window",
+      "k_quick": "Quick view (library and tray)",
+      "k_details": "Details (library)",
+      "k_sheet": "This sheet"
     },
     "common": {
       "on": "On",

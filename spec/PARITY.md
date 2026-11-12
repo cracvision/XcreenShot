@@ -367,7 +367,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-020 | Tomar atajos ocupados | M0 | Must | En curso |
 | APP-021 | Perfiles de atajos | M0 | Must | En curso |
 | APP-022 | Atajos de presets, destinos y otros comandos | M1 | Should | En curso |
-| APP-023 | Hoja de atajos | M2 | Could | — |
+| APP-023 | Hoja de atajos | M2 | Could | En curso (Windows: Ayuda > Atajos de teclado y `Ctrl+/` en la ventana principal, grupos, búsqueda, inactivos marcados, teclas contextuales, Imprimir y Guardar como PDF de 1–2 páginas A4; `shortcuts.export` pdf, html y json. Falta abrirla con `Ctrl+/` desde las demás ventanas y la advertencia de VoiceOver en macOS) |
 | APP-024 | Permisos de macOS y Reparar permisos | M0 | Must | En curso |
 | APP-025 | Aviso periódico de acceso a la pantalla (macOS) | M1 | Should | — |
 | APP-026 | Privilegios y privacidad en Windows | M1 | Should | En curso |

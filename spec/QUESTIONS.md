@@ -276,6 +276,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-011 / SPEC §7 | Formato `.xsettings` | Propuesto para la tabla de formatos: JSON con `format`, `formatVersion` (1), `app`, `platform`, `exported` y `groups` | Propuesta |
 | LIB-003 | ¿Dónde se guarda el tamaño de las miniaturas? | Con el resto de la forma de la vista Biblioteca (orden, filtros abiertos, Detalles), en este equipo. Pasos de 10 %; el deslizador se oculta en la vista Lista | Provisional |
 | LIB-026 | ¿Qué es "plegada"? | Plegada, la barra es una sola línea con los conteos, la ubicación y el nombre de la tarea en curso; desplegada añade la ruta y una fila por tarea con su progreso y Cancelar | Provisional |
+| APP-023 | ¿Ventana propia o diálogo? | Un diálogo grande en la ventana principal (como Preferencias de un vistazo), con `Ctrl+/` y en Ayuda. El PDF se dibuja con el motor de texto de la app a 150 ppp en A4 (una página con los atajos de hoy); las teclas contextuales (selección en pantalla, lienzo) salen en el diálogo, no en el PDF | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

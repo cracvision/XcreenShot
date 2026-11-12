@@ -499,6 +499,7 @@ fn editor_menus() -> Vec<MenuEntry> {
 fn help_items() -> Vec<MenuEntry> {
     vec![
         cmd("app.help", "menu.help_contents", "app.help"),
+        action("editor.shortcut_sheet", "menu.shortcut_sheet", "shortcut_sheet"),
         MenuEntry::Separator,
         cmd("open_logs", "menu.open_logs", "app.open_logs"),
         MenuEntry::Command {

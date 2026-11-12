@@ -699,6 +699,11 @@ pub fn slots() -> Vec<Slot> {
             r#"{"action":"duplicate_item"}"#,
         ),
         editor(
+            "editor.shortcut_sheet",
+            "editor.action",
+            r#"{"action":"shortcut_sheet"}"#,
+        ),
+        editor(
             "editor.show_in_folder",
             "editor.action",
             r#"{"action":"show_in_folder"}"#,
@@ -912,6 +917,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.pin_item" => "Ctrl+Shift+KeyP",
                 // TRY-010: Shift+Cmd+D on macOS.
                 "editor.duplicate_item" => "Ctrl+Shift+KeyD",
+                // APP-023: Cmd+/ on macOS.
+                "editor.shortcut_sheet" => "Ctrl+Slash",
                 _ => return None,
             };
             let mut acc: Accelerator = windows.parse().expect("editor defaults parse");

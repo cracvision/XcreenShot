@@ -5191,3 +5191,25 @@ fn duplicate_makes_independent_copies() {
         "one copy is shown"
     );
 }
+
+/// APP-023: the shortcut sheet saves as a PDF of one or two A4 pages.
+#[test]
+fn the_shortcut_sheet_saves_as_a_short_pdf() {
+    let e = env();
+    let out = e.outside.path().join("atajos.pdf");
+    cli(&e.core, "shortcuts.export", json!({"format": "pdf", "out": out}));
+    let pdf = std::fs::read(&out).unwrap();
+    assert!(pdf.starts_with(b"%PDF"));
+    let text = String::from_utf8_lossy(&pdf);
+    let pages = text.matches("/Type /Page").count() - text.matches("/Type /Pages").count();
+    assert!((1..=2).contains(&pages), "{pages} pages");
+    // No sliver of a page: every page image is a full A4 one.
+    assert!(!text.contains("/Height 1 "), "no one-pixel page");
+    let html = e.outside.path().join("atajos.html");
+    cli(
+        &e.core,
+        "shortcuts.export",
+        json!({"format": "html", "out": html}),
+    );
+    assert!(std::fs::read_to_string(&html).unwrap().contains("<table>"));
+}
