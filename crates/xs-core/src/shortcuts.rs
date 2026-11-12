@@ -610,6 +610,13 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"flip_objects_vertical"}"#,
         ),
+        editor(
+            "editor.crop_to_canvas",
+            "editor.action",
+            r#"{"action":"crop_to_canvas"}"#,
+        ),
+        editor("editor.fit_canvas", "editor.action", r#"{"action":"fit_canvas"}"#),
+        editor("editor.trim", "editor.action", r#"{"action":"trim"}"#),
         editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
         editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
         editor(
@@ -735,6 +742,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         // shortcut that would never let it through (spec/QUESTIONS.md).
         ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
         ("editor.redo_alt", _, Macos) => return None,
+        // Compatibility on Windows: Ctrl+Shift+X quits the app (a global shortcut).
+        ("editor.trim", Compatibility, Windows) => return None,
         // Compatibility on macOS: Cmd+R asks for the angle (EDT-116).
         ("editor.rotate_custom", Compatibility, Macos) => "Super+KeyR",
         ("editor.rotate_right", Compatibility, Macos) => return None,
@@ -822,6 +831,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.resize_image" => "Ctrl+Shift+KeyR",
                 "editor.canvas_size" => "Ctrl+Alt+KeyK",
                 "editor.rotate_right" => "Ctrl+KeyR",
+                "editor.crop_to_canvas" => "Ctrl+KeyK",
+                "editor.trim" => "Ctrl+Shift+KeyX",
                 "editor.zoom_in" => "Ctrl+Equal",
                 "editor.zoom_out" => "Ctrl+Minus",
                 "editor.zoom_actual" => "Ctrl+Digit0",
@@ -1535,8 +1546,9 @@ mod tests {
             Some(acc("Ctrl+Alt+Shift+J"))
         );
         let preview = store.preview_profile(Profile::Coexistence, Profile::Compatibility, false);
-        // Only the defaults that differ (Capture and Quit); the custom one stays.
-        assert_eq!(preview["changes"].as_array().unwrap().len(), 2);
+        // Only the defaults that differ (Capture, Quit, and Trim edges, which gives
+        // Ctrl+Shift+X to Quit); the custom one stays.
+        assert_eq!(preview["changes"].as_array().unwrap().len(), 3);
         store.reset(None);
         assert_eq!(
             store.binding(&ping, Profile::Compatibility),

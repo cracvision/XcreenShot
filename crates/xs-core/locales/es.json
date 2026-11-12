@@ -502,6 +502,18 @@
     "document_flip": {
       "title": "Voltear",
       "description": "Voltea la imagen y sus objetos (o solo algunos objetos) en horizontal o en vertical; el texto sigue legible y las imágenes flotantes también se voltean."
+    },
+    "document_trim": {
+      "title": "Recortar bordes",
+      "description": "Quita los bordes uniformes o transparentes alrededor de la imagen (el color del píxel de arriba a la izquierda, con una tolerancia). Lo indica si no hay ninguno."
+    },
+    "document_fit_canvas": {
+      "title": "Ajustar el lienzo al contenido",
+      "description": "Hace del lienzo el rectángulo que contiene la imagen original y todos los objetos, para que nada quede fuera."
+    },
+    "document_crop_to_canvas": {
+      "title": "Recortar al lienzo",
+      "description": "Quita lo que sobresale del lienzo: las imágenes flotantes pierden esa parte de su imagen; las anotaciones se quedan como están y se avisa."
     }
   },
   "settings": {
@@ -913,7 +925,10 @@
       "editor_resolution": "Resolución",
       "editor_revert": "Volver al original",
       "editor_flip_objects_horizontal": "Voltear objetos en horizontal",
-      "editor_flip_objects_vertical": "Voltear objetos en vertical"
+      "editor_flip_objects_vertical": "Voltear objetos en vertical",
+      "editor_crop_to_canvas": "Recortar al lienzo",
+      "editor_fit_canvas": "Ajustar el lienzo al contenido",
+      "editor_trim": "Recortar bordes"
     }
   },
   "tray": {
@@ -1042,7 +1057,10 @@
     "corners": "Esquinas redondeadas…",
     "resolution": "Resolución…",
     "effects": "Efectos",
-    "revert": "Volver al original…"
+    "revert": "Volver al original…",
+    "crop_to_canvas": "Recortar al lienzo",
+    "fit_canvas": "Ajustar el lienzo al contenido",
+    "trim": "Recortar bordes…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2100,7 +2118,10 @@
         "revert_ok": "Volver al original",
         "revert_body": "Se perderán todas las ediciones de este documento: objetos, efectos, recortes y cambios de tamaño. Se puede deshacer.",
         "revert_changed": "El original ya no está completo: un guardado le incorporó ediciones o dejó fuera el contenido recortado.",
-        "status_radius": "Esquinas {{r}} px"
+        "status_radius": "Esquinas {{r}} px",
+        "trim_title": "Recortar bordes",
+        "tolerance": "Tolerancia (de 0 a 20 %)",
+        "trim_hint": "Quita alrededor de la imagen los bordes del color de la esquina de arriba a la izquierda, o transparentes. Como un recorte, se puede deshacer y lo quitado puede volver."
       }
     },
     "multi": {
@@ -2358,10 +2379,16 @@
     "revert": "Volver al original",
     "canvas": "Cambiar lienzo",
     "canvas_size": "Tamaño del lienzo",
-    "flip": "Voltear"
+    "flip": "Voltear",
+    "trim": "Recortar bordes",
+    "fit_canvas": "Ajustar el lienzo al contenido",
+    "crop_to_canvas": "Recortar al lienzo"
   },
   "editor": {
-    "edited": "{{name}} — Editado"
+    "edited": "{{name}} — Editado",
+    "no_borders": "No hay bordes uniformes que recortar.",
+    "nothing_to_crop": "No sobresale del lienzo nada que se pueda recortar ({{count}} anotaciones sobresalen y no se recortan).",
+    "still_sticking": "{{count}} anotaciones siguen sobresaliendo del lienzo: no se recortan."
   },
   "stamps": {
     "indicators": "Indicadores",

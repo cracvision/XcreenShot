@@ -763,8 +763,22 @@ export function performAction(action: string): boolean {
     case "corners":
     case "resolution":
     case "revert":
+    case "trim":
       if (!doc) return false;
       openImageDialog(action);
+      return true;
+    case "crop_to_canvas":
+    case "fit_canvas":
+      // EDT-051: what cannot be done, or is left sticking out, is said.
+      if (!doc) return false;
+      run<{ changed?: boolean; message?: string; warnings?: string[] }>(`document.${action}`, {
+        documentId: doc.documentId,
+      })
+        .then((r) => {
+          const say = r.warnings?.[0] ?? (r.changed === false ? r.message : undefined);
+          if (say) useEditor.getState().showToast(say);
+        })
+        .catch(fail);
       return true;
     case "rotate_right":
     case "rotate_left":

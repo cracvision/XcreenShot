@@ -1587,6 +1587,8 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
     // The new document, and the new original pixels when they change.
     let mut next = doc.clone();
     let mut pixels: Option<image::RgbaImage> = None;
+    // Crop to canvas: annotations left sticking out (EDT-051).
+    let mut sticking: Vec<String> = Vec::new();
     let label = match which {
         "resize" => {
             let (cw, ch) = (doc.canvas.width as f64, doc.canvas.height as f64);
@@ -1752,6 +1754,142 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
             }
             "history.flip"
         }
+        "trim" => {
+            // Uniform borders around what the canvas shows (EDT-051).
+            let tolerance = num("tolerance").unwrap_or(2.0);
+            if !(0.0..=20.0).contains(&tolerance) {
+                return Err(bad("tolerance", "between 0 and 20"));
+            }
+            let snap = ed.store.snapshot(&id).map_err(|e| internal(lang, "", e))?;
+            let shown = xs_image::render(&snap.document, &snap.base);
+            let whole = [0, 0, shown.width(), shown.height()];
+            let found = xs_image::fx::trim_bounds(&shown, tolerance).filter(|b| *b != whole);
+            let Some([x0, y0, x1, y1]) = found else {
+                // Nothing to trim: said, not an error (EDT-051).
+                return Ok(json!({
+                    "changed": false,
+                    "width": doc.canvas.width,
+                    "height": doc.canvas.height,
+                    "message": tr(lang, "editor.no_borders", &[]),
+                }));
+            };
+            let base_size = ed.store.with(&id, |d| d.base_dims()).unwrap_or((1, 1));
+            crop_to(&mut next, base_size, [x0 as i64, y0 as i64, x1 as i64, y1 as i64])
+                .ok_or_else(|| bad("tolerance", "nothing would be left"))?;
+            "history.trim"
+        }
+        "fit_canvas" => {
+            // The original pixels and every object, nothing outside (EDT-051).
+            let (bw, bh) = ed.store.with(&id, |d| d.base_dims()).unwrap_or((1, 1));
+            let c = doc.crop;
+            let mut e = [
+                -c.x as f64,
+                -c.y as f64,
+                (bw as i64 - c.x) as f64,
+                (bh as i64 - c.y) as f64,
+            ];
+            let flat = xs_image::render::flattened_objects(&doc);
+            for o in doc.objects.iter().chain(flat.iter()) {
+                if let Some(b) = xs_image::object_bounds(o, doc.dpi) {
+                    e = [e[0].min(b[0]), e[1].min(b[1]), e[2].max(b[2]), e[3].max(b[3])];
+                }
+            }
+            // Less than half a pixel out is inside, as when the canvas grows (EDT-071).
+            let x0 = (e[0] + 0.5).floor() as i64;
+            let y0 = (e[1] + 0.5).floor() as i64;
+            let x1 = (e[2] - 0.5).ceil() as i64;
+            let y1 = (e[3] - 0.5).ceil() as i64;
+            let (w, h) = (doc.canvas.width as i64, doc.canvas.height as i64);
+            if (x0, y0, x1, y1) == (0, 0, w, h) || x1 <= x0 || y1 <= y0 {
+                return Ok(json!({"changed": false, "width": w, "height": h}));
+            }
+            next.crop_history.push(c);
+            next.crop = xs_core::document::PixelRect {
+                x: c.x + x0,
+                y: c.y + y0,
+                width: (x1 - x0) as u32,
+                height: (y1 - y0) as u32,
+            };
+            for o in next.objects.iter_mut() {
+                objects::translate(o, -x0 as f64, -y0 as f64);
+            }
+            next.canvas.width = next.crop.width;
+            next.canvas.height = next.crop.height;
+            next.frame = None;
+            next.outside.clear();
+            "history.fit_canvas"
+        }
+        "crop_to_canvas" => {
+            // What sticks out of the canvas goes: floating images lose that part of
+            // their picture; annotations stay as they are and are reported (EDT-051).
+            let (w, h) = (doc.canvas.width as f64, doc.canvas.height as f64);
+            let inside = |b: [f64; 4]| b[0] > -0.5 && b[1] > -0.5 && b[2] < w + 0.5 && b[3] < h + 0.5;
+            let mut cut = 0;
+            let mut gone: Vec<String> = Vec::new();
+            for o in next.objects.iter_mut() {
+                let Some(b) = xs_image::object_bounds(o, doc.dpi) else {
+                    continue;
+                };
+                if inside(b) || o.kind == "blur" || o.kind == "spotlight" {
+                    continue;
+                }
+                let turned = o.props.get("rotation").and_then(Value::as_f64).unwrap_or(0.0) != 0.0;
+                if o.kind != "image" || turned {
+                    sticking.push(o.id.clone());
+                    continue;
+                }
+                let r = &o.props["rect"];
+                let rect = [
+                    r["x"].as_f64().unwrap_or(0.0),
+                    r["y"].as_f64().unwrap_or(0.0),
+                    r["w"].as_f64().unwrap_or(0.0),
+                    r["h"].as_f64().unwrap_or(0.0),
+                ];
+                let (vx0, vy0) = (rect[0].max(0.0), rect[1].max(0.0));
+                let (vx1, vy1) = ((rect[0] + rect[2]).min(w), (rect[1] + rect[3]).min(h));
+                if vx1 - vx0 < 0.5 || vy1 - vy0 < 0.5 {
+                    // Wholly outside: nothing of it is left.
+                    gone.push(o.id.clone());
+                    continue;
+                }
+                let Some(name) = o.props.get("image").and_then(Value::as_str) else {
+                    continue;
+                };
+                let Some(pic) = ed
+                    .store
+                    .image_file(&id, name)
+                    .and_then(|b| xs_image::encode::decode(&b).ok())
+                else {
+                    continue;
+                };
+                let (kx, ky) = (pic.width() as f64 / rect[2], pic.height() as f64 / rect[3]);
+                let px0 = (((vx0 - rect[0]) * kx).round() as u32).min(pic.width() - 1);
+                let py0 = (((vy0 - rect[1]) * ky).round() as u32).min(pic.height() - 1);
+                let px1 = (((vx1 - rect[0]) * kx).round() as u32).clamp(px0 + 1, pic.width());
+                let py1 = (((vy1 - rect[1]) * ky).round() as u32).clamp(py0 + 1, pic.height());
+                let part = image::imageops::crop_imm(&pic, px0, py0, px1 - px0, py1 - py0).to_image();
+                let new = store_picture(core, &id, &part, lang)?;
+                o.props.insert("image".into(), json!(new));
+                o.props.insert(
+                    "rect".into(),
+                    json!({"x": vx0, "y": vy0, "w": vx1 - vx0, "h": vy1 - vy0}),
+                );
+                cut += 1;
+            }
+            next.objects.retain(|o| !gone.contains(&o.id));
+            next.outside.retain(|id| !gone.contains(id));
+            cut += gone.len();
+            if cut == 0 {
+                return Ok(json!({
+                    "changed": false,
+                    "width": doc.canvas.width,
+                    "height": doc.canvas.height,
+                    "sticking": sticking,
+                    "message": tr(lang, "editor.nothing_to_crop", &[("count", &sticking.len().to_string())]),
+                }));
+            }
+            "history.crop_to_canvas"
+        }
         "canvas_size" => {
             let (w, h) = (
                 num("width").unwrap_or(doc.canvas.width as f64),
@@ -1784,10 +1922,19 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
         ed.store.with(&id, |d| d.pixel_selection = None);
     }
     changed(core, ctx, &id);
-    let info = ed
+    let mut info = ed
         .store
         .with(&id, |d| json!({"width": d.document.canvas.width, "height": d.document.canvas.height, "dpi": d.document.dpi}))
         .unwrap_or_default();
+    info["changed"] = json!(true);
+    if !sticking.is_empty() {
+        info["sticking"] = json!(sticking);
+        info["warnings"] = json!([tr(
+            lang,
+            "editor.still_sticking",
+            &[("count", &sticking.len().to_string())]
+        )]);
+    }
     Ok(info)
 }
 
@@ -3674,6 +3821,21 @@ pub fn extension() -> Extension {
         ));
         on!("document.flip", |core, ctx, p| image_command(
             &core, ctx, &p, "flip"
+        ));
+        on!("document.trim", |core, ctx, p| image_command(
+            &core, ctx, &p, "trim"
+        ));
+        on!("document.fit_canvas", |core, ctx, p| image_command(
+            &core,
+            ctx,
+            &p,
+            "fit_canvas"
+        ));
+        on!("document.crop_to_canvas", |core, ctx, p| image_command(
+            &core,
+            ctx,
+            &p,
+            "crop_to_canvas"
         ));
         on!("document.revert", |core, ctx, p| image_command(
             &core, ctx, &p, "revert"

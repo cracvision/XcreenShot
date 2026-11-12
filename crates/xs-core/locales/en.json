@@ -502,6 +502,18 @@
     "document_flip": {
       "title": "Flip",
       "description": "Flips the image and its objects (or only some objects) horizontally or vertically; text stays readable and floating images flip too."
+    },
+    "document_trim": {
+      "title": "Trim edges",
+      "description": "Removes uniform or transparent borders around the image (the color of the top-left pixel, within a tolerance). Says so when there are none."
+    },
+    "document_fit_canvas": {
+      "title": "Fit canvas to content",
+      "description": "Makes the canvas the rectangle that holds the original image and every object, so nothing is left outside."
+    },
+    "document_crop_to_canvas": {
+      "title": "Crop to canvas",
+      "description": "Removes what sticks out of the canvas: floating images lose that part of their picture; annotations stay and are reported."
     }
   },
   "settings": {
@@ -913,7 +925,10 @@
       "editor_resolution": "Resolution",
       "editor_revert": "Revert to original",
       "editor_flip_objects_horizontal": "Flip objects horizontally",
-      "editor_flip_objects_vertical": "Flip objects vertically"
+      "editor_flip_objects_vertical": "Flip objects vertically",
+      "editor_crop_to_canvas": "Crop to canvas",
+      "editor_fit_canvas": "Fit canvas to content",
+      "editor_trim": "Trim edges"
     }
   },
   "tray": {
@@ -1042,7 +1057,10 @@
     "corners": "Rounded corners…",
     "resolution": "Resolution…",
     "effects": "Effects",
-    "revert": "Revert to original…"
+    "revert": "Revert to original…",
+    "crop_to_canvas": "Crop to canvas",
+    "fit_canvas": "Fit canvas to content",
+    "trim": "Trim edges…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2100,7 +2118,10 @@
         "revert_ok": "Revert",
         "revert_body": "All the edits of this document will be lost: objects, effects, crops and changes of size. You can undo it.",
         "revert_changed": "The original is no longer complete: a save merged edits into it or left out the cropped content.",
-        "status_radius": "Corners {{r}} px"
+        "status_radius": "Corners {{r}} px",
+        "trim_title": "Trim edges",
+        "tolerance": "Tolerance (0 to 20 %)",
+        "trim_hint": "Removes borders of the color of the top-left corner, or transparent ones, around the image. Like a crop, it can be undone and what goes can come back."
       }
     },
     "multi": {
@@ -2358,10 +2379,16 @@
     "revert": "Revert to original",
     "canvas": "Change canvas",
     "canvas_size": "Canvas size",
-    "flip": "Flip"
+    "flip": "Flip",
+    "trim": "Trim edges",
+    "fit_canvas": "Fit canvas to content",
+    "crop_to_canvas": "Crop to canvas"
   },
   "editor": {
-    "edited": "{{name}} — Edited"
+    "edited": "{{name}} — Edited",
+    "no_borders": "There are no uniform borders to trim.",
+    "nothing_to_crop": "Nothing sticks out of the canvas that can be cut ({{count}} annotations stick out and are not cut).",
+    "still_sticking": "{{count}} annotations still stick out of the canvas: they are not cut."
   },
   "stamps": {
     "indicators": "Indicators",

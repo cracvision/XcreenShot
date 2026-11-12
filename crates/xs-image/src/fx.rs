@@ -779,8 +779,25 @@ fn corners(mut img: RgbaImage, e: &Value) -> RgbaImage {
 /// Removes uniform borders (like EDT-051): the color of the top-left pixel, within a
 /// tolerance. Returns the image and where it was cut.
 fn trim(img: &RgbaImage, e: &Value) -> (RgbaImage, i64, i64) {
+    match trim_bounds(img, f(e, "tolerance", 5.0)) {
+        Some([x0, y0, x1, y1]) => (
+            imageops::crop_imm(img, x0, y0, x1 - x0, y1 - y0).to_image(),
+            x0 as i64,
+            y0 as i64,
+        ),
+        None => (img.clone(), 0, 0),
+    }
+}
+
+/// What is left of `img` without its uniform borders: the color of the top-left pixel,
+/// within `tolerance` percent (EDT-051, EDT-068). `[x0, y0, x1, y1]`, or `None` when
+/// the whole image is that color.
+pub fn trim_bounds(img: &RgbaImage, tolerance: f64) -> Option<[u32; 4]> {
     let (w, h) = img.dimensions();
-    let tol = (f(e, "tolerance", 5.0).clamp(0.0, 100.0) / 100.0 * 255.0).round() as i32;
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let tol = (tolerance.clamp(0.0, 100.0) / 100.0 * 255.0).round() as i32;
     let edge = img.get_pixel(0, 0).0;
     let same = |p: &[u8; 4]| (0..4).all(|i| (p[i] as i32 - edge[i] as i32).abs() <= tol);
     let row = |y: u32| (0..w).all(|x| same(&img.get_pixel(x, y).0));
@@ -790,7 +807,7 @@ fn trim(img: &RgbaImage, e: &Value) -> (RgbaImage, i64, i64) {
         y0 += 1;
     }
     if y0 == h {
-        return (img.clone(), 0, 0);
+        return None;
     }
     let mut y1 = h;
     while y1 > y0 && row(y1 - 1) {
@@ -804,11 +821,7 @@ fn trim(img: &RgbaImage, e: &Value) -> (RgbaImage, i64, i64) {
     while x1 > x0 && col(x1 - 1, y0, y1) {
         x1 -= 1;
     }
-    (
-        imageops::crop_imm(img, x0, y0, x1 - x0, y1 - y0).to_image(),
-        x0 as i64,
-        y0 as i64,
-    )
+    Some([x0, y0, x1, y1])
 }
 
 /// Scales by a percentage, by the longest side, or to a width or a height (EDT-068).

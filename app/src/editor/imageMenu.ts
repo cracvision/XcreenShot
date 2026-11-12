@@ -3,7 +3,14 @@
 import { create } from "zustand";
 
 export type ImageDialog =
-  "resize" | "canvas_size" | "rotate" | "corners" | "resolution" | "canvas_color" | "revert";
+  | "resize"
+  | "canvas_size"
+  | "rotate"
+  | "corners"
+  | "resolution"
+  | "canvas_color"
+  | "revert"
+  | "trim";
 
 export const useImageDialog = create<{ open: ImageDialog | null }>(() => ({ open: null }));
 

@@ -723,6 +723,28 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object"})),
+        B::new("document.trim", &["EDT-051", "EDT-119"])
+            .mutates()
+            .positional(&["tolerance"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 20, "default": 2, "description": "Percent: how far a border pixel may be from the top-left one"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.fit_canvas", &["EDT-051", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}}})),
+        B::new("document.crop_to_canvas", &["EDT-051", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "changed": {"type": "boolean"},
+                "sticking": {"type": "array", "items": {"type": "string"}, "description": "Annotations that still stick out: they are not cut"}
+            }})),
         B::new("document.revert", &["EDT-076", "EDT-119"])
             .mutates()
             .params(params(json!({"documentId": document_id()}), &[]))
@@ -1305,7 +1327,7 @@ pub const TOOLS: [&str; 20] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 86] = [
+pub const EDITOR_ACTIONS: [&str; 89] = [
     "open",
     "save",
     "save_as",
@@ -1377,6 +1399,9 @@ pub const EDITOR_ACTIONS: [&str; 86] = [
     "revert",
     "flip_objects_horizontal",
     "flip_objects_vertical",
+    "crop_to_canvas",
+    "fit_canvas",
+    "trim",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

@@ -3438,3 +3438,75 @@ fn captures_start_with_a_white_canvas_unless_transparent() {
     assert_eq!(png.get_pixel(10, 10).0[3], 0);
     assert_eq!(png.get_pixel(30, 10).0, [255, 255, 255, 255]);
 }
+
+/// EDT-051: trimming uniform borders leaves the content (and says when there are
+/// none); fitting the canvas takes in a floating image that sticks out; cropping to
+/// the canvas cuts its picture and reports annotations that still stick out.
+#[test]
+fn trimming_fitting_and_cropping_to_the_canvas() {
+    let e = env();
+    // 40 px of white around a blue block.
+    let img = image::RgbaImage::from_fn(200, 120, |x, y| {
+        if (40..160).contains(&x) && (40..80).contains(&y) {
+            image::Rgba([30, 110, 220, 255])
+        } else {
+            image::Rgba([255, 255, 255, 255])
+        }
+    });
+    let (doc, _) = add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, None).unwrap();
+    let r = cli(&e.core, "document.trim", json!({"documentId": doc}));
+    assert_eq!(r["changed"], true);
+    assert_eq!((r["width"].as_u64(), r["height"].as_u64()), (Some(120), Some(40)));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["undoLabel"], "Trim edges");
+    let r = cli(&e.core, "document.trim", json!({"documentId": doc}));
+    assert_eq!(r["changed"], false, "no borders left");
+    assert!(r["message"].as_str().is_some_and(|m| !m.is_empty()));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+
+    // A floating image 100 px past the right edge, with the canvas not growing.
+    cli(
+        &e.core,
+        "settings.set",
+        json!({"key": "editor.autoExpandCanvas", "value": false}),
+    );
+    let red = red_png(&e, 100, 40);
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red], "center": [100, 60]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let pic = info["objects"][0]["id"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": pic, "set": {"rect": {"x": 150, "y": 10, "w": 150, "h": 40}}}),
+    );
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([150, 100], [260, 100])]}),
+    );
+    let r = cli(&e.core, "document.fit_canvas", json!({"documentId": doc}));
+    assert_eq!(r["changed"], true);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["width"], 300, "100 px more");
+    assert_eq!(info["objects"][0]["rect"]["x"], json!(150.0), "inside now");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+
+    // Crop to canvas: the picture loses its outer 100 px; the arrow stays and is reported.
+    let before = cli(&e.core, "document.info", json!({"documentId": doc}))["objects"][0]["image"].clone();
+    let r = cli(&e.core, "document.crop_to_canvas", json!({"documentId": doc}));
+    assert_eq!(r["changed"], true);
+    assert_eq!(r["sticking"].as_array().map(Vec::len), Some(1));
+    assert!(r["warnings"][0].as_str().is_some());
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["width"], 200);
+    assert_eq!(info["objects"][0]["rect"]["w"], json!(50.0));
+    assert_ne!(info["objects"][0]["image"], before, "a new, narrower picture");
+    assert_eq!(info["undoLabel"], "Crop to canvas");
+    // Nothing more to cut: said, with the arrow still sticking out.
+    let r = cli(&e.core, "document.crop_to_canvas", json!({"documentId": doc}));
+    assert_eq!(r["changed"], false);
+}

@@ -264,6 +264,9 @@ const IMAGE_ACTIONS = [
   "corners",
   "resolution",
   "revert",
+  "crop_to_canvas",
+  "fit_canvas",
+  "trim",
   ...TYPES.map((t) => `effect_${t.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`),
 ];
 

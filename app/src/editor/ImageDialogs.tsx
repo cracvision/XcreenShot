@@ -582,6 +582,52 @@ function CanvasColor({ doc }: { doc: DocDetails }) {
   );
 }
 
+/** Image > Trim edges (EDT-051): uniform borders go, within a tolerance. */
+function Trim({ doc }: { doc: DocDetails }) {
+  const { t } = useTranslation();
+  const [tolerance, setTolerance] = useState(2);
+  const valid = tolerance >= 0 && tolerance <= 20;
+  const ok = () => {
+    closeImageDialog();
+    run<{ changed?: boolean; message?: string }>("document.trim", {
+      documentId: doc.documentId,
+      tolerance,
+    })
+      .then((r) => {
+        if (r.changed === false && r.message) useEditor.getState().showToast(r.message);
+      })
+      .catch(fail);
+  };
+  return (
+    <Dialog
+      title={t("ui.editor.image.trim_title")}
+      onCancel={closeImageDialog}
+      actions={
+        <>
+          <button type="button" className="btn primary" disabled={!valid} onClick={ok}>
+            {t("ui.editor.image.apply")}
+          </button>
+          <button type="button" className="btn" onClick={closeImageDialog}>
+            {t("ui.editor.cancel")}
+          </button>
+        </>
+      }
+    >
+      <div className="image-form">
+        <NumberInput
+          id="trim-tolerance"
+          label={t("ui.editor.image.tolerance")}
+          value={String(tolerance)}
+          autoFocus
+          suffix="%"
+          onValue={setTolerance}
+        />
+      </div>
+      <p className="muted">{t("ui.editor.image.trim_hint")}</p>
+    </Dialog>
+  );
+}
+
 /** Edit > Revert to original (EDT-076): asks first; Undo brings the edits back. */
 function Revert({ doc }: { doc: DocDetails }) {
   const { t } = useTranslation();
@@ -632,5 +678,7 @@ export function ImageDialogs() {
       return <CanvasColor key={key} doc={doc} />;
     case "revert":
       return <Revert key={key} doc={doc} />;
+    case "trim":
+      return <Trim key={key} doc={doc} />;
   }
 }

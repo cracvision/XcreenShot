@@ -226,6 +226,10 @@ fn editor_menus() -> Vec<MenuEntry> {
                 },
                 Separator,
                 action("editor.crop_selection", "menu.crop_selection", "crop_selection"),
+                // EDT-051.
+                action("editor.crop_to_canvas", "menu.crop_to_canvas", "crop_to_canvas"),
+                action("editor.fit_canvas", "menu.fit_canvas", "fit_canvas"),
+                action("editor.trim", "menu.trim", "trim"),
                 Separator,
                 action("editor.corners", "menu.corners", "corners"),
                 action("editor.resolution", "menu.resolution", "resolution"),
