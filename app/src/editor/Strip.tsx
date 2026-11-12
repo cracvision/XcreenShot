@@ -10,8 +10,9 @@ import { useTray } from "../library/state";
 import { closeDocument, showDocument } from "./actions";
 import { Icon } from "./icons";
 import { menuPoint, useContextMenu } from "./menus";
-import { docUrl, useEditor, type DocSummary } from "./state";
+import { docUrl, useEditor, xsdocUrl, type DocSummary } from "./state";
 import { trayOrder } from "./tray";
+import { showQuickView } from "../library/quickViewState";
 import { trayMenu } from "./trayMenu";
 
 export function Strip() {
@@ -40,6 +41,31 @@ export function Strip() {
 
   const onKey = (e: KeyboardEvent) => {
     const at = order.indexOf(current ?? "");
+    if (e.key === " " && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      // LIB-013: the quick view, also in the tray.
+      e.preventDefault();
+      showQuickView({
+        entries: documents.map((d) => ({
+          id: d.documentId,
+          name: d.name,
+          src: xsdocUrl(`${d.documentId}/final?v=${d.version}`),
+          thumb: docUrl(d.documentId, "thumb", d.version),
+          width: d.width,
+          height: d.height,
+          date: null,
+        })),
+        // From the item with the focus.
+        at: order.indexOf((e.target as HTMLElement).dataset.doc ?? current ?? ""),
+        open: (id) => showDocument(id),
+        done: (id) => {
+          setFocus(id);
+          requestAnimationFrame(() =>
+            list.current?.querySelector<HTMLElement>(`[data-doc="${id}"]`)?.focus(),
+          );
+        },
+      });
+      return;
+    }
     const target =
       e.key === "ArrowLeft"
         ? order[Math.max(0, at - 1)]

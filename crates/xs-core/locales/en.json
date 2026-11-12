@@ -1233,7 +1233,8 @@
     "unfavorite_item": "Remove from favorites",
     "show_in_library": "Show in library",
     "resolve_conflict": "Resolve conflict…",
-    "details_item": "Details"
+    "details_item": "Details",
+    "quick_view": "Quick view"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2831,6 +2832,15 @@
         "count_other": "{{count}} items selected",
         "dates": "Captured between",
         "common_tags": "Shared tags"
+      },
+      "quick": {
+        "title": "Quick view of {{name}}",
+        "key": "Space",
+        "previous": "Previous (←)",
+        "next": "Next (→)",
+        "position": "{{at}} of {{count}}",
+        "open": "Open in the editor",
+        "close": "Close (Space or Esc)"
       }
     },
     "files": {

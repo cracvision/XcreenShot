@@ -1,5 +1,6 @@
 // Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
 // the top; the menu bar, dialogs and notices are shared by both.
+import { QuickView } from "../library/QuickView";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -172,6 +173,7 @@ export function Editor() {
       {dropping && doc && <div className="drop-hint">{t("ui.editor.drop_hint")}</div>}
       <Dialogs />
       <TemplateDialogs />
+      <QuickView />
       <EditorContextMenu />
       <div className="sr-only" role="status" aria-live="polite">
         {announcement}

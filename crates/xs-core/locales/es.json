@@ -1233,7 +1233,8 @@
     "unfavorite_item": "Quitar de favoritos",
     "show_in_library": "Mostrar en la biblioteca",
     "resolve_conflict": "Resolver conflicto…",
-    "details_item": "Detalles"
+    "details_item": "Detalles",
+    "quick_view": "Vista rápida"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2831,6 +2832,15 @@
         "count_other": "{{count}} elementos seleccionados",
         "dates": "Capturados entre",
         "common_tags": "Etiquetas en común"
+      },
+      "quick": {
+        "title": "Vista rápida de {{name}}",
+        "key": "Espacio",
+        "previous": "Anterior (←)",
+        "next": "Siguiente (→)",
+        "position": "{{at}} de {{count}}",
+        "open": "Abrir en el editor",
+        "close": "Cerrar (Espacio o Esc)"
       }
     },
     "files": {

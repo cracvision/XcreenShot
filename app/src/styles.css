@@ -5223,9 +5223,101 @@ button.lc-head:hover,
   color: var(--ink);
 }
 
+/* ---------- Quick view (LIB-013) ---------- */
+.quick-view {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  /* Nearly opaque: the image stands out from the window behind. */
+  background: color-mix(in srgb, var(--surface-sunken) 94%, transparent);
+  outline: none;
+  animation: fade-in var(--dur-base) var(--ease-standard) both;
+}
+
+.qv-stage {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  padding: var(--space-4);
+}
+
+.qv-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: dialog-in var(--dur-slow) var(--ease-spring) backwards;
+}
+
+.qv-frame img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.qv-frame .qv-image {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.qv-frame .qv-image.ready {
+  opacity: 1;
+}
+
+.qv-thumb {
+  filter: blur(6px);
+}
+
+.qv-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: center;
+  max-width: calc(100% - 2 * var(--space-4));
+  margin-bottom: var(--space-4);
+  padding: 6px 8px 6px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-dialog);
+}
+
+.qv-step {
+  min-width: 34px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.qv-caption {
+  display: grid;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  font-size: 13px;
+}
+
+.qv-caption strong,
+.qv-caption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qv-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,
+  .quick-view,
+  .qv-frame,
   .backdrop,
   .dialog,
   .section-enter,

@@ -6,6 +6,7 @@ import type { LibraryItem } from "./state";
 import { openPicker } from "../editor/templateUi";
 import { editTags, toggleFavorite } from "./marks";
 import { askResolve } from "./maintenanceState";
+import { openLibraryQuickView } from "./quickViewState";
 import { useLibrary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -17,6 +18,13 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
   const one = items.length === 1 ? items[0] : undefined;
   return [
     { id: "open", label: t("menu.open_item"), onSelect: () => void openItems(items) },
+    // LIB-013.
+    {
+      id: "quick_view",
+      label: t("menu.quick_view"),
+      shortcut: t("ui.library.quick.key"),
+      onSelect: openLibraryQuickView,
+    },
     // EDT-095: the selected captures, in order, into a template's zones.
     {
       id: "combine",

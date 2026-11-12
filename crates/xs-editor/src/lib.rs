@@ -11,6 +11,7 @@ pub mod flatten;
 pub mod image_ops;
 pub mod objects;
 pub mod pixels;
+pub mod quick_view;
 pub mod recovery;
 pub mod samples;
 pub mod steps;

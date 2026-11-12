@@ -18,11 +18,11 @@ import { run } from "../lib/commands";
 import { openCapturePanel, openFiles } from "../editor/actions";
 import { Icon } from "../editor/icons";
 import { menuPoint, useContextMenu } from "../editor/menus";
-import { xsdocUrl } from "../editor/state";
 import { hint, useShortcut } from "../editor/tools";
 import { askDelete, itemRef, openItems } from "./actions";
 import { DetailsPane } from "./DetailsPane";
 import { fileSize } from "./format";
+import { libraryThumb, openLibraryQuickView } from "./quickViewState";
 import { FilterPane } from "./FilterPane";
 import { editTags, toggleFavorite } from "./marks";
 import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortKey } from "./query";
@@ -42,10 +42,6 @@ const TILE = 176;
 const ROW = 34;
 
 const IS_MAC = navigator.userAgent.includes("Mac");
-
-function thumbUrl(item: LibraryItem): string {
-  return xsdocUrl(`library/${item.id}/thumb?v=${encodeURIComponent(item.modified)}`);
-}
 
 function typeName(item: LibraryItem, t: (key: string) => string): string {
   const format = item.format === "jpeg" ? "jpg" : item.format;
@@ -312,7 +308,7 @@ function Item({
       ) : (
         <>
           <div className="lib-thumb">
-            <img src={thumbUrl(item)} alt="" loading="lazy" draggable={false} />
+            <img src={libraryThumb(item)} alt="" loading="lazy" draggable={false} />
             {item.format !== "xshot" && (
               <span className="lib-badge" aria-hidden="true">
                 {item.format === "jpeg" ? "JPG" : item.format.toUpperCase()}
@@ -570,6 +566,12 @@ function Grid() {
     if (e.key === "Enter") {
       e.preventDefault();
       void openItems(selectedItems());
+      return;
+    }
+    if (e.key === " " && !primary && !e.altKey && !e.shiftKey) {
+      // LIB-013: the quick view.
+      e.preventDefault();
+      openLibraryQuickView();
       return;
     }
     if (

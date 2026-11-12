@@ -4677,3 +4677,102 @@ fn huge_document_saves_and_exports_in_time() {
     assert!(save < Duration::from_secs(5), "save {save:?}");
     assert!(export < Duration::from_secs(10), "export {export:?}");
 }
+
+/// An editor whose library service looks at its library folder (LIB-013).
+fn env_with_library() -> Env {
+    let library = tempfile::tempdir().unwrap();
+    let recovery = tempfile::tempdir().unwrap();
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![
+            extension(),
+            xs_library::extension_with(Some(library.path().to_path_buf())),
+        ],
+    );
+    editor(&core).set_folders(library.path().to_path_buf(), recovery.path().to_path_buf());
+    Env {
+        core,
+        library,
+        _recovery: recovery,
+        outside: tempfile::tempdir().unwrap(),
+    }
+}
+
+/// LIB-013: the Library's quick view shows a capture with its annotations, fitted to
+/// the size asked for, and a loose PNG as it is.
+#[test]
+fn quick_view_shows_the_annotations() {
+    let e = env_with_library();
+    let (doc, path) = add_capture(
+        &e.core,
+        &white(400, 200),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Quick"),
+    )
+    .unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "shape", "rect": {"x": 0, "y": 0, "w": 400, "h": 200}, "style": {"fill": "#FF0000", "outline": "#FF0000"}}]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let lib = xs_library::library(&e.core);
+    lib.scan();
+    let id = lib.find(&path).unwrap().id;
+    let (png, mime) = crate::quick_view::library_preview(&e.core, &id, 100).unwrap();
+    assert_eq!(mime, "image/png");
+    let img = image::load_from_memory(&png).unwrap().to_rgba8();
+    assert_eq!(img.dimensions(), (100, 50), "fitted to 100 px");
+    let mid = img.get_pixel(50, 25);
+    assert!(mid[0] > 200 && mid[1] < 80, "the red shape is drawn: {mid:?}");
+
+    let loose = e.library.path().join("Loose.png");
+    let bytes = xs_image::encode::png(&white(30, 10), 0.0, true).unwrap();
+    std::fs::write(&loose, &bytes).unwrap();
+    lib.scan();
+    let id = lib.find(&loose).unwrap().id;
+    let (got, mime) = crate::quick_view::library_preview(&e.core, &id, 100).unwrap();
+    assert_eq!(mime, "image/png");
+    assert_eq!(got.as_slice(), bytes.as_slice(), "a PNG goes as it is");
+    assert!(crate::quick_view::library_preview(&e.core, "nope", 100).is_none());
+}
+
+/// LIB-013: the quick view of a 20-megapixel capture with annotations, in release
+/// (`cargo test --release -p xs-editor -- --ignored quick_view_of`).
+#[test]
+#[ignore]
+fn quick_view_of_twenty_megapixels_in_time() {
+    let e = env_with_library();
+    let img = image::RgbaImage::from_fn(5472, 3648, |x, y| {
+        image::Rgba([(x / 16) as u8, (y / 16) as u8, ((x + y) / 32) as u8, 255])
+    });
+    let (doc, path) = add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, Some("Twenty")).unwrap();
+    drop(img);
+    let objects: Vec<Value> = (0..20)
+        .map(|i| json!({"type": "arrow", "from": [100 + i * 200, 300], "to": [400 + i * 200, 900]}))
+        .collect();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": objects}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let lib = xs_library::library(&e.core);
+    lib.scan();
+    let id = lib.find(&path).unwrap().id;
+    let t = Instant::now();
+    let (png, _) = crate::quick_view::library_preview(&e.core, &id, 2560).unwrap();
+    let cold = t.elapsed();
+    let t = Instant::now();
+    crate::quick_view::library_preview(&e.core, &id, 2560).unwrap();
+    let warm = t.elapsed();
+    println!(
+        "quick view: first {} ms, again {} ms, {} KB",
+        cold.as_millis(),
+        warm.as_millis(),
+        png.len() / 1024
+    );
+    assert!(cold < Duration::from_secs(2), "first {cold:?}");
+    assert!(warm < Duration::from_millis(5), "again {warm:?}");
+}

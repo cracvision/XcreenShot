@@ -36,6 +36,10 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         ["library", item, "thumb"] => xs_library::library(&core)
             .thumbnail(item)
             .map(|png| (std::sync::Arc::new(png), "image/png")),
+        // The large preview (LIB-013), at most `max` pixels on its longest side.
+        ["library", item, "view", max] => {
+            xs_editor::quick_view::library_preview(&core, item, max.parse().unwrap_or(2560))
+        }
         [id, "base"] => {
             let flat = editor
                 .store
