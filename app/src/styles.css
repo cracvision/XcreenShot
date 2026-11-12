@@ -4279,6 +4279,93 @@ body.preparing-drag * {
   position: absolute;
 }
 
+/* Quick edit bar (EDT-006): HTML over the canvas, never in the image. */
+.quick-bar {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  animation: fade-in var(--dur-fast) var(--ease-spring) both;
+}
+
+.qb-swatch {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.qb-swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.qb-chip {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--control-line);
+  border-radius: 5px;
+}
+
+.qb-select,
+.qb-num {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.qb-select {
+  max-width: 110px;
+}
+
+.qb-font {
+  max-width: 130px;
+}
+
+.qb-num {
+  width: 46px;
+}
+
+.qb-toggle,
+.qb-button {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.qb-toggle[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.qb-toggle:hover,
+.qb-button:hover {
+  background: var(--surface-sunken);
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,
@@ -4315,6 +4402,10 @@ body.preparing-drag * {
   .recorder,
   .rotate-preview img {
     transition-duration: 0.01ms;
+  }
+
+  .quick-bar {
+    animation: fade-in var(--dur-instant) linear both;
   }
 
   .btn:hover:not(:disabled),

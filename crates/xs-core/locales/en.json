@@ -799,6 +799,10 @@
     "editor_workspaceColor": {
       "label": "Workspace color",
       "description": "\"auto\" follows the light or dark theme; or a color like #2B2B33."
+    },
+    "editor_quickEditBar": {
+      "label": "Quick edit bar",
+      "description": "A small bar next to the selected object with its most used properties and saved styles."
     }
   },
   "errors": {
@@ -2343,6 +2347,14 @@
         "preview": "Preview",
         "page_label": "Page {{n}}",
         "opened": "The pages opened in your PDF viewer: print them from there (Ctrl+P)."
+      },
+      "quick": {
+        "label": "Quick edit",
+        "styles": "Styles",
+        "style_n": "Style {{n}}",
+        "no_styles": "No saved styles",
+        "more": "More properties",
+        "value": "Value"
       }
     },
     "multi": {

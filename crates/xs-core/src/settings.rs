@@ -253,6 +253,7 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-071",
         ),
         def("editor.snap", "editor", boolean(), json!(true), "EDT-084"),
+        def("editor.quickEditBar", "editor", boolean(), json!(true), "EDT-006"),
         // The pixel grid from a zoom on (EDT-008).
         def("editor.pixelGrid", "editor", boolean(), json!(true), "EDT-008"),
         def(

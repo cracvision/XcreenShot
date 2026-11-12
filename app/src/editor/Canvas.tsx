@@ -85,6 +85,8 @@ import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
 import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
 import { snapMove, snapPoint, type Guide, type Spacing } from "./snap";
+import { QuickBar } from "./QuickBar";
+import { QUICK_KINDS } from "./quickKinds";
 import { hasRadius, MAX_TAILS } from "./callouts";
 import { corners as polyCorners, fromPoints as polyFromPoints, refit, sideAt } from "./polygon";
 import {
@@ -449,6 +451,7 @@ export function Canvas({ doc }: Props) {
   const cropState = useEditor((s) => s.cropRect);
   const autoExpand = useSetting("editor.autoExpandCanvas", true);
   const snapOn = useSetting("editor.snap", true);
+  const quickOn = useSetting("editor.quickEditBar", true);
   // The pixel grid (EDT-008) and the workspace color (EDT-010).
   const gridOn = useSetting("editor.pixelGrid", true);
   const gridFrom = useApp((s) => {
@@ -2357,6 +2360,25 @@ export function Canvas({ doc }: Props) {
           <span className="muted">{t("ui.editor.pixel.esc_cancels")}</span>
         </div>
       )}
+      {(() => {
+        // The quick edit bar by the one selected object, not while it changes (EDT-006).
+        if (!quickOn || drag || textEdit || !lay || !viewport || selection.length !== 1)
+          return null;
+        const o = doc.objects.find((x) => x.id === selection[0]);
+        if (!o || o.locked || !(QUICK_KINDS as readonly string[]).includes(o.type)) return null;
+        const b = boundsOf([o]);
+        if (!b) return null;
+        const [x0, y0] = toScreen([b.x, b.y]);
+        const [x1, y1] = toScreen([b.x + b.w, b.y + b.h]);
+        return (
+          <QuickBar
+            key={o.id}
+            object={o}
+            rect={{ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }}
+            areaWidth={viewport.width}
+          />
+        );
+      })()}
       {hover === "locked" && lockAt && (
         <span
           className="lock-badge"
