@@ -13,7 +13,7 @@ import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
 export type Tool =
-  "move" | "arrow" | "line" | "text" | "callout" | "shape" | "step" | "blur" | "crop";
+  "move" | "arrow" | "line" | "text" | "callout" | "shape" | "step" | "highlight" | "blur" | "crop";
 
 export interface DocSummary {
   documentId: string;
@@ -84,6 +84,24 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+}
+
+/** Highlighter (EDT-036). */
+export type HighlightShapeKind = "rectangle" | "roundedRectangle" | "ellipse";
+export const HIGHLIGHT_SHAPES: HighlightShapeKind[] = ["rectangle", "roundedRectangle", "ellipse"];
+
+export interface HighlightStyle {
+  color: string;
+  opacity: number;
+  shape: HighlightShapeKind;
+}
+
+export interface HighlightObject {
+  id: string;
+  type: "highlight";
+  rect: Rect;
+  rotation: number;
+  style: HighlightStyle;
 }
 
 /** Callouts (EDT-028). */
@@ -235,6 +253,7 @@ export type DocObject = (
   | ImageObject
   | StepObject
   | CalloutObject
+  | HighlightObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -251,6 +270,7 @@ export interface Styles {
   blur: BlurStyle;
   step: StepStyle;
   callout: CalloutStyle;
+  highlight: HighlightStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */

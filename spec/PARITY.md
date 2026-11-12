@@ -115,7 +115,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-033 | Emoji | M2 | Could | — |
 | EDT-034 | Paquetes de sellos `.xstamps` | M2 | Should | — |
 | EDT-035 | Paso | M2 | Must | En curso |
-| EDT-036 | Resaltador | M2 | Should | — |
+| EDT-036 | Resaltador | M2 | Should | En curso |
 | EDT-037 | Lápiz | M2 | Should | — |
 | EDT-038 | Lupa | M2 | Should | — |
 | EDT-039 | Foco | M2 | Should | — |

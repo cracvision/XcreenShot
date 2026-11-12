@@ -14,6 +14,7 @@ use crate::callouts::{self, CalloutObject};
 use crate::color::Rgba;
 use crate::effects;
 use crate::geometry::{dash, Arrow, Geometry, Shape};
+use crate::highlights::{self, HighlightObject};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
@@ -545,6 +546,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 callouts::draw(pm, &c, dpi);
             }
         }
+        "highlight" => {
+            if let Ok(h) = HighlightObject::from_props(&object.props) {
+                highlights::draw(pm, &h);
+            }
+        }
         "image" => {
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
@@ -697,6 +703,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "step" => StepObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
+        "highlight" => HighlightObject::from_props(&object.props)
+            .ok()
+            .map(|h| (h.rect, h.rotation)),
         // Its turned body and its tails, with room for the outline and a tail's base.
         "callout" => {
             let c = CalloutObject::from_props(&object.props).ok()?;
@@ -1205,5 +1214,34 @@ mod tests {
         ten.text = (1..=10).map(|n| n.to_string()).collect::<Vec<_>>().join("\n");
         let h = ten.fitted_height(96.0).expect("ten lines need more room");
         assert!(h > 150.0, "{h}");
+    }
+
+    /// EDT-036: yellow over black text leaves the text black and the white yellow.
+    #[test]
+    fn a_highlight_keeps_dark_text_dark() {
+        let mut img = RgbaImage::from_pixel(40, 20, image::Rgba([255, 255, 255, 255]));
+        for x in 0..20 {
+            for y in 0..20 {
+                img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]));
+            }
+        }
+        let base = Base::from_image(img);
+        let mut doc = Document::new(40, 20, 96.0);
+        doc.objects.push(Object {
+            id: "o1".into(),
+            kind: "highlight".into(),
+            props: json!({"rect": {"x": 0, "y": 0, "w": 40, "h": 20}, "style": {"color": "#FFFF00", "opacity": 100}})
+                .as_object()
+                .unwrap()
+                .clone(),
+        });
+        let out = render(&doc, &base);
+        assert_eq!(out.get_pixel(5, 5).0, [0, 0, 0, 255], "black stays black");
+        assert_eq!(out.get_pixel(30, 5).0, [255, 255, 0, 255], "white turns yellow");
+        doc.objects[0].props["style"]["opacity"] = json!(50);
+        let half = render(&doc, &base);
+        assert_eq!(half.get_pixel(5, 5).0, [0, 0, 0, 255]);
+        let p = half.get_pixel(30, 5).0;
+        assert!(p[0] == 255 && p[1] == 255 && (120..=135).contains(&p[2]), "{p:?}");
     }
 }

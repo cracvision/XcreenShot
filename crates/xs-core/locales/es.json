@@ -786,7 +786,8 @@
       "editor_delete_item": "Mover a la papelera",
       "editor_tool_step": "Herramienta Paso",
       "editor_tool_callout": "Herramienta Globo",
-      "editor_tool_line": "Herramienta Línea"
+      "editor_tool_line": "Herramienta Línea",
+      "editor_tool_highlight": "Herramienta Resaltador"
     }
   },
   "tray": {
@@ -1240,7 +1241,8 @@
         "image": "Una imagen sobre la captura.",
         "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande.",
         "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar.",
-        "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°."
+        "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°.",
+        "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible."
       },
       "tool": {
         "move": "Mover",
@@ -1252,7 +1254,8 @@
         "image": "Imagen",
         "step": "Paso",
         "callout": "Globo",
-        "line": "Línea"
+        "line": "Línea",
+        "highlight": "Resaltador"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1320,7 +1323,8 @@
         "tail_width": "Ancho de la cola",
         "valign": "Alineación vertical",
         "padding": "Margen interior",
-        "fit_text": "Ajustar al texto"
+        "fit_text": "Ajustar al texto",
+        "highlight_shape": "Forma"
       },
       "cap": {
         "none": "Ninguno",
@@ -1463,6 +1467,11 @@
         "top": "Arriba",
         "middle": "En medio",
         "bottom": "Abajo"
+      },
+      "highlight_shape": {
+        "rectangle": "Rectángulo",
+        "roundedRectangle": "Rectángulo redondeado",
+        "ellipse": "Óvalo"
       }
     },
     "multi": {
@@ -1668,7 +1677,13 @@
     "change_line": "Cambiar línea",
     "delete_line": "Eliminar línea",
     "cut_line": "Cortar línea",
-    "paste_line": "Pegar línea"
+    "paste_line": "Pegar línea",
+    "draw_highlight": "Resaltar",
+    "move_highlight": "Mover resaltado",
+    "change_highlight": "Cambiar resaltado",
+    "delete_highlight": "Eliminar resaltado",
+    "cut_highlight": "Cortar resaltado",
+    "paste_highlight": "Pegar resaltado"
   },
   "editor": {
     "edited": "{{name}} — Editado"

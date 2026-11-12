@@ -786,7 +786,8 @@
       "editor_delete_item": "Move to trash",
       "editor_tool_step": "Step tool",
       "editor_tool_callout": "Callout tool",
-      "editor_tool_line": "Line tool"
+      "editor_tool_line": "Line tool",
+      "editor_tool_highlight": "Highlighter tool"
     }
   },
   "tray": {
@@ -1240,7 +1241,8 @@
         "image": "A picture over the capture.",
         "step": "Click to place the next number; drag for a bigger marker.",
         "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point.",
-        "line": "Drag to draw a line; Shift keeps it straight or at 45°."
+        "line": "Drag to draw a line; Shift keeps it straight or at 45°.",
+        "highlight": "Drag over what to mark; dark text stays readable."
       },
       "tool": {
         "move": "Move",
@@ -1252,7 +1254,8 @@
         "image": "Image",
         "step": "Step",
         "callout": "Callout",
-        "line": "Line"
+        "line": "Line",
+        "highlight": "Highlighter"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1320,7 +1323,8 @@
         "tail_width": "Tail width",
         "valign": "Vertical alignment",
         "padding": "Padding",
-        "fit_text": "Fit to text"
+        "fit_text": "Fit to text",
+        "highlight_shape": "Shape"
       },
       "cap": {
         "none": "None",
@@ -1463,6 +1467,11 @@
         "top": "Top",
         "middle": "Middle",
         "bottom": "Bottom"
+      },
+      "highlight_shape": {
+        "rectangle": "Rectangle",
+        "roundedRectangle": "Rounded rectangle",
+        "ellipse": "Oval"
       }
     },
     "multi": {
@@ -1668,7 +1677,13 @@
     "change_line": "Change line",
     "delete_line": "Delete line",
     "cut_line": "Cut line",
-    "paste_line": "Paste line"
+    "paste_line": "Paste line",
+    "draw_highlight": "Highlight",
+    "move_highlight": "Move highlight",
+    "change_highlight": "Change highlight",
+    "delete_highlight": "Delete highlight",
+    "cut_highlight": "Cut highlight",
+    "paste_highlight": "Paste highlight"
   },
   "editor": {
     "edited": "{{name}} — Edited"

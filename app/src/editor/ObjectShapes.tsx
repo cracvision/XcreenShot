@@ -9,6 +9,7 @@ import { dash, type ArrowStyle, type Geometry } from "./geometry";
 import type {
   BlurObject,
   CalloutObject,
+  HighlightObject,
   ImageObject,
   ShapeObject,
   StepObject,
@@ -278,5 +279,32 @@ export function CalloutShape(props: {
       rotation={o.rotation - committed.rotation}
       listening={false}
     />
+  );
+}
+
+/** A highlight (EDT-036): its color multiplied into what is below, like a marker. */
+export function HighlightShape({ o }: { o: HighlightObject }) {
+  const { rect, style } = o;
+  const common = {
+    fill: style.color,
+    opacity: style.opacity / 100,
+    globalCompositeOperation: "multiply" as const,
+    listening: false,
+  };
+  return (
+    <Group x={rect.x + rect.w / 2} y={rect.y + rect.h / 2} rotation={o.rotation} listening={false}>
+      {style.shape === "ellipse" ? (
+        <Ellipse radiusX={rect.w / 2} radiusY={rect.h / 2} {...common} />
+      ) : (
+        <Rect
+          x={-rect.w / 2}
+          y={-rect.h / 2}
+          width={rect.w}
+          height={rect.h}
+          cornerRadius={style.shape === "roundedRectangle" ? 0.25 * Math.min(rect.w, rect.h) : 0}
+          {...common}
+        />
+      )}
+    </Group>
   );
 }

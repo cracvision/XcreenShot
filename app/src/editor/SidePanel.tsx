@@ -25,6 +25,8 @@ import {
   type CalloutShapeKind,
   type TailStyle,
   type VAlign,
+  HIGHLIGHT_SHAPES,
+  type HighlightShapeKind,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -118,8 +120,19 @@ interface Target {
   commit: (changes: Record<string, unknown>) => void;
 }
 
-type StyledKind = "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout";
-const STYLED: StyledKind[] = ["arrow", "line", "text", "shape", "blur", "image", "step", "callout"];
+type StyledKind =
+  "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout" | "highlight";
+const STYLED: StyledKind[] = [
+  "arrow",
+  "line",
+  "text",
+  "shape",
+  "blur",
+  "image",
+  "step",
+  "callout",
+  "highlight",
+];
 
 function useTarget(): Target | null {
   const doc = useEditor((s) => s.doc);
@@ -454,6 +467,28 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "highlight":
+      // Highlighter (EDT-036): color, opacity and shape.
+      return (
+        <>
+          <SelectField
+            label={t("ui.editor.prop.highlight_shape")}
+            value={v<HighlightShapeKind>("shape")}
+            options={HIGHLIGHT_SHAPES.map((s) => ({
+              value: s,
+              label: t(`ui.editor.highlight_shape.${s}`),
+            }))}
+            onCommit={(shape) => commit({ shape })}
+          />
+          <ColorPicker
+            label={t("ui.editor.prop.color")}
+            value={v<string>("color") ?? "#FFE14D"}
+            mixed={v<string>("color") === undefined}
+            onCommit={(color) => color && commit({ color })}
+          />
+          {opacity}
+        </>
+      );
     case "step":
       return <StepProperties v={v} num={num} commit={commit} opacity={opacity} />;
   }

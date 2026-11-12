@@ -158,6 +158,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-028 | Tiradores | Rombos en las puntas; **+** a la derecha del cuerpo (un clic añade una cola al lado; arrastrar la lleva donde se suelte); rombo del radio en el borde superior (solo Rectángulo redondeado); el ancla es el punto del centro. Doble clic o `Enter` escribe en el globo | Provisional |
 | EDT-028 | Lo que falta del spec | Subrayado, tachado e interlineado del texto, color de la cola en Propiedades (el CLI ya lo acepta: `tailColor`), relleno degradado, sombra y el aviso "Texto oculto" con Ajustar al texto desactivado. Llegan con los estilos (M2.4) o cuando el texto de EDT-026 los tenga | Pendiente |
 | EDT-025 | Línea | Objeto `line` guardado igual que una flecha (`from`, `to` y el mismo estilo), con su propio estilo de herramienta: sin extremos y 4 px. Tecla `L`, después de Flecha en la barra. Las curvas llegan cuando las tenga la Flecha, y "Seleccionar todas las líneas" con EDT-023 | Provisional |
+| EDT-036 | Resaltador | Objeto `highlight` (`rect`, `rotation`, `color`, `opacity`, `shape`) que multiplica su color con lo de debajo, como un rotulador: el negro sigue negro y el blanco toma el color. Amarillo del tema (`#FFE14D`) al 50 %. Tecla `H`. Formas Rectángulo, Rectángulo redondeado (esquinas de un cuarto del lado corto) y Óvalo; Polígono llega con EDT-030 y "Aplicar solo al texto" con su SMT | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

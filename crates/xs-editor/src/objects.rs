@@ -9,6 +9,7 @@ use serde_json::{json, Map, Value};
 use xs_core::document::{translate_props, Object};
 use xs_image::callouts::{CalloutObject, CalloutStyle};
 use xs_image::geometry::{Arrow, ArrowStyle, Cap};
+use xs_image::highlights::{HighlightObject, HighlightStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::steps::{self, StepObject, StepStyle};
 use xs_image::text::{Text, TextStyle};
@@ -26,6 +27,7 @@ pub struct Styles {
     pub blur: BlurStyle,
     pub step: StepStyle,
     pub callout: CalloutStyle,
+    pub highlight: HighlightStyle,
 }
 
 impl Default for Styles {
@@ -38,6 +40,7 @@ impl Default for Styles {
             blur: BlurStyle::default(),
             step: StepStyle::default(),
             callout: CalloutStyle::default(),
+            highlight: HighlightStyle::default(),
         }
     }
 }
@@ -63,6 +66,7 @@ impl Styles {
             "blur" => serde_json::to_value(&self.blur).ok(),
             "step" => serde_json::to_value(&self.step).ok(),
             "callout" => serde_json::to_value(&self.callout).ok(),
+            "highlight" => serde_json::to_value(&self.highlight).ok(),
             _ => None,
         }
     }
@@ -77,6 +81,7 @@ impl Styles {
             "blur" => self.blur = BlurStyle::merged(&self.blur, changes)?,
             "step" => self.step = StepStyle::merged(&self.step, changes)?,
             "callout" => self.callout = CalloutStyle::merged(&self.callout, changes)?,
+            "highlight" => self.highlight = HighlightStyle::merged(&self.highlight, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -84,14 +89,14 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["stamp", "highlight", "magnify", "spotlight"];
+const LATER_TYPES: &[&str] = &["stamp", "magnify", "spotlight"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
     match kind {
         "arrow" | "line" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
-        "shape" | "blur" | "image" => Some(&["rect", "rotation"]),
+        "shape" | "blur" | "image" | "highlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
@@ -158,6 +163,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let mut style = serde_json::to_value(&s.style).map_err(|e| e.to_string())?;
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
+        }
+        "highlight" => {
+            let h = HighlightObject::from_props(props)?;
+            json!({"rect": h.rect, "rotation": h.rotation, "style": h.style})
         }
         "callout" => {
             let c = CalloutObject::from_props(props)?;

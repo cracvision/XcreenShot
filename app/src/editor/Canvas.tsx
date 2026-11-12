@@ -36,6 +36,7 @@ import {
   ArrowShape,
   BlurShape,
   CalloutShape,
+  HighlightShape,
   ImageShape,
   ShapeShape,
   StepShape,
@@ -98,7 +99,7 @@ type HandleHit =
 type Drag =
   | {
       kind: "draw";
-      tool: "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout";
+      tool: "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout" | "highlight";
       from: Point;
       to: Point;
       startX: number;
@@ -191,7 +192,7 @@ function handlesOf(o: DocObject): Handle[] {
   // A step stays square: its corners (EDT-035).
   if (o.type === "step") return ["nw", "ne", "se", "sw", "rotate"];
   if (o.type === "callout") return [...RESIZE_HANDLES, "rotate"];
-  if (o.type === "shape" || o.type === "blur" || o.type === "image")
+  if (o.type === "shape" || o.type === "blur" || o.type === "image" || o.type === "highlight")
     return [...RESIZE_HANDLES, "rotate"];
   return [];
 }
@@ -721,7 +722,8 @@ export function Canvas({ doc }: Props) {
       tool === "blur" ||
       tool === "text" ||
       tool === "step" ||
-      tool === "callout"
+      tool === "callout" ||
+      tool === "highlight"
     ) {
       capture();
       setDrag({
@@ -1190,6 +1192,8 @@ export function Canvas({ doc }: Props) {
         );
       case "shape":
         return <ShapeShape key={o.id} o={o} scale={scale} />;
+      case "highlight":
+        return <HighlightShape key={o.id} o={o} />;
       case "blur": {
         const c = committed.get(o.id);
         return (
@@ -1280,6 +1284,17 @@ export function Canvas({ doc }: Props) {
       {dashedBox("text")}
       {dashedBox("step")}
       {dashedBox("callout")}
+      {drawing && styles && drawing.tool === "highlight" && (
+        <HighlightShape
+          o={{
+            id: "new",
+            type: "highlight",
+            rect: dragRect(drawing.from, drawing.to, drawing.square, drawing.fromCenter),
+            rotation: 0,
+            style: styles.highlight,
+          }}
+        />
+      )}
     </>
   );
   const blurPreview = dashedBox("blur");
