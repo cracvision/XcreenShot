@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { AiDialogs } from "./AiDialogs";
 import { FileDialogs } from "../library/FileDialogs";
-import { decide, flattenNow, recover, saveActive } from "./actions";
+import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
 
 function Decision() {
@@ -134,6 +134,61 @@ function Recovery() {
   );
 }
 
+/** Edit value of a step (EDT-035): up to six characters. */
+function StepValue() {
+  const { t } = useTranslation();
+  const edit = useEditor((s) => s.stepEdit);
+  const [value, setValue] = useState<string | null>(null);
+  if (!edit) return null;
+  const close = () => {
+    setValue(null);
+    useEditor.setState({ stepEdit: null });
+  };
+  const current = value ?? edit.value;
+  const ok = () => {
+    close();
+    if (current.trim() !== edit.value) void setStepValue(edit.id, current);
+  };
+  return (
+    <Dialog
+      title={t("ui.editor.step_edit_title")}
+      onCancel={close}
+      actions={
+        <>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={current.trim() === ""}
+            onClick={ok}
+          >
+            {t("ui.editor.ok")}
+          </button>
+          <button type="button" className="btn" onClick={close}>
+            {t("ui.editor.cancel")}
+          </button>
+        </>
+      }
+    >
+      <label className="prop-field">
+        <span>{t("ui.editor.step_edit_label")}</span>
+        <input
+          type="text"
+          maxLength={6}
+          data-autofocus
+          value={current}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && current.trim() !== "") {
+              e.preventDefault();
+              ok();
+            }
+          }}
+        />
+      </label>
+    </Dialog>
+  );
+}
+
 /** Flattening a blur cannot be undone with Unflatten (EDT-091). */
 function FlattenBlur() {
   const { t } = useTranslation();
@@ -194,6 +249,7 @@ export function Dialogs() {
       <Flatten />
       <Recovery />
       <FlattenBlur />
+      <StepValue />
       <ErrorMessage />
       <AiDialogs />
       <FileDialogs />

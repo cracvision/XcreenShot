@@ -584,6 +584,7 @@ pub fn slots() -> Vec<Slot> {
         tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
         tool("editor.tool_text", r#"{"tool":"text"}"#),
         tool("editor.tool_shape", r#"{"tool":"shape"}"#),
+        tool("editor.tool_step", r#"{"tool":"step"}"#),
         tool("editor.tool_blur", r#"{"tool":"blur"}"#),
         tool("editor.tool_crop", r#"{"tool":"crop"}"#),
     ]
@@ -651,12 +652,14 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_text", Compatibility, Macos) => "Ctrl+KeyT",
         ("editor.tool_shape", Compatibility, Macos) => "Ctrl+KeyU",
         ("editor.tool_blur", Compatibility, Macos) => "Ctrl+KeyB",
+        ("editor.tool_step", Compatibility, Macos) => "Ctrl+KeyS",
         ("editor.tool_crop", Compatibility, Macos) => "Ctrl+KeyC",
         ("editor.tool_move", ..) => "KeyV",
         ("editor.tool_arrow", ..) => "KeyA",
         ("editor.tool_text", ..) => "KeyT",
         ("editor.tool_shape", ..) => "KeyU",
         ("editor.tool_blur", ..) => "KeyB",
+        ("editor.tool_step", ..) => "KeyN",
         ("editor.tool_crop", ..) => "KeyR",
         ("editor.delete", ..) => "Delete",
         // LIB-001: Cmd+1 / Cmd+2 on macOS; Ctrl+Shift on Windows, where Ctrl+1…9 pick

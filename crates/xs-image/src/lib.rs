@@ -10,6 +10,7 @@ pub mod encode;
 pub mod geometry;
 pub mod render;
 pub mod shapes;
+pub mod steps;
 pub mod text;
 
 pub use render::{object_bounds, render, Base};

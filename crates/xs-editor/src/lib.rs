@@ -10,6 +10,7 @@ pub mod fit;
 pub mod flatten;
 pub mod objects;
 pub mod recovery;
+pub mod steps;
 pub mod store;
 pub mod transform;
 
@@ -29,7 +30,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
+pub const AVAILABLE_TOOLS: [&str; 7] = ["move", "arrow", "text", "shape", "step", "blur", "crop"];
 /// Zoom steps in percent (EDT-007).
 pub const ZOOM_STEPS: [f64; 16] = [
     10.0, 25.0, 33.0, 50.0, 67.0, 100.0, 150.0, 200.0, 300.0, 400.0, 600.0, 800.0, 1200.0, 1600.0, 2400.0,
@@ -1470,11 +1471,40 @@ pub fn extension() -> Extension {
                 objects::label("draw", &kinds)
             };
             let auto = auto_expand(&core);
+            // A step without a value takes the next one of its sequence (EDT-035).
+            let unnumbered: Vec<bool> = p["objects"]
+                .as_array()
+                .map(|a| a.iter().map(|o| o.get("value").is_none()).collect())
+                .unwrap_or_default();
+            let mut step_next = editor(&core)
+                .store
+                .with(&id, |d| d.step_next.clone())
+                .unwrap_or_default();
             let ids = editor(&core)
                 .store
                 .mutate(&id, &label, |doc| {
                     let mut ids = Vec::new();
-                    for (kind, props) in objects {
+                    for (i, (kind, mut props)) in objects.into_iter().enumerate() {
+                        if kind == "step" {
+                            let seq = steps::sequence_of(&Object {
+                                id: String::new(),
+                                kind: kind.clone(),
+                                props: props.clone(),
+                            });
+                            let n = if unnumbered.get(i).copied().unwrap_or(true) {
+                                let n = steps::next(doc, seq, &step_next);
+                                props.insert("value".into(), json!(seq.value(n)));
+                                Some(n)
+                            } else {
+                                props
+                                    .get("value")
+                                    .and_then(Value::as_str)
+                                    .and_then(|v| seq.index(v))
+                            };
+                            if let Some(n) = n {
+                                step_next.insert(seq.key().to_string(), n + 1);
+                            }
+                        }
                         let oid = doc.next_object_id();
                         doc.objects.push(Object {
                             id: oid.clone(),
@@ -1489,8 +1519,51 @@ pub fn extension() -> Extension {
                     Ok::<_, CommandError>(ids)
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
+            editor(&core).store.with(&id, |d| d.step_next = step_next);
             changed(&core, ctx, &id);
             Ok(json!({ "ids": ids }))
+        });
+        // Step sequence (EDT-035): Restart sequence and Renumber.
+        on!("document.steps", |core, ctx, p| {
+            let id = resolve(&core, ctx.lang, &p)?;
+            let seq = match p.get("sequence").and_then(Value::as_str) {
+                Some(k) => xs_image::steps::Sequence::from_key(k).ok_or_else(|| {
+                    invalid(tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", "sequence"), ("reason", "unknown sequence")],
+                    ))
+                })?,
+                None => editor(&core).styles().step.sequence,
+            };
+            let action = p["action"].as_str().unwrap_or_default().to_string();
+            match action.as_str() {
+                "restart" => {
+                    editor(&core).store.with(&id, |d| {
+                        d.step_next.insert(seq.key().to_string(), 1);
+                    });
+                    changed(&core, ctx, &id);
+                    Ok(json!({ "next": seq.value(1) }))
+                }
+                "renumber" => {
+                    let count = editor(&core)
+                        .store
+                        .mutate(&id, "history.renumber", |doc| {
+                            Ok::<_, CommandError>(steps::renumber(doc, seq))
+                        })
+                        .ok_or_else(|| CommandError::internal("document closed"))??;
+                    editor(&core).store.with(&id, |d| {
+                        d.step_next.insert(seq.key().to_string(), count + 1);
+                    });
+                    changed(&core, ctx, &id);
+                    Ok(json!({ "renumbered": count, "next": seq.value(count + 1) }))
+                }
+                _ => Err(invalid(tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "action"), ("reason", "must be restart or renumber")],
+                ))),
+            }
         });
         on!("document.update_object", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
@@ -1571,6 +1644,20 @@ pub fn extension() -> Extension {
                     Ok::<_, CommandError>(out)
                 })
                 .ok_or_else(|| CommandError::internal("document closed"))??;
+            // An edited step value of the sequence: the next click goes on from it (EDT-035).
+            if let Some(v) = set.get("value").and_then(Value::as_str) {
+                for o in updated.iter().filter(|o| o["type"] == "step") {
+                    let seq = o["style"]["sequence"]
+                        .as_str()
+                        .and_then(xs_image::steps::Sequence::from_key)
+                        .unwrap_or(xs_image::steps::Sequence::Number);
+                    if let Some(n) = seq.index(v) {
+                        editor(&core).store.with(&id, |d| {
+                            d.step_next.insert(seq.key().to_string(), n + 1);
+                        });
+                    }
+                }
+            }
             // EDT-014: a property changed on selected objects also becomes the tool's
             // current style. Agents do not change the user's styles.
             if ctx.source == Source::Ui {

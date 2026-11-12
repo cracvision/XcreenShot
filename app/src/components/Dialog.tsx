@@ -18,7 +18,8 @@ export function Dialog({ title, children, actions, onCancel }: Props) {
   // the first button while the user types in a field of the dialog.
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>("button")?.focus();
+    // A field marked data-autofocus (what the dialog asks for), else the first button.
+    ref.current?.querySelector<HTMLElement>("[data-autofocus], button")?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();

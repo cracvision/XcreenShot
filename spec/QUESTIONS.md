@@ -145,6 +145,15 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-086 | Expresiones en los campos y valores negativos | `+10`, `-5`, `*2` y `/2` cambian el valor actual; un número lo reemplaza. Como `-5` resta, un valor negativo se escribe `=-5`. Con varios objetos solo hay X e Y (los mueve juntos); ancho y alto de un grupo llegan con EDT-080. El alto de un texto sigue a sus líneas y no se escribe. Objeto > Posición y tamaño… llega con el menú Objeto | Provisional |
 | EDT-079 | `Ctrl+A` en la vista Biblioteca | Sigue seleccionando los elementos de la biblioteca; en el editor selecciona todos los objetos. Con Selección o Varita mágica (M2.3) seleccionará los píxeles | Provisional |
 
+## Dudas del equipo de construcción (M2, entrega 2: herramientas de anotación)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| EDT-035 | Cómo se guarda un paso | Objeto `step` con `rect` cuadrado (lado = `style.size`, 16–256 px), `rotation`, `value` (hasta 6 caracteres) y su estilo (`sequence`, `shape`, `fill`, `textColor`, `outline`, `outlineWidth`, `size`, `opacity`). Si se estira más en un eje que en otro, vuelve a ser cuadrado con la media de los dos lados. Lo dibuja Rust, también en pantalla, con el valor siempre derecho | Provisional |
+| EDT-035 | Valor siguiente | Se recuerda por documento abierto y por tipo: el último colocado o editado más uno; Reiniciar secuencia lo vuelve al primero. No se guarda en el archivo: al abrir, es el mayor de ese tipo más uno, como dice el spec. Propiedades muestra "Siguiente: N" | Provisional |
+| EDT-035 | Formas y letra | Marcador = gota con la punta hacia abajo; el valor va en la parte redonda. La letra es la de la interfaz del sistema en negrita, y se achica para que quepan los valores largos. El relleno degradado y la sombra llegan con los estilos (M2.4) | Provisional |
+| EDT-035 | Atajos y menús | Herramienta Paso con `N` (en el perfil de compatibilidad de macOS, `Control`+`S`), después de Forma en la barra. Doble clic o clic derecho > Editar valor… abre un diálogo; clic derecho > Renumerar | Provisional |
+
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
 | ID | Duda | Propuesta | Estado |

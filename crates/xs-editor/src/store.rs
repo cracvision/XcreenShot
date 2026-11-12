@@ -112,6 +112,8 @@ pub struct Doc {
     /// The editable `.xshot` kept in the library for a flat file from elsewhere
     /// (LIB-021), once there is one.
     pub editable_copy: Option<PathBuf>,
+    /// The next value of each step sequence, after the last placed or edited (EDT-035).
+    pub step_next: BTreeMap<String, u64>,
     last_used: u64,
 }
 
@@ -154,6 +156,7 @@ impl Doc {
             shown: false,
             view: None,
             editable_copy: None,
+            step_next: BTreeMap::new(),
             last_used: 0,
         }
     }
@@ -723,6 +726,8 @@ impl DocStore {
             "undoLabel": d.undo_label(),
             "redoLabel": d.redo_label(),
             "version": d.version,
+            // What the next step of each sequence will show (EDT-035).
+            "stepNext": crate::steps::next_values(&d.document, &d.step_next),
             "shown": d.shown,
             "view": d.view,
         });

@@ -113,6 +113,12 @@ export function transformed(o: DocObject, op: TransformOp): DocObject {
     case "blur":
     case "image":
       return { ...o, rect, rotation };
+    case "step": {
+      // Square: the core keeps it so (EDT-035).
+      const size = Math.min(256, Math.max(16, (rect.w + rect.h) / 2));
+      const sq = { x: c[0] - size / 2, y: c[1] - size / 2, w: size, h: size };
+      return { ...o, rect: sq, rotation, style: { ...o.style, size } };
+    }
     default:
       return o;
   }

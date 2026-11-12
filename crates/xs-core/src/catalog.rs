@@ -527,6 +527,18 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.steps", &["EDT-035"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["restart", "renumber"], "description": "restart: the next step shows the first value again; renumber: number the steps again by the order they were made, without gaps (one undo step)"},
+                    "sequence": {"type": "string", "enum": ["number", "upper", "lower", "romanUpper", "romanLower"], "description": "Default: the Step tool's"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"next": {"type": "string"}, "renumbered": {"type": "integer"}}})),
         B::new("document.flatten", &["EDT-091", "EDT-119"])
             .mutates()
             .params(params(
@@ -1016,7 +1028,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 6] = ["move", "arrow", "text", "shape", "blur", "crop"];
+pub const TOOLS: [&str; 7] = ["move", "arrow", "text", "shape", "step", "blur", "crop"];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).

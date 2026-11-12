@@ -16,7 +16,8 @@ use crate::geometry::{dash, Arrow, Geometry, Shape};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
-use crate::text::{self, Text};
+use crate::steps::{StepObject, StepShape};
+use crate::text::{self, Text, TextAlign, TextStyle};
 
 /// Original pixels of a document, straight RGBA, shared between renders, with the
 /// pictures of its floating images (`images/`, EDT-078), decoded.
@@ -230,6 +231,190 @@ fn outline_path(kind: ShapeKind, r: Rect) -> Option<tiny_skia::Path> {
     }
 }
 
+/// Adds to `pb` an arc of the circle around `c` of radius `r`, from angle `start`
+/// turning `sweep` radians (clockwise when positive, as the canvas's y goes down).
+fn arc(pb: &mut PathBuilder, c: (f32, f32), r: f32, start: f32, sweep: f32) {
+    let n = (sweep.abs() / std::f32::consts::FRAC_PI_2).ceil().max(1.0) as usize;
+    let step = sweep / n as f32;
+    let k = 4.0 / 3.0 * (step / 4.0).tan();
+    let mut a = start;
+    for _ in 0..n {
+        let b = a + step;
+        let (p0x, p0y) = (c.0 + r * a.cos(), c.1 + r * a.sin());
+        let (p3x, p3y) = (c.0 + r * b.cos(), c.1 + r * b.sin());
+        pb.cubic_to(
+            p0x - k * r * a.sin(),
+            p0y + k * r * a.cos(),
+            p3x + k * r * b.sin(),
+            p3y - k * r * b.cos(),
+            p3x,
+            p3y,
+        );
+        a = b;
+    }
+}
+
+/// Where the value of a marker of shape `shape` in `r` is centered: the middle, or the
+/// round part of a drop.
+fn step_center(shape: StepShape, r: Rect) -> (f64, f64) {
+    let cx = r.x + r.w / 2.0;
+    match shape {
+        StepShape::Marker => (cx, r.y + r.h / 2.6),
+        _ => (cx, r.y + r.h / 2.0),
+    }
+}
+
+/// The outline of a marker filling `r`, unturned (EDT-035). `None` for text alone.
+fn step_path(shape: StepShape, r: Rect) -> Option<tiny_skia::Path> {
+    let (x, y, w, h) = (r.x as f32, r.y as f32, r.w.max(0.01) as f32, r.h.max(0.01) as f32);
+    let rect = tiny_skia::Rect::from_xywh(x, y, w, h)?;
+    let mut pb = PathBuilder::new();
+    match shape {
+        StepShape::Text => return None,
+        StepShape::Circle => return PathBuilder::from_oval(rect),
+        StepShape::Square => return Some(PathBuilder::from_rect(rect)),
+        StepShape::RoundedSquare => {
+            let q = 0.22 * w.min(h);
+            pb.move_to(x + q, y);
+            pb.line_to(x + w - q, y);
+            arc(
+                &mut pb,
+                (x + w - q, y + q),
+                q,
+                -std::f32::consts::FRAC_PI_2,
+                std::f32::consts::FRAC_PI_2,
+            );
+            pb.line_to(x + w, y + h - q);
+            arc(
+                &mut pb,
+                (x + w - q, y + h - q),
+                q,
+                0.0,
+                std::f32::consts::FRAC_PI_2,
+            );
+            pb.line_to(x + q, y + h);
+            arc(
+                &mut pb,
+                (x + q, y + h - q),
+                q,
+                std::f32::consts::FRAC_PI_2,
+                std::f32::consts::FRAC_PI_2,
+            );
+            pb.line_to(x, y + q);
+            arc(
+                &mut pb,
+                (x + q, y + q),
+                q,
+                std::f32::consts::PI,
+                std::f32::consts::FRAC_PI_2,
+            );
+        }
+        StepShape::Diamond => {
+            pb.move_to(x + w / 2.0, y);
+            pb.line_to(x + w, y + h / 2.0);
+            pb.line_to(x + w / 2.0, y + h);
+            pb.line_to(x, y + h / 2.0);
+        }
+        StepShape::Marker => {
+            // A round head and a point at the bottom, like a map pin.
+            let rad = h / 2.6;
+            let c = (x + w / 2.0, y + rad);
+            let tip = (x + w / 2.0, y + h);
+            let alpha = (rad / (tip.1 - c.1)).acos();
+            let down = std::f32::consts::FRAC_PI_2;
+            let start = down - alpha;
+            pb.move_to(tip.0, tip.1);
+            pb.line_to(c.0 + rad * start.cos(), c.1 + rad * start.sin());
+            arc(
+                &mut pb,
+                c,
+                rad,
+                start,
+                -(2.0 * std::f32::consts::PI - 2.0 * alpha),
+            );
+        }
+    }
+    pb.close();
+    pb.finish()
+}
+
+/// The value of a marker, laid out to fit its shape, in pixels (EDT-035).
+fn step_text(s: &StepObject, dpi: f64) -> Option<Pixmap> {
+    let size = s.rect.w.min(s.rect.h);
+    let room = match s.style.shape {
+        StepShape::Diamond => 0.55,
+        StepShape::Marker => 0.62,
+        StepShape::Text => 1.0,
+        _ => 0.76,
+    } * size;
+    let mut px = size * 0.52;
+    let make = |px: f64| {
+        let t = Text {
+            at: [0.0, 0.0],
+            width: None,
+            text: s.value.clone(),
+            rotation: 0.0,
+            style: TextStyle {
+                font: text::default_font().to_string(),
+                size: (px * 72.0 / dpi.max(1.0)).clamp(1.0, 1000.0),
+                bold: true,
+                italic: false,
+                color: s.style.text_color.clone(),
+                align: TextAlign::Center,
+                opacity: 100.0,
+            },
+        };
+        text::rasterize(&t, dpi)
+    };
+    let (mut raster, mut laid) = make(px)?;
+    // Longer values get smaller letters, to stay inside.
+    if laid.width as f64 > room {
+        px *= room / laid.width as f64;
+        (raster, laid) = make(px)?;
+    }
+    let _ = laid;
+    Some(raster)
+}
+
+fn draw_step(pm: &mut Pixmap, s: &StepObject, dpi: f64) {
+    let t = turned(s.rect, s.rotation);
+    blend_layer(pm, s.style.opacity, |pm| {
+        let w = s.style.outline_width;
+        if let Some(fill) = s.style.fill.as_deref().and_then(Rgba::parse) {
+            if let Some(path) = step_path(s.style.shape, inner_rect(s.rect, w)) {
+                pm.fill_path(&path, &paint(fill), FillRule::Winding, t, None);
+            }
+        }
+        if w > 0.0 {
+            if let (Some(path), Some(color)) = (
+                step_path(s.style.shape, inner_rect(s.rect, w)),
+                Rgba::parse(&s.style.outline),
+            ) {
+                let mut st = stroke(w, None);
+                st.line_join = LineJoin::Round;
+                pm.stroke_path(&path, &paint(color), &st, t, None);
+            }
+        }
+        // The value stays upright however the marker turns.
+        if let Some(raster) = step_text(s, dpi) {
+            let (cx, cy) = step_center(s.style.shape, s.rect);
+            let (rcx, rcy) = (s.rect.x + s.rect.w / 2.0, s.rect.y + s.rect.h / 2.0);
+            let (sin, cos) = s.rotation.to_radians().sin_cos();
+            let (dx, dy) = (cx - rcx, cy - rcy);
+            let (px, py) = (rcx + dx * cos - dy * sin, rcy + dx * sin + dy * cos);
+            let at = Transform::from_translate(
+                (px - raster.width() as f64 / 2.0) as f32,
+                (py - raster.height() as f64 / 2.0) as f32,
+            );
+            let paint = PixmapPaint {
+                quality: tiny_skia::FilterQuality::Bilinear,
+                ..PixmapPaint::default()
+            };
+            pm.draw_pixmap(0, 0, raster.as_ref(), &paint, at, None);
+        }
+    });
+}
+
 fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
     let t = turned(s.rect, s.rotation);
     blend_layer(pm, s.style.opacity, |pm| {
@@ -347,6 +532,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
         "shape" => {
             if let Ok(s) = ShapeObject::from_props(&object.props) {
                 draw_shape(pm, &s);
+            }
+        }
+        "step" => {
+            if let Ok(s) = StepObject::from_props(&object.props) {
+                draw_step(pm, &s, dpi);
             }
         }
         "image" => {
@@ -498,6 +688,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "blur" => BlurObject::from_props(&object.props)
             .ok()
             .map(|b| (b.rect, b.rotation)),
+        "step" => StepObject::from_props(&object.props)
+            .ok()
+            .map(|s| (s.rect, s.rotation)),
         "image" => ImageObject::from_props(&object.props)
             .ok()
             .map(|i| (i.rect, i.rotation)),
@@ -666,6 +859,20 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
             }
             let (patch, x, y) = blur_patch(&pm, &b)?;
             Some((straight(&patch), x, y))
+        }
+        // A step as it shows, turned shape and upright value, in a picture centered on
+        // the marker's center: `(x, y)` is where its top-left corner goes.
+        "step" => {
+            let s = StepObject::from_props(&object.props).ok()?;
+            let r = s.rect;
+            let side = (r.w.hypot(r.h)).ceil() as u32 + 2;
+            let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
+            let (ox, oy) = (cx - side as f64 / 2.0, cy - side as f64 / 2.0);
+            let mut pm = Pixmap::new(side, side)?;
+            let mut moved = object.clone();
+            moved.translate(-ox, -oy);
+            draw_object(&mut pm, &moved, doc.dpi, &base.images);
+            Some((straight(&pm), ox.floor() as i32, oy.floor() as i32))
         }
         _ => None,
     }
@@ -894,5 +1101,52 @@ mod tests {
         let base = Base::from_image(RgbaImage::from_pixel(4, 4, image::Rgba([10, 20, 30, 0])));
         let out = render(&Document::new(4, 4, 96.0), &base);
         assert_eq!(out.get_pixel(0, 0).0[3], 0);
+    }
+
+    fn step(rotation: f64, shape: &str) -> Object {
+        Object {
+            id: "o1".into(),
+            kind: "step".into(),
+            props: json!({
+                "rect": {"x": 40, "y": 40, "w": 48, "h": 48},
+                "rotation": rotation,
+                "value": "7",
+                "style": {"fill": "#0000FF", "shape": shape, "textColor": if shape == "text" { "#000000" } else { "#FFFFFF" }}
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        }
+    }
+
+    /// EDT-035: the value of a turned marker stays upright.
+    #[test]
+    fn a_turned_step_keeps_its_value_upright() {
+        let base = white(128, 128);
+        let mut doc = Document::new(128, 128, 96.0);
+        doc.objects.push(step(0.0, "circle"));
+        let upright = render(&doc, &base);
+        doc.objects[0] = step(90.0, "circle");
+        let turned = render(&doc, &base);
+        // A circle looks the same turned; so does the value, if it stays upright.
+        let differ = upright
+            .pixels()
+            .zip(turned.pixels())
+            .filter(|(a, b)| a.0.iter().zip(b.0).any(|(x, y)| x.abs_diff(y) > 40))
+            .count();
+        assert!(differ < 12, "{differ} pixels differ");
+        assert_eq!(upright.get_pixel(48, 64).0, [0, 0, 255, 255], "filled blue");
+        // The value is drawn: white inside the circle near its middle.
+        let white_inside = (54..74)
+            .flat_map(|x| (54..74).map(move |y| (x, y)))
+            .filter(|(x, y)| upright.get_pixel(*x, *y).0[2] > 200 && upright.get_pixel(*x, *y).0[0] > 200)
+            .count();
+        assert!(white_inside > 10, "{white_inside}");
+        // Every shape draws something.
+        for shape in ["square", "roundedSquare", "diamond", "marker", "text"] {
+            doc.objects[0] = step(0.0, shape);
+            let img = render(&doc, &base);
+            assert!(img.pixels().any(|p| p.0 != [255, 255, 255, 255]), "{shape}");
+        }
     }
 }

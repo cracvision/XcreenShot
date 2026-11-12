@@ -1841,3 +1841,99 @@ fn a_flattened_blur_leaves_nothing_behind_in_the_file() {
     assert_eq!(base.get_pixel(150, 80), stripes.get_pixel(150, 80));
     assert_eq!(base.get_pixel(5, 5), stripes.get_pixel(5, 5));
 }
+
+/// EDT-035: three clicks place 1, 2 and 3; Restart sequence places another 1; an edited
+/// value shows; Renumber closes the gaps.
+#[test]
+fn steps_count_restart_and_renumber() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let place = |at: [i32; 2]| {
+        cli(
+            &e.core,
+            "document.annotate",
+            json!({"documentId": doc, "objects": [{"type": "step", "at": at}]}),
+        )["ids"][0]
+            .as_str()
+            .unwrap()
+            .to_string()
+    };
+    let values = |e: &Env| -> Vec<String> {
+        cli(&e.core, "document.info", json!({"documentId": doc}))["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|o| o["value"].as_str().unwrap().to_string())
+            .collect()
+    };
+    for x in [50, 100, 150] {
+        place([x, 50]);
+    }
+    assert_eq!(values(&e), ["1", "2", "3"]);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["rect"]["w"], json!(32.0), "the style's size");
+    assert_eq!(info["stepNext"]["number"], "4");
+    let r = cli(
+        &e.core,
+        "document.steps",
+        json!({"documentId": doc, "action": "restart"}),
+    );
+    assert_eq!(r["next"], "1");
+    place([200, 50]);
+    assert_eq!(values(&e), ["1", "2", "3", "1"]);
+    // Edit value.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o2", "set": {"value": "B2"}}),
+    );
+    assert_eq!(values(&e)[1], "B2");
+    // 1, 2, 4, 5 (the 3 deleted) → 1, 2, 3, 4.
+    let e2 = env();
+    let (doc2, _) = capture(&e2);
+    for x in [20, 60, 100, 140, 180] {
+        cli(
+            &e2.core,
+            "document.annotate",
+            json!({"documentId": doc2, "objects": [{"type": "step", "at": [x, 50]}]}),
+        );
+    }
+    cli(
+        &e2.core,
+        "document.delete_object",
+        json!({"documentId": doc2, "objectId": "o3"}),
+    );
+    let r = cli(
+        &e2.core,
+        "document.steps",
+        json!({"documentId": doc2, "action": "renumber"}),
+    );
+    assert_eq!(r["renumbered"], 4);
+    let info = cli(&e2.core, "document.info", json!({"documentId": doc2}));
+    let v: Vec<&str> = info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["value"].as_str().unwrap())
+        .collect();
+    assert_eq!(v, ["1", "2", "3", "4"]);
+    // A dragged step takes the dragged size, and the size changes the rect.
+    cli(
+        &e2.core,
+        "document.annotate",
+        json!({"documentId": doc2, "objects": [{"type": "step", "rect": {"x": 10, "y": 100, "w": 60, "h": 60}}]}),
+    );
+    let info = cli(&e2.core, "document.info", json!({"documentId": doc2}));
+    let last = info["objects"].as_array().unwrap().last().unwrap().clone();
+    assert_eq!(last["style"]["size"], json!(60.0));
+    assert_eq!(last["value"], "5");
+    let oid = last["id"].as_str().unwrap();
+    cli(
+        &e2.core,
+        "document.update_object",
+        json!({"documentId": doc2, "objectId": oid, "set": {"style": {"size": 40}}}),
+    );
+    let info = cli(&e2.core, "document.info", json!({"documentId": doc2}));
+    let last = info["objects"].as_array().unwrap().last().unwrap().clone();
+    assert_eq!(last["rect"], json!({"x": 20.0, "y": 110.0, "w": 40.0, "h": 40.0}));
+}

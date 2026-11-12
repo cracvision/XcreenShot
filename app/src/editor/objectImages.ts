@@ -19,7 +19,12 @@ export function useObjectImages(
   const wanted = objects.flatMap((o) => {
     // A picture never changes: its name is its content.
     if (o.type === "image") return [{ id: o.id, url: imageUrl(documentId, o.image) }];
-    if (o.type !== "text" && !(o.type === "blur" && o.style.blurType !== "solid")) return [];
+    if (
+      o.type !== "text" &&
+      o.type !== "step" &&
+      !(o.type === "blur" && o.style.blurType !== "solid")
+    )
+      return [];
     return [
       {
         id: o.id,

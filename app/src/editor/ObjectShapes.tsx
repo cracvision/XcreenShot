@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { Circle, Ellipse, Group, Image as KImage, Line, Rect } from "react-konva";
 import { innerRect, pixelBounds } from "./boxes";
 import { dash, type ArrowStyle, type Geometry } from "./geometry";
-import type { BlurObject, ImageObject, ShapeObject, TextObject } from "./state";
+import type { BlurObject, ImageObject, ShapeObject, StepObject, TextObject } from "./state";
 
 /** Draws its children whole and blends them once when translucent, like the export. */
 function Translucent({
@@ -216,6 +216,32 @@ export function BlurShape(props: {
       image={image}
       x={bounds[0] + rect.x - committed.rect.x}
       y={bounds[1] + rect.y - committed.rect.y}
+      listening={false}
+    />
+  );
+}
+
+/** A step marker as Rust draws it (EDT-035), centered on its center; while it is
+ * resized or turned, the picture follows until the new one is ready. */
+export function StepShape(props: {
+  o: StepObject;
+  committed: StepObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  if (!image) return null;
+  const k = committed.rect.w > 0 ? o.rect.w / committed.rect.w : 1;
+  return (
+    <KImage
+      image={image}
+      x={o.rect.x + o.rect.w / 2}
+      y={o.rect.y + o.rect.h / 2}
+      offsetX={image.naturalWidth / 2}
+      offsetY={image.naturalHeight / 2}
+      scaleX={k}
+      scaleY={k}
+      rotation={o.rotation - committed.rotation}
+      opacity={1}
       listening={false}
     />
   );

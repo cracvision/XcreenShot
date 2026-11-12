@@ -207,6 +207,10 @@
       "title": "Ordenar objetos",
       "description": "Trae objetos al frente o un paso adelante, o los envía un paso atrás o al fondo."
     },
+    "document_steps": {
+      "title": "Secuencia de pasos",
+      "description": "Reinicia la secuencia de los pasos o vuelve a numerarlos sin huecos."
+    },
     "document_flatten": {
       "title": "Aplanar objetos",
       "description": "Funde objetos con la imagen; se pueden volver a hacer objetos, salvo un desenfoque."
@@ -779,7 +783,8 @@
       "editor_close_others": "Cerrar los demás",
       "editor_rename_item": "Renombrar",
       "editor_show_in_folder": "Mostrar en el Explorador o el Finder",
-      "editor_delete_item": "Mover a la papelera"
+      "editor_delete_item": "Mover a la papelera",
+      "editor_tool_step": "Herramienta Paso"
     }
   },
   "tray": {
@@ -885,7 +890,9 @@
     "copy_path": "Copiar ruta",
     "open_item": "Abrir",
     "remove_from_tray": "Quitar de la bandeja",
-    "locate": "Buscar…"
+    "locate": "Buscar…",
+    "step_edit": "Editar valor…",
+    "step_renumber": "Renumerar"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -1228,7 +1235,8 @@
         "shape": "Arrastra para dibujar un rectángulo o una elipse.",
         "blur": "Arrastra sobre lo que no debe verse: desenfoque, pixelado o sólido.",
         "crop": "Arrastra para quedarte con una parte. No se pierde nada: vuelve a recortar para recuperarlo.",
-        "image": "Una imagen sobre la captura."
+        "image": "Una imagen sobre la captura.",
+        "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande."
       },
       "tool": {
         "move": "Mover",
@@ -1237,7 +1245,8 @@
         "shape": "Forma",
         "blur": "Desenfocar",
         "crop": "Recortar",
-        "image": "Imagen"
+        "image": "Imagen",
+        "step": "Paso"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1293,7 +1302,11 @@
         "outline_width": "Grosor del contorno",
         "shape_type": "Forma",
         "blur_type": "Tipo",
-        "intensity": "Intensidad"
+        "intensity": "Intensidad",
+        "step_shape": "Forma",
+        "text_color": "Color del texto",
+        "sequence": "Tipo",
+        "step_size": "Tamaño"
       },
       "cap": {
         "none": "Ninguno",
@@ -1395,7 +1408,27 @@
       "not_found": "No encontrado",
       "not_found_help": "El archivo se movió o se borró fuera de XcreenShot.",
       "not_in_library": "Este archivo no está en la biblioteca",
-      "strip_menu": "Elemento de la bandeja"
+      "strip_menu": "Elemento de la bandeja",
+      "step_edit_title": "Editar valor",
+      "step_edit_label": "Valor (hasta 6 caracteres)",
+      "step_restart": "Reiniciar secuencia",
+      "step_next": "Siguiente: {{value}}",
+      "step_shape": {
+        "circle": "Círculo",
+        "square": "Cuadrado",
+        "roundedSquare": "Cuadrado redondeado",
+        "diamond": "Rombo",
+        "marker": "Marcador",
+        "text": "Solo texto"
+      },
+      "sequence": {
+        "number": "1, 2, 3…",
+        "upper": "A, B, C…",
+        "lower": "a, b, c…",
+        "romanUpper": "I, II, III…",
+        "romanLower": "i, ii, iii…"
+      },
+      "ok": "Aceptar"
     },
     "multi": {
       "title": "Multicaptura",
@@ -1536,6 +1569,13 @@
     }
   },
   "history": {
+    "renumber": "Renumerar",
+    "draw_step": "Añadir paso",
+    "move_step": "Mover paso",
+    "change_step": "Cambiar paso",
+    "delete_step": "Eliminar paso",
+    "cut_step": "Cortar paso",
+    "paste_step": "Pegar paso",
     "flatten": "Aplanar",
     "flatten_all": "Aplanar todo",
     "unflatten": "Desaplanar",

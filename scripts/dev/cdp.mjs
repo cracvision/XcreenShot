@@ -9,6 +9,7 @@
 //   node cdp.mjs drag x1 y1 x2 y2 [ctrl|shift|alt…]
 //   node cdp.mjs move x y
 //   node cdp.mjs key <key> <code> [ctrl|shift|alt…]   e.g. key z KeyZ ctrl
+//   node cdp.mjs type <text>              types into the focused field
 //   node cdp.mjs wheel x y deltaY [ctrl…]
 //   node cdp.mjs media <feature> <value> [out.png]   emulate e.g. forced-colors active,
 //                                                    prefers-reduced-motion reduce
@@ -145,6 +146,11 @@ switch (cmd) {
       );
     }
     await mouse("mouseReleased", x2, y2, m);
+    break;
+  }
+  case "type": {
+    // Types text into the focused field, as a keyboard would.
+    await main.send("Input.insertText", { text: args.join(" ") });
     break;
   }
   case "key": {

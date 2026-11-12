@@ -24,7 +24,14 @@ import {
 } from "./boxes";
 import { arrowGeometry, constrain45, type Point } from "./geometry";
 import { useObjectImages } from "./objectImages";
-import { ArrowShape, BlurShape, ImageShape, ShapeShape, TextShape } from "./ObjectShapes";
+import {
+  ArrowShape,
+  BlurShape,
+  ImageShape,
+  ShapeShape,
+  StepShape,
+  TextShape,
+} from "./ObjectShapes";
 import { boxOf, extentPoints, hits, inBand, moved, reboxed } from "./objects";
 import {
   docUrl,
@@ -75,13 +82,15 @@ type HandleHit =
 type Drag =
   | {
       kind: "draw";
-      tool: "arrow" | "shape" | "blur" | "text";
+      tool: "arrow" | "shape" | "blur" | "text" | "step";
       from: Point;
       to: Point;
       startX: number;
       startY: number;
       square: boolean;
       fromCenter: boolean;
+      /** Let go without moving: a click (a step goes there). */
+      click?: boolean;
     }
   | { kind: "move"; ids: string[]; start: Point; delta: Point; moved: boolean; copy?: boolean }
   // A selection box drawn with Move over an empty place (EDT-079).
@@ -159,6 +168,8 @@ const checker = (() => {
 /** Handles a selected object shows (EDT-022): text changes only its width. */
 function handlesOf(o: DocObject): Handle[] {
   if (o.type === "text") return ["w", "e", "rotate"];
+  // A step stays square: its corners (EDT-035).
+  if (o.type === "step") return ["nw", "ne", "se", "sw", "rotate"];
   if (o.type === "shape" || o.type === "blur" || o.type === "image")
     return [...RESIZE_HANDLES, "rotate"];
   return [];
@@ -555,7 +566,13 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "band", start: p, end: p, touch: e.altKey, add: adding });
       return;
     }
-    if (tool === "arrow" || tool === "shape" || tool === "blur" || tool === "text") {
+    if (
+      tool === "arrow" ||
+      tool === "shape" ||
+      tool === "blur" ||
+      tool === "text" ||
+      tool === "step"
+    ) {
       capture();
       setDrag({
         kind: "draw",
@@ -607,9 +624,10 @@ export function Canvas({ doc }: Props) {
       }
       case "resize": {
         // An image keeps its proportions from a corner; Shift frees them (EDT-078).
-        const image = doc.objects.find((o) => o.id === d.id)?.type === "image";
+        const kind = doc.objects.find((o) => o.id === d.id)?.type;
+        const image = kind === "image";
         const corner = d.handle.length === 2;
-        const keepRatio = image && corner ? !e.shiftKey : e.shiftKey;
+        const keepRatio = kind === "step" || (image && corner ? !e.shiftKey : e.shiftKey);
         return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
       }
       case "rotate":
@@ -688,7 +706,12 @@ export function Canvas({ doc }: Props) {
         const object =
           d.tool === "arrow"
             ? { type: "arrow", from: d.from, to: d.to }
-            : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
+            : d.tool === "step"
+              ? // A step is square; a click places it at its size (EDT-035).
+                d.click
+                ? { type: "step", at: d.from }
+                : { type: "step", rect: dragRect(d.from, d.to, true, d.fromCenter) }
+              : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
         const r = await run<{ ids: string[] }>("document.annotate", {
           documentId: id,
           objects: [object],
@@ -774,7 +797,11 @@ export function Canvas({ doc }: Props) {
         }
         return;
       }
-      if (click) return;
+      if (click && d.tool !== "step") return;
+      if (d.tool === "step") {
+        void finish({ ...d, click });
+        return;
+      }
     }
     if (d.kind === "crop" && d.mode === "new") {
       const s = local(e);
@@ -811,7 +838,7 @@ export function Canvas({ doc }: Props) {
               p[1] >= l.bounds[1] &&
               p[1] <= l.bounds[3],
           );
-    canvasMenu(hit !== null, menuPoint(e), layer);
+    canvasMenu(hit !== null, menuPoint(e), layer, hit?.type === "step" ? hit : undefined);
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -835,6 +862,8 @@ export function Canvas({ doc }: Props) {
     }
     const hit = hitObject(p);
     if (hit?.type === "text") startTextEdit(hit);
+    // Edit value (EDT-035).
+    if (hit?.type === "step") useEditor.setState({ stepEdit: { id: hit.id, value: hit.value } });
   };
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -957,14 +986,30 @@ export function Canvas({ doc }: Props) {
         );
       case "image":
         return <ImageShape key={o.id} o={o} image={objectImages.get(o.id)} />;
+      case "step": {
+        const c = committed.get(o.id);
+        return (
+          <StepShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "step" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       default:
         return null;
     }
   };
 
-  const dashedBox = (kind: "blur" | "text") => {
+  const dashedBox = (kind: "blur" | "text" | "step") => {
     if (drawing?.tool !== kind) return null;
-    const r = dragRect(drawing.from, drawing.to, drawing.square, drawing.fromCenter);
+    const r = dragRect(
+      drawing.from,
+      drawing.to,
+      drawing.square || kind === "step",
+      drawing.fromCenter,
+    );
     return (
       <Rect
         x={r.x}
@@ -1000,6 +1045,7 @@ export function Canvas({ doc }: Props) {
         />
       )}
       {dashedBox("text")}
+      {dashedBox("step")}
     </>
   );
   const blurPreview = dashedBox("blur");

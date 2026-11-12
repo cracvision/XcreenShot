@@ -348,6 +348,32 @@ export function arrangeSelection(action: string): void {
   }).catch(fail);
 }
 
+/** Restart sequence or Renumber the steps of a sequence (EDT-035). */
+export async function stepSequence(
+  action: "restart" | "renumber",
+  sequence?: string,
+): Promise<void> {
+  const { active } = useEditor.getState();
+  if (!active) return;
+  await run("document.steps", {
+    documentId: active,
+    action,
+    ...(sequence ? { sequence } : {}),
+  }).catch(fail);
+}
+
+/** Gives a step the value typed in Edit value (EDT-035). */
+export async function setStepValue(id: string, value: string): Promise<void> {
+  const { active } = useEditor.getState();
+  const v = value.trim().slice(0, 6);
+  if (!active || !v) return;
+  await run("document.update_object", {
+    documentId: active,
+    objectId: id,
+    set: { value: v },
+  }).catch(fail);
+}
+
 /** Flattens the selection, or every object (EDT-091). */
 export async function flattenNow(all: boolean): Promise<void> {
   const { active, selection } = useEditor.getState();

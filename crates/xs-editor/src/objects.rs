@@ -9,6 +9,7 @@ use serde_json::{json, Map, Value};
 use xs_core::document::{translate_props, Object};
 use xs_image::geometry::{Arrow, ArrowStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
+use xs_image::steps::{self, StepObject, StepStyle};
 use xs_image::text::{Text, TextStyle};
 
 /// Current style of each tool: what the next object will look like (EDT-014).
@@ -20,6 +21,7 @@ pub struct Styles {
     pub text: TextStyle,
     pub shape: ShapeStyle,
     pub blur: BlurStyle,
+    pub step: StepStyle,
 }
 
 impl Styles {
@@ -30,6 +32,7 @@ impl Styles {
             "text" => serde_json::to_value(&self.text).ok(),
             "shape" => serde_json::to_value(&self.shape).ok(),
             "blur" => serde_json::to_value(&self.blur).ok(),
+            "step" => serde_json::to_value(&self.step).ok(),
             _ => None,
         }
     }
@@ -41,6 +44,7 @@ impl Styles {
             "text" => self.text = TextStyle::merged(&self.text, changes)?,
             "shape" => self.shape = ShapeStyle::merged(&self.shape, changes)?,
             "blur" => self.blur = BlurStyle::merged(&self.blur, changes)?,
+            "step" => self.step = StepStyle::merged(&self.step, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -48,15 +52,7 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &[
-    "line",
-    "callout",
-    "step",
-    "stamp",
-    "highlight",
-    "magnify",
-    "spotlight",
-];
+const LATER_TYPES: &[&str] = &["line", "callout", "stamp", "highlight", "magnify", "spotlight"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
@@ -64,6 +60,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "arrow" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
         "shape" | "blur" | "image" => Some(&["rect", "rotation"]),
+        "step" => Some(&["rect", "rotation", "value"]),
         _ => None,
     }
 }
@@ -121,6 +118,14 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let b = BlurObject::from_props(props)?;
             json!({"rect": b.rect, "rotation": b.rotation, "style": b.style})
         }
+        "step" => {
+            // Square, of the size of its style (EDT-035).
+            let s = StepObject::from_props(props)?;
+            let r = steps::square(s.rect, s.style.size);
+            let mut style = serde_json::to_value(&s.style).map_err(|e| e.to_string())?;
+            style["size"] = json!(r.w);
+            json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
+        }
         "image" => {
             let i = ImageObject::from_props(props)?;
             json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style})
@@ -151,10 +156,36 @@ pub fn new_object(input: &Value, styles: &Styles) -> Result<(String, Map<String,
     };
     let mut props = obj.clone();
     props.remove("type");
+    // A step can be placed by its center, `at`, with the size of the style (EDT-035).
+    let at = (kind == "step").then(|| props.remove("at")).flatten();
     only_keys(&props, keys)?;
-    let style = merge_style(styles.of(kind).as_ref(), &style_changes(obj.get("style"))?);
+    let mut style = merge_style(styles.of(kind).as_ref(), &style_changes(obj.get("style"))?);
+    if kind == "step" {
+        if let Some(size) = side(props.get("rect")) {
+            style["size"] = json!(size);
+        }
+        if let Some(c) = at {
+            let c = c
+                .as_array()
+                .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]))
+                .ok_or("at must be [x, y]")?;
+            let s = style["size"].as_f64().unwrap_or(32.0);
+            props.insert(
+                "rect".into(),
+                json!({"x": c[0] - s / 2.0, "y": c[1] - s / 2.0, "w": s, "h": s}),
+            );
+        }
+    }
     props.insert("style".into(), style);
     Ok((kind.to_string(), canonical(kind, &props)?))
+}
+
+/// The side of a step dragged or resized to `rect`: the mean of its width and height,
+/// between 16 and 256 (EDT-035).
+fn side(rect: Option<&Value>) -> Option<f64> {
+    let r = rect?;
+    let (w, h) = (r.get("w")?.as_f64()?, r.get("h")?.as_f64()?);
+    Some(((w + h) / 2.0).clamp(steps::MIN_SIZE, steps::MAX_SIZE).round())
 }
 
 /// A floating image showing `image` (a file of `images/`) in `rect` = `[x, y, w, h]`
@@ -230,6 +261,15 @@ pub fn update(object: &mut Object, set: &Map<String, Value>) -> Result<Change, S
             props.insert("style".into(), style);
         } else {
             props.insert(k.clone(), v.clone());
+        }
+    }
+    // A step's size follows a new rect; otherwise its rect follows a new size.
+    if object.kind == "step" && set.contains_key("rect") {
+        if let (Some(size), Some(style)) = (
+            side(props.get("rect")),
+            props.get_mut("style").and_then(Value::as_object_mut),
+        ) {
+            style.insert("size".into(), json!(size));
         }
     }
     let before = shape_of(

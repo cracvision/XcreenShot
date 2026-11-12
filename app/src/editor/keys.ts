@@ -155,7 +155,9 @@ function insert(): void {
       ? { type: "arrow", from: [c[0] - INSERT.w / 2, c[1]], to: [c[0] + INSERT.w / 2, c[1]] }
       : tool === "shape" || tool === "blur"
         ? { type: tool, rect: { x: c[0] - INSERT.w / 2, y: c[1] - INSERT.h / 2, ...INSERT } }
-        : null;
+        : tool === "step"
+          ? { type: "step", at: c }
+          : null;
   if (!object) return;
   run<{ ids: string[] }>("document.annotate", { documentId: active, objects: [object] })
     .then((r) => r.ids[0] && setSelection([r.ids[0]]))
@@ -167,6 +169,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   arrow: "color",
   text: "color",
   shape: "outline",
+  step: "fill",
   blur: "color",
 };
 

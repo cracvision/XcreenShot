@@ -106,6 +106,13 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A numbered marker (EDT-035).
+  step: (
+    <Svg>
+      <circle cx="10" cy="10" r="7" />
+      <path d="M8.5 7.5 10 6.5v7M8.5 13.5h3" />
+    </Svg>
+  ),
   blur: (
     <Svg>
       <rect x="3" y="3" width="14" height="14" rx="1.5" strokeDasharray="2 2" />

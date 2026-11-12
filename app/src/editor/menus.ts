@@ -11,8 +11,14 @@ import type { MenuItem } from "../components/Menu";
 import { display } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
-import { performAction, setLocked, toggleToolbarLabels, unflattenLayer } from "./actions";
-import { useEditor, usePanel, type FlatLayer } from "./state";
+import {
+  performAction,
+  setLocked,
+  stepSequence,
+  toggleToolbarLabels,
+  unflattenLayer,
+} from "./actions";
+import { useEditor, usePanel, type FlatLayer, type StepObject } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
 
@@ -143,7 +149,12 @@ export function menuPoint(e: MouseEvent): Point {
 
 /** Right click on the canvas: what applies to the object under the pointer, or to the
  * image (EDT-002), and Unflatten on a flattened place (EDT-091). */
-export function canvasMenu(onObject: boolean, at: Point, layer?: FlatLayer): void {
+export function canvasMenu(
+  onObject: boolean,
+  at: Point,
+  layer?: FlatLayer,
+  step?: StepObject,
+): void {
   const items: MenuItem[] = onObject
     ? [
         entry("cut"),
@@ -159,6 +170,25 @@ export function canvasMenu(onObject: boolean, at: Point, layer?: FlatLayer): voi
         entry("flatten", true),
       ]
     : [entry("paste"), entry("paste_in_place"), entry("copy_all", true)];
+  if (step) {
+    // Edit value and Renumber (EDT-035).
+    items.splice(
+      0,
+      0,
+      {
+        id: "editor.step_edit",
+        label: i18next.t("menu.step_edit"),
+        onSelect: () => useEditor.setState({ stepEdit: { id: step.id, value: step.value } }),
+      },
+      {
+        id: "editor.step_renumber",
+        label: i18next.t("menu.step_renumber"),
+        onSelect: () => void stepSequence("renumber", step.style.sequence),
+      },
+    );
+    const first = items[2];
+    if (first) items[2] = { ...first, separator: true };
+  }
   if (!onObject && layer) {
     items.push({
       id: "editor.unflatten",

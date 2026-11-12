@@ -1883,6 +1883,14 @@ html.overlay-root.overlay-native #root {
 
 /* Bold, italic and alignment: icon buttons in a sunken well, without outlines. A pressed
    toggle fills with the logo's gradient; alignment is a `.seg.brand` whose pill slides. */
+/* Restart sequence and Renumber (EDT-035): text buttons that wrap. */
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 .prop-buttons {
   position: relative;
   display: inline-flex;

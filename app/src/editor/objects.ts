@@ -11,6 +11,7 @@ export function boxOf(o: DocObject): Box | null {
     case "shape":
     case "blur":
     case "image":
+    case "step":
       return { ...o.rect, rotation: o.rotation };
     case "text":
       return {
@@ -69,7 +70,8 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
       return [{ ...o, at }, { at }];
     }
     case "shape":
-    case "blur": {
+    case "blur":
+    case "step": {
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
       return [{ ...o, rect }, { rect }];
     }
@@ -111,6 +113,20 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
       return [
         { ...o, rect, rotation: b.rotation },
         { rect, rotation: b.rotation },
+      ];
+    }
+    case "step": {
+      // Square, 16 to 256 px; its size becomes the tool's (EDT-035, EDT-014).
+      const size = Math.round(Math.min(256, Math.max(16, (b.w + b.h) / 2)));
+      const rect: Rect = {
+        x: b.x + b.w / 2 - size / 2,
+        y: b.y + b.h / 2 - size / 2,
+        w: size,
+        h: size,
+      };
+      return [
+        { ...o, rect, rotation: b.rotation, style: { ...o.style, size } },
+        { rect, rotation: b.rotation, style: { size } },
       ];
     }
     default:

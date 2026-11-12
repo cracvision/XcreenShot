@@ -12,7 +12,7 @@ import { aiProgress } from "./aiState";
 import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
-export type Tool = "move" | "arrow" | "text" | "shape" | "blur" | "crop";
+export type Tool = "move" | "arrow" | "text" | "shape" | "step" | "blur" | "crop";
 
 export interface DocSummary {
   documentId: string;
@@ -85,6 +85,45 @@ export interface ShapeObject {
   style: ShapeStyle;
 }
 
+/** Step markers (EDT-035). */
+export type StepSequence = "number" | "upper" | "lower" | "romanUpper" | "romanLower";
+export type StepShapeKind = "circle" | "square" | "roundedSquare" | "diamond" | "marker" | "text";
+export const STEP_SEQUENCES: StepSequence[] = [
+  "number",
+  "upper",
+  "lower",
+  "romanUpper",
+  "romanLower",
+];
+export const STEP_SHAPES: StepShapeKind[] = [
+  "circle",
+  "square",
+  "roundedSquare",
+  "diamond",
+  "marker",
+  "text",
+];
+
+export interface StepStyle {
+  sequence: StepSequence;
+  shape: StepShapeKind;
+  fill: string | null;
+  textColor: string;
+  outline: string;
+  outlineWidth: number;
+  size: number;
+  opacity: number;
+}
+
+export interface StepObject {
+  id: string;
+  type: "step";
+  rect: Rect;
+  rotation: number;
+  value: string;
+  style: StepStyle;
+}
+
 export type BlurType = "blur" | "pixelate" | "solid";
 
 /** Blur properties of M1 (EDT-040). */
@@ -121,7 +160,13 @@ export interface ImageObject {
 
 /** Objects of later builds are kept and drawn by the core, not edited here. */
 export type DocObject = (
-  ArrowObject | TextObject | ShapeObject | BlurObject | ImageObject | { id: string; type: "other" }
+  | ArrowObject
+  | TextObject
+  | ShapeObject
+  | BlurObject
+  | ImageObject
+  | StepObject
+  | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
   locked?: boolean;
@@ -134,6 +179,7 @@ export interface Styles {
   text: TextStyle;
   shape: ShapeStyle;
   blur: BlurStyle;
+  step: StepStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -165,6 +211,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   /** With flattened objects, the canvas shows a view of the image that may start
    * before the original pixels, in base pixels (EDT-091). */
   baseView?: { x: number; y: number; width: number; height: number } | null;
+  /** What the next step of each sequence shows (EDT-035). */
+  stepNext?: Partial<Record<StepSequence, string>>;
   /** Objects merged into the image (EDT-091), oldest first; `bounds` on the canvas. */
   flattened?: FlatLayer[];
   metadata: { display?: { scale?: number } };
@@ -206,6 +254,8 @@ interface EditorState {
   active: string | null;
   doc: DocDetails | null;
   selection: string[];
+  /** Edit value of a step (EDT-035). */
+  stepEdit: { id: string; value: string } | null;
   /** Flattening a blur waits for this question (EDT-091). */
   flattenAsk: { all: boolean } | null;
   /** The group a double click entered, outermost first (EDT-082). */
@@ -258,6 +308,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   doc: null,
   selection: [],
   flattenAsk: null,
+  stepEdit: null,
   entered: [],
   views: {},
   zoomRequest: null,

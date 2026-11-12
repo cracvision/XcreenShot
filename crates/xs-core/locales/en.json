@@ -207,6 +207,10 @@
       "title": "Arrange objects",
       "description": "Brings objects to the front or one place forward, or sends them one place backward or to the back."
     },
+    "document_steps": {
+      "title": "Step sequence",
+      "description": "Restarts the sequence of step markers or numbers them again without gaps."
+    },
     "document_flatten": {
       "title": "Flatten objects",
       "description": "Merges objects into the image; they can be made objects again, except a blur."
@@ -779,7 +783,8 @@
       "editor_close_others": "Close others",
       "editor_rename_item": "Rename",
       "editor_show_in_folder": "Show in Explorer or Finder",
-      "editor_delete_item": "Move to trash"
+      "editor_delete_item": "Move to trash",
+      "editor_tool_step": "Step tool"
     }
   },
   "tray": {
@@ -885,7 +890,9 @@
     "copy_path": "Copy path",
     "open_item": "Open",
     "remove_from_tray": "Remove from the tray",
-    "locate": "Find…"
+    "locate": "Find…",
+    "step_edit": "Edit value…",
+    "step_renumber": "Renumber"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -1228,7 +1235,8 @@
         "shape": "Drag to draw a rectangle or an ellipse.",
         "blur": "Drag over what should not be seen: blur, pixelate or solid.",
         "crop": "Drag to keep a part. Nothing is lost: crop again to bring it back.",
-        "image": "A picture over the capture."
+        "image": "A picture over the capture.",
+        "step": "Click to place the next number; drag for a bigger marker."
       },
       "tool": {
         "move": "Move",
@@ -1237,7 +1245,8 @@
         "shape": "Shape",
         "blur": "Blur",
         "crop": "Crop",
-        "image": "Image"
+        "image": "Image",
+        "step": "Step"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1293,7 +1302,11 @@
         "outline_width": "Outline thickness",
         "shape_type": "Shape",
         "blur_type": "Type",
-        "intensity": "Intensity"
+        "intensity": "Intensity",
+        "step_shape": "Shape",
+        "text_color": "Text color",
+        "sequence": "Type",
+        "step_size": "Size"
       },
       "cap": {
         "none": "None",
@@ -1395,7 +1408,27 @@
       "not_found": "Not found",
       "not_found_help": "The file was moved or deleted outside XcreenShot.",
       "not_in_library": "This file is not in the library",
-      "strip_menu": "Recent tray item"
+      "strip_menu": "Recent tray item",
+      "step_edit_title": "Edit value",
+      "step_edit_label": "Value (up to 6 characters)",
+      "step_restart": "Restart sequence",
+      "step_next": "Next: {{value}}",
+      "step_shape": {
+        "circle": "Circle",
+        "square": "Square",
+        "roundedSquare": "Rounded square",
+        "diamond": "Diamond",
+        "marker": "Marker",
+        "text": "Text only"
+      },
+      "sequence": {
+        "number": "1, 2, 3…",
+        "upper": "A, B, C…",
+        "lower": "a, b, c…",
+        "romanUpper": "I, II, III…",
+        "romanLower": "i, ii, iii…"
+      },
+      "ok": "OK"
     },
     "multi": {
       "title": "Multi-capture",
@@ -1536,6 +1569,13 @@
     }
   },
   "history": {
+    "renumber": "Renumber",
+    "draw_step": "Add step",
+    "move_step": "Move step",
+    "change_step": "Change step",
+    "delete_step": "Delete step",
+    "cut_step": "Cut step",
+    "paste_step": "Paste step",
     "flatten": "Flatten",
     "flatten_all": "Flatten all",
     "unflatten": "Unflatten",

@@ -17,8 +17,13 @@ import {
   type ShapeKind,
   type TextAlign,
   type TextStyle,
+  STEP_SEQUENCES,
+  STEP_SHAPES,
+  type StepSequence,
+  type StepShapeKind,
 } from "./state";
 import { useDraft } from "./useDraft";
+import { stepSequence } from "./actions";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -109,8 +114,8 @@ interface Target {
   commit: (changes: Record<string, unknown>) => void;
 }
 
-type StyledKind = "arrow" | "text" | "shape" | "blur" | "image";
-const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image"];
+type StyledKind = "arrow" | "text" | "shape" | "blur" | "image" | "step";
+const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image", "step"];
 
 function useTarget(): Target | null {
   const doc = useEditor((s) => s.doc);
@@ -432,7 +437,95 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "step":
+      return <StepProperties v={v} num={num} commit={commit} opacity={opacity} />;
   }
+}
+
+/** Step (EDT-035): shape, colors, size, sequence; Restart sequence and Renumber. */
+function StepProperties(props: {
+  v: <T>(key: string) => T | undefined;
+  num: (key: string) => number | undefined;
+  commit: (changes: Record<string, unknown>) => void;
+  opacity: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const { v, num, commit, opacity } = props;
+  const sequence = v<StepSequence>("sequence");
+  const next = useEditor((s) => (sequence ? s.doc?.stepNext?.[sequence] : undefined));
+  return (
+    <>
+      <SelectField
+        label={t("ui.editor.prop.step_shape")}
+        value={v<StepShapeKind>("shape")}
+        options={STEP_SHAPES.map((s) => ({ value: s, label: t(`ui.editor.step_shape.${s}`) }))}
+        onCommit={(shape) => commit({ shape })}
+      />
+      <ColorPicker
+        label={t("ui.editor.prop.fill")}
+        value={v<string | null>("fill") ?? null}
+        mixed={v<string | null>("fill") === undefined}
+        allowTransparent
+        onCommit={(fill) => commit({ fill })}
+      />
+      <ColorPicker
+        label={t("ui.editor.prop.text_color")}
+        value={v<string>("textColor") ?? "#FFFFFF"}
+        mixed={v<string>("textColor") === undefined}
+        onCommit={(textColor) => textColor && commit({ textColor })}
+      />
+      <ColorPicker
+        label={t("ui.editor.prop.outline")}
+        value={v<string>("outline") ?? "#FFFFFF"}
+        mixed={v<string>("outline") === undefined}
+        onCommit={(outline) => outline && commit({ outline })}
+      />
+      <NumberField
+        label={t("ui.editor.prop.outline_width")}
+        value={num("outlineWidth")}
+        min={0}
+        max={10}
+        step={0.5}
+        unit="px"
+        onCommit={(outlineWidth) => commit({ outlineWidth })}
+      />
+      <NumberField
+        label={t("ui.editor.prop.step_size")}
+        value={num("size")}
+        min={16}
+        max={256}
+        step={1}
+        unit="px"
+        onCommit={(size) => commit({ size })}
+      />
+      <SelectField
+        label={t("ui.editor.prop.sequence")}
+        value={sequence}
+        options={STEP_SEQUENCES.map((s) => ({ value: s, label: t(`ui.editor.sequence.${s}`) }))}
+        onCommit={(sequence) => commit({ sequence })}
+      />
+      {opacity}
+      <div className="prop-field">
+        {next && <span className="muted">{t("ui.editor.step_next", { value: next })}</span>}
+        <div className="step-actions">
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => void stepSequence("restart", sequence)}
+          >
+            {t("ui.editor.step_restart")}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => void stepSequence("renumber", sequence)}
+          >
+            {t("menu.step_renumber")}
+          </button>
+        </div>
+      </div>
+    </>
+  );
 }
 
 const ALIGN_ICONS: Record<TextAlign, IconName> = {
