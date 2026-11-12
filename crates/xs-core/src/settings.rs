@@ -199,6 +199,20 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "TRY-008",
         ),
+        def(
+            "tray.capacity",
+            "library",
+            json!({"type": "integer", "minimum": 1, "maximum": 200}),
+            json!(50),
+            "TRY-003",
+        ),
+        def(
+            "tray.thumbnailSize",
+            "library",
+            one_of(&["small", "medium", "large"]),
+            json!("medium"),
+            "TRY-007",
+        ),
         // Preferences > Editor (EDT-118), in its order; the rest arrive with their features.
         def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
         def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),

@@ -618,6 +618,34 @@
     "library_import": {
       "title": "Import to the library",
       "description": "Copies files and folders into the library, each in the folder of the month of its date; a folder's name can become a tag."
+    },
+    "tray_list": {
+      "title": "List the recent tray",
+      "description": "The items of the recent tray, left to right, with their library ID and whether each is pinned, unsaved or shown."
+    },
+    "tray_open": {
+      "title": "Open in the tray",
+      "description": "Opens a library item or a file and puts it in the recent tray."
+    },
+    "tray_activate": {
+      "title": "Show a tray item",
+      "description": "Shows an item of the recent tray in the editor."
+    },
+    "tray_pin": {
+      "title": "Pin in the tray",
+      "description": "Pins items at the left of the recent tray: they never leave it by themselves."
+    },
+    "tray_unpin": {
+      "title": "Unpin from the tray",
+      "description": "Unpins items of the recent tray; they go back to their place by arrival."
+    },
+    "tray_move": {
+      "title": "Move in the tray",
+      "description": "Moves an item of the recent tray to another place."
+    },
+    "tray_close": {
+      "title": "Close tray items",
+      "description": "Closes items of the recent tray (one, the others, all or the unpinned ones) without deleting their files."
     }
   },
   "settings": {
@@ -833,8 +861,8 @@
       "description": "Ask before moving library items to the trash."
     },
     "tray_clearUnpinnedOnExit": {
-      "label": "Clear the recent tray when quitting",
-      "description": "On quitting XcreenShot, the recent tray empties. The files stay in the library."
+      "label": "Clear unpinned items from the recent tray when quitting",
+      "description": "On quitting XcreenShot, the recent tray keeps only its pinned items. The files stay in the library."
     },
     "editor_simplifyLockOnExit": {
       "label": "Lock simplified shapes on exit",
@@ -879,6 +907,19 @@
     "editor_quickEditBar": {
       "label": "Quick edit bar",
       "description": "A small bar next to the selected object with its most used properties and saved styles."
+    },
+    "tray_capacity": {
+      "label": "Items in the recent tray",
+      "description": "From 1 to 200. Over this, the oldest items that are not pinned and have no unsaved changes leave the tray; they stay in the library."
+    },
+    "tray_thumbnailSize": {
+      "label": "Tray thumbnail size",
+      "description": "The height of the recent tray’s thumbnails.",
+      "options": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      }
     }
   },
   "errors": {
@@ -1090,7 +1131,8 @@
       "editor_apply_template": "Apply template",
       "editor_save_as_template": "Save as template",
       "editor_import_template": "Import template",
-      "editor_show_in_library": "Show in library"
+      "editor_show_in_library": "Show in library",
+      "editor_pin_item": "Pin or unpin in the tray"
     }
   },
   "tray": {
@@ -1243,7 +1285,11 @@
     "resolve_conflict": "Resolve conflict…",
     "details_item": "Details",
     "quick_view": "Quick view",
-    "export_items": "Export…"
+    "export_items": "Export…",
+    "pin_item": "Pin",
+    "unpin_item": "Unpin",
+    "close_unpinned": "Close unpinned",
+    "tray_size": "Thumbnail size"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2570,6 +2616,15 @@
           "columns3": "Three columns",
           "featured": "Featured and thumbnails"
         }
+      },
+      "tray": {
+        "pin": "Pin {{name}}",
+        "unpin": "Unpin {{name}}",
+        "pinned": "pinned",
+        "moved": "Position {{at}} of {{count}}",
+        "over": "{{count}} of {{capacity}}",
+        "over_help": "The tray is over its capacity: pinned items and items with unsaved changes never leave it by themselves.",
+        "menu": "Recent tray"
       }
     },
     "multi": {

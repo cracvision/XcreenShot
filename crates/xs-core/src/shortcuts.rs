@@ -692,6 +692,7 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"rename_item"}"#,
         ),
+        editor("editor.pin_item", "editor.action", r#"{"action":"pin_item"}"#),
         editor(
             "editor.show_in_folder",
             "editor.action",
@@ -841,6 +842,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.next_item", _, Macos) => "Super+BracketRight",
         ("editor.delete_item", _, Macos) => "Super+Backspace",
         ("editor.rename_item", _, Macos) => return None,
+        // TRY-004: Control+Shift+P on macOS too, as the spec writes it.
+        ("editor.pin_item", _, Macos) => "Ctrl+Shift+KeyP",
         // LIB-014: none on Windows, where Ctrl+Shift+L is the share link.
         ("editor.show_in_library", _, Macos) => "Shift+Super+KeyL",
         ("editor.show_in_library", ..) => return None,
@@ -901,6 +904,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.next_item" => "Ctrl+PageDown",
                 "editor.delete_item" => "Ctrl+Delete",
                 "editor.rename_item" => "F2",
+                "editor.pin_item" => "Ctrl+Shift+KeyP",
                 _ => return None,
             };
             let mut acc: Accelerator = windows.parse().expect("editor defaults parse");

@@ -22,6 +22,7 @@ pub mod templates;
 pub use template_cmds::template_thumbnail;
 pub mod themes;
 pub mod transform;
+pub mod tray;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -399,10 +400,17 @@ fn emit_document(core: &Core, id: &str) {
 
 fn list(core: &Core) -> Value {
     let ed = editor(core);
-    json!({ "active": ed.store.active(), "documents": ed.store.summaries() })
+    json!({
+        "active": ed.store.active(),
+        "documents": ed.store.summaries(),
+        // The tray, left to right (TRY-004, TRY-005).
+        "tray": ed.store.tray(),
+    })
 }
 
 fn emit_list(core: &Core) {
+    // Over the tray's capacity, the oldest free items leave it (TRY-003).
+    tray::trim(core);
     core.host().editor_event("documents", list(core));
     emit_title(core);
     remember_open(core);
@@ -744,23 +752,44 @@ pub fn open(core: &Arc<Core>, lang: Lang, path: &Path, show: bool) -> Result<Str
 // ---------------------------------------------------------------------------
 // Reopening at startup (EDT-120)
 
-/// The documents of the editor's strip, in order, and the one shown.
-fn open_documents(core: &Core) -> Value {
+/// The documents of the editor's strip, in order, and the one shown; the pinned ones
+/// and the tray's order (TRY-004, TRY-005). With `only_pinned`, just those (TRY-008).
+fn open_documents_of(core: &Core, only_pinned: bool) -> Value {
     let ed = editor(core);
     let active = ed.store.active();
     let mut paths = Vec::new();
+    let mut pinned = Vec::new();
     let mut shown = Value::Null;
     for id in ed.store.ids() {
-        let Some((Some(path), true)) = ed.store.with(&id, |d| (d.path.clone(), d.shown)) else {
+        let Some((Some(path), true, pin)) = ed.store.with(&id, |d| (d.path.clone(), d.shown, d.pinned))
+        else {
             continue;
         };
+        if only_pinned && !pin {
+            continue;
+        }
         let path = Value::String(path.to_string_lossy().into_owned());
         if active.as_deref() == Some(id.as_str()) {
             shown = path.clone();
         }
+        if pin {
+            pinned.push(path.clone());
+        }
         paths.push(path);
     }
-    json!({ "documents": paths, "active": shown })
+    let order: Vec<Value> = ed
+        .store
+        .tray()
+        .iter()
+        .filter_map(|id| ed.store.with(id, |d| d.path.clone()).flatten())
+        .map(|p| Value::String(p.to_string_lossy().into_owned()))
+        .filter(|p| paths.contains(p))
+        .collect();
+    json!({ "documents": paths, "active": shown, "pinned": pinned, "order": order })
+}
+
+fn open_documents(core: &Core) -> Value {
+    open_documents_of(core, false)
 }
 
 /// Keeps the list of open documents up to date at every change, so it survives any
@@ -864,6 +893,16 @@ fn reopen(core: &Core, saved: &Value) -> (usize, usize) {
             Err(_) => skipped += 1,
         }
     }
+    let paths = |key: &str| -> Vec<PathBuf> {
+        saved[key]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(PathBuf::from)
+            .collect()
+    };
+    ed.store.restore_tray(&paths("pinned"), &paths("order"));
     if let Some(id) = shown {
         ed.store.set_active(Some(&id));
     }
@@ -1321,11 +1360,14 @@ impl QuitGuard for EditorQuitGuard {
     fn before_quit(&self) {
         let Some(core) = self.0.upgrade() else { return };
         save_library_documents(&core);
-        // TRY-008: the recent tray starts empty next time (the files stay).
+        // TRY-008: the recent tray starts next time with only the pinned items (the
+        // files stay).
         if core.settings.get_bool("tray.clearUnpinnedOnExit") {
             let ed = editor(&core);
             ed.forget_open.store(true, std::sync::atomic::Ordering::Relaxed);
-            core.remember(OPEN_KEY, Value::Null);
+            let pinned = open_documents_of(&core, true);
+            let empty = pinned["documents"].as_array().is_none_or(|a| a.is_empty());
+            core.remember(OPEN_KEY, if empty { Value::Null } else { pinned });
         }
         // Whatever is still unsaved stays recoverable (APP-004 forced quit, APP-047).
         write_recovery_copies(&core);
@@ -1379,7 +1421,7 @@ fn close(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             })?;
         }
     }
-    let order = ed.store.ids();
+    let order = ed.store.tray();
     let active = ed.store.active();
     for doc in ed.store.remove(&targets) {
         if let Some(rid) = doc.recovery_id {
@@ -3401,6 +3443,15 @@ pub fn extension() -> Extension {
     Box::new(|reg, weak| {
         if let Some(core) = weak.upgrade() {
             core.add_quit_guard(Arc::new(EditorQuitGuard(weak.clone())));
+            // A smaller tray lets the oldest free items go at once (TRY-003).
+            let weak = weak.clone();
+            core.on_setting(Arc::new(move |key, _| {
+                if key == "tray.capacity" {
+                    if let Some(core) = weak.upgrade() {
+                        emit_list(&core);
+                    }
+                }
+            }));
         }
         xs_library::on_relocated(library_relocated);
         macro_rules! on {
@@ -4558,6 +4609,45 @@ pub fn extension() -> Extension {
             &core, ctx, &p
         ));
         on!("document.close", |core, ctx, p| close(&core, ctx, &p));
+        on!("tray.list", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.list",
+            &p
+        ));
+        on!("tray.open", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.open",
+            &p
+        ));
+        on!("tray.activate", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.activate",
+            &p
+        ));
+        on!("tray.pin", |core, ctx, p| tray::command(
+            &core, ctx, "tray.pin", &p
+        ));
+        on!("tray.unpin", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.unpin",
+            &p
+        ));
+        on!("tray.move", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.move",
+            &p
+        ));
+        on!("tray.close", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.close",
+            &p
+        ));
         on!("document.rename", |core, ctx, p| rename(&core, ctx.lang, &p));
         on!("document.image", |core, ctx, p| document_image(
             &core, ctx.lang, &p
@@ -4614,6 +4704,7 @@ pub fn extension() -> Extension {
                 "styles": ed.styles(),
                 "active": ed.store.active(),
                 "documents": ed.store.summaries(),
+                "tray": ed.store.tray(),
                 "recoverable": recoverable,
                 "zoomSteps": ZOOM_STEPS,
                 "view": ed.requested_view.lock().unwrap().take(),

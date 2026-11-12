@@ -208,9 +208,36 @@ export async function closeAll(): Promise<void> {
   }
 }
 
+/** Pins the items, or unpins them when all are pinned already (TRY-004). */
+export async function togglePin(ids: string[]): Promise<void> {
+  const { documents } = useEditor.getState();
+  const all =
+    ids.length > 0 && ids.every((id) => documents.find((d) => d.documentId === id)?.pinned);
+  try {
+    await run(all ? "tray.unpin" : "tray.pin", { documentIds: ids });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Close unpinned (TRY-008): every tray item that is not pinned. */
+export async function closeUnpinned(): Promise<void> {
+  const { documents, tray } = useEditor.getState();
+  const free = trayOrder(documents, tray)
+    .filter((d) => !d.pinned)
+    .map((d) => d.documentId);
+  if (free.length === 0) return;
+  try {
+    await closeWith(free, [], []);
+  } catch (e) {
+    fail(e);
+  }
+}
+
 /** Close others (TRY-008): every tray item but `keep`. */
 export async function closeOthers(keep: string): Promise<void> {
-  const others = trayOrder(useEditor.getState().documents)
+  const { documents, tray } = useEditor.getState();
+  const others = trayOrder(documents, tray)
     .map((d) => d.documentId)
     .filter((id) => id !== keep);
   if (others.length === 0) return;
@@ -539,8 +566,20 @@ export function performAction(action: string): boolean {
     case "prev_item":
     case "next_item": {
       if (!doc) return false;
-      const id = neighbour(documents, active, action === "next_item" ? 1 : -1);
+      const id = neighbour(
+        documents,
+        active,
+        action === "next_item" ? 1 : -1,
+        useEditor.getState().tray,
+      );
       if (id) showDocument(id);
+      return true;
+    }
+    case "pin_item": {
+      // TRY-004: the tray item with the focus, or the one shown.
+      const id = focusedTrayItem() ?? active;
+      if (!id || !documents.some((d) => d.documentId === id)) return false;
+      void togglePin([id]);
       return true;
     }
     case "close_others": {

@@ -264,6 +264,10 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | LIB-033 | Formato del CSV | `metadatos.csv` (`metadata.csv` con la app en inglés), separado por comas, UTF-8 con marca para que Excel lea los acentos, fechas `AAAA-MM-DD hh:mm:ss` en hora local y etiquetas separadas por "; ". Si tu Excel abre todo en una columna (configuración regional con punto y coma), lo cambiamos a punto y coma | Provisional |
 | LIB-033 | ¿Qué pasa si la carpeta de destino ya tiene archivos? | Nunca se sobrescribe nada: un nombre ocupado recibe "(2)". No se puede exportar dentro de la biblioteca (las copias se volverían elementos) | Provisional |
 | LIB-018 | Exportar… de un solo elemento | Guardar como del sistema, con los formatos de EDT-110/111 y sus opciones recordadas; el sistema pregunta antes de reemplazar | Provisional |
+| TRY-003 | ¿Dónde se ve que la bandeja supera su capacidad? | En la propia bandeja, al final: "52 de 50", con una explicación al pasar el ratón. El que se ve en el editor tampoco sale solo | Provisional |
+| TRY-005 | Mover con el teclado entre fijados y no fijados | Igual que al arrastrar: si `Ctrl+Shift+←` lleva el elemento a la zona de los fijados, queda fijado, y el lector de pantalla lo dice | Provisional |
+| TRY-005 / TRY-015 | Arrastrar dentro de la bandeja o fuera | Mientras el puntero sigue sobre la bandeja, el arrastre reordena; al salir de ella se convierte en el arrastre a otras apps de siempre | Provisional |
+| TRY-007 | Proporción de las miniaturas | El ancho es 1,5 veces el alto: 72 × 48, 108 × 72 y 168 × 112 px | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

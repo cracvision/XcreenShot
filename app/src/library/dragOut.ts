@@ -40,31 +40,73 @@ export function pastThreshold(dx: number, dy: number): boolean {
   return Math.hypot(dx, dy) > DRAG_THRESHOLD;
 }
 
+/** A place where a drag moves the item instead of taking it out (TRY-005): the tray. */
+export interface DragInside {
+  area: () => DOMRect | null;
+  /** The pointer is at `x` inside the area. */
+  over: (x: number) => void;
+  /** Let go at `x` inside the area. */
+  drop: (x: number) => void;
+  /** The drag left the area (or was cancelled) without a drop. */
+  leave: () => void;
+}
+
+function within(r: DOMRect | null, x: number, y: number): boolean {
+  return r !== null && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
 /**
  * Watches a press on an item: if the pointer moves past the threshold with the
  * button down, the drag starts with what `target()` returns then, and the click
- * that ends the press does nothing else.
+ * that ends the press does nothing else. With `inside`, while the pointer stays in
+ * that area the drag moves the item there; leaving it starts the drag out.
  */
-export function watchDrag(e: ReactPointerEvent, target: () => DragTarget | null): void {
+export function watchDrag(
+  e: ReactPointerEvent,
+  target: () => DragTarget | null,
+  inside?: DragInside,
+): void {
   if (e.button !== 0 || active) return;
   const start = { x: e.clientX, y: e.clientY };
   const id = e.pointerId;
-  const move = (m: PointerEvent) => {
-    if (m.pointerId !== id || !pastThreshold(m.clientX - start.x, m.clientY - start.y)) return;
+  let moving = false;
+  const out = () => {
     stop();
     const what = target();
     if (!what || what.docs.length + what.paths.length === 0) return;
     swallowClick();
     void dragOut(what);
   };
+  const move = (m: PointerEvent) => {
+    if (m.pointerId !== id) return;
+    if (!moving && !pastThreshold(m.clientX - start.x, m.clientY - start.y)) return;
+    if (inside && within(inside.area(), m.clientX, m.clientY)) {
+      moving = true;
+      inside.over(m.clientX);
+      return;
+    }
+    if (moving) inside?.leave();
+    out();
+  };
+  const up = (u: PointerEvent) => {
+    stop();
+    if (moving && inside) {
+      swallowClick();
+      inside.drop(u.clientX);
+    }
+  };
+  const cancel = () => {
+    stop();
+    if (moving) inside?.leave();
+  };
   const stop = () => {
     window.removeEventListener("pointermove", move, true);
-    window.removeEventListener("pointerup", stop, true);
-    window.removeEventListener("pointercancel", stop, true);
+    window.removeEventListener("pointerup", up, true);
+    window.removeEventListener("pointercancel", cancel, true);
   };
   window.addEventListener("pointermove", move, true);
-  window.addEventListener("pointerup", stop, true);
-  window.addEventListener("pointercancel", stop, true);
+  window.addEventListener("pointerup", up, true);
+  window.addEventListener("pointercancel", cancel, true);
 }
 
 /** The click that may follow a drag is not a click on the item. */

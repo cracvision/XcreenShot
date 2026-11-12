@@ -82,9 +82,14 @@ pub struct Core {
     /// Per-core state owned by other crates (open documents…), one per type.
     services: RwLock<Services>,
     quit_guards: RwLock<Vec<Arc<dyn QuitGuard>>>,
+    /// Other crates told about setting changes (the tray's capacity, TRY-003).
+    setting_hooks: RwLock<Vec<SettingHook>>,
     /// What scripts and agents can follow (APP-031).
     pub events: crate::events::Events,
 }
+
+/// Told the key and the new value of each setting that changes.
+pub type SettingHook = Arc<dyn Fn(&str, &Value) + Send + Sync>;
 
 /// Verbose logging switches itself off after this long (APP-046).
 const VERBOSE_FOR_HOURS: i64 = 24;
@@ -111,6 +116,7 @@ impl Core {
             registry: RwLock::new(None),
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
+            setting_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
         });
         let registry = build_registry(&core);
@@ -140,6 +146,7 @@ impl Core {
             registry: RwLock::new(None),
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
+            setting_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
         });
         let registry = build_registry(&core);
@@ -182,6 +189,11 @@ impl Core {
 
     pub fn add_quit_guard(&self, guard: Arc<dyn QuitGuard>) {
         self.quit_guards.write().unwrap().push(guard);
+    }
+
+    /// Runs `hook` after each setting change (from the UI, the CLI or a file).
+    pub fn on_setting(&self, hook: SettingHook) {
+        self.setting_hooks.write().unwrap().push(hook);
     }
 
     /// Everything that needs a decision before quitting (APP-004).
@@ -326,6 +338,10 @@ impl Core {
             self.host().shortcuts_changed();
         }
         self.host().settings_changed(key, value);
+        let hooks = self.setting_hooks.read().unwrap().clone();
+        for hook in hooks {
+            hook(key, value);
+        }
     }
 
     /// Name of a shortcut row: its own when it runs a command with fixed parameters

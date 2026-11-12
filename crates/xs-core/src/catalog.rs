@@ -97,7 +97,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 ];
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library"];
+pub const EXTERNAL_AREAS: &[&str] = &["capture", "document", "editor", "ai", "library", "tray"];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
@@ -1425,6 +1425,74 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(library_item()),
+        // The recent tray (TRY-017): the documents shown in the editor, in order.
+        B::new("tray.list", &["TRY-017", "TRY-002"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "items": {"type": "array", "description": "{documentId, name, path, libraryId, pinned, dirty, active, missing}, left to right"},
+                "capacity": {"type": "integer"}
+            }})),
+        B::new("tray.open", &["TRY-017"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string", "description": "A library item (library.list)"},
+                    "path": {"type": "string", "description": "Or a file"},
+                    "activate": {"type": "boolean", "default": true, "description": "Show it in the editor; false only puts it in the tray"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}}})),
+        B::new("tray.activate", &["TRY-017", "TRY-013"])
+            .positional(&["documentId"])
+            .params(params(json!({"documentId": {"type": "string"}}), &["documentId"]))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}}})),
+        B::new("tray.pin", &["TRY-017", "TRY-004"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({"documentId": document_id(), "documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "items": {"type": "array"}}})),
+        B::new("tray.unpin", &["TRY-017", "TRY-004"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({"documentId": document_id(), "documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "items": {"type": "array"}}})),
+        B::new("tray.move", &["TRY-017", "TRY-005"])
+            .mutates()
+            .positional(&["documentId", "index"])
+            .params(params(
+                json!({
+                    "documentId": {"type": "string"},
+                    "index": {"type": "integer", "minimum": 0, "description": "Its new place, 0 is the left end; among the pinned ones it is pinned, among the rest unpinned"}
+                }),
+                &["documentId", "index"],
+            ))
+            .result(json!({"type": "object", "properties": {"index": {"type": "integer"}, "pinned": {"type": "boolean"}}})),
+        B::new("tray.close", &["TRY-017", "TRY-008"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}},
+                    "which": {"type": "string", "enum": ["this", "others", "all", "unpinned"], "default": "this", "description": "this: the documents named; others: all but them; all; unpinned"},
+                    "save": {"type": "array", "items": {"type": "string"}, "description": "As document.close"},
+                    "discard": {"type": "array", "items": {"type": "string"}, "description": "As document.close"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["closed", "needs_decision"]},
+                "closed": {"type": "array", "items": {"type": "string"}},
+                "pending": {"type": "array"}
+            }})),
         B::new("library.import", &["LIB-024", "LIB-034"])
             .mutates()
             .positional(&["paths"])
@@ -1707,7 +1775,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 102] = [
+pub const EDITOR_ACTIONS: [&str; 103] = [
     "open",
     "save",
     "save_as",
@@ -1735,6 +1803,7 @@ pub const EDITOR_ACTIONS: [&str; 102] = [
     "next_item",
     "close_others",
     "rename_item",
+    "pin_item",
     "show_in_folder",
     "delete_item",
     "select_all",

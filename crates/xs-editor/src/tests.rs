@@ -4869,3 +4869,203 @@ fn batch_names_can_be_one_name() {
         "Captura"
     );
 }
+
+/// The tray, left to right, as `document.list` gives it (TRY-004, TRY-005).
+fn tray_ids(core: &Core) -> Vec<String> {
+    cli(core, "document.list", json!({}))["tray"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect()
+}
+
+fn ids(list: &[&String]) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
+/// TRY-004, TRY-005, TRY-017: pinned items go to the left; unpinned ones back to
+/// their place by arrival; moving among the pinned pins, among the rest unpins; the
+/// pinned ones and the order come back after a restart.
+#[test]
+fn the_tray_pins_and_moves_items() {
+    let e = env_with_library();
+    let docs: Vec<String> = (0..4)
+        .map(|_| {
+            let (doc, _) = capture(&e);
+            cli(&e.core, "tray.activate", json!({"documentId": doc}));
+            doc
+        })
+        .collect();
+    let [a, b, c, d] = [&docs[0], &docs[1], &docs[2], &docs[3]].map(|s| s.clone());
+    assert_eq!(tray_ids(&e.core), ids(&[&d, &c, &b, &a]), "newest first");
+
+    cli(&e.core, "tray.pin", json!({"documentId": b}));
+    cli(&e.core, "tray.pin", json!({"documentIds": [a]}));
+    assert_eq!(
+        tray_ids(&e.core),
+        ids(&[&b, &a, &d, &c]),
+        "pinned at the left, in pinning order"
+    );
+    let r = cli(&e.core, "tray.unpin", json!({"documentId": b}));
+    assert_eq!(r["changed"], json!(true));
+    assert_eq!(
+        tray_ids(&e.core),
+        ids(&[&a, &d, &c, &b]),
+        "back to its place by arrival"
+    );
+
+    let r = cli(&e.core, "tray.move", json!({"documentId": c, "index": 0}));
+    assert_eq!(
+        (r["index"].clone(), r["pinned"].clone()),
+        (json!(0), json!(true)),
+        "dropped among the pinned: pinned"
+    );
+    let r = cli(&e.core, "tray.move", json!({"documentId": a, "index": 3}));
+    assert_eq!(r["pinned"], json!(false));
+    assert_eq!(tray_ids(&e.core), ids(&[&c, &d, &b, &a]));
+
+    // A new capture arrives just right of the pinned ones.
+    let (new, _) = capture(&e);
+    cli(&e.core, "tray.activate", json!({"documentId": new}));
+    assert_eq!(tray_ids(&e.core), ids(&[&c, &new, &d, &b, &a]));
+
+    xs_library::library(&e.core).scan();
+    let list = cli(&e.core, "tray.list", json!({}));
+    let items = list["items"].as_array().unwrap();
+    assert_eq!(items[0]["documentId"], json!(c));
+    assert_eq!(items[0]["pinned"], json!(true));
+    assert_eq!(items[1]["active"], json!(true));
+    assert!(items.iter().all(|i| i["libraryId"].is_string()), "{list}");
+
+    // Back after a restart: the pinned item and the order.
+    let paths: Vec<PathBuf> = tray_ids(&e.core)
+        .iter()
+        .map(|id| PathBuf::from(info(&e.core, id)["path"].as_str().unwrap()))
+        .collect();
+    let again = restart(&e);
+    let ids = tray_ids(&again);
+    let paths_again: Vec<PathBuf> = ids
+        .iter()
+        .map(|id| PathBuf::from(info(&again, id)["path"].as_str().unwrap()))
+        .collect();
+    assert_eq!(paths_again, paths, "the same order after a restart");
+    let pinned = cli(&again, "document.list", json!({}))["documents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["pinned"] == true)
+        .count();
+    assert_eq!(pinned, 1);
+}
+
+/// TRY-003: over the capacity, the oldest free item leaves the tray (its file
+/// stays); pinned ones and unsaved ones never leave by themselves; a smaller
+/// capacity lets items go at once.
+#[test]
+fn the_tray_keeps_to_its_capacity() {
+    let e = env_with_library();
+    set(&e.core, "tray.capacity", json!(3));
+    let mut docs = Vec::new();
+    let mut paths = Vec::new();
+    for _ in 0..4 {
+        let (doc, path) = capture(&e);
+        cli(&e.core, "tray.activate", json!({"documentId": doc}));
+        docs.push(doc);
+        paths.push(path);
+    }
+    let tray = tray_ids(&e.core);
+    assert_eq!(tray.len(), 3);
+    assert!(!tray.contains(&docs[0]), "the oldest left");
+    assert!(paths[0].exists(), "its file stays");
+
+    cli(&e.core, "tray.pin", json!({"documentIds": tray}));
+    let (fifth, _) = capture(&e);
+    cli(&e.core, "tray.activate", json!({"documentId": fifth}));
+    assert_eq!(
+        tray_ids(&e.core).len(),
+        4,
+        "pinned items never leave by themselves"
+    );
+
+    cli(
+        &e.core,
+        "tray.unpin",
+        json!({"documentIds": [docs[1], docs[2], docs[3]]}),
+    );
+    assert_eq!(tray_ids(&e.core).len(), 3, "unpinned, the oldest leaves");
+    // A file from elsewhere with unsaved changes.
+    let outside = e.outside.path().join("outside.png");
+    std::fs::write(
+        &outside,
+        xs_image::encode::png(&white(20, 20), 0.0, true).unwrap(),
+    )
+    .unwrap();
+    let ext = show(&e, &outside);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": ext, "objects": [arrow([1, 1], [10, 10])]}),
+    );
+    cli(&e.core, "tray.activate", json!({"documentId": fifth}));
+    set(&e.core, "tray.capacity", json!(1));
+    let mut tray = tray_ids(&e.core);
+    tray.sort();
+    let mut kept = vec![fifth.clone(), ext.clone()];
+    kept.sort();
+    assert_eq!(
+        tray, kept,
+        "the one shown and the unsaved one stay, over the capacity"
+    );
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "settings.set",
+        json!({"key": "tray.capacity", "value": 0})
+    )
+    .is_err());
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "settings.set",
+        json!({"key": "tray.capacity", "value": 201})
+    )
+    .is_err());
+}
+
+/// TRY-008, TRY-017: tray.close closes the others, the unpinned ones or all of them,
+/// without deleting files; with the clearing on quit, only pinned items come back.
+#[test]
+fn the_tray_closes_items_and_keeps_pinned_ones_on_quit() {
+    let e = env_with_library();
+    let mut docs = Vec::new();
+    let mut paths = Vec::new();
+    for _ in 0..4 {
+        let (doc, path) = capture(&e);
+        cli(&e.core, "tray.activate", json!({"documentId": doc}));
+        docs.push(doc);
+        paths.push(path);
+    }
+    cli(&e.core, "tray.pin", json!({"documentId": docs[0]}));
+    let r = cli(
+        &e.core,
+        "tray.close",
+        json!({"documentId": docs[3], "which": "this"}),
+    );
+    assert_eq!(r["closed"], json!([docs[3]]));
+    set(&e.core, "tray.clearUnpinnedOnExit", json!(true));
+    EditorQuitGuard(Arc::downgrade(&e.core)).before_quit();
+    let again = restart(&e);
+    assert_eq!(
+        strip(&again).0,
+        vec![paths[0].clone()],
+        "only the pinned one comes back"
+    );
+
+    let r = cli(&e.core, "tray.close", json!({"which": "unpinned"}));
+    assert_eq!(r["closed"].as_array().unwrap().len(), 2);
+    assert_eq!(tray_ids(&e.core), ids(&[&docs[0]]));
+    cli(&e.core, "tray.close", json!({"which": "all"}));
+    assert!(tray_ids(&e.core).is_empty());
+    assert!(paths.iter().all(|p| p.exists()), "no file is deleted");
+}

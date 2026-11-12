@@ -49,6 +49,8 @@ export interface DocSummary {
   version: number;
   /** Its file was moved or deleted outside XcreenShot (TRY-002). */
   missing: boolean;
+  /** Pinned at the left of the tray (TRY-004). */
+  pinned?: boolean;
 }
 
 export interface ArrowObject {
@@ -667,6 +669,8 @@ interface EditorState {
   tools: Tool[];
   styles: Styles | null;
   documents: DocSummary[];
+  /** The tray, left to right (TRY-004, TRY-005). */
+  tray: string[];
   active: string | null;
   doc: DocDetails | null;
   selection: string[];
@@ -747,6 +751,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   tools: ["move", "arrow"],
   styles: null,
   documents: [],
+  tray: [],
   active: null,
   doc: null,
   selection: [],
@@ -783,10 +788,11 @@ export const useEditor = create<EditorState>((set, get) => ({
           const active = (payload.active as string | null) ?? null;
           const changed = active !== get().active;
           const documents = payload.documents as DocSummary[];
+          const tray = (payload.tray as string[] | undefined) ?? [];
           // A capture that arrives with the tray hidden lights its button (TRY-001).
           if (arrived(get().documents, documents) && !useTray.getState().visible)
             useTray.setState({ fresh: true });
-          set({ documents, active });
+          set({ documents, active, tray });
           if (changed) {
             set({ selection: [], cropRect: null, textEdit: null });
             const seen = docEvents;
@@ -882,8 +888,10 @@ export const useEditor = create<EditorState>((set, get) => ({
           break;
         case "library":
           // The folder changed: the Library view, and the tray's "Not found" (TRY-002).
-          void run<{ active: string | null; documents: DocSummary[] }>("document.list")
-            .then((r) => set({ documents: r.documents }))
+          void run<{ active: string | null; documents: DocSummary[]; tray?: string[] }>(
+            "document.list",
+          )
+            .then((r) => set({ documents: r.documents, tray: r.tray ?? get().tray }))
             .catch(() => undefined);
           if (useLibrary.getState().loaded)
             void useLibrary
@@ -899,6 +907,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       styles: Styles;
       active: string | null;
       documents: DocSummary[];
+      tray?: string[];
       view: MainView | null;
     }>("editor.state");
     // A view asked for before this window loaded (LIB-001).
@@ -914,6 +923,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       tools: state.tools,
       styles: state.styles,
       documents: state.documents,
+      tray: state.tray ?? [],
       active: state.active,
       doc: await loadDoc(state.active),
       recovery: recovery.items,

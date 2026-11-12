@@ -9,14 +9,19 @@ import {
   removeFromTray,
   showInFolder,
 } from "../library/actions";
-import { closeAll, closeDocument, closeOthers } from "./actions";
+import { closeAll, closeDocument, closeOthers, closeUnpinned, togglePin } from "./actions";
 import { shortcutOf } from "./menus";
 import type { DocSummary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
-/** The menu of a tray item (TRY-002, TRY-008, TRY-009). */
-export function trayMenu(doc: DocSummary, count: number, t: (key: string) => string): MenuItem[] {
+/** The menu of a tray item (TRY-002, TRY-004, TRY-008, TRY-009); `items` is the tray. */
+export function trayMenu(
+  doc: DocSummary,
+  items: DocSummary[],
+  t: (key: string) => string,
+): MenuItem[] {
+  const count = items.length;
   if (doc.missing) {
     return [
       { id: "locate", label: t("menu.locate"), onSelect: () => void locate(doc) },
@@ -26,9 +31,17 @@ export function trayMenu(doc: DocSummary, count: number, t: (key: string) => str
   const file = docRef(doc);
   const noFile = !doc.path;
   return [
+    // TRY-004.
+    {
+      id: "pin",
+      label: t(doc.pinned ? "menu.unpin_item" : "menu.pin_item"),
+      shortcut: shortcutOf("editor.pin_item"),
+      onSelect: () => void togglePin([doc.documentId]),
+    },
     {
       id: "close",
       label: t("menu.close"),
+      separator: true,
       shortcut: shortcutOf("editor.close"),
       onSelect: () => void closeDocument(doc.documentId),
     },
@@ -38,6 +51,12 @@ export function trayMenu(doc: DocSummary, count: number, t: (key: string) => str
       shortcut: shortcutOf("editor.close_others"),
       disabled: count < 2,
       onSelect: () => void closeOthers(doc.documentId),
+    },
+    {
+      id: "close_unpinned",
+      label: t("menu.close_unpinned"),
+      disabled: !items.some((d) => !d.pinned),
+      onSelect: () => void closeUnpinned(),
     },
     {
       id: "close_all",

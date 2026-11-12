@@ -21,6 +21,12 @@ function Svg({ children }: { children: ReactNode }) {
 }
 
 const ICONS = {
+  // A pushpin (TRY-004).
+  pin: (
+    <Svg>
+      <path d="M8 3h4M9 3v5l-3 3h8l-3-3V3M10 11v6" />
+    </Svg>
+  ),
   lock: (
     <Svg>
       <rect x="5" y="9" width="10" height="8" rx="1.5" />

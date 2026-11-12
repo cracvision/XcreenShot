@@ -618,6 +618,34 @@
     "library_import": {
       "title": "Importar a la biblioteca",
       "description": "Copia archivos y carpetas a la biblioteca, cada uno en la carpeta del mes de su fecha; el nombre de una carpeta puede ser una etiqueta."
+    },
+    "tray_list": {
+      "title": "Listar la bandeja reciente",
+      "description": "Los elementos de la bandeja reciente, de izquierda a derecha, con su ID de la biblioteca y si están fijados, sin guardar o a la vista."
+    },
+    "tray_open": {
+      "title": "Abrir en la bandeja",
+      "description": "Abre un elemento de la biblioteca o un archivo y lo pone en la bandeja reciente."
+    },
+    "tray_activate": {
+      "title": "Mostrar un elemento de la bandeja",
+      "description": "Muestra en el editor un elemento de la bandeja reciente."
+    },
+    "tray_pin": {
+      "title": "Fijar en la bandeja",
+      "description": "Fija elementos a la izquierda de la bandeja reciente: nunca salen de ella solos."
+    },
+    "tray_unpin": {
+      "title": "Desfijar de la bandeja",
+      "description": "Desfija elementos de la bandeja reciente; vuelven a su lugar por orden de llegada."
+    },
+    "tray_move": {
+      "title": "Mover en la bandeja",
+      "description": "Mueve un elemento de la bandeja reciente a otro lugar."
+    },
+    "tray_close": {
+      "title": "Cerrar elementos de la bandeja",
+      "description": "Cierra elementos de la bandeja reciente (uno, los demás, todos o los no fijados) sin borrar sus archivos."
     }
   },
   "settings": {
@@ -833,8 +861,8 @@
       "description": "Preguntar antes de mover elementos de la biblioteca a la papelera."
     },
     "tray_clearUnpinnedOnExit": {
-      "label": "Vaciar la bandeja reciente al salir",
-      "description": "Al salir de XcreenShot, la bandeja reciente se vacía. Los archivos siguen en la biblioteca."
+      "label": "Quitar de la bandeja los elementos no fijados al salir",
+      "description": "Al salir de XcreenShot, la bandeja reciente conserva solo sus elementos fijados. Los archivos siguen en la biblioteca."
     },
     "editor_simplifyLockOnExit": {
       "label": "Bloquear las formas simplificadas al salir",
@@ -879,6 +907,19 @@
     "editor_quickEditBar": {
       "label": "Barra de edición rápida",
       "description": "Una barra pequeña junto al objeto elegido con sus propiedades más usadas y sus estilos guardados."
+    },
+    "tray_capacity": {
+      "label": "Elementos de la bandeja reciente",
+      "description": "De 1 a 200. Si se pasa, los elementos más antiguos que no están fijados ni tienen cambios sin guardar salen de la bandeja; siguen en la biblioteca."
+    },
+    "tray_thumbnailSize": {
+      "label": "Tamaño de las miniaturas de la bandeja",
+      "description": "La altura de las miniaturas de la bandeja reciente.",
+      "options": {
+        "small": "Pequeño",
+        "medium": "Mediano",
+        "large": "Grande"
+      }
     }
   },
   "errors": {
@@ -1090,7 +1131,8 @@
       "editor_apply_template": "Aplicar plantilla",
       "editor_save_as_template": "Guardar como plantilla",
       "editor_import_template": "Importar plantilla",
-      "editor_show_in_library": "Mostrar en la biblioteca"
+      "editor_show_in_library": "Mostrar en la biblioteca",
+      "editor_pin_item": "Fijar o desfijar en la bandeja"
     }
   },
   "tray": {
@@ -1243,7 +1285,11 @@
     "resolve_conflict": "Resolver conflicto…",
     "details_item": "Detalles",
     "quick_view": "Vista rápida",
-    "export_items": "Exportar…"
+    "export_items": "Exportar…",
+    "pin_item": "Fijar",
+    "unpin_item": "Desfijar",
+    "close_unpinned": "Cerrar los no fijados",
+    "tray_size": "Tamaño de las miniaturas"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2570,6 +2616,15 @@
           "columns3": "Tres columnas",
           "featured": "Destacada y miniaturas"
         }
+      },
+      "tray": {
+        "pin": "Fijar {{name}}",
+        "unpin": "Desfijar {{name}}",
+        "pinned": "fijado",
+        "moved": "Posición {{at}} de {{count}}",
+        "over": "{{count}} de {{capacity}}",
+        "over_help": "La bandeja supera su capacidad: los elementos fijados y los que tienen cambios sin guardar nunca salen solos.",
+        "menu": "Bandeja reciente"
       }
     },
     "multi": {

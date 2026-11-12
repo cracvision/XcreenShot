@@ -323,12 +323,12 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; faltan `library.export`, LIB-018 y LIB-033, y `library.import`, LIB-024) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |
-| TRY-003 | Capacidad | M2 | Should | — |
-| TRY-004 | Fijar y desfijar | M2 | Should | — |
-| TRY-005 | Reordenar | M2 | Should | — |
+| TRY-003 | Capacidad | M2 | Should | En curso (Windows: `tray.capacity` de 1 a 200, 50 por defecto; sale el más antiguo libre; fijados, con cambios sin guardar y el que se ve nunca salen solos; reducirla actúa al momento; el aviso "N de M" va en la propia bandeja) |
+| TRY-004 | Fijar y desfijar | M2 | Should | En curso (Windows: chincheta al pasar el ratón, menú contextual, `Ctrl+Shift+P`, a la izquierda con una línea, se conservan entre sesiones y con la limpieza al salir; varios a la vez llegan con la selección múltiple, TRY-012) |
+| TRY-005 | Reordenar | M2 | Should | En curso (Windows: arrastrar dentro de la bandeja con una línea de destino, fija o desfija según dónde cae, `Ctrl+Shift+←/→` con anuncio, orden guardado; varios a la vez con TRY-012) |
 | TRY-006 | Renombrar | M2 | Should | En curso |
-| TRY-007 | Tamaño de las miniaturas | M2 | Could | — |
-| TRY-008 | Cerrar elementos | M1 | Must | En curso |
+| TRY-007 | Tamaño de las miniaturas | M2 | Could | En curso (Windows: menú de una zona vacía de la bandeja y Preferencias > Biblioteca, `tray.thumbnailSize` 48, 72 o 112 px) |
+| TRY-008 | Cerrar elementos | M1 | Must | En curso (M2: Cerrar los no fijados y la limpieza al salir conservan los fijados) |
 | TRY-009 | Eliminar desde la bandeja | M1 | Must | En curso |
 | TRY-010 | Duplicar | M2 | Should | — |
 | TRY-011 | Indicador de cambios sin guardar | M1 | Must | En curso |
@@ -337,7 +337,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-014 | Combinar arrastrando al lienzo | M2 | Must | En curso (Windows: arrastrar desde la bandeja al lienzo de otro documento crea imágenes flotantes en cascada donde se sueltan, con una marca de dónde caerán; sobre una zona de plantilla, la llena; falta la prueba manual de Carlos, porque el arrastre nativo no se puede automatizar, y lo de video llega con VID-) |
 | TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | En curso |
 | TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | — |
-| TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | — |
+| TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | En curso (Windows: `tray.list`, `tray.open`, `tray.activate`, `tray.pin`, `tray.unpin`, `tray.move`, `tray.close`) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |
 

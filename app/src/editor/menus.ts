@@ -369,8 +369,8 @@ export function useMenuBar(): void {
   const hasClip = Boolean(clip && (clip.image || clip.files > 0 || clip.text));
   const tray = useTray((s) => s.visible);
   const inTray = useEditor((s) => s.documents.filter((d) => d.shown).length);
-  const hasPrev = useEditor((s) => neighbour(s.documents, s.active, -1) !== null);
-  const hasNext = useEditor((s) => neighbour(s.documents, s.active, 1) !== null);
+  const hasPrev = useEditor((s) => neighbour(s.documents, s.active, -1, s.tray) !== null);
+  const hasNext = useEditor((s) => neighbour(s.documents, s.active, 1, s.tray) !== null);
   // The file of the document shown, while it is where it was (TRY-002).
   const hasFile = useEditor((s) => {
     const d = s.documents.find((x) => x.documentId === s.active);
@@ -412,6 +412,7 @@ export function useMenuBar(): void {
       "editor.prev_item": hasDoc && hasPrev,
       "editor.next_item": hasDoc && hasNext,
       "editor.rename_item": inLibrary ? picked === 1 : hasDoc && hasFile,
+      "editor.pin_item": !inLibrary && hasDoc,
       "editor.show_in_folder": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.delete_item": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.paste": !inLibrary,

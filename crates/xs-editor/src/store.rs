@@ -109,6 +109,12 @@ pub struct Doc {
     pub recovery_id: Option<String>,
     /// Shown in the editor's strip (opened by the user or with `show`).
     pub shown: bool,
+    /// Pinned in the tray (TRY-004): at the left, never leaves by itself.
+    pub pinned: bool,
+    /// Where it goes in its part of the tray, pinned or not (TRY-005): smaller first.
+    pub place: f64,
+    /// When it arrived in the tray: the oldest leaves first (TRY-003).
+    pub arrival: u64,
     /// Zoom and position the editor reported (EDT-007).
     pub view: Option<Value>,
     /// The editable `.xshot` kept in the library for a flat file from elsewhere
@@ -159,6 +165,9 @@ impl Doc {
             recovery_version: 0,
             recovery_id: None,
             shown: false,
+            pinned: false,
+            place: 0.0,
+            arrival: 0,
             view: None,
             editable_copy: None,
             step_next: BTreeMap::new(),
@@ -218,6 +227,7 @@ impl Doc {
             // Moved or deleted outside XcreenShot (TRY-002).
             "missing": self.path.as_ref().is_some_and(|p| !p.exists()),
             "shown": self.shown,
+            "pinned": self.pinned,
             "version": self.version,
         })
     }
@@ -352,11 +362,45 @@ struct Inner {
     active: Option<String>,
     next_id: u64,
     clock: u64,
+    /// Counts arrivals in the tray (TRY-003, TRY-005).
+    arrivals: u64,
 }
 
 impl Inner {
     fn get_mut(&mut self, id: &str) -> Option<&mut Doc> {
         self.docs.iter_mut().find(|d| d.id == id)
+    }
+
+    /// `id` enters the tray: the newest of the part that is not pinned (TRY-005).
+    fn arrive(&mut self, id: &str) {
+        self.arrivals += 1;
+        let n = self.arrivals;
+        if let Some(d) = self.get_mut(id) {
+            if !d.shown {
+                d.shown = true;
+                d.arrival = n;
+                d.place = -(n as f64);
+            }
+        }
+    }
+
+    /// The tray, left to right: the pinned ones, then the rest (TRY-004, TRY-005).
+    fn tray(&self) -> Vec<String> {
+        let mut shown: Vec<&Doc> = self.docs.iter().filter(|d| d.shown).collect();
+        shown.sort_by(|a, b| b.pinned.cmp(&a.pinned).then(a.place.total_cmp(&b.place)));
+        shown.into_iter().map(|d| d.id.clone()).collect()
+    }
+
+    /// Numbers each part of the tray 0, 1, 2… in the order given.
+    fn renumber(&mut self, order: &[String]) {
+        let (mut pinned, mut rest) = (0.0, 0.0);
+        for id in order {
+            if let Some(d) = self.get_mut(id) {
+                let n = if d.pinned { &mut pinned } else { &mut rest };
+                d.place = *n;
+                *n += 1.0;
+            }
+        }
     }
 
     fn touch(&mut self, id: &str) {
@@ -511,17 +555,22 @@ impl DocStore {
                 .iter_mut()
                 .find(|d| d.path.as_deref().is_some_and(|p| same_file(p, path)))
             {
-                existing.shown |= show;
                 let id = existing.id.clone();
+                if show {
+                    inner.arrive(&id);
+                }
                 inner.touch(&id);
                 return (id, false);
             }
         }
         inner.next_id += 1;
         doc.id = format!("d{}", inner.next_id);
-        doc.shown = show;
+        doc.shown = false;
         let id = doc.id.clone();
         inner.docs.push(doc);
+        if show {
+            inner.arrive(&id);
+        }
         inner.touch(&id);
         (id, true)
     }
@@ -544,9 +593,7 @@ impl DocStore {
         let mut inner = self.inner.lock().unwrap();
         let previous = inner.active.clone();
         if let Some(id) = id {
-            if let Some(d) = inner.get_mut(id) {
-                d.shown = true;
-            }
+            inner.arrive(id);
             inner.touch(id);
         }
         inner.active = id.map(str::to_string);
@@ -576,6 +623,115 @@ impl DocStore {
 
     pub fn summaries(&self) -> Vec<Value> {
         self.inner.lock().unwrap().docs.iter().map(Doc::summary).collect()
+    }
+
+    /// Puts a document in the tray without showing it in the editor (TRY-017).
+    pub fn show_in_tray(&self, id: &str) {
+        self.inner.lock().unwrap().arrive(id);
+    }
+
+    /// The tray, left to right (TRY-002, TRY-004, TRY-005).
+    pub fn tray(&self) -> Vec<String> {
+        self.inner.lock().unwrap().tray()
+    }
+
+    /// Pins or unpins (TRY-004). A pinned item goes to the right end of the pinned
+    /// ones; an unpinned one back to its place by arrival. Returns whether any changed.
+    pub fn set_pinned(&self, ids: &[String], pinned: bool) -> bool {
+        let mut inner = self.inner.lock().unwrap();
+        let mut order = inner.tray();
+        let mut changed = false;
+        for id in order.clone().iter().filter(|id| ids.contains(id)) {
+            let Some(d) = inner.get_mut(id) else { continue };
+            if d.pinned == pinned {
+                continue;
+            }
+            d.pinned = pinned;
+            changed = true;
+            let arrival = d.arrival;
+            order.retain(|o| o != id);
+            let at = if pinned {
+                order
+                    .iter()
+                    .rposition(|o| inner.docs.iter().any(|d| d.id == *o && d.pinned))
+                    .map_or(0, |i| i + 1)
+            } else {
+                // Among the rest, before the first that arrived earlier.
+                let first_rest = order
+                    .iter()
+                    .position(|o| inner.docs.iter().any(|d| d.id == *o && !d.pinned))
+                    .unwrap_or(order.len());
+                order[first_rest..]
+                    .iter()
+                    .position(|o| inner.docs.iter().any(|d| d.id == *o && d.arrival < arrival))
+                    .map_or(order.len(), |i| first_rest + i)
+            };
+            order.insert(at, id.clone());
+        }
+        if changed {
+            inner.renumber(&order);
+        }
+        changed
+    }
+
+    /// Moves `id` to `index` of the tray (TRY-005). Dropped among the pinned ones, it
+    /// is pinned; among the rest, unpinned; at the border, it keeps its state.
+    pub fn move_to(&self, id: &str, index: usize) -> Option<usize> {
+        let mut inner = self.inner.lock().unwrap();
+        let mut order = inner.tray();
+        let from = order.iter().position(|o| o == id)?;
+        order.remove(from);
+        let index = index.min(order.len());
+        let pinned_count = order
+            .iter()
+            .filter(|o| inner.docs.iter().any(|d| d.id == **o && d.pinned))
+            .count();
+        let doc = inner.get_mut(id)?;
+        doc.pinned = match index.cmp(&pinned_count) {
+            std::cmp::Ordering::Less => true,
+            std::cmp::Ordering::Greater => false,
+            std::cmp::Ordering::Equal => doc.pinned,
+        };
+        order.insert(index, id.to_string());
+        inner.renumber(&order);
+        inner.tray().iter().position(|o| o == id)
+    }
+
+    /// Puts back the pinned items and the order of a previous run (EDT-120).
+    pub fn restore_tray(&self, pinned: &[PathBuf], order: &[PathBuf]) {
+        let mut inner = self.inner.lock().unwrap();
+        let at = |list: &[PathBuf], d: &Doc| {
+            d.path
+                .as_deref()
+                .and_then(|p| list.iter().position(|q| same_file(q, p)))
+        };
+        let mut placed: Vec<(usize, String)> = Vec::new();
+        for d in inner.docs.iter_mut().filter(|d| d.shown) {
+            d.pinned = at(pinned, d).is_some();
+            if let Some(i) = at(order, d) {
+                placed.push((i, d.id.clone()));
+            }
+        }
+        if placed.is_empty() {
+            return;
+        }
+        placed.sort();
+        let mut tray = inner.tray();
+        let known: Vec<String> = placed.into_iter().map(|p| p.1).collect();
+        tray.retain(|id| !known.contains(id));
+        let mut order = known;
+        order.extend(tray);
+        let pinned_first: Vec<String> = order
+            .iter()
+            .filter(|id| inner.docs.iter().any(|d| d.id == **id && d.pinned))
+            .chain(
+                order
+                    .iter()
+                    .filter(|id| inner.docs.iter().any(|d| d.id == **id && !d.pinned)),
+            )
+            .cloned()
+            .collect();
+        inner.renumber(&pinned_first);
     }
 
     /// Changes a document as one undo step named `label` (an i18n key). `f` works on a
