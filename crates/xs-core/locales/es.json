@@ -458,6 +458,14 @@
     "editor_theme": {
       "title": "Tema",
       "description": "Activa, crea o cambia, duplica, renombra, elimina, exporta o importa un tema (.xtheme)."
+    },
+    "editor_colors": {
+      "title": "Colores",
+      "description": "Lista Mis colores y los colores recientes del selector de color, compartidos por todas las ventanas."
+    },
+    "editor_color": {
+      "title": "Color",
+      "description": "Añade un color a Mis colores (hasta 24), lo quita o lo marca como usado (los 8 últimos son los Recientes)."
     }
   },
   "settings": {
@@ -1522,7 +1530,11 @@
         "area": "Saturación y brillo",
         "hue": "Tono",
         "brightness_short": "Br",
-        "eyedropper": "Cuentagotas"
+        "eyedropper": "Cuentagotas",
+        "mine": "Mis colores",
+        "recent": "Recientes",
+        "add_mine": "Añadir a Mis colores",
+        "remove_mine": "Quitar {{color}} de Mis colores"
       },
       "a11y": {
         "object": "{{what}}, en {{x}}, {{y}}, {{w}} por {{h}} píxeles",

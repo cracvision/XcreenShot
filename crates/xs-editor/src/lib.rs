@@ -1957,6 +1957,64 @@ fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResul
     Ok(json!({ "changed": true }))
 }
 
+/// My colors (up to 24) and the last 8 used (EDT-019), shared by every window.
+const COLORS_KEY: &str = "colors";
+const MY_COLORS: usize = 24;
+const RECENT_COLORS: usize = 8;
+
+fn colors_of(core: &Core) -> (Vec<String>, Vec<String>) {
+    let v = core.recall(COLORS_KEY).unwrap_or_default();
+    let list = |k: &str| -> Vec<String> {
+        v.get(k)
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|c| c.as_str().map(str::to_string)).collect())
+            .unwrap_or_default()
+    };
+    (list("mine"), list("recent"))
+}
+
+/// `editor.color`: save or remove one of My colors, or note a color as used.
+fn color_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let color = p.get("color").and_then(Value::as_str).unwrap_or_default();
+    let c = xs_image::color::Rgba::parse(color).ok_or_else(|| bad("color", "use #RRGGBB or #RRGGBBAA"))?;
+    // One spelling per color: #RRGGBB, or #RRGGBBAA when not opaque.
+    let color = if c.a == 255 {
+        format!("#{:02X}{:02X}{:02X}", c.r, c.g, c.b)
+    } else {
+        format!("#{:02X}{:02X}{:02X}{:02X}", c.r, c.g, c.b, c.a)
+    };
+    let (mut mine, mut recent) = colors_of(core);
+    match p.get("action").and_then(Value::as_str).unwrap_or_default() {
+        "save" => {
+            if !mine.contains(&color) {
+                if mine.len() >= MY_COLORS {
+                    return Err(bad("color", "My colors holds 24: remove one first"));
+                }
+                mine.push(color);
+            }
+        }
+        "remove" => mine.retain(|x| x != &color),
+        "used" => {
+            recent.retain(|x| x != &color);
+            recent.insert(0, color);
+            recent.truncate(RECENT_COLORS);
+        }
+        other => return Err(bad("action", other)),
+    }
+    let v = json!({ "mine": mine, "recent": recent });
+    core.remember(COLORS_KEY, v.clone());
+    core.host().editor_event("colors", v.clone());
+    Ok(v)
+}
+
 /// Keeps the themes for the next session and tells the editor (EDT-015, EDT-017).
 fn themes_changed(core: &Core, lib: &themes::Library) {
     core.remember(themes::KEY, serde_json::to_value(lib).unwrap_or_default());
@@ -3520,6 +3578,12 @@ pub fn extension() -> Extension {
         });
         // Saved styles, favorites and themes (EDT-015 to EDT-018).
         on!("editor.styles", |core, _ctx, _p| Ok(styles_list(&core)));
+        // My colors and recent colors of the color selector (EDT-019).
+        on!("editor.colors", |core, _ctx, _p| {
+            let (mine, recent) = colors_of(&core);
+            Ok(json!({ "mine": mine, "recent": recent }))
+        });
+        on!("editor.color", |core, ctx, p| color_command(&core, ctx, &p));
         on!("editor.style", |core, ctx, p| style_command(&core, ctx, &p));
         on!("editor.themes", |core, _ctx, _p| Ok(themes_list(&core)));
         on!("editor.theme", |core, ctx, p| theme_command(&core, ctx, &p));

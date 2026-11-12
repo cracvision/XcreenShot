@@ -2865,3 +2865,51 @@ fn themes_and_xtheme_files() {
         4
     );
 }
+
+/// EDT-019: My colors (no repeats, up to 24) and the last 8 used.
+#[test]
+fn my_colors_and_recent_colors() {
+    let e = env();
+    let r = cli(
+        &e.core,
+        "editor.color",
+        json!({"action": "save", "color": "#2d7ff9"}),
+    );
+    assert_eq!(r["mine"], json!(["#2D7FF9"]), "one spelling");
+    cli(
+        &e.core,
+        "editor.color",
+        json!({"action": "save", "color": "#2D7FF9"}),
+    );
+    for i in 0..10 {
+        cli(
+            &e.core,
+            "editor.color",
+            json!({"action": "used", "color": format!("#0000{:02X}", i)}),
+        );
+    }
+    let r = cli(&e.core, "editor.colors", json!({}));
+    assert_eq!(r["mine"].as_array().unwrap().len(), 1);
+    assert_eq!(r["recent"].as_array().unwrap().len(), 8);
+    assert_eq!(r["recent"][0], "#000009", "newest first");
+    for i in 0..23 {
+        cli(
+            &e.core,
+            "editor.color",
+            json!({"action": "save", "color": format!("#11{:02X}11", i)}),
+        );
+    }
+    let full = call(
+        &e.core,
+        Source::Cli,
+        "editor.color",
+        json!({"action": "save", "color": "#ABCDEF"}),
+    );
+    assert!(full.is_err(), "24 at most");
+    let r = cli(
+        &e.core,
+        "editor.color",
+        json!({"action": "remove", "color": "#2D7FF9"}),
+    );
+    assert_eq!(r["mine"].as_array().unwrap().len(), 23);
+}

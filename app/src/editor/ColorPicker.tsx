@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { hsbToRgb, PALETTE, parseHex, rgbToHsb, THEME_COLORS, toHex, type Hsb } from "./color";
 import { tenStep } from "../lib/numberKeys";
+import { run } from "../lib/commands";
+import { useEditor } from "./state";
 
 interface EyeDropperResult {
   sRGBHex: string;
@@ -51,6 +53,8 @@ function Swatch({ color, label, onPick }: { color: string; label: string; onPick
 
 export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }: Props) {
   const { t } = useTranslation();
+  const themeColors = useEditor((s) => s.themeColors);
+  const lists = useEditor((s) => s.colors);
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -78,7 +82,12 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
   const close = (accept: boolean, refocus = true) => {
     setOpen(false);
     if (refocus) button.current?.focus();
-    if (accept && draftValue !== value) onCommit(draftValue);
+    if (accept && draftValue !== value) {
+      onCommit(draftValue);
+      // Recent colors (EDT-019).
+      if (draftValue)
+        void run("editor.color", { action: "used", color: draftValue }).catch(() => undefined);
+    }
   };
 
   // A click anywhere outside accepts what is chosen. Pointer events, in the capture
@@ -198,10 +207,57 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
         >
           <div className="cp-label">{t("ui.editor.color.theme")}</div>
           <div className="swatches">
-            {THEME_COLORS.map((c) => (
+            {(themeColors.length ? themeColors : THEME_COLORS).map((c) => (
               <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
             ))}
           </div>
+          {/* My colors (up to 24) and Recent (8), shared by every window (EDT-019). */}
+          <div className="cp-label">{t("ui.editor.color.mine")}</div>
+          <div className="swatches">
+            {lists.mine.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="swatch"
+                style={{ background: c }}
+                title={`${c} · ${t("ui.editor.color.remove_mine", { color: c })}: Supr`}
+                aria-label={c}
+                onClick={() => pick(c)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  void run("editor.color", { action: "remove", color: c }).catch(() => undefined);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Delete" || e.key === "Backspace") {
+                    e.preventDefault();
+                    void run("editor.color", { action: "remove", color: c }).catch(() => undefined);
+                  }
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              className="swatch add"
+              title={t("ui.editor.color.add_mine")}
+              aria-label={t("ui.editor.color.add_mine")}
+              disabled={transparent || lists.mine.length >= 24}
+              onClick={() =>
+                void run("editor.color", { action: "save", color: hex }).catch(() => undefined)
+              }
+            >
+              +
+            </button>
+          </div>
+          {lists.recent.length > 0 && (
+            <>
+              <div className="cp-label">{t("ui.editor.color.recent")}</div>
+              <div className="swatches">
+                {lists.recent.map((c) => (
+                  <Swatch key={c} color={c} label={c} onPick={() => pick(c)} />
+                ))}
+              </div>
+            </>
+          )}
           <div className="cp-label">{t("ui.editor.color.palette")}</div>
           <div className="cp-palette">
             {PALETTE.map((c) => (

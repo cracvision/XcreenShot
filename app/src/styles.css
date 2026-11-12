@@ -2816,6 +2816,20 @@ html.overlay-root.overlay-native #root {
   transform: scale(0.92);
 }
 
+/* Add to My colors (EDT-019). */
+.swatch.add {
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-weight: 700;
+}
+
+.swatch.add:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ---------- Status bar (EDT-011) ---------- */
 .status-bar {
   display: flex;

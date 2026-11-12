@@ -458,6 +458,14 @@
     "editor_theme": {
       "title": "Theme",
       "description": "Activates, creates or changes, duplicates, renames, deletes, exports or imports a theme (.xtheme)."
+    },
+    "editor_colors": {
+      "title": "Colors",
+      "description": "Lists My colors and the recent colors of the color selector, shared by every window."
+    },
+    "editor_color": {
+      "title": "Color",
+      "description": "Adds a color to My colors (up to 24), removes it, or marks it as used (the last 8 are Recent)."
     }
   },
   "settings": {
@@ -1522,7 +1530,11 @@
         "area": "Saturation and brightness",
         "hue": "Hue",
         "brightness_short": "Br",
-        "eyedropper": "Eyedropper"
+        "eyedropper": "Eyedropper",
+        "mine": "My colors",
+        "recent": "Recent",
+        "add_mine": "Add to My colors",
+        "remove_mine": "Remove {{color}} from My colors"
       },
       "a11y": {
         "object": "{{what}}, at {{x}}, {{y}}, {{w}} by {{h}} pixels",

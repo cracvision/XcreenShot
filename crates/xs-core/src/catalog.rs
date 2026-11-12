@@ -975,6 +975,21 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object"})),
+        B::new("editor.colors", &["EDT-019"])
+            .scopes(ALL)
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"mine": {"type": "array", "items": {"type": "string"}}, "recent": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("editor.color", &["EDT-019"])
+            .scopes(ALL)
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["save", "remove", "used"], "description": "save: add to My colors (up to 24); remove: take it out; used: first of the 8 recent colors"},
+                    "color": {"type": "string", "description": "#RRGGBB or #RRGGBBAA"}
+                }),
+                &["action", "color"],
+            ))
+            .result(json!({"type": "object", "properties": {"mine": {"type": "array"}, "recent": {"type": "array"}}})),
         B::new("editor.themes", &["EDT-017"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {"active": {"type": "string"}, "themes": {"type": "array"}}})),

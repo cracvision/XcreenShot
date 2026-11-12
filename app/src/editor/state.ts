@@ -622,6 +622,10 @@ interface EditorState {
   fillProgress: number | null;
   /** Bumped when themes, saved styles or favorites change (EDT-015 to EDT-018). */
   themesVersion: number;
+  /** The active theme's colors, for the color selector (EDT-019). */
+  themeColors: string[];
+  /** My colors and recent colors (EDT-019). */
+  colors: { mine: string[]; recent: string[] };
   /** An imported theme has the name of one of the user's (EDT-018). */
   themeConflict: { path: string; name: string } | null;
   /** The group a double click entered, outermost first (EDT-082). */
@@ -655,6 +659,18 @@ interface EditorState {
 let zoomSeq = 0;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
+/** The active theme's colors (EDT-019). */
+async function loadThemeColors(): Promise<string[]> {
+  try {
+    const r = await run<{ active: string; themes: { id: string; colors: string[] }[] }>(
+      "editor.themes",
+    );
+    return r.themes.find((t) => t.id === r.active)?.colors ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Document events received so far: a load that started before one is older than it. */
 let docEvents = 0;
 
@@ -679,6 +695,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   flattenAsk: null,
   fillProgress: null,
   themesVersion: 0,
+  themeColors: [],
+  colors: { mine: [], recent: [] },
   themeConflict: null,
   stepEdit: null,
   entered: [],
@@ -726,6 +744,10 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
         case "themes":
           set({ themesVersion: get().themesVersion + 1 });
+          void loadThemeColors().then((themeColors) => set({ themeColors }));
+          break;
+        case "colors":
+          set({ colors: payload as unknown as { mine: string[]; recent: string[] } });
           break;
         case "progress": {
           // A long fill's progress; null when it ends (EDT-045).
@@ -816,6 +838,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     // A view asked for before this window loaded (LIB-001).
     if (state.view) showView(state.view);
     const recovery = await run<{ items: RecoveryItem[] }>("editor.recovery_list");
+    // The color selector's theme colors, My colors and recent ones (EDT-019).
+    void loadThemeColors().then((themeColors) => set({ themeColors }));
+    void run<{ mine: string[]; recent: string[] }>("editor.colors")
+      .then((colors) => set({ colors }))
+      .catch(() => undefined);
     set({
       tool: state.tool,
       tools: state.tools,
