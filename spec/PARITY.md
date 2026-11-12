@@ -311,7 +311,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-022 | Índice propio de la biblioteca | M1 | Must | En curso |
 | LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | En curso (Windows: Reconstruir el índice y Comprobar desde el menú ⋯ de la Biblioteca, `library.rebuild` y `library.check` con limpieza de `.xmeta` huérfanos; faltan el progreso en segundo plano mientras se usa la biblioteca, mover los dañados aparte, el aviso de poco espacio y la entrada en Preferencias) |
 | LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | — |
-| LIB-025 | Bibliotecas grandes | M2 | Must | — |
+| LIB-025 | Bibliotecas grandes | M2 | Must | En curso (Windows: la cuadrícula y la lista solo dibujan lo visible; consultas medidas con 50.000 elementos; faltan los marcadores con el ícono del tipo, el límite de 2 GB de la caché de miniaturas y el aviso por encima de 100.000) |
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
 | LIB-027 | Ubicación por defecto | M1 | Must | En curso |
 | LIB-028 | Cambiar o mover la biblioteca | M2 | Must | En curso (Windows: Preferencias > Biblioteca > Cambiar…, mover con progreso y Cancelar que devuelve todo, empezar vacía, usar la que hay, informe de lo que no se movió, los documentos abiertos siguen a sus archivos, la automatización no puede; faltan comprobar el espacio libre, el tiempo restante, Reintentar, Fusionar (LIB-031) y el bloqueo por configuración administrada) |
@@ -396,7 +396,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-049 | De la captura al editor | M1 | Must | En curso |
 | APP-050 | Editor con imágenes muy grandes | M2 | Must | — |
 | APP-051 | Consumo en reposo y arranque | M1 | Should | En curso |
-| APP-052 | Escala de la biblioteca | M2 | Must | — |
+| APP-052 | Escala de la biblioteca | M2 | Must | En curso (Windows: búsqueda y filtros sobre 50.000 elementos en 33 a 136 ms en release; con 20.000 en depuración, primeras miniaturas en 0,7 s y recorrido completo sin fotogramas de más de 100 ms; falta medir 50.000 con el instalador y la reconstrucción en segundo plano) |
 | APP-053 | Cruceta con varios monitores 4K | M1 | Must | En curso |
 | APP-054 | Local y privado | M0 | Must | En curso |
 | APP-055 | Portabilidad de datos y migración entre equipos | M2 | Should | — |

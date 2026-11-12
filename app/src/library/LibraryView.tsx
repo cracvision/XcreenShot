@@ -30,9 +30,14 @@ import { askRebuild, checkLibrary } from "./maintenanceState";
 import { Menu } from "../components/Menu";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
-import { boxOf, clickSelection, columnsOf, moveFocus, overlaps, range } from "./selection";
+import { boxOf, clickSelection, moveFocus, overlaps, range } from "./selection";
 import { selectedItems, useLibrary, type LibraryItem } from "./state";
 import { ViewSwitch } from "./ViewSwitch";
+import { columnsFor, scrollToRow, visibleSpan } from "./virtual";
+
+/** Smallest tile of the grid, in CSS px; and a list row's height. */
+const TILE = 176;
+const ROW = 34;
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -429,14 +434,54 @@ function Grid() {
   const keyed = useRef(false);
   const order = items.map((i) => i.id);
   const chosen = new Set(selection);
+  // Only the rows in view are drawn (LIB-025): the scroll position, the size of the
+  // area, and the height of a row as drawn.
+  const [scroll, setScroll] = useState(0);
+  const [box, setBox] = useState({ width: 800, height: 600, gap: 16 });
+  const [tileHeight, setTileHeight] = useState(220);
+  // Items spring in when the view opens, not each time they scroll into view.
+  const [fresh, setFresh] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setFresh(false), 900);
+    return () => clearTimeout(timer);
+  }, []);
+  useLayoutEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    const measure = () => {
+      const style = getComputedStyle(el);
+      const pad = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const inner = el.querySelector<HTMLElement>(".lib-window");
+      const gap = inner ? parseFloat(getComputedStyle(inner).rowGap) || 0 : 16;
+      setBox({ width: el.clientWidth - pad, height: el.clientHeight, gap });
+      const first = el.querySelector<HTMLElement>("[data-item]");
+      if (first && !list) setTileHeight(first.offsetHeight);
+    };
+    measure();
+    const seen = new ResizeObserver(measure);
+    seen.observe(el);
+    return () => seen.disconnect();
+  }, [list, items.length]);
+  const columns = list ? 1 : columnsFor(box.width, TILE, box.gap);
+  const rowHeight = list ? ROW : tileHeight + box.gap;
+  const span = visibleSpan(items.length, columns, rowHeight, scroll, box.height);
 
   useLayoutEffect(() => {
     if (!keyed.current || !focus) return;
-    keyed.current = false;
     const el = grid.current?.querySelector<HTMLElement>(`[data-item="${focus}"]`);
-    el?.focus();
-    el?.scrollIntoView({ block: "nearest" });
-  }, [focus]);
+    const index = order.indexOf(focus);
+    const g = grid.current;
+    // Not drawn yet: scroll to its row; this runs again once it is.
+    if (g && index >= 0) {
+      const to = scrollToRow(Math.floor(index / columns), rowHeight, g.scrollTop, g.clientHeight);
+      if (to !== null) {
+        g.scrollTop = to;
+        if (!el) return;
+      }
+    }
+    keyed.current = false;
+    el?.focus({ preventScroll: true });
+  }, [focus, span.start, columns, rowHeight, order]);
 
   const pick = (item: LibraryItem, e: MouseEvent) => {
     const { selection: current, anchor } = useLibrary.getState();
@@ -467,10 +512,7 @@ function Grid() {
     });
 
   const layout = () => {
-    const els = Array.from(grid.current?.querySelectorAll<HTMLElement>("[data-item]") ?? []);
-    const columns = columnsOf(els.map((el) => el.offsetTop));
-    const height = els[0]?.offsetHeight ?? 1;
-    const rows = Math.max(1, Math.floor((grid.current?.clientHeight ?? 0) / height));
+    const rows = Math.max(1, Math.floor((grid.current?.clientHeight ?? 0) / rowHeight));
     return { columns, page: rows * columns };
   };
 
@@ -511,7 +553,12 @@ function Grid() {
 
   // Rubber band from an empty place of the grid (LIB-002).
   const down = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || e.target !== e.currentTarget) return;
+    const target = e.target as HTMLElement;
+    const empty =
+      target === e.currentTarget ||
+      target.classList.contains("lib-sizer") ||
+      target.classList.contains("lib-window");
+    if (e.button !== 0 || !empty) return;
     const box = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - box.left;
     const y = e.clientY - box.top + e.currentTarget.scrollTop;
@@ -543,7 +590,7 @@ function Grid() {
   return (
     <div
       ref={grid}
-      className={list ? "library-list" : "library-grid"}
+      className={`${list ? "library-list" : "library-grid"}${fresh ? " fresh" : ""}`}
       role="listbox"
       aria-multiselectable="true"
       aria-label={t("ui.library.grid")}
@@ -552,20 +599,34 @@ function Grid() {
       onPointerMove={moveBand}
       onPointerUp={upBand}
       onPointerCancel={upBand}
+      onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
     >
-      {items.map((item) => (
-        <Item
-          key={item.id}
-          item={item}
-          list={list}
-          selected={chosen.has(item.id)}
-          focusable={item.id === firstFocusable}
-          onPick={pick}
-          onOpen={(i) => void openItems([i])}
-          onMenu={menu}
-          onPress={press}
-        />
-      ))}
+      <div
+        className="lib-sizer"
+        style={{ height: Math.max(0, span.rows * rowHeight - (list ? 0 : box.gap)) }}
+      >
+        <div
+          className={`lib-window${list ? " list" : ""}`}
+          style={{
+            transform: `translateY(${span.firstRow * rowHeight}px)`,
+            ...(list ? {} : { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }),
+          }}
+        >
+          {items.slice(span.start, span.end).map((item) => (
+            <Item
+              key={item.id}
+              item={item}
+              list={list}
+              selected={chosen.has(item.id)}
+              focusable={item.id === firstFocusable}
+              onPick={pick}
+              onOpen={(i) => void openItems([i])}
+              onMenu={menu}
+              onPress={press}
+            />
+          ))}
+        </div>
+      </div>
       {shown && (
         <div
           className="rubber-band"

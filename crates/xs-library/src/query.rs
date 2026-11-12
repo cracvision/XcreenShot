@@ -601,6 +601,58 @@ mod tests {
         assert_eq!(run(&all, &today, "", Sort::Name, false, day()).items.len(), 2);
     }
 
+    /// APP-052: a search by tag and a filter over 50,000 items answer in under 300 ms
+    /// (release build; `cargo test --release -p xs-library -- --ignored scale`).
+    #[test]
+    #[ignore]
+    fn scale_fifty_thousand_items() {
+        let apps = ["Google Chrome 131", "Code", "Excel", "Slack", "Outlook"];
+        let all: Vec<Item> = (0..50_000)
+            .map(|i| {
+                let mut it = item(&format!("Captura {i}"), (i * 37 % 9000) as u64);
+                it.id = format!("id{i}");
+                it.app = Some(apps[i % apps.len()].to_string());
+                it.url = (i % 3 == 0).then(|| format!("https://www.site{}.com/page", i % 40));
+                it.tags = if i % 10 == 0 {
+                    vec!["Cliente".into()]
+                } else {
+                    Vec::new()
+                };
+                it.text = if i % 7 == 0 {
+                    "Pulsa el botón Guardar".into()
+                } else {
+                    String::new()
+                };
+                it.captured -= (i as i64) * 3_600_000;
+                it
+            })
+            .collect();
+        let mut times = Vec::new();
+        for q in ["tag:cliente", "guardar", "app:chrome", "captura 4"] {
+            let t = std::time::Instant::now();
+            let f = run(&all, &Filters::default(), q, Sort::Modified, true, day());
+            times.push((q, t.elapsed(), f.items.len()));
+        }
+        let t = std::time::Instant::now();
+        let f = run(
+            &all,
+            &Filters {
+                tags: vec!["Cliente".into()],
+                dates: vec!["2026".into()],
+                ..Filters::default()
+            },
+            "",
+            Sort::Name,
+            false,
+            day(),
+        );
+        times.push(("filters", t.elapsed(), f.items.len()));
+        for (q, d, n) in &times {
+            println!("{q}: {} ms, {n} items", d.as_millis());
+        }
+        assert!(times.iter().all(|(_, d, _)| d.as_millis() < 300), "{times:?}");
+    }
+
     #[test]
     fn domains_and_app_names() {
         assert_eq!(

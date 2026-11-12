@@ -3133,13 +3133,29 @@ html.overlay-root.overlay-native #root {
 .library-grid {
   position: relative;
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-  align-content: start;
-  gap: var(--space-4);
   padding: var(--space-5);
   overflow: auto;
   user-select: none;
+}
+
+/* Only the rows in view are drawn (LIB-025): the sizer is as tall as all of them and
+   the window, moved down to where they start, holds the ones drawn. */
+.lib-sizer {
+  position: relative;
+}
+
+.lib-window {
+  display: grid;
+  gap: var(--space-4);
+  will-change: transform;
+}
+
+.lib-window.list {
+  gap: 0;
+}
+
+.library-grid:not(.fresh) .lib-item {
+  animation: none;
 }
 
 .lib-item {
@@ -4993,8 +5009,6 @@ body.preparing-drag * {
 /* The list (LIB-004): the same items as rows, under a header that sorts. */
 .library-list {
   position: relative;
-  display: grid;
-  align-content: start;
   padding: 0 var(--space-5) var(--space-5);
   overflow: auto;
   user-select: none;
@@ -5017,7 +5031,7 @@ body.preparing-drag * {
 }
 
 .lib-row {
-  min-height: 34px;
+  height: 34px;
   padding: 0 10px;
   border-radius: var(--radius-sm);
   outline: none;
