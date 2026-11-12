@@ -646,6 +646,17 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
             let Some(original) = images.get(&i.image) else {
                 return;
             };
+            // Rounded corners first (EDT-075), in the picture's own pixels; its effects
+            // then follow that shape.
+            let rounded: Option<Arc<Pixmap>> = (i.style.corner_radius > 0.0)
+                .then(|| {
+                    let k = (i.rect.w / original.width() as f64 + i.rect.h / original.height() as f64) / 2.0;
+                    let img =
+                        crate::fx::round_corners(straight(original), i.style.corner_radius / k.max(1e-6));
+                    premultiply(&img).map(Arc::new)
+                })
+                .flatten();
+            let original = rounded.as_ref().unwrap_or(original);
             // Its own effects (EDT-053): the picture changes, and grows around the box.
             let stack: Vec<serde_json::Value> = object
                 .props

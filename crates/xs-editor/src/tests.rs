@@ -3554,3 +3554,54 @@ fn a_gradient_canvas_shows_in_added_space() {
     );
     assert!(bad.is_err());
 }
+
+/// EDT-075: with three floating images selected, Radius = 16 rounds the three; their
+/// corners show what is below.
+#[test]
+fn floating_images_get_rounded_corners_together() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(400, 200), json!({"mode": "region"}), 1.0, None).unwrap();
+    let paths: Vec<PathBuf> = (0..3).map(|_| red_png(&e, 60, 60)).collect();
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": paths, "center": [200, 100]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let ids: Vec<String> = info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["id"].as_str().unwrap().to_string())
+        .collect();
+    for (i, id) in ids.iter().enumerate() {
+        cli(
+            &e.core,
+            "document.update_object",
+            json!({"documentId": doc, "objectId": id, "set": {"rect": {"x": 20 + 120 * i, "y": 70, "w": 60, "h": 60}}}),
+        );
+    }
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectIds": ids, "set": {"style": {"cornerRadius": 16}}}),
+    );
+    let img = rendered(&e, &doc);
+    for i in 0..3u32 {
+        let x0 = 20 + 120 * i;
+        assert_eq!(
+            img.get_pixel(x0, 70).0,
+            [255, 255, 255, 255],
+            "corner {i} rounded"
+        );
+        assert_eq!(img.get_pixel(x0 + 30, 100).0, [255, 0, 0, 255], "middle {i} red");
+    }
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][2]["style"]["cornerRadius"], json!(16.0));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(
+        rendered(&e, &doc).get_pixel(20, 70).0,
+        [255, 0, 0, 255],
+        "square again"
+    );
+}

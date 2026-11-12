@@ -110,6 +110,7 @@ const ACCENT = "#0064fb";
 type BoxHandle = Exclude<Handle, "rotate">;
 
 type ArrowObj = Extract<DocObject, { type: "arrow" | "line" }>;
+type ImageObj = Extract<DocObject, { type: "image" }>;
 
 /** What a press on a handle grabs: the crop box, an arrow end or an object's handle. */
 type HandleHit =
@@ -120,7 +121,7 @@ type HandleHit =
   | { multi: Handle }
   // A callout's tail tip, its + (a new tail), its corner radius, its anchor (EDT-028).
   | { tail: CalloutObject; index: number | null }
-  | { radius: CalloutObject | ShapeObject }
+  | { radius: CalloutObject | ShapeObject | ImageObj }
   // A polygon's corner (EDT-030).
   | { vertex: ShapeObject; index: number }
   | { anchor: CalloutObject }
@@ -946,6 +947,11 @@ export function Canvas({ doc }: Props) {
       if (box && o.style.shapeType === "roundedRectangle")
         if (near(radiusPoint(box, o.style.cornerRadius), s)) return { radius: o };
     }
+    // A floating image's rounded corners (EDT-075).
+    if (o.type === "image" && !o.locked) {
+      const box = boxOf(o);
+      if (box && near(radiusPoint(box, o.style.cornerRadius ?? 0), s)) return { radius: o };
+    }
     if (o.type === "callout" && !o.locked) {
       const box = boxOf(o);
       if (box) {
@@ -1137,7 +1143,7 @@ export function Canvas({ doc }: Props) {
           kind: "radius",
           id: handle.radius.id,
           box,
-          value: handle.radius.style.cornerRadius,
+          value: handle.radius.style.cornerRadius ?? 0,
         });
         return;
       }
@@ -2680,6 +2686,30 @@ export function Canvas({ doc }: Props) {
                           })}
                         {o.type === "callout" && calloutHandles(o, box)}
                         {o.type === "shape" && shapeHandles(o, box)}
+                        {o.type === "image" &&
+                          !o.locked &&
+                          (() => {
+                            // Its rounded corners' rhombus (EDT-075).
+                            const r =
+                              drag?.kind === "radius" && drag.id === o.id
+                                ? drag.value
+                                : (o.style.cornerRadius ?? 0);
+                            const [x, y] = toScreen(radiusPoint(box, r));
+                            return (
+                              <Rect
+                                x={x}
+                                y={y}
+                                width={HANDLE - 2}
+                                height={HANDLE - 2}
+                                offsetX={(HANDLE - 2) / 2}
+                                offsetY={(HANDLE - 2) / 2}
+                                rotation={45 + box.rotation}
+                                fill={r > 0 ? ACCENT : "#ffffff"}
+                                stroke={r > 0 ? "#ffffff" : ACCENT}
+                                strokeWidth={1.5}
+                              />
+                            );
+                          })()}
                         {o.type === "magnify" &&
                           lensAway(o) &&
                           (() => {

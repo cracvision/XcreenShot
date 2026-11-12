@@ -266,7 +266,8 @@ impl BlurObject {
     }
 }
 
-/// Floating image properties of M1 (EDT-078). Border, shadow and corners arrive in M2.
+/// Floating image properties (EDT-078): shadow (EDT-021), opacity and rounded corners
+/// (EDT-075).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct ImageStyle {
@@ -274,6 +275,13 @@ pub struct ImageStyle {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shadow: Option<crate::shadows::Shadow>,
     pub opacity: f64,
+    /// Rounded corners in canvas pixels (EDT-075); the corners become transparent.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub corner_radius: f64,
+}
+
+fn is_zero(v: &f64) -> bool {
+    *v == 0.0
 }
 
 impl Default for ImageStyle {
@@ -281,6 +289,7 @@ impl Default for ImageStyle {
         ImageStyle {
             shadow: None,
             opacity: 100.0,
+            corner_radius: 0.0,
         }
     }
 }
@@ -290,6 +299,9 @@ impl ImageStyle {
         let s: ImageStyle = merged(base, changes)?;
         if !(0.0..=100.0).contains(&s.opacity) {
             return Err("opacity must be between 0 and 100".to_string());
+        }
+        if !(0.0..=10_000.0).contains(&s.corner_radius) {
+            return Err("cornerRadius must be between 0 and 10000".to_string());
         }
         Ok(s)
     }

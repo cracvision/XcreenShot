@@ -475,7 +475,24 @@ function KindProperties({ target }: { target: Target }) {
       );
     }
     case "image":
-      return opacity;
+      // Rounded corners, in all the selected images (EDT-075).
+      return (
+        <>
+          {opacity}
+          <NumberField
+            label={t("ui.editor.prop.corner_radius")}
+            value={common<number>(
+              styles.map((st) => ({ r: st.cornerRadius ?? 0 })),
+              "r",
+            )}
+            min={0}
+            max={500}
+            step={1}
+            unit="px"
+            onCommit={(cornerRadius) => commit({ cornerRadius })}
+          />
+        </>
+      );
     case "simplify":
       return <SimplifyProperties v={v} num={num} commit={commit} opacity={opacity} />;
     case "stamp":

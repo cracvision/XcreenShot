@@ -450,6 +450,8 @@ export interface BlurObject {
 /** Floating image properties of M1 (EDT-078). */
 export interface ImageStyle {
   opacity: number;
+  /** Rounded corners in canvas pixels (EDT-075). */
+  cornerRadius?: number;
 }
 
 /** A picture of the document's `images/` folder in a rectangle (EDT-078). */
