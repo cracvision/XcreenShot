@@ -15,6 +15,7 @@ import type {
   MagnifyObject,
   PenObject,
   ShapeObject,
+  SpotlightObject,
   StepObject,
   TextObject,
 } from "./state";
@@ -438,4 +439,34 @@ export function MagnifyShape(props: {
       listening={false}
     />
   );
+}
+
+/** Spotlights (EDT-039): the topmost one's picture is the whole canvas with the outside
+ * changed; the others draw nothing of their own. While one changes, its zone shows. */
+export function SpotlightShape(props: {
+  o: SpotlightObject;
+  committed: SpotlightObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  const same =
+    JSON.stringify([o.rect, o.rotation, o.style]) ===
+    JSON.stringify([committed.rect, committed.rotation, committed.style]);
+  if (!same)
+    return (
+      <Group
+        x={o.rect.x + o.rect.w / 2}
+        y={o.rect.y + o.rect.h / 2}
+        rotation={o.rotation}
+        listening={false}
+      >
+        <Outline
+          ellipse={o.style.shape === "ellipse"}
+          box={{ x: -o.rect.w / 2, y: -o.rect.h / 2, w: o.rect.w, h: o.rect.h }}
+          extra={{ fill: "rgba(255,255,255,0.15)" }}
+        />
+      </Group>
+    );
+  if (!image) return null;
+  return <KImage image={image} x={0} y={0} listening={false} />;
 }

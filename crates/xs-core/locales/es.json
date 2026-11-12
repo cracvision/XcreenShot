@@ -789,7 +789,8 @@
       "editor_tool_line": "Herramienta Línea",
       "editor_tool_highlight": "Herramienta Resaltador",
       "editor_tool_pen": "Herramienta Lápiz",
-      "editor_tool_magnify": "Herramienta Lupa"
+      "editor_tool_magnify": "Herramienta Lupa",
+      "editor_tool_spotlight": "Herramienta Foco"
     }
   },
   "tray": {
@@ -1246,7 +1247,8 @@
         "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°.",
         "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible.",
         "pen": "Dibuja a mano alzada; Mayús traza una línea recta.",
-        "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio."
+        "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio.",
+        "spotlight": "Arrastra alrededor de lo importante: el resto se oscurece o se desenfoca."
       },
       "tool": {
         "move": "Mover",
@@ -1261,7 +1263,8 @@
         "line": "Línea",
         "highlight": "Resaltador",
         "pen": "Lápiz",
-        "magnify": "Lupa"
+        "magnify": "Lupa",
+        "spotlight": "Foco"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1337,7 +1340,11 @@
         "editable": "Crear como trazo editable",
         "lens_shape": "Forma",
         "zoom": "Aumento",
-        "connectors": "Conectores"
+        "connectors": "Conectores",
+        "spot_shape": "Forma",
+        "outside_color": "Color del exterior",
+        "outside_blur": "Desenfoque del exterior",
+        "feather": "Borde suave"
       },
       "cap": {
         "none": "Ninguno",
@@ -1498,6 +1505,11 @@
         "square": "Cuadrado",
         "rectangle": "Rectángulo",
         "roundedRectangle": "Rectángulo redondeado"
+      },
+      "spot_shape": {
+        "rectangle": "Rectángulo",
+        "roundedRectangle": "Rectángulo redondeado",
+        "ellipse": "Óvalo"
       }
     },
     "multi": {
@@ -1721,7 +1733,13 @@
     "change_magnify": "Cambiar lupa",
     "delete_magnify": "Eliminar lupa",
     "cut_magnify": "Cortar lupa",
-    "paste_magnify": "Pegar lupa"
+    "paste_magnify": "Pegar lupa",
+    "draw_spotlight": "Foco",
+    "move_spotlight": "Mover foco",
+    "change_spotlight": "Cambiar foco",
+    "delete_spotlight": "Eliminar foco",
+    "cut_spotlight": "Cortar foco",
+    "paste_spotlight": "Pegar foco"
   },
   "editor": {
     "edited": "{{name}} — Editado"

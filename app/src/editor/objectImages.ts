@@ -25,6 +25,7 @@ export function useObjectImages(
       o.type !== "callout" &&
       o.type !== "pen" &&
       o.type !== "magnify" &&
+      o.type !== "spotlight" &&
       !(o.type === "blur" && o.style.blurType !== "solid")
     )
       return [];
@@ -35,7 +36,7 @@ export function useObjectImages(
         url: objectUrl(
           documentId,
           o.id,
-          o.type === "blur" || o.type === "magnify"
+          o.type === "blur" || o.type === "magnify" || o.type === "spotlight"
             ? `${version}-${fingerprint(o)}`
             : fingerprint(o),
         ),

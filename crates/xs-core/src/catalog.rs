@@ -1028,7 +1028,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 12] = [
+pub const TOOLS: [&str; 13] = [
     "move",
     "arrow",
     "line",
@@ -1039,6 +1039,7 @@ pub const TOOLS: [&str; 12] = [
     "highlight",
     "pen",
     "magnify",
+    "spotlight",
     "blur",
     "crop",
 ];

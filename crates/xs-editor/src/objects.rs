@@ -13,6 +13,7 @@ use xs_image::highlights::{HighlightObject, HighlightStyle};
 use xs_image::magnify::{MagnifyObject, MagnifyStyle};
 use xs_image::pens::{self, PenObject, PenStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
+use xs_image::spotlights::{SpotlightObject, SpotlightStyle, SHARED};
 use xs_image::steps::{self, StepObject, StepStyle};
 use xs_image::text::{Text, TextStyle};
 
@@ -32,6 +33,7 @@ pub struct Styles {
     pub highlight: HighlightStyle,
     pub pen: PenStyle,
     pub magnify: MagnifyStyle,
+    pub spotlight: SpotlightStyle,
 }
 
 impl Default for Styles {
@@ -47,6 +49,7 @@ impl Default for Styles {
             highlight: HighlightStyle::default(),
             pen: PenStyle::default(),
             magnify: MagnifyStyle::default(),
+            spotlight: SpotlightStyle::default(),
         }
     }
 }
@@ -75,6 +78,7 @@ impl Styles {
             "highlight" => serde_json::to_value(&self.highlight).ok(),
             "pen" => serde_json::to_value(&self.pen).ok(),
             "magnify" => serde_json::to_value(&self.magnify).ok(),
+            "spotlight" => serde_json::to_value(&self.spotlight).ok(),
             _ => None,
         }
     }
@@ -92,6 +96,7 @@ impl Styles {
             "highlight" => self.highlight = HighlightStyle::merged(&self.highlight, changes)?,
             "pen" => self.pen = PenStyle::merged(&self.pen, changes)?,
             "magnify" => self.magnify = MagnifyStyle::merged(&self.magnify, changes)?,
+            "spotlight" => self.spotlight = SpotlightStyle::merged(&self.spotlight, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -99,14 +104,14 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["stamp", "spotlight"];
+const LATER_TYPES: &[&str] = &["stamp"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
     match kind {
         "arrow" | "line" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
-        "shape" | "blur" | "image" | "highlight" => Some(&["rect", "rotation"]),
+        "shape" | "blur" | "image" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
         "magnify" => Some(&["source", "at"]),
@@ -175,6 +180,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let mut style = serde_json::to_value(&s.style).map_err(|e| e.to_string())?;
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
+        }
+        "spotlight" => {
+            let s = SpotlightObject::from_props(props)?;
+            json!({"rect": s.rect, "rotation": s.rotation, "style": s.style})
         }
         "magnify" => {
             let m = MagnifyObject::from_props(props)?;
@@ -283,6 +292,29 @@ pub fn default_tail(object: &mut Object, height: f64) {
     object
         .props
         .insert("tails".into(), json!([[x + w * 0.25, tip_y]]));
+}
+
+/// The spotlights of a document share their outside (EDT-039): the settings of the one
+/// that changed (`from`) pass to all of them.
+pub fn share_spotlights(doc: &mut xs_core::document::Document, from: &str) {
+    let Some(source) = doc.object(from).filter(|o| o.kind == "spotlight") else {
+        return;
+    };
+    let shared: Map<String, Value> = SHARED
+        .iter()
+        .filter_map(|k| Some((k.to_string(), source.props.get("style")?.get(*k)?.clone())))
+        .collect();
+    for o in doc
+        .objects
+        .iter_mut()
+        .filter(|o| o.kind == "spotlight" && o.id != from)
+    {
+        if let Some(style) = o.props.get_mut("style").and_then(Value::as_object_mut) {
+            for (k, v) in &shared {
+                style.insert(k.clone(), v.clone());
+            }
+        }
+    }
 }
 
 /// A callout that fits its text grows to show all of it (EDT-028). Other objects stay.

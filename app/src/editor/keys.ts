@@ -154,7 +154,7 @@ function insert(): void {
   const object =
     tool === "arrow" || tool === "line"
       ? { type: tool, from: [c[0] - INSERT.w / 2, c[1]], to: [c[0] + INSERT.w / 2, c[1]] }
-      : tool === "shape" || tool === "blur" || tool === "highlight"
+      : tool === "shape" || tool === "blur" || tool === "highlight" || tool === "spotlight"
         ? { type: tool, rect: { x: c[0] - INSERT.w / 2, y: c[1] - INSERT.h / 2, ...INSERT } }
         : tool === "step"
           ? { type: "step", at: c }
@@ -180,6 +180,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   highlight: "color",
   pen: "color",
   magnify: "outline",
+  spotlight: "color",
   blur: "color",
 };
 

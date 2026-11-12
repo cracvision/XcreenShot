@@ -19,7 +19,7 @@ fn within(b: [f64; 4], area: [f64; 4]) -> bool {
 }
 
 fn grows(o: &Object) -> bool {
-    o.kind != "blur"
+    o.kind != "blur" && o.kind != "spotlight"
 }
 
 /// The objects of `doc` that are not wholly inside its canvas: what a crop leaves outside.

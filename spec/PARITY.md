@@ -118,7 +118,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-036 | Resaltador | M2 | Should | En curso |
 | EDT-037 | Lápiz | M2 | Should | En curso |
 | EDT-038 | Lupa | M2 | Should | En curso |
-| EDT-039 | Foco | M2 | Should | — |
+| EDT-039 | Foco | M2 | Should | En curso |
 | EDT-040 | Desenfocar | M1 | Must | Win |
 | EDT-041 | Simplificar | M2 | Should | — |
 | EDT-042 | Mover | M1 | Must | En curso |

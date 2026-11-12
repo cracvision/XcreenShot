@@ -106,6 +106,22 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A lit zone in the dark (EDT-039).
+  spotlight: (
+    <Svg>
+      <rect
+        x="2.5"
+        y="3.5"
+        width="15"
+        height="13"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.3"
+      />
+      <circle cx="10" cy="10" r="4" />
+    </Svg>
+  ),
   // A magnifying glass (EDT-038).
   magnify: (
     <Svg>

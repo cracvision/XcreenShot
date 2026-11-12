@@ -31,6 +31,8 @@ import {
   type PenTip,
   LENS_SHAPES,
   type LensShape,
+  SPOT_SHAPES,
+  type SpotShape,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -135,7 +137,8 @@ type StyledKind =
   | "callout"
   | "highlight"
   | "pen"
-  | "magnify";
+  | "magnify"
+  | "spotlight";
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -148,6 +151,7 @@ const STYLED: StyledKind[] = [
   "highlight",
   "pen",
   "magnify",
+  "spotlight",
 ];
 
 function useTarget(): Target | null {
@@ -483,6 +487,43 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "spotlight":
+      // Spotlight (EDT-039): the outside's color, opacity, blur and soft edge, shared.
+      return (
+        <>
+          <SelectField
+            label={t("ui.editor.prop.spot_shape")}
+            value={v<SpotShape>("shape")}
+            options={SPOT_SHAPES.map((s) => ({ value: s, label: t(`ui.editor.spot_shape.${s}`) }))}
+            onCommit={(shape) => commit({ shape })}
+          />
+          <ColorPicker
+            label={t("ui.editor.prop.outside_color")}
+            value={v<string>("color") ?? "#000000"}
+            mixed={v<string>("color") === undefined}
+            onCommit={(color) => color && commit({ color })}
+          />
+          {opacity}
+          <NumberField
+            label={t("ui.editor.prop.outside_blur")}
+            value={num("blur")}
+            min={0}
+            max={100}
+            step={1}
+            unit=""
+            onCommit={(blur) => commit({ blur })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.feather")}
+            value={num("feather")}
+            min={0}
+            max={50}
+            step={1}
+            unit="px"
+            onCommit={(feather) => commit({ feather })}
+          />
+        </>
+      );
     case "magnify":
       // Magnify (EDT-038): shape, zoom, outline and connectors.
       return (

@@ -226,7 +226,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
    - **M2.1 terminada (2026-11-11):** selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083), bloquear (EDT-085), agrupar (EDT-082), transformar varios con Igualar ancho/alto (EDT-080) y aplanar/desaplanar (EDT-091). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1"). Falta en EDT-091 el criterio del Borrador: llega con las herramientas de píxeles (M2.3).
    - De paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba); y el diálogo Recuperar trabajo se salía del panel con rutas largas.
-   - **M2.2 en curso:** hechos Paso (EDT-035, `N`), Globo (EDT-028, `C`), Línea (EDT-025, `L`), Resaltador (EDT-036, `H`) y Lápiz (EDT-037, `P`). Decisiones en `QUESTIONS.md` (sección "M2, entrega 2"). Siguen Lupa, Foco, más formas, Sellos y Emoji, Simplificar.
+   - **M2.2 en curso:** hechos Paso (EDT-035, `N`), Globo (EDT-028, `C`), Línea (EDT-025, `L`), Resaltador (EDT-036, `H`), Lápiz (EDT-037, `P`), Lupa (EDT-038, `M`) y Foco (EDT-039, `O`). Decisiones en `QUESTIONS.md` (sección "M2, entrega 2"). Siguen más formas (EDT-030), Sellos y Emoji (EDT-031 a 034) y Simplificar (EDT-041).
 
 ## Decisiones vigentes que conviene recordar
 

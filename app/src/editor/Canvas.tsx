@@ -42,6 +42,7 @@ import {
   PenPreview,
   PenShape,
   ShapeShape,
+  SpotlightShape,
   StepShape,
   TextShape,
 } from "./ObjectShapes";
@@ -105,7 +106,16 @@ type Drag =
   | {
       kind: "draw";
       tool:
-        "arrow" | "line" | "shape" | "blur" | "text" | "step" | "callout" | "highlight" | "magnify";
+        | "arrow"
+        | "line"
+        | "shape"
+        | "blur"
+        | "text"
+        | "step"
+        | "callout"
+        | "highlight"
+        | "magnify"
+        | "spotlight";
       from: Point;
       to: Point;
       startX: number;
@@ -204,7 +214,13 @@ function handlesOf(o: DocObject): Handle[] {
   if (o.type === "callout") return [...RESIZE_HANDLES, "rotate"];
   // A lens: its corners change its zoom (EDT-038).
   if (o.type === "magnify") return ["nw", "ne", "se", "sw"];
-  if (o.type === "shape" || o.type === "blur" || o.type === "image" || o.type === "highlight")
+  if (
+    o.type === "shape" ||
+    o.type === "blur" ||
+    o.type === "image" ||
+    o.type === "highlight" ||
+    o.type === "spotlight"
+  )
     return [...RESIZE_HANDLES, "rotate"];
   return [];
 }
@@ -783,7 +799,8 @@ export function Canvas({ doc }: Props) {
       tool === "step" ||
       tool === "callout" ||
       tool === "highlight" ||
-      tool === "magnify"
+      tool === "magnify" ||
+      tool === "spotlight"
     ) {
       capture();
       setDrag({
@@ -1293,6 +1310,17 @@ export function Canvas({ doc }: Props) {
         return <ShapeShape key={o.id} o={o} scale={scale} />;
       case "highlight":
         return <HighlightShape key={o.id} o={o} />;
+      case "spotlight": {
+        const c = committed.get(o.id);
+        return (
+          <SpotlightShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "spotlight" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "magnify": {
         const c = committed.get(o.id);
         return (
@@ -1360,7 +1388,7 @@ export function Canvas({ doc }: Props) {
     }
   };
 
-  const dashedBox = (kind: "blur" | "text" | "step" | "callout" | "magnify") => {
+  const dashedBox = (kind: "blur" | "text" | "step" | "callout" | "magnify" | "spotlight") => {
     if (drawing?.tool !== kind) return null;
     const r = dragRect(
       drawing.from,
@@ -1406,6 +1434,7 @@ export function Canvas({ doc }: Props) {
       {dashedBox("step")}
       {dashedBox("callout")}
       {dashedBox("magnify")}
+      {dashedBox("spotlight")}
       {drag?.kind === "pen" && styles && (
         <PenPreview
           points={drag.points}

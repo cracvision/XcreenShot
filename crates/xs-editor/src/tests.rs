@@ -2106,3 +2106,28 @@ fn a_lens_and_its_zone() {
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(info["objects"][0]["style"]["zoom"], json!(400.0));
 }
+
+/// EDT-039: spotlights share their outside: a change to one passes to all.
+#[test]
+fn spotlights_share_their_outside() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "spotlight", "rect": {"x": 10, "y": 10, "w": 50, "h": 50}},
+            {"type": "spotlight", "rect": {"x": 100, "y": 10, "w": 50, "h": 50}, "style": {"shape": "ellipse"}}
+        ]}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o2", "set": {"style": {"opacity": 30, "blur": 20}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let first = &info["objects"][0]["style"];
+    assert_eq!(first["opacity"], json!(30.0));
+    assert_eq!(first["blur"], json!(20.0));
+    assert_eq!(first["shape"], "rectangle", "each keeps its own shape");
+}

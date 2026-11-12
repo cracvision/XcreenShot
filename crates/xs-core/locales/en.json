@@ -789,7 +789,8 @@
       "editor_tool_line": "Line tool",
       "editor_tool_highlight": "Highlighter tool",
       "editor_tool_pen": "Pen tool",
-      "editor_tool_magnify": "Magnify tool"
+      "editor_tool_magnify": "Magnify tool",
+      "editor_tool_spotlight": "Spotlight tool"
     }
   },
   "tray": {
@@ -1246,7 +1247,8 @@
         "line": "Drag to draw a line; Shift keeps it straight or at 45°.",
         "highlight": "Drag over what to mark; dark text stays readable.",
         "pen": "Draw freehand; Shift draws a straight line.",
-        "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere."
+        "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere.",
+        "spotlight": "Drag around what matters: the rest darkens or blurs."
       },
       "tool": {
         "move": "Move",
@@ -1261,7 +1263,8 @@
         "line": "Line",
         "highlight": "Highlighter",
         "pen": "Pen",
-        "magnify": "Magnify"
+        "magnify": "Magnify",
+        "spotlight": "Spotlight"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1337,7 +1340,11 @@
         "editable": "Create as editable stroke",
         "lens_shape": "Shape",
         "zoom": "Zoom",
-        "connectors": "Connectors"
+        "connectors": "Connectors",
+        "spot_shape": "Shape",
+        "outside_color": "Outside color",
+        "outside_blur": "Outside blur",
+        "feather": "Soft edge"
       },
       "cap": {
         "none": "None",
@@ -1498,6 +1505,11 @@
         "square": "Square",
         "rectangle": "Rectangle",
         "roundedRectangle": "Rounded rectangle"
+      },
+      "spot_shape": {
+        "rectangle": "Rectangle",
+        "roundedRectangle": "Rounded rectangle",
+        "ellipse": "Oval"
       }
     },
     "multi": {
@@ -1721,7 +1733,13 @@
     "change_magnify": "Change lens",
     "delete_magnify": "Delete lens",
     "cut_magnify": "Cut lens",
-    "paste_magnify": "Paste lens"
+    "paste_magnify": "Paste lens",
+    "draw_spotlight": "Spotlight",
+    "move_spotlight": "Move spotlight",
+    "change_spotlight": "Change spotlight",
+    "delete_spotlight": "Delete spotlight",
+    "cut_spotlight": "Cut spotlight",
+    "paste_spotlight": "Paste spotlight"
   },
   "editor": {
     "edited": "{{name}} — Edited"

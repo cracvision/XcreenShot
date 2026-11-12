@@ -23,6 +23,7 @@ export type Tool =
   | "highlight"
   | "pen"
   | "magnify"
+  | "spotlight"
   | "blur"
   | "crop";
 
@@ -95,6 +96,26 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+}
+
+/** Spotlight (EDT-039). */
+export type SpotShape = "rectangle" | "roundedRectangle" | "ellipse";
+export const SPOT_SHAPES: SpotShape[] = ["rectangle", "roundedRectangle", "ellipse"];
+
+export interface SpotlightStyle {
+  shape: SpotShape;
+  color: string;
+  opacity: number;
+  blur: number;
+  feather: number;
+}
+
+export interface SpotlightObject {
+  id: string;
+  type: "spotlight";
+  rect: Rect;
+  rotation: number;
+  style: SpotlightStyle;
 }
 
 /** Magnify (EDT-038). */
@@ -319,6 +340,7 @@ export type DocObject = (
   | HighlightObject
   | PenObject
   | MagnifyObject
+  | SpotlightObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -338,6 +360,7 @@ export interface Styles {
   highlight: HighlightStyle;
   pen: PenStyle;
   magnify: MagnifyStyle;
+  spotlight: SpotlightStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */

@@ -20,6 +20,7 @@ use crate::pens::{self, PenObject};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
+use crate::spotlights::{self, SpotlightObject};
 use crate::steps::{StepObject, StepShape};
 use crate::text::{self, Text, TextAlign, TextStyle};
 
@@ -717,6 +718,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "step" => StepObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
+        "spotlight" => SpotlightObject::from_props(&object.props)
+            .ok()
+            .map(|s| (s.rect, s.rotation)),
         "highlight" => HighlightObject::from_props(&object.props)
             .ok()
             .map(|h| (h.rect, h.rotation)),
@@ -760,10 +764,38 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
 /// objects (EDT-091).
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = canvas(doc, base);
-    for object in flattened_objects(doc).iter().chain(&doc.objects) {
-        draw_object(&mut pm, object, doc.dpi, &base.images);
-    }
+    let all: Vec<Object> = flattened_objects(doc)
+        .into_iter()
+        .chain(doc.objects.iter().cloned())
+        .collect();
+    draw_all(&mut pm, &all, doc.dpi, &base.images);
     straight(&pm)
+}
+
+/// Draws `objects` in order. Spotlights change the outside once, where the topmost of
+/// them is (EDT-039).
+fn draw_all(pm: &mut Pixmap, objects: &[Object], dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
+    let top = objects.iter().rposition(|o| o.kind == "spotlight");
+    for (i, object) in objects.iter().enumerate() {
+        if Some(i) == top {
+            draw_spotlights(pm, objects);
+        } else {
+            draw_object(pm, object, dpi, images);
+        }
+    }
+}
+
+/// The outside of every spotlight in `objects`, with the topmost one's settings.
+fn draw_spotlights(pm: &mut Pixmap, objects: &[Object]) {
+    let spots: Vec<SpotlightObject> = objects
+        .iter()
+        .filter(|o| o.kind == "spotlight")
+        .filter_map(|o| SpotlightObject::from_props(&o.props).ok())
+        .collect();
+    if let Some(top) = spots.last() {
+        let style = top.style.clone();
+        spotlights::draw(pm, &spots, &style);
+    }
 }
 
 /// The flattened objects of `doc` in canvas pixels, oldest first (EDT-091).
@@ -906,22 +938,40 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
                 return None;
             }
             let mut pm = canvas(doc, base);
-            for below in flattened_objects(doc).iter().chain(&doc.objects[..index]) {
-                draw_object(&mut pm, below, doc.dpi, &base.images);
-            }
+            let under: Vec<Object> = flattened_objects(doc)
+                .into_iter()
+                .chain(doc.objects[..index].iter().cloned())
+                .collect();
+            draw_all(&mut pm, &under, doc.dpi, &base.images);
             let (patch, x, y) = blur_patch(&pm, &b)?;
             Some((straight(&patch), x, y))
         }
         // A step as it shows, turned shape and upright value, in a picture centered on
         // the marker's center: `(x, y)` is where its top-left corner goes.
+        // The topmost spotlight: the whole canvas with the outside changed, from its top
+        // left corner. The others draw nothing of their own (EDT-039).
+        "spotlight" => {
+            let below: Vec<Object> = flattened_objects(doc)
+                .into_iter()
+                .chain(doc.objects[..=index].iter().cloned())
+                .collect();
+            if doc.objects[index + 1..].iter().any(|o| o.kind == "spotlight") {
+                return None;
+            }
+            let mut pm = canvas(doc, base);
+            draw_all(&mut pm, &below, doc.dpi, &base.images);
+            Some((straight(&pm), 0, 0))
+        }
         // A lens, over what is below it, in a picture centered on the middle of its zone
         // and lens (EDT-038).
         "magnify" => {
             let m = MagnifyObject::from_props(&object.props).ok()?;
             let mut below = canvas(doc, base);
-            for o in flattened_objects(doc).iter().chain(&doc.objects[..index]) {
-                draw_object(&mut below, o, doc.dpi, &base.images);
-            }
+            let under: Vec<Object> = flattened_objects(doc)
+                .into_iter()
+                .chain(doc.objects[..index].iter().cloned())
+                .collect();
+            draw_all(&mut below, &under, doc.dpi, &base.images);
             let [x0, y0, x1, y1] = m.span();
             let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
             let pad = m.style.outline_width + 2.0;

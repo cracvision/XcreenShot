@@ -30,7 +30,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 12] = [
+pub const AVAILABLE_TOOLS: [&str; 13] = [
     "move",
     "arrow",
     "line",
@@ -41,6 +41,7 @@ pub const AVAILABLE_TOOLS: [&str; 12] = [
     "highlight",
     "pen",
     "magnify",
+    "spotlight",
     "blur",
     "crop",
 ];
@@ -1530,10 +1531,15 @@ pub fn extension() -> Extension {
                             props,
                         };
                         objects::fit(&mut o, doc.dpi);
+                        let spot = (o.kind == "spotlight").then(|| o.id.clone());
                         if tailless.get(i).copied().unwrap_or(false) {
                             objects::default_tail(&mut o, doc.canvas.height as f64);
                         }
                         doc.objects.push(o);
+                        // A new spotlight's settings pass to the others (EDT-039).
+                        if let Some(sid) = spot {
+                            objects::share_spotlights(doc, &sid);
+                        }
                         ids.push(oid);
                     }
                     // A stroke that is not editable is painted into the image: a
@@ -1675,6 +1681,12 @@ pub fn extension() -> Extension {
                             ))
                         })?;
                         objects::fit(o, dpi);
+                    }
+                    // A spotlight's changed settings pass to the others (EDT-039).
+                    if set.contains_key("style") {
+                        if let Some(first) = oids.first() {
+                            objects::share_spotlights(doc, first);
+                        }
                     }
                     if auto {
                         fit::fit_canvas(doc);
