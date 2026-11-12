@@ -4325,6 +4325,9 @@ pub fn extension() -> Extension {
             Ok(json!({ "count": oids.len() }))
         });
         on!("document.new", |core, ctx, p| new_image(&core, ctx, &p));
+        on!("document.batch_export", |core, ctx, p| batch_export(
+            &core, ctx, &p
+        ));
         on!("document.new_from_clipboard", |core, ctx, _p| new_from_clipboard(
             &core, ctx
         ));
@@ -4858,6 +4861,191 @@ fn export_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         "height": height,
         "bytes": bytes.len(),
         "pages": pages.len(),
+    }))
+}
+
+/// The name of the `index`-th exported file (EDT-113): its own, or a base name with a
+/// number (`guia_01`), between a prefix and a suffix.
+pub fn batch_name(naming: &Value, original: &str, index: usize) -> String {
+    let text = |k: &str| naming.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+    let core = if naming.get("mode").and_then(Value::as_str) == Some("base") {
+        let start = naming.get("start").and_then(Value::as_u64).unwrap_or(1) as usize;
+        let digits = naming
+            .get("digits")
+            .and_then(Value::as_u64)
+            .unwrap_or(2)
+            .clamp(1, 9) as usize;
+        let base = text("base");
+        let base = if base.trim().is_empty() {
+            "image".to_string()
+        } else {
+            base
+        };
+        format!("{base}_{:0digits$}", start + index)
+    } else {
+        original.to_string()
+    };
+    xs_library::file_name(&format!("{}{core}{}", text("prefix"), text("suffix")))
+        .unwrap_or_else(|| "image".to_string())
+}
+
+/// `document.batch_export` (EDT-113): files (or folders of them) to one format, with a
+/// saved effect or a stack added, into a folder or next to each original; names kept
+/// or numbered. The sources do not change. Stops with `editor.cancel`; a file that
+/// fails is reported and the rest go on.
+fn batch_export(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    use xs_image::export::{Kind, Options, Page};
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let kind = Kind::parse(p["format"].as_str().unwrap_or("png"))
+        .ok_or_else(|| bad("format", "png, jpg, gif, bmp, tiff, pdf, ico or psd"))?;
+    let opts: Options = serde_json::from_value(p.get("options").cloned().unwrap_or(json!({})))
+        .map_err(|e| bad("options", &e.to_string()))?;
+    opts.check().map_err(|e| bad("options", &e))?;
+    // The files: folders bring their images, in name order.
+    let readable = |f: &Path| {
+        f.extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| ["xshot", "png", "jpg", "jpeg"].contains(&e.to_ascii_lowercase().as_str()))
+    };
+    let mut files: Vec<PathBuf> = Vec::new();
+    for v in p.get("paths").and_then(Value::as_array).into_iter().flatten() {
+        let Some(path) = v.as_str().map(PathBuf::from) else {
+            continue;
+        };
+        if path.is_dir() {
+            let mut inside: Vec<PathBuf> = std::fs::read_dir(&path)
+                .map(|r| r.filter_map(|e| e.ok().map(|e| e.path())).collect())
+                .unwrap_or_default();
+            inside.retain(|f| f.is_file() && readable(f));
+            inside.sort();
+            files.extend(inside);
+        } else {
+            files.push(path);
+        }
+    }
+    if files.is_empty() {
+        return Err(bad("paths", "give files or folders with images"));
+    }
+    // Effects added to each one's own: a saved effect (EDT-054) or a stack.
+    let extra: Vec<Value> = match p.get("effects") {
+        None | Some(Value::Null) => Vec::new(),
+        Some(Value::String(id)) => saved_effects(core)
+            .into_iter()
+            .find(|e| e["id"] == json!(id))
+            .and_then(|e| e["stack"].as_array().cloned())
+            .ok_or_else(|| bad("effects", "no saved effect has that id"))?,
+        Some(Value::Array(stack)) => stack.clone(),
+        Some(_) => return Err(bad("effects", "a saved effect's id or a stack")),
+    };
+    for e in &extra {
+        xs_image::fx::check(e).map_err(|r| bad("effects", &r))?;
+    }
+    let folder = p.get("folder").and_then(Value::as_str).map(PathBuf::from);
+    let next_to = p.get("nextToOriginal").and_then(Value::as_bool).unwrap_or(false);
+    if folder.is_none() && !next_to {
+        return Err(bad("folder", "give a folder, or nextToOriginal"));
+    }
+    let naming = p.get("naming").cloned().unwrap_or(json!({"mode": "keep"}));
+    let conflict = p.get("onConflict").and_then(Value::as_str).unwrap_or("keepBoth");
+    let background = flatten_background(core);
+    // Progress after 300 ms, and editor.cancel stops between files.
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    *ed.filling.lock().unwrap() = Some(stop.clone());
+    let started = Instant::now();
+    let total = files.len();
+    let (mut exported, mut failed, mut skipped) = (Vec::new(), Vec::new(), Vec::new());
+    let mut cancelled = false;
+    // The number of the next name: files that could not be read take none.
+    let mut number = 0;
+    for (i, file) in files.iter().enumerate() {
+        if stop.load(std::sync::atomic::Ordering::Relaxed) {
+            cancelled = true;
+            break;
+        }
+        if started.elapsed() >= Duration::from_millis(300) {
+            core.host().editor_event(
+                "progress",
+                json!({ "task": "batch", "done": i as f32 / total as f32, "index": i, "total": total }),
+            );
+        }
+        // Read and encode first: a file that fails takes no number.
+        let encoded = (|| -> Result<Vec<u8>, String> {
+            let mut doc = DocStore::load(file, &ed.library()).map_err(|e| format!("{e:?}"))?;
+            doc.document.effects.extend(extra.iter().cloned());
+            let image = DocStore::render_doc(&doc)?;
+            xs_image::export::encode(
+                &[Page {
+                    image,
+                    dpi: doc.document.dpi,
+                }],
+                kind,
+                &opts,
+                background,
+            )
+        })();
+        let bytes = match encoded {
+            Ok(b) => b,
+            Err(reason) => {
+                failed.push(json!({"source": file, "reason": reason}));
+                continue;
+            }
+        };
+        let stem = file
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let dir = if next_to {
+            file.parent().map(Path::to_path_buf).unwrap_or_default()
+        } else {
+            folder.clone().unwrap_or_default()
+        };
+        let mut target = dir.join(format!("{}.{}", batch_name(&naming, &stem, number), kind.ext()));
+        number += 1;
+        if target.exists() {
+            match conflict {
+                "replace" => {}
+                "skip" => {
+                    skipped.push(json!({"source": file, "path": target}));
+                    continue;
+                }
+                _ => {
+                    let s = target
+                        .file_stem()
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    target = xs_library::unique(&dir, &s, kind.ext());
+                }
+            }
+        }
+        let written = {
+            let _guard = ed.writing.lock().unwrap();
+            std::fs::create_dir_all(&dir)
+                .and_then(|_| write_file(&target, &bytes))
+                .map_err(|e| e.to_string())
+        };
+        match written {
+            Ok(()) => exported.push(json!({"source": file, "path": target})),
+            Err(reason) => failed.push(json!({"source": file, "reason": reason})),
+        }
+    }
+    *ed.filling.lock().unwrap() = None;
+    if started.elapsed() >= Duration::from_millis(300) {
+        core.host()
+            .editor_event("progress", json!({ "task": "batch", "done": null }));
+    }
+    Ok(json!({
+        "exported": exported,
+        "failed": failed,
+        "skipped": skipped,
+        "cancelled": cancelled,
     }))
 }
 

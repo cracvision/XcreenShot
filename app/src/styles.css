@@ -4179,6 +4179,73 @@ body.preparing-drag * {
   font-size: 13px;
 }
 
+/* Batch export (EDT-113): five sections in one dialog that scrolls. */
+.batch {
+  display: grid;
+  gap: var(--space-4);
+  max-height: 62vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.batch h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.batch-files {
+  max-height: 140px;
+  overflow: auto;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.batch-files li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+}
+
+.batch-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.batch-grid input {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.batch-failed {
+  max-height: 140px;
+  overflow: auto;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,

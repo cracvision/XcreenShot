@@ -37,6 +37,7 @@ import { importTheme } from "./themesUi";
 import { openImageDialog } from "./imageMenu";
 import { turnOnEffect } from "./effects";
 import { useExportDialog } from "./exportOptions";
+import { useBatchDialog } from "./batchExport";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -491,6 +492,7 @@ const IN_LIBRARY = new Set([
   "toolbar_labels",
   "new_image",
   "new_from_clipboard",
+  "batch_export",
 ]);
 
 /** What an editor menu entry or shortcut does (`editor.action`, EDT-002, EDT-116).
@@ -763,6 +765,13 @@ export function performAction(action: string): boolean {
       // File > New image (EDT-103), also from the Library view.
       openImageDialog("new_image");
       return true;
+    case "batch_export": {
+      // EDT-113: the selection of the Library view, or the document shown.
+      const inLibrary = useMainView.getState().view === "library";
+      const files = inLibrary ? selectedItems().map((i) => i.path) : doc?.path ? [doc.path] : [];
+      useBatchDialog.setState({ files });
+      return true;
+    }
     case "new_from_clipboard":
       // EDT-104: the document opens in the editor.
       run("document.new_from_clipboard")

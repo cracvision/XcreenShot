@@ -530,6 +530,10 @@
     "editor_clipboard": {
       "title": "Qué hay en el portapapeles",
       "description": "Dice si el portapapeles tiene una imagen (y su tamaño), archivos de imagen o texto."
+    },
+    "document_batch_export": {
+      "title": "Exportar por lotes",
+      "description": "Exporta muchos archivos de una vez a un formato, con un efecto guardado o una pila añadidos, a una carpeta o junto a cada original, conservando los nombres o numerándolos. Los originales no cambian; editor.cancel lo detiene."
     }
   },
   "settings": {
@@ -968,7 +972,8 @@
       "editor_snap": "Ajuste magnético",
       "editor_tool_cutout": "Herramienta Quitar franja",
       "editor_new_image": "Nueva imagen",
-      "editor_new_from_clipboard": "Nueva desde el portapapeles"
+      "editor_new_from_clipboard": "Nueva desde el portapapeles",
+      "editor_batch_export": "Exportar por lotes"
     }
   },
   "tray": {
@@ -1103,7 +1108,8 @@
     "trim": "Recortar bordes…",
     "snap": "Ajuste magnético",
     "new_image": "Nueva imagen…",
-    "new_from_clipboard": "Nueva desde el portapapeles"
+    "new_from_clipboard": "Nueva desde el portapapeles",
+    "batch_export": "Exportar por lotes…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2240,6 +2246,49 @@
         "scale": "Escala",
         "measuring": "Midiendo el archivo…",
         "size": "El archivo ocupará unos {{size}}."
+      },
+      "batch": {
+        "title": "Exportar por lotes",
+        "files": "Archivos",
+        "images": "Imágenes",
+        "add_files": "Añadir archivos…",
+        "add_folder": "Añadir carpeta…",
+        "up": "Subir",
+        "down": "Bajar",
+        "remove": "Quitar de la lista",
+        "effects": "Efectos",
+        "no_effects": "Ninguno",
+        "format": "Formato",
+        "destination": "Destino",
+        "to_folder": "Una carpeta",
+        "no_folder": "Sin carpeta elegida",
+        "choose": "Elegir…",
+        "next_to": "Junto a cada original",
+        "names": "Nombres",
+        "keep_names": "Conservar los nombres originales",
+        "base_name": "Un nombre base con números",
+        "naming_base": "Nombre base",
+        "naming_prefix": "Prefijo",
+        "naming_suffix": "Sufijo",
+        "naming_start": "Empezar en",
+        "naming_digits": "Dígitos",
+        "preview": "Así:",
+        "if_exists": "Si el archivo existe",
+        "conflict_keepBoth": "Conservar ambos",
+        "conflict_replace": "Reemplazar",
+        "conflict_skip": "Omitir",
+        "export_one": "Exportar {{count}} archivo",
+        "export_other": "Exportar {{count}} archivos",
+        "working": "Exportando…",
+        "progress": "Exportando {{index}} de {{total}}…",
+        "done_title": "Exportación por lotes terminada",
+        "done_exported_one": "{{count}} archivo exportado.",
+        "done_exported_other": "{{count}} archivos exportados.",
+        "done_skipped_one": "{{count}} archivo ya existía y se omitió.",
+        "done_skipped_other": "{{count}} archivos ya existían y se omitieron.",
+        "done_failed_one": "{{count}} archivo no se pudo exportar:",
+        "done_failed_other": "{{count}} archivos no se pudieron exportar:",
+        "done_cancelled": "Cancelado: los archivos ya exportados se quedan; ninguno quedó a medias."
       }
     },
     "multi": {

@@ -620,6 +620,11 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
         editor("editor.new_image", "editor.action", r#"{"action":"new_image"}"#),
         editor(
+            "editor.batch_export",
+            "editor.action",
+            r#"{"action":"batch_export"}"#,
+        ),
+        editor(
             "editor.new_from_clipboard",
             "editor.action",
             r#"{"action":"new_from_clipboard"}"#,

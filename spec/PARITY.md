@@ -192,7 +192,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
 | EDT-111 | Más formatos de exportación | M2 | Should | En curso (Windows: PNG, JPG, GIF, BMP, TIFF, PDF, ICO y PSD; faltan WebP y HEIC, y varias miniaturas de la bandeja o la biblioteca en un archivo) |
 | EDT-112 | Opciones de cada formato | M2 | Should | En curso (faltan JPG progresivo, tramado en GIF y TIFF con compresión JPEG) |
-| EDT-113 | Exportación por lotes | M2 | Should | — |
+| EDT-113 | Exportación por lotes | M2 | Should | En curso (Windows hecho; falta abrirla desde la bandeja y desde el menú de la biblioteca, y la pila de efectos propia) |
 | EDT-114 | Imprimir y configurar página | M2 | Should | — |
 | EDT-115 | Atajos de herramientas | M1 | Must | Win |
 | EDT-116 | Atajos de edición, vista y archivo | M1 | Must | Win |

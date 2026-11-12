@@ -734,6 +734,26 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.batch_export", &["EDT-113", "EDT-119"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Files (.xshot, PNG, JPG) and folders of them, in this order"},
+                    "format": {"type": "string", "enum": ["png", "jpg", "gif", "bmp", "tiff", "tif", "pdf", "ico", "psd"]},
+                    "options": {"type": "object", "description": "As document.export (EDT-112)"},
+                    "effects": {"type": ["string", "array", "null"], "description": "A saved effect's id (EDT-054) or a stack, added to each file's own effects"},
+                    "folder": {"type": "string", "description": "Where the files go"},
+                    "nextToOriginal": {"type": "boolean", "default": false, "description": "Each next to its source instead"},
+                    "naming": {"type": "object", "description": "{mode: keep | base, base, start (1), digits (2), prefix, suffix}: base gives guia_01, guia_02…"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "skip"], "default": "keepBoth"}
+                }),
+                &["paths", "format"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "exported": {"type": "array", "description": "{source, path} of each file written"},
+                "failed": {"type": "array", "description": "{source, reason}"},
+                "skipped": {"type": "array", "description": "{source, path} that already existed (onConflict: skip)"},
+                "cancelled": {"type": "boolean"}
+            }})),
         B::new("document.new", &["EDT-103", "EDT-119"])
             .params(params(
                 json!({
@@ -1371,7 +1391,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 92] = [
+pub const EDITOR_ACTIONS: [&str; 93] = [
     "open",
     "save",
     "save_as",
@@ -1451,6 +1471,8 @@ pub const EDITOR_ACTIONS: [&str; 92] = [
     // File > New image and New from clipboard (EDT-103, EDT-104).
     "new_image",
     "new_from_clipboard",
+    // File > Batch export (EDT-113).
+    "batch_export",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

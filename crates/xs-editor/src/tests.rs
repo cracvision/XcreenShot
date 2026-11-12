@@ -3808,3 +3808,74 @@ fn exporting_to_every_format() {
     );
     assert!(bad.is_err());
 }
+
+/// EDT-113: ten captures to JPG with the saved effect "Fine frame" and the base name
+/// "guia" give guia_01.jpg … guia_10.jpg with the frame; Skip leaves them as they are;
+/// a damaged file fails alone; the sources do not change.
+#[test]
+fn batch_export_names_effects_and_failures() {
+    let e = env();
+    let mut paths = Vec::new();
+    for _ in 0..10 {
+        let (_, path) = add_capture(&e.core, &white(60, 40), json!({"mode": "region"}), 1.0, None).unwrap();
+        paths.push(path);
+    }
+    let damaged = e.outside.path().join("damaged.png");
+    std::fs::write(&damaged, b"not an image").unwrap();
+    let mut list: Vec<Value> = paths.iter().map(|p| json!(p)).collect();
+    list.insert(3, json!(damaged));
+    let before = std::fs::read(&paths[0]).unwrap();
+    let out = e.outside.path().join("out");
+    let r = cli(
+        &e.core,
+        "document.batch_export",
+        json!({"paths": list, "format": "jpg", "effects": "fine-frame", "folder": out,
+               "naming": {"mode": "base", "base": "guia"}}),
+    );
+    assert_eq!(r["exported"].as_array().map(Vec::len), Some(10));
+    assert_eq!(r["failed"].as_array().map(Vec::len), Some(1), "the damaged one");
+    for n in 1..=10 {
+        assert!(out.join(format!("guia_{n:02}.jpg")).exists(), "guia_{n:02}");
+    }
+    // The frame: a dark border around the white capture, so the corner is not white.
+    let img = image::open(out.join("guia_01.jpg")).unwrap().to_rgb8();
+    assert!(img.width() > 60, "the frame grows the image");
+    assert!(img.get_pixel(0, 0).0[0] < 200, "a dark frame");
+    assert_eq!(
+        std::fs::read(&paths[0]).unwrap(),
+        before,
+        "the source is untouched"
+    );
+    // Again with Skip: nothing changes, and it says so.
+    let stamp = std::fs::metadata(out.join("guia_01.jpg"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    let r = cli(
+        &e.core,
+        "document.batch_export",
+        json!({"paths": paths, "format": "jpg", "effects": "fine-frame", "folder": out,
+               "naming": {"mode": "base", "base": "guia"}, "onConflict": "skip"}),
+    );
+    assert_eq!(r["exported"].as_array().map(Vec::len), Some(0));
+    assert_eq!(r["skipped"].as_array().map(Vec::len), Some(10));
+    assert_eq!(
+        std::fs::metadata(out.join("guia_01.jpg"))
+            .unwrap()
+            .modified()
+            .unwrap(),
+        stamp
+    );
+    assert_eq!(std::fs::read_dir(&out).unwrap().count(), 10, "no new files");
+}
+
+#[test]
+fn batch_names_with_numbers_prefix_and_suffix() {
+    let base =
+        json!({"mode": "base", "base": "guia", "start": 7, "digits": 3, "prefix": "a-", "suffix": "-b"});
+    assert_eq!(crate::batch_name(&base, "orig", 0), "a-guia_007-b");
+    assert_eq!(
+        crate::batch_name(&json!({"mode": "keep"}), "Chrome 2026", 4),
+        "Chrome 2026"
+    );
+}

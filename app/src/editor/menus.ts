@@ -377,6 +377,7 @@ export function useMenuBar(): void {
     for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc;
     enabled["editor.snap"] = !inLibrary;
     enabled["editor.new_image"] = true;
+    enabled["editor.batch_export"] = true;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;

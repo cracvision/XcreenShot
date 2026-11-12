@@ -530,6 +530,10 @@
     "editor_clipboard": {
       "title": "What the clipboard has",
       "description": "Says whether the clipboard has an image (and its size), image files or text."
+    },
+    "document_batch_export": {
+      "title": "Batch export",
+      "description": "Exports many files at once to one format, with a saved effect or a stack added, into a folder or next to each original, keeping the names or numbering them. The sources do not change; editor.cancel stops it."
     }
   },
   "settings": {
@@ -968,7 +972,8 @@
       "editor_snap": "Snapping",
       "editor_tool_cutout": "Cut out tool",
       "editor_new_image": "New image",
-      "editor_new_from_clipboard": "New from clipboard"
+      "editor_new_from_clipboard": "New from clipboard",
+      "editor_batch_export": "Batch export"
     }
   },
   "tray": {
@@ -1103,7 +1108,8 @@
     "trim": "Trim edges…",
     "snap": "Snapping",
     "new_image": "New image…",
-    "new_from_clipboard": "New from clipboard"
+    "new_from_clipboard": "New from clipboard",
+    "batch_export": "Batch export…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2240,6 +2246,49 @@
         "scale": "Scale",
         "measuring": "Measuring the file…",
         "size": "The file will take about {{size}}."
+      },
+      "batch": {
+        "title": "Batch export",
+        "files": "Files",
+        "images": "Images",
+        "add_files": "Add files…",
+        "add_folder": "Add folder…",
+        "up": "Move up",
+        "down": "Move down",
+        "remove": "Remove from the list",
+        "effects": "Effects",
+        "no_effects": "None",
+        "format": "Format",
+        "destination": "Destination",
+        "to_folder": "A folder",
+        "no_folder": "No folder chosen",
+        "choose": "Choose…",
+        "next_to": "Next to each original",
+        "names": "Names",
+        "keep_names": "Keep the original names",
+        "base_name": "A base name with numbers",
+        "naming_base": "Base name",
+        "naming_prefix": "Prefix",
+        "naming_suffix": "Suffix",
+        "naming_start": "Start at",
+        "naming_digits": "Digits",
+        "preview": "Like this:",
+        "if_exists": "If the file exists",
+        "conflict_keepBoth": "Keep both",
+        "conflict_replace": "Replace",
+        "conflict_skip": "Skip",
+        "export_one": "Export {{count}} file",
+        "export_other": "Export {{count}} files",
+        "working": "Exporting…",
+        "progress": "Exporting {{index}} of {{total}}…",
+        "done_title": "Batch export finished",
+        "done_exported_one": "{{count}} file exported.",
+        "done_exported_other": "{{count}} files exported.",
+        "done_skipped_one": "{{count}} file already existed and was skipped.",
+        "done_skipped_other": "{{count}} files already existed and were skipped.",
+        "done_failed_one": "{{count}} file could not be exported:",
+        "done_failed_other": "{{count}} files could not be exported:",
+        "done_cancelled": "Cancelled: the files exported before stay; none was left half-written."
       }
     },
     "multi": {

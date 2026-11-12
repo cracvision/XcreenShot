@@ -6,6 +6,7 @@ import { Dialog } from "../components/Dialog";
 import { AiDialogs } from "./AiDialogs";
 import { ImageDialogs } from "./ImageDialogs";
 import { ExportDialog } from "./ExportDialog";
+import { BatchExportDialog } from "./BatchExportDialog";
 import { FileDialogs } from "../library/FileDialogs";
 import { ThemeConflict } from "./StylesTab";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
@@ -259,6 +260,7 @@ export function Dialogs() {
       <FileDialogs />
       <ImageDialogs />
       <ExportDialog />
+      <BatchExportDialog />
     </>
   );
 }

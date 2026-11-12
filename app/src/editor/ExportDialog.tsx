@@ -90,70 +90,17 @@ function Select<T extends string>(props: {
   );
 }
 
-export function ExportDialog() {
-  const ids = useExportDialog((s) => s.ids);
-  if (!ids || ids.length === 0) return null;
-  return <ExportForm key={ids.join(",")} ids={ids} />;
-}
-
-function ExportForm({ ids }: { ids: string[] }) {
-  const { t, i18n } = useTranslation();
-  const name = useEditor((s) => s.documents.find((d) => d.documentId === ids[0])?.name ?? "");
-  const [format, setFormat] = useState<ExportFormat>(lastExportFormat);
-  const [o, setO] = useState<ExportOptions>(() => rememberedOptions(lastExportFormat()));
-  // The measured size, for the settings it was measured with.
-  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null);
-  const key = JSON.stringify([format, o, ids]);
-  const size = measured?.key === key ? measured.bytes : null;
-  const set = (changes: Partial<ExportOptions>) => setO((prev) => ({ ...prev, ...changes }));
-  const close = () => useExportDialog.setState({ ids: null });
-  const many = ids.length > 1;
-  const pick = (f: ExportFormat) => {
-    setFormat(f);
-    setO(rememberedOptions(f));
-  };
-  // The size the file would have, again after each change (EDT-112).
-  useEffect(() => {
-    let alive = true;
-    const timer = setTimeout(() => {
-      run<{ bytes: number }>("document.export", {
-        ...(many ? { documentIds: ids } : { documentId: ids[0] }),
-        format,
-        options: o,
-        estimate: true,
-      })
-        .then((r) => alive && setMeasured({ key, bytes: r.bytes }))
-        .catch(() => undefined);
-    }, 250);
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [format, o, ids, many, key]);
-
-  const go = async () => {
-    try {
-      const path = await save({
-        defaultPath: `${name}.${EXTENSIONS[format][0]}`,
-        filters: [{ name: t(`ui.editor.export.format_${format}`), extensions: EXTENSIONS[format] }],
-      });
-      if (!path) return;
-      close();
-      rememberExport(format, o);
-      // The system dialog already asked before replacing a file.
-      await run("document.export", {
-        ...(many ? { documentIds: ids } : { documentId: ids[0] }),
-        format,
-        path,
-        options: o,
-        onConflict: "replace",
-      });
-      useEditor.getState().showToast(t("ui.editor.exported"));
-    } catch (e) {
-      useEditor.getState().showError(e);
-    }
-  };
-
+/** The options of `format` (EDT-112); also in batch export (EDT-113). */
+export function FormatOptions({
+  format,
+  o,
+  set,
+}: {
+  format: ExportFormat;
+  o: ExportOptions;
+  set: (changes: Partial<ExportOptions>) => void;
+}) {
+  const { t } = useTranslation();
   const opt = (key: string) => t(`ui.editor.export.${key}`);
   let fields: React.ReactNode;
   switch (format) {
@@ -303,6 +250,74 @@ function ExportForm({ ids }: { ids: string[] }) {
       fields = null;
   }
 
+  return <>{fields}</>;
+}
+
+export function ExportDialog() {
+  const ids = useExportDialog((s) => s.ids);
+  if (!ids || ids.length === 0) return null;
+  return <ExportForm key={ids.join(",")} ids={ids} />;
+}
+
+function ExportForm({ ids }: { ids: string[] }) {
+  const { t, i18n } = useTranslation();
+  const name = useEditor((s) => s.documents.find((d) => d.documentId === ids[0])?.name ?? "");
+  const [format, setFormat] = useState<ExportFormat>(lastExportFormat);
+  const [o, setO] = useState<ExportOptions>(() => rememberedOptions(lastExportFormat()));
+  // The measured size, for the settings it was measured with.
+  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null);
+  const key = JSON.stringify([format, o, ids]);
+  const size = measured?.key === key ? measured.bytes : null;
+  const set = (changes: Partial<ExportOptions>) => setO((prev) => ({ ...prev, ...changes }));
+  const close = () => useExportDialog.setState({ ids: null });
+  const many = ids.length > 1;
+  const pick = (f: ExportFormat) => {
+    setFormat(f);
+    setO(rememberedOptions(f));
+  };
+  // The size the file would have, again after each change (EDT-112).
+  useEffect(() => {
+    let alive = true;
+    const timer = setTimeout(() => {
+      run<{ bytes: number }>("document.export", {
+        ...(many ? { documentIds: ids } : { documentId: ids[0] }),
+        format,
+        options: o,
+        estimate: true,
+      })
+        .then((r) => alive && setMeasured({ key, bytes: r.bytes }))
+        .catch(() => undefined);
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [format, o, ids, many, key]);
+
+  const go = async () => {
+    try {
+      const path = await save({
+        defaultPath: `${name}.${EXTENSIONS[format][0]}`,
+        filters: [{ name: t(`ui.editor.export.format_${format}`), extensions: EXTENSIONS[format] }],
+      });
+      if (!path) return;
+      close();
+      rememberExport(format, o);
+      // The system dialog already asked before replacing a file.
+      await run("document.export", {
+        ...(many ? { documentIds: ids } : { documentId: ids[0] }),
+        format,
+        path,
+        options: o,
+        onConflict: "replace",
+      });
+      useEditor.getState().showToast(t("ui.editor.exported"));
+    } catch (e) {
+      useEditor.getState().showError(e);
+    }
+  };
+
+  const opt = (key: string) => t(`ui.editor.export.${key}`);
   return (
     <Dialog
       title={t(many ? "ui.editor.export.title_many" : "ui.editor.export.title", {
@@ -342,7 +357,7 @@ function ExportForm({ ids }: { ids: string[] }) {
               ))}
           </select>
         </div>
-        {fields}
+        <FormatOptions format={format} o={o} set={set} />
         <Num
           id="ex-scale"
           label={opt("scale")}

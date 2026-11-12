@@ -149,6 +149,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.save", "menu.save", "save"),
                 action("editor.save_as", "menu.save_as", "save_as"),
                 action("editor.export", "menu.export", "export"),
+                action("editor.batch_export", "menu.batch_export", "batch_export"),
                 Separator,
                 action("editor.rename_item", "menu.rename_item", "rename_item"),
                 action("editor.show_in_folder", "menu.show_in_folder", "show_in_folder"),
