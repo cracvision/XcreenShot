@@ -373,7 +373,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-026 | Privilegios y privacidad en Windows | M1 | Should | En curso |
 | APP-027 | Registro de comandos | M0 | Must | Win |
 | APP-028 | CLI `xcreenshot` | M0 | Must | En curso |
-| APP-029 | Servidor MCP (herramientas adelantadas por SMT-043; faltan recursos y eventos) | M2 | Should | En curso |
+| APP-029 | Servidor MCP | M2 | Should | En curso (Windows: herramientas con sus esquemas e indicaciones, `include_image` con 1568 px, recursos de la guía, capturas recientes, bandeja y eventos, y eventos por suscripción; faltan los recursos de presets y destinos, que llegan con M3 y M6) |
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | En curso |
 | APP-031 | Eventos | M1 | Should | En curso |
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |

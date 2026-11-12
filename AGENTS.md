@@ -2,13 +2,13 @@
 
 XcreenShot is a screen capture, annotation and recording app for Windows and macOS.
 Every action is a **command** with a stable ID, typed parameters and a typed result.
-Agents and scripts drive the running app through the `xcreenshot` CLI. An MCP server
-(`xcreenshot mcp`, stdio only) arrives in milestone M2.
+Agents and scripts drive the running app through the `xcreenshot` CLI or its MCP
+server (`xcreenshot mcp`, stdio only; see "MCP" below).
 
-> Status: milestone M1, build 4b. Capture works, and documents can be opened,
-> annotated with arrows, text, shapes and blur, cropped, saved and exported
-> (`document.*`, `editor.*`). Menus, the library and sharing arrive with the next builds. This file is hand-written for now; from M2 it is generated from the
-> command registry (APP-033). A test fails if a registered command is missing here.
+> Status: milestone M2 (editor, library and recent tray). Capture, the full editor,
+> the library with tags, search, details, quick view, import and export, and the tray
+> work; sharing arrives with M6. This file is hand-written; a test fails if a
+> registered command is missing here.
 
 ## Connecting
 
@@ -410,6 +410,27 @@ Preview and apply a shortcut profile:
 xcreenshot shortcuts set-profile compatibility --dry-run --json
 xcreenshot shortcuts set-profile compatibility
 ```
+
+## MCP (APP-029)
+
+`xcreenshot mcp` speaks JSON-RPC over standard input and output, one message per line;
+the client starts it as a child process (Preferences > Advanced > Copy, or
+`xcreenshot app mcp-config --json`). Nothing listens on the network.
+
+- **Tools.** Every command marked for MCP, named with `_` for `.` (`capture.fullscreen`
+  → `capture_fullscreen`), with its description, input schema and hints (read-only,
+  destructive, network). The cloud AI commands are not tools.
+- **Images.** A tool whose result has a `documentId` (captures, `document_open`,
+  `document_new`…) also takes `include_image: true`: the result then carries the final
+  image, at most 1568 px on its longest side, as image content the agent can see.
+  `document_image` gives it for any open document.
+- **Resources** (read-only): `xcreenshot://agents` (this guide), `xcreenshot://library/recent`
+  (the 20 most recent captures), `xcreenshot://tray` (the recent tray) and
+  `xcreenshot://events` (the latest 50 events).
+- **Events.** `resources/subscribe` to `xcreenshot://events`: each event of
+  `events.watch` (captures, files written, app state) arrives as
+  `notifications/resources/updated`; `resources/read` gives the latest ones.
+  `resources/unsubscribe` stops them.
 
 ## Safety rules (APP-032)
 
