@@ -186,6 +186,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "LIB-021",
         ),
         def(
+            "capture.confirmPresetDelete",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-060",
+        ),
+        def(
             "library.confirmDelete",
             "library",
             boolean(),

@@ -240,6 +240,19 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Dudas del equipo de construcción (M3, entrega 1: presets)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-058 | ¿Dónde va la sección Presets? | Debajo del botón Capturar y su atajo, separada por una línea; se ve también con las opciones plegadas. La lista muestra unas 5 filas y desplaza el resto | Provisional |
+| CAP-058 | ¿Qué ícono lleva cada tipo? | Una letra en una ficha azul suave: I (Imagen) y U (Universal); Video y Grabador de pasos tendrán la suya | Provisional |
+| CAP-059 | Nombre propuesto | El modo de selección ("Región", "Ventana", "Pantalla completa"; "Universal: Región" en los universales). Hasta que exista la región fija no hay medidas en el nombre | Provisional |
+| CAP-062 | ¿Dónde se asigna el atajo en el panel? | En el menú ⋯ de la fila, **Atajo…**, con un diálogo que graba la combinación (la fila es estrecha para un campo de atajo). No se resalta el campo tras crear un preset | Provisional |
+| CAP-062 | Atajos de presets al restablecer | Restablecer todos los atajos, cambiar de perfil e importar los atajos de un `.xsettings` no tocan los atajos de los presets: van con su preset | Provisional |
+| CAP-060 | Confirmación al eliminar | Preferencia nueva `capture.confirmPresetDelete` (por defecto sí), que la casilla "No volver a preguntar" desactiva y Avanzado > Volver a mostrar avisos vuelve a activar | Provisional |
+| CAP-063 | Formato `.xpreset` | JSON con `format: "xcreenshot-presets"`, `formatVersion` (1), `app`, `platform`, `exported` y `presets` (nombre, tipo, ajustes, orden, incorporado y atajo por tecla física). Se propone para la tabla de formatos de SPEC §7 | Provisional |
+| CAP-064 | ¿Cómo se llama un incorporado tras importarlo en otro idioma? | Al exportar se escribe el nombre que se ve; al importar ya es un preset con nombre propio | Provisional |
+
 ## Dudas del equipo de construcción (M2, entrega 7: biblioteca)
 
 | ID | Duda | Propuesta | Estado |

@@ -57,7 +57,10 @@ fn percent_encode(text: &str) -> String {
 }
 
 /// Settings that a "Don't ask again" box turns off, with the value that asks (APP-010).
-const DONT_ASK_SETTINGS: &[(&str, bool)] = &[("library.confirmDelete", true)];
+const DONT_ASK_SETTINGS: &[(&str, bool)] = &[
+    ("library.confirmDelete", true),
+    ("capture.confirmPresetDelete", true),
+];
 /// UI memory that holds a "Don't ask again" answer (the flattening warning, EDT-107).
 const DONT_ASK_STATE: &[&str] = &["editor.flattenWarningOff"];
 /// UI memory of the hints already seen: `hint.<id>` (APP-014).

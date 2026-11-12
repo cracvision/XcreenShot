@@ -65,13 +65,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-055 | Confirmación de captura | M1 | Should | En curso |
 | CAP-056 | Metadatos de captura | M1 | Must | En curso |
 | CAP-057 | Anotación rápida de imagen | M3 | Should | — |
-| CAP-058 | Lista de presets | M3 | Must | — |
-| CAP-059 | Crear un preset | M3 | Must | — |
-| CAP-060 | Editar, renombrar, duplicar y eliminar | M3 | Must | — |
-| CAP-061 | Reordenar | M3 | Should | — |
-| CAP-062 | Atajo por preset | M3 | Must | — |
-| CAP-063 | Exportar e importar `.xpreset` | M3 | Should | — |
-| CAP-064 | Presets incorporados | M3 | Should | — |
+| CAP-058 | Lista de presets | M3 | Must | En curso (Windows: sección Presets del panel con ícono del tipo, nombre, resumen, atajo, aviso de ajustes que no existen y Capturar al pasar el puntero; doble clic, `Enter`, `F2`, `Supr`, flechas; Filtrar desde 9; submenú Presets del menú del ícono en el mismo orden; `preset.run` y `preset.list`. Faltan el Lanzador de borde (CAP-004), el indicador En marcha (CAP-049, CAP-050), los destinos (`SHR-`) y elegir varios con `Ctrl`/`Mayús`) |
+| CAP-059 | Crear un preset | M3 | Must | En curso (Windows: ＋ > Desde los ajustes actuales (queda el nombre propuesto para editar en la fila), Nuevo preset de imagen o universal con los valores por defecto; nombres de 1 a 64 caracteres, únicos con " (2)"; `preset.create`. Falta incluirlos en Exportar ajustes (APP-011) y los ajustes de modos que llegan con M3.3 a M3.6) |
+| CAP-060 | Editar, renombrar, duplicar y eliminar | M3 | Must | En curso (Windows: Editar preset con Guardar y Cancelar, Actualizar con los ajustes actuales (con confirmación, solo del mismo tipo), Cambiar nombre en la fila conservando el atajo, Duplicar "(copia)" sin atajo, Eliminar con confirmación desactivable y Deshacer durante 10 s; `preset.update`, `rename`, `duplicate`, `delete`, `restore`. Falta elegir varios a la vez) |
+| CAP-061 | Reordenar | M3 | Should | En curso (Windows: arrastrar por el asa con la línea de destino, `Alt`+`↑`/`↓`, sin arrastre mientras se filtra; el orden es el mismo en el menú del ícono y se guarda al momento; `preset.move`) |
+| CAP-062 | Atajo por preset | M3 | Must | En curso (Windows: atajo global por preset desde su menú ⋯ o desde Preferencias > Atajos (grupo Presets, con su nombre), con Reasignar para uno en uso; se conserva al cambiar el nombre y al cambiar de perfil, la copia no lo hereda, se libera al eliminar y vuelve con Deshacer. Falta el interruptor de los presets de intervalo y programada (CAP-049, CAP-050)) |
+| CAP-063 | Exportar e importar `.xpreset` | M3 | Should | En curso (Windows: Exportar de un preset o de todos, Importar presets… con el resumen, una casilla por preset y Conservar ambos, Reemplazar u Omitir; atajos convertidos de la otra plataforma y sin atajo si está en uso; un archivo dañado o más nuevo no importa nada; `preset.export`, `preset.import`. Faltan soltar el archivo sobre el panel, el doble clic en el archivo (instalador), `policy.presets` y marcar rutas que no existen (llegan con el destino Archivo)) |
+| CAP-064 | Presets incorporados | M3 | Should | En curso (Windows: Región al portapapeles, sin atajo y con el nombre en el idioma de la app hasta que se renombra; Restaurar presets incorporados pregunta por los cambiados; uno nuevo de una versión futura se añade al final. Desplazamiento, Grabador de pasos y Extraer texto llegan con sus funciones) |
 | CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | En curso |
 | CAP-066 | Perfil de compatibilidad | M1 | Should | En curso |
 | CAP-067 | Multicaptura (función propia, adelantada) | M1 | Should | En curso |
