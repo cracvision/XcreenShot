@@ -1356,7 +1356,8 @@
     "help_about": "Show help for a command",
     "ok": "Done.",
     "positional": "positional",
-    "mcp_about": "Run the MCP server over standard input and output, for AI clients such as Claude Desktop or Claude Code."
+    "mcp_about": "Run the MCP server over standard input and output, for AI clients such as Claude Desktop or Claude Code.",
+    "agents_md_about": "Prints AGENTS.md: the guide for AI agents, with every command of this version"
   },
   "system": {
     "unsupported_title": "Unsupported system",

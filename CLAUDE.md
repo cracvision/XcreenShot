@@ -172,7 +172,7 @@ Dónde vive cada cosa:
 - Editor: modelo y formato `.xshot` en `crates/xs-core/src/document.rs` (esquema en `docs/formats/`); la geometría de cada objeto está en `crates/xs-image/src/geometry.rs` y su copia en `app/src/editor/geometry.ts`, comprobadas con `tests/fixtures/` (regenerar con `XS_REGEN_FIXTURES=1 cargo test -p xs-image`).
 - Textos EN/ES: `crates/xs-core/locales/{en,es}.json` (los comparten Rust y React).
 - Datos del usuario: `%APPDATA%\XcreenShot\config` y `%LOCALAPPDATA%\XcreenShot\data` (Windows); `~/Library/Application Support/XcreenShot` (macOS). `XCREENSHOT_DATA_DIR` y `XCREENSHOT_IPC_NAME` aíslan una instancia para pruebas.
-- Un comando nuevo exige: entrada en el catálogo, manejador, textos en los dos idiomas y fila en `AGENTS.md` (hay pruebas que fallan si falta alguno).
+- Un comando nuevo exige: entrada en el catálogo, manejador y textos en los dos idiomas (hay pruebas que fallan si falta alguno). `AGENTS.md` se genera del registro (APP-033): añade su ejemplo y explicación en `crates/xs-core/agents/commands.md` y regenéralo con `XS_REGEN_AGENTS=1 cargo test -p xs-core agents`.
 
 ## Cómo trabajar con Carlos
 

@@ -1,6 +1,9 @@
 {
   "bundle": {
     "externalBin": ["binaries/xcreenshot"],
+    "resources": {
+      "../../AGENTS.md": "AGENTS.md"
+    },
     "windows": {
       "nsis": {
         "installerHooks": "installer-hooks.nsh"

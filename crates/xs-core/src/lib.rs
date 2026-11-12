@@ -5,6 +5,7 @@
 //! registry), APP-028 (CLI protocol), APP-032 (automation safety), APP-046 (logs).
 //! M1 adds the editable document model and its `.xshot` container (EDT-106).
 
+pub mod agents_md;
 pub mod catalog;
 pub mod command;
 pub mod core;

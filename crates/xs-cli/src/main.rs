@@ -204,6 +204,7 @@ fn build_cli(lang: Lang, specs: &[CommandSpec]) -> Command {
             ),
     )
     .subcommand(Command::new("mcp").about(tr(lang, "cli.mcp_about", &[])))
+    .subcommand(Command::new("agents-md").about(tr(lang, "cli.agents_md_about", &[])))
     .subcommand(
         Command::new("help")
             .about(tr(lang, "cli.help_about", &[]))
@@ -429,6 +430,11 @@ fn main() -> ExitCode {
 
     let (spec, params, yes) = match matches.subcommand() {
         Some(("mcp", _)) => return mcp::serve(&specs, no_launch, lang),
+        // APP-033: the guide for agents, built from this build's registry.
+        Some(("agents-md", _)) => {
+            print!("{}", xs_core::agents_md::render());
+            return ExitCode::SUCCESS;
+        }
         Some(("help", m)) => {
             let mut cli = cli;
             return match m.get_one::<String>("command") {

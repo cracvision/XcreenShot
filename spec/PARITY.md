@@ -377,7 +377,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-030 | Catálogo mínimo de comandos | M1 | Must | En curso |
 | APP-031 | Eventos | M1 | Should | En curso |
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |
-| APP-033 | `AGENTS.md` | M2 | Should | — |
+| APP-033 | `AGENTS.md` | M2 | Should | En curso (Windows: se genera del registro de comandos más un texto escrito a mano; `xcreenshot agents-md`, recurso MCP `xcreenshot://agents` y en la carpeta de instalación; una prueba falla si el del repositorio no está al día; faltan las recetas de grabar y extraer texto, que llegan con `VID-` y `SMT-`) |
 | APP-034 | Funciones en prueba | M1 | Should | En curso |
 | APP-035 | Configuración administrada | M6 | Should | — |
 | APP-036 | Actualizaciones | M6 | Must | — |

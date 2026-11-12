@@ -1356,7 +1356,8 @@
     "help_about": "Muestra la ayuda de un comando",
     "ok": "Hecho.",
     "positional": "posicional",
-    "mcp_about": "Ejecuta el servidor MCP por la entrada y la salida estándar, para clientes de IA como Claude Desktop o Claude Code."
+    "mcp_about": "Ejecuta el servidor MCP por la entrada y la salida estándar, para clientes de IA como Claude Desktop o Claude Code.",
+    "agents_md_about": "Escribe AGENTS.md: la guía para agentes de IA, con todos los comandos de esta versión"
   },
   "system": {
     "unsupported_title": "Sistema no compatible",

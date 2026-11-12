@@ -29,9 +29,6 @@ document_list or document_open, then document_image: it returns the final image 
 can describe it, write about it or suggest a name, and document_rename renames its file. \
 XcreenShot sends nothing to the cloud through these tools.";
 
-/// The command guide (APP-033), as a resource.
-const AGENTS: &str = include_str!("../../../AGENTS.md");
-
 /// Longest side of an image sent with `include_image` (APP-029, design decision).
 pub const IMAGE_SIDE: u64 = 1568;
 
@@ -184,9 +181,9 @@ impl Server<'_> {
     fn read_resource(&self, uri: &str) -> Result<Value, (i64, String)> {
         let json_text = |v: &Value| json!({"contents": [{"uri": uri, "mimeType": "application/json", "text": serde_json::to_string_pretty(v).unwrap_or_default()}]});
         match uri {
-            "xcreenshot://agents" => {
-                Ok(json!({"contents": [{"uri": uri, "mimeType": "text/markdown", "text": AGENTS}]}))
-            }
+            "xcreenshot://agents" => Ok(
+                json!({"contents": [{"uri": uri, "mimeType": "text/markdown", "text": xs_core::agents_md::render()}]}),
+            ),
             "xcreenshot://events" => {
                 let list: Vec<Value> = self.events.lock().unwrap().iter().cloned().collect();
                 Ok(json_text(&json!({ "events": list })))
@@ -423,7 +420,7 @@ mod tests {
         let uris: Vec<&str> = listed.iter().filter_map(|r| r["uri"].as_str()).collect();
         assert!(uris.contains(&"xcreenshot://agents") && uris.contains(&"xcreenshot://events"));
         assert!(
-            AGENTS.contains("| `library.list` |"),
+            xs_core::agents_md::render().contains("| `library.list` |"),
             "the guide is the real AGENTS.md"
         );
     }
