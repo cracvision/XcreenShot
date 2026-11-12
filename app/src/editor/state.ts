@@ -32,7 +32,8 @@ export type Tool =
   | "wand"
   | "fill"
   | "eraser"
-  | "crop";
+  | "crop"
+  | "cutout";
 
 export interface DocSummary {
   documentId: string;
@@ -179,6 +180,14 @@ export interface SelectStyle {
   level: number;
   gapFill: GapFill;
   quality: "fast" | "photo";
+}
+
+/** Cut out (EDT-052). */
+export interface CutOutStyle {
+  direction: "horizontal" | "vertical";
+  mode: "remove" | "add";
+  join: "straight" | "torn" | "wavy" | "zigzag";
+  gap: number;
 }
 
 /** The Magic wand (EDT-046). */
@@ -544,6 +553,7 @@ export interface Styles {
   eraser: EraserStyle;
   select: SelectStyle;
   wand: WandStyle;
+  cutout: CutOutStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -581,6 +591,9 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   dpi: number;
   objects: DocObject[];
   base: { width: number; height: number; mime: string };
+  /** New original pixels in `images/` after resizing, turning, flipping or cutting
+   * out (ADR 0006); they replace base.png until saved. */
+  baseImage?: string | null;
   /** base.png is no longer the image as captured or opened (EDT-050, EDT-076). */
   originalChanged?: boolean;
   /** With flattened objects, the canvas shows a view of the image that may start

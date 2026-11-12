@@ -183,6 +183,14 @@ const ICONS = {
       <rect x="3.5" y="4.5" width="13" height="11" rx="1" strokeDasharray="2.4 2.2" />
     </Svg>
   ),
+  // Cut out (EDT-052): two parts with the cut between them.
+  cutout: (
+    <Svg>
+      <rect x="3.5" y="3" width="13" height="4.5" rx="1" />
+      <rect x="3.5" y="12.5" width="13" height="4.5" rx="1" />
+      <path d="M3 10h2.2M7.4 10h2.2M11.8 10h2.2M16.2 10h1" />
+    </Svg>
+  ),
   // Magic wand (EDT-046): a stick and a sparkle.
   wand: (
     <Svg>

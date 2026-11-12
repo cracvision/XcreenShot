@@ -40,6 +40,49 @@ pub struct Styles {
     pub eraser: EraserStyle,
     pub select: SelectStyle,
     pub wand: WandStyle,
+    pub cutout: CutOutStyle,
+}
+
+/// Cut out (EDT-052).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct CutOutStyle {
+    /// "horizontal" (a strip of the whole width) or "vertical".
+    pub direction: String,
+    /// "remove" or "add".
+    pub mode: String,
+    /// "straight", "torn", "wavy" or "zigzag".
+    pub join: String,
+    /// The gap of the other joins, 8–60 px.
+    pub gap: f64,
+}
+
+impl Default for CutOutStyle {
+    fn default() -> Self {
+        CutOutStyle {
+            direction: "horizontal".to_string(),
+            mode: "remove".to_string(),
+            join: "straight".to_string(),
+            gap: 16.0,
+        }
+    }
+}
+
+impl CutOutStyle {
+    fn merged(base: &CutOutStyle, changes: &Map<String, Value>) -> Result<CutOutStyle, String> {
+        let s: CutOutStyle = merged(base, changes)?;
+        if !["horizontal", "vertical"].contains(&s.direction.as_str()) {
+            return Err("direction is horizontal or vertical".into());
+        }
+        if !["remove", "add"].contains(&s.mode.as_str()) {
+            return Err("mode is remove or add".into());
+        }
+        if !["straight", "torn", "wavy", "zigzag"].contains(&s.join.as_str()) {
+            return Err("join is straight, torn, wavy or zigzag".into());
+        }
+        within("gap", s.gap, 8.0, 60.0)?;
+        Ok(s)
+    }
 }
 
 /// The Selection tool (EDT-043, EDT-045).
@@ -280,6 +323,7 @@ impl Default for Styles {
             eraser: EraserStyle::default(),
             select: SelectStyle::default(),
             wand: WandStyle::default(),
+            cutout: CutOutStyle::default(),
         }
     }
 }
@@ -315,6 +359,7 @@ impl Styles {
             "eraser" => serde_json::to_value(&self.eraser).ok(),
             "select" => serde_json::to_value(&self.select).ok(),
             "wand" => serde_json::to_value(&self.wand).ok(),
+            "cutout" => serde_json::to_value(&self.cutout).ok(),
             _ => None,
         }
     }
@@ -350,6 +395,7 @@ impl Styles {
             "eraser" => self.eraser = EraserStyle::merged(&self.eraser, changes)?,
             "select" => self.select = SelectStyle::merged(&self.select, changes)?,
             "wand" => self.wand = WandStyle::merged(&self.wand, changes)?,
+            "cutout" => self.cutout = CutOutStyle::merged(&self.cutout, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         Ok(())

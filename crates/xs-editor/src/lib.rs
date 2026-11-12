@@ -35,7 +35,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 20] = [
+pub const AVAILABLE_TOOLS: [&str; 21] = [
     "favorites",
     "move",
     "arrow",
@@ -56,6 +56,7 @@ pub const AVAILABLE_TOOLS: [&str; 20] = [
     "fill",
     "eraser",
     "crop",
+    "cutout",
 ];
 /// Zoom steps in percent (EDT-007).
 pub const ZOOM_STEPS: [f64; 16] = [
@@ -1589,6 +1590,8 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
     let mut pixels: Option<image::RgbaImage> = None;
     // Crop to canvas: annotations left sticking out (EDT-051).
     let mut sticking: Vec<String> = Vec::new();
+    // Cut out: objects across the strip, which stay (EDT-052).
+    let mut crossing: Vec<String> = Vec::new();
     let label = match which {
         "resize" => {
             let (cw, ch) = (doc.canvas.width as f64, doc.canvas.height as f64);
@@ -1902,6 +1905,95 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
             }
             "history.crop_to_canvas"
         }
+        "cut_out" => {
+            // Cut out a strip, or add space (EDT-052): new original pixels (ADR 0006).
+            use xs_image::cutout::{self, Join, Strip};
+            let across = match p.get("direction").and_then(Value::as_str) {
+                Some("horizontal") | None => true,
+                Some("vertical") => false,
+                Some(other) => return Err(bad("direction", other)),
+            };
+            let adding = match p.get("mode").and_then(Value::as_str) {
+                Some("remove") | None => false,
+                Some("add") => true,
+                Some(other) => return Err(bad("mode", other)),
+            };
+            let join = Join::parse(p.get("join").and_then(Value::as_str).unwrap_or("straight"))
+                .ok_or_else(|| bad("join", "straight, torn, wavy or zigzag"))?;
+            let gap = num("gap").unwrap_or(16.0);
+            if !(8.0..=60.0).contains(&gap) {
+                return Err(bad("gap", "between 8 and 60"));
+            }
+            let (a, b) = match (num("from"), num("to")) {
+                (Some(a), Some(b)) => (a.min(b), a.max(b)),
+                _ => return Err(bad("from", "give from and to, in canvas pixels")),
+            };
+            let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+            let src = pixels_with_patches(&doc, &base);
+            let c = doc.crop;
+            let (off, len, shown) = if across {
+                (c.y, src.height() as i64, c.height as i64)
+            } else {
+                (c.x, src.width() as i64, c.width as i64)
+            };
+            // In base pixels, inside the image and the canvas.
+            let (lo, hi) = (off.max(0), (off + shown).min(len));
+            let f = (a.round() as i64 + off).clamp(lo, hi);
+            let t = (b.round() as i64 + off).clamp(lo, hi);
+            if t - f < 1 {
+                return Err(bad("to", "the strip is empty"));
+            }
+            let strip = if across { Strip::Across } else { Strip::Down };
+            let new = if adding {
+                cutout::add(&src, strip, f as u32, (t - f) as u32)
+            } else {
+                let seed = ((f as u64) << 32) ^ (t as u64);
+                cutout::cut(&src, strip, f as u32, t as u32, join, gap as u32, seed)
+            };
+            let new_len = if across { new.height() } else { new.width() } as i64;
+            // How far what comes after the strip moves along the axis.
+            let shift = (new_len - len) as f64;
+            // Objects wholly after the strip move with their part; those across it stay
+            // and are reported (EDT-052). `start` and `end` in the same pixels as `o`.
+            let place = |o: &mut Object, start: f64, end: f64, crossing: &mut Vec<String>| {
+                let Some(bx) = xs_image::object_bounds(o, doc.dpi) else {
+                    return;
+                };
+                let (o0, o1) = if across { (bx[1], bx[3]) } else { (bx[0], bx[2]) };
+                let after = if adding { start } else { end };
+                if o0 >= after - 0.5 {
+                    let (dx, dy) = if across { (0.0, shift) } else { (shift, 0.0) };
+                    objects::translate(o, dx, dy);
+                } else if o1 > start + 0.5 {
+                    crossing.push(o.id.clone());
+                }
+            };
+            let (cf, ct) = ((f - off) as f64, (t - off) as f64);
+            for o in next.objects.iter_mut() {
+                place(o, cf, ct, &mut crossing);
+            }
+            let mut flat_crossing = Vec::new();
+            for o in next.flattened.iter_mut().flat_map(|l| l.objects.iter_mut()) {
+                place(o, f as f64, t as f64, &mut flat_crossing);
+            }
+            if across {
+                next.crop.height = (next.crop.height as i64 + shift as i64).max(1) as u32;
+            } else {
+                next.crop.width = (next.crop.width as i64 + shift as i64).max(1) as u32;
+            }
+            next.canvas.width = next.crop.width;
+            next.canvas.height = next.crop.height;
+            next.crop_history.clear();
+            next.frame = None;
+            next.patches.clear();
+            next.outside = fit::outside_canvas(&next);
+            pixels = Some(new);
+            if adding {
+                "history.add_space"
+            } else {
+                "history.cut_out"
+            }
+        }
         "canvas_size" => {
             let (w, h) = (
                 num("width").unwrap_or(doc.canvas.width as f64),
@@ -1939,6 +2031,14 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
         .with(&id, |d| json!({"width": d.document.canvas.width, "height": d.document.canvas.height, "dpi": d.document.dpi}))
         .unwrap_or_default();
     info["changed"] = json!(true);
+    if !crossing.is_empty() {
+        info["crossing"] = json!(crossing);
+        info["warnings"] = json!([tr(
+            lang,
+            "editor.crossing_strip",
+            &[("count", &crossing.len().to_string())]
+        )]);
+    }
     if !sticking.is_empty() {
         info["sticking"] = json!(sticking);
         info["warnings"] = json!([tr(
@@ -3836,6 +3936,9 @@ pub fn extension() -> Extension {
         ));
         on!("document.trim", |core, ctx, p| image_command(
             &core, ctx, &p, "trim"
+        ));
+        on!("document.cut_out", |core, ctx, p| image_command(
+            &core, ctx, &p, "cut_out"
         ));
         on!("document.fit_canvas", |core, ctx, p| image_command(
             &core,

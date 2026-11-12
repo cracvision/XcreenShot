@@ -81,10 +81,11 @@ type StyledKind =
   | "fill"
   | "eraser"
   | "select"
-  | "wand";
+  | "wand"
+  | "cutout";
 /** Tools that change pixels (EDT-047, EDT-048): their own style shows even with a
  * selection, which says only which floating image the eraser works on. */
-const PIXEL_TOOLS: StyledKind[] = ["fill", "eraser", "select", "wand"];
+const PIXEL_TOOLS: StyledKind[] = ["fill", "eraser", "select", "wand", "cutout"];
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -104,6 +105,7 @@ const STYLED: StyledKind[] = [
   "eraser",
   "select",
   "wand",
+  "cutout",
 ];
 
 function useTarget(): Target | null {
@@ -136,7 +138,7 @@ function useTarget(): Target | null {
     };
   }
   if (PIXEL_TOOLS.includes(tool as StyledKind)) {
-    const k = tool as "fill" | "eraser" | "select" | "wand";
+    const k = tool as "fill" | "eraser" | "select" | "wand" | "cutout";
     return {
       kind: k,
       styles: [styles[k] as unknown as Record<string, unknown>],
@@ -782,6 +784,53 @@ function KindProperties({ target }: { target: Target }) {
           </label>
           {gapField}
           {qualityField}
+        </>
+      );
+    case "cutout":
+      // Cut out (EDT-052): which way, remove or add, the join and its gap.
+      return (
+        <>
+          <SelectField
+            label={t("ui.editor.cutout.direction")}
+            value={v<"horizontal" | "vertical">("direction")}
+            options={(["horizontal", "vertical"] as const).map((d) => ({
+              value: d,
+              label: t(`ui.editor.cutout.dir_${d}`),
+            }))}
+            onCommit={(direction) => commit({ direction })}
+          />
+          <SelectField
+            label={t("ui.editor.cutout.mode")}
+            value={v<"remove" | "add">("mode")}
+            options={(["remove", "add"] as const).map((m) => ({
+              value: m,
+              label: t(`ui.editor.cutout.mode_${m}`),
+            }))}
+            onCommit={(mode) => commit({ mode })}
+          />
+          {v<string>("mode") !== "add" && (
+            <SelectField
+              label={t("ui.editor.cutout.join")}
+              value={v<"straight" | "torn" | "wavy" | "zigzag">("join")}
+              options={(["straight", "torn", "wavy", "zigzag"] as const).map((j) => ({
+                value: j,
+                label: t(`ui.editor.cutout.join_${j}`),
+              }))}
+              onCommit={(join) => commit({ join })}
+            />
+          )}
+          {v<string>("mode") !== "add" && v<string>("join") !== "straight" && (
+            <NumberField
+              label={t("ui.editor.cutout.gap")}
+              value={num("gap")}
+              min={8}
+              max={60}
+              step={1}
+              unit="px"
+              onCommit={(gap) => commit({ gap })}
+            />
+          )}
+          <p className="muted hint">{t("ui.editor.cutout.hint")}</p>
         </>
       );
     case "eraser":

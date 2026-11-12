@@ -514,6 +514,10 @@
     "document_crop_to_canvas": {
       "title": "Recortar al lienzo",
       "description": "Quita lo que sobresale del lienzo: las imágenes flotantes pierden esa parte de su imagen; las anotaciones se quedan como están y se avisa."
+    },
+    "document_cut_out": {
+      "title": "Quitar franja o añadir espacio",
+      "description": "Quita una franja de todo el ancho (o de todo el alto) y junta las partes, rectas o con un hueco rasgado, ondulado o en zigzag; o añade ese espacio. Los objetos de después de la franja se mueven con ella; los que la cruzan se quedan y se avisa."
     }
   },
   "settings": {
@@ -933,7 +937,8 @@
       "editor_crop_to_canvas": "Recortar al lienzo",
       "editor_fit_canvas": "Ajustar el lienzo al contenido",
       "editor_trim": "Recortar bordes",
-      "editor_snap": "Ajuste magnético"
+      "editor_snap": "Ajuste magnético",
+      "editor_tool_cutout": "Herramienta Quitar franja"
     }
   },
   "tray": {
@@ -1423,7 +1428,8 @@
         "eraser": "Arrastra para borrar la imagen; se ve el color del lienzo. Los objetos no cambian.",
         "select": "Arrastra para seleccionar píxeles; arrastra dentro para moverlos. Shift añade, Alt resta.",
         "wand": "Haz clic para seleccionar una zona de color parecido. Shift añade, Alt resta.",
-        "favorites": "Tus estilos con estrella de todas las herramientas: haz clic en uno para dibujar con él."
+        "favorites": "Tus estilos con estrella de todas las herramientas: haz clic en uno para dibujar con él.",
+        "cutout": "Arrastra sobre la imagen para quitar una franja de todo el ancho (Shift: de todo el alto) o para añadir espacio."
       },
       "tool": {
         "move": "Mover",
@@ -1446,7 +1452,8 @@
         "eraser": "Borrador",
         "select": "Selección",
         "wand": "Varita mágica",
-        "favorites": "Favoritos"
+        "favorites": "Favoritos",
+        "cutout": "Quitar franja"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -2128,6 +2135,21 @@
         "trim_title": "Recortar bordes",
         "tolerance": "Tolerancia (de 0 a 20 %)",
         "trim_hint": "Quita alrededor de la imagen los bordes del color de la esquina de arriba a la izquierda, o transparentes. Como un recorte, se puede deshacer y lo quitado puede volver."
+      },
+      "cutout": {
+        "direction": "Dirección",
+        "dir_horizontal": "Horizontal (todo el ancho)",
+        "dir_vertical": "Vertical (todo el alto)",
+        "mode": "Modo",
+        "mode_remove": "Quitar la franja",
+        "mode_add": "Añadir espacio",
+        "join": "Unión",
+        "join_straight": "Recta",
+        "join_torn": "Rasgada",
+        "join_wavy": "Ondulada",
+        "join_zigzag": "Zigzag",
+        "gap": "Hueco",
+        "hint": "Arrastra sobre la imagen para marcar la franja; Shift cambia su dirección. Los objetos de después se mueven con ella."
       }
     },
     "multi": {
@@ -2388,13 +2410,16 @@
     "flip": "Voltear",
     "trim": "Recortar bordes",
     "fit_canvas": "Ajustar el lienzo al contenido",
-    "crop_to_canvas": "Recortar al lienzo"
+    "crop_to_canvas": "Recortar al lienzo",
+    "cut_out": "Quitar franja",
+    "add_space": "Añadir espacio"
   },
   "editor": {
     "edited": "{{name}} — Editado",
     "no_borders": "No hay bordes uniformes que recortar.",
     "nothing_to_crop": "No sobresale del lienzo nada que se pueda recortar ({{count}} anotaciones sobresalen y no se recortan).",
-    "still_sticking": "{{count}} anotaciones siguen sobresaliendo del lienzo: no se recortan."
+    "still_sticking": "{{count}} anotaciones siguen sobresaliendo del lienzo: no se recortan.",
+    "crossing_strip": "{{count}} objetos cruzan la franja y se quedan donde estaban."
   },
   "stamps": {
     "indicators": "Indicadores",

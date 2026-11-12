@@ -734,6 +734,23 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.cut_out", &["EDT-052", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "direction": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal", "description": "horizontal: a strip of the whole width (the height changes); vertical: of the whole height"},
+                    "from": {"type": "number", "description": "Where the strip starts, in canvas pixels along the direction's axis (y for horizontal)"},
+                    "to": {"type": "number", "description": "Where it ends"},
+                    "mode": {"type": "string", "enum": ["remove", "add"], "default": "remove", "description": "remove the strip, or add that much space of the canvas color"},
+                    "join": {"type": "string", "enum": ["straight", "torn", "wavy", "zigzag"], "default": "straight", "description": "How the parts join; all but straight leave a gap"},
+                    "gap": {"type": "number", "minimum": 8, "maximum": 60, "default": 16, "description": "The gap, px"}
+                }),
+                &["from", "to"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "crossing": {"type": "array", "items": {"type": "string"}, "description": "Objects across the strip: they stay where they were"}
+            }})),
         B::new("document.fit_canvas", &["EDT-051", "EDT-119"])
             .mutates()
             .params(params(json!({"documentId": document_id()}), &[]))
@@ -1302,7 +1319,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 20] = [
+pub const TOOLS: [&str; 21] = [
     "favorites",
     "move",
     "arrow",
@@ -1323,6 +1340,7 @@ pub const TOOLS: [&str; 20] = [
     "fill",
     "eraser",
     "crop",
+    "cutout",
 ];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and

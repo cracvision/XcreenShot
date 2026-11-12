@@ -205,7 +205,9 @@ type Drag =
   | { kind: "pxmove"; start: Point; delta: Point; moved: boolean }
   // The canvas resized by a handle (EDT-070), or its corners rounded (EDT-075).
   | { kind: "canvas"; handle: BoxHandle; start: Box; box: Box; fromCenter: boolean }
-  | { kind: "cradius"; value: number; startX: number; startY: number };
+  | { kind: "cradius"; value: number; startX: number; startY: number }
+  // A strip being marked with Cut out (EDT-052); Shift turns its direction.
+  | { kind: "cut"; start: Point; end: Point; vertical: boolean };
 
 /** What stays put when the canvas is resized by a handle (EDT-070). */
 const ANCHOR_OF: Record<BoxHandle, string> = {
@@ -456,14 +458,14 @@ export function Canvas({ doc }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
   const dpr = useDevicePixelRatio();
-  // With flattened objects or edits of pixels the image shown changes with them
-  // (EDT-091, ADR 0005).
+  // With flattened objects, edits of pixels or new original pixels (resized, turned,
+  // flipped, cut out) the image shown changes with them (EDT-091, ADR 0005, ADR 0006).
   const flatKey = useMemo(
     () =>
-      doc.flattened?.length || doc.patches?.length
-        ? hashOf(JSON.stringify([doc.flattened ?? [], doc.patches ?? []]))
+      doc.flattened?.length || doc.patches?.length || doc.baseImage
+        ? hashOf(JSON.stringify([doc.flattened ?? [], doc.patches ?? [], doc.baseImage ?? null]))
         : 0,
-    [doc.flattened, doc.patches],
+    [doc.flattened, doc.patches, doc.baseImage],
   );
   const base = useBaseImage(doc.documentId, flatKey);
   const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
@@ -1037,6 +1039,13 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "crop", mode, start: p, from: cropRect, rect: cropRect });
       return;
     }
+    // Cut out (EDT-052): a strip of the whole width (or height) of the image.
+    if (tool === "cutout" && styles) {
+      capture();
+      const vertical = (styles.cutout.direction === "vertical") !== e.shiftKey;
+      setDrag({ kind: "cut", start: p, end: p, vertical });
+      return;
+    }
     // Pixel tools (EDT-047, EDT-048; ADR 0005) work on the image, not on objects.
     if (tool === "fill" && styles) {
       // A click on a floating image fills it; on any other object, nothing.
@@ -1475,6 +1484,12 @@ export function Canvas({ doc }: Props) {
           fromCenter: e.altKey,
           box: resize(d.start, d.handle, p, { keepRatio: e.shiftKey, fromCenter: e.altKey }),
         };
+      case "cut":
+        return {
+          ...d,
+          end: p,
+          vertical: (styles?.cutout.direction === "vertical") !== e.shiftKey,
+        };
       case "cradius": {
         // Along the diagonal; at most half the shorter side (EDT-075).
         const most = Math.floor(Math.min(canvasSize.width, canvasSize.height) / 2);
@@ -1718,6 +1733,20 @@ export function Canvas({ doc }: Props) {
           height,
           anchor: d.fromCenter ? "center" : ANCHOR_OF[d.handle],
         });
+      } else if (d.kind === "cut") {
+        const c = styles?.cutout;
+        if (!c) return;
+        const axis = d.vertical ? 0 : 1;
+        const r = await run<{ warnings?: string[] }>("document.cut_out", {
+          documentId: id,
+          direction: d.vertical ? "vertical" : "horizontal",
+          from: Math.round(d.start[axis]),
+          to: Math.round(d.end[axis]),
+          mode: c.mode,
+          join: c.join,
+          gap: c.gap,
+        });
+        if (r.warnings?.[0]) useEditor.getState().showToast(r.warnings[0]);
       } else if (d.kind === "cradius") {
         if (d.value === doc.canvas.cornerRadius) return;
         await run("document.canvas", { documentId: id, cornerRadius: d.value });
@@ -1827,6 +1856,13 @@ export function Canvas({ doc }: Props) {
         void finish({ ...d, click });
         return;
       }
+    }
+    if (d.kind === "cut") {
+      // A click marks nothing (EDT-052).
+      const size = Math.abs(d.vertical ? d.end[0] - d.start[0] : d.end[1] - d.start[1]);
+      if (size * (lay?.scale ?? 1) < DRAG_THRESHOLD) return;
+      void finish(d);
+      return;
     }
     if (d.kind === "cradius") {
       // A click rounds the corners 20 px (EDT-075).
@@ -1990,7 +2026,9 @@ export function Canvas({ doc }: Props) {
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
   const fillProgress = useEditor((s) => s.fillProgress);
-  const showFx = Boolean(finalView) && !drag && !textEdit && tool !== "crop" && !cropRect;
+  // Crop and Cut out show the real image, without the effects (EDT-053).
+  const showFx =
+    Boolean(finalView) && !drag && !textEdit && tool !== "crop" && tool !== "cutout" && !cropRect;
   // A sample of the current style by the pointer, when asked for (EDT-015).
   const previewOn = useSetting("editor.cursorStylePreview", false);
   const previewTool = (STYLED_TOOLS as readonly string[]).includes(tool) ? tool : null;
@@ -2611,6 +2649,32 @@ export function Canvas({ doc }: Props) {
                           </Group>
                         );
                       })}
+                    </Group>
+                  );
+                })()}
+              {drag?.kind === "cut" &&
+                styles &&
+                (() => {
+                  // The strip being marked, across the whole image, and its size (EDT-052).
+                  const axis = drag.vertical ? 0 : 1;
+                  const a = Math.round(Math.min(drag.start[axis], drag.end[axis]));
+                  const b = Math.round(Math.max(drag.start[axis], drag.end[axis]));
+                  const box: RectBox = drag.vertical
+                    ? { x: a, y: 0, w: b - a, h: canvasSize.height }
+                    : { x: 0, y: a, w: canvasSize.width, h: b - a };
+                  const adding = styles.cutout.mode === "add";
+                  const [lx, ly] = toScreen(drag.end);
+                  return (
+                    <Group listening={false}>
+                      <Line
+                        points={corners({ ...box, rotation: 0 }).flatMap(toScreen)}
+                        closed
+                        stroke={adding ? ACCENT : "#FC1B39"}
+                        strokeWidth={1.5}
+                        dash={[6, 4]}
+                        fill={adding ? "rgba(0, 100, 251, 0.16)" : "rgba(252, 27, 57, 0.22)"}
+                      />
+                      <DragLabel x={lx} y={ly} text={`${b - a} px`} />
                     </Group>
                   );
                 })()}

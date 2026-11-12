@@ -3605,3 +3605,87 @@ fn floating_images_get_rounded_corners_together() {
         "square again"
     );
 }
+
+/// EDT-052: removing a 200 px strip leaves 800 px; arrows above stay and below move up;
+/// one across it stays and is reported; a wavy join leaves a 20 px wavy gap; adding
+/// 150 px of vertical space widens the image and moves what is to the right.
+#[test]
+fn cutting_out_strips_and_adding_space() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(600, 1000), json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            arrow([100, 100], [300, 100]),
+            arrow([100, 800], [300, 800]),
+            arrow([400, 200], [400, 700])]}),
+    );
+    let r = cli(
+        &e.core,
+        "document.cut_out",
+        json!({"documentId": doc, "direction": "horizontal", "from": 300, "to": 500}),
+    );
+    assert_eq!(r["height"], 800);
+    assert_eq!(r["crossing"].as_array().map(Vec::len), Some(1));
+    assert!(r["warnings"][0].as_str().is_some());
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([100.0, 100.0]), "above: stays");
+    assert_eq!(
+        info["objects"][1]["from"],
+        json!([100.0, 600.0]),
+        "below: 200 px up"
+    );
+    assert_eq!(info["objects"][2]["from"], json!([400.0, 200.0]), "across: stays");
+    assert_eq!(info["undoLabel"], "Cut out");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+
+    // Wavy, with a 20 px gap: on a transparent canvas, 20 transparent pixels a column.
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "color": null}),
+    );
+    cli(
+        &e.core,
+        "document.cut_out",
+        json!({"documentId": doc, "from": 300, "to": 500, "join": "wavy", "gap": 20}),
+    );
+    let img = rendered(&e, &doc);
+    let run = |x: u32| {
+        (0..img.height())
+            .filter(|&y| img.get_pixel(x, y).0[3] == 0)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(run(10).len(), 20);
+    assert_ne!(run(10)[0], run(30)[0], "the gap waves");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+
+    // Add 150 px of vertical space at x = 350: wider, and what is right of it moves.
+    let r = cli(
+        &e.core,
+        "document.cut_out",
+        json!({"documentId": doc, "direction": "vertical", "mode": "add", "from": 350, "to": 500}),
+    );
+    assert_eq!(r["width"], 750);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        info["objects"][2]["from"],
+        json!([550.0, 200.0]),
+        "right of it: 150 px right"
+    );
+    assert_eq!(
+        info["objects"][0]["from"],
+        json!([100.0, 100.0]),
+        "left of it: stays"
+    );
+    assert_eq!(info["undoLabel"], "Add space");
+    // Undo and Revert bring the original size back.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(
+        (info["width"].as_u64(), info["height"].as_u64()),
+        (Some(600), Some(1000))
+    );
+}

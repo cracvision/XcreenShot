@@ -6,6 +6,7 @@
 
 pub mod callouts;
 pub mod color;
+pub mod cutout;
 pub mod effects;
 pub mod encode;
 pub mod fx;
