@@ -10,7 +10,8 @@ Cada entrega termina como las de M1: pruebas automáticas, `PARITY.md`, `QUESTIO
 | M2.2 · Herramientas de anotación | Paso, Globo, Línea, más formas, Resaltador, Lápiz, Lupa, Foco, Sellos y Emoji, Simplificar | EDT-035, EDT-028 |
 | M2.3 · Selección de píxeles | Selección y sus acciones, relleno del hueco, varita mágica, relleno, borrador | EDT-043, EDT-044 |
 | M2.4 · Estilos | Estilos guardados, favoritos, temas y `.xtheme`, degradados, sombra de objetos | EDT-015 |
-| M2.5 · Efectos y lienzo | Panel Efectos, bordes, sombra, perspectiva, filtros, ajuste de color; cambiar tamaño, tamaño del lienzo, girar, voltear, esquinas, volver al original | EDT-053, EDT-069 |
+| M2.5 · Efectos y lienzo | Panel Efectos, bordes, sombra, perspectiva, filtros, ajuste de color; cambiar tamaño, tamaño del lienzo, girar, voltear, esquinas, volver al original; el menú Imagen con recortar bordes, ajustar el lienzo y recortar al lienzo (EDT-051) | EDT-053, EDT-069 |
+| M2.5b · Franjas y ajuste magnético | Quitar franja y añadir espacio (EDT-052), ajuste magnético y guías (EDT-084). Se habían quedado fuera del plan; van antes de M2.6 | — |
 | M2.6 · Plantillas, exportación e impresión | Plantillas y `.xtemplate`, nueva imagen, más formatos, opciones de formato, exportación por lotes, imprimir; barra de herramientas configurable, barra de edición rápida, área de trabajo | — |
 | M2.7 · Biblioteca | Ordenar y lista, filtros, búsqueda, etiquetas, favoritos, detalles, vista rápida, mover la biblioteca, sincronizada, bibliotecas grandes, comandos `library.*`; bandeja: fijar, reordenar, combinar arrastrando al lienzo; exportar e importar ajustes, hoja de atajos, MCP completo | LIB-004, LIB-005, LIB-007, LIB-009, LIB-023, LIB-025, LIB-028, LIB-029, LIB-034, TRY-014, APP-050, APP-052 |
 

@@ -99,7 +99,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-017 | Temas | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | En curso (faltan el doble clic en el archivo y `policy.themes`) |
 | EDT-019 | Selector de color | M1 | Must | Win |
-| EDT-020 | Degradados | M2 | Should | En curso (faltan el color del lienzo, con EDT-074, y el borde de la cámara) |
+| EDT-020 | Degradados | M2 | Should | En curso (falta el borde de la cámara, con `VID-`) |
 | EDT-021 | Sombra de los objetos | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
 | EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
@@ -130,9 +130,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-048 | Borrador | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-049 | Recortar | M1 | Must | Win |
 | EDT-050 | Recorte no destructivo | M1 | Must | Win |
-| EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | — |
+| EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-052 | Quitar franja y añadir espacio | M2 | Should | — |
-| EDT-053 | Panel Efectos | M2 | Must | En curso (faltan el menú Imagen > Efectos y ocultarlos con Quitar franja) |
+| EDT-053 | Panel Efectos | M2 | Must | En curso (falta ocultarlos con Quitar franja, EDT-052) |
 | EDT-054 | Efectos guardados | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-055 | Borde | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-056 | Bordes decorativos | M2 | Should | Hecho en Windows (macOS pendiente) |
@@ -148,15 +148,15 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-066 | Marca de agua | M2 | Could | Hecho en Windows (macOS pendiente) |
 | EDT-067 | Detalles de captura | M3 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-068 | Efectos de transformación | M2 | Should | Hecho en Windows (macOS pendiente) |
-| EDT-069 | Cambiar tamaño de la imagen | M2 | Must | — |
-| EDT-070 | Tamaño del lienzo | M2 | Should | — |
+| EDT-069 | Cambiar tamaño de la imagen | M2 | Must | Hecho en Windows (macOS pendiente) |
+| EDT-070 | Tamaño del lienzo | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-071 | Ampliar el lienzo automáticamente | M1 | Should | Win |
-| EDT-072 | Girar | M2 | Should | — |
-| EDT-073 | Voltear | M2 | Could | — |
-| EDT-074 | Color del lienzo | M2 | Should | — |
-| EDT-075 | Esquinas redondeadas | M2 | Should | — |
-| EDT-076 | Volver al original | M2 | Should | — |
-| EDT-077 | Resolución y densidad de píxeles | M2 | Could | — |
+| EDT-072 | Girar | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-073 | Voltear | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-074 | Color del lienzo | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-075 | Esquinas redondeadas | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-076 | Volver al original | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-077 | Resolución y densidad de píxeles | M2 | Could | En curso (Windows hecho; falta comprobar los 192 PPP de una pantalla Retina en Mac) |
 | EDT-078 | Imágenes flotantes (lo básico, adelantado a M1 por CAP-067) | M2 | Must | En curso |
 | EDT-079 | Selección múltiple | M2 | Must | En curso |
 | EDT-080 | Transformar varios objetos | M2 | Should | En curso |
