@@ -698,6 +698,28 @@ fn build(f: &Found, id: String, favorite: bool, tags: Vec<String>) -> Item {
     }
 }
 
+/// Opens a web address in the default browser (LIB-012): only `http` and `https`, and
+/// nothing that could be read as more than one argument.
+pub fn open_url(url: &str) -> std::io::Result<()> {
+    let ok = (url.starts_with("https://") || url.starts_with("http://"))
+        && !url
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || c == '"');
+    if !ok {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "not a web address",
+        ));
+    }
+    #[cfg(windows)]
+    let program = "explorer.exe";
+    #[cfg(target_os = "macos")]
+    let program = "open";
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let program = "xdg-open";
+    std::process::Command::new(program).arg(url).spawn().map(|_| ())
+}
+
 /// Opens the system file manager with the file selected (EDT-109).
 pub fn show_in_folder(path: &Path) -> std::io::Result<()> {
     #[cfg(windows)]

@@ -104,6 +104,8 @@ export interface LibraryShape {
   layout: "grid" | "list";
   /** The filter pane is open. */
   pane: boolean;
+  /** The Details pane is open (LIB-012). */
+  details?: boolean;
 }
 
 const SHAPE_KEY = "xs.library.view";

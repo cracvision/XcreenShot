@@ -21,6 +21,8 @@ import { menuPoint, useContextMenu } from "../editor/menus";
 import { xsdocUrl } from "../editor/state";
 import { hint, useShortcut } from "../editor/tools";
 import { askDelete, itemRef, openItems } from "./actions";
+import { DetailsPane } from "./DetailsPane";
+import { fileSize } from "./format";
 import { FilterPane } from "./FilterPane";
 import { editTags, toggleFavorite } from "./marks";
 import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortKey } from "./query";
@@ -140,6 +142,7 @@ function LibraryToolbar() {
   const { t } = useTranslation();
   const openKey = useShortcut("editor.open");
   const pane = useLibrary((s) => s.shape.pane);
+  const details = useLibrary((s) => s.shape.details === true);
   const setShape = useLibrary((s) => s.setShape);
   const selected = useLibrary((s) => s.selection.length);
   return (
@@ -172,6 +175,15 @@ function LibraryToolbar() {
         onClick={() => editTags(useLibrary.getState().selection)}
       >
         <span className="tb-label">{t("ui.library.tags.button")}</span>
+      </button>
+      <button
+        type="button"
+        className="btn tb-btn"
+        aria-pressed={details}
+        title={t("ui.library.details.toggle")}
+        onClick={() => setShape({ details: !details })}
+      >
+        <span className="tb-label">{t("ui.library.details.title")}</span>
       </button>
       <div className="tb-spacer" />
       <div className="tb-group">
@@ -369,17 +381,6 @@ function shortDate(iso: string, lang: string): string {
   return new Date(iso).toLocaleString(lang, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function fileSize(bytes: number, lang: string): string {
-  const units = ["B", "KB", "MB", "GB"];
-  let v = bytes;
-  let u = 0;
-  while (v >= 1024 && u < units.length - 1) {
-    v /= 1024;
-    u += 1;
-  }
-  return `${v.toLocaleString(lang, { maximumFractionDigits: u === 0 ? 0 : 1 })} ${units[u]}`;
-}
-
 function siteOf(url: string | null): string {
   if (!url) return "";
   try {
@@ -558,6 +559,12 @@ function Grid() {
     if (primary && e.code === "KeyA") {
       e.preventDefault();
       select(order, at, at);
+      return;
+    }
+    if ((!IS_MAC && e.key === "Enter" && e.altKey) || (IS_MAC && e.metaKey && e.code === "KeyI")) {
+      // LIB-012: Alt+Enter (Cmd+I) opens Details.
+      e.preventDefault();
+      useLibrary.getState().setShape({ details: true });
       return;
     }
     if (e.key === "Enter") {
@@ -831,6 +838,7 @@ export function LibraryView() {
   const empty = useLibrary((s) => s.total === 0);
   const none = useLibrary((s) => s.items.length === 0);
   const pane = useLibrary((s) => s.shape.pane);
+  const details = useLibrary((s) => s.shape.details === true);
   const list = useLibrary((s) => s.shape.layout === "list");
 
   useEffect(() => {
@@ -858,6 +866,7 @@ export function LibraryView() {
               {list && !none && <ListHeader />}
               {none ? <NoResults /> : <Grid />}
             </div>
+            {details && <DetailsPane />}
           </>
         )}
       </div>

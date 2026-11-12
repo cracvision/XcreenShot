@@ -606,6 +606,10 @@
     "library_resolve": {
       "title": "Resolver un conflicto de sincronización",
       "description": "Se queda con la copia en conflicto, con el original o con las dos, cuando un servicio de sincronización hizo una copia de un elemento cambiado en dos equipos."
+    },
+    "library_open_url": {
+      "title": "Abrir el sitio web",
+      "description": "Abre en el navegador predeterminado el sitio web donde se capturó un elemento de la biblioteca."
     }
   },
   "settings": {
@@ -1228,7 +1232,8 @@
     "favorite_item": "Marcar como favorito",
     "unfavorite_item": "Quitar de favoritos",
     "show_in_library": "Mostrar en la biblioteca",
-    "resolve_conflict": "Resolver conflicto…"
+    "resolve_conflict": "Resolver conflicto…",
+    "details_item": "Detalles"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2801,7 +2806,32 @@
       "resolve_original": "Quedarme con el original",
       "resolve_original_help": "Esta copia va a la papelera.",
       "resolve_both": "Conservar las dos",
-      "resolve_both_help": "Esta copia recibe un nombre propio."
+      "resolve_both_help": "Esta copia recibe un nombre propio.",
+      "details": {
+        "title": "Detalles",
+        "toggle": "Mostrar u ocultar los detalles de la selección (Alt+Intro)",
+        "none": "Selecciona un elemento para ver sus detalles.",
+        "copy": "Copiar",
+        "name": "Nombre",
+        "type": "Tipo",
+        "dimensions": "Dimensiones",
+        "size": "Tamaño",
+        "location": "Ubicación",
+        "captured": "Capturado",
+        "created": "Creado",
+        "modified": "Modificado",
+        "app": "Aplicación",
+        "site": "Sitio web",
+        "os": "Sistema",
+        "user": "Usuario",
+        "tags": "Etiquetas",
+        "favorite": "Favorito",
+        "edit_tags": "Editar…",
+        "count_one": "{{count}} elemento seleccionado",
+        "count_other": "{{count}} elementos seleccionados",
+        "dates": "Capturados entre",
+        "common_tags": "Etiquetas en común"
+      }
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

@@ -1521,10 +1521,21 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["ids"],
             ))
             .result(json!({"type": "object", "properties": {"favorite": {"type": "boolean"}, "count": {"type": "integer"}}})),
-        B::new("library.get", &["LIB-034"])
-            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+        B::new("library.get", &["LIB-034", "LIB-012"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "details": {"type": "boolean", "default": false, "description": "Add `details`: capture metadata (app and version, website, system, user, display scale) and the file's dates (LIB-012)"}
+                }),
+                &["id"],
+            ))
             .positional(&["id"])
             .result(library_item()),
+        B::new("library.open_url", &["LIB-012"])
+            .scopes(UI_CLI)
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object", "properties": {"url": {"type": "string"}}})),
         B::new("library.delete", &["LIB-015", "TRY-009"])
             .destructive()
             .params(params(

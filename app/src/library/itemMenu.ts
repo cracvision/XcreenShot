@@ -6,6 +6,7 @@ import type { LibraryItem } from "./state";
 import { openPicker } from "../editor/templateUi";
 import { editTags, toggleFavorite } from "./marks";
 import { askResolve } from "./maintenanceState";
+import { useLibrary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -65,6 +66,13 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       label: t("menu.copy_path"),
       disabled: !one,
       onSelect: () => one && copyPath(itemRef(one)),
+    },
+    // LIB-012: the Details pane, which follows the selection.
+    {
+      id: "details",
+      label: t("menu.details_item"),
+      shortcut: IS_MAC ? "⌘I" : "Alt+Enter",
+      onSelect: () => useLibrary.getState().setShape({ details: true }),
     },
     {
       id: "delete",

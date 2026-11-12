@@ -606,6 +606,10 @@
     "library_resolve": {
       "title": "Resolve a sync conflict",
       "description": "Keeps the conflict copy, the original or both, when a sync service made a copy of an item changed on two computers."
+    },
+    "library_open_url": {
+      "title": "Open the website",
+      "description": "Opens the website a library item was captured from in the default browser."
     }
   },
   "settings": {
@@ -1228,7 +1232,8 @@
     "favorite_item": "Add to favorites",
     "unfavorite_item": "Remove from favorites",
     "show_in_library": "Show in library",
-    "resolve_conflict": "Resolve conflict…"
+    "resolve_conflict": "Resolve conflict…",
+    "details_item": "Details"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2801,7 +2806,32 @@
       "resolve_original": "Keep the original",
       "resolve_original_help": "This copy goes to the trash.",
       "resolve_both": "Keep both",
-      "resolve_both_help": "This copy gets a name of its own."
+      "resolve_both_help": "This copy gets a name of its own.",
+      "details": {
+        "title": "Details",
+        "toggle": "Show or hide the details of the selection (Alt+Enter)",
+        "none": "Select an item to see its details.",
+        "copy": "Copy",
+        "name": "Name",
+        "type": "Type",
+        "dimensions": "Dimensions",
+        "size": "File size",
+        "location": "Location",
+        "captured": "Captured",
+        "created": "Created",
+        "modified": "Modified",
+        "app": "App",
+        "site": "Website",
+        "os": "System",
+        "user": "User",
+        "tags": "Tags",
+        "favorite": "Favorite",
+        "edit_tags": "Edit…",
+        "count_one": "{{count}} item selected",
+        "count_other": "{{count}} items selected",
+        "dates": "Captured between",
+        "common_tags": "Shared tags"
+      }
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

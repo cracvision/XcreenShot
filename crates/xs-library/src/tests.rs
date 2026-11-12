@@ -686,3 +686,34 @@ fn sync_conflict_copies_are_resolved() {
         .iter()
         .all(|i| i["conflict"].is_null()));
 }
+
+/// LIB-012: details bring the capture's app, version and website from its metadata,
+/// even after the image changed; only web addresses open.
+#[test]
+fn details_come_from_the_capture_metadata() {
+    let e = env();
+    write_xshot(&e.path("a.xshot"), "Google Chrome", "2026-11-03T10:00:00+00:00");
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En)).unwrap();
+    let id = cli("library.list", json!({}))["items"][0]["id"].clone();
+    let plain = cli("library.get", json!({"id": id}));
+    assert!(plain["details"].is_null());
+    let d = cli("library.get", json!({"id": id, "details": true}))["details"].clone();
+    assert_eq!(d["app"], "Google Chrome");
+    assert_eq!(d["appVersion"], "1.0");
+    assert_eq!(d["url"], "https://example.com/a");
+    assert_eq!(d["capturedAt"], "2026-11-03T10:00:00+00:00");
+    assert!(d["modified"].is_string());
+    for bad in [
+        "javascript:alert(1)",
+        "file:///C:/x",
+        "https://a.com/\" & calc",
+        "ftp://x",
+    ] {
+        assert!(service::open_url(bad).is_err(), "{bad}");
+    }
+}

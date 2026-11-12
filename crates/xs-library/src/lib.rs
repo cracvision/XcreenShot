@@ -506,6 +506,39 @@ fn resolve(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError>
     Ok(json!({ "kept": kept, "undo": undo }))
 }
 
+/// What Details shows of a file besides the index (LIB-012): its capture metadata
+/// (CAP-056) and the file's own dates. A file only in the cloud is not read.
+fn details(file: &Path, cloud: bool) -> Value {
+    let fs = std::fs::metadata(file).ok();
+    let time =
+        |t: Option<std::time::SystemTime>| t.map(|t| chrono::DateTime::<chrono::Local>::from(t).to_rfc3339());
+    let created = time(fs.as_ref().and_then(|m| m.created().ok()));
+    let modified = time(fs.as_ref().and_then(|m| m.modified().ok()));
+    let meta = if cloud || file.extension().is_none_or(|e| e != "xshot") {
+        Value::Null
+    } else {
+        xs_core::document::Xshot::read_summary(file)
+            .map(|s| s.meta)
+            .unwrap_or(Value::Null)
+    };
+    let app = &meta["app"];
+    json!({
+        "created": created,
+        "modified": modified,
+        "capturedAt": meta["capturedAt"],
+        "app": app["name"].as_str().or(app.as_str()),
+        "appVersion": app["version"],
+        "url": meta["url"],
+        "os": meta["os"]["name"].as_str().map(|n| match meta["os"]["version"].as_str() {
+            Some(v) => format!("{n} {v}"),
+            None => n.to_string(),
+        }),
+        "user": meta["user"],
+        "scale": meta["display"]["scale"],
+        "monitor": meta["display"]["monitor"],
+    })
+}
+
 /// `library.search` (LIB-034): `library.list` with a parameter for each field (LIB-005,
 /// LIB-007): text, tags, type, app, site, a range of days and favorites.
 fn search(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
@@ -954,9 +987,29 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         on!("library.get", |core, ctx, p| {
             let lib = library(&core);
             let id = p["id"].as_str().unwrap_or_default();
-            lib.get(id)
-                .map(|i| i.to_json(lib.root()))
-                .ok_or_else(|| not_found(ctx.lang, id))
+            let item = lib.get(id).ok_or_else(|| not_found(ctx.lang, id))?;
+            let mut v = item.to_json(lib.root());
+            if p.get("details").and_then(Value::as_bool) == Some(true) {
+                v["details"] = details(&lib.abs(&item.path), item.cloud);
+            }
+            Ok(v)
+        });
+        on!("library.open_url", |core, ctx, p| {
+            let lib = library(&core);
+            let id = p["id"].as_str().unwrap_or_default();
+            let item = lib.get(id).ok_or_else(|| not_found(ctx.lang, id))?;
+            let url = item.url.ok_or_else(|| not_found(ctx.lang, id))?;
+            service::open_url(&url).map_err(|e| {
+                CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", "url"), ("reason", &e.to_string())],
+                    ),
+                )
+            })?;
+            Ok(json!({ "url": url }))
         });
         on!("library.delete", |core, ctx, p| delete(&core, ctx, &p));
         on!("library.restore", |core, ctx, p| restore(&core, ctx, &p));

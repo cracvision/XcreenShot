@@ -295,10 +295,10 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-006 | Filtros por aplicación y sitio web | M2 | Should | En curso (Windows: sin el ícono de cada aplicación) |
 | LIB-007 | Campo de búsqueda | M2 | Must | En curso (Windows: falta el texto de las guías de pasos, que llegan en M5) |
 | LIB-008 | Buscar el texto de las imágenes | M5 | Should | — |
-| LIB-009 | Etiquetas: añadir y quitar | M2 | Must | En curso (Windows: botón Etiquetas y menú contextual; faltan Imagen > Editar etiquetas en el editor y Detalles, LIB-012) |
+| LIB-009 | Etiquetas: añadir y quitar | M2 | Must | En curso (Windows: botón Etiquetas, menú contextual y Detalles, LIB-012; falta Imagen > Editar etiquetas en el editor) |
 | LIB-010 | Gestionar etiquetas | M2 | Should | En curso (Windows: renombrar, fusionar, eliminar y seleccionar; falta unificar mayúsculas al indexar, LIB-031) |
-| LIB-011 | Favoritos | M2 | Should | En curso (Windows: estrella y menú contextual; faltan Detalles y la bandeja, TRY-016) |
-| LIB-012 | Detalles del elemento | M2 | Should | — |
+| LIB-011 | Favoritos | M2 | Should | En curso (Windows: estrella, menú contextual y Detalles, LIB-012; falta la bandeja, TRY-016) |
+| LIB-012 | Detalles del elemento | M2 | Should | En curso (Windows: panel Detalles que sigue a la selección, botón, Alt+Enter / Cmd+I y menú contextual; nombre, etiquetas y favorito editables; copiar cada dato; varios elementos; `library.get --details` y `library.open_url`. Faltan duración y fps de videos y pasos de guías (M3 y M4), y Último envío, que llega con el historial de SHR-012. El tooltip de la miniatura es el del sistema) |
 | LIB-013 | Vista rápida | M2 | Should | — |
 | LIB-014 | Mostrar en la biblioteca | M2 | Should | En curso (Windows: Archivo > Mostrar en la biblioteca y `library.reveal`: cambia a la Biblioteca, selecciona y desplaza hasta el elemento, quita los filtros con aviso; falta Deshacer en el aviso y la entrada en el menú de la bandeja, TRY-016) |
 | LIB-015 | Eliminar | M1 | Must | En curso |
