@@ -21,6 +21,7 @@ use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
 use crate::spotlights::{self, SpotlightObject};
+use crate::stamps::{self, StampObject};
 use crate::steps::{StepObject, StepShape};
 use crate::text::{self, Text, TextAlign, TextStyle};
 
@@ -612,6 +613,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 highlights::draw(pm, &h);
             }
         }
+        "stamp" => {
+            if let Ok(s) = StampObject::from_props(&object.props) {
+                stamps::draw(pm, &s, dpi);
+            }
+        }
         "pen" => {
             if let Ok(p) = PenObject::from_props(&object.props) {
                 pens::draw(pm, &p);
@@ -777,6 +783,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
             .ok()
             .map(|s| (s.rect, s.rotation)),
         "spotlight" => SpotlightObject::from_props(&object.props)
+            .ok()
+            .map(|s| (s.rect, s.rotation)),
+        "stamp" => StampObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
         "highlight" => HighlightObject::from_props(&object.props)
@@ -1050,7 +1059,7 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         // A step, a callout or a stroke as it shows, in a picture centered on the
         // center of its body (of its points for a stroke): `(x, y)` is where its top-left
         // corner goes. The editor places it by that center.
-        "step" | "callout" | "pen" => {
+        "step" | "callout" | "pen" | "stamp" => {
             let b = object_bounds(object, doc.dpi)?;
             let (cx, cy, reach) = match object.kind.as_str() {
                 "step" => {
@@ -1059,6 +1068,10 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
                 }
                 "callout" => {
                     let r = CalloutObject::from_props(&object.props).ok()?.rect;
+                    (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
+                }
+                "stamp" => {
+                    let r = StampObject::from_props(&object.props).ok()?.rect;
                     (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
                 }
                 _ => ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0, 0.0),

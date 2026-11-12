@@ -37,6 +37,7 @@ import {
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
+import { StampBrowser } from "./StampBrowser";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -139,7 +140,8 @@ type StyledKind =
   | "highlight"
   | "pen"
   | "magnify"
-  | "spotlight";
+  | "spotlight"
+  | "stamp";
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -153,6 +155,7 @@ const STYLED: StyledKind[] = [
   "pen",
   "magnify",
   "spotlight",
+  "stamp",
 ];
 
 function useTarget(): Target | null {
@@ -500,6 +503,22 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "stamp":
+      // A stamp's color (its own, or another for monochrome ones) and opacity (EDT-031).
+      return (
+        <>
+          <ColorPicker
+            label={t("ui.editor.prop.color")}
+            value={v<string | null>("color") ?? "#3A3F4B"}
+            mixed={v<string | null>("color") === undefined}
+            onCommit={(color) => color && commit({ color })}
+          />
+          <button type="button" className="btn small" onClick={() => commit({ color: null })}>
+            {t("ui.editor.stamps.own_color")}
+          </button>
+          {opacity}
+        </>
+      );
     case "spotlight":
       // Spotlight (EDT-039): the outside's color, opacity, blur and soft edge, shared.
       return (
@@ -1081,7 +1100,11 @@ export function SidePanel() {
       <PanelTabs tab={tab} setTab={setTab} />
       <div className="side-body" role="tabpanel">
         {tab === "styles" ? (
-          <p className="muted">{t("ui.editor.styles_soon")}</p>
+          tool === "stamp" || target?.kind === "stamp" ? (
+            <StampBrowser />
+          ) : (
+            <p className="muted">{t("ui.editor.styles_soon")}</p>
+          )
         ) : (
           <section aria-label={title}>
             <h2 className="side-title">{title}</h2>

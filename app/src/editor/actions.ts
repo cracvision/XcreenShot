@@ -36,7 +36,7 @@ import { textBox } from "./callouts";
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
 
-function fail(e: unknown): void {
+export function fail(e: unknown): void {
   useEditor.getState().showError(e);
 }
 
@@ -251,6 +251,8 @@ export function redo(): void {
 
 export function selectTool(tool: Tool): void {
   if (useEditor.getState().tool !== tool) run("editor.select_tool", { tool }).catch(fail);
+  // The stamps are chosen in the Styles tab (EDT-031).
+  if (tool === "stamp") usePanel.getState().set({ visible: true, tab: "styles" });
 }
 
 /** Loads the installed fonts the first time the font list is needed (EDT-026). */

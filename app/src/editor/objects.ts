@@ -15,6 +15,7 @@ export function boxOf(o: DocObject): Box | null {
     case "callout":
     case "highlight":
     case "spotlight":
+    case "stamp":
       return { ...o.rect, rotation: o.rotation };
     case "magnify":
       // The lens (EDT-038).
@@ -102,7 +103,8 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
     case "blur":
     case "step":
     case "highlight":
-    case "spotlight": {
+    case "spotlight":
+    case "stamp": {
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
       return [{ ...o, rect }, { rect }];
     }
@@ -162,7 +164,8 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
     case "shape":
     case "blur":
     case "highlight":
-    case "spotlight": {
+    case "spotlight":
+    case "stamp": {
       const rect: Rect = { x: b.x, y: b.y, w: b.w, h: b.h };
       return [
         { ...o, rect, rotation: b.rotation },

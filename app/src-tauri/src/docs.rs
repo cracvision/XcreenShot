@@ -54,6 +54,19 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                 .ok()
                 .map(|png| (std::sync::Arc::new(png), "image/png"))
         }),
+        // A stamp of the collection (EDT-031), in the app's language.
+        ["stamp", id] => {
+            let lang = if core.lang() == xs_core::Lang::Es {
+                xs_image::stamps::Lang::Es
+            } else {
+                xs_image::stamps::Lang::En
+            };
+            xs_image::stamps::thumbnail(id, lang, 96).and_then(|img| {
+                xs_image::encode::png(&img, 0.0, true)
+                    .ok()
+                    .map(|png| (std::sync::Arc::new(png), "image/png"))
+            })
+        }
         ["multi", item] => xs_capture::multi::thumbnail_png(&core, item).map(|png| (png, "image/png")),
         [id, "image", name] => editor.store.image_file(id, name).map(|bytes| {
             let mime = if name.ends_with(".jpg") {

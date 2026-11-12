@@ -155,6 +155,12 @@ const ICONS = {
       <path d="M4 4h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
     </Svg>
   ),
+  // A stamp (EDT-031).
+  stamp: (
+    <Svg>
+      <path d="M10 3a3.5 3.5 0 0 0-2 6.4V12H5a1.5 1.5 0 0 0-1.5 1.5V15h13v-1.5A1.5 1.5 0 0 0 15 12h-3V9.4A3.5 3.5 0 0 0 10 3zM4 17h12" />
+    </Svg>
+  ),
   // A numbered marker (EDT-035).
   step: (
     <Svg>

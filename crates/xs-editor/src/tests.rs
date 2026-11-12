@@ -2181,3 +2181,41 @@ fn polygons_and_rounded_rectangles() {
     let back = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(back["objects"][0]["points"], info["objects"][0]["points"]);
 }
+
+/// EDT-031: a stamp placed with a click takes the usual size; another stamp in its place
+/// keeps its place and height; the document carries its drawing.
+#[test]
+fn stamps_are_placed_replaced_and_carried() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    let found = cli(&e.core, "editor.stamps", json!({"query": "aviso"}));
+    assert_eq!(found["stamps"][0]["id"], "warning");
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "stamp", "stamp": "check", "at": [100, 100]}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let s = &info["objects"][0];
+    // The canvas is 400 x 200: a quarter of 200 is less than 96.
+    assert_eq!(s["rect"]["h"], json!(50.0));
+    assert!(s["art"]["shapes"].as_array().is_some_and(|a| !a.is_empty()));
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"rect": {"x": 20, "y": 30, "w": 120, "h": 120}}}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"stamp": "label-new"}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let r = &info["objects"][0]["rect"];
+    assert_eq!((r["x"].as_f64(), r["y"].as_f64(), r["h"].as_f64()), (Some(20.0), Some(30.0), Some(120.0)));
+    assert_eq!(r["w"], json!(300.0), "a label is 2.5 times as wide as high");
+    assert_eq!(info["objects"][0]["stamp"], "label-new");
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert!(file.document.objects[0].props["art"]["shapes"].is_array(), "the drawing travels with it");
+}

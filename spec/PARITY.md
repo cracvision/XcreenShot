@@ -110,7 +110,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-028 | Globo | M2 | Must | En curso |
 | EDT-029 | Forma: rectángulo y elipse | M1 | Must | Win |
 | EDT-030 | Forma: rectángulo redondeado, polígono y otras formas | M2 | Should | En curso |
-| EDT-031 | Sello | M2 | Should | — |
+| EDT-031 | Sello | M2 | Should | En curso |
 | EDT-032 | Sellos propios y Guardar como sello | M2 | Should | — |
 | EDT-033 | Emoji | M2 | Could | — |
 | EDT-034 | Paquetes de sellos `.xstamps` | M2 | Should | — |

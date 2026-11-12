@@ -26,6 +26,7 @@ export function useObjectImages(
       o.type !== "pen" &&
       o.type !== "magnify" &&
       o.type !== "spotlight" &&
+      o.type !== "stamp" &&
       !(o.type === "blur" && o.style.blurType !== "solid")
     )
       return [];

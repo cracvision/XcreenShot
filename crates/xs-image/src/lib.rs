@@ -15,6 +15,7 @@ pub mod pens;
 pub mod render;
 pub mod shapes;
 pub mod spotlights;
+pub mod stamps;
 pub mod steps;
 pub mod text;
 

@@ -414,6 +414,10 @@
     "document_locate": {
       "title": "Locate document file",
       "description": "Links an open document to its file after it was moved outside XcreenShot."
+    },
+    "editor_stamps": {
+      "title": "Stamp collection",
+      "description": "Lists the stamps you can place, by category or by words."
     }
   },
   "settings": {
@@ -790,7 +794,8 @@
       "editor_tool_highlight": "Highlighter tool",
       "editor_tool_pen": "Pen tool",
       "editor_tool_magnify": "Magnify tool",
-      "editor_tool_spotlight": "Spotlight tool"
+      "editor_tool_spotlight": "Spotlight tool",
+      "editor_tool_stamp": "Stamp tool"
     }
   },
   "tray": {
@@ -1248,7 +1253,8 @@
         "highlight": "Drag over what to mark; dark text stays readable.",
         "pen": "Draw freehand; Shift draws a straight line.",
         "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere.",
-        "spotlight": "Drag around what matters: the rest darkens or blurs."
+        "spotlight": "Drag around what matters: the rest darkens or blurs.",
+        "stamp": "Pick a stamp in Styles, then click to place it; drag for another size."
       },
       "tool": {
         "move": "Move",
@@ -1264,7 +1270,8 @@
         "highlight": "Highlighter",
         "pen": "Pen",
         "magnify": "Magnify",
-        "spotlight": "Spotlight"
+        "spotlight": "Spotlight",
+        "stamp": "Stamp"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1514,6 +1521,14 @@
         "rectangle": "Rectangle",
         "roundedRectangle": "Rounded rectangle",
         "ellipse": "Oval"
+      },
+      "stamps": {
+        "title": "Stamps",
+        "search": "Search stamps",
+        "category": "Category",
+        "all": "All",
+        "none": "No stamp matches.",
+        "own_color": "Own color"
       }
     },
     "multi": {
@@ -1743,9 +1758,24 @@
     "change_spotlight": "Change spotlight",
     "delete_spotlight": "Delete spotlight",
     "cut_spotlight": "Cut spotlight",
-    "paste_spotlight": "Paste spotlight"
+    "paste_spotlight": "Paste spotlight",
+    "draw_stamp": "Stamp",
+    "move_stamp": "Move stamp",
+    "change_stamp": "Change stamp",
+    "delete_stamp": "Delete stamp",
+    "cut_stamp": "Cut stamp",
+    "paste_stamp": "Paste stamp"
   },
   "editor": {
     "edited": "{{name}} — Edited"
+  },
+  "stamps": {
+    "indicators": "Indicators",
+    "cursors": "Cursors and gestures",
+    "keys": "Keys",
+    "devices": "Devices",
+    "interface": "Interface",
+    "labels": "Labels",
+    "arrows": "Arrows"
   }
 }

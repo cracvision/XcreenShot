@@ -34,6 +34,43 @@ pub struct Styles {
     pub pen: PenStyle,
     pub magnify: MagnifyStyle,
     pub spotlight: SpotlightStyle,
+    pub stamp: StampStyle,
+}
+
+/// The Stamp tool's style (EDT-031): which stamp it places, and its color (`None`: the
+/// stamp's own) and opacity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct StampStyle {
+    pub stamp: String,
+    pub color: Option<String>,
+    pub opacity: f64,
+}
+
+impl Default for StampStyle {
+    fn default() -> Self {
+        StampStyle {
+            stamp: "check".to_string(),
+            color: None,
+            opacity: 100.0,
+        }
+    }
+}
+
+impl StampStyle {
+    fn merged(base: &StampStyle, changes: &Map<String, Value>) -> Result<StampStyle, String> {
+        let mut v = serde_json::to_value(base).map_err(|e| e.to_string())?;
+        if let Some(m) = v.as_object_mut() {
+            for (k, val) in changes {
+                m.insert(k.clone(), val.clone());
+            }
+        }
+        let s: StampStyle = serde_json::from_value(v).map_err(|e| e.to_string())?;
+        if xs_image::stamps::find(&s.stamp).is_none() {
+            return Err(format!("there is no stamp \"{}\"", s.stamp));
+        }
+        Ok(s)
+    }
 }
 
 impl Default for Styles {
@@ -50,6 +87,7 @@ impl Default for Styles {
             pen: PenStyle::default(),
             magnify: MagnifyStyle::default(),
             spotlight: SpotlightStyle::default(),
+            stamp: StampStyle::default(),
         }
     }
 }
@@ -79,6 +117,7 @@ impl Styles {
             "pen" => serde_json::to_value(&self.pen).ok(),
             "magnify" => serde_json::to_value(&self.magnify).ok(),
             "spotlight" => serde_json::to_value(&self.spotlight).ok(),
+            "stamp" => serde_json::to_value(&self.stamp).ok(),
             _ => None,
         }
     }
@@ -97,6 +136,7 @@ impl Styles {
             "pen" => self.pen = PenStyle::merged(&self.pen, changes)?,
             "magnify" => self.magnify = MagnifyStyle::merged(&self.magnify, changes)?,
             "spotlight" => self.spotlight = SpotlightStyle::merged(&self.spotlight, changes)?,
+            "stamp" => self.stamp = StampStyle::merged(&self.stamp, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -104,7 +144,7 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["stamp"];
+const LATER_TYPES: &[&str] = &[];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
@@ -115,6 +155,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "blur" | "image" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
+        "stamp" => Some(&["rect", "rotation", "stamp", "art", "ink"]),
         "magnify" => Some(&["source", "at"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
@@ -185,6 +226,17 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let mut style = serde_json::to_value(&s.style).map_err(|e| e.to_string())?;
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
+        }
+        "stamp" => {
+            let s = xs_image::stamps::StampObject::from_props(props)?;
+            json!({
+                "rect": s.rect,
+                "rotation": s.rotation,
+                "stamp": props.get("stamp").cloned().unwrap_or(Value::Null),
+                "art": s.art,
+                "ink": s.ink,
+                "style": {"color": s.color, "opacity": s.opacity}
+            })
         }
         "spotlight" => {
             let s = SpotlightObject::from_props(props)?;
@@ -297,6 +349,48 @@ pub fn default_tail(object: &mut Object, height: f64) {
     object
         .props
         .insert("tails".into(), json!([[x + w * 0.25, tip_y]]));
+}
+
+/// A stamp of the collection, ready for `document.annotate` or a replacement (EDT-031):
+/// its drawing in `lang` and its color. For a new one without a box, `at` (its center)
+/// or the canvas middle and the usual size: the smaller of 96 px and a quarter of the
+/// canvas's shorter side. A box keeps its height; its width follows the stamp.
+pub fn stamp_props(
+    input: &Map<String, Value>,
+    id: &str,
+    lang: xs_core::Lang,
+    canvas: (f64, f64),
+) -> Result<Map<String, Value>, String> {
+    let st = xs_image::stamps::find(id).ok_or_else(|| format!("there is no stamp \"{id}\""))?;
+    let l = if lang == xs_core::Lang::Es {
+        xs_image::stamps::Lang::Es
+    } else {
+        xs_image::stamps::Lang::En
+    };
+    let mut out = input.clone();
+    out.insert("stamp".into(), json!(id));
+    out.insert("art".into(), st.art(l));
+    out.insert("ink".into(), json!(st.ink.unwrap_or("#3A3F4B")));
+    let at = input
+        .get("at")
+        .and_then(Value::as_array)
+        .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]));
+    out.remove("at");
+    let rect = match input.get("rect") {
+        Some(r) => {
+            let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+            let h = n("h").max(1.0);
+            json!({"x": n("x"), "y": n("y"), "w": (h * st.aspect()).max(1.0), "h": h})
+        }
+        None => {
+            let h = 96f64.min(canvas.0.min(canvas.1) * 0.25).max(16.0);
+            let w = h * st.aspect();
+            let c = at.unwrap_or([canvas.0 / 2.0, canvas.1 / 2.0]);
+            json!({"x": c[0] - w / 2.0, "y": c[1] - h / 2.0, "w": w, "h": h})
+        }
+    };
+    out.insert("rect".into(), rect);
+    Ok(out)
 }
 
 /// The spotlights of a document share their outside (EDT-039): the settings of the one
@@ -669,7 +763,7 @@ mod tests {
         let s = Styles::default();
         let err = |v: Value| new_object(&v, &s).unwrap_err();
         assert!(err(json!({"type": "spiral"})).contains("unknown type"));
-        assert!(err(json!({"type": "stamp", "rect": {}})).contains("later build"));
+        assert!(err(json!({"type": "spiral"})).contains("unknown type"));
         assert!(err(json!({"type": "arrow", "from": [0, 0]})).contains("to"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [0, 0]})).contains("1 pixel"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [9, 9], "colour": 1})).contains("colour"));

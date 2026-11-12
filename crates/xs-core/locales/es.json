@@ -414,6 +414,10 @@
     "document_locate": {
       "title": "Localizar el archivo de un documento",
       "description": "Enlaza un documento abierto con su archivo después de moverlo fuera de XcreenShot."
+    },
+    "editor_stamps": {
+      "title": "Colección de sellos",
+      "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
     }
   },
   "settings": {
@@ -790,7 +794,8 @@
       "editor_tool_highlight": "Herramienta Resaltador",
       "editor_tool_pen": "Herramienta Lápiz",
       "editor_tool_magnify": "Herramienta Lupa",
-      "editor_tool_spotlight": "Herramienta Foco"
+      "editor_tool_spotlight": "Herramienta Foco",
+      "editor_tool_stamp": "Herramienta Sello"
     }
   },
   "tray": {
@@ -1248,7 +1253,8 @@
         "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible.",
         "pen": "Dibuja a mano alzada; Mayús traza una línea recta.",
         "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio.",
-        "spotlight": "Arrastra alrededor de lo importante: el resto se oscurece o se desenfoca."
+        "spotlight": "Arrastra alrededor de lo importante: el resto se oscurece o se desenfoca.",
+        "stamp": "Elige un sello en Estilos y haz clic para ponerlo; arrastra para otro tamaño."
       },
       "tool": {
         "move": "Mover",
@@ -1264,7 +1270,8 @@
         "highlight": "Resaltador",
         "pen": "Lápiz",
         "magnify": "Lupa",
-        "spotlight": "Foco"
+        "spotlight": "Foco",
+        "stamp": "Sello"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1514,6 +1521,14 @@
         "rectangle": "Rectángulo",
         "roundedRectangle": "Rectángulo redondeado",
         "ellipse": "Óvalo"
+      },
+      "stamps": {
+        "title": "Sellos",
+        "search": "Buscar sellos",
+        "category": "Categoría",
+        "all": "Todas",
+        "none": "Ningún sello coincide.",
+        "own_color": "Color propio"
       }
     },
     "multi": {
@@ -1743,9 +1758,24 @@
     "change_spotlight": "Cambiar foco",
     "delete_spotlight": "Eliminar foco",
     "cut_spotlight": "Cortar foco",
-    "paste_spotlight": "Pegar foco"
+    "paste_spotlight": "Pegar foco",
+    "draw_stamp": "Poner sello",
+    "move_stamp": "Mover sello",
+    "change_stamp": "Cambiar sello",
+    "delete_stamp": "Eliminar sello",
+    "cut_stamp": "Cortar sello",
+    "paste_stamp": "Pegar sello"
   },
   "editor": {
     "edited": "{{name}} — Editado"
+  },
+  "stamps": {
+    "indicators": "Indicadores",
+    "cursors": "Cursores y gestos",
+    "keys": "Teclas",
+    "devices": "Dispositivos",
+    "interface": "Interfaz",
+    "labels": "Etiquetas",
+    "arrows": "Flechas"
   }
 }

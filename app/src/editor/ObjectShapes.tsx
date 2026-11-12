@@ -16,6 +16,7 @@ import type {
   PenObject,
   ShapeObject,
   SpotlightObject,
+  StampObject,
   StepObject,
   TextObject,
 } from "./state";
@@ -514,4 +515,30 @@ export function SpotlightShape(props: {
     );
   if (!image) return null;
   return <KImage image={image} x={0} y={0} listening={false} />;
+}
+
+/** A stamp as Rust draws it (EDT-031), centered on its box; while it is resized or
+ * turned, the picture follows until the new one is ready. */
+export function StampShape(props: {
+  o: StampObject;
+  committed: StampObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  if (!image) return null;
+  const kx = committed.rect.w > 0 ? o.rect.w / committed.rect.w : 1;
+  const ky = committed.rect.h > 0 ? o.rect.h / committed.rect.h : 1;
+  return (
+    <KImage
+      image={image}
+      x={o.rect.x + o.rect.w / 2}
+      y={o.rect.y + o.rect.h / 2}
+      offsetX={image.naturalWidth / 2}
+      offsetY={image.naturalHeight / 2}
+      scaleX={kx}
+      scaleY={ky}
+      rotation={o.rotation - committed.rotation}
+      listening={false}
+    />
+  );
 }

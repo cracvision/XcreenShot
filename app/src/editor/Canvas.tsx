@@ -43,6 +43,7 @@ import {
   PenShape,
   ShapeShape,
   SpotlightShape,
+  StampShape,
   StepShape,
   TextShape,
 } from "./ObjectShapes";
@@ -119,7 +120,8 @@ type Drag =
         | "callout"
         | "highlight"
         | "magnify"
-        | "spotlight";
+        | "spotlight"
+        | "stamp";
       from: Point;
       to: Point;
       startX: number;
@@ -224,7 +226,8 @@ function handlesOf(o: DocObject): Handle[] {
     o.type === "blur" ||
     o.type === "image" ||
     o.type === "highlight" ||
-    o.type === "spotlight"
+    o.type === "spotlight" ||
+    o.type === "stamp"
   )
     return [...RESIZE_HANDLES, "rotate"];
   return [];
@@ -966,7 +969,8 @@ export function Canvas({ doc }: Props) {
       tool === "callout" ||
       tool === "highlight" ||
       tool === "magnify" ||
-      tool === "spotlight"
+      tool === "spotlight" ||
+      tool === "stamp"
     ) {
       capture();
       setDrag({
@@ -1030,7 +1034,9 @@ export function Canvas({ doc }: Props) {
         const kind = doc.objects.find((o) => o.id === d.id)?.type;
         const image = kind === "image";
         const corner = d.handle.length === 2;
-        const keepRatio = kind === "step" || (image && corner ? !e.shiftKey : e.shiftKey);
+        // A stamp keeps its proportions like a picture; Shift lets it stretch (EDT-031).
+        const picture = image || kind === "stamp";
+        const keepRatio = kind === "step" || (picture && corner ? !e.shiftKey : e.shiftKey);
         return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
       }
       case "rotate":
@@ -1146,24 +1152,29 @@ export function Canvas({ doc }: Props) {
                 d.click
                 ? { type: "step", at: d.from }
                 : { type: "step", rect: dragRect(d.from, d.to, true, d.fromCenter) }
-              : d.tool === "magnify"
-                ? // A lens over the zone dragged; a click, over a small square (EDT-038).
-                  {
-                    type: "magnify",
-                    source: d.click
-                      ? { x: d.from[0] - 30, y: d.from[1] - 30, w: 60, h: 60 }
-                      : dragRect(d.from, d.to, d.square, d.fromCenter),
-                  }
-                : d.tool === "callout"
-                  ? // A callout: a click makes one of a usual size (EDT-028).
+              : d.tool === "stamp"
+                ? // A click places it at its usual size; a drag, at the height dragged.
+                  d.click
+                  ? { type: "stamp", at: d.from }
+                  : { type: "stamp", rect: dragRect(d.from, d.to, d.square, d.fromCenter) }
+                : d.tool === "magnify"
+                  ? // A lens over the zone dragged; a click, over a small square (EDT-038).
                     {
-                      type: "callout",
-                      text: "",
-                      rect: d.click
-                        ? { x: d.from[0], y: d.from[1], w: 200, h: 60 }
+                      type: "magnify",
+                      source: d.click
+                        ? { x: d.from[0] - 30, y: d.from[1] - 30, w: 60, h: 60 }
                         : dragRect(d.from, d.to, d.square, d.fromCenter),
                     }
-                  : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
+                  : d.tool === "callout"
+                    ? // A callout: a click makes one of a usual size (EDT-028).
+                      {
+                        type: "callout",
+                        text: "",
+                        rect: d.click
+                          ? { x: d.from[0], y: d.from[1], w: 200, h: 60 }
+                          : dragRect(d.from, d.to, d.square, d.fromCenter),
+                      }
+                    : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
         const r = await run<{ ids: string[] }>("document.annotate", {
           documentId: id,
           objects: [object],
@@ -1311,8 +1322,9 @@ export function Canvas({ doc }: Props) {
         }
         return;
       }
-      if (click && d.tool !== "step" && d.tool !== "callout" && d.tool !== "magnify") return;
-      if (d.tool === "step" || d.tool === "callout" || d.tool === "magnify") {
+      const clickable = ["step", "callout", "magnify", "stamp"].includes(d.tool);
+      if (click && !clickable) return;
+      if (clickable) {
         void finish({ ...d, click });
         return;
       }
@@ -1492,6 +1504,17 @@ export function Canvas({ doc }: Props) {
         return <ShapeShape key={o.id} o={o} scale={scale} />;
       case "highlight":
         return <HighlightShape key={o.id} o={o} />;
+      case "stamp": {
+        const c = committed.get(o.id);
+        return (
+          <StampShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "stamp" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "spotlight": {
         const c = committed.get(o.id);
         return (
@@ -1570,7 +1593,9 @@ export function Canvas({ doc }: Props) {
     }
   };
 
-  const dashedBox = (kind: "blur" | "text" | "step" | "callout" | "magnify" | "spotlight") => {
+  const dashedBox = (
+    kind: "blur" | "text" | "step" | "callout" | "magnify" | "spotlight" | "stamp",
+  ) => {
     if (drawing?.tool !== kind) return null;
     const r = dragRect(
       drawing.from,
@@ -1618,6 +1643,7 @@ export function Canvas({ doc }: Props) {
       {dashedBox("callout")}
       {dashedBox("magnify")}
       {dashedBox("spotlight")}
+      {dashedBox("stamp")}
       {drag?.kind === "pen" && styles && (
         <PenPreview
           points={drag.points}

@@ -19,6 +19,7 @@ export type Tool =
   | "text"
   | "callout"
   | "shape"
+  | "stamp"
   | "step"
   | "highlight"
   | "pen"
@@ -109,6 +110,30 @@ export interface ShapeObject {
   style: ShapeStyle;
   /** A polygon's corners, as shares of its box (EDT-030). */
   points?: Point[];
+}
+
+/** Stamps (EDT-031). */
+export interface StampStyle {
+  /** The tool's stamp; objects keep theirs in `stamp`. */
+  stamp?: string;
+  /** null: the stamp's own color. */
+  color: string | null;
+  opacity: number;
+}
+
+export interface StampObject {
+  id: string;
+  type: "stamp";
+  rect: Rect;
+  rotation: number;
+  stamp: string;
+  ink: string;
+  style: StampStyle;
+}
+
+/** A stamp of the collection's grid (EDT-031). */
+export function stampUrl(id: string): string {
+  return xsdocUrl(`stamp/${encodeURIComponent(id)}`);
 }
 
 /** Spotlight (EDT-039). */
@@ -354,6 +379,7 @@ export type DocObject = (
   | PenObject
   | MagnifyObject
   | SpotlightObject
+  | StampObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -374,6 +400,7 @@ export interface Styles {
   pen: PenStyle;
   magnify: MagnifyStyle;
   spotlight: SpotlightStyle;
+  stamp: StampStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */

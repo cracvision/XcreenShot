@@ -527,6 +527,15 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["to"],
             ))
             .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("editor.stamps", &["EDT-031"])
+            .params(params(
+                json!({
+                    "query": {"type": "string", "description": "Words of its name or keywords, in English or Spanish"},
+                    "category": {"type": "string", "enum": ["indicators", "cursors", "keys", "devices", "interface", "labels", "arrows"]}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"categories": {"type": "array"}, "stamps": {"type": "array"}}})),
         B::new("document.steps", &["EDT-035"])
             .mutates()
             .positional(&["action"])
@@ -1028,13 +1037,14 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 13] = [
+pub const TOOLS: [&str; 14] = [
     "move",
     "arrow",
     "line",
     "text",
     "callout",
     "shape",
+    "stamp",
     "step",
     "highlight",
     "pen",

@@ -136,6 +136,7 @@ export function transformed(o: DocObject, op: TransformOp): DocObject {
     case "image":
     case "highlight":
     case "spotlight":
+    case "stamp":
       return { ...o, rect, rotation };
     case "callout": {
       const tails = o.tails.map((t) =>
