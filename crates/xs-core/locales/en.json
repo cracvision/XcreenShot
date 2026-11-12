@@ -442,6 +442,22 @@
     "editor_cancel": {
       "title": "Cancel",
       "description": "Stops a long editor task that is running: the Photo smart fill. Nothing changes."
+    },
+    "editor_styles": {
+      "title": "Saved styles",
+      "description": "Lists the saved styles of the active theme for each tool, and the favorites."
+    },
+    "editor_style": {
+      "title": "Saved style",
+      "description": "Applies, saves, updates, renames, deletes, moves or resets saved styles, and adds, removes, moves or uses favorites."
+    },
+    "editor_themes": {
+      "title": "Themes",
+      "description": "Lists the themes and which one is active."
+    },
+    "editor_theme": {
+      "title": "Theme",
+      "description": "Activates, creates or changes, duplicates, renames, deletes, exports or imports a theme (.xtheme)."
     }
   },
   "settings": {
@@ -726,7 +742,8 @@
     "library_not_found": "Item \"{{id}}\" is not in the library.",
     "library_no_trash": "\"{{name}}\" cannot go to the trash here: deleting it would be final.",
     "library_undo_expired": "It is too late to undo that delete.",
-    "fill_stopped": "The fill was stopped; nothing changed."
+    "fill_stopped": "The fill was stopped; nothing changed.",
+    "theme_newer": "This theme file was made by a newer version of XcreenShot. Update the app to import it."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

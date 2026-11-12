@@ -442,6 +442,22 @@
     "editor_cancel": {
       "title": "Cancelar",
       "description": "Detiene una tarea larga del editor que esté en marcha: el relleno inteligente Fotográfico. No cambia nada."
+    },
+    "editor_styles": {
+      "title": "Estilos guardados",
+      "description": "Lista los estilos guardados del tema activo de cada herramienta y los favoritos."
+    },
+    "editor_style": {
+      "title": "Estilo guardado",
+      "description": "Aplica, guarda, actualiza, renombra, elimina, mueve o restablece estilos guardados, y añade, quita, mueve o usa favoritos."
+    },
+    "editor_themes": {
+      "title": "Temas",
+      "description": "Lista los temas y cuál está activo."
+    },
+    "editor_theme": {
+      "title": "Tema",
+      "description": "Activa, crea o cambia, duplica, renombra, elimina, exporta o importa un tema (.xtheme)."
     }
   },
   "settings": {
@@ -726,7 +742,8 @@
     "library_not_found": "El elemento \"{{id}}\" no está en la biblioteca.",
     "library_no_trash": "\"{{name}}\" no puede ir a la papelera aquí: eliminarlo sería definitivo.",
     "library_undo_expired": "Ya es tarde para deshacer esa eliminación.",
-    "fill_stopped": "Se detuvo el relleno; no cambió nada."
+    "fill_stopped": "Se detuvo el relleno; no cambió nada.",
+    "theme_newer": "Este archivo de tema lo hizo una versión más nueva de XcreenShot. Actualiza la app para importarlo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

@@ -952,6 +952,52 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["tool", "style"],
             ))
             .result(json!({"type": "object", "properties": {"style": {"type": "object"}}})),
+        B::new("editor.styles", &["EDT-015", "EDT-016"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "theme": {"type": "object"},
+                "tools": {"type": "object", "description": "Saved styles of the active theme by tool: [{id, name, style}]"},
+                "favorites": {"type": "array", "description": "[{id, tool, style}]"}
+            }})),
+        B::new("editor.style", &["EDT-015", "EDT-016"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["apply", "save", "update", "rename", "delete", "move", "reset", "favorite", "unfavorite", "move_favorite", "apply_favorite"], "description": "apply: the tool takes the style (and objectIds, if given); save: the tool's current style as a new one; update: a style becomes the current one; reset: back to the theme's styles of the tool; favorite: a copy in Favorites (of styleId, or of the current style)"},
+                    "tool": {"type": "string", "enum": ["arrow", "line", "text", "callout", "shape", "step", "highlight", "pen", "magnify", "spotlight", "blur"]},
+                    "styleId": {"type": "string"},
+                    "favoriteId": {"type": "string"},
+                    "name": {"type": "string"},
+                    "to": {"type": "integer", "minimum": 0, "description": "move: the new position, 0 is first"},
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "apply: objects of that tool that take the style too (not their position, size or text)"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("editor.themes", &["EDT-017"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"active": {"type": "string"}, "themes": {"type": "array"}}})),
+        B::new("editor.theme", &["EDT-017", "EDT-018"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["activate", "save", "duplicate", "rename", "delete", "export", "import"]},
+                    "id": {"type": "string", "description": "The theme; save without it creates one"},
+                    "theme": {"type": "object", "description": "save: {name, colors (2 to 8, none twice), font (empty: the system's), shadow, shadowOff (tools)}; its styles are made again", "properties": {
+                        "name": {"type": "string"},
+                        "colors": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 8},
+                        "font": {"type": ["string", "null"]},
+                        "shadow": {"type": "boolean"},
+                        "shadowOff": {"type": "array", "items": {"type": "string"}}
+                    }},
+                    "name": {"type": "string"},
+                    "path": {"type": "string", "description": "export or import: a .xtheme file"},
+                    "onConflict": {"type": "string", "enum": ["replace", "keep"], "description": "import: a theme of the user with that name exists"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
         B::new("editor.zoom", &["EDT-007", "EDT-119"])
             .scopes(ALL)
             .assignable()

@@ -11,8 +11,10 @@ pub mod flatten;
 pub mod objects;
 pub mod pixels;
 pub mod recovery;
+pub mod samples;
 pub mod steps;
 pub mod store;
+pub mod themes;
 pub mod transform;
 
 use std::collections::BTreeMap;
@@ -95,6 +97,8 @@ pub struct Editor {
     unsaved_dir: Mutex<PathBuf>,
     /// The Photo fill running, to stop it (EDT-045).
     filling: Mutex<Option<Arc<std::sync::atomic::AtomicBool>>>,
+    /// Themes, saved styles and favorites (EDT-015 to EDT-018).
+    themes: Mutex<themes::Library>,
 }
 
 /// What `document.copy_objects` put on the clipboard.
@@ -134,6 +138,7 @@ impl Editor {
             requested_view: Mutex::new(None),
             unsaved_dir: Mutex::new(core.paths.local_dir.join("unsaved")),
             filling: Mutex::new(None),
+            themes: Mutex::new(themes::Library::load(core.recall(themes::KEY))),
         }
     }
 
@@ -1951,6 +1956,311 @@ fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResul
     Ok(json!({ "changed": true }))
 }
 
+/// Keeps the themes for the next session and tells the editor (EDT-015, EDT-017).
+fn themes_changed(core: &Core, lib: &themes::Library) {
+    core.remember(themes::KEY, serde_json::to_value(lib).unwrap_or_default());
+    core.host().editor_event("themes", json!({}));
+}
+
+/// The sample of a style as a PNG (EDT-015): `which` is `current` (the tool's style
+/// now), a saved style's id or a favorite's id.
+pub fn sample_png(core: &Core, tool: &str, which: &str) -> Option<Vec<u8>> {
+    let ed = editor(core);
+    let (tool, style) = if which == "current" {
+        (tool.to_string(), ed.styles().of(tool)?)
+    } else {
+        let lib = ed.themes.lock().unwrap();
+        match lib.favorites.iter().find(|f| f.id == which) {
+            Some(f) => (f.tool.clone(), f.style.clone()),
+            None => (tool.to_string(), lib.find(tool, which)?.style.clone()),
+        }
+    };
+    let img = samples::sample(&tool, &style)?;
+    xs_image::encode::png(&img, 0.0, true).ok()
+}
+
+/// `editor.styles`: the saved styles of the active theme, by tool, and the favorites.
+fn styles_list(core: &Core) -> Value {
+    let lib = editor(core).themes.lock().unwrap().clone();
+    let theme = lib.active();
+    json!({
+        "theme": {"id": theme.id, "name": theme.name},
+        "tools": theme.styles,
+        "favorites": lib.favorites,
+    })
+}
+
+/// A saved style applied to objects: never their position, size or text; a blur
+/// takes only its type, strength and color (EDT-015).
+fn style_for_objects(tool: &str, style: &Value) -> Map<String, Value> {
+    let mut m = style.as_object().cloned().unwrap_or_default();
+    match tool {
+        "blur" => m.retain(|k, _| k == "blurType" || k == "intensity" || k == "color"),
+        "step" => {
+            m.remove("size");
+        }
+        _ => {}
+    }
+    m
+}
+
+/// `editor.style` (EDT-015, EDT-016): saved styles and favorites.
+fn style_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let action = p.get("action").and_then(Value::as_str).unwrap_or_default();
+    let tool = p
+        .get("tool")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let style_id = p.get("styleId").and_then(Value::as_str).map(str::to_string);
+    let needs_tool = !matches!(action, "unfavorite" | "move_favorite" | "apply_favorite");
+    if needs_tool && !themes::STYLED_TOOLS.contains(&tool.as_str()) {
+        return Err(bad("tool", "this tool has no saved styles"));
+    }
+    let current = || ed.styles().of(&tool).unwrap_or_default();
+    let mut lib = ed.themes.lock().unwrap().clone();
+    let mut out = json!({});
+    let need_id = || style_id.clone().ok_or_else(|| bad("styleId", "give the style"));
+    match action {
+        "apply" => {
+            let id = need_id()?;
+            let saved = lib
+                .find(&tool, &id)
+                .ok_or_else(|| bad("styleId", "there is no such style"))?
+                .style
+                .clone();
+            set_tool_style(core, &tool, saved.as_object().unwrap_or(&Map::new()), lang)?;
+            // The selected objects of that tool take it too.
+            let ids: Vec<Value> = p
+                .get("objectIds")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            if !ids.is_empty() {
+                let doc = resolve(core, lang, p)?;
+                core.call(
+                    ctx.source,
+                    "document.update_object",
+                    json!({"documentId": doc, "objectIds": ids, "set": {"style": style_for_objects(&tool, &saved)}}),
+                    Some(lang),
+                )?;
+            }
+            return Ok(json!({ "style": saved }));
+        }
+        "save" => {
+            let name = p.get("name").and_then(Value::as_str).map(str::to_string);
+            out = json!({ "styleId": lib.add(&tool, current(), name) });
+        }
+        "update" => lib
+            .update(&tool, &need_id()?, current())
+            .map_err(|r| bad("styleId", &r))?,
+        "rename" => {
+            let name = p.get("name").and_then(Value::as_str).unwrap_or_default();
+            lib.rename(&tool, &need_id()?, name)
+                .map_err(|r| bad("styleId", &r))?
+        }
+        "delete" => lib.delete(&tool, &need_id()?).map_err(|r| bad("styleId", &r))?,
+        "move" => {
+            let to = p
+                .get("to")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| bad("to", "give the new position"))?;
+            lib.move_to(&tool, &need_id()?, to as usize)
+                .map_err(|r| bad("styleId", &r))?
+        }
+        "reset" => lib.reset(&tool),
+        "favorite" => {
+            let style = match &style_id {
+                Some(id) => lib
+                    .find(&tool, id)
+                    .ok_or_else(|| bad("styleId", "there is no such style"))?
+                    .style
+                    .clone(),
+                None => current(),
+            };
+            out = json!({ "favoriteId": lib.favorite(&tool, style) });
+        }
+        "unfavorite" | "move_favorite" | "apply_favorite" => {
+            let fid = p
+                .get("favoriteId")
+                .and_then(Value::as_str)
+                .ok_or_else(|| bad("favoriteId", "give the favorite"))?;
+            match action {
+                "unfavorite" => lib.unfavorite(fid).map_err(|r| bad("favoriteId", &r))?,
+                "move_favorite" => {
+                    let to = p
+                        .get("to")
+                        .and_then(Value::as_u64)
+                        .ok_or_else(|| bad("to", "give the new position"))?;
+                    lib.move_favorite(fid, to as usize)
+                        .map_err(|r| bad("favoriteId", &r))?
+                }
+                _ => {
+                    // Its tool, with its style (EDT-016).
+                    let fav = lib
+                        .favorites
+                        .iter()
+                        .find(|f| f.id == fid)
+                        .cloned()
+                        .ok_or_else(|| bad("favoriteId", "there is no such favorite"))?;
+                    set_tool_style(
+                        core,
+                        &fav.tool,
+                        fav.style.as_object().unwrap_or(&Map::new()),
+                        lang,
+                    )?;
+                    core.call(
+                        ctx.source,
+                        "editor.select_tool",
+                        json!({"tool": fav.tool}),
+                        Some(lang),
+                    )?;
+                    return Ok(json!({ "tool": fav.tool, "style": fav.style }));
+                }
+            }
+        }
+        other => return Err(bad("action", other)),
+    }
+    *ed.themes.lock().unwrap() = lib.clone();
+    themes_changed(core, &lib);
+    Ok(out)
+}
+
+/// `editor.themes`: the themes, without their styles.
+fn themes_list(core: &Core) -> Value {
+    let lib = editor(core).themes.lock().unwrap().clone();
+    json!({
+        "active": lib.active,
+        "themes": lib.themes.iter().map(|t| json!({
+            "id": t.id, "name": t.name, "colors": t.colors, "font": t.font,
+            "shadow": t.shadow, "shadowOff": t.shadow_off, "builtIn": t.built_in,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+/// A theme's settings from `theme` (EDT-017).
+fn theme_from(v: &Value) -> themes::Theme {
+    let list = |k: &str| -> Vec<String> {
+        v.get(k)
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|c| c.as_str().map(str::to_string)).collect())
+            .unwrap_or_default()
+    };
+    themes::Theme {
+        id: String::new(),
+        name: v
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        colors: list("colors"),
+        font: v
+            .get("font")
+            .and_then(Value::as_str)
+            .filter(|f| !f.is_empty())
+            .map(str::to_string),
+        shadow: v.get("shadow").and_then(Value::as_bool).unwrap_or(true),
+        shadow_off: list("shadowOff"),
+        built_in: false,
+        styles: BTreeMap::new(),
+    }
+}
+
+/// `editor.theme` (EDT-017, EDT-018): activate, create or change, duplicate, rename,
+/// delete, export or import a theme.
+fn theme_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let action = p.get("action").and_then(Value::as_str).unwrap_or_default();
+    let id = p.get("id").and_then(Value::as_str).map(str::to_string);
+    let need_id = || id.clone().ok_or_else(|| bad("id", "give the theme"));
+    let mut lib = ed.themes.lock().unwrap().clone();
+    let mut out = json!({});
+    match action {
+        "activate" => {
+            let id = need_id()?;
+            lib.index_of(&id)
+                .ok_or_else(|| bad("id", "there is no such theme"))?;
+            lib.active = id;
+        }
+        "save" => {
+            let theme = theme_from(p.get("theme").ok_or_else(|| bad("theme", "give its settings"))?);
+            let new = lib
+                .save_theme(id.as_deref(), theme)
+                .map_err(|r| bad("theme", &r))?;
+            lib.active = new.clone();
+            out = json!({ "id": new });
+        }
+        "duplicate" => {
+            let new = lib.duplicate(&need_id()?).map_err(|r| bad("id", &r))?;
+            out = json!({ "id": new });
+        }
+        "rename" => {
+            let name = p.get("name").and_then(Value::as_str).unwrap_or_default();
+            lib.rename_theme(&need_id()?, name).map_err(|r| bad("name", &r))?
+        }
+        "delete" => lib.delete_theme(&need_id()?).map_err(|r| bad("id", &r))?,
+        "export" => {
+            let id = id.clone().unwrap_or_else(|| lib.active.clone());
+            let i = lib
+                .index_of(&id)
+                .ok_or_else(|| bad("id", "there is no such theme"))?;
+            let path = p
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or_else(|| bad("path", "give the file"))?;
+            let text = serde_json::to_string_pretty(&themes::to_file(&lib.themes[i])).unwrap_or_default();
+            std::fs::write(path, text).map_err(|e| internal(lang, path, e))?;
+            return Ok(json!({ "path": path }));
+        }
+        "import" => {
+            let path = p
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or_else(|| bad("path", "give the file"))?;
+            let text = std::fs::read_to_string(path).map_err(|e| bad("path", &e.to_string()))?;
+            let v: Value = serde_json::from_str(&text).map_err(|_| bad("path", "it is not a theme file"))?;
+            let theme = themes::from_file(&v).map_err(|e| match e {
+                themes::FileError::Newer => invalid(tr(lang, "errors.theme_newer", &[])),
+                themes::FileError::Unreadable(r) => bad("path", &r),
+            })?;
+            // The same name as one of the user's themes: Replace or Keep both (EDT-018).
+            let clash = lib.themes.iter().any(|t| t.name == theme.name && !t.built_in);
+            let choice = p.get("onConflict").and_then(Value::as_str);
+            if clash && choice.is_none() {
+                return Ok(json!({ "status": "needs_decision", "name": theme.name }));
+            }
+            let missing_font = theme.font.clone().filter(|f| {
+                !xs_image::text::families()
+                    .iter()
+                    .any(|x| x.eq_ignore_ascii_case(f))
+            });
+            let new = lib.import(theme, choice == Some("replace"));
+            out = json!({ "status": "imported", "id": new, "missingFont": missing_font });
+        }
+        other => return Err(bad("action", other)),
+    }
+    *ed.themes.lock().unwrap() = lib.clone();
+    themes_changed(core, &lib);
+    Ok(out)
+}
+
 fn set_tool_style(
     core: &Core,
     tool: &str,
@@ -3187,6 +3497,11 @@ pub fn extension() -> Extension {
             core.host().editor_event("tool", json!({ "tool": tool }));
             Ok(json!({ "tool": tool }))
         });
+        // Saved styles, favorites and themes (EDT-015 to EDT-018).
+        on!("editor.styles", |core, _ctx, _p| Ok(styles_list(&core)));
+        on!("editor.style", |core, ctx, p| style_command(&core, ctx, &p));
+        on!("editor.themes", |core, _ctx, _p| Ok(themes_list(&core)));
+        on!("editor.theme", |core, ctx, p| theme_command(&core, ctx, &p));
         on!("editor.set_style", |core, ctx, p| {
             let tool = p["tool"].as_str().unwrap_or_default();
             let changes = p["style"].as_object().cloned().unwrap_or_default();

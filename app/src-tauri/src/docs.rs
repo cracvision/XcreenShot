@@ -9,6 +9,8 @@
 //! - `/<documentId>/object/<objectId>` returns a text or blur object as Rust draws it.
 //! - `/<documentId>/image/<name>` returns a picture of the document's `images/` folder
 //!   (a floating image, EDT-078).
+//! - `/sample/<tool>/<styleId | favoriteId | current>` returns the sample of a style
+//!   (EDT-015); the URL carries the style's hash, so a changed one gets a new one.
 //! - `/multi/<itemId>` returns the thumbnail of a multi-capture (CAP-067).
 //! - `/library/<itemId>/thumb` returns the thumbnail of a library item (LIB-001); the
 //!   URL carries the item's modified time, so a changed file gets a new one.
@@ -63,6 +65,10 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                 .ok()
                 .map(|png| (std::sync::Arc::new(png), "image/png"))
         }),
+        // A sample of a saved style, a favorite or the current style (EDT-015).
+        ["sample", tool, which] => {
+            xs_editor::sample_png(&core, tool, which).map(|png| (std::sync::Arc::new(png), "image/png"))
+        }
         // A stamp of the collection (EDT-031), in the app's language.
         ["stamp", id] => {
             let lang = if core.lang() == xs_core::Lang::Es {

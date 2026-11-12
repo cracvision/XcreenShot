@@ -2719,3 +2719,149 @@ fn objects_cast_shadows() {
     assert!(info["objects"][0]["shadowAt"].is_null());
     assert_eq!(rendered(&e, &doc).get_pixel(185, 115).0[0], 255);
 }
+
+/// EDT-015, EDT-016: saved styles of the active theme; save, apply to objects,
+/// reset per tool; favorites keep a copy and pick their tool.
+#[test]
+fn saved_styles_and_favorites() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let list = cli(&e.core, "editor.styles", json!({}));
+    assert_eq!(list["theme"]["name"], "Base");
+    let arrows = list["tools"]["arrow"].as_array().unwrap().clone();
+    assert_eq!(arrows.len(), 5);
+    // A thicker arrow, saved.
+    cli(
+        &e.core,
+        "editor.set_style",
+        json!({"tool": "arrow", "style": {"width": 22}}),
+    );
+    let saved = cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "save", "tool": "arrow"}),
+    );
+    let id = saved["styleId"].as_str().unwrap().to_string();
+    let list = cli(&e.core, "editor.styles", json!({}));
+    assert_eq!(list["tools"]["arrow"].as_array().unwrap().len(), 6);
+    // Three callouts take a callout style; their text stays.
+    let callout = |x: i32| json!({"type": "callout", "rect": {"x": x, "y": 20, "w": 80, "h": 40}, "text": format!("t{x}")});
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [callout(10), callout(110), callout(210)]}),
+    );
+    let blue = list["tools"]["callout"][2]["id"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "apply", "tool": "callout", "styleId": blue, "documentId": doc, "objectIds": ["o1", "o2", "o3"]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    for (i, o) in info["objects"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(o["style"]["fill"], "#2D7FF9");
+        assert_eq!(o["text"], format!("t{}", 10 + i * 100));
+    }
+    // Reset shapes: arrows keep the saved one.
+    cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "reset", "tool": "shape"}),
+    );
+    let list = cli(&e.core, "editor.styles", json!({}));
+    assert!(list["tools"]["arrow"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|s| s["id"] == id));
+    // A favorite picks its tool and style.
+    let fav = cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "favorite", "tool": "arrow", "styleId": id}),
+    );
+    cli(&e.core, "editor.select_tool", json!({"tool": "text"}));
+    let r = cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "apply_favorite", "favoriteId": fav["favoriteId"]}),
+    );
+    assert_eq!(r["tool"], "arrow");
+    let state = cli(&e.core, "editor.state", json!({}));
+    assert_eq!(state["tool"], "arrow");
+    assert_eq!(state["styles"]["arrow"]["width"], json!(22.0));
+}
+
+/// EDT-017, EDT-018: a new theme makes its styles; built-in ones stay; .xtheme files
+/// go and come back, asking about the same name.
+#[test]
+fn themes_and_xtheme_files() {
+    let e = env();
+    let r = cli(
+        &e.core,
+        "editor.theme",
+        json!({"action": "save", "theme": {"name": "Mío", "colors": ["#112233", "#DD3355", "#33AA77"], "font": "Georgia", "shadow": false}}),
+    );
+    let id = r["id"].as_str().unwrap().to_string();
+    let list = cli(&e.core, "editor.styles", json!({}));
+    assert_eq!(list["theme"]["name"], "Mío");
+    assert_eq!(list["tools"]["callout"].as_array().unwrap().len(), 3);
+    assert_eq!(list["tools"]["callout"][0]["style"]["font"], "Georgia");
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "editor.theme",
+        json!({"action": "delete", "id": "base"})
+    )
+    .is_err());
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "editor.theme",
+        json!({"action": "save", "theme": {"name": "X", "colors": ["#112233", "#112233"]}}),
+    );
+    assert!(bad.is_err(), "a color twice");
+    // Export, then import: same name asks; keep both.
+    let path = e.outside.path().join("mio.xtheme");
+    cli(
+        &e.core,
+        "editor.theme",
+        json!({"action": "export", "id": id, "path": path}),
+    );
+    let r = cli(&e.core, "editor.theme", json!({"action": "import", "path": path}));
+    assert_eq!(r["status"], "needs_decision");
+    let r = cli(
+        &e.core,
+        "editor.theme",
+        json!({"action": "import", "path": path, "onConflict": "keep"}),
+    );
+    assert_eq!(r["status"], "imported");
+    let themes = cli(&e.core, "editor.themes", json!({}));
+    let names: Vec<&str> = themes["themes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
+    assert!(names.contains(&"Mío") && names.contains(&"Mío (2)"));
+    // A newer file is refused and nothing changes.
+    std::fs::write(
+        &path,
+        r##"{"format":"xtheme","version":9,"name":"N","colors":["#000000","#FFFFFF"]}"##,
+    )
+    .unwrap();
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "editor.theme",
+        json!({"action": "import", "path": path})
+    )
+    .is_err());
+    assert_eq!(
+        cli(&e.core, "editor.themes", json!({}))["themes"]
+            .as_array()
+            .unwrap()
+            .len(),
+        4
+    );
+}
