@@ -515,7 +515,9 @@ fn main() -> ExitCode {
         None => return ExitCode::from(2),
     };
 
-    if spec.destructive && !yes {
+    // A dry run only says what would change (settings.import, APP-011).
+    let dry_run = params.get("dryRun").and_then(Value::as_bool) == Some(true);
+    if spec.destructive && !yes && !dry_run {
         return out.fail(
             CommandError::new(ErrorCode::InvalidParams, tr(lang, "cli.needs_yes", &[])),
             lang,

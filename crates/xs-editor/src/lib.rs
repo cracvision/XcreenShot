@@ -3446,11 +3446,28 @@ pub fn extension() -> Extension {
             core.add_quit_guard(Arc::new(EditorQuitGuard(weak.clone())));
             // A smaller tray lets the oldest free items go at once (TRY-003).
             let weak = weak.clone();
-            core.on_setting(Arc::new(move |key, _| {
-                if key == "tray.capacity" {
-                    if let Some(core) = weak.upgrade() {
-                        emit_list(&core);
+            core.on_setting(Arc::new({
+                let weak = weak.clone();
+                move |key, _| {
+                    if key == "tray.capacity" {
+                        if let Some(core) = weak.upgrade() {
+                            emit_list(&core);
+                        }
                     }
+                }
+            }));
+            // Themes, saved effects or the toolbar imported (APP-011): the editor takes
+            // them at once.
+            core.on_memory(Arc::new(move |key, value| {
+                let Some(core) = weak.upgrade() else { return };
+                match key {
+                    themes::KEY => {
+                        *editor(&core).themes.lock().unwrap() = themes::Library::load(Some(value.clone()));
+                        core.host().editor_event("themes", json!({}));
+                    }
+                    SAVED_EFFECTS_KEY => core.host().editor_event("saved_effects", json!({})),
+                    TOOLBAR_KEY => core.host().editor_event("toolbar", json!({})),
+                    _ => {}
                 }
             }));
         }

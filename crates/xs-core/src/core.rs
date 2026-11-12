@@ -84,6 +84,9 @@ pub struct Core {
     quit_guards: RwLock<Vec<Arc<dyn QuitGuard>>>,
     /// Other crates told about setting changes (the tray's capacity, TRY-003).
     setting_hooks: RwLock<Vec<SettingHook>>,
+    /// Other crates told when something they keep in the core's memory changed under
+    /// them (an import of settings, APP-011).
+    memory_hooks: RwLock<Vec<SettingHook>>,
     /// What scripts and agents can follow (APP-031).
     pub events: crate::events::Events,
 }
@@ -117,6 +120,7 @@ impl Core {
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
             setting_hooks: RwLock::new(Vec::new()),
+            memory_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
         });
         let registry = build_registry(&core);
@@ -147,6 +151,7 @@ impl Core {
             services: RwLock::new(Services::new()),
             quit_guards: RwLock::new(Vec::new()),
             setting_hooks: RwLock::new(Vec::new()),
+            memory_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
         });
         let registry = build_registry(&core);
@@ -194,6 +199,31 @@ impl Core {
     /// Runs `hook` after each setting change (from the UI, the CLI or a file).
     pub fn on_setting(&self, hook: SettingHook) {
         self.setting_hooks.write().unwrap().push(hook);
+    }
+
+    /// Runs `hook` when a key of the core's memory is replaced from outside its owner
+    /// (APP-011), with the key and its new value.
+    pub fn on_memory(&self, hook: SettingHook) {
+        self.memory_hooks.write().unwrap().push(hook);
+    }
+
+    /// Tells the owner of `key` that its memory changed (APP-011).
+    pub fn memory_changed(&self, key: &str) {
+        let value = self.recall(key).unwrap_or(Value::Null);
+        let hooks = self.memory_hooks.read().unwrap().clone();
+        for hook in hooks {
+            hook(key, &value);
+        }
+    }
+
+    /// A setting changed outside `settings.set` (an import, APP-011): the same effects.
+    pub fn setting_changed(&self, key: &str, value: &Value) {
+        self.on_setting_changed(key, value);
+    }
+
+    /// The shortcuts changed outside `shortcuts.set` (an import, APP-011).
+    pub fn shortcuts_changed(&self) {
+        self.host().shortcuts_changed();
     }
 
     /// Everything that needs a decision before quitting (APP-004).
@@ -752,6 +782,69 @@ fn build_registry(core: &Arc<Core>) -> Registry {
             core.on_setting_changed(&key, &value);
         }
         Ok(json!({ "key": key, "value": value, "changed": changed }))
+    });
+    on!("settings.export", |core, ctx, p| {
+        let out = str_param(&p, "out").unwrap_or_default();
+        let groups: Vec<String> = p
+            .get("groups")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
+        let file = crate::settings_io::export(&core, &groups);
+        let bytes = serde_json::to_vec_pretty(&file).map_err(|e| CommandError::internal(e.to_string()))?;
+        crate::paths::write_atomic(std::path::Path::new(out), &bytes).map_err(|e| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "out"), ("reason", &e.to_string())],
+                ),
+            )
+        })?;
+        let written: Vec<&String> = file["groups"]
+            .as_object()
+            .map(|g| g.keys().collect())
+            .unwrap_or_default();
+        Ok(json!({ "path": out, "groups": written }))
+    });
+    on!("settings.import", |core, ctx, p| {
+        let path = str_param(&p, "path").unwrap_or_default();
+        let bad = |reason: &str| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "path"), ("reason", reason)],
+                ),
+            )
+        };
+        let bytes = std::fs::read(path).map_err(|e| bad(&e.to_string()))?;
+        let file: Value = serde_json::from_slice(&bytes).map_err(|e| bad(&e.to_string()))?;
+        let opts = crate::settings_io::ImportOptions {
+            groups: p
+                .get("groups")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect(),
+            convert_shortcuts: p.get("convertShortcuts").and_then(Value::as_bool).unwrap_or(true),
+            on_conflict: p
+                .get("onConflict")
+                .and_then(Value::as_str)
+                .and_then(crate::settings_io::OnConflict::parse)
+                .unwrap_or(crate::settings_io::OnConflict::KeepBoth),
+            dry_run: p.get("dryRun").and_then(Value::as_bool).unwrap_or(false),
+        };
+        let r = crate::settings_io::import(&core, &file, &opts, ctx.lang).map_err(|e| bad(&e))?;
+        if !opts.dry_run {
+            tracing::info!(source = ?ctx.source, "settings imported");
+        }
+        Ok(r)
     });
     on!("settings.reset", |core, ctx, p| {
         let section = str_param(&p, "section");

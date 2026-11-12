@@ -271,6 +271,9 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | TRY-012 | ¿Ctrl+clic en la bandeja parte de qué? | Del elemento que se está editando: Ctrl+clic en otro deja seleccionados los dos. Un clic normal vuelve a uno solo y lo abre | Provisional |
 | TRY-010 | ¿Cómo se duplica un PNG de otra carpeta con cambios sin guardar? | Como `.xshot` junto al PNG, con los cambios editables; el PNG no cambia. Sin cambios, la copia es otro PNG idéntico. La copia de un elemento fijado queda fijada a su lado | Provisional |
 | TRY-016 | Detalles desde la bandeja | Abre la vista Biblioteca con el elemento seleccionado y el panel de Detalles abierto | Provisional |
+| APP-011 | ¿Qué grupos lleva el `.xsettings` hoy? | Preferencias, Atajos (con el perfil), Temas (los propios, los favoritos y los efectos guardados) y Barra de herramientas. Los presets de captura (M3) y los destinos de compartir (M6) se añaden cuando existan. La ubicación de la biblioteca no va: es de cada equipo | Provisional |
+| APP-011 | Atajos al importar | Los atajos propios del archivo sustituyen a los de este equipo (lo que no está en el archivo vuelve a su valor por defecto). Dos atajos del archivo con la misma combinación: el segundo queda sin asignar y se lista. La simulación (`--dry-run`) no pide `--yes` | Provisional |
+| APP-011 / SPEC §7 | Formato `.xsettings` | Propuesto para la tabla de formatos: JSON con `format`, `formatVersion` (1), `app`, `platform`, `exported` y `groups` | Propuesta |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

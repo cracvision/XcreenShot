@@ -650,6 +650,14 @@
     "library_duplicate": {
       "title": "Duplicar elementos",
       "description": "Hace una copia completa e independiente de cada elemento a su lado, con sus objetos editables, etiquetas y datos de captura."
+    },
+    "settings_export": {
+      "title": "Exportar ajustes",
+      "description": "Escribe las preferencias, los atajos, los temas y efectos guardados, y la barra de herramientas en un archivo .xsettings. Nunca lleva contraseñas, tokens, la biblioteca ni los registros."
+    },
+    "settings_import": {
+      "title": "Importar ajustes",
+      "description": "Aplica un archivo .xsettings, por grupos; los atajos de la otra plataforma se pueden convertir."
     }
   },
   "settings": {
@@ -1457,6 +1465,35 @@
         "advanced": "Avanzado",
         "experimental": "Funciones en prueba",
         "ai": "IA"
+      },
+      "transfer": {
+        "title": "Archivo de ajustes",
+        "help": "Lleva tus preferencias, atajos, temas y barra de herramientas a otro equipo. Las contraseñas, la biblioteca y los registros nunca van en el archivo.",
+        "export": "Exportar ajustes…",
+        "import": "Importar ajustes…",
+        "file_type": "Ajustes de XcreenShot",
+        "groups": "Grupos",
+        "group_preferences": "Preferencias",
+        "group_shortcuts": "Atajos y perfil de atajos",
+        "group_themes": "Temas, favoritos y efectos guardados",
+        "group_toolbar": "Barra de herramientas",
+        "export_title": "Exportar ajustes",
+        "export_help": "Elige qué va en el archivo .xsettings.",
+        "export_go": "Exportar…",
+        "exported": "Ajustes exportados.",
+        "import_title": "Importar ajustes",
+        "import_help": "Esto es lo que cambia cada grupo en este equipo. Desmarca lo que quieras dejar como está.",
+        "changes_one": "{{count}} cambio",
+        "changes_other": "{{count}} cambios",
+        "convert": "Convertir los atajos hechos en {{platform}} (Ctrl ↔ Cmd, Alt ↔ Opción, Win ↔ Control)",
+        "conflict": "Un tema o efecto con el mismo nombre",
+        "conflict_both": "Conservar ambos",
+        "conflict_replace": "Reemplazar",
+        "conflict_skip": "Omitir",
+        "import_go": "Importar",
+        "imported": "Ajustes importados.",
+        "unassigned_one": "{{count}} atajo no tenía equivalente aquí y quedó sin asignar.",
+        "unassigned_other": "{{count}} atajos no tenían equivalente aquí y quedaron sin asignar."
       }
     },
     "permissions": {

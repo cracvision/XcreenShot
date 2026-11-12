@@ -20,6 +20,7 @@ pub mod paths;
 pub mod platform;
 pub mod schema;
 pub mod settings;
+pub mod settings_io;
 pub mod shortcuts;
 #[cfg(windows)]
 pub mod winreg;

@@ -355,7 +355,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |
 | APP-009 | Sección Avanzado | M1 | Should | En curso |
 | APP-010 | Restablecer ajustes y avisos | M1 | Should | En curso |
-| APP-011 | Exportar e importar ajustes | M2 | Should | — |
+| APP-011 | Exportar e importar ajustes | M2 | Should | En curso (Windows: Preferencias > Avanzado > Archivo de ajustes, `.xsettings` con preferencias, atajos y perfil, temas, favoritos y efectos guardados, y la barra; resumen previo por grupo; conversión de atajos Windows ↔ macOS; mismos nombres con Reemplazar, Conservar ambos u Omitir; `settings.export` y `settings.import`. Presets de captura y destinos de compartir se añaden cuando existan, M3 y M6) |
 | APP-012 | Tema de la interfaz | M0 | Must | En curso |
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
 | APP-014 | Tooltips y pistas | M1 | Should | En curso |

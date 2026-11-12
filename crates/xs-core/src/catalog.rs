@@ -283,6 +283,34 @@ pub fn specs() -> Vec<CommandSpec> {
             .positional(&["key", "value"])
             .params(params(json!({"key": {"type": "string"}, "value": {}}), &["key", "value"]))
             .result(json!({"type": "object", "properties": {"key": {"type": "string"}, "value": {}, "changed": {"type": "boolean"}}})),
+        B::new("settings.export", &["APP-011", "APP-030"])
+            .params(params(
+                json!({
+                    "out": {"type": "string", "description": "The .xsettings file to write"},
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar"]}, "description": "Default: all of them"}
+                }),
+                &["out"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "groups": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("settings.import", &["APP-011", "APP-030"])
+            .destructive()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "An .xsettings file"},
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar"]}, "description": "Default: all of them"},
+                    "convertShortcuts": {"type": "boolean", "default": true, "description": "From the other platform: convert Ctrl and Cmd, Alt and Option, Win and Control; false keeps this computer's shortcuts"},
+                    "onConflict": {"type": "string", "enum": ["replace", "keepBoth", "skip"], "default": "keepBoth", "description": "A theme or saved effect with the name of an existing one"},
+                    "dryRun": {"type": "boolean", "default": false, "description": "Only say what would change, by group"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "platform": {"type": "string"},
+                "samePlatform": {"type": "boolean"},
+                "dryRun": {"type": "boolean"},
+                "groups": {"type": "object", "description": "By group: preferences {changes, notApplied}, shortcuts {changes, kept, unconvertible, conflicts}, themes {themes, effects, favorites}, toolbar {changes}"}
+            }})),
         B::new("settings.reset", &["APP-010", "APP-030"])
             .destructive()
             .params(params(

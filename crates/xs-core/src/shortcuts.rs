@@ -1159,6 +1159,35 @@ impl ShortcutStore {
             .find(|s| s.id == id && s.scope == scope)
     }
 
+    /// The user's own shortcuts: slot key → shortcut, or `None` where a default was
+    /// removed (APP-011).
+    pub fn overrides(&self) -> BTreeMap<String, Option<Accelerator>> {
+        self.stored.read().unwrap().overrides.clone()
+    }
+
+    /// The slot with this key (`<id>` or `<id>@<scope>`).
+    pub fn slot_by_key(&self, key: &str) -> Option<Slot> {
+        self.slots.iter().find(|s| s.key() == key).copied()
+    }
+
+    /// The user's shortcuts become `wanted` (APP-011): what equals the profile's default
+    /// is not kept as an override; slots not named go back to their default.
+    pub fn replace_overrides(&self, wanted: &BTreeMap<String, Option<Accelerator>>, profile: Profile) {
+        {
+            let mut stored = self.stored.write().unwrap();
+            stored.overrides.clear();
+            for (key, acc) in wanted {
+                let Some(slot) = self.slots.iter().find(|s| s.key() == *key) else {
+                    continue;
+                };
+                if *acc != default_for(slot, profile, self.platform) {
+                    stored.overrides.insert(key.clone(), acc.clone());
+                }
+            }
+        }
+        self.save();
+    }
+
     pub fn is_custom(&self, slot: &Slot) -> bool {
         self.stored.read().unwrap().overrides.contains_key(&slot.key())
     }

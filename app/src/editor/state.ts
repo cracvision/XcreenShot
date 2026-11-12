@@ -1,6 +1,7 @@
 // Editor view state. Documents, tools and styles live in the core (ADR 0004): this
 // store mirrors what the `xs://editor` events report and keeps only what belongs to
 // the view (selection, views, open dialogs).
+import { loadToolbar } from "./toolbarLayout";
 import { listen } from "@tauri-apps/api/event";
 import i18next from "i18next";
 import { create } from "zustand";
@@ -809,6 +810,10 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
         case "saved_effects":
           set({ themesVersion: get().themesVersion + 1 });
+          break;
+        case "toolbar":
+          // Imported settings (APP-011).
+          void loadToolbar();
           break;
         case "themes":
           set({ themesVersion: get().themesVersion + 1 });

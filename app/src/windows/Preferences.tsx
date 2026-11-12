@@ -7,6 +7,7 @@ import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
 import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
+import { SettingsTransfer } from "../prefs/SettingsTransfer";
 import { AiSection } from "../prefs/AiSection";
 import { LibraryLocation } from "../prefs/LibraryLocation";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
@@ -172,6 +173,7 @@ export function Preferences() {
               </button>
             </div>
             <AdvancedExtras />
+            <SettingsTransfer />
             <ResetAll />
           </>
         )}

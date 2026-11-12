@@ -650,6 +650,14 @@
     "library_duplicate": {
       "title": "Duplicate items",
       "description": "Makes a full, independent copy of each item beside it, with its editable objects, tags and capture details."
+    },
+    "settings_export": {
+      "title": "Export settings",
+      "description": "Writes the preferences, shortcuts, themes and saved effects, and the toolbar to an .xsettings file. It never holds passwords, tokens, the library or the logs."
+    },
+    "settings_import": {
+      "title": "Import settings",
+      "description": "Applies an .xsettings file, by group; shortcuts from the other platform can be converted."
     }
   },
   "settings": {
@@ -1457,6 +1465,35 @@
         "advanced": "Advanced",
         "experimental": "Experimental features",
         "ai": "AI"
+      },
+      "transfer": {
+        "title": "Settings file",
+        "help": "Take your preferences, shortcuts, themes and toolbar to another computer. Passwords, the library and the logs never go in the file.",
+        "export": "Export settings…",
+        "import": "Import settings…",
+        "file_type": "XcreenShot settings",
+        "groups": "Groups",
+        "group_preferences": "Preferences",
+        "group_shortcuts": "Shortcuts and shortcut profile",
+        "group_themes": "Themes, favorites and saved effects",
+        "group_toolbar": "Toolbar",
+        "export_title": "Export settings",
+        "export_help": "Choose what goes in the .xsettings file.",
+        "export_go": "Export…",
+        "exported": "Settings exported.",
+        "import_title": "Import settings",
+        "import_help": "This is what each group changes on this computer. Untick what you want to keep as it is.",
+        "changes_one": "{{count}} change",
+        "changes_other": "{{count}} changes",
+        "convert": "Convert the shortcuts made on {{platform}} (Ctrl ↔ Cmd, Alt ↔ Option, Win ↔ Control)",
+        "conflict": "A theme or effect with the same name",
+        "conflict_both": "Keep both",
+        "conflict_replace": "Replace",
+        "conflict_skip": "Skip",
+        "import_go": "Import",
+        "imported": "Settings imported.",
+        "unassigned_one": "{{count}} shortcut had no equivalent here and was left unassigned.",
+        "unassigned_other": "{{count}} shortcuts had no equivalent here and were left unassigned."
       }
     },
     "permissions": {
