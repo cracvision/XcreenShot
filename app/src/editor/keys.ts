@@ -234,6 +234,11 @@ function resizeStroke(up: boolean): void {
     }).catch(fail);
   } else if ((tool === "arrow" || tool === "line") && styles) {
     run("editor.set_style", { tool, style: { width: width(styles[tool].width) } }).catch(fail);
+  } else if (tool === "eraser" && styles) {
+    // EDT-048: steps of 10 %, 1 to 200 px.
+    const w = styles.eraser.width;
+    const next = Math.min(200, Math.max(1, Math.round(w * (up ? 1.1 : 1 / 1.1) * 10) / 10));
+    run("editor.set_style", { tool, style: { width: next } }).catch(fail);
   }
 }
 

@@ -156,6 +156,26 @@ const ICONS = {
     </Svg>
   ),
   // Flat bars standing in for an interface (EDT-041).
+  // Fill (EDT-047): a tipped bucket and a drop.
+  fill: (
+    <Svg>
+      <path d="M3.8 9.6 9.4 4l6 6-5.6 5.6a1.5 1.5 0 0 1-2.1 0l-3.9-3.9a1.5 1.5 0 0 1 0-2.1Z" />
+      <path d="M3.6 10.2h11.2" />
+      <path
+        d="M17.6 14.2c0 .9-.6 1.6-1.4 1.6s-1.4-.7-1.4-1.6c0-1 1.4-2.6 1.4-2.6s1.4 1.6 1.4 2.6Z"
+        fill="currentColor"
+        stroke="none"
+      />
+    </Svg>
+  ),
+  // Eraser (EDT-048): a tilted block on a line.
+  eraser: (
+    <Svg>
+      <path d="M9 16.5h8" />
+      <path d="M3.9 11.9 11.2 4.6a1.5 1.5 0 0 1 2.1 0l2.6 2.6a1.5 1.5 0 0 1 0 2.1L8.8 16.5H7.3a1.5 1.5 0 0 1-1-.4l-2.4-2.4a1.5 1.5 0 0 1 0-1.8Z" />
+      <path d="M7.4 8.4l4.7 4.7" />
+    </Svg>
+  ),
   simplify: (
     <Svg>
       <rect x="3" y="4" width="14" height="3" rx="1.5" fill="currentColor" stroke="none" />

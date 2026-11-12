@@ -812,7 +812,9 @@
       "editor_tool_magnify": "Herramienta Lupa",
       "editor_tool_spotlight": "Herramienta Foco",
       "editor_tool_stamp": "Herramienta Sello",
-      "editor_tool_simplify": "Herramienta Simplificar"
+      "editor_tool_simplify": "Herramienta Simplificar",
+      "editor_tool_fill": "Herramienta Relleno",
+      "editor_tool_eraser": "Herramienta Borrador"
     }
   },
   "tray": {
@@ -1272,7 +1274,9 @@
         "magnify": "Arrastra sobre una zona para verla ampliada; arrastra la lente a otro sitio.",
         "spotlight": "Arrastra alrededor de lo importante: el resto se oscurece o se desenfoca.",
         "stamp": "Elige un sello en Estilos y haz clic para ponerlo; arrastra para otro tamaño.",
-        "simplify": "Arrastra para tapar texto y detalles con formas planas."
+        "simplify": "Arrastra para tapar texto y detalles con formas planas.",
+        "fill": "Haz clic para rellenar una zona de color parecido, o dejarla transparente.",
+        "eraser": "Arrastra para borrar la imagen; se ve el color del lienzo. Los objetos no cambian."
       },
       "tool": {
         "move": "Mover",
@@ -1290,7 +1294,9 @@
         "magnify": "Lupa",
         "spotlight": "Foco",
         "stamp": "Sello",
-        "simplify": "Simplificar"
+        "simplify": "Simplificar",
+        "fill": "Relleno",
+        "eraser": "Borrador"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1570,7 +1576,20 @@
         "original_opacity": "Opacidad del original",
         "lock_on_exit": "Bloquear al salir"
       },
-      "unflatten_edited": "Encima se rellenó o se borró, así que ya forma parte de la imagen."
+      "unflatten_edited": "Encima se rellenó o se borró, así que ya forma parte de la imagen.",
+      "pixel": {
+        "fill_color": "Color",
+        "transparent": "Transparente",
+        "tolerance": "Tolerancia",
+        "global": "Global",
+        "global_help": "Todos los píxeles de ese color, contiguos o no.",
+        "eraser_width": "Grosor",
+        "eraser_shape": "Forma",
+        "round": "Redonda",
+        "square": "Cuadrada",
+        "antialias": "Suavizado de bordes",
+        "opacity": "Opacidad"
+      }
     },
     "multi": {
       "title": "Multicaptura",

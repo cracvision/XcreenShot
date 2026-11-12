@@ -151,7 +151,52 @@ type Drag =
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
   | { kind: "pan"; x: number; y: number; left: number; top: number }
   // A freehand stroke being drawn (EDT-037); Shift keeps it straight.
-  | { kind: "pen"; points: Point[]; straight: boolean };
+  | { kind: "pen"; points: Point[]; straight: boolean }
+  // An eraser stroke (EDT-048), on the image or on the floating image `target`.
+  | { kind: "erase"; points: Point[]; straight: boolean; target: string | null };
+
+/** The eraser's tip around the pointer, in screen pixels: dark and light, so it shows
+ * on any image (EDT-048). */
+function EraserOutline({
+  at,
+  size,
+  square,
+}: {
+  at: { x: number; y: number };
+  size: number;
+  square: boolean;
+}) {
+  const r = Math.max(size / 2, 1);
+  return (
+    <Group x={at.x} y={at.y} listening={false}>
+      {[
+        { stroke: "#000000", width: 3, opacity: 0.45 },
+        { stroke: "#ffffff", width: 1, opacity: 1 },
+      ].map((l) =>
+        square ? (
+          <Rect
+            key={l.stroke}
+            x={-r}
+            y={-r}
+            width={r * 2}
+            height={r * 2}
+            stroke={l.stroke}
+            strokeWidth={l.width}
+            opacity={l.opacity}
+          />
+        ) : (
+          <Circle
+            key={l.stroke}
+            radius={r}
+            stroke={l.stroke}
+            strokeWidth={l.width}
+            opacity={l.opacity}
+          />
+        ),
+      )}
+    </Group>
+  );
+}
 
 function useBaseImage(id: string, key: number): HTMLImageElement | null {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
@@ -299,10 +344,14 @@ export function Canvas({ doc }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
   const dpr = useDevicePixelRatio();
-  // With flattened objects the image shown changes with them (EDT-091).
+  // With flattened objects or edits of pixels the image shown changes with them
+  // (EDT-091, ADR 0005).
   const flatKey = useMemo(
-    () => (doc.flattened?.length ? hashOf(JSON.stringify(doc.flattened)) : 0),
-    [doc.flattened],
+    () =>
+      doc.flattened?.length || doc.patches?.length
+        ? hashOf(JSON.stringify([doc.flattened ?? [], doc.patches ?? []]))
+        : 0,
+    [doc.flattened, doc.patches],
   );
   const base = useBaseImage(doc.documentId, flatKey);
   const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
@@ -793,6 +842,31 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "crop", mode, start: p, from: cropRect, rect: cropRect });
       return;
     }
+    // Pixel tools (EDT-047, EDT-048; ADR 0005) work on the image, not on objects.
+    if (tool === "fill" && styles) {
+      // A click on a floating image fills it; on any other object, nothing.
+      const hit = hitObject(p, true);
+      if (hit && (hit.type !== "image" || hit.locked)) return;
+      const f = styles.fill;
+      void run("document.fill", {
+        documentId: doc.documentId,
+        at: p,
+        color: f.color,
+        tolerance: f.tolerance,
+        opacity: f.opacity,
+        global: f.global,
+        ...(hit ? { objectId: hit.id } : {}),
+      }).catch(showError);
+      return;
+    }
+    if (tool === "eraser") {
+      // On the selected floating image, if one is; otherwise on the image.
+      const only = selection.length === 1 ? shown.find((o) => o.id === selection[0]) : undefined;
+      const target = only?.type === "image" && !only.locked ? only.id : null;
+      capture();
+      setDrag({ kind: "erase", points: [p], straight: false, target });
+      return;
+    }
     if (handle && "multi" in handle) {
       const start = multiBox();
       if (start) {
@@ -1011,6 +1085,7 @@ export function Canvas({ doc }: Props) {
         };
       case "end":
         return { ...d, point: e.shiftKey ? constrain45(d.other, p) : p };
+      case "erase":
       case "pen": {
         const first = d.points[0] ?? p;
         // Shift: a straight line, level, upright or at 45° (EDT-037).
@@ -1135,6 +1210,20 @@ export function Canvas({ doc }: Props) {
   const finish = async (d: Drag) => {
     const id = doc.documentId;
     try {
+      if (d.kind === "erase") {
+        const er = styles?.eraser;
+        if (!er) return;
+        await run("document.erase", {
+          documentId: id,
+          points: d.points,
+          width: er.width,
+          shape: er.shape,
+          opacity: er.opacity,
+          antialias: er.antialias,
+          ...(d.target ? { objectId: d.target } : {}),
+        });
+        return;
+      }
       if (d.kind === "pen") {
         const pen = styles?.pen;
         const r = await run<{ ids: string[] }>("document.annotate", {
@@ -1454,20 +1543,36 @@ export function Canvas({ doc }: Props) {
       ? "grabbing"
       : space
         ? "grab"
-        : hover === "locked"
-          ? "not-allowed"
-          : hover && resizeCursor[hover]
-            ? resizeCursor[hover]
-            : hover === "object" || drag?.kind === "move"
-              ? "move"
-              : tool === "text"
-                ? "text"
-                : tool === "move"
-                  ? "default"
-                  : "crosshair";
+        : tool === "eraser"
+          ? "none"
+          : tool === "fill"
+            ? "crosshair"
+            : hover === "locked"
+              ? "not-allowed"
+              : hover && resizeCursor[hover]
+                ? resizeCursor[hover]
+                : hover === "object" || drag?.kind === "move"
+                  ? "move"
+                  : tool === "text"
+                    ? "text"
+                    : tool === "move"
+                      ? "default"
+                      : "crosshair";
 
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
+  // The eraser's outline follows the pointer at its real size (EDT-048).
+  const eraserAt = usePointer((s) => (tool === "eraser" && !space ? s.screen : null));
+  const erasing = drag?.kind === "erase" && styles ? drag : null;
+  const erasePreview = erasing && styles && (
+    <PenPreview
+      points={erasing.points}
+      color={doc.canvas.color ?? "#ffffff"}
+      width={styles.eraser.width}
+      opacity={styles.eraser.opacity}
+      square={styles.eraser.shape === "square"}
+    />
+  );
   const scale = lay?.scale ?? 1;
   const editingId = textEdit?.id ?? null;
   const shownCrop = drag?.kind === "crop" ? drag.rect : cropRect;
@@ -1660,6 +1765,7 @@ export function Canvas({ doc }: Props) {
       {dashedBox("spotlight")}
       {dashedBox("stamp")}
       {dashedBox("simplify")}
+      {erasing?.target && erasePreview}
       {drag?.kind === "pen" && styles && (
         <PenPreview
           points={drag.points}
@@ -1769,6 +1875,8 @@ export function Canvas({ doc }: Props) {
                       }
                     />
                   )}
+                  {/* Erasing the image: under the objects, which stay (EDT-048). */}
+                  {erasing && !erasing.target && erasePreview}
                 </Group>
                 {/* Objects are cut at the edge, except the one being drawn or dragged:
                     it shows whole and the canvas grows to fit it when the gesture ends
@@ -1820,6 +1928,13 @@ export function Canvas({ doc }: Props) {
               </Group>
             </Layer>
             <Layer>
+              {eraserAt && styles && (
+                <EraserOutline
+                  at={eraserAt}
+                  size={styles.eraser.width * scale}
+                  square={styles.eraser.shape === "square"}
+                />
+              )}
               {shownCrop && (
                 <Group>
                   <Line

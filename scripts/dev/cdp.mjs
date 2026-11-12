@@ -157,8 +157,16 @@ switch (cmd) {
     const [key, code, ...rest] = args;
     const m = mods(rest);
     const vk =
-      { Delete: 46, Escape: 27, Backspace: 8, Enter: 13, " ": 32 }[key] ??
-      key.toUpperCase().charCodeAt(0);
+      // Punctuation has its own codes: "]" as a character code (93) is the Menu key.
+      {
+        Delete: 46,
+        Escape: 27,
+        Backspace: 8,
+        Enter: 13,
+        " ": 32,
+        "[": 219,
+        "]": 221,
+      }[key] ?? key.toUpperCase().charCodeAt(0);
     await main.send("Input.dispatchKeyEvent", {
       type: "rawKeyDown",
       key,
@@ -169,7 +177,13 @@ switch (cmd) {
     // Enter and Space also type their character, which is what activates a button.
     const text = { Enter: "\r", " ": " " }[key];
     if (text)
-      await main.send("Input.dispatchKeyEvent", { type: "char", key, code, text, modifiers: m });
+      await main.send("Input.dispatchKeyEvent", {
+        type: "char",
+        key,
+        code,
+        text,
+        modifiers: m,
+      });
     await main.send("Input.dispatchKeyEvent", {
       type: "keyUp",
       key,
@@ -182,7 +196,9 @@ switch (cmd) {
   case "media": {
     // Only this page sees it, while this script runs: the system is not touched.
     const [name, value, out] = args;
-    await main.send("Emulation.setEmulatedMedia", { features: [{ name, value }] });
+    await main.send("Emulation.setEmulatedMedia", {
+      features: [{ name, value }],
+    });
     await new Promise((r) => setTimeout(r, 300));
     if (out) {
       const r = await main.send("Page.captureScreenshot", { format: "png" });

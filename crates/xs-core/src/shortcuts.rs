@@ -594,6 +594,8 @@ pub fn slots() -> Vec<Slot> {
         tool("editor.tool_spotlight", r#"{"tool":"spotlight"}"#),
         tool("editor.tool_blur", r#"{"tool":"blur"}"#),
         tool("editor.tool_simplify", r#"{"tool":"simplify"}"#),
+        tool("editor.tool_fill", r#"{"tool":"fill"}"#),
+        tool("editor.tool_eraser", r#"{"tool":"eraser"}"#),
         tool("editor.tool_crop", r#"{"tool":"crop"}"#),
     ]
 }
@@ -661,6 +663,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_shape", Compatibility, Macos) => "Ctrl+KeyU",
         ("editor.tool_blur", Compatibility, Macos) => "Ctrl+KeyB",
         ("editor.tool_simplify", Compatibility, Macos) => "Ctrl+KeyY",
+        ("editor.tool_fill", Compatibility, Macos) => "Ctrl+KeyF",
+        ("editor.tool_eraser", Compatibility, Macos) => "Ctrl+KeyE",
         ("editor.tool_step", Compatibility, Macos) => "Ctrl+KeyS",
         ("editor.tool_stamp", Compatibility, Macos) => "Ctrl+KeyI",
         ("editor.tool_highlight", Compatibility, Macos) => "Ctrl+KeyH",
@@ -675,6 +679,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         ("editor.tool_shape", ..) => "KeyU",
         ("editor.tool_blur", ..) => "KeyB",
         ("editor.tool_simplify", ..) => "KeyY",
+        ("editor.tool_fill", ..) => "KeyG",
+        ("editor.tool_eraser", ..) => "KeyE",
         ("editor.tool_step", ..) => "KeyN",
         ("editor.tool_stamp", ..) => "KeyS",
         ("editor.tool_highlight", ..) => "KeyH",

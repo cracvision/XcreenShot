@@ -126,8 +126,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-044 | Acciones sobre la selección | M2 | Must | — |
 | EDT-045 | Relleno del hueco | M2 | Should | — |
 | EDT-046 | Varita mágica | M2 | Should | — |
-| EDT-047 | Relleno | M2 | Should | — |
-| EDT-048 | Borrador | M2 | Should | — |
+| EDT-047 | Relleno | M2 | Should | En curso (falta el relleno degradado, con EDT-020) |
+| EDT-048 | Borrador | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-049 | Recortar | M1 | Must | Win |
 | EDT-050 | Recorte no destructivo | M1 | Must | Win |
 | EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | — |

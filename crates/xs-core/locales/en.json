@@ -812,7 +812,9 @@
       "editor_tool_magnify": "Magnify tool",
       "editor_tool_spotlight": "Spotlight tool",
       "editor_tool_stamp": "Stamp tool",
-      "editor_tool_simplify": "Simplify tool"
+      "editor_tool_simplify": "Simplify tool",
+      "editor_tool_fill": "Fill tool",
+      "editor_tool_eraser": "Eraser tool"
     }
   },
   "tray": {
@@ -1272,7 +1274,9 @@
         "magnify": "Drag over a zone to show it enlarged; drag the lens elsewhere.",
         "spotlight": "Drag around what matters: the rest darkens or blurs.",
         "stamp": "Pick a stamp in Styles, then click to place it; drag for another size.",
-        "simplify": "Drag to cover text and details with flat shapes."
+        "simplify": "Drag to cover text and details with flat shapes.",
+        "fill": "Click to fill an area of similar color, or make it transparent.",
+        "eraser": "Drag to erase the image; the canvas color shows. Objects stay."
       },
       "tool": {
         "move": "Move",
@@ -1290,7 +1294,9 @@
         "magnify": "Magnify",
         "spotlight": "Spotlight",
         "stamp": "Stamp",
-        "simplify": "Simplify"
+        "simplify": "Simplify",
+        "fill": "Fill",
+        "eraser": "Eraser"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1570,7 +1576,20 @@
         "original_opacity": "Original opacity",
         "lock_on_exit": "Lock on exit"
       },
-      "unflatten_edited": "It was filled or erased over, so it is now part of the image."
+      "unflatten_edited": "It was filled or erased over, so it is now part of the image.",
+      "pixel": {
+        "fill_color": "Color",
+        "transparent": "Transparent",
+        "tolerance": "Tolerance",
+        "global": "Global",
+        "global_help": "Every pixel of that color, touching or not.",
+        "eraser_width": "Thickness",
+        "eraser_shape": "Shape",
+        "round": "Round",
+        "square": "Square",
+        "antialias": "Smooth edges",
+        "opacity": "Opacity"
+      }
     },
     "multi": {
       "title": "Multi-capture",

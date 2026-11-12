@@ -145,7 +145,12 @@ type StyledKind =
   | "magnify"
   | "spotlight"
   | "stamp"
-  | "simplify";
+  | "simplify"
+  | "fill"
+  | "eraser";
+/** Tools that change pixels (EDT-047, EDT-048): their own style shows even with a
+ * selection, which says only which floating image the eraser works on. */
+const PIXEL_TOOLS: StyledKind[] = ["fill", "eraser"];
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -161,6 +166,8 @@ const STYLED: StyledKind[] = [
   "spotlight",
   "stamp",
   "simplify",
+  "fill",
+  "eraser",
 ];
 
 function useTarget(): Target | null {
@@ -190,6 +197,14 @@ function useTarget(): Target | null {
             : run("editor.set_style", { tool: "text", style: changes }),
         );
       },
+    };
+  }
+  if (PIXEL_TOOLS.includes(tool as StyledKind)) {
+    const k = tool as "fill" | "eraser";
+    return {
+      kind: k,
+      styles: [styles[k] as unknown as Record<string, unknown>],
+      commit: (changes) => fail(run("editor.set_style", { tool: k, style: changes })),
     };
   }
   const selected = (doc?.objects ?? []).filter((o) => selection.includes(o.id));
@@ -685,6 +700,69 @@ function Properties({ target }: { target: Target }) {
       );
     case "step":
       return <StepProperties v={v} num={num} commit={commit} opacity={opacity} />;
+    case "fill":
+      // Fill (EDT-047): a color or Transparent, how alike, and everywhere or touching.
+      return (
+        <>
+          <ColorPicker
+            label={t("ui.editor.pixel.fill_color")}
+            value={v<string | null>("color") ?? null}
+            allowTransparent
+            onCommit={(color) => commit({ color })}
+          />
+          <NumberField
+            label={t("ui.editor.pixel.tolerance")}
+            value={num("tolerance")}
+            min={0}
+            max={100}
+            step={1}
+            unit="%"
+            onCommit={(tolerance) => commit({ tolerance })}
+          />
+          {opacity}
+          <label className="panel-check" title={t("ui.editor.pixel.global_help")}>
+            <input
+              type="checkbox"
+              checked={v<boolean>("global") === true}
+              onChange={(e) => commit({ global: e.target.checked })}
+            />
+            {t("ui.editor.pixel.global")}
+          </label>
+        </>
+      );
+    case "eraser":
+      // Eraser (EDT-048): thickness, tip, how much it erases and smooth edges.
+      return (
+        <>
+          <NumberField
+            label={t("ui.editor.pixel.eraser_width")}
+            value={num("width")}
+            min={1}
+            max={200}
+            step={1}
+            unit="px"
+            onCommit={(width) => commit({ width })}
+          />
+          <SelectField
+            label={t("ui.editor.pixel.eraser_shape")}
+            value={v<"round" | "square">("shape")}
+            options={(["round", "square"] as const).map((s) => ({
+              value: s,
+              label: t(`ui.editor.pixel.${s}`),
+            }))}
+            onCommit={(shape) => commit({ shape })}
+          />
+          {opacity}
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={v<boolean>("antialias") !== false}
+              onChange={(e) => commit({ antialias: e.target.checked })}
+            />
+            {t("ui.editor.pixel.antialias")}
+          </label>
+        </>
+      );
   }
 }
 
@@ -1209,7 +1287,8 @@ export function SidePanel() {
 
   let title: string;
   let body: React.ReactNode;
-  if (target && (selection.length > 0 || editing)) {
+  const pixelTool = target !== null && PIXEL_TOOLS.includes(target.kind);
+  if (target && !pixelTool && (selection.length > 0 || editing)) {
     const count = target.styles.length;
     title = t("ui.editor.props_selection", {
       what:
@@ -1222,7 +1301,7 @@ export function SidePanel() {
         {!editing && <PositionSize />}
       </>
     );
-  } else if (doc && selection.length > 1) {
+  } else if (doc && !pixelTool && selection.length > 1) {
     // Objects of several kinds: what they share, where they are (EDT-080).
     title = t("ui.editor.props_selection", {
       what: t("ui.editor.objects_count", { count: selection.length }),
@@ -1234,7 +1313,10 @@ export function SidePanel() {
       </>
     );
   } else if (target) {
-    title = t("ui.editor.props_tool", { tool: t(`ui.editor.tool.${target.kind}`) });
+    // A pixel tool changes the image, not the next objects (EDT-047, EDT-048).
+    title = pixelTool
+      ? t(`ui.editor.tool.${target.kind}`)
+      : t("ui.editor.props_tool", { tool: t(`ui.editor.tool.${target.kind}`) });
     body = <Properties target={target} />;
   } else if (doc && tool === "crop") {
     title = t("ui.editor.tool.crop");

@@ -27,6 +27,8 @@ export type Tool =
   | "spotlight"
   | "blur"
   | "simplify"
+  | "fill"
+  | "eraser"
   | "crop";
 
 export interface DocSummary {
@@ -152,6 +154,22 @@ export interface SimplifyObject {
 }
 
 /** Stamps (EDT-031). */
+/** The Fill tool (EDT-047): `color` null is Transparent. */
+export interface FillStyle {
+  color: string | null;
+  tolerance: number;
+  opacity: number;
+  global: boolean;
+}
+
+/** The Eraser (EDT-048). */
+export interface EraserStyle {
+  width: number;
+  shape: "round" | "square";
+  opacity: number;
+  antialias: boolean;
+}
+
 export interface StampStyle {
   /** The tool's stamp; objects keep theirs in `stamp`. */
   stamp?: string;
@@ -442,6 +460,8 @@ export interface Styles {
   spotlight: SpotlightStyle;
   stamp: StampStyle;
   simplify: SimpleStyle;
+  fill: FillStyle;
+  eraser: EraserStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -477,6 +497,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   baseView?: { x: number; y: number; width: number; height: number } | null;
   /** Simplify (EDT-041): how the original shows under the simplified shapes. */
   simplify?: { showOriginal: boolean; opacity: number };
+  /** Edits of pixels not yet saved (ADR 0005): the core shows them in the image. */
+  patches?: { rect: { x: number; y: number; width: number; height: number }; image: string }[];
   /** What the next step of each sequence shows (EDT-035). */
   stepNext?: Partial<Record<StepSequence, string>>;
   /** Objects merged into the image (EDT-091), oldest first; `bounds` on the canvas. */

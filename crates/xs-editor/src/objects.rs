@@ -36,6 +36,101 @@ pub struct Styles {
     pub spotlight: SpotlightStyle,
     pub stamp: StampStyle,
     pub simplify: xs_image::simplify::SimplifyToolStyle,
+    pub fill: FillStyle,
+    pub eraser: EraserStyle,
+}
+
+/// The Fill tool's style (EDT-047). `color` `None` is Transparent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct FillStyle {
+    pub color: Option<String>,
+    /// 0–100 %: how different a color may be and still fill.
+    pub tolerance: f64,
+    pub opacity: f64,
+    /// Every pixel of that color, touching or not.
+    pub global: bool,
+}
+
+impl Default for FillStyle {
+    fn default() -> Self {
+        FillStyle {
+            color: Some("#F2545B".to_string()),
+            tolerance: 10.0,
+            opacity: 100.0,
+            global: false,
+        }
+    }
+}
+
+/// The Eraser's style (EDT-048).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct EraserStyle {
+    /// 1–200 px.
+    pub width: f64,
+    /// "round" or "square".
+    pub shape: String,
+    pub opacity: f64,
+    /// Smooth edges.
+    pub antialias: bool,
+}
+
+impl Default for EraserStyle {
+    fn default() -> Self {
+        EraserStyle {
+            width: 20.0,
+            shape: "round".to_string(),
+            opacity: 100.0,
+            antialias: true,
+        }
+    }
+}
+
+/// `base` with `changes`, checked as a `T`.
+fn merged<T: Serialize + serde::de::DeserializeOwned>(
+    base: &T,
+    changes: &Map<String, Value>,
+) -> Result<T, String> {
+    let mut v = serde_json::to_value(base).map_err(|e| e.to_string())?;
+    if let Some(m) = v.as_object_mut() {
+        for (k, val) in changes {
+            m.insert(k.clone(), val.clone());
+        }
+    }
+    serde_json::from_value(v).map_err(|e| e.to_string())
+}
+
+fn within(name: &str, v: f64, min: f64, max: f64) -> Result<(), String> {
+    if (min..=max).contains(&v) {
+        Ok(())
+    } else {
+        Err(format!("{name} must be between {min} and {max}"))
+    }
+}
+
+impl FillStyle {
+    fn merged(base: &FillStyle, changes: &Map<String, Value>) -> Result<FillStyle, String> {
+        let s: FillStyle = merged(base, changes)?;
+        if let Some(c) = &s.color {
+            xs_image::color::Rgba::parse(c).ok_or_else(|| format!("{c} is not a color"))?;
+        }
+        within("tolerance", s.tolerance, 0.0, 100.0)?;
+        within("opacity", s.opacity, 0.0, 100.0)?;
+        Ok(s)
+    }
+}
+
+impl EraserStyle {
+    fn merged(base: &EraserStyle, changes: &Map<String, Value>) -> Result<EraserStyle, String> {
+        let s: EraserStyle = merged(base, changes)?;
+        if s.shape != "round" && s.shape != "square" {
+            return Err("shape is round or square".into());
+        }
+        within("width", s.width, 1.0, 200.0)?;
+        within("opacity", s.opacity, 0.0, 100.0)?;
+        Ok(s)
+    }
 }
 
 /// The Stamp tool's style (EDT-031): which stamp it places, and its color (`None`: the
@@ -90,6 +185,8 @@ impl Default for Styles {
             spotlight: SpotlightStyle::default(),
             stamp: StampStyle::default(),
             simplify: xs_image::simplify::SimplifyToolStyle::default(),
+            fill: FillStyle::default(),
+            eraser: EraserStyle::default(),
         }
     }
 }
@@ -121,6 +218,8 @@ impl Styles {
             "spotlight" => serde_json::to_value(&self.spotlight).ok(),
             "stamp" => serde_json::to_value(&self.stamp).ok(),
             "simplify" => serde_json::to_value(&self.simplify).ok(),
+            "fill" => serde_json::to_value(&self.fill).ok(),
+            "eraser" => serde_json::to_value(&self.eraser).ok(),
             _ => None,
         }
     }
@@ -143,6 +242,8 @@ impl Styles {
             "simplify" => {
                 self.simplify = xs_image::simplify::SimplifyToolStyle::merged(&self.simplify, changes)?
             }
+            "fill" => self.fill = FillStyle::merged(&self.fill, changes)?,
+            "eraser" => self.eraser = EraserStyle::merged(&self.eraser, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
