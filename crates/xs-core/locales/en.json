@@ -2965,7 +2965,8 @@
         "highlight_yellow": "Yellow circle",
         "highlight_accent": "Accent circle",
         "title": "Cursor"
-      }
+      },
+      "bar_more": "More options"
     },
     "multi": {
       "title": "Multi-capture",

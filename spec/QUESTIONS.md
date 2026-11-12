@@ -240,6 +240,12 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Arreglos tras la caminata del 2026-11-12
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| EDT-001 / EDT-003 / LIB-002 | La barra se cargó de íconos y en una ventana estrecha se montaban unos sobre otros (Carlos, 2026-11-12) | La barra mide su ancho real y se compacta por pasos, sin montar ni cortar nada. **Editor:** 1) los nombres de las herramientas; 2) los textos de Abrir, Guardar, Copiar todo, Compartir y Más; 3) los de Capturar y Editor/Biblioteca; 4) el idioma y Preferencias pasan a un menú ⋯; 5) Abrir y Guardar también; 6) las herramientas y comandos del final de la barra pasan a Más, en su grupo. **Biblioteca:** el buscador cede ancho primero; después los textos, el tamaño de miniaturas, Crear/Etiquetas/Detalles, el idioma y Preferencias, Abrir carpeta/Abrir, Cuadrícula/Lista y Ordenar pasan a su menú ⋯. Todo vuelve al agrandar la ventana | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 2: extraer texto)
 
 | ID | Duda | Propuesta | Estado |

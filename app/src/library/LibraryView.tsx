@@ -24,6 +24,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { useIndicator } from "../components/useIndicator";
@@ -47,7 +48,9 @@ import { askExportLibrary } from "./exportState";
 import { LibraryExportDialog } from "./LibraryExport";
 import { ImportDialog } from "./ImportDialog";
 import { importFiles, importFolder } from "./importState";
-import { Menu } from "../components/Menu";
+import { Menu, type MenuItem } from "../components/Menu";
+import { useFit } from "../components/fit";
+import { languageItems } from "../components/languageItems";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
 import { boxOf, clickSelection, moveFocus, overlaps, range } from "./selection";
@@ -106,53 +109,150 @@ function SearchField() {
   );
 }
 
-function SortControls() {
+function SortControls({ sort = true, layout = true }: { sort?: boolean; layout?: boolean }) {
   const { t } = useTranslation();
   const shape = useLibrary((s) => s.shape);
   const setShape = useLibrary((s) => s.setShape);
   const seg = useRef<HTMLDivElement>(null);
-  useIndicator(seg, shape.layout);
+  useIndicator(seg, `${shape.layout}:${layout}`);
+  if (!sort && !layout) return null;
   return (
     <div className="lib-sort">
-      <select
-        value={shape.sort}
-        aria-label={t("ui.library.sort.label")}
-        onChange={(e) => setShape({ sort: e.target.value as SortKey })}
-      >
-        {SORT_KEYS.map((k) => (
-          <option key={k} value={k}>
-            {t(`ui.library.sort.${k}`)}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        className="btn icon small"
-        title={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
-        aria-label={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
-        onClick={() => setShape({ order: shape.order === "asc" ? "desc" : "asc" })}
-      >
-        <span className={`lib-dir ${shape.order}`} aria-hidden="true">
-          <Icon name="up" />
-        </span>
-      </button>
-      <div className="seg small" role="radiogroup" aria-label={t("ui.library.layout")} ref={seg}>
-        <span className="seg-indicator" aria-hidden="true" />
-        {(["grid", "list"] as const).map((l) => (
-          <button
-            key={l}
-            type="button"
-            role="radio"
-            aria-checked={shape.layout === l}
-            onClick={() => setShape({ layout: l })}
+      {sort && (
+        <>
+          <select
+            value={shape.sort}
+            aria-label={t("ui.library.sort.label")}
+            onChange={(e) => setShape({ sort: e.target.value as SortKey })}
           >
-            {t(`ui.library.layout_${l}`)}
+            {SORT_KEYS.map((k) => (
+              <option key={k} value={k}>
+                {t(`ui.library.sort.${k}`)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn icon small"
+            title={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
+            aria-label={t(shape.order === "asc" ? "ui.library.sort.asc" : "ui.library.sort.desc")}
+            onClick={() => setShape({ order: shape.order === "asc" ? "desc" : "asc" })}
+          >
+            <span className={`lib-dir ${shape.order}`} aria-hidden="true">
+              <Icon name="up" />
+            </span>
           </button>
-        ))}
-      </div>
+        </>
+      )}
+      {layout && (
+        <div className="seg small" role="radiogroup" aria-label={t("ui.library.layout")} ref={seg}>
+          <span className="seg-indicator" aria-hidden="true" />
+          {(["grid", "list"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={shape.layout === l}
+              onClick={() => setShape({ layout: l })}
+            >
+              {t(`ui.library.layout_${l}`)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+/** What a narrow library bar folds into its ⋯ menu (LIB-002, EDT-001), by level. */
+function foldedItems(level: number, t: TFunction): MenuItem[] {
+  const state = useLibrary.getState();
+  const { shape, setShape, selection, items } = state;
+  const chosen = items.filter((i) => selection.includes(i.id));
+  const out: MenuItem[] = [];
+  if (level >= FOLD_ACTIONS) {
+    out.push(
+      {
+        id: "fold-create",
+        label: t("ui.library.create.button"),
+        disabled: chosen.length === 0,
+        title: t("ui.library.create.need_selection"),
+        submenu: createItems(chosen, t),
+        onSelect: () => undefined,
+      },
+      {
+        id: "fold-tags",
+        label: t("ui.library.tags.button"),
+        disabled: selection.length === 0,
+        onSelect: () => editTags(useLibrary.getState().selection),
+      },
+      {
+        id: "fold-details",
+        label: t("ui.library.details.title"),
+        checked: shape.details === true,
+        onSelect: () => setShape({ details: shape.details !== true }),
+      },
+    );
+  }
+  if (level >= FOLD_LAYOUT) {
+    out.push(
+      ...(["grid", "list"] as const).map((l, i) => ({
+        id: `fold-layout-${l}`,
+        label: t(`ui.library.layout_${l}`),
+        checked: shape.layout === l,
+        separator: i === 0,
+        onSelect: () => setShape({ layout: l }),
+      })),
+    );
+  }
+  if (level >= FOLD_SORT) {
+    out.push({
+      id: "fold-sort",
+      label: t("ui.library.sort.label"),
+      onSelect: () => undefined,
+      submenu: [
+        ...SORT_KEYS.map((k) => ({
+          id: `fold-sort-${k}`,
+          label: t(`ui.library.sort.${k}`),
+          checked: shape.sort === k,
+          onSelect: () => setShape({ sort: k }),
+        })),
+        ...(["asc", "desc"] as const).map((o, i) => ({
+          id: `fold-order-${o}`,
+          label: t(`ui.library.sort.${o}`),
+          checked: shape.order === o,
+          separator: i === 0,
+          onSelect: () => setShape({ order: o }),
+        })),
+      ],
+    });
+  }
+  if (level >= FOLD_FILES) {
+    out.push(
+      {
+        id: "fold-folder",
+        label: t("ui.library.open_folder"),
+        separator: true,
+        onSelect: () => void run("library.show_in_folder").catch(() => undefined),
+      },
+      {
+        id: "fold-open",
+        label: t("ui.editor.open"),
+        onSelect: () => void openFiles(),
+      },
+    );
+  }
+  return out;
+}
+
+/** The steps of a narrow library bar: labels, the zoom, then things fold into ⋯. */
+const FOLD_ZOOM = 2;
+const FOLD_LABELS = 3;
+const FOLD_ACTIONS = 4;
+const FOLD_PREFS = 5;
+const FOLD_FILES = 6;
+const FOLD_LAYOUT = 7;
+const FOLD_SORT = 8;
 
 /** Create ▾ (LIB-016): new things from the selection. */
 function CreateMenu() {
@@ -197,15 +297,22 @@ function ZoomControl() {
 }
 
 function LibraryToolbar() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const openKey = useShortcut("editor.open");
+  const bar = useRef<HTMLDivElement>(null);
+  const layout = useLibrary((s) => s.shape.layout);
+  // A narrow window never lets its items run over each other (Carlos, 2026-11-12).
+  const level = useFit(bar, FOLD_SORT, `${i18n.language}|${layout}`);
   const pane = useLibrary((s) => s.shape.pane);
   const details = useLibrary((s) => s.shape.details === true);
   const setShape = useLibrary((s) => s.setShape);
   const selected = useLibrary((s) => s.selection.length);
   return (
     <div
-      className="editor-toolbar library-toolbar"
+      ref={bar}
+      className={`editor-toolbar library-toolbar${level >= 1 ? " fit-2" : ""}${
+        level >= FOLD_LABELS ? " fit-3" : ""
+      }`}
       role="toolbar"
       aria-label={t("ui.library.title")}
     >
@@ -224,48 +331,54 @@ function LibraryToolbar() {
         <span className="tb-label">{t("ui.library.filter.title")}</span>
       </button>
       <SearchField />
-      <SortControls />
-      <ZoomControl />
-      <CreateMenu />
-      <button
-        type="button"
-        className="btn tb-btn"
-        disabled={selected === 0}
-        title={t("ui.library.tags.button")}
-        onClick={() => editTags(useLibrary.getState().selection)}
-      >
-        <span className="tb-label">{t("ui.library.tags.button")}</span>
-      </button>
-      <button
-        type="button"
-        className="btn tb-btn"
-        aria-pressed={details}
-        title={t("ui.library.details.toggle")}
-        onClick={() => setShape({ details: !details })}
-      >
-        <span className="tb-label">{t("ui.library.details.title")}</span>
-      </button>
+      <SortControls sort={level < FOLD_SORT} layout={level < FOLD_LAYOUT} />
+      {level < FOLD_ZOOM && <ZoomControl />}
+      {level < FOLD_ACTIONS && (
+        <>
+          <CreateMenu />
+          <button
+            type="button"
+            className="btn tb-btn"
+            disabled={selected === 0}
+            title={t("ui.library.tags.button")}
+            onClick={() => editTags(useLibrary.getState().selection)}
+          >
+            <span className="tb-label">{t("ui.library.tags.button")}</span>
+          </button>
+          <button
+            type="button"
+            className="btn tb-btn"
+            aria-pressed={details}
+            title={t("ui.library.details.toggle")}
+            onClick={() => setShape({ details: !details })}
+          >
+            <span className="tb-label">{t("ui.library.details.title")}</span>
+          </button>
+        </>
+      )}
       <div className="tb-spacer" />
-      <div className="tb-group">
-        <button
-          type="button"
-          className="btn tb-btn"
-          title={t("ui.library.open_folder")}
-          onClick={() => void run("library.show_in_folder").catch(() => undefined)}
-        >
-          <Icon name="library" />
-          <span className="tb-label tb-wide">{t("ui.library.open_folder")}</span>
-        </button>
-        <button
-          type="button"
-          className="btn tb-btn"
-          title={hint(t("ui.editor.open"), openKey)}
-          onClick={() => void openFiles()}
-        >
-          <Icon name="open" />
-          <span className="tb-label tb-wide">{t("ui.editor.open")}</span>
-        </button>
-      </div>
+      {level < FOLD_FILES && (
+        <div className="tb-group">
+          <button
+            type="button"
+            className="btn tb-btn"
+            title={t("ui.library.open_folder")}
+            onClick={() => void run("library.show_in_folder").catch(() => undefined)}
+          >
+            <Icon name="library" />
+            <span className="tb-label tb-wide">{t("ui.library.open_folder")}</span>
+          </button>
+          <button
+            type="button"
+            className="btn tb-btn"
+            title={hint(t("ui.editor.open"), openKey)}
+            onClick={() => void openFiles()}
+          >
+            <Icon name="open" />
+            <span className="tb-label tb-wide">{t("ui.editor.open")}</span>
+          </button>
+        </div>
+      )}
       <Menu
         label={<Icon name="more" />}
         ariaLabel={t("ui.library.more")}
@@ -274,10 +387,12 @@ function LibraryToolbar() {
         chevron={false}
         align="end"
         items={[
+          ...foldedItems(level, t),
           // LIB-024.
           {
             id: "import_files",
             label: t("ui.library.import.files"),
+            separator: level >= FOLD_ACTIONS,
             onSelect: () => void importFiles(),
           },
           {
@@ -305,18 +420,32 @@ function LibraryToolbar() {
             separator: true,
             onSelect: askExportLibrary,
           },
+          ...(level >= FOLD_PREFS
+            ? [
+                ...languageItems(t, i18n.language, true),
+                {
+                  id: "preferences",
+                  label: t("ui.editor.preferences"),
+                  onSelect: () => void run("settings.open"),
+                },
+              ]
+            : []),
         ]}
       />
-      <LanguageToggle />
-      <button
-        type="button"
-        className="btn icon"
-        title={t("ui.editor.preferences")}
-        aria-label={t("ui.editor.preferences")}
-        onClick={() => void run("settings.open")}
-      >
-        <Icon name="settings" />
-      </button>
+      {level < FOLD_PREFS && (
+        <>
+          <LanguageToggle />
+          <button
+            type="button"
+            className="btn icon"
+            title={t("ui.editor.preferences")}
+            aria-label={t("ui.editor.preferences")}
+            onClick={() => void run("settings.open")}
+          >
+            <Icon name="settings" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

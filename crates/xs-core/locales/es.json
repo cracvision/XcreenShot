@@ -2965,7 +2965,8 @@
         "highlight_yellow": "Círculo amarillo",
         "highlight_accent": "Círculo de acento",
         "title": "Cursor"
-      }
+      },
+      "bar_more": "Más opciones"
     },
     "multi": {
       "title": "Multicaptura",

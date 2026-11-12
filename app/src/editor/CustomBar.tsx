@@ -88,7 +88,8 @@ function ActionButton({ action }: { action: string }) {
   );
 }
 
-export function CustomBar() {
+/** `hide`: how many items at the end of the bar wait in More, when the window is narrow. */
+export function CustomBar({ hide = 0 }: { hide?: number }) {
   const { t } = useTranslation();
   const data = useToolbar((s) => s.data);
   const customizing = useToolbar((s) => s.customizing);
@@ -98,7 +99,11 @@ export function CustomBar() {
   useEffect(() => {
     void loadToolbar();
   }, []);
-  const items = data?.items ?? [];
+  const all = data?.items ?? [];
+  // While customizing, everything shows (EDT-004).
+  const shown = customizing ? all.length : Math.max(0, all.length - hide);
+  const items = all.slice(0, shown);
+  const hiddenActions = all.slice(shown).filter((i) => i.startsWith("action:"));
   const onBar = new Set(items);
   const tempShown = temp && !onBar.has(`tool:${temp}`) && available.includes(temp) ? temp : null;
 
@@ -157,6 +162,16 @@ export function CustomBar() {
           },
         })),
     })).filter((g) => g.submenu.length > 0),
+    // Commands that left a narrow bar wait here too.
+    ...hiddenActions.map((item, i) => {
+      const action = item.slice(7);
+      return {
+        id: `more-${item}`,
+        label: actionName(t, action),
+        separator: i === 0,
+        onSelect: () => performAction(action),
+      };
+    }),
     {
       id: "more-customize",
       label: t("menu.customize_toolbar"),

@@ -1955,18 +1955,20 @@ html.overlay-root.overlay-native #root {
   transform: rotate(-90deg);
 }
 
-/* Narrow windows: the share area keeps only its icons (EDT-001), and below that the
-   tools too; their tooltips keep name and key (EDT-003). */
-@media (max-width: 1199px) {
-  .tb-wide {
-    display: none;
-  }
+/* A narrow bar gets compact by steps (useFit, EDT-001): the tools' names go first, then
+   the secondary labels, then Capture's and the view switch's; tooltips keep name and key
+   (EDT-003). What does not fit then folds into menus: nothing runs over anything. */
+.editor-toolbar.fit-1 .tb-tool .tb-label {
+  display: none;
 }
 
-@media (max-width: 1449px) {
-  .tb-tool .tb-label {
-    display: none;
-  }
+.editor-toolbar.fit-2 .tb-wide {
+  display: none;
+}
+
+.editor-toolbar.fit-3 .tb-capture .tb-label,
+.editor-toolbar.fit-3 .view-switch .tb-label {
+  display: none;
 }
 
 /* Toolbar labels off (EDT-003, editor.toolbarLabels): icons only; tooltips keep names. */
@@ -2755,6 +2757,12 @@ html.overlay-root.overlay-native #root {
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+  /* Nothing shrinks under its content: the bar gets compact instead (useFit). */
+  overflow: hidden;
+}
+
+.editor-toolbar > * {
+  flex-shrink: 0;
 }
 
 .tb-group {
@@ -2763,8 +2771,9 @@ html.overlay-root.overlay-native #root {
   gap: var(--space-1);
 }
 
-.tb-spacer {
-  flex: 1;
+.editor-toolbar > .tb-spacer {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .editor-toolbar .btn {
@@ -4886,9 +4895,9 @@ body.preparing-drag * {
 /* The toolbar the user arranges (EDT-003, EDT-004). */
 .tb-custom {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
-  min-width: 0;
 }
 
 .tb-custom.customizing {
@@ -5196,6 +5205,12 @@ body.preparing-drag * {
 .lib-search {
   width: clamp(140px, 22vw, 320px);
   min-width: 0;
+}
+
+/* The search gives up its width before anything folds (useFit). */
+.editor-toolbar > .lib-search {
+  flex-shrink: 1;
+  min-width: 160px;
 }
 
 .lib-sort {
