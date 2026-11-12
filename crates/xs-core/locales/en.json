@@ -498,6 +498,10 @@
     "document_canvas_size": {
       "title": "Canvas size",
       "description": "Sets the canvas size around an anchor: growing adds space, shrinking hides what falls out (it can come back)."
+    },
+    "document_flip": {
+      "title": "Flip",
+      "description": "Flips the image and its objects (or only some objects) horizontally or vertically; text stays readable and floating images flip too."
     }
   },
   "settings": {
@@ -2264,7 +2268,8 @@
     "rotate": "Rotate",
     "revert": "Revert to original",
     "canvas": "Change canvas",
-    "canvas_size": "Canvas size"
+    "canvas_size": "Canvas size",
+    "flip": "Flip"
   },
   "editor": {
     "edited": "{{name}} — Edited"

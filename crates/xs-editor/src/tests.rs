@@ -3316,3 +3316,74 @@ fn canvas_color_size_corners_and_resolution() {
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert!(info["canvas"]["color"].is_null());
 }
+
+/// EDT-073: flipping turns the pixels and objects over (arrows point the other way,
+/// text stays readable); twice gives the original; with objectIds only those objects
+/// flip, around the box that holds them.
+#[test]
+fn flipping_the_image_and_objects() {
+    let e = env();
+    let img = image::RgbaImage::from_fn(2000, 1000, |x, _| {
+        if x < 1000 {
+            image::Rgba([255, 0, 0, 255])
+        } else {
+            image::Rgba([0, 0, 255, 255])
+        }
+    });
+    let (doc, _) = add_capture(&e.core, &img, json!({"mode": "region"}), 1.0, None).unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([100, 100], [300, 100]),
+            {"type": "text", "at": [500, 500], "text": "Hola", "style": {"size": 20}}]}),
+    );
+    let before = rendered(&e, &doc);
+    let text_before = cli(&e.core, "document.info", json!({"documentId": doc}))["objects"][1].clone();
+    cli(
+        &e.core,
+        "document.flip",
+        json!({"documentId": doc, "direction": "horizontal"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([1900.0, 100.0]));
+    assert_eq!(info["objects"][0]["to"], json!([1700.0, 100.0]), "it points left");
+    let text = &info["objects"][1];
+    assert_eq!(text["text"], text_before["text"], "the text is not mirrored");
+    let at = text["at"][0].as_f64().unwrap();
+    assert!(
+        at < 1500.0 && at > 1300.0,
+        "its box moved to the other side: {at}"
+    );
+    assert_eq!(info["undoLabel"], "Flip");
+    let out = rendered(&e, &doc);
+    assert_eq!(out.get_pixel(10, 900).0, [0, 0, 255, 255], "blue on the left");
+    // Twice: the original image.
+    cli(
+        &e.core,
+        "document.flip",
+        json!({"documentId": doc, "direction": "horizontal"}),
+    );
+    assert_eq!(rendered(&e, &doc), before);
+    // Vertically, only the arrow: it flips inside its own box.
+    let id = info["objects"][0]["id"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "document.flip",
+        json!({"documentId": doc, "direction": "vertical", "objectIds": [id]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["from"], json!([100.0, 100.0]));
+    assert_eq!(
+        info["objects"][1]["at"], text_before["at"],
+        "the text did not move"
+    );
+    assert_eq!(
+        rendered(&e, &doc).get_pixel(10, 900).0,
+        [255, 0, 0, 255],
+        "pixels unchanged"
+    );
+    // Undo brings the flipped pixels back step by step.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(rendered(&e, &doc).get_pixel(10, 900).0, [0, 0, 255, 255]);
+}

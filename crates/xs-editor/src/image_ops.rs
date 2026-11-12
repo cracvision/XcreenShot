@@ -253,6 +253,134 @@ pub fn canvas_size(doc: &mut Document, width: u32, height: u32, anchor: &str) {
     doc.frame = Some(doc.crop);
 }
 
+/// Mirrors one object across the line `x = axis` (or `y = axis` when `!horizontal`):
+/// its place and shape flip, its text stays readable (EDT-073). `text_size` measures a
+/// text box.
+pub fn mirror(o: &mut xs_core::document::Object, axis: f64, horizontal: bool, measure: Measure) {
+    let k = if horizontal { 0 } else { 1 };
+    let flip = |v: f64| 2.0 * axis - v;
+    let props = &mut o.props;
+    let point = |v: &mut Value| {
+        if let Some(a) = v.as_array_mut() {
+            if let Some(n) = a.get(k).and_then(Value::as_f64) {
+                a[k] = serde_json::json!(flip(n));
+            }
+        }
+    };
+    let rect_key = |props: &mut Map<String, Value>, key: &str| {
+        if let Some(r) = props.get_mut(key).and_then(Value::as_object_mut) {
+            let (pos, size) = if horizontal { ("x", "w") } else { ("y", "h") };
+            let (p, s) = (
+                r.get(pos).and_then(Value::as_f64).unwrap_or(0.0),
+                r.get(size).and_then(Value::as_f64).unwrap_or(0.0),
+            );
+            r.insert(pos.into(), serde_json::json!(flip(p) - s));
+        }
+    };
+    for key in ["from", "to", "at"] {
+        if o.kind == "text" && key == "at" {
+            continue;
+        }
+        if let Some(v) = props.get_mut(key) {
+            point(v);
+        }
+    }
+    for key in ["points", "tails"] {
+        if o.kind == "shape" && key == "points" {
+            continue;
+        }
+        if let Some(list) = props.get_mut(key).and_then(Value::as_array_mut) {
+            for v in list.iter_mut() {
+                point(v);
+            }
+        }
+    }
+    rect_key(props, "rect");
+    rect_key(props, "source");
+    // A polygon's corners are fractions of its box: they flip inside it.
+    if o.kind == "shape" {
+        if let Some(list) = props.get_mut("points").and_then(Value::as_array_mut) {
+            for v in list.iter_mut() {
+                if let Some(a) = v.as_array_mut() {
+                    if let Some(n) = a.get(k).and_then(Value::as_f64) {
+                        a[k] = serde_json::json!(1.0 - n);
+                    }
+                }
+            }
+        }
+        // A triangle points up: upside down it is a polygon pointing down.
+        if !horizontal && props["style"]["shapeType"] == "triangle" {
+            props.insert(
+                "points".into(),
+                serde_json::json!([[0.5, 1.0], [1.0, 0.0], [0.0, 0.0]]),
+            );
+            if let Some(st) = props.get_mut("style").and_then(Value::as_object_mut) {
+                st.insert("shapeType".into(), serde_json::json!("polygon"));
+            }
+        }
+    }
+    // A text box: its top-left corner moves by its width (or height).
+    if o.kind == "text" {
+        let size = measure(props).unwrap_or((0.0, 0.0));
+        let side = if horizontal { size.0 } else { size.1 };
+        if let Some(a) = props.get_mut("at").and_then(Value::as_array_mut) {
+            if let Some(n) = a.get(k).and_then(Value::as_f64) {
+                a[k] = serde_json::json!(flip(n) - side);
+            }
+        }
+    }
+    if let Some(r) = props.get("rotation").and_then(Value::as_f64) {
+        props.insert("rotation".into(), serde_json::json!(-r));
+    }
+}
+
+/// Flips the document (EDT-073): the original pixels and every object. Returns the new
+/// pixels; floating images' pictures are flipped by the caller.
+pub fn flip(doc: &mut Document, pixels: &RgbaImage, horizontal: bool, measure: Measure) -> RgbaImage {
+    let out = if horizontal {
+        imageops::flip_horizontal(pixels)
+    } else {
+        imageops::flip_vertical(pixels)
+    };
+    let (bw, bh) = (pixels.width() as f64, pixels.height() as f64);
+    let c = doc.crop;
+    let (cw, ch) = (doc.canvas.width as f64, doc.canvas.height as f64);
+    for o in doc.objects.iter_mut() {
+        mirror(
+            o,
+            if horizontal { cw / 2.0 } else { ch / 2.0 },
+            horizontal,
+            measure,
+        );
+    }
+    for layer in doc.flattened.iter_mut() {
+        for o in layer.objects.iter_mut() {
+            mirror(
+                o,
+                if horizontal { bw / 2.0 } else { bh / 2.0 },
+                horizontal,
+                measure,
+            );
+        }
+    }
+    // The canvas over the flipped pixels.
+    doc.crop = if horizontal {
+        PixelRect {
+            x: bw as i64 - (c.x + c.width as i64),
+            ..c
+        }
+    } else {
+        PixelRect {
+            y: bh as i64 - (c.y + c.height as i64),
+            ..c
+        }
+    };
+    doc.crop_history.clear();
+    doc.frame = None;
+    doc.patches.clear();
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

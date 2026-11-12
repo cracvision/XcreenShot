@@ -711,6 +711,18 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["degrees"],
             ))
             .result(json!({"type": "object"})),
+        B::new("document.flip", &["EDT-073", "EDT-119"])
+            .mutates()
+            .positional(&["direction"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "direction": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "Only these objects, around the box that holds them; without it, the image and every object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
         B::new("document.revert", &["EDT-076", "EDT-119"])
             .mutates()
             .params(params(json!({"documentId": document_id()}), &[]))

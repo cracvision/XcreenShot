@@ -498,6 +498,10 @@
     "document_canvas_size": {
       "title": "Tamaño del lienzo",
       "description": "Pone el tamaño del lienzo alrededor de un ancla: crecer añade espacio, reducir oculta lo que queda fuera (se puede recuperar)."
+    },
+    "document_flip": {
+      "title": "Voltear",
+      "description": "Voltea la imagen y sus objetos (o solo algunos objetos) en horizontal o en vertical; el texto sigue legible y las imágenes flotantes también se voltean."
     }
   },
   "settings": {
@@ -2264,7 +2268,8 @@
     "rotate": "Girar",
     "revert": "Volver al original",
     "canvas": "Cambiar lienzo",
-    "canvas_size": "Tamaño del lienzo"
+    "canvas_size": "Tamaño del lienzo",
+    "flip": "Voltear"
   },
   "editor": {
     "edited": "{{name}} — Editado"

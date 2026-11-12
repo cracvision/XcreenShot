@@ -1686,6 +1686,66 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
             }
             "history.canvas"
         }
+        "flip" => {
+            let horizontal = match p.get("direction").and_then(Value::as_str) {
+                Some("vertical") => false,
+                Some("horizontal") | None => true,
+                Some(other) => return Err(bad("direction", other)),
+            };
+            let picked: Vec<String> = p
+                .get("objectIds")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                .unwrap_or_default();
+            if picked.is_empty() {
+                // The whole image and every object (EDT-073).
+                let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
+                let src = pixels_with_patches(&doc, &base);
+                pixels = Some(image_ops::flip(&mut next, &src, horizontal, &measure));
+            } else {
+                // Object > Flip: only those, around the box that holds them.
+                let objs: Vec<&Object> = doc.objects.iter().filter(|o| picked.contains(&o.id)).collect();
+                if objs.len() != picked.len() {
+                    return Err(bad("objectIds", "some of them do not exist"));
+                }
+                let b = transform::bounds(objs.iter().copied(), &measure)
+                    .ok_or_else(|| bad("objectIds", "they have no size"))?;
+                let axis = if horizontal {
+                    b.x + b.w / 2.0
+                } else {
+                    b.y + b.h / 2.0
+                };
+                for o in next.objects.iter_mut().filter(|o| picked.contains(&o.id)) {
+                    image_ops::mirror(o, axis, horizontal, &measure);
+                }
+            }
+            // Floating images flip their pictures too.
+            let flips: Vec<(String, String)> = next
+                .objects
+                .iter()
+                .filter(|o| o.kind == "image" && (picked.is_empty() || picked.contains(&o.id)))
+                .filter_map(|o| Some((o.id.clone(), o.props.get("image")?.as_str()?.to_string())))
+                .collect();
+            for (oid, name) in flips {
+                let Some(img) = ed
+                    .store
+                    .image_file(&id, &name)
+                    .and_then(|b| xs_image::encode::decode(&b).ok())
+                else {
+                    continue;
+                };
+                let flipped = if horizontal {
+                    image::imageops::flip_horizontal(&img)
+                } else {
+                    image::imageops::flip_vertical(&img)
+                };
+                let new = store_picture(core, &id, &flipped, lang)?;
+                if let Some(o) = next.object_mut(&oid) {
+                    o.props.insert("image".into(), json!(new));
+                }
+            }
+            "history.flip"
+        }
         "canvas_size" => {
             let (w, h) = (
                 num("width").unwrap_or(doc.canvas.width as f64),
@@ -3602,6 +3662,9 @@ pub fn extension() -> Extension {
         ));
         on!("document.rotate", |core, ctx, p| image_command(
             &core, ctx, &p, "rotate"
+        ));
+        on!("document.flip", |core, ctx, p| image_command(
+            &core, ctx, &p, "flip"
         ));
         on!("document.revert", |core, ctx, p| image_command(
             &core, ctx, &p, "revert"
