@@ -83,6 +83,7 @@ import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
 import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
+import { snapMove, snapPoint, type Guide, type Spacing } from "./snap";
 import { hasRadius, MAX_TAILS } from "./callouts";
 import { corners as polyCorners, fromPoints as polyFromPoints, refit, sideAt } from "./polygon";
 import {
@@ -155,14 +156,24 @@ type Drag =
       /** Let go without moving: a click (a step goes there). */
       click?: boolean;
     }
-  | { kind: "move"; ids: string[]; start: Point; delta: Point; moved: boolean; copy?: boolean }
+  | {
+      kind: "move";
+      ids: string[];
+      start: Point;
+      delta: Point;
+      moved: boolean;
+      copy?: boolean;
+      /** Snapping lines and equal spaces shown while moving (EDT-084). */
+      guides?: Guide[];
+      spacings?: Spacing[];
+    }
   // A selection box drawn with Move over an empty place (EDT-079).
   | { kind: "band"; start: Point; end: Point; touch: boolean; add: boolean }
   | { kind: "end"; id: string; end: "from" | "to"; other: Point; point: Point }
-  | { kind: "resize"; id: string; handle: BoxHandle; start: Box; box: Box }
+  | { kind: "resize"; id: string; handle: BoxHandle; start: Box; box: Box; guides?: Guide[] }
   | { kind: "rotate"; id: string; start: Box; box: Box }
   // Several objects stretched or turned with their common box (EDT-080).
-  | { kind: "mresize"; handle: BoxHandle; start: Box; box: Box }
+  | { kind: "mresize"; handle: BoxHandle; start: Box; box: Box; guides?: Guide[] }
   | { kind: "mrotate"; start: Box; angle: number }
   // A callout's tail tip (index null: a new one), radius or body alone (EDT-028).
   | { kind: "tail"; id: string; index: number | null; point: Point; start: Point }
@@ -211,6 +222,14 @@ const ANCHOR_OF: Record<BoxHandle, string> = {
 /** How far the corners' rhombus sits from the top-right corner at radius 0, in screen
  * pixels (EDT-075). */
 const CORNER_GAP = 16;
+
+/** Snapping distance in screen pixels, whatever the zoom (EDT-084). */
+const SNAP = 6;
+
+/** Thicker guides with the system's increased contrast (APP-045). */
+const highContrast = (): boolean =>
+  typeof window !== "undefined" &&
+  Boolean(window.matchMedia?.("(prefers-contrast: more), (forced-colors: active)").matches);
 
 /** The size or radius by the pointer while a handle is dragged. */
 function DragLabel({ x, y, text }: { x: number; y: number; text: string }) {
@@ -426,6 +445,7 @@ export function Canvas({ doc }: Props) {
   const textEdit = useEditor((s) => s.textEdit);
   const cropState = useEditor((s) => s.cropRect);
   const autoExpand = useSetting("editor.autoExpandCanvas", true);
+  const snapOn = useSetting("editor.snap", true);
   const scaleStrokes = useSetting("editor.scaleStrokes", true);
   const { setSelection, setView, showError } = useEditor.getState();
   // Another document: no group is entered (EDT-082).
@@ -1319,9 +1339,37 @@ export function Canvas({ doc }: Props) {
    * moving and again on release, so the last position counts even when the release
    * comes before the screen caught up with the moves.
    */
+  /** The boxes of the objects not in `except`, to snap to (EDT-084). */
+  const snapTargets = (except: string[]): RectBox[] =>
+    doc.objects
+      .filter((o) => !except.includes(o.id))
+      .map((o) => boundsOf([o]))
+      .filter((r): r is RectBox => r !== null);
+  const canvasRect: RectBox = { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height };
+  /** Snapping applies unless it is off or Ctrl (Cmd) is held (EDT-084). */
+  const snapping = (e: { ctrlKey?: boolean; metaKey?: boolean }) =>
+    snapOn && !e.ctrlKey && !e.metaKey;
+  /** A resize handle's point snapped to the lines near it (EDT-084). */
+  const snapHandle = (
+    start: Box,
+    handle: BoxHandle,
+    p: Point,
+    e: { ctrlKey?: boolean; metaKey?: boolean },
+    except: string[],
+  ): { point: Point; guides: Guide[] } => {
+    if (!snapping(e) || start.rotation !== 0) return { point: p, guides: [] };
+    return snapPoint(
+      p,
+      { x: /[ew]/.test(handle), y: /[ns]/.test(handle) },
+      canvasRect,
+      snapTargets(except),
+      SNAP / (lay?.scale ?? 1),
+    );
+  };
+
   const step = (
     d: Exclude<Drag, { kind: "pan" }>,
-    e: { shiftKey: boolean; altKey: boolean },
+    e: { shiftKey: boolean; altKey: boolean; ctrlKey?: boolean; metaKey?: boolean },
     p: Point,
   ): Drag => {
     switch (d.kind) {
@@ -1371,7 +1419,21 @@ export function Canvas({ doc }: Props) {
           else dx = 0;
         }
         const isMoved = d.moved || Math.hypot(dx, dy) * (lay?.scale ?? 1) >= DRAG_THRESHOLD;
-        return { ...d, delta: isMoved ? [dx, dy] : [0, 0], moved: isMoved };
+        if (!isMoved) return { ...d, delta: [0, 0], moved: false, guides: [], spacings: [] };
+        const start = snapping(e)
+          ? boundsOf(doc.objects.filter((o) => d.ids.includes(o.id)))
+          : null;
+        if (!start) return { ...d, delta: [dx, dy], moved: true, guides: [], spacings: [] };
+        // Edges, centers and equal spaces (EDT-084); Shift keeps its axis.
+        const r = snapMove(start, dx, dy, canvasRect, snapTargets(d.ids), SNAP / (lay?.scale ?? 1));
+        const free = (axis: "x" | "y") => !e.shiftKey || (axis === "x" ? dy === 0 : dx === 0);
+        return {
+          ...d,
+          delta: [free("x") ? r.dx : dx, free("y") ? r.dy : dy],
+          moved: true,
+          guides: r.guides.filter((g) => free(g.axis)),
+          spacings: r.spacings.filter((s) => free(s.axis)),
+        };
       }
       case "resize": {
         // An image keeps its proportions from a corner; Shift frees them (EDT-078).
@@ -1381,14 +1443,24 @@ export function Canvas({ doc }: Props) {
         // A stamp keeps its proportions like a picture; Shift lets it stretch (EDT-031).
         const picture = image || kind === "stamp";
         const keepRatio = kind === "step" || (picture && corner ? !e.shiftKey : e.shiftKey);
-        return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
+        const s = snapHandle(d.start, d.handle, p, e, [d.id]);
+        return {
+          ...d,
+          box: resize(d.start, d.handle, s.point, { keepRatio, fromCenter: e.altKey }),
+          guides: s.guides,
+        };
       }
       case "rotate":
         return { ...d, box: { ...d.start, rotation: rotateTo(d.start, p, e.shiftKey) } };
       case "mresize": {
         // From a corner the proportions stay, as with pictures; Shift frees them.
         const keepRatio = d.handle.length === 2 ? !e.shiftKey : e.shiftKey;
-        return { ...d, box: resize(d.start, d.handle, p, { keepRatio, fromCenter: e.altKey }) };
+        const s = snapHandle(d.start, d.handle, p, e, selection);
+        return {
+          ...d,
+          box: resize(d.start, d.handle, s.point, { keepRatio, fromCenter: e.altKey }),
+          guides: s.guides,
+        };
       }
       case "mrotate":
         return { ...d, angle: normalized(rotateTo(d.start, p, e.shiftKey)) };
@@ -2494,6 +2566,51 @@ export function Canvas({ doc }: Props) {
                         />
                       )}
                       {drag?.kind === "cradius" && <DragLabel x={rx} y={ry} text={`${r} px`} />}
+                    </Group>
+                  );
+                })()}
+              {(drag?.kind === "move" || drag?.kind === "resize" || drag?.kind === "mresize") &&
+                (() => {
+                  // Snapping guides and equal spaces (EDT-084).
+                  const width = highContrast() ? 2 : 1;
+                  const guides = drag.guides ?? [];
+                  const spacings = drag.kind === "move" ? (drag.spacings ?? []) : [];
+                  return (
+                    <Group listening={false}>
+                      {guides.map((g, i) => (
+                        <Line
+                          key={`g${i}`}
+                          points={
+                            g.axis === "x"
+                              ? [...toScreen([g.at, g.from]), ...toScreen([g.at, g.to])]
+                              : [...toScreen([g.from, g.at]), ...toScreen([g.to, g.at])]
+                          }
+                          stroke={ACCENT}
+                          strokeWidth={width}
+                        />
+                      ))}
+                      {spacings.map((s, i) => {
+                        const a =
+                          s.axis === "x" ? toScreen([s.a, s.cross]) : toScreen([s.cross, s.a]);
+                        const b =
+                          s.axis === "x" ? toScreen([s.b, s.cross]) : toScreen([s.cross, s.b]);
+                        const label = `${Math.round(Math.abs(s.b - s.a))}`;
+                        return (
+                          <Group key={`s${i}`}>
+                            <Line
+                              points={[...a, ...b]}
+                              stroke={ACCENT}
+                              strokeWidth={width}
+                              dash={[3, 2]}
+                            />
+                            <DragLabel
+                              x={(a[0] + b[0]) / 2 - 20}
+                              y={(a[1] + b[1]) / 2 - 24}
+                              text={label}
+                            />
+                          </Group>
+                        );
+                      })}
                     </Group>
                   );
                 })()}

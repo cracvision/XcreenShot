@@ -738,6 +738,12 @@ export function performAction(action: string): boolean {
     case "toolbar_labels":
       toggleToolbarLabels();
       return true;
+    case "snap": {
+      // Image > Snapping (EDT-084).
+      const current = useApp.getState().settings.find((s) => s.key === "editor.snap");
+      run("settings.set", { key: "editor.snap", value: current?.value === false }).catch(fail);
+      return true;
+    }
     case "recover":
       void showRecovery();
       return true;

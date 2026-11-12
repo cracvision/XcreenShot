@@ -617,6 +617,7 @@ pub fn slots() -> Vec<Slot> {
         ),
         editor("editor.fit_canvas", "editor.action", r#"{"action":"fit_canvas"}"#),
         editor("editor.trim", "editor.action", r#"{"action":"trim"}"#),
+        editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
         editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
         editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
         editor(
@@ -833,6 +834,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.rotate_right" => "Ctrl+KeyR",
                 "editor.crop_to_canvas" => "Ctrl+KeyK",
                 "editor.trim" => "Ctrl+Shift+KeyX",
+                "editor.snap" => "Ctrl+Semicolon",
                 "editor.zoom_in" => "Ctrl+Equal",
                 "editor.zoom_out" => "Ctrl+Minus",
                 "editor.zoom_actual" => "Ctrl+Digit0",

@@ -739,6 +739,10 @@
     "editor_cursorStylePreview": {
       "label": "Style preview by the pointer",
       "description": "With a drawing tool, a small sample of its current style follows the pointer over the canvas."
+    },
+    "editor_snap": {
+      "label": "Snap objects into place",
+      "description": "When you move or resize an object, its edges and center line up with the canvas and other objects, and with equal spaces between them. Hold Ctrl (Cmd) to move freely."
     }
   },
   "errors": {
@@ -928,7 +932,8 @@
       "editor_flip_objects_vertical": "Flip objects vertically",
       "editor_crop_to_canvas": "Crop to canvas",
       "editor_fit_canvas": "Fit canvas to content",
-      "editor_trim": "Trim edges"
+      "editor_trim": "Trim edges",
+      "editor_snap": "Snapping"
     }
   },
   "tray": {
@@ -1060,7 +1065,8 @@
     "revert": "Revert to original…",
     "crop_to_canvas": "Crop to canvas",
     "fit_canvas": "Fit canvas to content",
-    "trim": "Trim edges…"
+    "trim": "Trim edges…",
+    "snap": "Snapping"
   },
   "notify": {
     "ping_title": "XcreenShot is working",

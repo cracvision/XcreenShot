@@ -739,6 +739,10 @@
     "editor_cursorStylePreview": {
       "label": "Vista previa del estilo junto al puntero",
       "description": "Con una herramienta de dibujo, una muestra pequeña de su estilo actual acompaña al puntero sobre el lienzo."
+    },
+    "editor_snap": {
+      "label": "Ajuste magnético",
+      "description": "Al mover o cambiar de tamaño un objeto, sus bordes y su centro se alinean con el lienzo y con los demás objetos, y con espacios iguales entre ellos. Mantén Ctrl (Cmd) para moverlo libremente."
     }
   },
   "errors": {
@@ -928,7 +932,8 @@
       "editor_flip_objects_vertical": "Voltear objetos en vertical",
       "editor_crop_to_canvas": "Recortar al lienzo",
       "editor_fit_canvas": "Ajustar el lienzo al contenido",
-      "editor_trim": "Recortar bordes"
+      "editor_trim": "Recortar bordes",
+      "editor_snap": "Ajuste magnético"
     }
   },
   "tray": {
@@ -1060,7 +1065,8 @@
     "revert": "Volver al original…",
     "crop_to_canvas": "Recortar al lienzo",
     "fit_canvas": "Ajustar el lienzo al contenido",
-    "trim": "Recortar bordes…"
+    "trim": "Recortar bordes…",
+    "snap": "Ajuste magnético"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",

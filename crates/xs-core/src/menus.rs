@@ -299,6 +299,15 @@ fn editor_menus() -> Vec<MenuEntry> {
                         ),
                     ],
                 },
+                Separator,
+                // A tick: Image > Snapping (EDT-084).
+                MenuEntry::Command {
+                    id: "editor.snap",
+                    label: "menu.snap",
+                    command: "editor.action",
+                    params: json!({ "action": "snap" }),
+                    checked: Some("editor.snap"),
+                },
             ],
         },
         Submenu {

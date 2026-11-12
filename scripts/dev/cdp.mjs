@@ -8,6 +8,8 @@
 //   node cdp.mjs click x y [ctrl|shift|alt…]
 //   node cdp.mjs drag x1 y1 x2 y2 [ctrl|shift|alt…]
 //   node cdp.mjs move x y
+//   node cdp.mjs press x1 y1 x2 y2 [ctrl|shift|alt…]   a drag that is not let go yet
+//   node cdp.mjs release x y                          lets go of it
 //   node cdp.mjs key <key> <code> [ctrl|shift|alt…]   e.g. key z KeyZ ctrl
 //   node cdp.mjs type <text>              types into the focused field
 //   node cdp.mjs wheel x y deltaY [ctrl…]
@@ -146,6 +148,23 @@ switch (cmd) {
       );
     }
     await mouse("mouseReleased", x2, y2, m);
+    break;
+  }
+  case "press": {
+    // Like drag, without letting go: to look at what a gesture shows meanwhile.
+    const [x1, y1, x2, y2] = args.slice(0, 4).map(Number);
+    const m = mods(args.slice(4));
+    await mouse("mouseMoved", x1, y1, m, { buttons: 0, button: "none" });
+    await mouse("mousePressed", x1, y1, m);
+    const steps = 12;
+    for (let i = 1; i <= steps; i++) {
+      await mouse("mouseMoved", x1 + ((x2 - x1) * i) / steps, y1 + ((y2 - y1) * i) / steps, m);
+    }
+    break;
+  }
+  case "release": {
+    const [x, y] = args.slice(0, 2).map(Number);
+    await mouse("mouseReleased", x, y, mods(args.slice(2)));
     break;
   }
   case "type": {

@@ -252,6 +252,7 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "EDT-071",
         ),
+        def("editor.snap", "editor", boolean(), json!(true), "EDT-084"),
         def(
             "editor.deleteCroppedContent",
             "editor",

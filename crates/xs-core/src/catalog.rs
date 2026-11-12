@@ -1327,7 +1327,7 @@ pub const TOOLS: [&str; 20] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 89] = [
+pub const EDITOR_ACTIONS: [&str; 90] = [
     "open",
     "save",
     "save_as",
@@ -1402,6 +1402,8 @@ pub const EDITOR_ACTIONS: [&str; 89] = [
     "crop_to_canvas",
     "fit_canvas",
     "trim",
+    // Image > Snapping (EDT-084).
+    "snap",
     // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
     "effect_border",
     "effect_edges",

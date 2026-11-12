@@ -285,6 +285,7 @@ export function useMenuBar(): void {
   const anyOpen = useEditor((s) => s.documents.length > 0);
   const panel = usePanel((s) => s.visible);
   const labels = useSetting("editor.toolbarLabels", true);
+  const snap = useSetting("editor.snap", true);
   const tray = useTray((s) => s.visible);
   const inTray = useEditor((s) => s.documents.filter((d) => d.shown).length);
   const hasPrev = useEditor((s) => neighbour(s.documents, s.active, -1) !== null);
@@ -371,6 +372,7 @@ export function useMenuBar(): void {
       enabled[`editor.${a}`] = (enabled[`editor.${a}`] ?? false) || hasPixels;
     // The Image menu (EDT-069 to EDT-077) and Image > Effects (EDT-053).
     for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc;
+    enabled["editor.snap"] = !inLibrary;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;
     enabled["editor.invert_selection"] = hasPixels;
@@ -379,6 +381,7 @@ export function useMenuBar(): void {
     const checked = {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
+      "editor.snap": snap,
       "editor.tray": tray,
     };
     // The drawn menu bar (Windows) reads it here; the system one (macOS) from the shell.
@@ -397,6 +400,7 @@ export function useMenuBar(): void {
     anyOpen,
     panel,
     labels,
+    snap,
     tray,
     inLibrary,
     inTray,
