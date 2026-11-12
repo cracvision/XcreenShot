@@ -48,6 +48,10 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Sesión del 2026-11-11/12 (madrugada): M2.2 empezada.**
+  - Paso (EDT-035): marcadores numerados en seis formas con el valor siempre derecho; Editar valor, Reiniciar secuencia y Renumerar (`document.steps`).
+  - Globo (EDT-028): nueve formas, hasta ocho colas (recta, curva, flecha; burbujas en Pensamiento), un solo contorno, sombreado, radio, Ajustar al texto; tiradores de puntas, **+**, radio y ancla.
+  - Arreglos de paso: los diálogos ponen el foco en su campo (Editar valor); `scripts/dev/cdp.mjs type` escribe en el campo con foco.
 - **Sesión del 2026-11-11 (noche, continuación): M2.1 terminada.**
   - Agrupar y desagrupar (EDT-082, `Ctrl+G` / `Ctrl+Shift+G`): doble clic entra en el grupo.
   - Transformar varios (EDT-080): el recuadro común tiene tiradores de tamaño y de giro (`document.transform`); la casilla **Escalar grosores y texto** en Propiedades (`editor.scaleStrokes`); **Igualar ancho / alto** en Objeto > Distribuir y en Propiedades. Propiedades ya muestra las selecciones de tipos distintos.
@@ -221,7 +225,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
    - **M2.1 terminada (2026-11-11):** selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083), bloquear (EDT-085), agrupar (EDT-082), transformar varios con Igualar ancho/alto (EDT-080) y aplanar/desaplanar (EDT-091). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1"). Falta en EDT-091 el criterio del Borrador: llega con las herramientas de píxeles (M2.3).
    - De paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba); y el diálogo Recuperar trabajo se salía del panel con rutas largas.
-   - **Sigue: M2.2** (herramientas de anotación), empezando por Paso (EDT-035) y Globo (EDT-028).
+   - **M2.2 en curso:** hechos Paso (EDT-035, tecla `N`) y Globo (EDT-028, tecla `C`). Decisiones en `QUESTIONS.md` (sección "M2, entrega 2"). Siguen Línea, más formas, Resaltador, Lápiz, Lupa, Foco, Sellos y Emoji, Simplificar.
 
 ## Decisiones vigentes que conviene recordar
 
