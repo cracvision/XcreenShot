@@ -586,6 +586,14 @@
     "library_check": {
       "title": "Check the library",
       "description": "Lists files that cannot be read and metadata files without their item, and whether the folder can be written; can clean up those metadata files."
+    },
+    "library_location": {
+      "title": "Library location",
+      "description": "Where the library is, and what a folder holds before choosing it."
+    },
+    "library_relocate": {
+      "title": "Change the library location",
+      "description": "Moves the library to another folder, starts an empty one there or uses the one already there."
     }
   },
   "settings": {
@@ -918,7 +926,8 @@
     "template_exists": "There is already a template called {{name}}.",
     "invalid_tag": "\"{{tag}}\" is not a valid tag: use 1 to 50 characters.",
     "too_many_tags": "{{name}} would have more than {{max}} tags.",
-    "tag_exists": "There is already a tag {{tag}}. Merge them?"
+    "tag_exists": "There is already a tag {{tag}}. Merge them?",
+    "library_moving": "The library is being moved. Wait until it finishes or cancel it."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2634,7 +2643,7 @@
       "item_menu": "Library item",
       "size": "{{width}} × {{height}} px",
       "location": "Location",
-      "location_help": "Each capture is saved here as an .xshot file. Changing the location arrives later.",
+      "location_help": "Each capture is saved here as an .xshot file.",
       "search": "Search the library",
       "layout": "View",
       "layout_grid": "Grid",
@@ -2733,7 +2742,27 @@
       "check_orphans_other": "{{count}} metadata files have no item.",
       "check_clean": "Clean up",
       "check_readonly": "XcreenShot cannot write in the library folder. Check its permissions or choose another location.",
-      "check_show": "Show"
+      "check_show": "Show",
+      "change": "Change…",
+      "show": "Show",
+      "choose_folder": "Choose the new library folder",
+      "move_title": "Library in {{path}}",
+      "move_here": "Move the library here",
+      "move_here_help_one": "Its {{count}} item and its tags go to the new folder.",
+      "move_here_help_other": "Its {{count}} items and their tags go to the new folder.",
+      "start_empty": "Start an empty library here",
+      "start_empty_help": "The current library stays where it is.",
+      "use_there": "Use that library",
+      "use_there_help_one": "The folder already has a library ({{count}} item). The current one stays where it is.",
+      "use_there_help_other": "The folder already has a library ({{count}} items). The current one stays where it is.",
+      "not_writable": "XcreenShot cannot write in that folder.",
+      "synced_folder": "This folder syncs to the cloud: each computer keeps its own index.",
+      "moving": "Moving the library: {{done}} of {{total}} items",
+      "moved_one": "Library moved: {{count}} item.",
+      "moved_other": "Library moved: {{count}} items.",
+      "move_cancelled": "Move cancelled: everything is back in its place.",
+      "move_failed_one": "{{count}} file could not be moved and stayed where it was.",
+      "move_failed_other": "{{count}} files could not be moved and stayed where they were."
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

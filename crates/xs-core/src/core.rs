@@ -171,6 +171,15 @@ impl Core {
             .expect("service type")
     }
 
+    /// Replaces the `T` service with `value` (the library moved, LIB-028). Holders of
+    /// the old one keep it until they let it go.
+    pub fn replace_service<T: std::any::Any + Send + Sync>(&self, value: T) -> Arc<T> {
+        let id = std::any::TypeId::of::<T>();
+        let new = Arc::new(value);
+        self.services.write().unwrap().insert(id, new.clone());
+        new
+    }
+
     pub fn add_quit_guard(&self, guard: Arc<dyn QuitGuard>) {
         self.quit_guards.write().unwrap().push(guard);
     }

@@ -4492,3 +4492,71 @@ fn own_templates_round_trip() {
         .iter()
         .any(|t| t["id"] == tid));
 }
+
+/// LIB-028: moving the library takes its items and their tags to the new folder, an
+/// open document follows its file, and automation cannot move it.
+#[test]
+fn moving_the_library() {
+    let library = tempfile::tempdir().unwrap();
+    let recovery = tempfile::tempdir().unwrap();
+    let elsewhere = tempfile::tempdir().unwrap();
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![
+            extension(),
+            xs_library::extension_with(Some(library.path().to_path_buf())),
+        ],
+    );
+    editor(&core).set_folders(library.path().to_path_buf(), recovery.path().to_path_buf());
+    let (doc, path) = add_capture(
+        &core,
+        &white(200, 100),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Test"),
+    )
+    .unwrap();
+    assert!(path.starts_with(library.path()));
+    let lib = xs_library::library(&core);
+    lib.scan();
+    let id = lib.list()[0].id.clone();
+    cli(&core, "library.tag", json!({"ids": [id], "add": ["Cliente"]}));
+    let to = elsewhere.path().join("Moved");
+    let refused = call(
+        &core,
+        Source::Cli,
+        "library.relocate",
+        json!({"path": to, "mode": "move"}),
+    );
+    assert!(refused.is_err(), "automation cannot move the library");
+    call(
+        &core,
+        Source::Ui,
+        "library.relocate",
+        json!({"path": to, "mode": "move"}),
+    )
+    .unwrap();
+    let start = Instant::now();
+    while cli(&core, "library.location", json!({}))["path"] != json!(to) {
+        assert!(
+            start.elapsed() < Duration::from_secs(20),
+            "the move did not finish"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let moved = editor(&core)
+        .store
+        .with(&doc, |d| d.path.clone())
+        .flatten()
+        .unwrap();
+    assert!(moved.starts_with(&to) && moved.exists(), "{moved:?}");
+    assert!(xs_library::scan::walk(library.path()).is_empty());
+    let lib = xs_library::library(&core);
+    lib.scan();
+    let items = lib.list();
+    assert_eq!(items.len(), 1);
+    assert_eq!(
+        (items[0].id.as_str(), items[0].tags.clone()),
+        (id.as_str(), vec!["Cliente".to_string()])
+    );
+}

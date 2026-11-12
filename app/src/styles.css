@@ -4935,6 +4935,34 @@ body.preparing-drag * {
   fill: currentColor;
 }
 
+.lib-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.lib-move progress {
+  flex: 1;
+  min-width: 120px;
+}
+
+.move-options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.move-option {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-height: 56px;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: normal;
+}
+
 .check-list {
   display: grid;
   gap: 4px;

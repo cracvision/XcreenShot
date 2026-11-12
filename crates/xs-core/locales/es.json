@@ -586,6 +586,14 @@
     "library_check": {
       "title": "Comprobar la biblioteca",
       "description": "Lista los archivos que no se pueden leer y los archivos de metadatos sin su elemento, y si se puede escribir en la carpeta; puede limpiar esos archivos de metadatos."
+    },
+    "library_location": {
+      "title": "Ubicación de la biblioteca",
+      "description": "Dónde está la biblioteca, y qué tiene una carpeta antes de elegirla."
+    },
+    "library_relocate": {
+      "title": "Cambiar la ubicación de la biblioteca",
+      "description": "Mueve la biblioteca a otra carpeta, empieza una vacía allí o usa la que ya hay."
     }
   },
   "settings": {
@@ -918,7 +926,8 @@
     "template_exists": "Ya hay una plantilla llamada {{name}}.",
     "invalid_tag": "\"{{tag}}\" no es una etiqueta válida: usa de 1 a 50 caracteres.",
     "too_many_tags": "{{name}} tendría más de {{max}} etiquetas.",
-    "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?"
+    "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?",
+    "library_moving": "La biblioteca se está moviendo. Espera a que termine o cancélalo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2634,7 +2643,7 @@
       "item_menu": "Elemento de la biblioteca",
       "size": "{{width}} × {{height}} px",
       "location": "Ubicación",
-      "location_help": "Cada captura se guarda aquí como archivo .xshot. Cambiar la ubicación llegará más adelante.",
+      "location_help": "Cada captura se guarda aquí como archivo .xshot.",
       "search": "Buscar en la biblioteca",
       "layout": "Vista",
       "layout_grid": "Cuadrícula",
@@ -2733,7 +2742,27 @@
       "check_orphans_other": "{{count}} archivos de metadatos no tienen su elemento.",
       "check_clean": "Limpiar",
       "check_readonly": "XcreenShot no puede escribir en la carpeta de la biblioteca. Revisa sus permisos o elige otra ubicación.",
-      "check_show": "Mostrar"
+      "check_show": "Mostrar",
+      "change": "Cambiar…",
+      "show": "Mostrar",
+      "choose_folder": "Elige la carpeta nueva de la biblioteca",
+      "move_title": "Biblioteca en {{path}}",
+      "move_here": "Mover la biblioteca aquí",
+      "move_here_help_one": "Su {{count}} elemento y sus etiquetas van a la carpeta nueva.",
+      "move_here_help_other": "Sus {{count}} elementos y sus etiquetas van a la carpeta nueva.",
+      "start_empty": "Empezar una biblioteca vacía aquí",
+      "start_empty_help": "La biblioteca actual se queda donde está.",
+      "use_there": "Usar esa biblioteca",
+      "use_there_help_one": "La carpeta ya tiene una biblioteca ({{count}} elemento). La actual se queda donde está.",
+      "use_there_help_other": "La carpeta ya tiene una biblioteca ({{count}} elementos). La actual se queda donde está.",
+      "not_writable": "XcreenShot no puede escribir en esa carpeta.",
+      "synced_folder": "Esta carpeta se sincroniza con la nube: cada equipo guarda su propio índice.",
+      "moving": "Moviendo la biblioteca: {{done}} de {{total}} elementos",
+      "moved_one": "Biblioteca movida: {{count}} elemento.",
+      "moved_other": "Biblioteca movida: {{count}} elementos.",
+      "move_cancelled": "Movimiento cancelado: todo volvió a su sitio.",
+      "move_failed_one": "{{count}} archivo no se pudo mover y quedó donde estaba.",
+      "move_failed_other": "{{count}} archivos no se pudieron mover y quedaron donde estaban."
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

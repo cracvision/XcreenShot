@@ -1420,6 +1420,35 @@ pub fn specs() -> Vec<CommandSpec> {
                 "tags": {"type": "array", "description": "{tag, count}"},
                 "changed": {"type": ["integer", "null"], "description": "Items changed"}
             }})),
+        B::new("library.location", &["LIB-027", "LIB-028", "LIB-034"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["get", "inspect"], "default": "get"},
+                    "path": {"type": "string", "description": "inspect: a folder, what it holds"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"},
+                "default": {"type": "string"},
+                "synced": {"type": "boolean"},
+                "moving": {"type": "boolean"},
+                "items": {"type": "integer", "description": "inspect: items in the folder"},
+                "library": {"type": "boolean", "description": "inspect: it holds a library of XcreenShot"}
+            }})),
+        B::new("library.relocate", &["LIB-028"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "The new folder"},
+                    "mode": {"type": "string", "enum": ["move", "empty", "use"], "default": "move", "description": "move the items there, start an empty library there, or use the library already there"},
+                    "cancel": {"type": "boolean", "description": "Cancel the move in progress: what was moved goes back"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "started": {"type": "boolean"}, "total": {"type": "integer"}}})),
         B::new("library.rebuild", &["LIB-023", "LIB-034"])
             .mutates()
             .params(params(json!({}), &[]))

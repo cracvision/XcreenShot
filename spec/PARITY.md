@@ -314,7 +314,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-025 | Bibliotecas grandes | M2 | Must | — |
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
 | LIB-027 | Ubicación por defecto | M1 | Must | En curso |
-| LIB-028 | Cambiar o mover la biblioteca | M2 | Must | — |
+| LIB-028 | Cambiar o mover la biblioteca | M2 | Must | En curso (Windows: Preferencias > Biblioteca > Cambiar…, mover con progreso y Cancelar que devuelve todo, empezar vacía, usar la que hay, informe de lo que no se movió, los documentos abiertos siguen a sus archivos, la automatización no puede; faltan comprobar el espacio libre, el tiempo restante, Reintentar, Fusionar (LIB-031) y el bloqueo por configuración administrada) |
 | LIB-029 | Biblioteca en una carpeta sincronizada | M2 | Must | — |
 | LIB-030 | Biblioteca en una ubicación de red | M2 | Should | — |
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |

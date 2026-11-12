@@ -133,7 +133,7 @@ impl Editor {
             store: DocStore::default(),
             styles: Mutex::new(styles),
             tool: Mutex::new(tool),
-            library: Mutex::new(xs_library::location()),
+            library: Mutex::new(xs_library::location_for(core)),
             recovery_dir: Mutex::new(recovery::dir(&core.paths.local_dir)),
             writing: Mutex::new(()),
             copied: Mutex::new(None),
@@ -3346,11 +3346,33 @@ fn upgrade(weak: &Weak<Core>) -> Result<Arc<Core>, CommandError> {
 }
 
 /// Handlers of the `document.*` and `editor.*` commands.
+/// The library moved (LIB-028): new captures go to the new folder, and open documents
+/// of the library follow their files.
+fn library_relocated(core: &Core, from: &Path, to: &Path) {
+    let ed = editor(core);
+    *ed.library.lock().unwrap() = to.to_path_buf();
+    for id in ed.store.ids() {
+        let moved = ed
+            .store
+            .with(&id, |d| {
+                d.path
+                    .as_ref()
+                    .and_then(|p| p.strip_prefix(from).ok().map(|r| to.join(r)))
+            })
+            .flatten();
+        if let Some(path) = moved {
+            ed.store.set_path(&id, path);
+        }
+    }
+    emit_list(core);
+}
+
 pub fn extension() -> Extension {
     Box::new(|reg, weak| {
         if let Some(core) = weak.upgrade() {
             core.add_quit_guard(Arc::new(EditorQuitGuard(weak.clone())));
         }
+        xs_library::on_relocated(library_relocated);
         macro_rules! on {
             ($id:literal, |$core:ident, $ctx:ident, $p:ident| $body:expr) => {{
                 let weak = weak.clone();

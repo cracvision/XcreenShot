@@ -5,6 +5,7 @@
 pub mod index;
 pub mod query;
 pub mod recycle;
+pub mod relocate;
 pub mod scan;
 pub mod service;
 pub mod xmeta;
@@ -22,7 +23,31 @@ pub use service::{synced, Library};
 
 /// The library of `core`, opened at its location the first time.
 pub fn library(core: &Core) -> Arc<Library> {
-    core.service(|| Library::open(location(), &core.paths.local_dir))
+    core.service(|| Library::open(location_for(core), &core.paths.local_dir))
+}
+
+/// Where the user put the library (LIB-028), kept by the core.
+const LOCATION_KEY: &str = "library.location";
+
+/// The library folder of `core`: the test override, the one the user chose (LIB-028),
+/// or the default (LIB-027).
+pub fn location_for(core: &Core) -> PathBuf {
+    if let Some(dir) = std::env::var_os("XCREENSHOT_LIBRARY_DIR") {
+        return PathBuf::from(dir);
+    }
+    core.recall(LOCATION_KEY)
+        .and_then(|v| v.as_str().map(PathBuf::from))
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(location)
+}
+
+type Relocated = Box<dyn Fn(&Core, &Path, &Path) + Send + Sync>;
+static RELOCATED: std::sync::OnceLock<Relocated> = std::sync::OnceLock::new();
+
+/// What else follows the library to a new folder (the editor's open documents): called
+/// with the old and the new folder (LIB-028).
+pub fn on_relocated(f: impl Fn(&Core, &Path, &Path) + Send + Sync + 'static) {
+    let _ = RELOCATED.set(Box::new(f));
 }
 
 /// Indexes the folder in the background, then follows changes made outside
@@ -230,6 +255,139 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
         "items": items,
         "facets": found.facets,
     }))
+}
+
+fn ctx_is_relocate(p: &Value) -> bool {
+    p.get("relocate").and_then(Value::as_bool) == Some(true)
+}
+
+/// The move in progress, to cancel it (LIB-028).
+static MOVING: std::sync::Mutex<Option<Arc<std::sync::atomic::AtomicBool>>> = std::sync::Mutex::new(None);
+
+/// Uses `to` as the library from now on: kept, opened, indexed and followed; open
+/// documents follow it (LIB-028).
+fn switch_to(core: &Arc<Core>, from: &Path, to: &Path) {
+    core.remember(LOCATION_KEY, json!(to));
+    core.replace_service(Library::open(to.to_path_buf(), &core.paths.local_dir));
+    if let Some(f) = RELOCATED.get() {
+        f(core, from, to);
+    }
+    start(core);
+}
+
+/// `library.location` (LIB-028): where the library is; what a folder holds; and
+/// changing it (moving the items, starting an empty library or using one that is
+/// there), in the background with progress events (`library_move`) and Cancel.
+fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", param), ("reason", reason)],
+            ),
+        )
+    };
+    let lib = library(core);
+    let path = || {
+        p.get("path")
+            .and_then(Value::as_str)
+            .map(PathBuf::from)
+            .filter(|p| p.is_absolute())
+            .ok_or_else(|| bad("path", "give a full folder path"))
+    };
+    let action = if ctx_is_relocate(p) {
+        p.get("action").and_then(Value::as_str).unwrap_or("set")
+    } else {
+        p.get("action").and_then(Value::as_str).unwrap_or("get")
+    };
+    match action {
+        "get" => Ok(json!({
+            "path": lib.root(),
+            "default": location(),
+            "synced": synced(lib.root()),
+            "moving": MOVING.lock().unwrap().is_some(),
+        })),
+        "inspect" => {
+            let dir = path()?;
+            let i = relocate::inspect(&dir);
+            Ok(json!({
+                "path": dir,
+                "exists": i.exists,
+                "items": i.items,
+                "library": i.library,
+                "writable": i.writable,
+                "synced": synced(&dir),
+                "same": same_path(&dir, lib.root()),
+            }))
+        }
+        "cancel" => {
+            if let Some(flag) = MOVING.lock().unwrap().as_ref() {
+                flag.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(json!({}))
+        }
+        "set" => {
+            let to = path()?;
+            let from = lib.root().to_path_buf();
+            if same_path(&to, &from) || to.starts_with(&from) || from.starts_with(&to) {
+                return Err(bad("path", "choose a folder outside the library"));
+            }
+            let mode = p.get("mode").and_then(Value::as_str).unwrap_or("move");
+            let mut moving = MOVING.lock().unwrap();
+            if moving.is_some() {
+                return Err(CommandError::new(
+                    ErrorCode::Busy,
+                    tr(lang, "errors.library_moving", &[]),
+                ));
+            }
+            std::fs::create_dir_all(&to).map_err(|e| CommandError::internal(e.to_string()))?;
+            match mode {
+                "empty" | "use" => {
+                    drop(moving);
+                    switch_to(core, &from, &to);
+                    Ok(json!({ "path": to, "started": false }))
+                }
+                "move" => {
+                    let flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                    *moving = Some(flag.clone());
+                    drop(moving);
+                    let weak = Arc::downgrade(core);
+                    let total = lib.list().len();
+                    let target = to.clone();
+                    std::thread::spawn(move || {
+                        let to = target;
+                        let Some(core) = weak.upgrade() else { return };
+                        let host = core.host();
+                        let r = relocate::move_library(&from, &to, &flag, |done, total| {
+                            host.editor_event("library_move", json!({ "done": done, "total": total }));
+                        });
+                        *MOVING.lock().unwrap() = None;
+                        if !r.cancelled {
+                            switch_to(&core, &from, &to);
+                        }
+                        changed(&core);
+                        let at = if r.cancelled { &from } else { &to };
+                        core.host().editor_event(
+                            "library_move",
+                            json!({
+                                "finished": true,
+                                "cancelled": r.cancelled,
+                                "moved": r.moved,
+                                "failed": r.failed,
+                                "path": at,
+                            }),
+                        );
+                    });
+                    Ok(json!({ "path": to, "started": true, "total": total }))
+                }
+                other => Err(bad("mode", other)),
+            }
+        }
+        other => Err(bad("action", other)),
+    }
 }
 
 fn mark_error(lang: Lang, e: service::MarkError) -> CommandError {
@@ -549,7 +707,7 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         if let Some(core) = weak.upgrade() {
             core.service(|| match &root {
                 Some(root) => Library::open(root.clone(), &core.paths.local_dir).holding_deletes(),
-                None => Library::open(location(), &core.paths.local_dir),
+                None => Library::open(location_for(&core), &core.paths.local_dir),
             });
         }
         macro_rules! on {
@@ -567,6 +725,27 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         }
         on!("library.list", |core, ctx, p| list(&core, ctx, &p));
         on!("library.tag", |core, ctx, p| tag(&core, ctx, &p));
+        on!("library.location", |core, ctx, p| {
+            match p.get("action").and_then(Value::as_str) {
+                None | Some("get") | Some("inspect") => location_command(&core, ctx, &p),
+                Some(other) => Err(CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", "action"), ("reason", other)],
+                    ),
+                )),
+            }
+        });
+        on!("library.relocate", |core, ctx, p| {
+            let mut p = p;
+            p["relocate"] = json!(true);
+            if p.get("cancel").and_then(Value::as_bool) == Some(true) {
+                p["action"] = json!("cancel");
+            }
+            location_command(&core, ctx, &p)
+        });
         on!("library.rebuild", |core, ctx, _p| {
             let lib = library(&core);
             let items = lib.rebuild();

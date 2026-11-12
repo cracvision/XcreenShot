@@ -734,6 +734,11 @@ impl DocStore {
     }
 
     /// Links the document to another file (Save as of a file from elsewhere, EDT-107).
+    /// The document's file moved (the library moved, LIB-028): nothing else changes.
+    pub fn set_path(&self, id: &str, path: PathBuf) {
+        self.with(id, |d| d.path = Some(path));
+    }
+
     pub fn relink(&self, id: &str, path: PathBuf, kind: Kind, format: Format, version: u64) {
         self.with(id, |d| {
             d.path = Some(path);
