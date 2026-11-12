@@ -6,6 +6,7 @@ import { finishTextEdit } from "./actions";
 import type { Point } from "./geometry";
 import type { TextEdit } from "./state";
 import { LINE_SPACING } from "./textMetrics";
+import { useSetting } from "../store";
 
 interface Props {
   edit: TextEdit;
@@ -37,6 +38,7 @@ export function TextEditor({ edit, toScreen, scale, dpi }: Props) {
 
   const { style } = edit;
   const [left, top] = toScreen(edit.at);
+  const spellcheck = useSetting("editor.spellcheck", true);
   const px = ((style.size * dpi) / 72) * scale;
   const css: CSSProperties & { fieldSizing?: string } = {
     left,
@@ -64,7 +66,9 @@ export function TextEditor({ edit, toScreen, scale, dpi }: Props) {
       style={css}
       defaultValue={edit.text}
       aria-label={t("ui.editor.text_field")}
-      spellCheck={false}
+      // EDT-027: the system's spell checker, in the system's languages; its
+      // suggestions and Add to dictionary come in the field's right-click menu.
+      spellCheck={spellcheck}
       onBlur={finish}
       onKeyDown={(e) => {
         if (e.key === "Escape") {

@@ -936,6 +936,10 @@
         "medium": "Medium",
         "large": "Large"
       }
+    },
+    "editor_spellcheck": {
+      "label": "Check spelling",
+      "description": "While you write a text or a callout, unknown words get a wavy line; right-click one for suggestions. The line never shows in exports, copies or prints."
     }
   },
   "errors": {

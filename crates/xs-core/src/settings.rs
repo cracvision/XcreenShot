@@ -252,6 +252,7 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-041",
         ),
         def("editor.scaleStrokes", "editor", boolean(), json!(true), "EDT-080"),
+        def("editor.spellcheck", "editor", boolean(), json!(true), "EDT-027"),
         def(
             "editor.cursorStylePreview",
             "editor",

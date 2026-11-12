@@ -936,6 +936,10 @@
         "medium": "Mediano",
         "large": "Grande"
       }
+    },
+    "editor_spellcheck": {
+      "label": "Corrector ortográfico",
+      "description": "Mientras escribes un texto o un globo, las palabras desconocidas se subrayan con una línea ondulada; clic derecho sobre una para ver sugerencias. La línea nunca sale al exportar, copiar ni imprimir."
     }
   },
   "errors": {

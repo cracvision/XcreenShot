@@ -106,7 +106,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-024 | Flecha | M1 | Must | Win |
 | EDT-025 | Línea | M2 | Should | En curso |
 | EDT-026 | Texto | M1 | Must | Win |
-| EDT-027 | Corrector ortográfico | M2 | Should | — |
+| EDT-027 | Corrector ortográfico | M2 | Should | En curso (Windows: subrayado del corrector del sistema al escribir textos y globos, sugerencias y Añadir al diccionario en el clic derecho, preferencia `editor.spellcheck`; falta elegir el idioma de corrección y el diccionario propio con "XcreenShot", ver QUESTIONS) |
 | EDT-028 | Globo | M2 | Must | En curso |
 | EDT-029 | Forma: rectángulo y elipse | M1 | Must | Win |
 | EDT-030 | Forma: rectángulo redondeado, polígono y otras formas | M2 | Should | En curso |
