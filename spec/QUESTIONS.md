@@ -240,6 +240,17 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Dudas del equipo de construcción (M3, entrega 2: extraer texto)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| SMT-003 | ¿Con qué se llama al reconocimiento de Windows? | Con el crate `windows` de Microsoft (versión 0.62, la que la app ya trae por WebView2 y Tauri), activando sus partes de OCR, imágenes y cadenas. No entra ningún paquete nuevo ni se descarga nada: solo cambia la lista de dependencias de `xs-ocr` | Provisional |
+| SMT-003 | El motor de Windows no da confianza por palabra | Todas sus palabras cuentan como seguras (confianza 1): ninguna sale subrayada como dudosa. Si un día hace falta, la duda se podría estimar comparando dos lecturas | Provisional |
+| SMT-003 | ¿A qué tamaño se le da la imagen al motor? | A 1,5 veces (menos si no cabe en su ancho máximo). Medido: a 2× leía peor el texto pequeño de interfaz ("Ayude" por "Ayuda") y a 1× juntaba mal los dígitos estrechos ("111" como "1 11"); a 1,5× leyó bien los dos. El texto claro sobre fondo oscuro se invierte y se estiran los niveles antes de leer | Provisional |
+| SMT-003 | Imágenes muy altas | Por tramos de la altura máxima del motor (10.000 px en este equipo) que se solapan 400 px; cada línea pertenece al tramo donde cae su centro. Probado con 400 líneas en 20.000 px: todas, en orden y sin repetir | Provisional |
+| SMT-003 | Columnas y párrafos | Las líneas que no se tocan en horizontal forman columnas, de izquierda a derecha y cada una entera; una línea mucho más ancha (un título) parte la página en franjas solo cuando hay columnas. Nuevo párrafo cuando el espacio entre líneas supera 1,8 veces el habitual (el cuartil inferior) o cuando el tamaño de letra cambia más de un 40 % | Provisional |
+| SMT-004 | Los cinco idiomas obligatorios en una instalación nueva | Windows solo trae el reconocimiento de los idiomas instalados en el sistema (en este equipo: inglés y español). El portugués, el francés y el alemán aparecen como "No disponible en este equipo" con el enlace a Configuración > Hora e idioma. Cumplir el criterio en todos los equipos pediría un motor incluido en la app (por ejemplo Tesseract, unos 30 MB con los cinco idiomas): **pregunta para Carlos** | Pregunta |
+
 ## Dudas del equipo de construcción (M3, entrega 1: presets)
 
 | ID | Duda | Propuesta | Estado |

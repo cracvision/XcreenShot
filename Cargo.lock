@@ -7267,6 +7267,16 @@ dependencies = [
 [[package]]
 name = "xs-ocr"
 version = "0.2.0"
+dependencies = [
+ "image",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
+ "windows 0.62.2",
+ "xs-core",
+ "xs-image",
+]
 
 [[package]]
 name = "xs-share"

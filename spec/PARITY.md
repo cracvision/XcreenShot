@@ -407,7 +407,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 |---|---|---|---|---|
 | SMT-001 | Procesamiento local y sin conexión | M3 | Must | — |
 | SMT-002 | Activar y desactivar las funciones inteligentes | M5 | Should | — |
-| SMT-003 | Motor de reconocimiento de texto | M3 | Must | — |
+| SMT-003 | Motor de reconocimiento de texto | M3 | Must | En curso (Windows: el reconocimiento del sistema, bloques, líneas y palabras con su rectángulo, color del texto y del fondo y altura, orden de lectura con columnas y párrafos, texto claro sobre oscuro, imágenes altas por tramos; medido 1920×1080 con 600 palabras en 249 ms y 400 líneas en 20.000 px sin perder ni repetir; falta la familia de letra y la confianza, que el motor de Windows no da) |
 | SMT-004 | Idiomas del reconocimiento | M3 | Must | — |
 | SMT-005 | Extraer texto como modo de captura | M3 | Must | — |
 | SMT-006 | Ventana de resultados de Extraer texto | M3 | Must | — |

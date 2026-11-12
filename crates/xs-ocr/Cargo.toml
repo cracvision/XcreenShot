@@ -6,6 +6,27 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+# The system's text recognition (SMT-003): Windows.Media.Ocr through Microsoft's own
+# bindings, the version the app already has through WebView2 and Tauri.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+  "Foundation",
+  "Foundation_Collections",
+  "Globalization",
+  "Graphics_Imaging",
+  "Media_Ocr",
+  "Storage_Streams",
+] }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+xs-core.workspace = true
+xs-image = { path = "../xs-image" }
