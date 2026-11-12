@@ -252,9 +252,13 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
         .take(limit)
         .map(|i| with_conflict(i.to_json(lib.root()), &conflicts, &i.id))
         .collect();
+    let (place, service) = place_of(lib.root());
     Ok(json!({
         "root": lib.root(),
         "synced": synced(lib.root()),
+        // LIB-026: local, synced (with its service), network or unavailable.
+        "place": place,
+        "service": service,
         "total": all.len(),
         "count": found.items.len(),
         "items": items,
@@ -411,6 +415,36 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
             }
         }
         other => Err(bad("action", other)),
+    }
+}
+
+/// Where the library is (LIB-026): `local`, `synced` (with the service), `network` or
+/// `unavailable`. The services are looked up once per folder.
+fn place_of(root: &Path) -> (&'static str, Option<&'static str>) {
+    static SEEN: std::sync::Mutex<Option<(PathBuf, Option<&'static str>)>> = std::sync::Mutex::new(None);
+    if !root.is_dir() {
+        return ("unavailable", None);
+    }
+    let text = root.to_string_lossy();
+    if text.starts_with("\\\\") || text.starts_with("//") {
+        return ("network", None);
+    }
+    let mut seen = SEEN.lock().unwrap();
+    let service = match &*seen {
+        Some((path, service)) if path == root => *service,
+        _ => {
+            let service = sync::folders()
+                .into_iter()
+                .find(|f| root.starts_with(&f.path))
+                .map(|f| f.service);
+            *seen = Some((root.to_path_buf(), service));
+            service
+        }
+    };
+    match service {
+        Some(s) => ("synced", Some(s)),
+        None if synced(root) => ("synced", None),
+        None => ("local", None),
     }
 }
 

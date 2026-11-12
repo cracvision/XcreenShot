@@ -3009,7 +3009,23 @@
         "skipped_other": "{{count}} se dejaron fuera.",
         "drop_hint": "Suelta para importar a la biblioteca"
       },
-      "copy_word": "copia"
+      "copy_word": "copia",
+      "zoom": "Tamaño de las miniaturas (Ctrl + rueda)",
+      "status": {
+        "shown_one": "{{count}} visible",
+        "shown_other": "{{count}} visibles",
+        "place_local": "En este equipo",
+        "place_network": "Carpeta de red",
+        "place_unavailable": "Biblioteca no disponible",
+        "place_synced": "Carpeta sincronizada",
+        "synced_with": "Sincronizada con {{service}}",
+        "expand": "Mostrar el detalle",
+        "collapse": "Ocultar el detalle",
+        "exporting": "Exportando",
+        "importing": "Importando a la biblioteca…",
+        "progress": "{{what}}: {{done}} de {{total}}",
+        "export_done": "Exportación terminada."
+      }
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

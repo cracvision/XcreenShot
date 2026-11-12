@@ -3009,7 +3009,23 @@
         "skipped_other": "{{count}} were left out.",
         "drop_hint": "Drop to import into the library"
       },
-      "copy_word": "copy"
+      "copy_word": "copy",
+      "zoom": "Thumbnail size (Ctrl + wheel)",
+      "status": {
+        "shown_one": "{{count}} shown",
+        "shown_other": "{{count}} shown",
+        "place_local": "On this computer",
+        "place_network": "Network folder",
+        "place_unavailable": "Library not available",
+        "place_synced": "Synced folder",
+        "synced_with": "Synced with {{service}}",
+        "expand": "Show the details",
+        "collapse": "Hide the details",
+        "exporting": "Exporting",
+        "importing": "Importing into the library…",
+        "progress": "{{what}}: {{done}} of {{total}}",
+        "export_done": "Export finished."
+      }
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

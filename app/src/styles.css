@@ -3363,6 +3363,65 @@ html.overlay-root.overlay-native #root {
   letter-spacing: 0.04em;
 }
 
+/* LIB-026: the Library's status bar, one line or with its tasks. */
+.library-status {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lib-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.lib-task progress {
+  flex: 1;
+  max-width: 320px;
+}
+
+.lib-place {
+  white-space: nowrap;
+}
+
+.lib-place-unavailable {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.lib-status-toggle .lf-caret {
+  transform: rotate(90deg);
+}
+
+.lib-status-toggle .lf-caret.open {
+  transform: rotate(-90deg);
+}
+
+/* LIB-003: below 80 % only the thumbnails, with their tooltip. */
+.library-grid.compact .lib-name,
+.library-grid.compact .lib-date {
+  display: none;
+}
+
+.lib-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lib-zoom input[type="range"] {
+  width: 110px;
+  accent-color: var(--brand);
+}
+
+.lib-zoom-value {
+  min-width: 44px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .lib-name {
   overflow: hidden;
   padding: 0 2px;

@@ -1,4 +1,5 @@
 // Rebuild the index and Check the library (LIB-023), from the Library's ⋯ menu.
+import { taskDone, taskProgress } from "./tasks";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
@@ -66,11 +67,17 @@ export function MaintenanceDialogs() {
               disabled={busy}
               onClick={() => {
                 setBusy(true);
+                taskProgress({ id: "rebuild", label: "ui.library.rebuilding" });
                 run<{ items: number }>("library.rebuild")
-                  .then((r) =>
-                    useEditor.getState().showToast(t("ui.library.rebuilt", { count: r.items })),
-                  )
-                  .catch(fail)
+                  .then((r) => {
+                    const done = t("ui.library.rebuilt", { count: r.items });
+                    useEditor.getState().showToast(done);
+                    taskDone("rebuild", done);
+                  })
+                  .catch((e: unknown) => {
+                    taskDone("rebuild");
+                    fail(e);
+                  })
                   .finally(() => {
                     setBusy(false);
                     close();

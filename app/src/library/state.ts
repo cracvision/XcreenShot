@@ -41,6 +41,8 @@ export interface LibraryItem {
 interface LibraryList {
   root: string;
   synced: boolean;
+  place?: LibraryState["place"];
+  service?: string | null;
   total: number;
   count: number;
   items: LibraryItem[];
@@ -117,6 +119,8 @@ export interface LibraryShape {
   pane: boolean;
   /** The Details pane is open (LIB-012). */
   details?: boolean;
+  /** Thumbnail size, 50 to 300 % of 160 px (LIB-003). */
+  zoom?: number;
 }
 
 const SHAPE_KEY = "xs.library.view";
@@ -133,6 +137,9 @@ interface LibraryState {
   items: LibraryItem[];
   root: string;
   synced: boolean;
+  /** Where the library is (LIB-026), and its sync service. */
+  place: "local" | "synced" | "network" | "unavailable";
+  service: string | null;
   /** Items in the library, and those that pass the filters and the search. */
   total: number;
   count: number;
@@ -164,6 +171,8 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   loaded: false,
   items: [],
   root: "",
+  place: "local",
+  service: null,
   synced: false,
   total: 0,
   count: 0,
@@ -223,6 +232,8 @@ export const useLibrary = create<LibraryState>((set, get) => ({
         items: r.items,
         root: r.root,
         synced: r.synced,
+        place: r.place ?? (r.synced ? "synced" : "local"),
+        service: r.service ?? null,
         total: r.total,
         count: r.count,
         facets: r.facets,

@@ -2,6 +2,16 @@
 // library folder as a grid or a list, sorted (LIB-004), filtered from the left pane
 // (LIB-005, LIB-006) and searched (LIB-007); selection by mouse and keyboard, a rubber
 // band, favorites (LIB-011), tags (LIB-009), the item menu and a status bar.
+import { listen } from "@tauri-apps/api/event";
+import {
+  keepStatusExpanded,
+  statusExpanded,
+  taskDone,
+  taskProgress,
+  totalSize,
+  useLibraryTasks,
+} from "./tasks";
+import { setZoom, zoomOf, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "./zoom";
 import {
   useEffect,
   useLayoutEffect,
@@ -41,7 +51,9 @@ import { ViewSwitch } from "./ViewSwitch";
 import { columnsFor, scrollToRow, visibleSpan } from "./virtual";
 
 /** Smallest tile of the grid, in CSS px; and a list row's height. */
-const TILE = 176;
+/** A tile at 100 %: a 160 px thumbnail and its padding (LIB-003). */
+const THUMB = 160;
+const TILE_PAD = 16;
 const ROW = 34;
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -137,6 +149,31 @@ function SortControls() {
   );
 }
 
+/** The thumbnail size of the grid (LIB-003): 50 to 300 %. */
+function ZoomControl() {
+  const { t } = useTranslation();
+  const zoom = useLibrary((s) => zoomOf(s.shape.zoom));
+  const list = useLibrary((s) => s.shape.layout === "list");
+  if (list) return null;
+  return (
+    <label className="lib-zoom" title={t("ui.library.zoom")}>
+      <span className="sr-only">{t("ui.library.zoom")}</span>
+      <input
+        type="range"
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        step={ZOOM_STEP}
+        value={zoom}
+        aria-valuetext={`${zoom} %`}
+        onChange={(e) => setZoom(Number(e.target.value))}
+      />
+      <span className="lib-zoom-value" aria-hidden="true">
+        {zoom} %
+      </span>
+    </label>
+  );
+}
+
 function LibraryToolbar() {
   const { t } = useTranslation();
   const openKey = useShortcut("editor.open");
@@ -166,6 +203,7 @@ function LibraryToolbar() {
       </button>
       <SearchField />
       <SortControls />
+      <ZoomControl />
       <button
         type="button"
         className="btn tb-btn"
@@ -490,6 +528,7 @@ function Grid() {
   const [scroll, setScroll] = useState(0);
   const [box, setBox] = useState({ width: 800, height: 600, gap: 16 });
   const [tileHeight, setTileHeight] = useState(220);
+  const zoom = useLibrary((s) => zoomOf(s.shape.zoom));
   // Items spring in when the view opens, not each time they scroll into view.
   const [fresh, setFresh] = useState(true);
   useEffect(() => {
@@ -512,8 +551,9 @@ function Grid() {
     const seen = new ResizeObserver(measure);
     seen.observe(el);
     return () => seen.disconnect();
-  }, [list, items.length]);
-  const columns = list ? 1 : columnsFor(box.width, TILE, box.gap);
+  }, [list, items.length, zoom]);
+  const tile = Math.round((THUMB * zoom) / 100) + TILE_PAD;
+  const columns = list ? 1 : columnsFor(box.width, tile, box.gap);
   const rowHeight = list ? ROW : tileHeight + box.gap;
   const span = visibleSpan(items.length, columns, rowHeight, scroll, box.height);
 
@@ -575,9 +615,27 @@ function Grid() {
     return { columns, page: rows * columns };
   };
 
+  /** A zoom `by` steps away (LIB-003), keeping the selected item in view. */
+  const zoomBy = (by: number) => {
+    const next = zoomOf(useLibrary.getState().shape.zoom) + by * ZOOM_STEP;
+    const { focus: at, selection: picked } = useLibrary.getState();
+    const keep = at ?? picked[0] ?? null;
+    if (keep) {
+      keyed.current = true;
+      if (!at) select(picked, keep, useLibrary.getState().anchor);
+    }
+    setZoom(next);
+  };
+
   const onKey = (e: KeyboardEvent) => {
     const primary = IS_MAC ? e.metaKey : e.ctrlKey;
     const { selection: current, anchor, focus: at } = useLibrary.getState();
+    // LIB-003: Ctrl + / - (Cmd on macOS) change the thumbnail size.
+    if (primary && !list && (e.key === "+" || e.key === "=" || e.key === "-")) {
+      e.preventDefault();
+      zoomBy(e.key === "-" ? -1 : 1);
+      return;
+    }
     if (primary && e.code === "KeyA") {
       e.preventDefault();
       select(order, at, at);
@@ -661,7 +719,9 @@ function Grid() {
   return (
     <div
       ref={grid}
-      className={`${list ? "library-list" : "library-grid"}${fresh ? " fresh" : ""}`}
+      className={`${list ? "library-list" : "library-grid"}${fresh ? " fresh" : ""}${
+        !list && zoom < 80 ? " compact" : ""
+      }`}
       role="listbox"
       aria-multiselectable="true"
       aria-label={t("ui.library.grid")}
@@ -671,6 +731,12 @@ function Grid() {
       onPointerUp={upBand}
       onPointerCancel={upBand}
       onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
+      // LIB-003: Ctrl + wheel (Cmd on macOS) changes the thumbnail size.
+      onWheel={(e) => {
+        if (list || !(IS_MAC ? e.metaKey : e.ctrlKey)) return;
+        e.preventDefault();
+        zoomBy(e.deltaY < 0 ? 1 : -1);
+      }}
     >
       <div
         className="lib-sizer"
@@ -816,29 +882,118 @@ function NoResults() {
   );
 }
 
+/** The Library's status bar (LIB-026): how many items there are, shown and selected
+ * (with their size), where the library is, and the tasks under way with Cancel. */
 function LibraryStatus() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const total = useLibrary((s) => s.total);
-  const selected = useLibrary((s) => s.selection.length);
+  const shown = useLibrary((s) => s.count);
+  const items = useLibrary((s) => s.items);
+  const selection = useLibrary((s) => s.selection);
   const root = useLibrary((s) => s.root);
-  const synced = useLibrary((s) => s.synced);
+  const place = useLibrary((s) => s.place);
+  const service = useLibrary((s) => s.service);
+  const tasks = useLibraryTasks((s) => s.tasks);
+  const said = useLibraryTasks((s) => s.said);
+  const [expanded, setExpanded] = useState(statusExpanded);
+  // Exports report their progress (LIB-018, LIB-033).
+  useEffect(() => {
+    const off = listen<{ kind: string; payload: Record<string, unknown> }>("xs://editor", (e) => {
+      const p = e.payload.payload;
+      if (e.payload.kind !== "progress") return;
+      const id = p.task === "library_export" ? "export" : p.task === "batch" ? "batch" : null;
+      if (!id) return;
+      if (p.done === null) taskDone(id, t("ui.library.status.export_done"));
+      else
+        taskProgress({
+          id,
+          label: "ui.library.status.exporting",
+          done: Number(p.index ?? 0),
+          total: Number(p.total ?? 0),
+          cancel: () => void run("editor.cancel").catch(() => undefined),
+        });
+    });
+    return () => void off.then((f) => f());
+  }, [t]);
+  const size = totalSize(items, selection);
+  const where =
+    place === "synced"
+      ? service
+        ? t("ui.library.status.synced_with", { service: t(`ui.library.service.${service}`) })
+        : t("ui.library.synced")
+      : t(`ui.library.status.place_${place}`);
+  const toggle = () => {
+    keepStatusExpanded(!expanded);
+    setExpanded(!expanded);
+  };
   return (
-    <footer className="status-bar library-status">
-      <span className="status-item">{t("ui.library.count", { count: total })}</span>
-      {selected > 0 && (
-        <span className="status-item" role="status">
-          {t("ui.library.selected", { count: selected })}
+    <footer className={`status-bar library-status${expanded ? " expanded" : ""}`}>
+      <div className="lib-status-row">
+        <span className="status-item">{t("ui.library.count", { count: total })}</span>
+        {shown !== total && (
+          <span className="status-item">{t("ui.library.status.shown", { count: shown })}</span>
+        )}
+        {selection.length > 0 && (
+          <span className="status-item">
+            {t("ui.library.selected", { count: selection.length })} ·{" "}
+            {fileSize(size, i18n.language)}
+          </span>
+        )}
+        {tasks.length > 0 && !expanded && (
+          <span className="status-item lib-task-short">{t(tasks[0]?.label ?? "")}</span>
+        )}
+        <span className="grow" />
+        <span
+          className={`lib-place lib-place-${place}`}
+          title={place === "synced" ? t("ui.library.synced_help", { path: root }) : root}
+        >
+          {where}
         </span>
-      )}
-      <span className="grow" />
-      {synced && (
-        <span className="lib-synced" title={t("ui.library.synced_help", { path: root })}>
-          {t("ui.library.synced")}
-        </span>
-      )}
-      <span className="lib-root muted" title={root}>
-        {root}
-      </span>
+        {expanded && (
+          <span className="lib-root muted" title={root}>
+            {root}
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn icon small lib-status-toggle"
+          aria-expanded={expanded}
+          aria-label={t(expanded ? "ui.library.status.collapse" : "ui.library.status.expand")}
+          title={t(expanded ? "ui.library.status.collapse" : "ui.library.status.expand")}
+          onClick={toggle}
+        >
+          <span className={`lf-caret${expanded ? "" : " open"}`} aria-hidden="true">
+            ▸
+          </span>
+        </button>
+      </div>
+      {expanded &&
+        tasks.map((task) => (
+          <div key={task.id} className="lib-status-row lib-task">
+            <span>
+              {task.total
+                ? t("ui.library.status.progress", {
+                    what: t(task.label),
+                    done: task.done ?? 0,
+                    total: task.total,
+                  })
+                : t(task.label)}
+            </span>
+            <progress
+              max={Math.max(1, task.total ?? 1)}
+              {...(task.total ? { value: task.done ?? 0 } : {})}
+              aria-label={t(task.label)}
+            />
+            {task.cancel && (
+              <button type="button" className="btn small" onClick={task.cancel}>
+                {t("ui.editor.cancel")}
+              </button>
+            )}
+          </div>
+        ))}
+      <div className="sr-only" role="status" aria-live="polite">
+        {said}
+      </div>
     </footer>
   );
 }

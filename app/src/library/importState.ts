@@ -1,5 +1,6 @@
 // Import to the library (LIB-024): files picked or dropped on the Library view are
 // copied into it; a folder's name can become their tag.
+import { taskDone, taskProgress } from "./tasks";
 import { open } from "@tauri-apps/plugin-dialog";
 import i18next from "i18next";
 import { create } from "zustand";
@@ -35,6 +36,7 @@ export function askImport(paths: string[]): void {
 export async function importPaths(paths: string[], tagFolders: boolean): Promise<void> {
   useImport.setState({ paths: null });
   const t = i18next.t.bind(i18next);
+  taskProgress({ id: "import", label: "ui.library.status.importing" });
   try {
     const r = await run<ImportResult>("library.import", { paths, tagFolders });
     const done = t("ui.library.import.done", { count: r.imported.length });
@@ -42,7 +44,9 @@ export async function importPaths(paths: string[], tagFolders: boolean): Promise
       ? ` ${t("ui.library.import.skipped", { count: r.skipped.length })}`
       : "";
     useEditor.getState().showToast(`${done}${skipped}`);
+    taskDone("import", done);
   } catch (e) {
+    taskDone("import");
     useEditor.getState().showError(e);
   }
 }

@@ -274,6 +274,8 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-011 | ¿Qué grupos lleva el `.xsettings` hoy? | Preferencias, Atajos (con el perfil), Temas (los propios, los favoritos y los efectos guardados) y Barra de herramientas. Los presets de captura (M3) y los destinos de compartir (M6) se añaden cuando existan. La ubicación de la biblioteca no va: es de cada equipo | Provisional |
 | APP-011 | Atajos al importar | Los atajos propios del archivo sustituyen a los de este equipo (lo que no está en el archivo vuelve a su valor por defecto). Dos atajos del archivo con la misma combinación: el segundo queda sin asignar y se lista. La simulación (`--dry-run`) no pide `--yes` | Provisional |
 | APP-011 / SPEC §7 | Formato `.xsettings` | Propuesto para la tabla de formatos: JSON con `format`, `formatVersion` (1), `app`, `platform`, `exported` y `groups` | Propuesta |
+| LIB-003 | ¿Dónde se guarda el tamaño de las miniaturas? | Con el resto de la forma de la vista Biblioteca (orden, filtros abiertos, Detalles), en este equipo. Pasos de 10 %; el deslizador se oculta en la vista Lista | Provisional |
+| LIB-026 | ¿Qué es "plegada"? | Plegada, la barra es una sola línea con los conteos, la ubicación y el nombre de la tarea en curso; desplegada añade la ruta y una fila por tarea con su progreso y Cancelar | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 
