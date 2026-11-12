@@ -300,7 +300,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-011 | Favoritos | M2 | Should | En curso (Windows: estrella, menú contextual y Detalles, LIB-012; falta la bandeja, TRY-016) |
 | LIB-012 | Detalles del elemento | M2 | Should | En curso (Windows: panel Detalles que sigue a la selección, botón, Alt+Enter / Cmd+I y menú contextual; nombre, etiquetas y favorito editables; copiar cada dato; varios elementos; `library.get --details` y `library.open_url`. Faltan duración y fps de videos y pasos de guías (M3 y M4), y Último envío, que llega con el historial de SHR-012. El tooltip de la miniatura es el del sistema) |
 | LIB-013 | Vista rápida | M2 | Should | En curso (Windows: Espacio en la biblioteca y en la bandeja, ← →, Esc o Espacio cierran, Intro abre; recorre solo la selección si hay varios; pie con nombre, tamaño, fecha y posición; menú contextual. Faltan video, GIF y guías, que llegan con M3 y M4) |
-| LIB-014 | Mostrar en la biblioteca | M2 | Should | En curso (Windows: Archivo > Mostrar en la biblioteca y `library.reveal`: cambia a la Biblioteca, selecciona y desplaza hasta el elemento, quita los filtros con aviso; falta Deshacer en el aviso y la entrada en el menú de la bandeja, TRY-016) |
+| LIB-014 | Mostrar en la biblioteca | M2 | Should | En curso (Windows: Archivo > Mostrar en la biblioteca y `library.reveal`: cambia a la Biblioteca, selecciona y desplaza hasta el elemento, quita los filtros con aviso; y desde el menú de la bandeja, TRY-016; falta Deshacer en el aviso) |
 | LIB-015 | Eliminar | M1 | Must | En curso |
 | LIB-016 | Crear desde la biblioteca | M2 | Should | — |
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
@@ -320,7 +320,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
 | LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | En curso (Windows: ⋯ > Exportar toda la biblioteca…, toda o lo filtrado, PNG o JPG, subcarpetas, `metadatos.csv`, progreso, Cancelar y resumen; `library.export`. Videos y guías llegan con M3 y M4) |
-| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; faltan `library.export`, LIB-018 y LIB-033, y `library.import`, LIB-024) |
+| LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; más `library.export` (LIB-018, LIB-033), `library.import` (LIB-024), `library.duplicate` (TRY-010), `library.resolve` (LIB-029) y `library.open_url` (LIB-012)) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |
 | TRY-003 | Capacidad | M2 | Should | En curso (Windows: `tray.capacity` de 1 a 200, 50 por defecto; sale el más antiguo libre; fijados, con cambios sin guardar y el que se ve nunca salen solos; reducirla actúa al momento; el aviso "N de M" va en la propia bandeja) |
