@@ -506,8 +506,9 @@ the client starts it as a child process (Preferences > Advanced > Copy, or
   image, at most 1568 px on its longest side, as image content the agent can see.
   `document_image` gives it for any open document.
 - **Resources** (read-only): `xcreenshot://agents` (this guide), `xcreenshot://library/recent`
-  (the 20 most recent captures), `xcreenshot://tray` (the recent tray) and
-  `xcreenshot://events` (the latest 50 events).
+  (the 20 most recent captures), `xcreenshot://tray` (the recent tray),
+  `xcreenshot://presets` (the capture presets) and `xcreenshot://events` (the latest 50
+  events).
 - **Events.** `resources/subscribe` to `xcreenshot://events`: each event of
   `events.watch` (captures, files written, app state) arrives as
   `notifications/resources/updated`; `resources/read` gives the latest ones.

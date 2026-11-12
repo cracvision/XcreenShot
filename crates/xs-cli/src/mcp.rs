@@ -58,6 +58,12 @@ pub fn resources() -> Vec<Value> {
             "application/json",
         ),
         r(
+            "xcreenshot://presets",
+            "Capture presets",
+            "The capture presets in order, with their settings and shortcuts (CAP-058); run one with preset_run",
+            "application/json",
+        ),
+        r(
             "xcreenshot://events",
             "Events",
             "The latest app events (APP-031); subscribe to be told of each new one",
@@ -188,12 +194,14 @@ impl Server<'_> {
                 let list: Vec<Value> = self.events.lock().unwrap().iter().cloned().collect();
                 Ok(json_text(&json!({ "events": list })))
             }
-            "xcreenshot://library/recent" | "xcreenshot://tray" => {
+            "xcreenshot://library/recent" | "xcreenshot://tray" | "xcreenshot://presets" => {
                 if !self.running() {
                     return Err((-32002, tr(self.lang, "cli.not_running", &[])));
                 }
                 let (id, params) = if uri.ends_with("tray") {
                     ("tray.list", json!({}))
+                } else if uri.ends_with("presets") {
+                    ("preset.list", json!({}))
                 } else {
                     (
                         "library.list",
