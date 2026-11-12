@@ -1337,7 +1337,10 @@
     "capture_blank": "The capture came out black: the window protects its content (a protected video, or an app that hides itself from captures). If it runs as administrator, start XcreenShot as administrator too.",
     "slow_crosshair": "The selection ran slowly on this computer. Turn on the simplified crosshair in Preferences > Capture.",
     "action_open": "Open",
-    "action_folder": "Show in folder"
+    "action_folder": "Show in folder",
+    "waiting_moved_title": "Captures in the library",
+    "waiting_moved_body_one": "The library is reachable again: {{count}} capture made meanwhile is in it now.",
+    "waiting_moved_body_other": "The library is reachable again: {{count}} captures made meanwhile are in it now."
   },
   "source": {
     "ui": "the interface",
@@ -3122,7 +3125,9 @@
         "progress": "{{what}}: {{done}} of {{total}}",
         "export_done": "Export finished.",
         "merging": "Merging another library",
-        "merge_done": "Merge finished."
+        "merge_done": "Merge finished.",
+        "unavailable_help": "{{path}} cannot be reached now (a network folder disconnected or a disk unplugged). You can still search and see what this computer knows of it.",
+        "unavailable_note": "New captures wait on this computer and go into the library when it is back."
       },
       "columns": "Columns",
       "column_resize": "Width of {{column}}",

@@ -104,6 +104,64 @@ fn existing(path: &std::path::Path) -> Option<std::path::PathBuf> {
         .map(std::path::Path::to_path_buf)
 }
 
+/// Whether `path` is on a network share (LIB-030): on Windows a UNC path or a mapped
+/// network drive (also while it is disconnected); on macOS an SMB, AFP, NFS or WebDAV
+/// volume.
+pub fn is_network(path: &std::path::Path) -> bool {
+    let text = path.to_string_lossy();
+    #[cfg(windows)]
+    {
+        if text.starts_with(r"\\?\UNC\") {
+            return true;
+        }
+        let local = text.strip_prefix(r"\\?\");
+        if local.is_none() && (text.starts_with(r"\\") || text.starts_with("//")) {
+            return true;
+        }
+        let mut chars = local.unwrap_or(&text).chars();
+        let (Some(letter), Some(':')) = (chars.next(), chars.next()) else {
+            return false;
+        };
+        if !letter.is_ascii_alphabetic() {
+            return false;
+        }
+        use windows_sys::Win32::Storage::FileSystem::GetDriveTypeW;
+        const DRIVE_REMOTE: u32 = 4;
+        let root: Vec<u16> = format!("{letter}:\\")
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        // SAFETY: a NUL-terminated drive root.
+        unsafe { GetDriveTypeW(root.as_ptr()) == DRIVE_REMOTE }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let _ = &text;
+        let Some(dir) = existing(path) else {
+            return false;
+        };
+        let Ok(c) = std::ffi::CString::new(dir.as_os_str().as_bytes()) else {
+            return false;
+        };
+        let mut st: libc::statfs = unsafe { std::mem::zeroed() };
+        // SAFETY: a NUL-terminated path and a valid out pointer.
+        if unsafe { libc::statfs(c.as_ptr(), &mut st) } != 0 {
+            return false;
+        }
+        // SAFETY: the kernel fills f_fstypename with a NUL-terminated name.
+        let kind = unsafe { std::ffi::CStr::from_ptr(st.f_fstypename.as_ptr()) };
+        matches!(
+            kind.to_bytes(),
+            b"smbfs" | b"afpfs" | b"nfs" | b"webdav" | b"cifs"
+        )
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        text.starts_with("//")
+    }
+}
+
 /// Bytes free for the user on the disk of `path` (LIB-028), or `None` if unknown.
 pub fn free_space(path: &std::path::Path) -> Option<u64> {
     let dir = existing(path)?;
@@ -168,5 +226,20 @@ mod space_tests {
             "from the nearest folder"
         );
         assert!(same_volume(&dir, &dir.join("x")));
+    }
+
+    /// LIB-030: network shares are known by their path; a local folder is not one.
+    #[test]
+    fn network_paths() {
+        assert!(!is_network(&std::env::temp_dir()));
+        #[cfg(windows)]
+        {
+            use std::path::Path;
+            assert!(is_network(Path::new(r"\\servidor\equipo\XcreenShot")));
+            assert!(is_network(Path::new("//servidor/equipo")));
+            assert!(is_network(Path::new(r"\\?\UNC\servidor\equipo")));
+            assert!(!is_network(Path::new(r"\\?\C:\Users")));
+            assert!(!is_network(Path::new(r"C:\Users")));
+        }
     }
 }

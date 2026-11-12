@@ -54,7 +54,9 @@ fn fnv(text: &str) -> u64 {
 
 /// `library.db` in the library folder, or in the app's data for a synced folder.
 pub fn index_path(root: &Path, local_dir: &Path) -> PathBuf {
-    if synced(root) {
+    // A synced folder or a network share (LIB-029, LIB-030): each computer keeps its own
+    // index in its app data, so two computers never write the same database.
+    if synced(root) || xs_core::platform::is_network(root) {
         let key = fnv(&root.to_string_lossy().to_lowercase());
         local_dir.join("library").join(format!("index-{key:016x}.db"))
     } else {
@@ -117,19 +119,28 @@ pub struct Library {
     reopen: Mutex<HashMap<String, Vec<PathBuf>>>,
     scanning: Mutex<()>,
     watcher: Mutex<Option<Debouncer<RecommendedWatcher>>>,
+    /// On a network share (LIB-030): no trash there, so deleting is for good.
+    network: bool,
 }
 
 impl Library {
     /// The library at `root`, with its index, thumbnails and Undo area under
     /// `local_dir` (the app's data). The folder is created if missing (LIB-027).
     pub fn open(root: PathBuf, local_dir: &Path) -> Library {
+        let index = index_path(&root, local_dir);
+        Library::open_with_index(root, local_dir, &index)
+    }
+
+    /// [`Library::open`] with the index at `index` (tests of a share out of reach).
+    pub fn open_with_index(root: PathBuf, local_dir: &Path, index: &Path) -> Library {
         let _ = std::fs::create_dir_all(&root);
-        let index = Index::open(&index_path(&root, local_dir)).unwrap_or_else(|e| {
+        let index = Index::open(index).unwrap_or_else(|e| {
             tracing::error!(error = %e, "library index could not be opened; using a temporary one");
             Index::in_memory()
         });
         let hold = local_dir.join("deleted");
         recycle::finish_leftovers(&hold);
+        let network = xs_core::platform::is_network(&root);
         Library {
             root,
             index: Mutex::new(index),
@@ -140,7 +151,24 @@ impl Library {
             reopen: Mutex::default(),
             scanning: Mutex::default(),
             watcher: Mutex::default(),
+            network,
         }
+    }
+
+    /// Treats the library as a network share (tests of LIB-030).
+    pub fn as_network(mut self) -> Library {
+        self.network = true;
+        self
+    }
+
+    pub fn is_network(&self) -> bool {
+        self.network
+    }
+
+    /// The folder can be reached now: a network share may be disconnected and a disk
+    /// unplugged (LIB-030). The index stays meanwhile, so search and thumbnails work.
+    pub fn available(&self) -> bool {
+        self.root.is_dir()
     }
 
     /// Deleted files wait in the app's data instead of going to the Recycle Bin at
@@ -186,6 +214,10 @@ impl Library {
     /// Builds the index again from the files and their sidecars (LIB-023): IDs, tags
     /// and favorites come back from the `.xmeta`. Returns the number of items.
     pub fn rebuild(&self) -> usize {
+        // Out of reach (LIB-030), reading the folder again would empty the index.
+        if !self.available() {
+            return self.list().len();
+        }
         {
             let index = self.index.lock().unwrap();
             let _ = index.clear();
@@ -392,6 +424,11 @@ impl Library {
     /// changed. A file renamed outside XcreenShot keeps its ID and data: its sidecar
     /// follows it, or it is recognized by the same size and time.
     pub fn scan(&self) -> bool {
+        // A folder out of reach (a network share disconnected, LIB-030) is not a folder
+        // whose files were all deleted: the index keeps what it knows.
+        if !self.available() {
+            return false;
+        }
         let _one = self.scanning.lock().unwrap();
         let found = scan::walk(&self.root);
         let index = self.index.lock().unwrap();
@@ -548,6 +585,11 @@ impl Library {
         others: &[PathBuf],
         permanent: bool,
     ) -> Result<(Option<String>, Vec<Item>), TrashError> {
+        // LIB-030, LIB-015: a network share has no trash; deleting there is for good and
+        // the window always asks first.
+        if self.network && !permanent && !ids.is_empty() {
+            return Err(TrashError::NoTrash("network".into()));
+        }
         let items: Vec<Item> = ids.iter().filter_map(|id| self.get(id)).collect();
         let mut files: Vec<PathBuf> = others.to_vec();
         for item in &items {

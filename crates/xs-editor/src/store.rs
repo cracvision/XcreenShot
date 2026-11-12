@@ -461,7 +461,8 @@ impl DocStore {
                     XshotError::Newer(_) => OpenError::Newer,
                     e => unreadable(&e),
                 })?;
-                let kind = if xs_library::contains(library, path) {
+                // A capture waiting for the library (LIB-030) is one of the library too.
+                let kind = if xs_library::contains(library, path) || xs_library::waiting::contains(path) {
                     Kind::Library
                 } else {
                     Kind::External

@@ -5321,3 +5321,26 @@ fn the_captured_pointer_is_a_cursor_object() {
     );
     assert!(bad.is_err());
 }
+
+/// LIB-030: with the library out of reach (a share disconnected), a capture waits in
+/// the app's data as a library document: saved by itself, never asked about.
+#[test]
+fn a_capture_waits_while_the_library_is_out_of_reach() {
+    let e = env();
+    let gone = e.library.path().join("share-not-there");
+    let recovery = tempfile::tempdir().unwrap();
+    editor(&e.core).set_folders(gone.clone(), recovery.path().to_path_buf());
+    let (doc, path) = capture(&e);
+    let waiting = xs_library::waiting::waiting_dir(&e.core.paths.local_dir);
+    assert!(path.starts_with(&waiting), "{path:?}");
+    assert!(path.exists());
+    let list = cli(&e.core, "document.list", json!({}));
+    let item = list["documents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["documentId"] == json!(doc))
+        .unwrap()
+        .clone();
+    assert_eq!(item["kind"], "library", "{item}");
+}

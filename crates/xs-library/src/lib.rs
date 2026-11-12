@@ -13,6 +13,7 @@ pub mod relocate;
 pub mod scan;
 pub mod service;
 pub mod sync;
+pub mod waiting;
 pub mod xmeta;
 
 use std::path::{Path, PathBuf};
@@ -55,14 +56,79 @@ pub fn on_relocated(f: impl Fn(&Core, &Path, &Path) + Send + Sync + 'static) {
     let _ = RELOCATED.set(Box::new(f));
 }
 
+type Arrived = Box<dyn Fn(&Core, &[(PathBuf, PathBuf)]) + Send + Sync>;
+static ARRIVED: std::sync::OnceLock<Arrived> = std::sync::OnceLock::new();
+
+/// The editor follows the captures that moved from the waiting folder into the
+/// library (LIB-030): their open documents point to the new files.
+pub fn on_arrived(f: impl Fn(&Core, &[(PathBuf, PathBuf)]) + Send + Sync + 'static) {
+    let _ = ARRIVED.set(Box::new(f));
+}
+
+/// LIB-030: the captures made while the library was out of reach move into it, with a
+/// notification. Returns how many moved.
+pub fn bring_waiting(core: &Core) -> usize {
+    let waiting = waiting::waiting_dir(&core.paths.local_dir);
+    if !waiting.is_dir() || !waiting::has_waiting(&waiting) {
+        return 0;
+    }
+    let lib = library(core);
+    let moved = waiting::move_waiting(&lib, &waiting);
+    if moved.is_empty() {
+        return 0;
+    }
+    if let Some(f) = ARRIVED.get() {
+        f(core, &moved);
+    }
+    changed(core);
+    let lang = core.lang();
+    let count = moved.len().to_string();
+    core.host().notify(
+        "captures",
+        &tr(lang, "notify.waiting_moved_title", &[]),
+        &tr(
+            lang,
+            if moved.len() == 1 {
+                "notify.waiting_moved_body_one"
+            } else {
+                "notify.waiting_moved_body_other"
+            },
+            &[("count", &count)],
+        ),
+    );
+    tracing::info!(count = moved.len(), "waiting captures moved into the library");
+    moved.len()
+}
+
+/// Every few seconds, while captures wait and the library is back (LIB-030).
+fn watch_waiting(core: &Arc<Core>) {
+    static STARTED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    if STARTED.set(()).is_err() {
+        return;
+    }
+    let weak = Arc::downgrade(core);
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(10));
+        let Some(core) = weak.upgrade() else { return };
+        let waiting = waiting::waiting_dir(&core.paths.local_dir);
+        if waiting.is_dir() && library(&core).available() && bring_waiting(&core) > 0 {
+            // The folder is back: what changed meanwhile is read again.
+            library(&core).scan();
+            changed(&core);
+        }
+    });
+}
+
 /// Indexes the folder in the background, then follows changes made outside
 /// XcreenShot (LIB-022). The shell calls it once at startup.
 pub fn start(core: &Arc<Core>) {
+    watch_waiting(core);
     let weak = Arc::downgrade(core);
     std::thread::spawn(move || {
         let Some(core) = weak.upgrade() else { return };
         let lib = library(&core);
         let started = std::time::Instant::now();
+        bring_waiting(&core);
         lib.scan();
         tracing::info!(
             items = lib.list().len(),
@@ -564,8 +630,8 @@ fn place_of(root: &Path) -> (&'static str, Option<&'static str>) {
     if !root.is_dir() {
         return ("unavailable", None);
     }
-    let text = root.to_string_lossy();
-    if text.starts_with("\\\\") || text.starts_with("//") {
+    // A UNC path or a mapped network drive (LIB-030).
+    if xs_core::platform::is_network(root) {
         return ("network", None);
     }
     let mut seen = SEEN.lock().unwrap();
@@ -1124,6 +1190,7 @@ pub fn extension() -> Extension {
 pub fn extension_with(root: Option<PathBuf>) -> Extension {
     Box::new(move |reg, weak: Weak<Core>| {
         if let Some(core) = weak.upgrade() {
+            waiting::remember(&core.paths.local_dir);
             core.service(|| match &root {
                 Some(root) => Library::open(root.clone(), &core.paths.local_dir).holding_deletes(),
                 None => Library::open(location_for(&core), &core.paths.local_dir),

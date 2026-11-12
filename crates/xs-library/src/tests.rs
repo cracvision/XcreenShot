@@ -1065,3 +1065,90 @@ fn a_copied_library_works_on_another_computer() {
         assert_eq!(names_in(&root), files, "nothing renamed or added");
     }
 }
+
+/// LIB-030: a library on a share out of reach keeps its index (search by tag and by app
+/// still answer), shows as not available, and a capture made meanwhile waits in the
+/// app's data and moves into the library, by itself, when it is back.
+#[test]
+fn a_network_library_out_of_reach_keeps_working() {
+    let outer = tempfile::tempdir().unwrap();
+    let root = outer.path().join("share");
+    write_xshot(
+        &root.join("2026-11").join("factura.xshot"),
+        "Chrome",
+        "2026-11-03T10:00:00+00:00",
+    );
+    write_png_n(&root.join("2026-11").join("b.png"), 2);
+    let core = Core::for_tests_with(Platform::Windows, vec![extension_with(Some(root.clone()))]);
+    // As on a share: the index in this computer's data, not in the folder.
+    let index = core.paths.local_dir.join("library").join("index-share.db");
+    std::fs::create_dir_all(index.parent().unwrap()).unwrap();
+    let lib = core.replace_service(
+        Library::open_with_index(root.clone(), &core.paths.local_dir, &index)
+            .holding_deletes()
+            .as_network(),
+    );
+    lib.scan();
+    let b = lib.find(&root.join("2026-11").join("b.png")).unwrap();
+    lib.tag(std::slice::from_ref(&b.id), &["Cliente".to_string()], &[])
+        .unwrap();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+
+    // The share goes away.
+    let away = outer.path().join("away");
+    std::fs::rename(&root, &away).unwrap();
+    assert!(!lib.available());
+    assert!(!lib.scan(), "nothing read and nothing forgotten");
+    assert_eq!(lib.rebuild(), 2, "not even when asked to rebuild");
+    let tagged = cli("library.search", json!({"tag": "Cliente"})).unwrap();
+    assert_eq!(tagged["count"], 1, "{tagged}");
+    let by_app = cli("library.search", json!({"app": "chrome"})).unwrap();
+    assert_eq!(by_app["count"], 1, "{by_app}");
+    let listed = cli("library.list", json!({"limit": 1})).unwrap();
+    assert_eq!(listed["place"], "unavailable");
+
+    // A capture made meanwhile waits in the app's data.
+    let target = waiting::target_root(&root, &core.paths.local_dir);
+    assert!(target.starts_with(&core.paths.local_dir), "{target:?}");
+    write_png_n(&target.join("2026-11").join("nueva.png"), 9);
+    assert_eq!(bring_waiting(&core), 0, "still out of reach");
+
+    // The share is back: the capture moves in, and the index learns it.
+    std::fs::rename(&away, &root).unwrap();
+    assert_eq!(waiting::target_root(&root, &core.paths.local_dir), root);
+    assert_eq!(bring_waiting(&core), 1);
+    assert!(root.join("2026-11").join("nueva.png").exists());
+    assert!(!target.join("2026-11").join("nueva.png").exists());
+    assert!(!target.join("2026-11").exists(), "the emptied folder goes");
+    assert_eq!(lib.list().len(), 3);
+    assert_eq!(
+        cli("library.list", json!({"limit": 1})).unwrap()["place"],
+        "local"
+    );
+}
+
+/// LIB-030, LIB-015: a share has no trash, so a delete there asks to be for good; a
+/// share's index is kept on this computer.
+#[test]
+fn a_network_library_deletes_for_good_and_indexes_locally() {
+    let e = env();
+    write_png_n(&e.path("a.png"), 1);
+    let lib = e.open().as_network();
+    lib.scan();
+    let a = lib.find(&e.path("a.png")).unwrap();
+    assert!(matches!(
+        lib.delete(std::slice::from_ref(&a.id), false),
+        Err(recycle::TrashError::NoTrash(_))
+    ));
+    assert!(e.path("a.png").exists(), "nothing deleted without asking");
+    let (undo, gone) = lib.delete(std::slice::from_ref(&a.id), true).unwrap();
+    assert!(undo.is_none());
+    assert_eq!(gone.len(), 1);
+    assert!(!e.path("a.png").exists());
+    #[cfg(windows)]
+    {
+        let data = tempfile::tempdir().unwrap();
+        let index = service::index_path(Path::new(r"\\servidor\equipo\XcreenShot"), data.path());
+        assert!(index.starts_with(data.path()), "{index:?}");
+    }
+}

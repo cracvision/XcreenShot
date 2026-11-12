@@ -193,7 +193,11 @@ fn create_document(
 ) -> Result<(String, PathBuf), CommandError> {
     let ed = editor(core);
     let autosave = core.settings.get_bool("library.autosaveImages");
-    let folder = if autosave { ed.library() } else { ed.unsaved_dir() };
+    let folder = if autosave {
+        crate::library_target(core)
+    } else {
+        ed.unsaved_dir()
+    };
     let path = xs_library::new_item_path(&folder, None, chrono::Local::now(), "xshot");
     let fail = |e: String| internal(lang, "", e);
     let decoded = xs_image::encode::decode(&base_png).map_err(fail)?;

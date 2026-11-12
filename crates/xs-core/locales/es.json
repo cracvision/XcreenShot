@@ -1337,7 +1337,10 @@
     "capture_blank": "La captura salió en negro: la ventana protege su contenido (un video protegido o una app que se oculta de las capturas). Si se ejecuta como administrador, abre también XcreenShot como administrador.",
     "slow_crosshair": "La selección fue lenta en este equipo. Activa la cruceta simplificada en Preferencias > Captura.",
     "action_open": "Abrir",
-    "action_folder": "Mostrar en la carpeta"
+    "action_folder": "Mostrar en la carpeta",
+    "waiting_moved_title": "Capturas en la biblioteca",
+    "waiting_moved_body_one": "La biblioteca vuelve a estar disponible: {{count}} captura hecha mientras tanto ya está en ella.",
+    "waiting_moved_body_other": "La biblioteca vuelve a estar disponible: {{count}} capturas hechas mientras tanto ya están en ella."
   },
   "source": {
     "ui": "la interfaz",
@@ -3122,7 +3125,9 @@
         "progress": "{{what}}: {{done}} de {{total}}",
         "export_done": "Exportación terminada.",
         "merging": "Fusionando otra biblioteca",
-        "merge_done": "Fusión terminada."
+        "merge_done": "Fusión terminada.",
+        "unavailable_help": "Ahora no se llega a {{path}} (una carpeta de red desconectada o un disco quitado). Puedes seguir buscando y viendo lo que este equipo sabe de ella.",
+        "unavailable_note": "Las capturas nuevas esperan en este equipo y pasan a la biblioteca cuando vuelva."
       },
       "columns": "Columnas",
       "column_resize": "Ancho de {{column}}",

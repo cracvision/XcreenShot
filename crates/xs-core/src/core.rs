@@ -140,10 +140,13 @@ impl Core {
 
     /// In-memory core for tests, with extensions.
     pub fn for_tests_with(platform: Platform, extensions: Vec<Extension>) -> Arc<Core> {
+        // Each test core has its own data folder: tests run side by side.
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let core = Arc::new(Core {
             settings: SettingsStore::in_memory(),
             shortcuts: ShortcutStore::in_memory(platform),
-            paths: Paths::rooted(&std::env::temp_dir().join(format!("xs-test-{}", std::process::id()))),
+            paths: Paths::rooted(&std::env::temp_dir().join(format!("xs-test-{}-{n}", std::process::id()))),
             host: RwLock::new(Arc::new(NullHost)),
             log: None,
             state: RwLock::new(AppState::default()),

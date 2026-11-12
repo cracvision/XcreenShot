@@ -501,6 +501,12 @@ fn drop_cropped(core: &Core) -> bool {
     core.settings.get_bool("editor.deleteCroppedContent")
 }
 
+/// Where a new item of the library is written: the library, or the waiting folder
+/// while the library is out of reach (LIB-030).
+pub(crate) fn library_target(core: &Core) -> PathBuf {
+    xs_library::waiting::target_root(&editor(core).library(), &core.paths.local_dir)
+}
+
 /// Saves a document in its own file and clears its unsaved state (EDT-107). A
 /// capture kept unsaved (LIB-020) goes into the library.
 fn save_own(core: &Core, id: &str) -> Result<PathBuf, String> {
@@ -510,7 +516,7 @@ fn save_own(core: &Core, id: &str) -> Result<PathBuf, String> {
     let unsaved = path.starts_with(ed.unsaved_dir());
     if unsaved {
         let app = snap.meta["app"].as_str();
-        path = xs_library::new_item_path(&ed.library(), app, chrono::Local::now(), "xshot");
+        path = xs_library::new_item_path(&library_target(core), app, chrono::Local::now(), "xshot");
     }
     write_snapshot(&ed, &snap, &path, snap.format, 90, drop_cropped(core))?;
     if unsaved {
@@ -545,9 +551,7 @@ fn keep_editable_copy(core: &Core, id: &str) {
     };
     let existing = ed.store.with(id, |d| d.editable_copy.clone()).flatten();
     let target = existing.unwrap_or_else(|| {
-        let dir = ed
-            .library()
-            .join(chrono::Local::now().format("%Y-%m").to_string());
+        let dir = library_target(core).join(chrono::Local::now().format("%Y-%m").to_string());
         xs_library::unique(&dir, &snap.name, "xshot")
     });
     if let Some(original) = &snap.path {
@@ -1080,7 +1084,7 @@ fn write_library_item_with(
     // Off (LIB-020): the capture waits in the app's data until it is saved.
     // Multi-capture saves to the library either way (CAP-067).
     let folder = if core.settings.get_bool("library.autosaveImages") || meta["mode"] == "multi" {
-        ed.library()
+        library_target(core)
     } else {
         ed.unsaved_dir()
     };
@@ -3429,6 +3433,29 @@ fn upgrade(weak: &Weak<Core>) -> Result<Arc<Core>, CommandError> {
 /// Handlers of the `document.*` and `editor.*` commands.
 /// The library moved (LIB-028): new captures go to the new folder, and open documents
 /// of the library follow their files.
+/// Captures that waited for the library are in it now (LIB-030): their documents
+/// follow their files.
+fn waiting_arrived(core: &Core, moved: &[(PathBuf, PathBuf)]) {
+    let ed = editor(core);
+    for id in ed.store.ids() {
+        let to = ed
+            .store
+            .with(&id, |d| {
+                d.path.as_ref().and_then(|p| {
+                    moved
+                        .iter()
+                        .find(|(from, _)| store::same_file(from, p) || from == p)
+                        .map(|(_, to)| to.clone())
+                })
+            })
+            .flatten();
+        if let Some(to) = to {
+            ed.store.set_path(&id, to);
+        }
+    }
+    emit_list(core);
+}
+
 fn library_relocated(core: &Core, from: &Path, to: &Path) {
     let ed = editor(core);
     *ed.library.lock().unwrap() = to.to_path_buf();
@@ -3482,6 +3509,7 @@ pub fn extension() -> Extension {
             }));
         }
         xs_library::on_relocated(library_relocated);
+        xs_library::on_arrived(waiting_arrived);
         macro_rules! on {
             ($id:literal, |$core:ident, $ctx:ident, $p:ident| $body:expr) => {{
                 let weak = weak.clone();

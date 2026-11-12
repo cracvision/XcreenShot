@@ -1045,10 +1045,20 @@ function LibraryStatus() {
         <span className="grow" />
         <span
           className={`lib-place lib-place-${place}`}
-          title={place === "synced" ? t("ui.library.synced_help", { path: root }) : root}
+          title={
+            place === "synced"
+              ? t("ui.library.synced_help", { path: root })
+              : place === "unavailable"
+                ? t("ui.library.status.unavailable_help", { path: root })
+                : root
+          }
         >
           {where}
         </span>
+        {/* LIB-030: out of reach, it still answers from this computer's index. */}
+        {place === "unavailable" && expanded && (
+          <span className="status-item muted">{t("ui.library.status.unavailable_note")}</span>
+        )}
         {expanded && (
           <span className="lib-root muted" title={root}>
             {root}

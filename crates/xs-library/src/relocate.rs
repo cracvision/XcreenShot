@@ -76,7 +76,7 @@ pub struct Moved {
 }
 
 /// Moves one file: a rename on the same disk, else a copy and a delete.
-fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
+pub(crate) fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
     if let Some(parent) = to.parent() {
         std::fs::create_dir_all(parent)?;
     }
