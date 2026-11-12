@@ -1579,7 +1579,8 @@
         "import_go": "Importar",
         "imported": "Ajustes importados.",
         "unassigned_one": "{{count}} atajo no tenía equivalente aquí y quedó sin asignar.",
-        "unassigned_other": "{{count}} atajos no tenían equivalente aquí y quedaron sin asignar."
+        "unassigned_other": "{{count}} atajos no tenían equivalente aquí y quedaron sin asignar.",
+        "group_presets": "Presets de captura"
       }
     },
     "permissions": {

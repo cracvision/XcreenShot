@@ -420,34 +420,59 @@ pub fn read_file(path: &std::path::Path, lang: Lang) -> Result<(Platform, Vec<Va
     Ok((platform, list))
 }
 
-fn import(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
-    let lang = ctx.lang;
-    let paths: Vec<PathBuf> = p
-        .get("paths")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_str)
-        .map(PathBuf::from)
+/// The presets group of `.xsettings` (APP-011, CAP-059): the same content as an
+/// `.xpreset` file.
+fn settings_export(core: &Core, lang: Lang) -> Value {
+    export_file(core, None, lang)
+}
+
+/// Reads the presets group back: names that exist follow the file's choice (keep both,
+/// replace or skip); `changes` lists the presets that would be added or replaced.
+fn settings_import(
+    core: &Core,
+    group: &Value,
+    from: Platform,
+    opts: &xs_core::settings_io::ImportOptions,
+    lang: Lang,
+) -> Result<Value, String> {
+    use xs_core::settings_io::OnConflict;
+    let list = group["presets"].as_array().cloned().unwrap_or_default();
+    let on_conflict = match opts.on_conflict {
+        OnConflict::Replace => "replace",
+        OnConflict::Skip => "skip",
+        OnConflict::KeepBoth => "keepBoth",
+    };
+    let incoming = incoming_of(
+        vec![(from, list)],
+        opts.convert_shortcuts,
+        core.shortcuts.platform(),
+    );
+    let stored = presets::load(core);
+    let same = |x: &Incoming| {
+        stored.presets.iter().any(|p| {
+            presets::display_name(p, lang).to_lowercase() == x.name.to_lowercase()
+                && p.kind == x.kind
+                && p.settings == x.settings
+        })
+    };
+    // What is here as the file has it is not imported again.
+    let fresh: Vec<Incoming> = incoming.into_iter().filter(|x| !same(x)).collect();
+    let changes: Vec<String> = fresh
+        .iter()
+        .filter(|x| x.problem.is_none())
+        .map(|x| x.name.clone())
         .collect();
-    if paths.is_empty() {
-        return Err(bad(lang, "paths", "give one or more .xpreset files"));
+    if opts.dry_run {
+        return Ok(json!({ "changes": changes }));
     }
-    let dry_run = p.get("dryRun").and_then(Value::as_bool).unwrap_or(false);
-    let convert_keys = p.get("convertShortcuts").and_then(Value::as_bool).unwrap_or(true);
-    let on_conflict = p.get("onConflict").and_then(Value::as_str).unwrap_or("keepBoth");
-    if !["keepBoth", "replace", "skip"].contains(&on_conflict) {
-        return Err(bad(lang, "onConflict", "keepBoth, replace or skip"));
-    }
-    let only: Option<Vec<String>> = p
-        .get("only")
-        .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect());
-    let here = core.shortcuts.platform();
-    // Every file first: a damaged one imports nothing at all.
+    let r = apply(core, fresh, on_conflict, None, lang);
+    Ok(json!({ "changes": changes, "imported": r["imported"], "withoutShortcut": r["withoutShortcut"] }))
+}
+
+/// The presets of the files' lists, checked, with their shortcuts for this platform.
+fn incoming_of(lists: Vec<(Platform, Vec<Value>)>, convert_keys: bool, here: Platform) -> Vec<Incoming> {
     let mut incoming = Vec::new();
-    for path in &paths {
-        let (from, list) = read_file(path, lang)?;
+    for (from, list) in lists {
         for v in list {
             let name = v["name"].as_str().map(str::trim).unwrap_or_default().to_string();
             let kind = v["kind"].as_str().unwrap_or_default().to_string();
@@ -476,7 +501,40 @@ fn import(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             });
         }
     }
-    let mut stored = presets::load(core);
+    incoming
+}
+
+fn import(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let paths: Vec<PathBuf> = p
+        .get("paths")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(PathBuf::from)
+        .collect();
+    if paths.is_empty() {
+        return Err(bad(lang, "paths", "give one or more .xpreset files"));
+    }
+    let dry_run = p.get("dryRun").and_then(Value::as_bool).unwrap_or(false);
+    let convert_keys = p.get("convertShortcuts").and_then(Value::as_bool).unwrap_or(true);
+    let on_conflict = p.get("onConflict").and_then(Value::as_str).unwrap_or("keepBoth");
+    if !["keepBoth", "replace", "skip"].contains(&on_conflict) {
+        return Err(bad(lang, "onConflict", "keepBoth, replace or skip"));
+    }
+    let only: Option<Vec<String>> = p
+        .get("only")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect());
+    let here = core.shortcuts.platform();
+    // Every file first: a damaged one imports nothing at all.
+    let mut lists = Vec::new();
+    for path in &paths {
+        lists.push(read_file(path, lang)?);
+    }
+    let incoming = incoming_of(lists, convert_keys, here);
+    let stored = presets::load(core);
     let profile = core.profile();
     let taken = |acc: &Accelerator| core.shortcuts.bindings(profile).iter().any(|(_, a)| a == acc);
     if dry_run {
@@ -495,15 +553,26 @@ fn import(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             .collect();
         return Ok(json!({ "dryRun": true, "presets": rows }));
     }
+    Ok(apply(core, incoming, on_conflict, only.as_deref(), lang))
+}
+
+/// Adds (or replaces) the incoming presets and gives them their shortcuts when free.
+fn apply(
+    core: &Core,
+    incoming: Vec<Incoming>,
+    on_conflict: &str,
+    only: Option<&[String]>,
+    lang: Lang,
+) -> Value {
+    let mut stored = presets::load(core);
+    let profile = core.profile();
+    let taken = |acc: &Accelerator| core.shortcuts.bindings(profile).iter().any(|(_, a)| a == acc);
     let mut imported = Vec::new();
     let mut skipped = Vec::new();
     let mut without_shortcut = Vec::new();
     let mut shortcuts: Vec<(String, Accelerator)> = Vec::new();
     for x in incoming {
-        if only
-            .as_ref()
-            .is_some_and(|o| !o.iter().any(|n| n.to_lowercase() == x.name.to_lowercase()))
-        {
+        if only.is_some_and(|o| !o.iter().any(|n| n.to_lowercase() == x.name.to_lowercase())) {
             continue;
         }
         if let Some(problem) = x.problem {
@@ -558,16 +627,18 @@ fn import(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             .set(&presets::slot_of(&id), Some(acc), false, profile, lang);
     }
     core.shortcuts_changed();
-    Ok(json!({
+    json!({
         "imported": imported.len(),
         "ids": imported,
         "skipped": skipped,
         "withoutShortcut": without_shortcut,
-    }))
+    })
 }
 
 /// Handlers of the `preset` area, inside the capture extension.
 pub fn register(reg: &mut Registry, weak: &Weak<Core>) {
+    // Presets travel in Export settings too (APP-011, CAP-059).
+    xs_core::settings_io::add_group("presets", settings_export, settings_import);
     macro_rules! on {
         ($id:literal, $f:expr) => {{
             let w = weak.clone();
@@ -765,6 +836,62 @@ mod tests {
         assert_eq!(names(&c), ["Ventana (copy)", "Region to clipboard", "Ventana"]);
         let menu: Vec<String> = presets::menu_items(&c).into_iter().map(|(_, n)| n).collect();
         assert_eq!(menu, names(&c));
+    }
+
+    /// APP-011, CAP-059: presets travel in the settings file with their shortcuts; what is
+    /// there already as the file has it is not imported again.
+    #[test]
+    fn presets_travel_in_the_settings_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("a.xsettings");
+        let a = core();
+        let one = call(
+            &a,
+            "preset.create",
+            json!({"name": "Uno", "settings": {"selection": "window"}}),
+        );
+        call(
+            &a,
+            "shortcuts.set",
+            json!({"command": one["slot"], "shortcut": "Ctrl+Alt+Shift+2"}),
+        );
+        call(&a, "settings.export", json!({"out": file}));
+        let text = std::fs::read_to_string(&file).unwrap();
+        let exported: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(exported["groups"]["presets"]["presets"][1]["name"], "Uno");
+        assert!(
+            !exported["groups"]["shortcuts"]["overrides"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .any(|k| k.starts_with("preset.")),
+            "a preset's shortcut goes with the preset"
+        );
+
+        let b = core();
+        let dry = call(
+            &b,
+            "settings.import",
+            json!({"path": file, "dryRun": true, "groups": ["presets"]}),
+        );
+        assert_eq!(dry["groups"]["presets"]["changes"], json!(["Uno"]), "{dry}");
+        call(
+            &b,
+            "settings.import",
+            json!({"path": file, "groups": ["presets"]}),
+        );
+        assert_eq!(names(&b), ["Region to clipboard", "Uno"]);
+        let uno = presets::load(&b).presets[1].clone();
+        assert_eq!(
+            presets::shortcut_of(&b, &uno.id).unwrap().to_string(),
+            "Ctrl+Alt+Shift+Digit2"
+        );
+        let again = call(
+            &b,
+            "settings.import",
+            json!({"path": file, "dryRun": true, "groups": ["presets"]}),
+        );
+        assert_eq!(again["groups"]["presets"]["changes"], json!([]));
     }
 
     /// CAP-063: export and import keep settings, order and shortcuts; from the other

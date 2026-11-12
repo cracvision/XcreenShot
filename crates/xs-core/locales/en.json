@@ -1579,7 +1579,8 @@
         "import_go": "Import",
         "imported": "Settings imported.",
         "unassigned_one": "{{count}} shortcut had no equivalent here and was left unassigned.",
-        "unassigned_other": "{{count}} shortcuts had no equivalent here and were left unassigned."
+        "unassigned_other": "{{count}} shortcuts had no equivalent here and were left unassigned.",
+        "group_presets": "Capture presets"
       }
     },
     "permissions": {

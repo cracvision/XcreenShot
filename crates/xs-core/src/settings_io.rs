@@ -17,7 +17,27 @@ pub const FORMAT: &str = "xcreenshot-settings";
 pub const FORMAT_VERSION: u64 = 1;
 
 /// The groups, in the order the dialogs show them.
-pub const GROUPS: &[&str] = &["preferences", "shortcuts", "themes", "toolbar"];
+pub const GROUPS: &[&str] = &["preferences", "shortcuts", "themes", "toolbar", "presets"];
+
+/// A group whose owner lives outside the core (capture presets, CAP-059): what it
+/// writes, and how it reads it back (with the file's platform) and says what changes.
+pub type GroupExport = fn(&Core, Lang) -> Value;
+pub type GroupImport = fn(&Core, &Value, Platform, &ImportOptions, Lang) -> Result<Value, String>;
+
+static EXTRA_GROUPS: std::sync::Mutex<Vec<(&'static str, GroupExport, GroupImport)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// Adds a group of another crate to the file (once per name).
+pub fn add_group(name: &'static str, export: GroupExport, import: GroupImport) {
+    let mut groups = EXTRA_GROUPS.lock().unwrap();
+    if !groups.iter().any(|(n, _, _)| *n == name) {
+        groups.push((name, export, import));
+    }
+}
+
+fn extra_groups() -> Vec<(&'static str, GroupExport, GroupImport)> {
+    EXTRA_GROUPS.lock().unwrap().clone()
+}
 
 /// What the core keeps for the editor (written by `xs-editor`).
 const THEMES_KEY: &str = "editor.themes";
@@ -40,10 +60,12 @@ pub fn export(core: &Core, groups: &[String]) -> Value {
         out.insert("preferences".into(), Value::Object(prefs));
     }
     if wanted(groups, "shortcuts") {
+        // A preset's shortcut travels with its preset, in the presets group.
         let overrides: BTreeMap<String, Value> = core
             .shortcuts
             .overrides()
             .into_iter()
+            .filter(|(k, _)| !crate::shortcuts::is_preset_key(k))
             .map(|(k, v)| (k, v.map(|a| json!(a.to_string())).unwrap_or(Value::Null)))
             .collect();
         out.insert(
@@ -75,6 +97,11 @@ pub fn export(core: &Core, groups: &[String]) -> Value {
     }
     if wanted(groups, "toolbar") {
         out.insert("toolbar".into(), json!({ "items": core.recall(TOOLBAR_KEY) }));
+    }
+    for (name, export, _) in extra_groups() {
+        if wanted(groups, name) {
+            out.insert(name.into(), export(core, core.lang()));
+        }
     }
     json!({
         "format": FORMAT,
@@ -424,6 +451,12 @@ pub fn import(core: &Core, file: &Value, opts: &ImportOptions, lang: Lang) -> Re
                 core.memory_changed(TOOLBAR_KEY);
             }
             summary.insert("toolbar".into(), json!({ "changes": changes }));
+        }
+    }
+
+    for (name, _, import) in extra_groups() {
+        if wanted(&opts.groups, name) && groups[name].is_object() {
+            summary.insert(name.into(), import(core, &groups[name], from, opts, lang)?);
         }
     }
 

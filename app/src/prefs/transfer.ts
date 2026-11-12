@@ -1,6 +1,6 @@
 // What the settings transfer dialogs read of an import preview (APP-011).
 
-export const GROUPS = ["preferences", "shortcuts", "themes", "toolbar"] as const;
+export const GROUPS = ["preferences", "shortcuts", "themes", "toolbar", "presets"] as const;
 export type Group = (typeof GROUPS)[number];
 
 /** How many things a group of the preview changes. */

@@ -287,7 +287,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "out": {"type": "string", "description": "The .xsettings file to write"},
-                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar"]}, "description": "Default: all of them"}
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar", "presets"]}, "description": "Default: all of them"}
                 }),
                 &["out"],
             ))
@@ -298,7 +298,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "path": {"type": "string", "description": "An .xsettings file"},
-                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar"]}, "description": "Default: all of them"},
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar", "presets"]}, "description": "Default: all of them"},
                     "convertShortcuts": {"type": "boolean", "default": true, "description": "From the other platform: convert Ctrl and Cmd, Alt and Option, Win and Control; false keeps this computer's shortcuts"},
                     "onConflict": {"type": "string", "enum": ["replace", "keepBoth", "skip"], "default": "keepBoth", "description": "A theme or saved effect with the name of an existing one"},
                     "dryRun": {"type": "boolean", "default": false, "description": "Only say what would change, by group"}
