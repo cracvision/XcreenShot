@@ -3451,6 +3451,16 @@ html.overlay-root.overlay-native #root {
   gap: 8px;
 }
 
+.fx-saved {
+  display: grid;
+  gap: 6px;
+}
+
+.fx-save {
+  font-size: 22px;
+  color: var(--brand);
+}
+
 .fx-selection {
   display: flex;
   flex-wrap: wrap;

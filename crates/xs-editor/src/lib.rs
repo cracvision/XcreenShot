@@ -2228,6 +2228,161 @@ fn color_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     Ok(v)
 }
 
+/// Saved effects (EDT-054): `[{id, name, stack}]`, kept between sessions.
+const SAVED_EFFECTS_KEY: &str = "effects.saved";
+
+/// The saved effects that come with the app (EDT-054, design decision).
+fn built_in_effects(lang: Lang) -> Value {
+    let es = lang == Lang::Es;
+    let n = |en: &str, es_: &str| if es { es_.to_string() } else { en.to_string() };
+    json!([
+        {"id": "fine-frame", "name": n("Fine frame", "Marco fino"), "stack": [
+            {"type": "border", "enabled": true, "width": 1, "color": "#1F2430", "position": "outside"}]},
+        {"id": "floating-card", "name": n("Floating card", "Tarjeta flotante"), "stack": [
+            {"type": "corners", "enabled": true, "shape": "radius", "radius": 12},
+            {"type": "shadow", "enabled": true, "angle": 90, "distance": 6, "blur": 18, "opacity": 35, "color": "#000000"}]},
+        {"id": "torn-sheet", "name": n("Torn sheet", "Hoja rasgada"), "stack": [
+            {"type": "edges", "enabled": true, "style": "torn", "size": 16, "sides": {"bottom": true}, "randomness": 50, "seed": 4242},
+            {"type": "shadow", "enabled": true, "angle": 45, "distance": 6, "blur": 12, "opacity": 40, "color": "#000000"}]},
+        {"id": "soft-perspective", "name": n("Soft perspective", "Perspectiva suave"), "stack": [
+            {"type": "perspective", "enabled": true, "style": "perspective", "horizontal": 12, "vertical": 0, "depth": 40},
+            {"type": "shadow", "enabled": true, "angle": 90, "distance": 8, "blur": 20, "opacity": 30, "color": "#000000"}]},
+        {"id": "documentation", "name": n("Documentation", "Documentación"), "stack": [
+            {"type": "border", "enabled": true, "width": 1, "color": "#9AA0A6", "position": "outside"},
+            {"type": "details", "enabled": true, "placement": "band", "side": "bottom", "fields": {"app": true, "url": true, "title": true, "date": true}, "size": 11, "color": "#FFFFFF", "background": "#1F2430", "align": "left", "padding": 8}]},
+        {"id": "grayscale", "name": n("Grayscale", "Escala de grises"), "stack": [
+            {"type": "filters", "enabled": true, "grayscale": {"on": true}}]},
+    ])
+}
+
+fn saved_effects(core: &Core) -> Vec<Value> {
+    core.recall(SAVED_EFFECTS_KEY)
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_else(|| {
+            built_in_effects(core.lang())
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+        })
+}
+
+/// `editor.saved_effect` (EDT-054): save the current stack, apply, rename, update,
+/// delete, move, or add to favorites.
+fn saved_effect_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let mut list = saved_effects(core);
+    let id = p.get("id").and_then(Value::as_str).map(str::to_string);
+    let find = |list: &Vec<Value>| -> Result<usize, CommandError> {
+        let id = id.as_deref().ok_or_else(|| bad("id", "give the saved effect"))?;
+        list.iter()
+            .position(|e| e["id"] == id)
+            .ok_or_else(|| bad("id", "there is no such saved effect"))
+    };
+    // The stack of the target: the document shown, or its floating image.
+    let target_stack = || -> Result<(String, Vec<Value>), CommandError> {
+        let doc = resolve(core, lang, p)?;
+        let stack = editor(core)
+            .store
+            .with(&doc, |d| match p.get("objectId").and_then(Value::as_str) {
+                Some(oid) => d
+                    .document
+                    .objects
+                    .iter()
+                    .find(|o| o.id == oid)
+                    .and_then(|o| o.props.get("effects").and_then(Value::as_array).cloned())
+                    .unwrap_or_default(),
+                None => d.document.effects.clone(),
+            })
+            .ok_or_else(|| CommandError::internal("document closed"))?;
+        Ok((doc, stack))
+    };
+    let mut out = json!({});
+    match p.get("action").and_then(Value::as_str).unwrap_or_default() {
+        "apply" => {
+            let i = find(&list)?;
+            let saved: Vec<Value> = list[i]["stack"].as_array().cloned().unwrap_or_default();
+            let (doc, current) = target_stack()?;
+            // Shift+click adds it at the end (EDT-054, design decision).
+            let append = p.get("append").and_then(Value::as_bool).unwrap_or(false);
+            let stack: Vec<Value> = if append {
+                current.into_iter().chain(saved).collect()
+            } else {
+                saved
+            };
+            let mut params = json!({"documentId": doc, "action": "set", "effects": stack});
+            if let Some(oid) = p.get("objectId") {
+                params["objectId"] = oid.clone();
+            }
+            return core.call(ctx.source, "document.effects", params, Some(lang));
+        }
+        "save" => {
+            let (_, stack) = target_stack()?;
+            if stack.is_empty() {
+                return Err(bad("documentId", "there are no effects to save"));
+            }
+            let name = p
+                .get("name")
+                .and_then(Value::as_str)
+                .filter(|n| !n.trim().is_empty())
+                .unwrap_or("Effect")
+                .to_string();
+            let new = format!("fx{}", chrono::Utc::now().timestamp_millis());
+            list.push(json!({"id": new, "name": name, "stack": stack}));
+            out = json!({ "id": new });
+        }
+        "update" => {
+            let i = find(&list)?;
+            let (_, stack) = target_stack()?;
+            list[i]["stack"] = json!(stack);
+        }
+        "rename" => {
+            let i = find(&list)?;
+            let name = p.get("name").and_then(Value::as_str).unwrap_or_default().trim();
+            if name.is_empty() {
+                return Err(bad("name", "the name is empty"));
+            }
+            list[i]["name"] = json!(name);
+        }
+        "delete" => {
+            let i = find(&list)?;
+            list.remove(i);
+        }
+        "move" => {
+            let i = find(&list)?;
+            let to = p
+                .get("to")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| bad("to", "give the new position"))? as usize;
+            let e = list.remove(i);
+            list.insert(to.min(list.len()), e);
+        }
+        // A favorite of the Favorites tool (EDT-016): a copy of the stack.
+        "favorite" => {
+            let i = find(&list)?;
+            let ed = editor(core);
+            let mut lib = ed.themes.lock().unwrap().clone();
+            let fid = lib.favorite(
+                "effects",
+                json!({"name": list[i]["name"], "stack": list[i]["stack"]}),
+            );
+            *ed.themes.lock().unwrap() = lib.clone();
+            themes_changed(core, &lib);
+            return Ok(json!({ "favoriteId": fid }));
+        }
+        other => return Err(bad("action", other)),
+    }
+    core.remember(SAVED_EFFECTS_KEY, json!(list));
+    core.host().editor_event("saved_effects", json!({}));
+    Ok(out)
+}
+
 /// Keeps the themes for the next session and tells the editor (EDT-015, EDT-017).
 fn themes_changed(core: &Core, lib: &themes::Library) {
     core.remember(themes::KEY, serde_json::to_value(lib).unwrap_or_default());
@@ -2238,6 +2393,22 @@ fn themes_changed(core: &Core, lib: &themes::Library) {
 /// now), a saved style's id or a favorite's id.
 pub fn sample_png(core: &Core, tool: &str, which: &str) -> Option<Vec<u8>> {
     let ed = editor(core);
+    if tool == "effects" {
+        // A saved effect or an effect favorite (EDT-054, EDT-016).
+        let stack = saved_effects(core)
+            .into_iter()
+            .find(|e| e["id"] == which)
+            .map(|e| e["stack"].clone())
+            .or_else(|| {
+                let lib = ed.themes.lock().unwrap();
+                lib.favorites
+                    .iter()
+                    .find(|f| f.id == which)
+                    .map(|f| f.style["stack"].clone())
+            })?;
+        let img = samples::effect_sample(stack.as_array()?)?;
+        return xs_image::encode::png(&img, 0.0, true).ok();
+    }
     let (tool, style) = if which == "current" {
         (tool.to_string(), ed.styles().of(tool)?)
     } else {
@@ -2384,6 +2555,17 @@ fn style_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
                         .find(|f| f.id == fid)
                         .cloned()
                         .ok_or_else(|| bad("favoriteId", "there is no such favorite"))?;
+                    // A saved effect: it goes to the document shown.
+                    if fav.tool == "effects" {
+                        let doc = resolve(core, lang, p)?;
+                        let stack = fav.style.get("stack").cloned().unwrap_or(json!([]));
+                        return core.call(
+                            ctx.source,
+                            "document.effects",
+                            json!({"documentId": doc, "action": "set", "effects": stack}),
+                            Some(lang),
+                        );
+                    }
                     set_tool_style(
                         core,
                         &fav.tool,
@@ -3236,6 +3418,13 @@ pub fn extension() -> Extension {
         ));
         // Effects (EDT-053 to EDT-068).
         on!("document.effects", |core, ctx, p| effects_command(&core, ctx, &p));
+        // Saved effects (EDT-054).
+        on!("editor.saved_effects", |core, _ctx, _p| Ok(
+            json!({ "effects": saved_effects(&core) })
+        ));
+        on!("editor.saved_effect", |core, ctx, p| saved_effect_command(
+            &core, ctx, &p
+        ));
         // Stops a Photo fill (EDT-045): the image stays as it was.
         on!("editor.cancel", |core, _ctx, _p| {
             let running = editor(&core).filling.lock().unwrap().clone();

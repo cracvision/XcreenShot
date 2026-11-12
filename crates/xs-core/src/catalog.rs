@@ -666,6 +666,24 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"effects": {"type": "array"}}})),
+        B::new("editor.saved_effects", &["EDT-054"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"effects": {"type": "array", "description": "[{id, name, stack}]"}}})),
+        B::new("editor.saved_effect", &["EDT-054", "EDT-016"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["apply", "save", "update", "rename", "delete", "move", "favorite"], "description": "apply: the saved effect becomes the target's stack (with append, it goes at the end); save / update: from the target's stack; favorite: a copy in Favorites"},
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "to": {"type": "integer", "minimum": 0},
+                    "append": {"type": "boolean", "default": false},
+                    "documentId": document_id(),
+                    "objectId": {"type": "string", "description": "A floating image instead of the document"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(

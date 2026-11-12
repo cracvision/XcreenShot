@@ -95,7 +95,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
 | EDT-015 | Estilos guardados | M2 | Must | Hecho en Windows (macOS pendiente) |
-| EDT-016 | Favoritos | M2 | Should | En curso (faltan los efectos favoritos, con EDT-054) |
+| EDT-016 | Favoritos | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-017 | Temas | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | En curso (faltan el doble clic en el archivo y `policy.themes`) |
 | EDT-019 | Selector de color | M1 | Must | Win |
@@ -132,22 +132,22 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-050 | Recorte no destructivo | M1 | Must | Win |
 | EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | — |
 | EDT-052 | Quitar franja y añadir espacio | M2 | Should | — |
-| EDT-053 | Panel Efectos | M2 | Must | — |
-| EDT-054 | Efectos guardados | M2 | Should | — |
-| EDT-055 | Borde | M2 | Should | — |
-| EDT-056 | Bordes decorativos | M2 | Should | — |
-| EDT-057 | Sombra de la imagen | M2 | Should | — |
-| EDT-058 | Perspectiva | M2 | Should | — |
-| EDT-059 | Página doblada | M2 | Could | — |
-| EDT-060 | Reflejo | M2 | Could | — |
-| EDT-061 | Desvanecer bordes | M2 | Could | — |
-| EDT-062 | Filtros | M2 | Should | — |
-| EDT-063 | Ajuste de color | M2 | Should | — |
-| EDT-064 | Reemplazo de color | M2 | Could | — |
-| EDT-065 | Efecto Foco y lupa | M2 | Could | — |
-| EDT-066 | Marca de agua | M2 | Could | — |
-| EDT-067 | Detalles de captura | M3 | Should | — |
-| EDT-068 | Efectos de transformación | M2 | Should | — |
+| EDT-053 | Panel Efectos | M2 | Must | En curso (faltan el menú Imagen > Efectos y ocultarlos con Quitar franja) |
+| EDT-054 | Efectos guardados | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-055 | Borde | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-056 | Bordes decorativos | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-057 | Sombra de la imagen | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-058 | Perspectiva | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-059 | Página doblada | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-060 | Reflejo | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-061 | Desvanecer bordes | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-062 | Filtros | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-063 | Ajuste de color | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-064 | Reemplazo de color | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-065 | Efecto Foco y lupa | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-066 | Marca de agua | M2 | Could | Hecho en Windows (macOS pendiente) |
+| EDT-067 | Detalles de captura | M3 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-068 | Efectos de transformación | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-069 | Cambiar tamaño de la imagen | M2 | Must | — |
 | EDT-070 | Tamaño del lienzo | M2 | Should | — |
 | EDT-071 | Ampliar el lienzo automáticamente | M1 | Should | Win |

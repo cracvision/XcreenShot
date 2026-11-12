@@ -68,6 +68,34 @@ fn object(tool: &str, style: &Value) -> Option<Map<String, Value>> {
     v.as_object().cloned()
 }
 
+/// A saved effect's sample (EDT-054): a small page with the stack applied.
+pub fn effect_sample(stack: &[Value]) -> Option<RgbaImage> {
+    let mut img = page();
+    // A little color, so filters and color changes show.
+    for y in 10..30 {
+        for x in 80..116 {
+            img.put_pixel(x, y, image::Rgba([45, 127, 249, 255]));
+        }
+    }
+    let meta = json!({"capturedAt": "2026-01-01T09:00:00+00:00", "app": {"name": "XcreenShot"}});
+    let none = |_: &str| None;
+    let ctx = xs_image::fx::Ctx {
+        canvas_color: None,
+        dpi: 96.0,
+        meta: &meta,
+        picture: &none,
+    };
+    let out = xs_image::fx::apply(stack, img, &ctx).image;
+    // Back to the sample's size, keeping its proportions, on a transparent box.
+    let (w, h) = out.dimensions();
+    let k = (W as f64 / w as f64).min(H as f64 / h as f64).min(1.0);
+    let (nw, nh) = (((w as f64 * k) as u32).max(1), ((h as f64 * k) as u32).max(1));
+    let small = image::imageops::resize(&out, nw, nh, image::imageops::FilterType::Triangle);
+    let mut boxed = RgbaImage::new(W, H);
+    image::imageops::overlay(&mut boxed, &small, ((W - nw) / 2) as i64, ((H - nh) / 2) as i64);
+    Some(boxed)
+}
+
 /// The sample of `tool` in `style`.
 pub fn sample(tool: &str, style: &Value) -> Option<RgbaImage> {
     let props = object(tool, style)?;

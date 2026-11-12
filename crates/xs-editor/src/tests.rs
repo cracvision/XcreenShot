@@ -3091,3 +3091,67 @@ fn effects_stack_on_the_document_images_and_selections() {
     cli(&e.core, "document.undo", json!({"documentId": doc}));
     assert_eq!(rendered(&e, &doc).get_pixel(50, 50).0, [255, 0, 0, 255]);
 }
+
+/// EDT-054: a saved effect replaces the stack, or Shift adds it at the end; the
+/// current stack can be saved and applied to another capture; a favorite applies it.
+#[test]
+fn saved_effects_replace_or_add() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let list = cli(&e.core, "editor.saved_effects", json!({}));
+    assert_eq!(list["effects"].as_array().unwrap().len(), 6);
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "add", "effect": {"type": "border", "width": 3}}),
+    );
+    cli(
+        &e.core,
+        "editor.saved_effect",
+        json!({"action": "apply", "id": "grayscale", "documentId": doc, "append": true}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let types: Vec<&str> = info["effects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["type"].as_str().unwrap())
+        .collect();
+    assert_eq!(types, ["border", "filters"], "the border stays");
+    // Border + rounded corners + shadow, saved and applied to another capture.
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "set", "effects": [
+            {"type": "border", "width": 4}, {"type": "corners", "radius": 10}, {"type": "shadow", "distance": 5}]}),
+    );
+    let saved = cli(
+        &e.core,
+        "editor.saved_effect",
+        json!({"action": "save", "name": "Mine", "documentId": doc}),
+    );
+    let (other, _) = capture(&e);
+    cli(
+        &e.core,
+        "editor.saved_effect",
+        json!({"action": "apply", "id": saved["id"], "documentId": other}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": other}));
+    let fx = info["effects"].as_array().unwrap();
+    assert_eq!(fx.len(), 3);
+    assert_eq!(fx[1]["radius"], json!(10));
+    // As a favorite, it applies to the document shown.
+    let fav = cli(
+        &e.core,
+        "editor.saved_effect",
+        json!({"action": "favorite", "id": "fine-frame"}),
+    );
+    cli(
+        &e.core,
+        "editor.style",
+        json!({"action": "apply_favorite", "favoriteId": fav["favoriteId"], "documentId": other}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": other}));
+    assert_eq!(info["effects"][0]["type"], "border");
+    assert_eq!(info["effects"].as_array().unwrap().len(), 1);
+}

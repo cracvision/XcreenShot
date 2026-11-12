@@ -757,6 +757,9 @@ export const useEditor = create<EditorState>((set, get) => ({
           }
           break;
         }
+        case "saved_effects":
+          set({ themesVersion: get().themesVersion + 1 });
+          break;
         case "themes":
           set({ themesVersion: get().themesVersion + 1 });
           void loadThemeColors().then((themeColors) => set({ themeColors }));

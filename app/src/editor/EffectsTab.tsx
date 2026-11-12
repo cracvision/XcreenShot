@@ -3,13 +3,16 @@
 // the selected floating image; with a pixel selection, some effects can be fixed into
 // it. Everything runs `document.effects` (and `document.selection_action`).
 import { open } from "@tauri-apps/plugin-dialog";
-import { useState, type DragEvent } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { ColorPicker } from "./ColorPicker";
 import { NumberField, SelectField } from "./Fields";
 import { selectionAction } from "./pixelSelection";
 import { useEditor } from "./state";
+import { Dialog } from "../components/Dialog";
+import { useContextMenu } from "./menus";
+import { sampleUrl } from "./themesUi";
 
 type Effect = Record<string, unknown> & { type: string; enabled?: boolean };
 
@@ -240,6 +243,167 @@ function change(e: Effect | undefined, key: string, value: unknown): Record<stri
   return { [head]: inner };
 }
 
+interface SavedEffect {
+  id: string;
+  name: string;
+  stack: Effect[];
+}
+
+/** Saved effects (EDT-054): a row of samples; click applies, Shift+click adds at the
+ * end, + saves the current stack; right-click renames, updates, deletes or stars. */
+function SavedEffects({ target }: { target: Record<string, unknown> }) {
+  const { t } = useTranslation();
+  const version = useEditor((s) => s.themesVersion);
+  const doc = useEditor((s) => s.doc);
+  const [list, setList] = useState<SavedEffect[]>([]);
+  const [ask, setAsk] = useState<{ id: string | null; name: string } | null>(null);
+  const [dragged, setDragged] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void run<{ effects: SavedEffect[] }>("editor.saved_effects")
+      .then((r) => alive && setList(r.effects))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+  if (!doc) return null;
+  const act = (params: Record<string, unknown>) =>
+    run("editor.saved_effect", { documentId: doc.documentId, ...target, ...params }).catch((e) =>
+      useEditor.getState().showError(e),
+    );
+  const menu = (ev: React.MouseEvent, s: SavedEffect) => {
+    ev.preventDefault();
+    useContextMenu.setState({
+      open: true,
+      x: ev.clientX,
+      y: ev.clientY,
+      label: t("ui.editor.fx.saved.saved"),
+      items: [
+        {
+          id: "fx-rename",
+          label: t("ui.editor.fx.saved.rename"),
+          onSelect: () => setAsk({ id: s.id, name: s.name }),
+        },
+        {
+          id: "fx-update",
+          label: t("ui.editor.fx.saved.update"),
+          onSelect: () => void act({ action: "update", id: s.id }),
+        },
+        {
+          id: "fx-favorite",
+          label: t("ui.editor.fx.saved.favorite"),
+          onSelect: () => void act({ action: "favorite", id: s.id }),
+        },
+        {
+          id: "fx-delete",
+          label: t("ui.editor.fx.saved.delete"),
+          separator: true,
+          onSelect: () => void act({ action: "delete", id: s.id }),
+        },
+      ],
+    });
+  };
+  return (
+    <div className="fx-saved">
+      <span className="muted">{t("ui.editor.fx.saved.saved")}</span>
+      <div className="style-grid" role="list" aria-label={t("ui.editor.fx.saved.saved")}>
+        {list.map((s, i) => (
+          <div
+            key={s.id}
+            className="style-cell"
+            role="listitem"
+            draggable
+            onDragStart={() => setDragged(s.id)}
+            onDragOver={(ev) => dragged && dragged !== s.id && ev.preventDefault()}
+            onDrop={(ev) => {
+              ev.preventDefault();
+              if (dragged && dragged !== s.id) void act({ action: "move", id: dragged, to: i });
+              setDragged(null);
+            }}
+          >
+            <button
+              type="button"
+              className="style-sample"
+              title={`${s.name} · ${t("ui.editor.fx.saved.apply_help")}`}
+              onClick={(ev) => void act({ action: "apply", id: s.id, append: ev.shiftKey })}
+              onContextMenu={(ev) => menu(ev, s)}
+            >
+              <img src={sampleUrl("effects", s.id, s.stack)} alt={s.name} />
+            </button>
+          </div>
+        ))}
+        <div className="style-cell temporary" role="listitem">
+          <button
+            type="button"
+            className="style-sample fx-save"
+            title={t("ui.editor.fx.saved.save")}
+            aria-label={t("ui.editor.fx.saved.save")}
+            onClick={() => setAsk({ id: null, name: "" })}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      {ask && (
+        <SaveName
+          title={ask.id ? t("ui.editor.fx.saved.rename") : t("ui.editor.fx.saved.save_title")}
+          value={ask.name}
+          onCancel={() => setAsk(null)}
+          onOk={(name) => {
+            setAsk(null);
+            void act(ask.id ? { action: "rename", id: ask.id, name } : { action: "save", name });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SaveName(props: {
+  title: string;
+  value: string;
+  onCancel: () => void;
+  onOk: (v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(props.value);
+  return (
+    <Dialog
+      title={props.title}
+      onCancel={props.onCancel}
+      actions={
+        <>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!value.trim()}
+            onClick={() => props.onOk(value.trim())}
+          >
+            {t("ui.editor.ok")}
+          </button>
+          <button type="button" className="btn" onClick={props.onCancel}>
+            {t("ui.editor.cancel")}
+          </button>
+        </>
+      }
+    >
+      <label className="prop-field">
+        <span>{t("ui.editor.fx.saved.name")}</span>
+        <input
+          type="text"
+          data-autofocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && value.trim()) props.onOk(value.trim());
+          }}
+        />
+      </label>
+    </Dialog>
+  );
+}
+
 export function EffectsTab() {
   const { t } = useTranslation();
   const doc = useEditor((s) => s.doc);
@@ -393,6 +557,7 @@ export function EffectsTab() {
           {t("ui.editor.fx.remove_all")}
         </button>
       </div>
+      <SavedEffects target={target} />
       {pixels && (
         // Fixed into the selected pixels (EDT-053, EDT-065).
         <div className="fx-selection">

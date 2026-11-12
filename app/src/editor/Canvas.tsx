@@ -2166,6 +2166,7 @@ export function Canvas({ doc }: Props) {
                   shadowColor="black"
                   shadowBlur={12 / scale}
                   shadowOpacity={0.25}
+                  visible={!showFx}
                 />
                 <Group {...clip}>
                   <Rect
@@ -2176,6 +2177,7 @@ export function Canvas({ doc }: Props) {
                     fillPatternImage={checker as unknown as HTMLImageElement}
                     fillPatternScaleX={1 / scale}
                     fillPatternScaleY={1 / scale}
+                    visible={!showFx}
                   />
                   {doc.canvas.color && !showFx && (
                     <Rect
