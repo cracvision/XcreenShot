@@ -2974,3 +2974,120 @@ fn gradients_fill_shapes_and_areas() {
     );
     assert!(r["gradients"].as_array().unwrap().is_empty());
 }
+
+/// EDT-053, EDT-055: effects are kept in the file and editable; the export has them
+/// (a 5 px outside border on 400 × 200 gives 410 × 210); order matters; a floating
+/// image has its own stack; a selection takes an effect into its pixels.
+#[test]
+fn effects_stack_on_the_document_images_and_selections() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "add", "effect": {"type": "border", "width": 5, "color": "#FF0000"}}),
+    );
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "add", "effect": {"type": "shadow", "distance": 0, "blur": 0, "opacity": 0}}),
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(img.dimensions(), (410, 210));
+    assert_eq!(img.get_pixel(1, 100).0, [255, 0, 0, 255]);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["width"], 400, "the editable canvas does not grow");
+    assert_eq!(info["undoLabel"], "Change effects");
+    // Saved and opened again: both there and on.
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let doc = cli(&e.core, "document.open", json!({"path": path}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let fx = info["effects"].as_array().unwrap();
+    assert_eq!(fx.len(), 2);
+    assert_eq!(fx[0]["type"], "border");
+    assert_eq!(fx[0]["enabled"], true);
+    // Order: perspective after the border slants the border too.
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "set", "effects": [{"type": "border", "width": 5}, {"type": "perspective", "horizontal": 20}]}),
+    );
+    let a = rendered(&e, &doc);
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "move", "index": 1, "to": 0}),
+    );
+    let b = rendered(&e, &doc);
+    assert!(a != b, "a different result");
+    // Remove all: off, kept.
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "action": "clear"}),
+    );
+    assert_eq!(rendered(&e, &doc).dimensions(), (400, 200));
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.effects",
+        json!({"documentId": doc, "action": "add", "effect": {"type": "border", "width": 500}}),
+    );
+    assert!(bad.is_err(), "width goes to 100");
+    // A floating image's own border.
+    let red = red_png(&e, 40, 20);
+    cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [red], "center": [200, 100]}),
+    );
+    cli(
+        &e.core,
+        "document.effects",
+        json!({"documentId": doc, "objectId": "o1", "action": "add", "effect": {"type": "border", "width": 4, "color": "#0000FF"}}),
+    );
+    let img = rendered(&e, &doc);
+    assert_eq!(img.get_pixel(178, 100).0, [0, 0, 255, 255], "around the image");
+    assert_eq!(
+        img.get_pixel(5, 5).0,
+        [255, 255, 255, 255],
+        "not around the document"
+    );
+    // A selection takes grayscale; Undo takes it back.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [20, 20])]}),
+    );
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [5, 5], "color": "#FF0000"}),
+    );
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 0, "y": 0, "w": 100, "h": 100}}),
+    );
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "effect", "effect": {"type": "filters", "grayscale": {"on": true}}}),
+    );
+    let img = rendered(&e, &doc);
+    let inside = img.get_pixel(50, 50).0;
+    assert!(
+        inside[0] == inside[1] && inside[1] == inside[2],
+        "gray: {inside:?}"
+    );
+    assert_eq!(img.get_pixel(200, 150).0, [255, 0, 0, 255], "outside stays red");
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(rendered(&e, &doc).get_pixel(50, 50).0, [255, 0, 0, 255]);
+}

@@ -641,7 +641,8 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "action": {"type": "string", "enum": ["delete", "cut", "copy", "move", "float", "crop"], "description": "delete or cut leave the gap filled; copy puts the pixels on the clipboard; move takes them by `offset`; float makes them a floating image; crop crops to them"},
+                    "action": {"type": "string", "enum": ["delete", "cut", "copy", "move", "float", "crop", "effect"], "description": "delete or cut leave the gap filled; copy puts the pixels on the clipboard; move takes them by `offset`; float makes them a floating image; crop crops to them; effect fixes `effect` into them"},
+                    "effect": {"type": "object", "description": "effect: a filters, color, replace or spotlight effect (spotlight: dim, blur, zoom 100–400, borderColor, borderWidth)"},
                     "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "move: [dx, dy] in canvas pixels"},
                     "gapFill": {"type": "string", "enum": ["smart", "transparent", "canvas"], "default": "smart", "description": "What fills the place the pixels leave"},
                     "quality": {"type": "string", "enum": ["fast", "photo"], "default": "fast", "description": "Smart fill: fast for interfaces and flat backgrounds; photo rebuilds textures (slower; editor.cancel stops it)"}
@@ -649,6 +650,22 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "ids": {"type": "array", "items": {"type": "string"}, "description": "float: the new floating image"}}})),
+        B::new("document.effects", &["EDT-053", "EDT-055", "EDT-056", "EDT-057", "EDT-058", "EDT-059", "EDT-060", "EDT-061", "EDT-062", "EDT-063", "EDT-064", "EDT-066", "EDT-067", "EDT-068", "EDT-119"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["set", "add", "update", "remove", "move", "clear"], "default": "set", "description": "set: the whole stack; add: one at the end; update: change `index` with `effect`'s values; remove / move (`to`); clear: every effect off"},
+                    "effects": {"type": "array", "items": {"type": "object"}, "description": "set: the stack, in order"},
+                    "effect": {"type": "object", "description": "{type, enabled, …settings}. Types: border, edges, shadow, perspective, pageCurl, reflection, fade, filters, color, replace, watermark, details, trim, corners, scale, rotate"},
+                    "index": {"type": "integer", "minimum": 0},
+                    "to": {"type": "integer", "minimum": 0},
+                    "objectId": {"type": "string", "description": "A floating image's own stack instead of the document's"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"effects": {"type": "array"}}})),
         B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
             .mutates()
             .params(params(

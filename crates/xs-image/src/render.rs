@@ -643,10 +643,41 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
             };
-            let Some(picture) = images.get(&i.image) else {
+            let Some(original) = images.get(&i.image) else {
                 return;
             };
-            let r = i.rect;
+            // Its own effects (EDT-053): the picture changes, and grows around the box.
+            let stack: Vec<serde_json::Value> = object
+                .props
+                .get("effects")
+                .and_then(serde_json::Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let mut grown: Option<(Arc<Pixmap>, [i64; 2])> = None;
+            if stack.iter().any(crate::fx::enabled) {
+                let meta = serde_json::Value::Null;
+                let none = |_: &str| None;
+                let ctx = crate::fx::Ctx {
+                    canvas_color: None,
+                    dpi,
+                    meta: &meta,
+                    picture: &none,
+                };
+                let out = crate::fx::apply(&stack, straight(original), &ctx);
+                if let Some(p) = premultiply(&out.image) {
+                    grown = Some((Arc::new(p), out.origin));
+                }
+            }
+            let (picture, origin) = match &grown {
+                Some((p, o)) => (p, *o),
+                None => (original, [0, 0]),
+            };
+            let mut r = i.rect;
+            let (kx, ky) = (r.w / original.width() as f64, r.h / original.height() as f64);
+            r.x -= origin[0] as f64 * kx;
+            r.y -= origin[1] as f64 * ky;
+            r.w = picture.width() as f64 * kx;
+            r.h = picture.height() as f64 * ky;
             let paint = PixmapPaint {
                 opacity: (i.style.opacity / 100.0).clamp(0.0, 1.0) as f32,
                 quality: tiny_skia::FilterQuality::Bicubic,
@@ -697,7 +728,7 @@ fn image_opacity(doc: &Document) -> f32 {
     }
 }
 
-fn straight(pm: &Pixmap) -> RgbaImage {
+pub(crate) fn straight(pm: &Pixmap) -> RgbaImage {
     let mut out = Vec::with_capacity(pm.data().len());
     for px in pm.pixels() {
         let c = px.demultiply();
@@ -844,6 +875,45 @@ pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = image_layer(doc, base);
     draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
     straight(&pm)
+}
+
+/// The image as it leaves the editor (EDT-053): the document's effects applied (with
+/// the base-only ones under the objects), and where the canvas's top-left corner is
+/// in it. Without effects, the same as [`render`].
+pub fn render_final(doc: &Document, base: &Base, meta: &serde_json::Value) -> (RgbaImage, [i64; 2]) {
+    let active = doc.effects.iter().any(crate::fx::enabled);
+    if !active {
+        return (render(doc, base), [0, 0]);
+    }
+    let picture = |name: &str| base.images.get(name).map(|p| straight(p));
+    let ctx = crate::fx::Ctx {
+        canvas_color: doc.canvas.color.as_deref().and_then(Rgba::parse),
+        dpi: doc.dpi,
+        meta,
+        picture: &picture,
+    };
+    let mut pm = image_layer(doc, base);
+    if doc
+        .effects
+        .iter()
+        .any(|e| crate::fx::enabled(e) && crate::fx::on_base(e))
+    {
+        let under = crate::fx::apply_base(&doc.effects, straight(&pm), &ctx);
+        if let Some(p) = premultiply(&under) {
+            pm = p;
+        }
+    }
+    draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
+    let out = crate::fx::apply(&doc.effects, straight(&pm), &ctx);
+    (out.image, out.origin)
+}
+
+fn premultiply(img: &RgbaImage) -> Option<Pixmap> {
+    let mut pm = Pixmap::new(img.width().max(1), img.height().max(1))?;
+    for (p, q) in pm.pixels_mut().iter_mut().zip(img.pixels()) {
+        *p = tiny_skia::ColorU8::from_rgba(q.0[0], q.0[1], q.0[2], q.0[3]).premultiply();
+    }
+    Some(pm)
 }
 
 /// What the image shows under the objects: the original pixels, the flattened layers

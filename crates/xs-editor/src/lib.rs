@@ -1387,6 +1387,136 @@ fn changed(core: &Core, ctx: &Context, id: &str) {
     }
 }
 
+/// `document.effects` (EDT-053): the effect stack of the document, or of the floating
+/// image `objectId`, in one undo step.
+fn effects_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let id = resolve(core, lang, p)?;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let action = p
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("set")
+        .to_string();
+    let target = p.get("objectId").and_then(Value::as_str).map(str::to_string);
+    let index = p.get("index").and_then(Value::as_u64).map(|i| i as usize);
+    let checked = |e: &Value| -> Result<Value, CommandError> {
+        let mut e = e.clone();
+        if !e.is_object() {
+            return Err(bad("effect", "an effect is an object with its type"));
+        }
+        xs_image::fx::check(&e).map_err(|r| bad("effect", &r))?;
+        // A torn edge keeps its variant in the file (EDT-056).
+        if e["type"] == "edges" && e.get("seed").is_none() {
+            e["seed"] = json!(
+                chrono::Utc::now()
+                    .timestamp_nanos_opt()
+                    .unwrap_or(7)
+                    .unsigned_abs()
+                    % 1_000_000_007
+            );
+        }
+        if e.get("enabled").is_none() {
+            e["enabled"] = json!(true);
+        }
+        Ok(e)
+    };
+    let stack = editor(core)
+        .store
+        .mutate(&id, "history.effects", |doc| {
+            let list: &mut Vec<Value> = match &target {
+                None => &mut doc.effects,
+                Some(oid) => {
+                    let o = doc
+                        .objects
+                        .iter_mut()
+                        .find(|o| &o.id == oid)
+                        .ok_or_else(|| bad("objectId", "there is no such object"))?;
+                    if o.kind != "image" {
+                        return Err(bad(
+                            "objectId",
+                            "only the document and floating images have effects",
+                        ));
+                    }
+                    let v = o.props.entry("effects").or_insert_with(|| json!([]));
+                    if !v.is_array() {
+                        *v = json!([]);
+                    }
+                    v.as_array_mut().expect("an array")
+                }
+            };
+            let at = |i: Option<usize>, len: usize| {
+                i.filter(|&i| i < len)
+                    .ok_or_else(|| bad("index", "there is no effect there"))
+            };
+            match action.as_str() {
+                "set" => {
+                    let all = p
+                        .get("effects")
+                        .and_then(Value::as_array)
+                        .ok_or_else(|| bad("effects", "give the list"))?;
+                    *list = all.iter().map(checked).collect::<Result<_, _>>()?;
+                }
+                "add" => {
+                    let e = checked(p.get("effect").ok_or_else(|| bad("effect", "give the effect"))?)?;
+                    list.push(e);
+                }
+                "update" => {
+                    let i = at(index, list.len())?;
+                    let changes = p
+                        .get("effect")
+                        .and_then(Value::as_object)
+                        .ok_or_else(|| bad("effect", "give the changes"))?;
+                    let mut e = list[i].clone();
+                    for (k, v) in changes {
+                        e[k] = v.clone();
+                    }
+                    list[i] = checked(&e)?;
+                }
+                "remove" => {
+                    let i = at(index, list.len())?;
+                    list.remove(i);
+                }
+                "move" => {
+                    let i = at(index, list.len())?;
+                    let to = p
+                        .get("to")
+                        .and_then(Value::as_u64)
+                        .ok_or_else(|| bad("to", "give the new position"))?
+                        as usize;
+                    let e = list.remove(i);
+                    list.insert(to.min(list.len()), e);
+                }
+                // Remove all: every effect off (EDT-053).
+                "clear" => {
+                    for e in list.iter_mut() {
+                        e["enabled"] = json!(false);
+                    }
+                }
+                other => return Err(bad("action", other)),
+            }
+            // One decorative edge per target (EDT-056).
+            if list
+                .iter()
+                .filter(|e| e["type"] == "edges" && xs_image::fx::enabled(e))
+                .count()
+                > 1
+            {
+                return Err(bad("effect", "only one decorative edge at a time"));
+            }
+            Ok::<_, CommandError>(list.clone())
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    changed(core, ctx, &id);
+    Ok(json!({ "effects": stack }))
+}
+
 /// Crops `doc` to `[x0, y0, x1, y1]` of its canvas (EDT-049), keeping the objects on
 /// the image. `None` if nothing would be left. The new canvas size.
 fn crop_to(doc: &mut Document, base: (u32, u32), r: [i64; 4]) -> Option<(u32, u32)> {
@@ -1731,6 +1861,26 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
                 }
                 None => (None, "history.move_pixels"),
             }
+        }
+        "effect" => {
+            // Fixed into the selected pixels (EDT-053): filters, color, replace and
+            // the spotlight with lens (EDT-065).
+            let effect = p
+                .get("effect")
+                .cloned()
+                .ok_or_else(|| bad("effect", "give the effect"))?;
+            let kind = effect.get("type").and_then(Value::as_str).unwrap_or_default();
+            if !["filters", "color", "replace", "spotlight"].contains(&kind) {
+                return Err(bad(
+                    "effect",
+                    "only filters, color, replace and spotlight work on a selection",
+                ));
+            }
+            xs_image::fx::check(&effect).map_err(|r| bad("effect", &r))?;
+            (
+                pixels::selection_effect(&pixels, mask, &effect),
+                "history.effect_selection",
+            )
         }
         "float" | "crop" => {
             base_only()?;
@@ -3056,6 +3206,8 @@ pub fn extension() -> Extension {
         on!("document.selection_action", |core, ctx, p| selection_action(
             &core, ctx, &p
         ));
+        // Effects (EDT-053 to EDT-068).
+        on!("document.effects", |core, ctx, p| effects_command(&core, ctx, &p));
         // Stops a Photo fill (EDT-045): the image stays as it was.
         on!("editor.cancel", |core, _ctx, _p| {
             let running = editor(&core).filling.lock().unwrap().clone();

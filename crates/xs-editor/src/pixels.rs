@@ -358,3 +358,39 @@ pub fn rect_of(area: [u32; 4]) -> PixelRect {
         height: area[3],
     }
 }
+
+/// An effect fixed into the selected pixels (EDT-053, EDT-065): the selection takes it,
+/// as much as it is selected.
+pub fn selection_effect(pixels: &RgbaImage, mask: &Mask, effect: &Value) -> Option<Changed> {
+    let b = mask.bounds()?;
+    let out = if effect["type"] == "spotlight" {
+        xs_image::fx_spot::spotlight(pixels, mask, effect)
+    } else {
+        let meta = Value::Null;
+        let none = |_: &str| None;
+        let ctx = xs_image::fx::Ctx {
+            canvas_color: None,
+            dpi: 96.0,
+            meta: &meta,
+            picture: &none,
+        };
+        let done = xs_image::fx::apply(std::slice::from_ref(effect), pixels.clone(), &ctx).image;
+        let mut out = pixels.clone();
+        for (i, (p, q)) in out.pixels_mut().zip(done.pixels()).enumerate() {
+            let k = mask.alpha[i] as f32 / 255.0;
+            if k > 0.0 {
+                for c in 0..4 {
+                    p.0[c] = (p.0[c] as f32 * (1.0 - k) + q.0[c] as f32 * k).round() as u8;
+                }
+            }
+        }
+        out
+    };
+    // A spotlight changes the outside too: the whole image.
+    let area = if effect["type"] == "spotlight" {
+        [0, 0, pixels.width(), pixels.height()]
+    } else {
+        b
+    };
+    Some(Changed { pixels: out, area })
+}

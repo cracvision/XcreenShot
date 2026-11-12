@@ -222,8 +222,14 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
+    /// The image as it leaves the editor: with its effects (EDT-053).
     pub fn render(&self) -> image::RgbaImage {
-        xs_image::render(&self.document, &self.base)
+        xs_image::render::render_final(&self.document, &self.base, &self.meta).0
+    }
+
+    /// [`Self::render`] and where the canvas's corner is in it (the editor's preview).
+    pub fn render_with_origin(&self) -> (image::RgbaImage, [i64; 2]) {
+        xs_image::render::render_final(&self.document, &self.base, &self.meta)
     }
 
     /// The `.xshot` of this state (EDT-106). With `drop_cropped`, the original pixels
@@ -605,7 +611,7 @@ impl DocStore {
         for (name, bytes) in doc.images.iter() {
             let _ = base.add_image(name, bytes);
         }
-        Ok(xs_image::render(&doc.document, &base))
+        Ok(xs_image::render::render_final(&doc.document, &base, &doc.meta).0)
     }
 
     /// Adds pictures to a document's `images/` folder (EDT-078), before the objects

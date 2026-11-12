@@ -466,6 +466,10 @@
     "editor_color": {
       "title": "Color",
       "description": "Adds a color to My colors (up to 24), removes it, or marks it as used (the last 8 are Recent)."
+    },
+    "document_effects": {
+      "title": "Effects",
+      "description": "Sets, adds, changes, removes, reorders or turns off the effects of the document or of a floating image. They are not destructive: the file keeps the image without them."
     }
   },
   "settings": {
@@ -2018,7 +2022,9 @@
     "cut_pixels": "Cut pixels",
     "move_pixels": "Move pixels",
     "float_pixels": "Float selection",
-    "crop_selection": "Crop to selection"
+    "crop_selection": "Crop to selection",
+    "effects": "Change effects",
+    "effect_selection": "Effect on selection"
   },
   "editor": {
     "edited": "{{name}} — Edited"

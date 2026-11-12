@@ -20,6 +20,11 @@ use tauri::{AppHandle, Manager};
 
 use crate::AppState;
 
+thread_local! {
+    /// Where the canvas is in the final image just made (EDT-053).
+    static FINAL_ORIGIN: std::cell::Cell<[i64; 2]> = const { std::cell::Cell::new([0, 0]) };
+}
+
 /// Longest side of the strip thumbnails, in physical pixels.
 const THUMB: u32 = 240;
 
@@ -57,6 +62,16 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             xs_image::encode::png(&image, 0.0, true)
                 .ok()
                 .map(|png| (std::sync::Arc::new(png), "image/png"))
+        }),
+        // The image with its effects (EDT-053), for the editor's preview; where the
+        // canvas's corner is goes in the X-Origin header.
+        [id, "final"] => editor.store.snapshot(id).ok().and_then(|snap| {
+            let (image, origin) = snap.render_with_origin();
+            let png = xs_image::encode::png(&image, 0.0, true).ok()?;
+            return Some((std::sync::Arc::new(png), "image/png")).map(|b| {
+                FINAL_ORIGIN.with(|o| o.set(origin));
+                b
+            });
         }),
         // An object's shadow (EDT-021); `document.info` says where it goes (`shadowAt`).
         [id, "shadow", object] => editor.store.snapshot(id).ok().and_then(|snap| {
@@ -99,7 +114,17 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         }),
         _ => None,
     };
-    let builder = Response::builder().header("Access-Control-Allow-Origin", "*");
+    let builder = Response::builder()
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Expose-Headers", "X-Origin");
+    // The final image says where the canvas is in it (EDT-053).
+    let builder = match parts.as_slice() {
+        [_, "final"] => {
+            let [x, y] = FINAL_ORIGIN.with(|o| o.get());
+            builder.header("X-Origin", format!("{x},{y}"))
+        }
+        _ => builder,
+    };
     match body {
         Some((bytes, mime)) => builder
             .header("Content-Type", mime)

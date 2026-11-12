@@ -466,6 +466,10 @@
     "editor_color": {
       "title": "Color",
       "description": "Añade un color a Mis colores (hasta 24), lo quita o lo marca como usado (los 8 últimos son los Recientes)."
+    },
+    "document_effects": {
+      "title": "Efectos",
+      "description": "Pone, añade, cambia, quita, reordena o desactiva los efectos del documento o de una imagen flotante. No son destructivos: el archivo guarda la imagen sin ellos."
     }
   },
   "settings": {
@@ -2018,7 +2022,9 @@
     "cut_pixels": "Cortar píxeles",
     "move_pixels": "Mover píxeles",
     "float_pixels": "Convertir en imagen flotante",
-    "crop_selection": "Recortar a la selección"
+    "crop_selection": "Recortar a la selección",
+    "effects": "Cambiar efectos",
+    "effect_selection": "Efecto en la selección"
   },
   "editor": {
     "edited": "{{name}} — Editado"
