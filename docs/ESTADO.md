@@ -258,7 +258,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Instalador nuevo (2026-11-12): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `fd0bed8`** (M1 completo + M2.1 a M2.5b). Probada la compilación empaquetada en una instancia aislada (abrir, cambiar tamaño, quitar franja en zigzag, voltear, recortar bordes, exportar). Sustituye al `fe74bfe` para la caminata.
+1. **Instalador nuevo (2026-11-12, madrugada): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `1158f3e`** (M1 completo + M2.1 a M2.6 + la primera parte de M2.7). Probada la compilación empaquetada en una instancia aislada: crear "Antes y después" con dos imágenes, que la biblioteca la indexe, etiquetar, buscar `tag:prueba` y cerrar con `app quit --force` (esta vez se cerró bien). Sustituye al `fd0bed8`.
 1. **Caminata de Carlos** con el instalador nuevo y la guía [`docs/caminata-M1.md`](caminata-M1.md); lo de M2 se prueba con `tests/manual/EDT-047-048.md`, `EDT-043-046.md`, `EDT-015-021.md` y `EDT-069-077.md`. Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
