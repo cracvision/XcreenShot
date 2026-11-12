@@ -18,6 +18,7 @@ import { useTray } from "../library/state";
 import { showQuickView } from "../library/quickViewState";
 import { run } from "../lib/commands";
 import { settingValue, useApp } from "../store";
+import { clickSelection } from "../library/selection";
 import { closeDocument, showDocument, togglePin } from "./actions";
 import { Icon } from "./icons";
 import { menuPoint, useContextMenu } from "./menus";
@@ -37,6 +38,7 @@ export function Strip() {
   const tray = useEditor((s) => s.tray);
   const active = useEditor((s) => s.active);
   const visible = useTray((s) => s.visible);
+  const picked = useTray((s) => s.selected);
   const size = useApp((s) => settingValue(s.settings, "tray.thumbnailSize")) as TraySize;
   const capacity = useApp((s) => settingValue(s.settings, "tray.capacity"));
   const [focus, setFocus] = useState<string | null>(null);
@@ -47,6 +49,8 @@ export function Strip() {
   const documents = trayOrder(all, tray);
   const order = documents.map((d) => d.documentId);
   const pinnedCount = documents.filter((d) => d.pinned).length;
+  // TRY-012: the selection, without items that left the tray.
+  const selected = picked.filter((id) => order.includes(id));
 
   useLayoutEffect(() => {
     if (!keyed.current || !focus) return;
@@ -83,6 +87,12 @@ export function Strip() {
       e.preventDefault();
       const to = at + (e.key === "ArrowLeft" ? -1 : 1);
       if (subject && to >= 0 && to < order.length) moveTo(subject, to);
+      return;
+    }
+    // TRY-012: Ctrl+A (Cmd+A) selects the whole tray.
+    if (primary && !e.shiftKey && e.code === "KeyA") {
+      e.preventDefault();
+      useTray.getState().select(order, subject ?? null);
       return;
     }
     if (e.key === " " && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
@@ -134,7 +144,7 @@ export function Strip() {
       open: true,
       ...menuPoint(e),
       label: t("ui.editor.strip_menu"),
-      items: trayMenu(doc, documents, t),
+      items: trayMenu(doc, documents, t, selected),
     });
   };
 
@@ -204,6 +214,7 @@ export function Strip() {
             markBefore === d.documentId ? "drop-before" : "",
             markAfter === d.documentId ? "drop-after" : "",
             drop?.id === d.documentId ? "dragging" : "",
+            selected.length > 1 && selected.includes(d.documentId) ? "selected" : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -219,14 +230,29 @@ export function Strip() {
                 data-doc={d.documentId}
                 tabIndex={d.documentId === current ? 0 : -1}
                 aria-current={shown ? "true" : undefined}
+                aria-pressed={selected.length > 1 ? selected.includes(d.documentId) : undefined}
                 aria-label={shown ? t("ui.editor.strip_open", { name }) : name}
                 title={
                   d.missing
                     ? `${d.name}\n${t("ui.editor.not_found_help")}`
                     : `${d.name}\n${d.width} × ${d.height} px`
                 }
-                onClick={() => {
+                onClick={(e) => {
                   setFocus(d.documentId);
+                  const toggle = IS_MAC ? e.metaKey : e.ctrlKey;
+                  if (toggle || e.shiftKey) {
+                    // TRY-012: Ctrl+click adds or removes, Shift+click a range; the
+                    // canvas keeps showing the active item.
+                    const { anchor } = useTray.getState();
+                    const base = selected.length > 0 ? selected : active ? [active] : [];
+                    const r = clickSelection(order, base, anchor ?? active, d.documentId, {
+                      toggle,
+                      range: e.shiftKey,
+                    });
+                    useTray.getState().select(r.selection, r.anchor);
+                    return;
+                  }
+                  useTray.getState().select([d.documentId], d.documentId);
                   showDocument(d.documentId);
                 }}
                 onContextMenu={(e) => menu(d, e)}

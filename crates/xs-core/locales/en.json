@@ -646,6 +646,10 @@
     "tray_close": {
       "title": "Close tray items",
       "description": "Closes items of the recent tray (one, the others, all or the unpinned ones) without deleting their files."
+    },
+    "library_duplicate": {
+      "title": "Duplicate items",
+      "description": "Makes a full, independent copy of each item beside it, with its editable objects, tags and capture details."
     }
   },
   "settings": {
@@ -1132,7 +1136,8 @@
       "editor_save_as_template": "Save as template",
       "editor_import_template": "Import template",
       "editor_show_in_library": "Show in library",
-      "editor_pin_item": "Pin or unpin in the tray"
+      "editor_pin_item": "Pin or unpin in the tray",
+      "editor_duplicate_item": "Duplicate the item"
     }
   },
   "tray": {
@@ -1289,7 +1294,10 @@
     "pin_item": "Pin",
     "unpin_item": "Unpin",
     "close_unpinned": "Close unpinned",
-    "tray_size": "Thumbnail size"
+    "tray_size": "Thumbnail size",
+    "duplicate_item": "Duplicate",
+    "details_tray": "Details",
+    "create": "Create"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2624,7 +2632,11 @@
         "moved": "Position {{at}} of {{count}}",
         "over": "{{count}} of {{capacity}}",
         "over_help": "The tray is over its capacity: pinned items and items with unsaved changes never leave it by themselves.",
-        "menu": "Recent tray"
+        "menu": "Recent tray",
+        "selected_other": "{{count}} selected",
+        "selected_one": "{{count}} selected",
+        "duplicated_one": "Duplicated: {{name}}",
+        "duplicated_other": "{{count}} copies made."
       }
     },
     "multi": {
@@ -2959,7 +2971,8 @@
         "skipped_one": "{{count}} was left out.",
         "skipped_other": "{{count}} were left out.",
         "drop_hint": "Drop to import into the library"
-      }
+      },
+      "copy_word": "copy"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

@@ -3043,6 +3043,30 @@ html.overlay-root.overlay-native #root {
   animation: none;
 }
 
+/* TRY-012: items of a selection of several: a brand ring and a check. */
+.strip li.selected .strip-item {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.strip li.selected::before {
+  content: "\2713";
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 /* TRY-005: where a dragged item will go. */
 .strip li.dragging {
   opacity: 0.45;

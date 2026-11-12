@@ -646,6 +646,10 @@
     "tray_close": {
       "title": "Cerrar elementos de la bandeja",
       "description": "Cierra elementos de la bandeja reciente (uno, los demás, todos o los no fijados) sin borrar sus archivos."
+    },
+    "library_duplicate": {
+      "title": "Duplicar elementos",
+      "description": "Hace una copia completa e independiente de cada elemento a su lado, con sus objetos editables, etiquetas y datos de captura."
     }
   },
   "settings": {
@@ -1132,7 +1136,8 @@
       "editor_save_as_template": "Guardar como plantilla",
       "editor_import_template": "Importar plantilla",
       "editor_show_in_library": "Mostrar en la biblioteca",
-      "editor_pin_item": "Fijar o desfijar en la bandeja"
+      "editor_pin_item": "Fijar o desfijar en la bandeja",
+      "editor_duplicate_item": "Duplicar el elemento"
     }
   },
   "tray": {
@@ -1289,7 +1294,10 @@
     "pin_item": "Fijar",
     "unpin_item": "Desfijar",
     "close_unpinned": "Cerrar los no fijados",
-    "tray_size": "Tamaño de las miniaturas"
+    "tray_size": "Tamaño de las miniaturas",
+    "duplicate_item": "Duplicar",
+    "details_tray": "Detalles",
+    "create": "Crear"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2624,7 +2632,11 @@
         "moved": "Posición {{at}} de {{count}}",
         "over": "{{count}} de {{capacity}}",
         "over_help": "La bandeja supera su capacidad: los elementos fijados y los que tienen cambios sin guardar nunca salen solos.",
-        "menu": "Bandeja reciente"
+        "menu": "Bandeja reciente",
+        "selected_other": "{{count}} seleccionados",
+        "selected_one": "{{count}} seleccionado",
+        "duplicated_one": "Duplicado: {{name}}",
+        "duplicated_other": "{{count}} copias hechas."
       }
     },
     "multi": {
@@ -2959,7 +2971,8 @@
         "skipped_one": "{{count}} se dejó fuera.",
         "skipped_other": "{{count}} se dejaron fuera.",
         "drop_hint": "Suelta para importar a la biblioteca"
-      }
+      },
+      "copy_word": "copia"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

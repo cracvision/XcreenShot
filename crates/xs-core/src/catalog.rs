@@ -1493,6 +1493,21 @@ pub fn specs() -> Vec<CommandSpec> {
                 "closed": {"type": "array", "items": {"type": "string"}},
                 "pending": {"type": "array"}
             }})),
+        B::new("library.duplicate", &["TRY-010", "LIB-034"])
+            .mutates()
+            .positional(&["ids"])
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Library items"},
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Or open documents (their unsaved changes go into the copy)"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Or files"},
+                    "open": {"type": "boolean", "default": false, "description": "Put the copies in the tray next to their originals; a single copy is shown"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "copies": {"type": "array", "description": "{source, path, id, documentId} of each copy"}
+            }})),
         B::new("library.import", &["LIB-024", "LIB-034"])
             .mutates()
             .positional(&["paths"])
@@ -1775,7 +1790,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 103] = [
+pub const EDITOR_ACTIONS: [&str; 104] = [
     "open",
     "save",
     "save_as",
@@ -1804,6 +1819,7 @@ pub const EDITOR_ACTIONS: [&str; 103] = [
     "close_others",
     "rename_item",
     "pin_item",
+    "duplicate_item",
     "show_in_folder",
     "delete_item",
     "select_all",

@@ -165,6 +165,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.print", "menu.print", "print"),
                 Separator,
                 action("editor.rename_item", "menu.rename_item", "rename_item"),
+                action("editor.duplicate_item", "menu.duplicate_item", "duplicate_item"),
                 action("editor.show_in_folder", "menu.show_in_folder", "show_in_folder"),
                 action(
                     "editor.show_in_library",

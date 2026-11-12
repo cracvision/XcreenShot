@@ -268,6 +268,9 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | TRY-005 | Mover con el teclado entre fijados y no fijados | Igual que al arrastrar: si `Ctrl+Shift+←` lleva el elemento a la zona de los fijados, queda fijado, y el lector de pantalla lo dice | Provisional |
 | TRY-005 / TRY-015 | Arrastrar dentro de la bandeja o fuera | Mientras el puntero sigue sobre la bandeja, el arrastre reordena; al salir de ella se convierte en el arrastre a otras apps de siempre | Provisional |
 | TRY-007 | Proporción de las miniaturas | El ancho es 1,5 veces el alto: 72 × 48, 108 × 72 y 168 × 112 px | Provisional |
+| TRY-012 | ¿Ctrl+clic en la bandeja parte de qué? | Del elemento que se está editando: Ctrl+clic en otro deja seleccionados los dos. Un clic normal vuelve a uno solo y lo abre | Provisional |
+| TRY-010 | ¿Cómo se duplica un PNG de otra carpeta con cambios sin guardar? | Como `.xshot` junto al PNG, con los cambios editables; el PNG no cambia. Sin cambios, la copia es otro PNG idéntico. La copia de un elemento fijado queda fijada a su lado | Provisional |
+| TRY-016 | Detalles desde la bandeja | Abre la vista Biblioteca con el elemento seleccionado y el panel de Detalles abierto | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

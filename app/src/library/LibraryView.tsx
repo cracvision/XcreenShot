@@ -26,7 +26,6 @@ import { libraryThumb, openLibraryQuickView } from "./quickViewState";
 import { FilterPane } from "./FilterPane";
 import { editTags, toggleFavorite } from "./marks";
 import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortKey } from "./query";
-import { TagDialogs } from "./TagDialogs";
 import { MaintenanceDialogs } from "./Maintenance";
 import { askRebuild, checkLibrary } from "./maintenanceState";
 import { askExportLibrary } from "./exportState";
@@ -900,7 +899,6 @@ export function LibraryView() {
         )}
       </div>
       <LibraryStatus />
-      <TagDialogs />
       <RevealNotice />
       <MaintenanceDialogs />
       <LibraryExportDialog />

@@ -330,13 +330,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-007 | Tamaño de las miniaturas | M2 | Could | En curso (Windows: menú de una zona vacía de la bandeja y Preferencias > Biblioteca, `tray.thumbnailSize` 48, 72 o 112 px) |
 | TRY-008 | Cerrar elementos | M1 | Must | En curso (M2: Cerrar los no fijados y la limpieza al salir conservan los fijados) |
 | TRY-009 | Eliminar desde la bandeja | M1 | Must | En curso |
-| TRY-010 | Duplicar | M2 | Should | — |
+| TRY-010 | Duplicar | M2 | Should | En curso (Windows: menú contextual de la bandeja y de la biblioteca, Archivo > Duplicar y `Ctrl+Shift+D`, varios a la vez, `library.duplicate`; falta "sin historial de envíos", que llega con SHR-012) |
 | TRY-011 | Indicador de cambios sin guardar | M1 | Must | En curso |
-| TRY-012 | Selección múltiple y acciones | M2 | Should | — |
+| TRY-012 | Selección múltiple y acciones | M2 | Should | En curso (Windows: Ctrl+clic, Mayús+clic y Ctrl+A en la bandeja; Fijar, Cerrar, Eliminar, Duplicar, Etiquetas, Favorito, Exportar y Crear: Combinar en plantilla. Compartir, Enlace, Diapositivas narradas y Combinar videos llegan con sus funciones) |
 | TRY-013 | Navegación con teclado | M1 | Should | En curso |
 | TRY-014 | Combinar arrastrando al lienzo | M2 | Must | En curso (Windows: arrastrar desde la bandeja al lienzo de otro documento crea imágenes flotantes en cascada donde se sueltan, con una marca de dónde caerán; sobre una zona de plantilla, la llena; falta la prueba manual de Carlos, porque el arrastre nativo no se puede automatizar, y lo de video llega con VID-) |
 | TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | En curso |
-| TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | — |
+| TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | En curso (Windows: Detalles, Etiquetas…, Favorito, Vista rápida, Mostrar en la biblioteca, Mostrar en el Explorador, Copiar ruta, Copiar todo y Exportar… desde la bandeja; Compartir y Enlace llegan con SHR-) |
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | En curso (Windows: `tray.list`, `tray.open`, `tray.activate`, `tray.pin`, `tray.unpin`, `tray.move`, `tray.close`) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |

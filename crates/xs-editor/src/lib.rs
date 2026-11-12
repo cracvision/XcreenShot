@@ -6,6 +6,7 @@
 //! close, unsaved changes and recovery copies (ADR 0004). Each capture is saved in
 //! the library as `.xshot` (LIB-020).
 
+pub mod duplicate;
 pub mod fit;
 pub mod flatten;
 pub mod image_ops;
@@ -4647,6 +4648,9 @@ pub fn extension() -> Extension {
             ctx,
             "tray.close",
             &p
+        ));
+        on!("library.duplicate", |core, ctx, p| duplicate::duplicate(
+            &core, ctx, &p
         ));
         on!("document.rename", |core, ctx, p| rename(&core, ctx.lang, &p));
         on!("document.image", |core, ctx, p| document_image(

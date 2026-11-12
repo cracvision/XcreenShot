@@ -5069,3 +5069,125 @@ fn the_tray_closes_items_and_keeps_pinned_ones_on_quit() {
     assert!(tray_ids(&e.core).is_empty());
     assert!(paths.iter().all(|p| p.exists()), "no file is deleted");
 }
+
+/// TRY-010: Duplicate copies an item beside it as "<name> (copy)" with its editable
+/// objects and tags and a new ID (not a favorite); several at once; unsaved changes
+/// go into the copy, a PNG with changes becomes an editable `.xshot`; with `open`,
+/// copies join the tray beside their originals.
+#[test]
+fn duplicate_makes_independent_copies() {
+    let e = env_with_library();
+    let (doc, path) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [arrow([10, 10], [90, 60])]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let lib = xs_library::library(&e.core);
+    lib.scan();
+    let item = lib.find(&path).unwrap();
+    cli(
+        &e.core,
+        "library.tag",
+        json!({"ids": [item.id], "add": ["Cliente"]}),
+    );
+    cli(&e.core, "library.favorite", json!({"ids": [item.id]}));
+
+    let r = cli(&e.core, "library.duplicate", json!({"ids": [item.id]}));
+    let copy = r["copies"][0].clone();
+    let copy_path = PathBuf::from(copy["path"].as_str().unwrap());
+    let stem = path.file_stem().unwrap().to_string_lossy().into_owned();
+    assert_eq!(
+        copy_path.file_name().unwrap().to_string_lossy(),
+        format!("{stem} (copy).xshot")
+    );
+    assert_eq!(copy_path.parent(), path.parent(), "beside the original");
+    assert_ne!(copy["id"], json!(item.id), "a new ID");
+    let copied = lib.get(copy["id"].as_str().unwrap()).unwrap();
+    assert_eq!(copied.tags, ["Cliente"]);
+    assert!(!copied.favorite, "not a favorite");
+    let opened = show(&e, &copy_path);
+    assert_eq!(
+        info(&e.core, &opened)["objects"].as_array().unwrap().len(),
+        1,
+        "the arrow, editable"
+    );
+    // Editing the copy leaves the original alone.
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": opened, "objects": [arrow([5, 5], [50, 50])]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": opened}));
+    let x = Xshot::read(&path).unwrap();
+    assert_eq!(x.document.objects.len(), 1);
+    let again = cli(&e.core, "library.duplicate", json!({"ids": [item.id]}));
+    assert!(again["copies"][0]["path"]
+        .as_str()
+        .unwrap()
+        .ends_with(&format!("{stem} (copy 2).xshot")));
+
+    // Three open documents, into the tray beside their originals.
+    let docs: Vec<String> = (0..3)
+        .map(|_| {
+            let (d, _) = capture(&e);
+            cli(&e.core, "tray.activate", json!({"documentId": d}));
+            d
+        })
+        .collect();
+    let r = cli(
+        &e.core,
+        "library.duplicate",
+        json!({"documentIds": docs, "open": true}),
+    );
+    let made: Vec<String> = r["copies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["documentId"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(made.len(), 3);
+    let tray = tray_ids(&e.core);
+    for (original, copy) in docs.iter().zip(&made) {
+        let at = tray.iter().position(|t| t == original).unwrap();
+        assert_eq!(
+            tray.get(at + 1),
+            Some(copy),
+            "the copy beside its original: {tray:?}"
+        );
+    }
+
+    // A PNG from elsewhere with unsaved changes: an editable copy.
+    let outside = e.outside.path().join("plain.png");
+    let bytes = xs_image::encode::png(&white(40, 30), 0.0, true).unwrap();
+    std::fs::write(&outside, &bytes).unwrap();
+    let ext = show(&e, &outside);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": ext, "objects": [arrow([1, 1], [30, 20])]}),
+    );
+    let r = cli(
+        &e.core,
+        "library.duplicate",
+        json!({"documentIds": [ext], "open": true}),
+    );
+    let made = PathBuf::from(r["copies"][0]["path"].as_str().unwrap());
+    assert_eq!(made.file_name().unwrap().to_string_lossy(), "plain (copy).xshot");
+    assert_eq!(
+        Xshot::read(&made).unwrap().document.objects.len(),
+        1,
+        "with the unsaved arrow"
+    );
+    assert_eq!(
+        std::fs::read(&outside).unwrap(),
+        bytes,
+        "the original did not change"
+    );
+    assert_eq!(
+        cli(&e.core, "document.list", json!({}))["active"],
+        r["copies"][0]["documentId"],
+        "one copy is shown"
+    );
+}

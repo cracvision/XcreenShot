@@ -1,6 +1,7 @@
 // What the editor's buttons, keys and dialogs do: each one runs a command (APP-027).
 // The only work done here is asking the system for a file name and showing the
 // answer of the command.
+import { duplicateDocs, duplicateItems, trayTargets } from "./trayActions";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import i18next from "i18next";
 import { run } from "../lib/commands";
@@ -215,6 +216,16 @@ export async function togglePin(ids: string[]): Promise<void> {
     ids.length > 0 && ids.every((id) => documents.find((d) => d.documentId === id)?.pinned);
   try {
     await run(all ? "tray.unpin" : "tray.pin", { documentIds: ids });
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** Closes these tray items (TRY-012), asking about unsaved changes as Close does. */
+export async function closeDocuments(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    await closeWith(ids, [], []);
   } catch (e) {
     fail(e);
   }
@@ -521,6 +532,7 @@ const IN_LIBRARY = new Set([
   "view_library",
   "tray",
   "rename_item",
+  "duplicate_item",
   "show_in_folder",
   "delete_item",
   "open_item",
@@ -576,10 +588,26 @@ export function performAction(action: string): boolean {
       return true;
     }
     case "pin_item": {
-      // TRY-004: the tray item with the focus, or the one shown.
-      const id = focusedTrayItem() ?? active;
-      if (!id || !documents.some((d) => d.documentId === id)) return false;
-      void togglePin([id]);
+      // TRY-004: the tray item with the focus (and the selection it is in), or the
+      // one shown.
+      const ids = trayTargets().filter((id) => documents.some((d) => d.documentId === id));
+      if (ids.length === 0) return false;
+      void togglePin(ids);
+      return true;
+    }
+    case "duplicate_item": {
+      // TRY-010: the Library's selection, or the tray's items.
+      if (useMainView.getState().view === "library") {
+        const ids = selectedItems().map((i) => i.id);
+        if (ids.length === 0) return false;
+        void duplicateItems(ids);
+        return true;
+      }
+      const ids = trayTargets().filter((id) =>
+        documents.some((d) => d.documentId === id && d.path && !d.missing),
+      );
+      if (ids.length === 0) return false;
+      void duplicateDocs(ids);
       return true;
     }
     case "close_others": {

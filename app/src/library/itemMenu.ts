@@ -8,6 +8,7 @@ import { editTags, toggleFavorite } from "./marks";
 import { askResolve } from "./maintenanceState";
 import { openLibraryQuickView } from "./quickViewState";
 import { exportItems } from "./exportState";
+import { duplicateItems } from "../editor/trayActions";
 import { useLibrary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -75,6 +76,13 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       label: t("menu.copy_path"),
       disabled: !one,
       onSelect: () => one && copyPath(itemRef(one)),
+    },
+    // TRY-010.
+    {
+      id: "duplicate",
+      label: t("menu.duplicate_item"),
+      shortcut: shortcutOf("editor.duplicate_item"),
+      onSelect: () => void duplicateItems(items.map((i) => i.id)),
     },
     // LIB-018: one item with Save as, several with the batch export.
     {

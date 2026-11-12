@@ -83,19 +83,30 @@ export function showView(view: MainView): void {
 const TRAY_KEY = "xs.editor.tray";
 const isBool = (v: unknown): v is boolean => typeof v === "boolean";
 
-/** The recent tray: shown or hidden (remembered), and whether captures arrived while
- * it was hidden, for the dot on the Recent button (TRY-001). */
-export const useTray = create<{ visible: boolean; fresh: boolean; toggle: () => void }>(
-  (set, get) => ({
-    visible: load(TRAY_KEY, true, isBool),
-    fresh: false,
-    toggle: () => {
-      const visible = !get().visible;
-      set({ visible, ...(visible ? { fresh: false } : {}) });
-      keep(TRAY_KEY, visible);
-    },
-  }),
-);
+/** The recent tray: shown or hidden (remembered), whether captures arrived while it
+ * was hidden, for the dot on the Recent button (TRY-001), and its selection (TRY-012). */
+export const useTray = create<{
+  visible: boolean;
+  fresh: boolean;
+  toggle: () => void;
+  /** Items selected with Ctrl / Shift + click or Ctrl+A; the canvas still shows the
+   * active one (TRY-012). */
+  selected: string[];
+  anchor: string | null;
+  select: (selected: string[], anchor?: string | null) => void;
+}>((set, get) => ({
+  visible: load(TRAY_KEY, true, isBool),
+  fresh: false,
+  toggle: () => {
+    const visible = !get().visible;
+    set({ visible, ...(visible ? { fresh: false } : {}) });
+    keep(TRAY_KEY, visible);
+  },
+  selected: [],
+  anchor: null,
+  select: (selected, anchor) =>
+    set((s) => ({ selected, anchor: anchor === undefined ? s.anchor : anchor })),
+}));
 
 /** How the Library view shows the items (LIB-004, LIB-005): remembered. */
 export interface LibraryShape {

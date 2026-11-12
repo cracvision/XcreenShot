@@ -12,7 +12,8 @@ import {
   useTagAction,
   useTagEditor,
 } from "./marks";
-import { useLibrary } from "./state";
+import { run } from "../lib/commands";
+import { useLibrary, type LibraryItem } from "./state";
 
 export function TagDialogs() {
   const editing = useTagEditor((s) => s.ids);
@@ -30,7 +31,26 @@ export function TagDialogs() {
 function TagEditor({ ids }: { ids: string[] }) {
   const { t } = useTranslation();
   const all = useLibrary((s) => s.items);
-  const items = all.filter((i) => ids.includes(i.id));
+  // Items the Library view has not loaded (the tray's, TRY-016) are read here, again
+  // after each change.
+  const [read, setRead] = useState<LibraryItem[]>([]);
+  const [round, setRound] = useState(0);
+  const missing = ids.filter((id) => !all.some((i) => i.id === id));
+  const key = missing.join(",");
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    void Promise.all(
+      key.split(",").map((id) => run<LibraryItem>("library.get", { id }).catch(() => null)),
+    ).then((list) => alive && setRead(list.filter((i): i is LibraryItem => i !== null)));
+    return () => {
+      alive = false;
+    };
+  }, [key, round]);
+  const items = [
+    ...all.filter((i) => ids.includes(i.id)),
+    ...read.filter((i) => missing.includes(i.id)),
+  ];
   const [draft, setDraft] = useState("");
   const [known, setKnown] = useState<string[]>([]);
   useEffect(() => {
@@ -56,8 +76,10 @@ function TagEditor({ ids }: { ids: string[] }) {
       .filter(Boolean);
     if (tags.length === 0) return;
     if (await changeTags(ids, tags, [])) setDraft("");
+    setRound((n) => n + 1);
   };
-  const remove = (tag: string) => void changeTags(ids, [], [tag]);
+  const remove = (tag: string) =>
+    void changeTags(ids, [], [tag]).then(() => setRound((n) => n + 1));
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();

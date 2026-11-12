@@ -10,8 +10,8 @@ import { useEditor } from "../editor/state";
 import { hasFilters } from "./query";
 import { useLibrary, type LibraryItem } from "./state";
 
-/** Export… of the selection (LIB-018). */
-export async function exportItems(items: LibraryItem[]): Promise<void> {
+/** Export… of the selection (LIB-018): library items or tray items, by name and file. */
+export async function exportItems(items: Pick<LibraryItem, "name" | "path">[]): Promise<void> {
   const [one] = items;
   if (!one) return;
   if (items.length > 1) {

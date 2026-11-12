@@ -694,6 +694,11 @@ pub fn slots() -> Vec<Slot> {
         ),
         editor("editor.pin_item", "editor.action", r#"{"action":"pin_item"}"#),
         editor(
+            "editor.duplicate_item",
+            "editor.action",
+            r#"{"action":"duplicate_item"}"#,
+        ),
+        editor(
             "editor.show_in_folder",
             "editor.action",
             r#"{"action":"show_in_folder"}"#,
@@ -905,6 +910,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.delete_item" => "Ctrl+Delete",
                 "editor.rename_item" => "F2",
                 "editor.pin_item" => "Ctrl+Shift+KeyP",
+                // TRY-010: Shift+Cmd+D on macOS.
+                "editor.duplicate_item" => "Ctrl+Shift+KeyD",
                 _ => return None,
             };
             let mut acc: Accelerator = windows.parse().expect("editor defaults parse");
