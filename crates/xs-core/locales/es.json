@@ -822,7 +822,12 @@
       "editor_tool_stamp": "Herramienta Sello",
       "editor_tool_simplify": "Herramienta Simplificar",
       "editor_tool_fill": "Herramienta Relleno",
-      "editor_tool_eraser": "Herramienta Borrador"
+      "editor_tool_eraser": "Herramienta Borrador",
+      "editor_tool_select": "Herramienta Selección",
+      "editor_tool_wand": "Herramienta Varita mágica",
+      "editor_invert_selection": "Invertir selección",
+      "editor_float_selection": "Convertir en imagen flotante",
+      "editor_crop_selection": "Recortar a la selección"
     }
   },
   "tray": {
@@ -930,7 +935,10 @@
     "remove_from_tray": "Quitar de la bandeja",
     "locate": "Buscar…",
     "step_edit": "Editar valor…",
-    "step_renumber": "Renumerar"
+    "step_renumber": "Renumerar",
+    "invert_selection": "Invertir selección",
+    "float_selection": "Convertir en imagen flotante",
+    "crop_selection": "Recortar a la selección"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -1284,7 +1292,9 @@
         "stamp": "Elige un sello en Estilos y haz clic para ponerlo; arrastra para otro tamaño.",
         "simplify": "Arrastra para tapar texto y detalles con formas planas.",
         "fill": "Haz clic para rellenar una zona de color parecido, o dejarla transparente.",
-        "eraser": "Arrastra para borrar la imagen; se ve el color del lienzo. Los objetos no cambian."
+        "eraser": "Arrastra para borrar la imagen; se ve el color del lienzo. Los objetos no cambian.",
+        "select": "Arrastra para seleccionar píxeles; arrastra dentro para moverlos. Shift añade, Alt resta.",
+        "wand": "Haz clic para seleccionar una zona de color parecido. Shift añade, Alt resta."
       },
       "tool": {
         "move": "Mover",
@@ -1304,7 +1314,9 @@
         "stamp": "Sello",
         "simplify": "Simplificar",
         "fill": "Relleno",
-        "eraser": "Borrador"
+        "eraser": "Borrador",
+        "select": "Selección",
+        "wand": "Varita mágica"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1596,7 +1608,28 @@
         "round": "Redonda",
         "square": "Cuadrada",
         "antialias": "Suavizado de bordes",
-        "opacity": "Opacidad"
+        "opacity": "Opacidad",
+        "sel_shape": "Forma",
+        "rectangle": "Rectángulo",
+        "ellipse": "Elipse",
+        "polygon": "Polígono",
+        "freehand": "Mano alzada",
+        "snap": "Ajustar al objeto",
+        "level": "Nivel",
+        "feather": "Calado",
+        "gap_fill": "Rellenar el hueco con",
+        "gap": {
+          "smart": "Relleno inteligente",
+          "transparent": "Transparente",
+          "canvas": "Color del lienzo"
+        },
+        "selection": "Selección",
+        "sel_x": "X",
+        "sel_y": "Y",
+        "sel_w": "An",
+        "sel_h": "Al",
+        "polygon_help": "Haz clic en cada esquina; doble clic o Enter la cierra.",
+        "floating_only": "Esto funciona sobre la imagen, no sobre una imagen flotante."
       }
     },
     "multi": {

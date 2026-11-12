@@ -822,7 +822,12 @@
       "editor_tool_stamp": "Stamp tool",
       "editor_tool_simplify": "Simplify tool",
       "editor_tool_fill": "Fill tool",
-      "editor_tool_eraser": "Eraser tool"
+      "editor_tool_eraser": "Eraser tool",
+      "editor_tool_select": "Selection tool",
+      "editor_tool_wand": "Magic wand tool",
+      "editor_invert_selection": "Invert selection",
+      "editor_float_selection": "Float selection",
+      "editor_crop_selection": "Crop to selection"
     }
   },
   "tray": {
@@ -930,7 +935,10 @@
     "remove_from_tray": "Remove from the tray",
     "locate": "Find…",
     "step_edit": "Edit value…",
-    "step_renumber": "Renumber"
+    "step_renumber": "Renumber",
+    "invert_selection": "Invert selection",
+    "float_selection": "Float selection",
+    "crop_selection": "Crop to selection"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -1284,7 +1292,9 @@
         "stamp": "Pick a stamp in Styles, then click to place it; drag for another size.",
         "simplify": "Drag to cover text and details with flat shapes.",
         "fill": "Click to fill an area of similar color, or make it transparent.",
-        "eraser": "Drag to erase the image; the canvas color shows. Objects stay."
+        "eraser": "Drag to erase the image; the canvas color shows. Objects stay.",
+        "select": "Drag to select pixels; drag inside to move them. Shift adds, Alt subtracts.",
+        "wand": "Click to select an area of similar color. Shift adds, Alt subtracts."
       },
       "tool": {
         "move": "Move",
@@ -1304,7 +1314,9 @@
         "stamp": "Stamp",
         "simplify": "Simplify",
         "fill": "Fill",
-        "eraser": "Eraser"
+        "eraser": "Eraser",
+        "select": "Selection",
+        "wand": "Magic wand"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1596,7 +1608,28 @@
         "round": "Round",
         "square": "Square",
         "antialias": "Smooth edges",
-        "opacity": "Opacity"
+        "opacity": "Opacity",
+        "sel_shape": "Shape",
+        "rectangle": "Rectangle",
+        "ellipse": "Ellipse",
+        "polygon": "Polygon",
+        "freehand": "Freehand",
+        "snap": "Snap to object",
+        "level": "Level",
+        "feather": "Feather",
+        "gap_fill": "Fill the gap with",
+        "gap": {
+          "smart": "Smart fill",
+          "transparent": "Transparent",
+          "canvas": "Canvas color"
+        },
+        "selection": "Selection",
+        "sel_x": "X",
+        "sel_y": "Y",
+        "sel_w": "W",
+        "sel_h": "H",
+        "polygon_help": "Click for each corner; double-click or Enter closes it.",
+        "floating_only": "This works on the image, not on a floating image."
       }
     },
     "multi": {

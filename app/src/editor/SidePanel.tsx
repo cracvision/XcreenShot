@@ -7,7 +7,7 @@ import { run } from "../lib/commands";
 import { useSetting } from "../store";
 import { applyCrop, loadFonts, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
-import { PositionSize } from "./PositionSize";
+import { Field, PositionSize } from "./PositionSize";
 import { CAPS, LINE_STYLES, type Cap, type LineStyle } from "./geometry";
 import { Icon, type IconName } from "./icons";
 import {
@@ -37,9 +37,12 @@ import {
   SHAPE_KINDS,
   SIMPLE_KINDS,
   type SimpleKind,
+  type GapFill,
+  type SelectStyle,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
+import { selectPixels } from "./pixelSelection";
 import { StampBrowser } from "./StampBrowser";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
@@ -147,10 +150,12 @@ type StyledKind =
   | "stamp"
   | "simplify"
   | "fill"
-  | "eraser";
+  | "eraser"
+  | "select"
+  | "wand";
 /** Tools that change pixels (EDT-047, EDT-048): their own style shows even with a
  * selection, which says only which floating image the eraser works on. */
-const PIXEL_TOOLS: StyledKind[] = ["fill", "eraser"];
+const PIXEL_TOOLS: StyledKind[] = ["fill", "eraser", "select", "wand"];
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -168,6 +173,8 @@ const STYLED: StyledKind[] = [
   "simplify",
   "fill",
   "eraser",
+  "select",
+  "wand",
 ];
 
 function useTarget(): Target | null {
@@ -200,7 +207,7 @@ function useTarget(): Target | null {
     };
   }
   if (PIXEL_TOOLS.includes(tool as StyledKind)) {
-    const k = tool as "fill" | "eraser";
+    const k = tool as "fill" | "eraser" | "select" | "wand";
     return {
       kind: k,
       styles: [styles[k] as unknown as Record<string, unknown>],
@@ -317,6 +324,18 @@ function Properties({ target }: { target: Target }) {
       step={1}
       unit="%"
       onCommit={(opacity) => commit({ opacity })}
+    />
+  );
+  // What fills the place selected pixels leave (EDT-045).
+  const gapField = (
+    <SelectField
+      label={t("ui.editor.pixel.gap_fill")}
+      value={v<GapFill>("gapFill")}
+      options={(["smart", "transparent", "canvas"] as const).map((g) => ({
+        value: g,
+        label: t(`ui.editor.pixel.gap.${g}`),
+      }))}
+      onCommit={(gapFill) => commit({ gapFill })}
     />
   );
   const lineStyle = (
@@ -730,6 +749,88 @@ function Properties({ target }: { target: Target }) {
           </label>
         </>
       );
+    case "select": {
+      // Selection (EDT-043): its shape, Snap to object, edges and the gap (EDT-045).
+      const shape = v<SelectStyle["shape"]>("shape");
+      return (
+        <>
+          <SelectField
+            label={t("ui.editor.pixel.sel_shape")}
+            value={shape}
+            options={(["rectangle", "ellipse", "polygon", "freehand"] as const).map((s) => ({
+              value: s,
+              label: t(`ui.editor.pixel.${s}`),
+            }))}
+            onCommit={(shape) => commit({ shape })}
+          />
+          {shape === "polygon" && <p className="muted hint">{t("ui.editor.pixel.polygon_help")}</p>}
+          {(shape === "rectangle" || shape === "ellipse") && (
+            <label className="panel-check">
+              <input
+                type="checkbox"
+                checked={v<boolean>("snap") === true}
+                onChange={(e) => commit({ snap: e.target.checked })}
+              />
+              {t("ui.editor.pixel.snap")}
+            </label>
+          )}
+          {(shape === "rectangle" || shape === "ellipse") && v<boolean>("snap") === true && (
+            <NumberField
+              label={t("ui.editor.pixel.level")}
+              value={num("level")}
+              min={0}
+              max={100}
+              step={1}
+              unit=""
+              onCommit={(level) => commit({ level })}
+            />
+          )}
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={v<boolean>("antialias") !== false}
+              onChange={(e) => commit({ antialias: e.target.checked })}
+            />
+            {t("ui.editor.pixel.antialias")}
+          </label>
+          <NumberField
+            label={t("ui.editor.pixel.feather")}
+            value={num("feather")}
+            min={0}
+            max={50}
+            step={1}
+            unit="px"
+            onCommit={(feather) => commit({ feather })}
+          />
+          {gapField}
+          <SelectionBox />
+        </>
+      );
+    }
+    case "wand":
+      // Magic wand (EDT-046): how alike, everywhere or touching, and the gap.
+      return (
+        <>
+          <NumberField
+            label={t("ui.editor.pixel.tolerance")}
+            value={num("tolerance")}
+            min={0}
+            max={100}
+            step={1}
+            unit="%"
+            onCommit={(tolerance) => commit({ tolerance })}
+          />
+          <label className="panel-check" title={t("ui.editor.pixel.global_help")}>
+            <input
+              type="checkbox"
+              checked={v<boolean>("global") === true}
+              onChange={(e) => commit({ global: e.target.checked })}
+            />
+            {t("ui.editor.pixel.global")}
+          </label>
+          {gapField}
+        </>
+      );
     case "eraser":
       // Eraser (EDT-048): thickness, tip, how much it erases and smooth edges.
       return (
@@ -764,6 +865,36 @@ function Properties({ target }: { target: Target }) {
         </>
       );
   }
+}
+
+/** A rectangle or ellipse selection in numbers (EDT-043, EDT-086): typing a size
+ * selects exactly that. */
+function SelectionBox() {
+  const { t } = useTranslation();
+  const sel = useEditor((s) => s.doc?.pixelSelection ?? null);
+  const style = useEditor((s) => s.styles?.select);
+  const shape = sel?.shape;
+  if (!sel || !shape) return null;
+  const r = shape.rect;
+  const set = (k: "x" | "y" | "w" | "h", value: number) =>
+    void selectPixels({
+      shape: shape.type,
+      rect: { ...r, [k]: k === "w" || k === "h" ? Math.max(1, value) : value },
+      antialias: style?.antialias ?? true,
+      feather: style?.feather ?? 0,
+      ...(sel.target ? { objectId: sel.target } : {}),
+    });
+  return (
+    <fieldset className="pos-size">
+      <legend>{t("ui.editor.pixel.selection")}</legend>
+      <div className="pos-grid">
+        <Field label={t("ui.editor.pixel.sel_x")} value={r.x} onApply={(v) => set("x", v)} />
+        <Field label={t("ui.editor.pixel.sel_y")} value={r.y} onApply={(v) => set("y", v)} />
+        <Field label={t("ui.editor.pixel.sel_w")} value={r.w} onApply={(v) => set("w", v)} />
+        <Field label={t("ui.editor.pixel.sel_h")} value={r.h} onApply={(v) => set("h", v)} />
+      </div>
+    </fieldset>
+  );
 }
 
 /** Callout (EDT-028): body, outline, corners, tails, text and Fit to text. */

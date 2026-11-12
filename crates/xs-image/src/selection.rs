@@ -340,7 +340,15 @@ fn smart_fill(img: &mut RgbaImage, mask: &Mask) {
             color[y * w + x] = [p[0] as f32 * a, p[1] as f32 * a, p[2] as f32 * a, p[3] as f32];
         }
     }
-    let filled = membrane(&color, &known, w, h);
+    let mut filled = membrane(&color, &known, w, h);
+    // Interfaces: where the pixels on both sides of the gap, across a row or a column,
+    // are the same color, the gap takes it, sharp; the shorter crossing wins.
+    let crisp = sides_alike(&color, &known, w, h);
+    for (f, c) in filled.iter_mut().zip(crisp) {
+        if let Some(c) = c {
+            *f = c;
+        }
+    }
     for y in 0..h {
         for x in 0..w {
             let (ix, iy) = (x0 + x as u32, y0 + y as u32);
@@ -367,6 +375,56 @@ fn smart_fill(img: &mut RgbaImage, mask: &Mask) {
             ];
         }
     }
+}
+
+/// For each unknown cell, the color of the known cells at both ends of its row or
+/// column run when they match, from the shorter run.
+fn sides_alike(color: &[[f32; 4]], known: &[f32], w: usize, h: usize) -> Vec<Option<[f32; 4]>> {
+    let alike = |a: [f32; 4], b: [f32; 4]| (0..4).all(|k| (a[k] - b[k]).abs() <= 8.0);
+    let mut best: Vec<Option<([f32; 4], usize)>> = vec![None; w * h];
+    // Rows, then columns: the same walk over a line of cells.
+    for (lines, len, at) in [
+        (
+            h,
+            w,
+            &(|line: usize, i: usize| line * w + i) as &dyn Fn(usize, usize) -> usize,
+        ),
+        (
+            w,
+            h,
+            &(|line: usize, i: usize| i * w + line) as &dyn Fn(usize, usize) -> usize,
+        ),
+    ] {
+        for line in 0..lines {
+            let mut i = 0;
+            while i < len {
+                if known[at(line, i)] > 0.0 {
+                    i += 1;
+                    continue;
+                }
+                let start = i;
+                while i < len && known[at(line, i)] == 0.0 {
+                    i += 1;
+                }
+                let (before, after) = (start.checked_sub(1), (i < len).then_some(i));
+                let (Some(b), Some(a)) = (before, after) else {
+                    continue;
+                };
+                let (cb, ca) = (color[at(line, b)], color[at(line, a)]);
+                if !alike(cb, ca) {
+                    continue;
+                }
+                let span = i - start;
+                for j in start..i {
+                    let cell = &mut best[at(line, j)];
+                    if cell.is_none_or(|(_, s)| span < s) {
+                        *cell = Some((cb, span));
+                    }
+                }
+            }
+        }
+    }
+    best.into_iter().map(|c| c.map(|(c, _)| c)).collect()
 }
 
 /// Fills the unknown cells (`known` 0) of a grid so each is the mean of its
@@ -705,6 +763,36 @@ mod tests {
         assert_eq!(snap(&img, [40, 25, 120, 55], 50.0), Some([60, 40, 80, 24]));
         // Nothing but background: no snap.
         assert_eq!(snap(&img, [150, 70, 40, 25], 50.0), None);
+    }
+
+    #[test]
+    fn a_gap_across_a_box_edge_stays_sharp() {
+        // A blue box; the gap takes its right half and the white beyond.
+        let mut img = RgbaImage::from_pixel(120, 80, image::Rgba([255, 255, 255, 255]));
+        for y in 20..60 {
+            for x in 20..60 {
+                img.put_pixel(x, y, image::Rgba([20, 90, 200, 255]));
+            }
+        }
+        let m = Mask::of_shape(
+            120,
+            80,
+            &Shape::Rectangle([40.0, 10.0, 40.0, 60.0]),
+            Transform::identity(),
+            false,
+        );
+        fill_gap(&mut img, &m, Gap::Smart);
+        assert_eq!(
+            img.get_pixel(50, 40).0,
+            [255, 255, 255, 255],
+            "white above and below"
+        );
+        assert_eq!(img.get_pixel(45, 15).0, [255, 255, 255, 255]);
+        assert_eq!(
+            img.get_pixel(30, 40).0,
+            [20, 90, 200, 255],
+            "the rest of the box stays"
+        );
     }
 
     #[test]

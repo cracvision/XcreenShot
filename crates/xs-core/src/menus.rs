@@ -172,6 +172,19 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.duplicate", "menu.duplicate", "duplicate"),
                 action("editor.select_all", "menu.select_all", "select_all"),
                 action("editor.deselect", "menu.deselect", "deselect"),
+                Separator,
+                // Pixel selection (EDT-044).
+                action(
+                    "editor.invert_selection",
+                    "menu.invert_selection",
+                    "invert_selection",
+                ),
+                action(
+                    "editor.float_selection",
+                    "menu.float_selection",
+                    "float_selection",
+                ),
+                action("editor.crop_selection", "menu.crop_selection", "crop_selection"),
             ],
         },
         Submenu {

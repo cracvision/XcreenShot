@@ -1112,7 +1112,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 17] = [
+pub const TOOLS: [&str; 19] = [
     "move",
     "arrow",
     "line",
@@ -1127,6 +1127,8 @@ pub const TOOLS: [&str; 17] = [
     "spotlight",
     "blur",
     "simplify",
+    "select",
+    "wand",
     "fill",
     "eraser",
     "crop",
@@ -1134,7 +1136,7 @@ pub const TOOLS: [&str; 17] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 52] = [
+pub const EDITOR_ACTIONS: [&str; 55] = [
     "open",
     "save",
     "save_as",
@@ -1187,6 +1189,9 @@ pub const EDITOR_ACTIONS: [&str; 52] = [
     "flatten",
     "flatten_all",
     "unflatten_all",
+    "invert_selection",
+    "float_selection",
+    "crop_selection",
 ];
 
 fn library_item() -> Value {

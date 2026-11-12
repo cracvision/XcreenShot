@@ -3,7 +3,7 @@
 // one command when the gesture ends.
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
+import { Circle, Ellipse, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
@@ -14,7 +14,14 @@ import {
   startNewText,
   startTextEdit,
 } from "./actions";
-import { canvasMenu, lockedMenu, menuPoint } from "./menus";
+import { canvasMenu, lockedMenu, menuPoint, selectionMenu } from "./menus";
+import {
+  insideSelection,
+  modeOf,
+  selectionAction,
+  selectPixels,
+  type SelectMode,
+} from "./pixelSelection";
 import {
   center,
   contains,
@@ -153,7 +160,22 @@ type Drag =
   // A freehand stroke being drawn (EDT-037); Shift keeps it straight.
   | { kind: "pen"; points: Point[]; straight: boolean }
   // An eraser stroke (EDT-048), on the image or on the floating image `target`.
-  | { kind: "erase"; points: Point[]; straight: boolean; target: string | null };
+  | { kind: "erase"; points: Point[]; straight: boolean; target: string | null }
+  // A pixel selection being drawn (EDT-043), on the image or a floating image.
+  | {
+      kind: "psel";
+      shape: "rectangle" | "ellipse" | "freehand";
+      from: Point;
+      to: Point;
+      points: Point[];
+      mode: SelectMode;
+      target: string | null;
+      square: boolean;
+      startX: number;
+      startY: number;
+    }
+  // Selected pixels being dragged (EDT-044).
+  | { kind: "pxmove"; start: Point; delta: Point; moved: boolean };
 
 /** The eraser's tip around the pointer, in screen pixels: dark and light, so it shows
  * on any image (EDT-048). */
@@ -295,6 +317,30 @@ function PolygonDraft({ points, scale }: { points: Point[]; scale: number }) {
   );
 }
 
+/** `r` on whole pixels. */
+function wholePixels(r: { x: number; y: number; w: number; h: number }) {
+  const x = Math.round(r.x);
+  const y = Math.round(r.y);
+  return { x, y, w: Math.round(r.x + r.w) - x, h: Math.round(r.y + r.h) - y };
+}
+
+/** A pixel selection being drawn (EDT-043): dashed like the polygon draft. */
+function SelectionDraft({ d, scale }: { d: Extract<Drag, { kind: "psel" }>; scale: number }) {
+  const look = {
+    stroke: ACCENT,
+    strokeWidth: 1.5 / scale,
+    dash: [6 / scale, 4 / scale],
+    listening: false,
+  };
+  if (d.shape === "freehand") return <Line points={d.points.flat()} {...look} />;
+  const r = dragRect(d.from, d.to, d.square, false);
+  return d.shape === "ellipse" ? (
+    <Ellipse x={r.x + r.w / 2} y={r.y + r.h / 2} radiusX={r.w / 2} radiusY={r.h / 2} {...look} />
+  ) : (
+    <Rect x={r.x} y={r.y} width={r.w} height={r.h} {...look} />
+  );
+}
+
 /** Whether a lens sits away from its zone (EDT-038). */
 function lensAway(o: MagnifyObject): boolean {
   const z = o.source;
@@ -385,6 +431,61 @@ export function Canvas({ doc }: Props) {
       showError(err);
     }
   };
+  /** A polygon selection being drawn (EDT-043), a corner per click. */
+  const [pselDraft, setPselDraft] = useState<{
+    doc: string;
+    points: Point[];
+    mode: SelectMode;
+    target: string | null;
+  } | null>(null);
+  const pPoly =
+    pselDraft &&
+    pselDraft.doc === doc.documentId &&
+    tool === "select" &&
+    styles?.select.shape === "polygon"
+      ? pselDraft
+      : null;
+  const closePixelPolygon = (d: { points: Point[]; mode: SelectMode; target: string | null }) => {
+    setPselDraft(null);
+    const kept = d.points.filter((p, i) => {
+      const prev = d.points[i - 1];
+      return !prev || Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 0.5;
+    });
+    if (kept.length < 3) return;
+    void selectPixels({
+      shape: "polygon",
+      points: kept,
+      mode: d.mode,
+      antialias: styles?.select.antialias ?? true,
+      feather: styles?.select.feather ?? 0,
+      ...(d.target ? { objectId: d.target } : {}),
+    });
+  };
+  useEffect(() => {
+    if (!pPoly) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") closePixelPolygon(pPoly);
+      else if (e.key === "Backspace")
+        setPselDraft(
+          pPoly.points.length > 1 ? { ...pPoly, points: pPoly.points.slice(0, -1) } : null,
+        );
+      else if (e.key === "Escape") setPselDraft(null);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pPoly]);
+  // The marching ants move, unless motion is reduced (EDT-043).
+  const hasPixelSel = Boolean(doc.pixelSelection);
+  const [antPhase, setAntPhase] = useState(0);
+  useEffect(() => {
+    if (!hasPixelSel || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setAntPhase((v) => (v + 1) % 8), 120);
+    return () => window.clearInterval(timer);
+  }, [hasPixelSel]);
   // Enter closes it, Backspace takes the last corner away, Esc cancels it.
   useEffect(() => {
     if (!poly) return;
@@ -403,6 +504,9 @@ export function Canvas({ doc }: Props) {
 
   /** What a finished gesture showed, until the core reports the change. */
   const [pending, setPending] = useState<{ version: number; object: DocObject } | null>(null);
+  // Once the core reports another version it is done: Undo can bring the old version
+  // number back, and the gesture must not show again.
+  if (pending && pending.version !== doc.version) setPending(null);
 
   const canvasSize: Size = { width: doc.canvas.width, height: doc.canvas.height };
   const cropping = tool === "crop";
@@ -867,6 +971,64 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "erase", points: [p], straight: false, target });
       return;
     }
+    if (tool === "select" && styles) {
+      const sel = doc.pixelSelection ?? null;
+      const mode = modeOf(sel !== null, e);
+      // A drag inside the selection moves its pixels (EDT-044).
+      if (sel && mode === "replace" && !pPoly && insideSelection(sel, p)) {
+        capture();
+        setDrag({ kind: "pxmove", start: p, delta: [0, 0], moved: false });
+        return;
+      }
+      // On a floating image, its pixels; anywhere else, the image's.
+      const hit = hitObject(p);
+      const target = hit?.type === "image" && !hit.locked ? hit.id : null;
+      const shape = styles.select.shape;
+      if (shape === "polygon") {
+        const draft = pPoly?.points ?? [];
+        const first = draft[0];
+        if (pPoly && draft.length >= 3 && first && near(first, s)) {
+          closePixelPolygon(pPoly);
+          return;
+        }
+        const last = draft[draft.length - 1];
+        setPselDraft({
+          doc: doc.documentId,
+          points: [...draft, e.shiftKey && last ? constrain45(last, p) : p],
+          mode: pPoly?.mode ?? mode,
+          target: pPoly?.target ?? target,
+        });
+        return;
+      }
+      capture();
+      setDrag({
+        kind: "psel",
+        shape,
+        from: p,
+        to: p,
+        points: [p],
+        mode,
+        target,
+        square: false,
+        startX: s.x,
+        startY: s.y,
+      });
+      return;
+    }
+    if (tool === "wand" && styles) {
+      // A click selects the color there (EDT-046); Shift adds, Alt subtracts.
+      const hit = hitObject(p);
+      const target = hit?.type === "image" && !hit.locked ? hit.id : null;
+      void selectPixels({
+        shape: "wand",
+        at: p,
+        tolerance: styles.wand.tolerance,
+        global: styles.wand.global,
+        mode: modeOf(Boolean(doc.pixelSelection), e),
+        ...(target ? { objectId: target } : {}),
+      });
+      return;
+    }
     if (handle && "multi" in handle) {
       const start = multiBox();
       if (start) {
@@ -1085,6 +1247,23 @@ export function Canvas({ doc }: Props) {
         };
       case "end":
         return { ...d, point: e.shiftKey ? constrain45(d.other, p) : p };
+      case "psel": {
+        if (d.shape !== "freehand") return { ...d, to: p, square: e.shiftKey && d.mode !== "add" };
+        const last = d.points[d.points.length - 1] ?? p;
+        const far = Math.hypot(p[0] - last[0], p[1] - last[1]) * (lay?.scale ?? 1) >= 2;
+        return far ? { ...d, to: p, points: [...d.points, p] } : { ...d, to: p };
+      }
+      case "pxmove": {
+        let dx = p[0] - d.start[0];
+        let dy = p[1] - d.start[1];
+        // Shift keeps the move horizontal or vertical.
+        if (e.shiftKey) {
+          if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+          else dx = 0;
+        }
+        const isMoved = d.moved || Math.hypot(dx, dy) * (lay?.scale ?? 1) >= DRAG_THRESHOLD;
+        return { ...d, delta: isMoved ? [Math.round(dx), Math.round(dy)] : [0, 0], moved: isMoved };
+      }
       case "erase":
       case "pen": {
         const first = d.points[0] ?? p;
@@ -1173,6 +1352,15 @@ export function Canvas({ doc }: Props) {
     const s = local(e);
     const p = toCanvas(s);
     usePointer.setState({ point: p, screen: s });
+    if (
+      !drag &&
+      tool === "select" &&
+      doc.pixelSelection &&
+      insideSelection(doc.pixelSelection, p)
+    ) {
+      setHover("pxsel");
+      return;
+    }
     if (!drag) {
       const h = hitHandle(s);
       const handleName = h
@@ -1402,6 +1590,38 @@ export function Canvas({ doc }: Props) {
     // Where the pointer was let go, not where the last drawn frame had it.
     const d = step(last, e, toCanvas(local(e)));
     if (d.kind === "pan") return;
+    if (d.kind === "psel") {
+      const s = local(e);
+      const st = styles?.select;
+      if (Math.hypot(s.x - d.startX, s.y - d.startY) < DRAG_THRESHOLD) {
+        // A click outside the selection drops it (EDT-043).
+        if (doc.pixelSelection && d.mode === "replace") void selectPixels({ shape: "none" });
+        return;
+      }
+      const common = {
+        mode: d.mode,
+        antialias: st?.antialias ?? true,
+        feather: st?.feather ?? 0,
+        ...(d.target ? { objectId: d.target } : {}),
+      };
+      if (d.shape === "freehand")
+        void selectPixels({ shape: "freehand", points: d.points, ...common });
+      else
+        void selectPixels({
+          shape: d.shape,
+          // Whole pixels, as the selection is (EDT-043).
+          rect: wholePixels(dragRect(d.from, d.to, d.square, false)),
+          snap: st?.snap ?? false,
+          level: st?.level ?? 50,
+          ...common,
+        });
+      return;
+    }
+    if (d.kind === "pxmove") {
+      if (d.moved && (d.delta[0] !== 0 || d.delta[1] !== 0))
+        void selectionAction("move", { offset: d.delta });
+      return;
+    }
     if (d.kind === "draw") {
       const s = local(e);
       const click = Math.hypot(s.x - d.startX, s.y - d.startY) < DRAG_THRESHOLD;
@@ -1435,6 +1655,12 @@ export function Canvas({ doc }: Props) {
     e.preventDefault();
     if (!lay || cropping) return;
     const p = toCanvas(local(e));
+    // Inside a pixel selection: what can be done with it (EDT-044).
+    const sel = doc.pixelSelection;
+    if (sel && insideSelection(sel, p)) {
+      selectionMenu(menuPoint(e), !sel.target);
+      return;
+    }
     const hit = hitObject(p);
     // A locked object offers Unlock (EDT-085).
     const locked = hit ? null : hitObject(p, true);
@@ -1461,6 +1687,10 @@ export function Canvas({ doc }: Props) {
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const p = toCanvas(local(e));
+    if (pPoly) {
+      if (pPoly.points.length >= 3) closePixelPolygon(pPoly);
+      return;
+    }
     if (poly) {
       if (poly.length >= 3) void closePolygon(poly);
       return;
@@ -1545,19 +1775,23 @@ export function Canvas({ doc }: Props) {
         ? "grab"
         : tool === "eraser"
           ? "none"
-          : tool === "fill"
+          : tool === "fill" || tool === "wand"
             ? "crosshair"
-            : hover === "locked"
-              ? "not-allowed"
-              : hover && resizeCursor[hover]
-                ? resizeCursor[hover]
-                : hover === "object" || drag?.kind === "move"
-                  ? "move"
-                  : tool === "text"
-                    ? "text"
-                    : tool === "move"
-                      ? "default"
-                      : "crosshair";
+            : tool === "select"
+              ? hover === "pxsel" || drag?.kind === "pxmove"
+                ? "move"
+                : "crosshair"
+              : hover === "locked"
+                ? "not-allowed"
+                : hover && resizeCursor[hover]
+                  ? resizeCursor[hover]
+                  : hover === "object" || drag?.kind === "move"
+                    ? "move"
+                    : tool === "text"
+                      ? "text"
+                      : tool === "move"
+                        ? "default"
+                        : "crosshair";
 
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
@@ -1759,6 +1993,8 @@ export function Canvas({ doc }: Props) {
       )}
       {dashedBox("text")}
       {poly && <PolygonDraft points={poly} scale={scale} />}
+      {pPoly && <PolygonDraft points={pPoly.points} scale={scale} />}
+      {drag?.kind === "psel" && <SelectionDraft d={drag} scale={scale} />}
       {dashedBox("step")}
       {dashedBox("callout")}
       {dashedBox("magnify")}
@@ -1789,6 +2025,41 @@ export function Canvas({ doc }: Props) {
     </>
   );
   const blurPreview = dashedBox("blur");
+  // The pixel selection's marching ants (EDT-043); while its pixels move, they go
+  // with them over the image (EDT-044).
+  const pixelSel = doc.pixelSelection ?? null;
+  const pxMove = drag?.kind === "pxmove" ? drag : null;
+  const pixelAnts = pixelSel && (
+    <Group x={pxMove?.delta[0] ?? 0} y={pxMove?.delta[1] ?? 0} listening={false}>
+      {pxMove?.moved && base && !pixelSel.target && (
+        <Group
+          clipFunc={(ctx) => {
+            for (const loop of pixelSel.outline) {
+              loop.forEach((pt, i) =>
+                i === 0 ? ctx.moveTo(pt[0], pt[1]) : ctx.lineTo(pt[0], pt[1]),
+              );
+              ctx.closePath();
+            }
+          }}
+        >
+          <KImage image={base} x={baseAt.x - doc.crop.x} y={baseAt.y - doc.crop.y} />
+        </Group>
+      )}
+      {pixelSel.outline.map((loop, i) => (
+        <Group key={i}>
+          <Line points={loop.flat()} closed stroke="#000000" strokeWidth={1 / scale} />
+          <Line
+            points={loop.flat()}
+            closed
+            stroke="#ffffff"
+            strokeWidth={1 / scale}
+            dash={[4 / scale, 4 / scale]}
+            dashOffset={antPhase / scale}
+          />
+        </Group>
+      ))}
+    </Group>
+  );
 
   return (
     <div className="canvas-area">
@@ -1892,6 +2163,7 @@ export function Canvas({ doc }: Props) {
                 )}
                 {autoExpand ? previews : <Group {...clip}>{previews}</Group>}
                 <Group {...clip}>{blurPreview}</Group>
+                {pixelAnts}
                 {shownCrop && (
                   <Group>
                     {/* Outside the crop the image is darkened (EDT-049). */}

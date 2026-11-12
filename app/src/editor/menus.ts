@@ -149,6 +149,19 @@ export function menuPoint(e: MouseEvent): Point {
 
 /** Right click on the canvas: what applies to the object under the pointer, or to the
  * image (EDT-002), and Unflatten on a flattened place (EDT-091). */
+/** Right-click inside a pixel selection (EDT-044). */
+export function selectionMenu(at: Point, onImage: boolean): void {
+  const items: MenuItem[] = [
+    entry("cut"),
+    entry("copy"),
+    entry("delete"),
+    entry("invert_selection", true),
+    ...(onImage ? [entry("float_selection"), entry("crop_selection")] : []),
+    entry("deselect", true),
+  ];
+  useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
+}
+
 export function canvasMenu(
   onObject: boolean,
   at: Point,
@@ -265,6 +278,10 @@ export function useMenuBar(): void {
   const hasDoc = doc !== null && !inLibrary;
   const objectCount = inLibrary ? 0 : (doc?.objects.length ?? 0);
   const canUnflatten = !inLibrary && (doc?.flattened ?? []).some((l) => !l.permanent);
+  // A pixel selection (EDT-044): on the image, or on a floating image.
+  const pixelSel = inLibrary ? null : (doc?.pixelSelection ?? null);
+  const hasPixels = pixelSel !== null;
+  const pixelsOnImage = hasPixels && !pixelSel?.target;
   const canUndo = (doc?.canUndo ?? false) && !inLibrary;
   const canRedo = (doc?.canRedo ?? false) && !inLibrary;
 
@@ -329,6 +346,11 @@ export function useMenuBar(): void {
     enabled["editor.flatten"] = selected;
     enabled["editor.flatten_all"] = objectCount > 0;
     enabled["editor.unflatten_all"] = canUnflatten;
+    for (const a of ["cut", "copy", "delete", "deselect"])
+      enabled[`editor.${a}`] = (enabled[`editor.${a}`] ?? false) || hasPixels;
+    enabled["editor.invert_selection"] = hasPixels;
+    enabled["editor.float_selection"] = pixelsOnImage;
+    enabled["editor.crop_selection"] = pixelsOnImage;
     const checked = {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
@@ -357,6 +379,8 @@ export function useMenuBar(): void {
     hasNext,
     hasFile,
     picked,
+    hasPixels,
+    pixelsOnImage,
   ]);
 
   useEffect(() => {

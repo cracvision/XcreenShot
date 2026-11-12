@@ -15,6 +15,7 @@ import {
   startTextEdit,
 } from "./actions";
 import { moved } from "./objects";
+import { selectPixels } from "./pixelSelection";
 import { isSegment, requestZoom, useEditor, usePointer, type Tool } from "./state";
 import { useMainView } from "../library/state";
 import { inToolbar } from "../components/arrowFocus";
@@ -321,6 +322,7 @@ export function useEditorKeys(): void {
             if (state.tool === "crop" && state.cropRect) resetCrop();
             // Leaves the group a double click entered (EDT-082).
             else if (state.entered.length > 0) useEditor.setState({ entered: [] });
+            else if (state.doc?.pixelSelection) void selectPixels({ shape: "none" });
             else if (state.selection.length > 0) state.setSelection([]);
             else if (setting("editor.escClosesEditor", false))
               run("app.close_window").catch(() => undefined);

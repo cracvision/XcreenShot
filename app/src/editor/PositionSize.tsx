@@ -29,7 +29,7 @@ const ALIGN_ACTIONS = [
 ] as const;
 
 /** One field: shows `value`; what is typed is evaluated on it when applied. */
-function Field({
+export function Field({
   label,
   value,
   onApply,

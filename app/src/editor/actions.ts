@@ -32,6 +32,7 @@ import { focusedTrayItem, neighbour, trayOrder } from "./tray";
 import { extentPoints } from "./objects";
 import { alignMoves, distributeMoves, frameOf, type AlignTo, type Extent } from "./align";
 import { textBox } from "./callouts";
+import { selectionAction, selectPixels } from "./pixelSelection";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -262,6 +263,8 @@ export function selectTool(tool: Tool): void {
     if (ids.length > 0) void setLocked(ids, true);
   }
   if (before !== tool) run("editor.select_tool", { tool }).catch(fail);
+  // Selecting pixels works on what is under the pointer, not on selected objects.
+  if (tool === "select" || tool === "wand") useEditor.getState().setSelection([]);
   // The stamps are chosen in the Styles tab (EDT-031).
   if (tool === "stamp") usePanel.getState().set({ visible: true, tab: "styles" });
 }
@@ -492,6 +495,21 @@ const IN_LIBRARY = new Set([
 export function performAction(action: string): boolean {
   const { selection, setSelection, doc, documents, active } = useEditor.getState();
   const selected = selection.length > 0;
+  // A pixel selection takes Cut, Copy, Delete and Deselect (EDT-044).
+  const pixels = doc?.pixelSelection ?? null;
+  if (pixels && useMainView.getState().view !== "library") {
+    switch (action) {
+      case "cut":
+      case "copy":
+      case "delete":
+        void selectionAction(action);
+        return true;
+      case "deselect":
+        void selectPixels({ shape: "none" });
+        setSelection([]);
+        return true;
+    }
+  }
   if (useMainView.getState().view === "library" && !IN_LIBRARY.has(action)) return false;
   switch (action) {
     case "view_editor":
@@ -618,7 +636,29 @@ export function performAction(action: string): boolean {
       if (!selected) return false;
       arrangeSelection(action);
       return true;
+    case "invert_selection":
+      if (!pixels) return false;
+      void selectPixels({ shape: "invert" });
+      return true;
+    case "float_selection":
+      // The pixels become a floating image, ready to move (EDT-044).
+      if (!pixels || pixels.target) return false;
+      void selectionAction("float").then((r) => {
+        if (!r?.ids?.length) return;
+        selectTool("move");
+        setSelection(r.ids);
+      });
+      return true;
+    case "crop_selection":
+      if (!pixels || pixels.target) return false;
+      void selectionAction("crop");
+      return true;
     case "select_all":
+      // With Selection or the Magic wand, every pixel (EDT-043).
+      if (doc && (useEditor.getState().tool === "select" || useEditor.getState().tool === "wand")) {
+        void selectPixels({ shape: "all" });
+        return true;
+      }
       // Every object but the locked ones (EDT-079, EDT-085).
       if (!doc || doc.objects.length === 0) return false;
       setSelection(doc.objects.filter((o) => !o.locked).map((o) => o.id));

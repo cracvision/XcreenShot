@@ -38,6 +38,86 @@ pub struct Styles {
     pub simplify: xs_image::simplify::SimplifyToolStyle,
     pub fill: FillStyle,
     pub eraser: EraserStyle,
+    pub select: SelectStyle,
+    pub wand: WandStyle,
+}
+
+/// The Selection tool (EDT-043, EDT-045).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct SelectStyle {
+    /// "rectangle", "ellipse", "polygon" or "freehand".
+    pub shape: String,
+    pub antialias: bool,
+    /// 0–50 px.
+    pub feather: f64,
+    /// Snap to object, and how far it groups (0–100).
+    pub snap: bool,
+    pub level: f64,
+    /// "smart", "transparent" or "canvas".
+    pub gap_fill: String,
+}
+
+impl Default for SelectStyle {
+    fn default() -> Self {
+        SelectStyle {
+            shape: "rectangle".to_string(),
+            antialias: true,
+            feather: 0.0,
+            snap: false,
+            level: 50.0,
+            gap_fill: "smart".to_string(),
+        }
+    }
+}
+
+/// The Magic wand (EDT-046, EDT-045).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
+pub struct WandStyle {
+    pub tolerance: f64,
+    pub global: bool,
+    pub gap_fill: String,
+}
+
+impl Default for WandStyle {
+    fn default() -> Self {
+        WandStyle {
+            tolerance: 15.0,
+            global: false,
+            gap_fill: "smart".to_string(),
+        }
+    }
+}
+
+fn gap_fill_ok(v: &str) -> Result<(), String> {
+    if ["smart", "transparent", "canvas"].contains(&v) {
+        Ok(())
+    } else {
+        Err("gapFill is smart, transparent or canvas".into())
+    }
+}
+
+impl SelectStyle {
+    fn merged(base: &SelectStyle, changes: &Map<String, Value>) -> Result<SelectStyle, String> {
+        let s: SelectStyle = merged(base, changes)?;
+        if !["rectangle", "ellipse", "polygon", "freehand"].contains(&s.shape.as_str()) {
+            return Err("shape is rectangle, ellipse, polygon or freehand".into());
+        }
+        within("feather", s.feather, 0.0, 50.0)?;
+        within("level", s.level, 0.0, 100.0)?;
+        gap_fill_ok(&s.gap_fill)?;
+        Ok(s)
+    }
+}
+
+impl WandStyle {
+    fn merged(base: &WandStyle, changes: &Map<String, Value>) -> Result<WandStyle, String> {
+        let s: WandStyle = merged(base, changes)?;
+        within("tolerance", s.tolerance, 0.0, 100.0)?;
+        gap_fill_ok(&s.gap_fill)?;
+        Ok(s)
+    }
 }
 
 /// The Fill tool's style (EDT-047). `color` `None` is Transparent.
@@ -187,6 +267,8 @@ impl Default for Styles {
             simplify: xs_image::simplify::SimplifyToolStyle::default(),
             fill: FillStyle::default(),
             eraser: EraserStyle::default(),
+            select: SelectStyle::default(),
+            wand: WandStyle::default(),
         }
     }
 }
@@ -220,6 +302,8 @@ impl Styles {
             "simplify" => serde_json::to_value(&self.simplify).ok(),
             "fill" => serde_json::to_value(&self.fill).ok(),
             "eraser" => serde_json::to_value(&self.eraser).ok(),
+            "select" => serde_json::to_value(&self.select).ok(),
+            "wand" => serde_json::to_value(&self.wand).ok(),
             _ => None,
         }
     }
@@ -244,6 +328,8 @@ impl Styles {
             }
             "fill" => self.fill = FillStyle::merged(&self.fill, changes)?,
             "eraser" => self.eraser = EraserStyle::merged(&self.eraser, changes)?,
+            "select" => self.select = SelectStyle::merged(&self.select, changes)?,
+            "wand" => self.wand = WandStyle::merged(&self.wand, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())

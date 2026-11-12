@@ -156,6 +156,20 @@ const ICONS = {
     </Svg>
   ),
   // Flat bars standing in for an interface (EDT-041).
+  // Selection (EDT-043): a dashed box.
+  select: (
+    <Svg>
+      <rect x="3.5" y="4.5" width="13" height="11" rx="1" strokeDasharray="2.4 2.2" />
+    </Svg>
+  ),
+  // Magic wand (EDT-046): a stick and a sparkle.
+  wand: (
+    <Svg>
+      <path d="M3.5 16.5 12 8" />
+      <path d="M14.5 2.5v4M12.5 4.5h4" />
+      <path d="M16.5 10v1.5M15.75 10.75h1.5M8 3v1.5M7.25 3.75h1.5" />
+    </Svg>
+  ),
   // Fill (EDT-047): a tipped bucket and a drop.
   fill: (
     <Svg>

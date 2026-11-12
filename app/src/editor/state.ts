@@ -27,6 +27,8 @@ export type Tool =
   | "spotlight"
   | "blur"
   | "simplify"
+  | "select"
+  | "wand"
   | "fill"
   | "eraser"
   | "crop";
@@ -154,6 +156,40 @@ export interface SimplifyObject {
 }
 
 /** Stamps (EDT-031). */
+/** What fills the place selected pixels leave (EDT-045). */
+export type GapFill = "smart" | "transparent" | "canvas";
+
+/** The Selection tool (EDT-043). */
+export interface SelectStyle {
+  shape: "rectangle" | "ellipse" | "polygon" | "freehand";
+  antialias: boolean;
+  feather: number;
+  snap: boolean;
+  level: number;
+  gapFill: GapFill;
+}
+
+/** The Magic wand (EDT-046). */
+export interface WandStyle {
+  tolerance: number;
+  global: boolean;
+  gapFill: GapFill;
+}
+
+/** The pixel selection as `document.info` reports it, in canvas pixels (EDT-043). */
+export interface PixelSelectionInfo {
+  /** The floating image it is on, or null for the image. */
+  target: string | null;
+  bounds: { x: number; y: number; w: number; h: number };
+  /** Closed loops; a hole is a loop too. */
+  outline: [number, number][][];
+  /** A rectangle or ellipse drawn alone: its numeric position and size (EDT-086). */
+  shape: {
+    type: "rectangle" | "ellipse";
+    rect: { x: number; y: number; w: number; h: number };
+  } | null;
+}
+
 /** The Fill tool (EDT-047): `color` null is Transparent. */
 export interface FillStyle {
   color: string | null;
@@ -462,6 +498,8 @@ export interface Styles {
   simplify: SimpleStyle;
   fill: FillStyle;
   eraser: EraserStyle;
+  select: SelectStyle;
+  wand: WandStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -497,6 +535,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   baseView?: { x: number; y: number; width: number; height: number } | null;
   /** Simplify (EDT-041): how the original shows under the simplified shapes. */
   simplify?: { showOriginal: boolean; opacity: number };
+  /** The pixel selection, if there is one (EDT-043). */
+  pixelSelection?: PixelSelectionInfo | null;
   /** Edits of pixels not yet saved (ADR 0005): the core shows them in the image. */
   patches?: { rect: { x: number; y: number; width: number; height: number }; image: string }[];
   /** What the next step of each sequence shows (EDT-035). */
