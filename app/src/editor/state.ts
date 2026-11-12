@@ -464,6 +464,8 @@ export interface ImageStyle {
   opacity: number;
   /** Rounded corners in canvas pixels (EDT-075). */
   cornerRadius?: number;
+  /** The pointer of a capture (EDT-093). */
+  cursor?: import("./cursorShapes").CursorLook;
 }
 
 /** A picture of the document's `images/` folder in a rectangle (EDT-078). */

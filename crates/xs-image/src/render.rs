@@ -705,6 +705,22 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
             };
+            // The pointer of a capture (EDT-093): its highlight under it, and a
+            // standard shape instead of the captured one when chosen.
+            if let Some(look) = &i.style.cursor {
+                crate::cursor::draw_highlight(pm, look, &i.rect, i.rotation, Transform::identity());
+                if look.shape != "captured" {
+                    crate::cursor::draw_shape(
+                        pm,
+                        &look.shape,
+                        &i.rect,
+                        i.rotation,
+                        i.style.opacity,
+                        Transform::identity(),
+                    );
+                    return;
+                }
+            }
             let Some(original) = images.get(&i.image) else {
                 return;
             };
@@ -936,9 +952,19 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
             add(x1 + o, y1 + o);
             None
         }
-        "image" => ImageObject::from_props(&object.props)
-            .ok()
-            .map(|i| (i.rect, i.rotation)),
+        "image" => ImageObject::from_props(&object.props).ok().map(|i| {
+            // A cursor's highlight reaches past its box (EDT-093).
+            if let Some(([cx, cy], r)) = i
+                .style
+                .cursor
+                .as_ref()
+                .and_then(|c| crate::cursor::highlight_circle(c, &i.rect))
+            {
+                add(cx - r, cy - r);
+                add(cx + r, cy + r);
+            }
+            (i.rect, i.rotation)
+        }),
         "zone" => ZoneObject::from_props(&object.props).ok().map(|z| (z.rect, 0.0)),
         _ => None,
     };

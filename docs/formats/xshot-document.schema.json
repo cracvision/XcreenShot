@@ -179,7 +179,17 @@
           "required": ["opacity"],
           "properties": {
             "opacity": { "type": "number", "minimum": 0, "maximum": 100 },
-            "shadow": { "$ref": "#/$defs/shadow" }
+            "shadow": { "$ref": "#/$defs/shadow" },
+            "cornerRadius": { "type": "number", "minimum": 0, "description": "Rounded corners in canvas pixels (EDT-075)" },
+            "cursor": {
+              "type": "object",
+              "description": "This image is the pointer of a capture (EDT-093): drawn as captured or as a standard shape, with an optional highlight circle under its tip",
+              "properties": {
+                "shape": { "type": "string", "enum": ["captured", "arrow", "hand", "text", "cross"] },
+                "highlight": { "type": "string", "enum": ["none", "yellow", "accent"] },
+                "natural": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "The captured pointer's size in pixels: its 100 %" }
+              }
+            }
           }
         }
       }

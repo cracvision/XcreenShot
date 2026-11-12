@@ -1,6 +1,7 @@
 // How each object looks on the canvas (EDT-024, EDT-026, EDT-029, EDT-040). Arrows
 // and shapes are drawn by Konva with the shared geometry; text and blur are images
 // Rust makes, so they look exactly as in exported files (ADR 0004).
+import { cursorPoints, highlightCircle, type CursorLook } from "./cursorShapes";
 import Konva from "konva";
 import { useEffect, useRef } from "react";
 import { Circle, Ellipse, Group, Image as KImage, Line, Rect } from "react-konva";
@@ -252,8 +253,11 @@ export function TextShape({ o, image }: { o: TextObject; image: HTMLImageElement
   );
 }
 
-/** A floating image (EDT-078): its picture stretched to its box and turned. */
+/** A floating image (EDT-078): its picture stretched to its box and turned. A cursor
+ * (EDT-093) adds its highlight and may be a standard shape instead. */
 export function ImageShape({ o, image }: { o: ImageObject; image: HTMLImageElement | undefined }) {
+  const look = o.style.cursor;
+  if (look) return <CursorShape o={o} look={look} image={image} />;
   if (!image) return null;
   const { x, y, w, h } = o.rect;
   return (
@@ -269,6 +273,54 @@ export function ImageShape({ o, image }: { o: ImageObject; image: HTMLImageEleme
       opacity={o.style.opacity / 100}
       listening={false}
     />
+  );
+}
+
+function CursorShape({
+  o,
+  look,
+  image,
+}: {
+  o: ImageObject;
+  look: CursorLook;
+  image: HTMLImageElement | undefined;
+}) {
+  const r = o.rect;
+  const glow = highlightCircle(look, r);
+  const opacity = o.style.opacity / 100;
+  return (
+    <Group
+      x={r.x + r.w / 2}
+      y={r.y + r.h / 2}
+      offsetX={r.x + r.w / 2}
+      offsetY={r.y + r.h / 2}
+      rotation={o.rotation}
+      listening={false}
+    >
+      {glow && (
+        <Circle
+          x={glow.x}
+          y={glow.y}
+          radius={glow.r}
+          fill={
+            look.highlight === "yellow" ? "rgba(255, 214, 10, 0.43)" : "rgba(45, 127, 249, 0.43)"
+          }
+        />
+      )}
+      {look.shape === "captured" ? (
+        image && <KImage image={image} x={r.x} y={r.y} width={r.w} height={r.h} opacity={opacity} />
+      ) : (
+        <Line
+          points={cursorPoints(look.shape, r)}
+          closed
+          fill="#ffffff"
+          stroke="#000000"
+          strokeWidth={Math.max(1, Math.max(r.w, r.h) / 18)}
+          lineJoin="round"
+          opacity={opacity}
+        />
+      )}
+    </Group>
   );
 }
 

@@ -1101,7 +1101,14 @@ fn write_library_item_with(
     let mut images = BTreeMap::new();
     let mut shown = std::borrow::Cow::Borrowed(image);
     if let Some((pic, [x, y])) = picture {
-        let props = objects::image_object(&pic.name, [*x, *y, pic.width as f64, pic.height as f64])?;
+        let mut props = objects::image_object(&pic.name, [*x, *y, pic.width as f64, pic.height as f64])?;
+        // The captured pointer is a Cursor object (EDT-093): as captured, no highlight.
+        if let Some(style) = props.get_mut("style").and_then(Value::as_object_mut) {
+            style.insert(
+                "cursor".to_string(),
+                json!({"shape": "captured", "highlight": "none", "natural": [pic.width, pic.height]}),
+            );
+        }
         document.objects.push(Object {
             id: document.next_object_id(),
             kind: "image".to_string(),

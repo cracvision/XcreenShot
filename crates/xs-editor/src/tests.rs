@@ -5268,3 +5268,56 @@ fn library_files_print_one_per_page() {
         "the file does not change"
     );
 }
+
+/// EDT-093: the captured pointer is a Cursor: it says so in its style; its shape
+/// becomes a standard one (the hand) in the same place, with a highlight under it;
+/// bad shapes are refused.
+#[test]
+fn the_captured_pointer_is_a_cursor_object() {
+    let e = env();
+    let pointer = Pointer {
+        image: image::RgbaImage::from_pixel(20, 20, image::Rgba([255, 0, 0, 255])),
+        x: 40,
+        y: 30,
+    };
+    let (doc, _) = add_capture_with(
+        &e.core,
+        &white(200, 120),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Test"),
+        Some(&pointer),
+    )
+    .unwrap();
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let o = &info["objects"][0];
+    assert_eq!(o["style"]["cursor"]["shape"], "captured");
+    assert_eq!(o["style"]["cursor"]["natural"], json!([20, 20]));
+    let id = o["id"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": id, "set": {"style": {"cursor": {"shape": "hand", "highlight": "yellow", "natural": [20, 20]}}}}),
+    );
+    let out = e.outside.path().join("hand.png");
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    let img = image::open(&out).unwrap().to_rgba8();
+    let palm = img.get_pixel(50, 48).0;
+    assert!(
+        palm[0] > 200 && palm[1] > 200 && palm[2] > 200,
+        "a white hand, not the red capture: {palm:?}"
+    );
+    let glow = img.get_pixel(48, 22).0;
+    assert!(glow[2] < 200, "the yellow highlight above the tip: {glow:?}");
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": id, "set": {"style": {"cursor": {"shape": "star"}}}}),
+    );
+    assert!(bad.is_err());
+}

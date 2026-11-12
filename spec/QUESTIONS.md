@@ -283,6 +283,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-023 | ¿Qué hace el botón con una herramienta elegida? | Elige los objetos y pasa a la herramienta Mover, para que se puedan editar juntos enseguida | Provisional |
 | LIB-017 | Varias imágenes al imprimir | Una por página, ajustada al papel y con la orientación que mejor encaja en cada una, aunque la vista previa diga otro tamaño; el PDF se abre en el visor del sistema como en EDT-114 | Provisional |
 | EDT-027 | ¿Cómo se elige el idioma del corrector? | El corrector es el del navegador integrado de Windows (WebView2), que usa los idiomas de corrección del sistema y no hace caso al idioma del campo. Por eso no hay de momento **Idioma de corrección** ni un diccionario propio con "XcreenShot": hacerlo exige llamar al corrector de Windows (y al de macOS) directamente desde la app, unos días de trabajo. Propuesta: dejarlo así y, si te molesta, priorizarlo. **Necesita tu decisión** | Abierta |
+| EDT-093 | ¿Cómo se guarda el cursor? | Como una imagen flotante con `style.cursor` (forma, resalte y tamaño natural): así se mueve, redimensiona, agrupa, aplana y exporta como cualquier imagen. Las formas estándar son dibujos propios sencillos (blanco con borde negro). El resalte se centra en la punta (flecha y mano) o en el centro (texto y cruz) | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

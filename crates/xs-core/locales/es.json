@@ -2741,6 +2741,20 @@
         "simplify": "Seleccionar todas las formas simplificadas",
         "none_simplify": "No hay formas simplificadas en el documento",
         "menu": "Seleccionar todos los de este tipo"
+      },
+      "cursor": {
+        "size": "Tamaño",
+        "shape": "Forma",
+        "highlight": "Resalte",
+        "shape_captured": "La capturada",
+        "shape_arrow": "Flecha",
+        "shape_hand": "Mano",
+        "shape_text": "Texto",
+        "shape_cross": "Cruz",
+        "highlight_none": "Ninguno",
+        "highlight_yellow": "Círculo amarillo",
+        "highlight_accent": "Círculo de acento",
+        "title": "Cursor"
       }
     },
     "multi": {

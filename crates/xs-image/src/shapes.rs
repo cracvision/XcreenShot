@@ -278,6 +278,9 @@ pub struct ImageStyle {
     /// Rounded corners in canvas pixels (EDT-075); the corners become transparent.
     #[serde(skip_serializing_if = "is_zero")]
     pub corner_radius: f64,
+    /// The pointer of a capture (EDT-093): its shape and highlight.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<crate::cursor::CursorLook>,
 }
 
 fn is_zero(v: &f64) -> bool {
@@ -290,6 +293,7 @@ impl Default for ImageStyle {
             shadow: None,
             opacity: 100.0,
             corner_radius: 0.0,
+            cursor: None,
         }
     }
 }
@@ -302,6 +306,9 @@ impl ImageStyle {
         }
         if !(0.0..=10_000.0).contains(&s.corner_radius) {
             return Err("cornerRadius must be between 0 and 10000".to_string());
+        }
+        if let Some(c) = &s.cursor {
+            c.check()?;
         }
         Ok(s)
     }

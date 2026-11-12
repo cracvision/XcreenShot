@@ -172,7 +172,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-090 | Copiar todo | M1 | Must | Win |
 | EDT-091 | Aplanar y desaplanar | M2 | Should | En curso |
 | EDT-092 | Deshacer y rehacer | M1 | Must | Win |
-| EDT-093 | Cursor como objeto | M2 | Should | — |
+| EDT-093 | Cursor como objeto | M2 | Should | En curso (Windows: el puntero capturado es un Cursor que se mueve, redimensiona con proporción, borra o aplana; Tamaño 50–400 %, Forma (la capturada, flecha, mano, texto, cruz) y Resalte (ninguno, amarillo, acento); en el lienzo y en la imagen final igual) |
 | EDT-094 | Medición en vivo | M5 | Could | — |
 | EDT-095 | Nuevo desde plantilla | M2 | Should | En curso (Windows: Archivo > Nuevo desde plantilla, Aplicar plantilla, Combinar desde la Biblioteca, filtro "Para N imágenes", máximo 20 con aviso; falta la selección múltiple en la Bandeja reciente) |
 | EDT-096 | Plantillas incorporadas | M2 | Should | Hecho en Windows (11 plantillas en 4 familias, con el tema activo) |

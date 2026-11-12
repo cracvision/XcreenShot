@@ -1,5 +1,12 @@
 // Side panel (EDT-005) with the Properties of the selected objects, of the text being
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
+import {
+  CURSOR_HIGHLIGHTS,
+  CURSOR_SHAPES,
+  cursorPercent,
+  cursorRect,
+  type CursorLook,
+} from "./cursorShapes";
 import { hasSelectAll, idsOfKind } from "./selectKind";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -479,6 +486,9 @@ function KindProperties({ target }: { target: Target }) {
       );
     }
     case "image":
+      // The pointer of a capture (EDT-093), alone: its size, shape and highlight.
+      if (styles.length === 1 && styles[0]?.cursor)
+        return <CursorProperties look={styles[0].cursor as CursorLook} commit={commit} />;
       // Rounded corners, in all the selected images (EDT-075).
       return (
         <>
@@ -1518,7 +1528,11 @@ export function SidePanel() {
     const count = target.styles.length;
     title = t("ui.editor.props_selection", {
       what:
-        count > 1 ? t("ui.editor.objects_count", { count }) : t(`ui.editor.tool.${target.kind}`),
+        count > 1
+          ? t("ui.editor.objects_count", { count })
+          : target.kind === "image" && target.styles[0]?.cursor
+            ? t("ui.editor.cursor.title")
+            : t(`ui.editor.tool.${target.kind}`),
     });
     body = (
       <>
@@ -1585,6 +1599,70 @@ export function SidePanel() {
         )}
       </div>
     </aside>
+  );
+}
+
+/** A cursor's properties (EDT-093): size 50 to 400 %, shape and highlight. */
+function CursorProperties({
+  look,
+  commit,
+}: {
+  look: CursorLook;
+  commit: (changes: Record<string, unknown>) => void;
+}) {
+  const { t } = useTranslation();
+  const doc = useEditor((s) => s.doc);
+  const selection = useEditor((s) => s.selection);
+  const o = doc?.objects.find((x) => x.id === selection[0]);
+  const rect = o && o.type === "image" ? o.rect : null;
+  const resize = (percent: number) => {
+    if (!doc || !o || !rect) return;
+    void run("document.update_object", {
+      documentId: doc.documentId,
+      objectId: o.id,
+      set: { rect: cursorRect(rect, look, percent) },
+    }).catch((e: unknown) => useEditor.getState().showError(e));
+  };
+  return (
+    <>
+      <NumberField
+        label={t("ui.editor.cursor.size")}
+        value={rect ? cursorPercent(rect, look) : 100}
+        min={50}
+        max={400}
+        step={10}
+        unit="%"
+        onCommit={resize}
+      />
+      <div className="prop-field">
+        <label htmlFor="cursor-shape">{t("ui.editor.cursor.shape")}</label>
+        <select
+          id="cursor-shape"
+          value={look.shape}
+          onChange={(e) => commit({ cursor: { ...look, shape: e.target.value } })}
+        >
+          {CURSOR_SHAPES.map((s) => (
+            <option key={s} value={s}>
+              {t(`ui.editor.cursor.shape_${s}`)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="prop-field">
+        <label htmlFor="cursor-highlight">{t("ui.editor.cursor.highlight")}</label>
+        <select
+          id="cursor-highlight"
+          value={look.highlight}
+          onChange={(e) => commit({ cursor: { ...look, highlight: e.target.value } })}
+        >
+          {CURSOR_HIGHLIGHTS.map((h) => (
+            <option key={h} value={h}>
+              {t(`ui.editor.cursor.highlight_${h}`)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
   );
 }
 

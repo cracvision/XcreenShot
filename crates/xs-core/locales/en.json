@@ -2741,6 +2741,20 @@
         "simplify": "Select all simplified shapes",
         "none_simplify": "There are no simplified shapes in the document",
         "menu": "Select all of this kind"
+      },
+      "cursor": {
+        "size": "Size",
+        "shape": "Shape",
+        "highlight": "Highlight",
+        "shape_captured": "As captured",
+        "shape_arrow": "Arrow",
+        "shape_hand": "Hand",
+        "shape_text": "Text",
+        "shape_cross": "Cross",
+        "highlight_none": "None",
+        "highlight_yellow": "Yellow circle",
+        "highlight_accent": "Accent circle",
+        "title": "Cursor"
       }
     },
     "multi": {
