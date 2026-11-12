@@ -10,7 +10,11 @@ description = "Final image of a document: drawing, pixel effects and file encodi
 xs-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "ico", "tiff"] }
+# Export formats (EDT-111): crates the project already had through `image` and `zip`.
+tiff = { version = "0.11", default-features = false, features = ["lzw", "deflate"] }
+weezl = "0.1"
+flate2 = "1"
 png = "0.17"
 tiny-skia = "0.12.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

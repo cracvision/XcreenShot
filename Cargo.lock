@@ -7234,11 +7234,14 @@ version = "0.2.0"
 dependencies = [
  "chrono",
  "cosmic-text",
+ "flate2",
  "image",
  "png 0.17.16",
  "serde",
  "serde_json",
+ "tiff",
  "tiny-skia",
+ "weezl",
  "xs-core",
 ]
 

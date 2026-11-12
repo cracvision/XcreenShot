@@ -253,6 +253,14 @@ pub fn definitions() -> Vec<SettingDef> {
             "EDT-071",
         ),
         def("editor.snap", "editor", boolean(), json!(true), "EDT-084"),
+        // What fills transparency in JPG, BMP, GIF without it and PDF (EDT-112).
+        def(
+            "editor.flattenBackground",
+            "editor",
+            json!({"type": "string"}),
+            json!("#FFFFFF"),
+            "EDT-112",
+        ),
         // A new image (EDT-103): its size and canvas color (null: transparent).
         def(
             "editor.newImage.width",

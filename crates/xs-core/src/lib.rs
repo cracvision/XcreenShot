@@ -28,3 +28,11 @@ pub use crate::command::{CommandSpec, Context, Registry, Scope, Source};
 pub use crate::core::Core;
 pub use crate::error::{CommandError, CommandResult, ErrorCode};
 pub use crate::i18n::Lang;
+
+/// The system clipboard is used from several threads (paste, copy, captures, menus),
+/// and its library is not safe for that: two uses at once corrupted the process's
+/// memory. Every use takes this lock first.
+pub fn clipboard_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}

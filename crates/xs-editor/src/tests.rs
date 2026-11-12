@@ -3738,3 +3738,73 @@ fn new_images_and_remembered_defaults() {
     );
     assert!(bad.is_err());
 }
+
+/// Reading the clipboard from several threads at once corrupted the process's memory
+/// (seen at startup, when the window asks what the clipboard has): every use now takes
+/// one lock. Reads only; the tests never write to the clipboard.
+#[test]
+fn clipboard_reads_from_several_threads_are_safe() {
+    let handles: Vec<_> = (0..8)
+        .map(|_| {
+            std::thread::spawn(|| {
+                for _ in 0..40 {
+                    let _ = crate::read_clipboard();
+                    let _ = crate::clipboard_files();
+                }
+            })
+        })
+        .collect();
+    for h in handles {
+        let _ = h.join();
+    }
+}
+
+/// EDT-111, EDT-112: every export format writes a file; estimate writes nothing; three
+/// documents make one PDF of three pages in their order; options are checked.
+#[test]
+fn exporting_to_every_format() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(120, 80), json!({"mode": "region"}), 1.0, None).unwrap();
+    for format in ["png", "jpg", "gif", "bmp", "tiff", "pdf", "ico", "psd"] {
+        let out = e.outside.path().join(format!("all.{format}"));
+        let r = cli(
+            &e.core,
+            "document.export",
+            json!({"documentId": doc, "format": format, "path": out}),
+        );
+        let path = PathBuf::from(r["path"].as_str().unwrap());
+        assert!(std::fs::metadata(&path).unwrap().len() > 0, "{format}");
+    }
+    let r = cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "jpg", "estimate": true, "options": {"quality": 40}}),
+    );
+    assert!(r["bytes"].as_u64().unwrap() > 0);
+    assert!(r.get("path").is_none(), "nothing written");
+    let (b, _) = add_capture(&e.core, &white(60, 60), json!({"mode": "region"}), 1.0, None).unwrap();
+    let (c, _) = add_capture(&e.core, &white(90, 40), json!({"mode": "region"}), 1.0, None).unwrap();
+    let out = e.outside.path().join("three.pdf");
+    let r = cli(
+        &e.core,
+        "document.export",
+        json!({"documentIds": [doc, b, c], "format": "pdf", "path": out}),
+    );
+    assert_eq!(r["pages"], 3);
+    let pdf = std::fs::read(r["path"].as_str().unwrap()).unwrap();
+    assert_eq!(String::from_utf8_lossy(&pdf).matches("/Type /Page ").count(), 3);
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.export",
+        json!({"documentIds": [doc, b], "format": "png", "path": e.outside.path().join("x.png")}),
+    );
+    assert!(bad.is_err(), "PNG holds one image");
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "estimate": true, "options": {"scale": 1000}}),
+    );
+    assert!(bad.is_err());
+}

@@ -4226,49 +4226,7 @@ pub fn extension() -> Extension {
             }
             Ok(json!({ "status": "saved", "path": target, "linked": linked }))
         });
-        on!("document.export", |core, ctx, p| {
-            let id = resolve(&core, ctx.lang, &p)?;
-            let ed = editor(&core);
-            let format = Format::from_name(p["format"].as_str().unwrap_or_default()).unwrap_or(Format::Png);
-            let mut target = PathBuf::from(p["path"].as_str().unwrap_or_default());
-            if target.extension().is_none() {
-                target.set_extension(format.ext());
-            }
-            let name = target
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            if target.exists() {
-                match p.get("onConflict").and_then(Value::as_str).unwrap_or("keepBoth") {
-                    "replace" => {}
-                    "fail" => {
-                        return Err(invalid(tr(ctx.lang, "errors.file_exists", &[("name", &name)])));
-                    }
-                    _ => {
-                        let dir = target.parent().map(Path::to_path_buf).unwrap_or_default();
-                        let stem = target
-                            .file_stem()
-                            .map(|s| s.to_string_lossy().into_owned())
-                            .unwrap_or_default();
-                        let ext = target
-                            .extension()
-                            .map(|s| s.to_string_lossy().into_owned())
-                            .unwrap_or_default();
-                        target = xs_library::unique(&dir, &stem, &ext);
-                    }
-                }
-            }
-            let quality = p.get("quality").and_then(Value::as_u64).unwrap_or(90) as u8;
-            let snap = ed.store.snapshot(&id).map_err(|e| internal(ctx.lang, &name, e))?;
-            let bytes = write_snapshot(&ed, &snap, &target, format, quality, false)
-                .map_err(|e| internal(ctx.lang, &name, e))?;
-            Ok(json!({
-                "path": target,
-                "width": snap.document.canvas.width,
-                "height": snap.document.canvas.height,
-                "bytes": bytes,
-            }))
-        });
+        on!("document.export", |core, ctx, p| export_command(&core, ctx, &p));
         on!("document.crop", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
             if p.get("trim").and_then(Value::as_bool).unwrap_or(false) {
@@ -4791,6 +4749,118 @@ fn objects_image(snap: &store::Snapshot, ids: &[String]) -> Option<image::RgbaIm
     (x1 > x0 && y1 > y0).then(|| image::imageops::crop_imm(&img, x0, y0, x1 - x0, y1 - y0).to_image())
 }
 
+/// The color that fills transparency in formats without it (EDT-112).
+fn flatten_background(core: &Core) -> xs_image::color::Rgba {
+    core.settings
+        .get("editor.flattenBackground")
+        .and_then(|v| v.as_str().and_then(xs_image::color::Rgba::parse))
+        .unwrap_or(xs_image::color::Rgba::WHITE)
+}
+
+/// `document.export` (EDT-110 to EDT-112): the final image in any export format, with
+/// its options; several documents in one PDF or TIFF; `estimate` only measures.
+fn export_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    use xs_image::export::{Kind, Options, Page};
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", param), ("reason", reason)],
+        ))
+    };
+    let ed = editor(core);
+    let kind = Kind::parse(p["format"].as_str().unwrap_or("png"))
+        .ok_or_else(|| bad("format", "png, jpg, gif, bmp, tiff, pdf, ico or psd"))?;
+    let mut opts: Options = serde_json::from_value(p.get("options").cloned().unwrap_or(json!({})))
+        .map_err(|e| bad("options", &e.to_string()))?;
+    if let Some(q) = p.get("quality").and_then(Value::as_u64) {
+        opts.quality = q.clamp(1, 100) as u8;
+    }
+    opts.check().map_err(|e| bad("options", &e))?;
+    // Several documents, one page each (EDT-111); else the one given or shown.
+    let ids: Vec<String> = match p.get("documentIds").and_then(Value::as_array) {
+        Some(list) if !list.is_empty() => list
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect(),
+        _ => vec![resolve(core, lang, p)?],
+    };
+    if ids.len() > 1 && !kind.multi_page() {
+        return Err(bad("documentIds", "only PDF and TIFF hold several images"));
+    }
+    let mut pages = Vec::new();
+    for id in &ids {
+        let snap = ed.store.snapshot(id).map_err(|_| {
+            CommandError::new(
+                ErrorCode::NotFound,
+                tr(lang, "errors.document_not_found", &[("id", id)]),
+            )
+        })?;
+        pages.push(Page {
+            image: snap.render(),
+            dpi: snap.document.dpi,
+        });
+    }
+    let (width, height) = pages
+        .first()
+        .map(|pg| (pg.image.width(), pg.image.height()))
+        .unwrap_or((0, 0));
+    let bytes = xs_image::export::encode(&pages, kind, &opts, flatten_background(core))
+        .map_err(|e| internal(lang, "", e))?;
+    // How big it would be, for the options dialog (EDT-112).
+    if p.get("estimate").and_then(Value::as_bool) == Some(true) {
+        return Ok(json!({"bytes": bytes.len(), "width": width, "height": height}));
+    }
+    let mut target = PathBuf::from(
+        p["path"]
+            .as_str()
+            .ok_or_else(|| bad("path", "give the file to write"))?,
+    );
+    if target.extension().is_none() {
+        target.set_extension(kind.ext());
+    }
+    let name = target
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    if target.exists() {
+        match p.get("onConflict").and_then(Value::as_str).unwrap_or("keepBoth") {
+            "replace" => {}
+            "fail" => {
+                return Err(invalid(tr(lang, "errors.file_exists", &[("name", &name)])));
+            }
+            _ => {
+                let dir = target.parent().map(Path::to_path_buf).unwrap_or_default();
+                let stem = target
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                let ext = target
+                    .extension()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                target = xs_library::unique(&dir, &stem, &ext);
+            }
+        }
+    }
+    {
+        let _guard = ed.writing.lock().unwrap();
+        if let Some(parent) = target.parent().filter(|p| !p.as_os_str().is_empty()) {
+            std::fs::create_dir_all(parent).map_err(|e| internal(lang, &name, e.to_string()))?;
+        }
+        write_file(&target, &bytes).map_err(|e| internal(lang, &name, e.to_string()))?;
+    }
+    Ok(json!({
+        "path": target,
+        "width": width,
+        "height": height,
+        "bytes": bytes.len(),
+        "pages": pages.len(),
+    }))
+}
+
 /// File > New image (EDT-103): a blank canvas of the size, color and resolution
 /// given, or of the remembered ones; with `remember`, these become the defaults.
 fn new_image(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
@@ -4919,6 +4989,7 @@ fn new_from_clipboard(core: &Arc<Core>, ctx: &Context) -> CommandResult {
 
 /// Image files copied in the file manager (EDT-104).
 fn clipboard_files() -> Vec<PathBuf> {
+    let _lock = xs_core::clipboard_lock();
     arboard::Clipboard::new()
         .ok()
         .and_then(|mut cb| cb.get().file_list().ok())
@@ -4933,6 +5004,7 @@ fn clipboard_files() -> Vec<PathBuf> {
 }
 
 fn read_clipboard() -> (Option<image::RgbaImage>, Option<String>) {
+    let _lock = xs_core::clipboard_lock();
     let Ok(mut cb) = arboard::Clipboard::new() else {
         return (None, None);
     };
@@ -4972,6 +5044,7 @@ fn extent(objects: &[Object]) -> Option<[f64; 4]> {
 
 /// Copies an image to the clipboard, retrying while another app holds it (EDT-090).
 fn copy_image(image: &image::RgbaImage) -> Result<(), arboard::Error> {
+    let _lock = xs_core::clipboard_lock();
     let data = arboard::ImageData {
         width: image.width() as usize,
         height: image.height() as usize,

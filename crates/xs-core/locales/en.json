@@ -771,6 +771,10 @@
     "editor_newImage_color": {
       "label": "Canvas color of a new image",
       "description": "#RRGGBB, or empty for transparent."
+    },
+    "editor_flattenBackground": {
+      "label": "Background for formats without transparency",
+      "description": "A color like #FFFFFF: what transparent areas become in JPG, BMP and PDF."
     }
   },
   "errors": {

@@ -221,6 +221,7 @@ impl Host for TauriHost {
     }
 
     fn copy_text(&self, text: &str) -> Result<(), CommandError> {
+        let _lock = xs_core::clipboard_lock();
         self.app
             .clipboard()
             .write_text(text.to_string())

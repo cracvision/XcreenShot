@@ -421,6 +421,7 @@ fn thumbnail_png(image: &RgbaImage) -> Option<Vec<u8>> {
 }
 
 fn copy_to_clipboard(image: &RgbaImage) -> Result<(), arboard::Error> {
+    let _lock = xs_core::clipboard_lock();
     let data = arboard::ImageData {
         width: image.width() as usize,
         height: image.height() as usize,

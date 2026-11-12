@@ -9,6 +9,7 @@ pub mod color;
 pub mod cutout;
 pub mod effects;
 pub mod encode;
+pub mod export;
 pub mod fx;
 pub mod fx_marks;
 pub mod fx_shapes;

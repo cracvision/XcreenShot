@@ -771,6 +771,10 @@
     "editor_newImage_color": {
       "label": "Color del lienzo de una imagen nueva",
       "description": "#RRGGBB, o vacío para transparente."
+    },
+    "editor_flattenBackground": {
+      "label": "Fondo para formatos sin transparencia",
+      "description": "Un color como #FFFFFF: en qué se convierten las zonas transparentes en JPG, BMP y PDF."
     }
   },
   "errors": {

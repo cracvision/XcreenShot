@@ -903,12 +903,15 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "format": {"type": "string", "enum": ["png", "jpg"]},
-                    "path": {"type": "string"},
-                    "quality": {"type": "integer", "minimum": 1, "maximum": 100, "description": "JPG quality (default 90)"},
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Several documents in one PDF or TIFF, one page each, in this order (EDT-111)"},
+                    "format": {"type": "string", "enum": ["png", "jpg", "gif", "bmp", "tiff", "tif", "pdf", "ico", "psd"]},
+                    "path": {"type": "string", "description": "Required unless estimate"},
+                    "quality": {"type": "integer", "minimum": 1, "maximum": 100, "description": "JPG quality (default 90); also options.quality"},
+                    "options": {"type": "object", "description": "Format options (EDT-112): quality, pngCompression (fast | max), pngColors256, gifTransparent, tiffCompression (none | lzw | zip), pdfPage (auto | a4 | letter | legal | a3), pdfOrientation (auto | portrait | landscape), pdfMargin (mm), pdfFitWidth, pdfSinglePage, pdfLossless, icoSizes ([16…256]), scale (25–400 %), colorProfile"},
+                    "estimate": {"type": "boolean", "default": false, "description": "Only say how many bytes it would take; nothing is written"},
                     "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "fail"], "default": "keepBoth"}
                 }),
-                &["format", "path"],
+                &["format"],
             ))
             .result(json!({
                 "type": "object",
@@ -916,7 +919,8 @@ pub fn specs() -> Vec<CommandSpec> {
                     "path": {"type": "string"},
                     "width": {"type": "integer"},
                     "height": {"type": "integer"},
-                    "bytes": {"type": "integer"}
+                    "bytes": {"type": "integer"},
+                    "pages": {"type": "integer", "description": "Images in the file"}
                 }
             })),
         B::new("document.crop", &["EDT-049", "EDT-050", "EDT-119"])
