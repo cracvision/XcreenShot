@@ -1,11 +1,12 @@
 // Side panel (EDT-005) with the Properties of the selected objects, of the text being
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
+import { hasSelectAll, idsOfKind } from "./selectKind";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
-import { applyCrop, resetCrop } from "./actions";
+import { applyCrop, resetCrop, selectTool } from "./actions";
 import { ColorPicker } from "./ColorPicker";
 import { FontField, NumberField, SelectField } from "./Fields";
 import { FillPicker } from "./FillPicker";
@@ -1576,11 +1577,36 @@ export function SidePanel() {
         ) : (
           <section aria-label={title}>
             <h2 className="side-title">{title}</h2>
+            {target && !pixelTool && hasSelectAll(target.kind) && (
+              <SelectAllOfKind kind={target.kind} />
+            )}
             {body}
           </section>
         )}
       </div>
     </aside>
+  );
+}
+
+/** Select all (EDT-023): every object of the tool's kind, to edit them together. */
+function SelectAllOfKind({ kind }: { kind: string }) {
+  const { t } = useTranslation();
+  const objects = useEditor((s) => s.doc?.objects);
+  const ids = idsOfKind(objects ?? [], kind);
+  const label = t(`ui.editor.select_kind.${kind}`);
+  return (
+    <button
+      type="button"
+      className="btn small select-kind"
+      disabled={ids.length === 0}
+      title={ids.length === 0 ? t(`ui.editor.select_kind.none_${kind}`) : label}
+      onClick={() => {
+        selectTool("move");
+        useEditor.getState().setSelection(ids);
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

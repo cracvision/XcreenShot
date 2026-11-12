@@ -778,6 +778,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Or image files (library items), one fitted per page, without opening them (LIB-017)"},
                     "setup": {"type": "object", "description": "{paper: a4 | letter | legal | a3, orientation: auto | portrait | landscape, margin (mm), size: fit | actual | percent, percent, position: center | topLeft}"},
                     "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}: printing a selection"}
                 }),
@@ -788,6 +789,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "As document.print_pages (LIB-017)"},
                     "setup": {"type": "object", "description": "As document.print_pages"},
                     "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}"},
                     "open": {"type": "boolean", "default": true, "description": "Open the PDF in the system's viewer to print it"}

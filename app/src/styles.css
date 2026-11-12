@@ -2767,6 +2767,12 @@ html.overlay-root.overlay-native #root {
   animation: rise var(--dur-slow) var(--ease-out) backwards;
 }
 
+/* EDT-023: under the panel's title. */
+.select-kind {
+  justify-self: start;
+  margin: -2px 0 var(--space-2);
+}
+
 .side-title {
   color: var(--ink-muted);
   font-size: 12px;

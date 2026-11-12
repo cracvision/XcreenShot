@@ -5252,7 +5252,6 @@ fn print_layout(
     p: &Value,
 ) -> Result<(Vec<xs_image::export::PrintPage>, String), CommandError> {
     let lang = ctx.lang;
-    let id = resolve(core, lang, p)?;
     let setup: xs_image::export::PrintSetup =
         serde_json::from_value(p.get("setup").cloned().unwrap_or(json!({}))).map_err(|e| {
             invalid(tr(
@@ -5261,6 +5260,37 @@ fn print_layout(
                 &[("param", "setup"), ("reason", &e.to_string())],
             ))
         })?;
+    // Files of the library (LIB-017): each fitted on its own page, turned the way it
+    // fits best, without opening them; their files do not change.
+    if let Some(paths) = p.get("paths").and_then(Value::as_array) {
+        let ed = editor(core);
+        let fitted = xs_image::export::PrintSetup {
+            size: "fit".to_string(),
+            orientation: "auto".to_string(),
+            ..setup.clone()
+        };
+        let mut pages = Vec::new();
+        let mut first = None;
+        for path in paths.iter().filter_map(Value::as_str).map(PathBuf::from) {
+            let doc = DocStore::load(&path, &ed.library()).map_err(|e| open_error(lang, &path, e))?;
+            let image = DocStore::render_doc(&doc).map_err(|e| internal(lang, "", e))?;
+            first.get_or_insert_with(|| doc.name());
+            pages.extend(xs_image::export::print_pages(&image, doc.document.dpi, &fitted));
+        }
+        if pages.is_empty() {
+            return Err(invalid(tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", "paths"), ("reason", "give image files")],
+            )));
+        }
+        let name = match (first, paths.len()) {
+            (Some(n), 1) => n,
+            (_, n) => format!("XcreenShot ({n})"),
+        };
+        return Ok((pages, name));
+    }
+    let id = resolve(core, lang, p)?;
     let snap = editor(core)
         .store
         .snapshot(&id)

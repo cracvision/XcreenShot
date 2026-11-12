@@ -5239,3 +5239,32 @@ fn the_original_pixels_decode_once_for_many_requests() {
         "one decode, shared"
     );
 }
+
+/// LIB-017: library files print one per page, fitted, without opening them and
+/// without touching their files.
+#[test]
+fn library_files_print_one_per_page() {
+    let e = env();
+    let (_, a) = capture(&e);
+    let wide = image::RgbaImage::from_pixel(1600, 400, image::Rgba([10, 20, 30, 255]));
+    let (_, b) = add_capture(&e.core, &wide, json!({"mode": "region"}), 1.0, Some("Wide")).unwrap();
+    let before = std::fs::metadata(&a).unwrap().modified().unwrap();
+    let r = cli(
+        &e.core,
+        "document.print_pages",
+        json!({"paths": [a, b], "setup": {"paper": "a4", "size": "actual"}}),
+    );
+    let pages = r["pages"].as_array().unwrap();
+    assert_eq!(pages.len(), 2, "one page each, fitted");
+    assert!(
+        pages[1]["paper"]["w"].as_f64().unwrap() > pages[1]["paper"]["h"].as_f64().unwrap(),
+        "the wide one turned"
+    );
+    let out = cli(&e.core, "document.print", json!({"paths": [a, b], "open": false}));
+    assert_eq!(out["pages"], json!(2));
+    assert_eq!(
+        std::fs::metadata(&a).unwrap().modified().unwrap(),
+        before,
+        "the file does not change"
+    );
+}

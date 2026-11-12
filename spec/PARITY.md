@@ -102,7 +102,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-020 | Degradados | M2 | Should | En curso (falta el borde de la cámara, con `VID-`) |
 | EDT-021 | Sombra de los objetos | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-022 | Selección, tiradores y modificadores | M1 | Must | Win |
-| EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | — |
+| EDT-023 | Seleccionar todos los objetos de una herramienta | M2 | Should | En curso (Windows: botón bajo el título de Propiedades de cada herramienta de anotación, desactivado con su motivo si no hay, y clic derecho > Seleccionar todos los de este tipo; trae el grupo entero y deja fuera los bloqueados) |
 | EDT-024 | Flecha | M1 | Must | Win |
 | EDT-025 | Línea | M2 | Should | En curso |
 | EDT-026 | Texto | M1 | Must | Win |
@@ -302,8 +302,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-013 | Vista rápida | M2 | Should | En curso (Windows: Espacio en la biblioteca y en la bandeja, ← →, Esc o Espacio cierran, Intro abre; recorre solo la selección si hay varios; pie con nombre, tamaño, fecha y posición; menú contextual. Faltan video, GIF y guías, que llegan con M3 y M4) |
 | LIB-014 | Mostrar en la biblioteca | M2 | Should | En curso (Windows: Archivo > Mostrar en la biblioteca y `library.reveal`: cambia a la Biblioteca, selecciona y desplaza hasta el elemento, quita los filtros con aviso; y desde el menú de la bandeja, TRY-016; falta Deshacer en el aviso) |
 | LIB-015 | Eliminar | M1 | Must | En curso |
-| LIB-016 | Crear desde la biblioteca | M2 | Should | — |
-| LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
+| LIB-016 | Crear desde la biblioteca | M2 | Should | En curso (Windows: Crear ▾ en la barra y Crear ▸ en el menú contextual con Nuevo desde plantilla; Diapositivas narradas y Combinar videos aparecen desactivados hasta el video, M4) |
+| LIB-017 | Imprimir desde la biblioteca | M2 | Could | En curso (Windows: Imprimir… del menú contextual y Ctrl+P en la biblioteca, una imagen por página ajustada y girada como mejor cabe, vista previa de todas, sin abrirlas ni cambiar sus archivos; `document.print` y `print_pages` con `paths`) |
 | LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | En curso (Windows: Exportar… del menú contextual: uno con Guardar como, varios con la exportación por lotes de EDT-113 ya cargada; aviso si el destino está en la biblioteca. Videos, GIF y guías llegan con M3 y M4; el progreso va en el diálogo, no en la barra de estado de LIB-026) |
 | LIB-019 | Guías de pasos en la biblioteca | M5 | Should | — |
 | LIB-020 | Autoguardado de capturas | M1 | Must | En curso |

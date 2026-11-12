@@ -2091,6 +2091,7 @@ export function Canvas({ doc }: Props) {
       layer,
       hit?.type === "step" ? hit : undefined,
       hit?.type === "image" && !hit.locked ? hit.id : undefined,
+      hit?.type,
     );
   };
 

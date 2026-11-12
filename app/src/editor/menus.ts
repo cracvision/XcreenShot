@@ -2,6 +2,7 @@
 // entries, its orders (`editor.action`), and the right-click menus of the canvas and
 // the toolbar, drawn by the app so they animate like every other menu (APP-012).
 // Entries show their current shortcut (EDT-116).
+import { hasSelectAll, idsOfKind } from "./selectKind";
 import { listen } from "@tauri-apps/api/event";
 import i18next from "i18next";
 import type { MouseEvent } from "react";
@@ -173,6 +174,7 @@ export function canvasMenu(
   layer?: FlatLayer,
   step?: StepObject,
   image?: string,
+  kind?: string,
 ): void {
   const items: MenuItem[] = onObject
     ? [
@@ -189,6 +191,15 @@ export function canvasMenu(
         entry("flatten", true),
       ]
     : [entry("paste"), entry("paste_in_place"), entry("copy_all", true)];
+  if (onObject && kind && hasSelectAll(kind)) {
+    items.push({
+      id: "editor.select_kind",
+      label: i18next.t("ui.editor.select_kind.menu"),
+      separator: true,
+      onSelect: () =>
+        useEditor.getState().setSelection(idsOfKind(useEditor.getState().doc?.objects ?? [], kind)),
+    });
+  }
   if (step) {
     // Edit value and Renumber (EDT-035).
     items.splice(
@@ -463,7 +474,7 @@ export function useMenuBar(): void {
     enabled["editor.customize_toolbar"] = !inLibrary;
     enabled["editor.pixel_grid"] = hasDoc;
     enabled["editor.fullscreen"] = true;
-    enabled["editor.print"] = hasDoc;
+    enabled["editor.print"] = inLibrary ? picked > 0 : hasDoc;
     // Templates (EDT-095, EDT-101).
     enabled["editor.new_from_template"] = true;
     enabled["editor.apply_template"] = hasDoc && !inLibrary;

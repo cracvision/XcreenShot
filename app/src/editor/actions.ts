@@ -40,7 +40,7 @@ import { openImageDialog } from "./imageMenu";
 import { turnOnEffect } from "./effects";
 import { useExportDialog } from "./exportOptions";
 import { useBatchDialog } from "./batchExport";
-import { usePrintDialog } from "./printState";
+import { printFiles, usePrintDialog } from "./printState";
 import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
 import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
@@ -535,6 +535,7 @@ const IN_LIBRARY = new Set([
   "rename_item",
   "duplicate_item",
   "shortcut_sheet",
+  "print",
   "show_in_folder",
   "delete_item",
   "open_item",
@@ -897,9 +898,15 @@ export function performAction(action: string): boolean {
       openImageDialog("new_image");
       return true;
     case "print":
-      // File > Print (EDT-114).
+      // File > Print (EDT-114); in the Library, its selection (LIB-017).
+      if (useMainView.getState().view === "library") {
+        const paths = selectedItems().map((i) => i.path);
+        if (paths.length === 0) return false;
+        printFiles(paths);
+        return true;
+      }
       if (!doc) return false;
-      usePrintDialog.setState({ open: true });
+      usePrintDialog.setState({ open: true, paths: undefined });
       return true;
     case "batch_export": {
       // EDT-113: the selection of the Library view, or the document shown.

@@ -2708,7 +2708,36 @@
         "duplicated_one": "Duplicated: {{name}}",
         "duplicated_other": "{{count}} copies made."
       },
-      "exporting": "Exporting…"
+      "exporting": "Exporting…",
+      "select_kind": {
+        "arrow": "Select all arrows",
+        "none_arrow": "There are no arrows in the document",
+        "line": "Select all lines",
+        "none_line": "There are no lines in the document",
+        "text": "Select all texts",
+        "none_text": "There are no texts in the document",
+        "callout": "Select all callouts",
+        "none_callout": "There are no callouts in the document",
+        "shape": "Select all shapes",
+        "none_shape": "There are no shapes in the document",
+        "stamp": "Select all stamps",
+        "none_stamp": "There are no stamps in the document",
+        "step": "Select all steps",
+        "none_step": "There are no steps in the document",
+        "highlight": "Select all highlights",
+        "none_highlight": "There are no highlights in the document",
+        "pen": "Select all pen strokes",
+        "none_pen": "There are no pen strokes in the document",
+        "magnify": "Select all magnifiers",
+        "none_magnify": "There are no magnifiers in the document",
+        "spotlight": "Select all spotlights",
+        "none_spotlight": "There are no spotlights in the document",
+        "blur": "Select all blurs",
+        "none_blur": "There are no blurs in the document",
+        "simplify": "Select all simplified shapes",
+        "none_simplify": "There are no simplified shapes in the document",
+        "menu": "Select all of this kind"
+      }
     },
     "multi": {
       "title": "Multi-capture",
@@ -3069,7 +3098,16 @@
       "left_minutes_one": "about {{count}} minute left",
       "left_minutes_other": "about {{count}} minutes left",
       "downloading_one": "Downloading from the cloud…",
-      "downloading_other": "Downloading {{count}} items from the cloud…"
+      "downloading_other": "Downloading {{count}} items from the cloud…",
+      "create": {
+        "button": "Create",
+        "from_template": "New from template…",
+        "slides": "Narrated slides…",
+        "videos": "Combine videos…",
+        "later": "Arrives with video recording.",
+        "need_images": "Choose images first.",
+        "need_selection": "Select items first."
+      }
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

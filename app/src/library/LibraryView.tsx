@@ -2,6 +2,7 @@
 // library folder as a grid or a list, sorted (LIB-004), filtered from the left pane
 // (LIB-005, LIB-006) and searched (LIB-007); selection by mouse and keyboard, a rubber
 // band, favorites (LIB-011), tags (LIB-009), the item menu and a status bar.
+import { createItems } from "./create";
 import { COLUMNS, MIN_WIDTH, shownColumns, template } from "./columns";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -151,6 +152,23 @@ function SortControls() {
   );
 }
 
+/** Create ▾ (LIB-016): new things from the selection. */
+function CreateMenu() {
+  const { t } = useTranslation();
+  const items = useLibrary((s) => s.items);
+  const selection = useLibrary((s) => s.selection);
+  const chosen = items.filter((i) => selection.includes(i.id));
+  return (
+    <Menu
+      label={t("ui.library.create.button")}
+      triggerClass="btn tb-btn"
+      disabled={chosen.length === 0}
+      {...(chosen.length === 0 ? { title: t("ui.library.create.need_selection") } : {})}
+      items={createItems(chosen, t)}
+    />
+  );
+}
+
 /** The thumbnail size of the grid (LIB-003): 50 to 300 %. */
 function ZoomControl() {
   const { t } = useTranslation();
@@ -206,6 +224,7 @@ function LibraryToolbar() {
       <SearchField />
       <SortControls />
       <ZoomControl />
+      <CreateMenu />
       <button
         type="button"
         className="btn tb-btn"

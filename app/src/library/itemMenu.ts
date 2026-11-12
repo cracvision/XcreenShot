@@ -1,4 +1,5 @@
 // The right-click menu of the Library view's selection (LIB-002).
+import { createItems, printItems } from "./create";
 import type { MenuItem } from "../components/Menu";
 import { shortcutOf } from "../editor/menus";
 import { askDelete, askRename, copyPath, itemRef, openItems, showInFolder } from "./actions";
@@ -83,6 +84,19 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       label: t("menu.duplicate_item"),
       shortcut: shortcutOf("editor.duplicate_item"),
       onSelect: () => void duplicateItems(items.map((i) => i.id)),
+    },
+    // LIB-016: Create ▸, and LIB-017: Print.
+    {
+      id: "create",
+      label: t("menu.create"),
+      submenu: createItems(items, t),
+      onSelect: () => undefined,
+    },
+    {
+      id: "print",
+      label: t("menu.print"),
+      shortcut: shortcutOf("editor.print"),
+      onSelect: () => printItems(items),
     },
     // LIB-018: one item with Save as, several with the batch export.
     {

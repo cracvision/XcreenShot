@@ -52,32 +52,35 @@ function remember(s: Setup): void {
 
 export function PrintDialog() {
   const open = usePrintDialog((s) => s.open);
+  const paths = usePrintDialog((s) => s.paths);
   const doc = useEditor((s) => s.doc);
-  if (!open || !doc) return null;
-  return <PrintForm key={doc.documentId} />;
+  if (!open || (!doc && !paths)) return null;
+  return <PrintForm key={paths ? paths.join("|") : doc?.documentId} paths={paths} />;
 }
 
-function PrintForm() {
+function PrintForm({ paths }: { paths?: string[] | undefined }) {
   const { t } = useTranslation();
-  const doc = useEditor((s) => s.doc);
+  const editing = useEditor((s) => s.doc);
+  // Files from the library (LIB-017) print without the document shown.
+  const doc = paths ? null : editing;
   const [s, setS] = useState<Setup>(remembered);
   const [what, setWhat] = useState<"all" | "selection">("all");
   const [result, setResult] = useState<{ key: string; pages: PrintPage[] } | null>(null);
   const [printing, setPrinting] = useState(false);
   const set = (changes: Partial<Setup>) => setS((prev) => ({ ...prev, ...changes }));
-  const close = () => usePrintDialog.setState({ open: false });
+  const close = () => usePrintDialog.setState({ open: false, paths: undefined });
   const tt = (k: string, o?: Record<string, unknown>) => t(`ui.editor.print.${k}`, o ?? {});
   const sel = doc?.pixelSelection && !doc.pixelSelection.target ? doc.pixelSelection : null;
   const bounds = sel?.bounds ?? null;
-  const key = JSON.stringify([doc?.documentId, doc?.version, s, what]);
+  const key = JSON.stringify([doc?.documentId, doc?.version, paths, s, what]);
   const pages = result?.key === key ? result.pages : null;
 
   useEffect(() => {
-    if (!doc) return;
+    if (!doc && !paths) return;
     let alive = true;
     const timer = setTimeout(() => {
       run<{ pages: PrintPage[] }>("document.print_pages", {
-        documentId: doc.documentId,
+        ...(paths ? { paths } : { documentId: doc?.documentId }),
         setup: s,
         ...(what === "selection" && bounds ? { rect: bounds } : {}),
       })
@@ -88,7 +91,7 @@ function PrintForm() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [doc, s, what, bounds, key]);
+  }, [doc, paths, s, what, bounds, key]);
 
   const select = <T extends string>(
     id: string,
@@ -120,12 +123,12 @@ function PrintForm() {
             className="btn primary"
             disabled={!pages || printing}
             onClick={() => {
-              if (!doc) return;
+              if (!doc && !paths) return;
               remember(s);
               setPrinting(true);
               // EDT-114: a PDF of these exact pages, printed from the system's viewer.
               run("document.print", {
-                documentId: doc.documentId,
+                ...(paths ? { paths } : { documentId: doc?.documentId }),
                 setup: s,
                 ...(what === "selection" && bounds ? { rect: bounds } : {}),
               })

@@ -280,6 +280,8 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | LIB-028 | ¿Cuánto espacio hace falta para mover? | El tamaño de la biblioteca más un 5 %. En el mismo disco no se pide nada, porque mover es renombrar. El tiempo restante se calcula con lo que tardaron los primeros elementos | Provisional |
 | LIB-029 | "Con progreso" al abrir un archivo solo en la nube | Un aviso "Descargando de la nube…" mientras el servicio lo descarga (Windows no dice el porcentaje a la app que abre el archivo) | Provisional |
 | LIB-004 | Columnas | Clic derecho en la cabecera para mostrar u ocultar (el Nombre siempre se ve); arrastrar el borde de una cabecera cambia su ancho y doble clic lo devuelve; se guardan con la forma de la vista | Provisional |
+| EDT-023 | ¿Qué hace el botón con una herramienta elegida? | Elige los objetos y pasa a la herramienta Mover, para que se puedan editar juntos enseguida | Provisional |
+| LIB-017 | Varias imágenes al imprimir | Una por página, ajustada al papel y con la orientación que mejor encaja en cada una, aunque la vista previa diga otro tamaño; el PDF se abre en el visor del sistema como en EDT-114 | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

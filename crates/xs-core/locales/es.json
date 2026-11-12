@@ -2708,7 +2708,36 @@
         "duplicated_one": "Duplicado: {{name}}",
         "duplicated_other": "{{count}} copias hechas."
       },
-      "exporting": "Exportando…"
+      "exporting": "Exportando…",
+      "select_kind": {
+        "arrow": "Seleccionar todas las flechas",
+        "none_arrow": "No hay flechas en el documento",
+        "line": "Seleccionar todas las líneas",
+        "none_line": "No hay líneas en el documento",
+        "text": "Seleccionar todos los textos",
+        "none_text": "No hay textos en el documento",
+        "callout": "Seleccionar todos los globos",
+        "none_callout": "No hay globos en el documento",
+        "shape": "Seleccionar todas las formas",
+        "none_shape": "No hay formas en el documento",
+        "stamp": "Seleccionar todos los sellos",
+        "none_stamp": "No hay sellos en el documento",
+        "step": "Seleccionar todos los pasos",
+        "none_step": "No hay pasos en el documento",
+        "highlight": "Seleccionar todos los resaltados",
+        "none_highlight": "No hay resaltados en el documento",
+        "pen": "Seleccionar todos los trazos",
+        "none_pen": "No hay trazos en el documento",
+        "magnify": "Seleccionar todas las lupas",
+        "none_magnify": "No hay lupas en el documento",
+        "spotlight": "Seleccionar todos los focos",
+        "none_spotlight": "No hay focos en el documento",
+        "blur": "Seleccionar todos los desenfoques",
+        "none_blur": "No hay desenfoques en el documento",
+        "simplify": "Seleccionar todas las formas simplificadas",
+        "none_simplify": "No hay formas simplificadas en el documento",
+        "menu": "Seleccionar todos los de este tipo"
+      }
     },
     "multi": {
       "title": "Multicaptura",
@@ -3069,7 +3098,16 @@
       "left_minutes_one": "falta unos {{count}} minuto",
       "left_minutes_other": "faltan unos {{count}} minutos",
       "downloading_one": "Descargando de la nube…",
-      "downloading_other": "Descargando {{count}} elementos de la nube…"
+      "downloading_other": "Descargando {{count}} elementos de la nube…",
+      "create": {
+        "button": "Crear",
+        "from_template": "Nuevo desde plantilla…",
+        "slides": "Diapositivas narradas…",
+        "videos": "Combinar videos…",
+        "later": "Llega con la grabación de video.",
+        "need_images": "Elige imágenes primero.",
+        "need_selection": "Selecciona elementos primero."
+      }
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",
