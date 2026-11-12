@@ -192,7 +192,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-110 | Exportar a PNG y JPG | M1 | Must | En curso |
 | EDT-111 | Más formatos de exportación | M2 | Should | En curso (Windows: PNG, JPG, GIF, BMP, TIFF, PDF, ICO y PSD; faltan WebP y HEIC, y varias miniaturas de la bandeja o la biblioteca en un archivo) |
 | EDT-112 | Opciones de cada formato | M2 | Should | En curso (faltan JPG progresivo, tramado en GIF y TIFF con compresión JPEG) |
-| EDT-113 | Exportación por lotes | M2 | Should | En curso (Windows hecho; falta abrirla desde la bandeja y desde el menú de la biblioteca, y la pila de efectos propia) |
+| EDT-113 | Exportación por lotes | M2 | Should | En curso (Windows hecho, también desde el menú de la biblioteca, LIB-018; falta abrirla desde la bandeja y la pila de efectos propia) |
 | EDT-114 | Imprimir y configurar página | M2 | Should | En curso (Windows: vista previa propia e impresión desde un PDF exacto en el visor del sistema; falta el diálogo de impresión directo, ver QUESTIONS) |
 | EDT-115 | Atajos de herramientas | M1 | Must | Win |
 | EDT-116 | Atajos de edición, vista y archivo | M1 | Must | Win |
@@ -304,13 +304,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-015 | Eliminar | M1 | Must | En curso |
 | LIB-016 | Crear desde la biblioteca | M2 | Should | — |
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | — |
-| LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | — |
+| LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | En curso (Windows: Exportar… del menú contextual: uno con Guardar como, varios con la exportación por lotes de EDT-113 ya cargada; aviso si el destino está en la biblioteca. Videos, GIF y guías llegan con M3 y M4; el progreso va en el diálogo, no en la barra de estado de LIB-026) |
 | LIB-019 | Guías de pasos en la biblioteca | M5 | Should | — |
 | LIB-020 | Autoguardado de capturas | M1 | Must | En curso |
 | LIB-021 | Guardar como y copia editable | M1 | Must | En curso |
 | LIB-022 | Índice propio de la biblioteca | M1 | Must | En curso |
 | LIB-023 | Reconstruir y comprobar la biblioteca | M2 | Must | En curso (Windows: Reconstruir el índice y Comprobar desde el menú ⋯ de la Biblioteca, `library.rebuild` y `library.check` con limpieza de `.xmeta` huérfanos; faltan el progreso en segundo plano mientras se usa la biblioteca, mover los dañados aparte, el aviso de poco espacio y la entrada en Preferencias) |
-| LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | — |
+| LIB-024 | Archivos añadidos a la carpeta e importación | M2 | Should | En curso (Windows: los archivos que llegan a la carpeta aparecen solos; fecha EXIF de JPG y PNG; Importar archivos… e Importar una carpeta… en el menú ⋯ de la biblioteca y al soltar sobre la vista Biblioteca, con la etiqueta de la carpeta; `library.import`. Solo `.xshot`, PNG y JPG: GIF, WebP, BMP, TIFF, HEIC y videos llegan con sus funciones) |
 | LIB-025 | Bibliotecas grandes | M2 | Must | En curso (Windows: la cuadrícula y la lista solo dibujan lo visible; consultas medidas con 50.000 elementos; faltan los marcadores con el ícono del tipo, el límite de 2 GB de la caché de miniaturas y el aviso por encima de 100.000) |
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
 | LIB-027 | Ubicación por defecto | M1 | Must | En curso |
@@ -319,7 +319,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-030 | Biblioteca en una ubicación de red | M2 | Should | — |
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |
-| LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | — |
+| LIB-033 | Exportar toda la biblioteca a archivos normales | M2 | Should | En curso (Windows: ⋯ > Exportar toda la biblioteca…, toda o lo filtrado, PNG o JPG, subcarpetas, `metadatos.csv`, progreso, Cancelar y resumen; `library.export`. Videos y guías llegan con M3 y M4) |
 | LIB-034 | Comandos de la biblioteca (CLI y MCP) | M2 | Must | En curso (`library.list`, `library.search`, `library.get`, `library.tag`, `library.tags`, `library.favorite`, `library.reveal`, `library.delete` con `--yes`, `library.rebuild`, `library.check`, `library.location`; faltan `library.export`, LIB-018 y LIB-033, y `library.import`, LIB-024) |
 | TRY-001 | Mostrar y ocultar la bandeja | M1 | Must | En curso |
 | TRY-002 | Contenido y orden | M1 | Must | En curso |

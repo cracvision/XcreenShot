@@ -610,6 +610,14 @@
     "library_open_url": {
       "title": "Open the website",
       "description": "Opens the website a library item was captured from in the default browser."
+    },
+    "library_export": {
+      "title": "Export the library",
+      "description": "Copies the whole library, or what the filters show, to a folder as plain files: images with their annotations as PNG or JPG, the subfolders kept, and a CSV with each item's details."
+    },
+    "library_import": {
+      "title": "Import to the library",
+      "description": "Copies files and folders into the library, each in the folder of the month of its date; a folder's name can become a tag."
     }
   },
   "settings": {
@@ -1234,7 +1242,8 @@
     "show_in_library": "Show in library",
     "resolve_conflict": "Resolve conflict…",
     "details_item": "Details",
-    "quick_view": "Quick view"
+    "quick_view": "Quick view",
+    "export_items": "Export…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2413,7 +2422,8 @@
         "done_skipped_other": "{{count}} files already existed and were skipped.",
         "done_failed_one": "{{count}} file could not be exported:",
         "done_failed_other": "{{count}} files could not be exported:",
-        "done_cancelled": "Cancelled: the files exported before stay; none was left half-written."
+        "done_cancelled": "Cancelled: the files exported before stay; none was left half-written.",
+        "into_library": "The exported files will appear in the library as loose items."
       },
       "print": {
         "title": "Print",
@@ -2841,6 +2851,59 @@
         "position": "{{at}} of {{count}}",
         "open": "Open in the editor",
         "close": "Close (Space or Esc)"
+      },
+      "export": {
+        "csv_file": "metadata.csv",
+        "csv_name": "Name",
+        "csv_file_col": "File",
+        "csv_captured": "Captured",
+        "csv_modified": "Modified",
+        "csv_app": "App",
+        "csv_website": "Website",
+        "csv_tags": "Tags",
+        "csv_favorite": "Favorite",
+        "menu": "Export the whole library…",
+        "title": "Export the library",
+        "help": "A copy of the library as plain files: images with their annotations, the same subfolders and a list of each item's details (metadata.csv). Nothing in the library changes.",
+        "scope": "What to export",
+        "scope_all_one": "The whole library ({{count}} item)",
+        "scope_all_other": "The whole library ({{count}} items)",
+        "scope_filtered_one": "Only what the filters show ({{count}} item)",
+        "scope_filtered_other": "Only what the filters show ({{count}} items)",
+        "format": "Images as",
+        "no_folder": "No folder chosen",
+        "choose": "Choose folder…",
+        "in_library": "Choose a folder outside the library.",
+        "go": "Export",
+        "starting": "Starting…",
+        "progress": "Exporting: {{done}} of {{total}}",
+        "done_title": "Library exported",
+        "done_exported_one": "{{count}} image exported with its annotations.",
+        "done_exported_other": "{{count}} images exported with their annotations.",
+        "done_copied_one": "{{count}} file copied as it was.",
+        "done_copied_other": "{{count}} files copied as they were.",
+        "done_csv": "The details of each item are in metadata.csv.",
+        "done_cancelled": "Cancelled: what was exported stays in the folder.",
+        "done_failed_one": "{{count}} item could not be exported:",
+        "done_failed_other": "{{count}} items could not be exported:",
+        "saved": "Exported: {{name}}"
+      },
+      "import": {
+        "files": "Import files…",
+        "folder": "Import a folder…",
+        "images": "Images",
+        "title": "Import to the library",
+        "help": "They are copied into the library, each in the folder of its month. The originals do not change.",
+        "more_one": "and {{count}} more",
+        "more_other": "and {{count}} more",
+        "tag_one": "Tag its images with \"{{name}}\"",
+        "tag_many": "Tag the images of each folder with its name",
+        "go": "Import",
+        "done_one": "{{count}} image imported.",
+        "done_other": "{{count}} images imported.",
+        "skipped_one": "{{count}} was left out.",
+        "skipped_other": "{{count}} were left out.",
+        "drop_hint": "Drop to import into the library"
       }
     },
     "files": {

@@ -4776,3 +4776,96 @@ fn quick_view_of_twenty_megapixels_in_time() {
     assert!(cold < Duration::from_secs(2), "first {cold:?}");
     assert!(warm < Duration::from_millis(5), "again {warm:?}");
 }
+
+/// LIB-033: the whole library as plain files: captures as PNG with their annotations,
+/// loose files copied, the subfolders kept and a CSV with one row per item; never into
+/// the library and never over a file.
+#[test]
+fn library_export_writes_plain_files_and_the_csv() {
+    let e = env_with_library();
+    let (doc, path) = add_capture(
+        &e.core,
+        &white(40, 20),
+        json!({"mode": "region"}),
+        1.0,
+        Some("Report, final"),
+    )
+    .unwrap();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "shape", "rect": {"x": 0, "y": 0, "w": 40, "h": 20}, "style": {"fill": "#0000FF", "outline": "#0000FF"}}]}),
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let sub = e.library.path().join("Sub");
+    std::fs::create_dir_all(&sub).unwrap();
+    let loose_bytes = xs_image::encode::png(&white(8, 8), 0.0, true).unwrap();
+    std::fs::write(sub.join("Loose.png"), &loose_bytes).unwrap();
+    let lib = xs_library::library(&e.core);
+    lib.scan();
+    let capture = lib.find(&path).unwrap();
+    cli(
+        &e.core,
+        "library.tag",
+        json!({"ids": [capture.id], "add": ["Client A", "Q3"]}),
+    );
+
+    let out = e.outside.path().join("Copy");
+    let r = cli(&e.core, "library.export", json!({"folder": out}));
+    assert_eq!(
+        (r["exported"].clone(), r["copied"].clone()),
+        (json!(1), json!(1)),
+        "{r}"
+    );
+    assert_eq!(r["cancelled"], json!(false));
+    let rel = path.strip_prefix(e.library.path()).unwrap().with_extension("png");
+    let png = image::open(out.join(&rel)).unwrap().to_rgba8();
+    assert_eq!(png.get_pixel(20, 10)[2], 255, "the annotation is in the PNG");
+    assert_eq!(
+        std::fs::read(out.join("Sub").join("Loose.png")).unwrap(),
+        loose_bytes
+    );
+    let csv = std::fs::read_to_string(out.join("metadata.csv")).unwrap();
+    assert!(
+        csv.starts_with("\u{feff}Name,File,Captured,Modified,App,Website,Tags,Favorite\r\n"),
+        "{csv}"
+    );
+    assert_eq!(csv.lines().count(), 3, "a row per item: {csv}");
+    assert!(
+        csv.contains("\"Report, final "),
+        "quoted when it has a comma: {csv}"
+    );
+    assert!(csv.contains("Client A; Q3"), "{csv}");
+
+    // Again: nothing is overwritten.
+    let r = cli(
+        &e.core,
+        "library.export",
+        json!({"folder": out, "ids": [capture.id], "metadata": false}),
+    );
+    assert_eq!(r["exported"], json!(1));
+    let stem = rel.file_stem().unwrap().to_string_lossy().into_owned();
+    let again = out.join(&rel).with_file_name(format!("{stem} (2).png"));
+    assert!(again.exists(), "a second copy beside the first");
+
+    let refused = call(
+        &e.core,
+        Source::Cli,
+        "library.export",
+        json!({"folder": e.library.path().join("Out")}),
+    );
+    assert!(refused.is_err(), "not into the library");
+}
+
+/// LIB-018: Export of one library item gives the file the name chosen.
+#[test]
+fn batch_names_can_be_one_name() {
+    assert_eq!(
+        batch_name(&json!({"mode": "name", "name": "Para Ana"}), "Captura", 0),
+        "Para Ana"
+    );
+    assert_eq!(
+        batch_name(&json!({"mode": "name", "name": " "}), "Captura", 0),
+        "Captura"
+    );
+}

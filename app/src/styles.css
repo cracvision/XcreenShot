@@ -5223,6 +5223,30 @@ button.lc-head:hover,
   color: var(--ink);
 }
 
+/* ---------- Export the library (LIB-033) ---------- */
+.export-scope {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.export-format .seg {
+  justify-self: start;
+  align-self: flex-start;
+  width: max-content;
+}
+
+.export-progress {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.export-progress progress {
+  width: 100%;
+}
+
 /* ---------- Quick view (LIB-013) ---------- */
 .quick-view {
   position: fixed;

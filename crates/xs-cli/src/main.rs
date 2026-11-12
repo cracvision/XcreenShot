@@ -71,6 +71,15 @@ fn param_arg(name: &str, schema: &Value, positional_index: Option<usize>) -> Arg
         arg = arg.value_name(name.to_uppercase());
     }
     let types = type_of(schema);
+    // A list of texts takes several values: `library import a.png b.png`, or
+    // `--tags A --tags B`; one JSON array still works.
+    if is_text_list(schema) {
+        return if positional_index.is_some() {
+            arg.num_args(1..)
+        } else {
+            arg.action(ArgAction::Append)
+        };
+    }
     if types == ["boolean"] && positional_index.is_none() {
         arg = arg
             .num_args(0..=1)
@@ -260,10 +269,28 @@ fn read_params_arg(raw: Option<&String>) -> Result<Map<String, Value>, String> {
     }
 }
 
+/// An array of strings.
+fn is_text_list(schema: &Value) -> bool {
+    type_of(schema) == ["array"] && schema["items"]["type"] == "string"
+}
+
 fn collect_params(spec: &CommandSpec, m: &ArgMatches) -> Result<Value, String> {
     let mut params = read_params_arg(m.get_one::<String>("__params"))?;
     let props = spec.params["properties"].as_object().cloned().unwrap_or_default();
     for (name, schema) in &props {
+        if is_text_list(schema) {
+            if let Some(values) = m.get_many::<String>(name) {
+                let values: Vec<&String> = values.collect();
+                let v = match values.as_slice() {
+                    [one] if one.trim_start().starts_with('[') => {
+                        serde_json::from_str(one).map_err(|e| format!("{name}: {e}"))?
+                    }
+                    _ => json!(values),
+                };
+                params.insert(name.clone(), v);
+            }
+            continue;
+        }
         if let Some(raw) = m.get_one::<String>(name) {
             let v = convert(raw, schema).map_err(|e| format!("{name}: {e}"))?;
             params.insert(name.clone(), v);
@@ -598,6 +625,20 @@ mod tests {
             collect_params(spec, am).unwrap(),
             json!({"key": "general.theme", "value": "dark"})
         );
+        // A list takes several values, or one JSON array (LIB-024).
+        let spec = specs.iter().find(|s| s.id == "library.import").unwrap();
+        for args in [
+            vec!["xcreenshot", "library", "import", "a.png", "D:/Proyecto X"],
+            vec!["xcreenshot", "library", "import", r#"["a.png","D:/Proyecto X"]"#],
+        ] {
+            let m = cli.clone().try_get_matches_from(args).unwrap();
+            let (_, sm) = m.subcommand().unwrap();
+            let (_, am) = sm.subcommand().unwrap();
+            assert_eq!(
+                collect_params(spec, am).unwrap()["paths"],
+                json!(["a.png", "D:/Proyecto X"])
+            );
+        }
         let m = cli
             .try_get_matches_from([
                 "xcreenshot",

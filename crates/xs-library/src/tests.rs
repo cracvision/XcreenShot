@@ -717,3 +717,64 @@ fn details_come_from_the_capture_metadata() {
         assert!(service::open_url(bad).is_err(), "{bad}");
     }
 }
+
+/// LIB-024: importing copies files and folders into the folder of their month; a
+/// folder's name becomes their tag; a photo's EXIF date files it under its year; the
+/// originals stay; files already in the library are skipped.
+#[test]
+fn import_copies_into_the_month_with_the_folder_tag() {
+    let e = env();
+    let outside = tempfile::tempdir().unwrap();
+    let project = outside.path().join("Proyecto X");
+    for n in 1..=3 {
+        write_png(&project.join(format!("p{n}.png")), 8, 8);
+    }
+    write_png(&project.join("deeper").join("p4.png"), 8, 8);
+    std::fs::write(project.join("notes.txt"), "not an image").unwrap();
+    let photo = outside.path().join("old.jpg");
+    std::fs::write(&photo, crate::exif::tests::jpeg_with_date("2019:06:15 10:30:00")).unwrap();
+    write_png(&e.path("2026-11/inside.png"), 8, 8);
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+    let r = cli(
+        "library.import",
+        json!({"paths": [project, photo, e.path("2026-11/inside.png")]}),
+    )
+    .unwrap();
+    assert_eq!(r["imported"].as_array().unwrap().len(), 5, "{r}");
+    let reasons: Vec<&str> = r["skipped"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|s| s["reason"].as_str())
+        .collect();
+    assert_eq!(
+        reasons,
+        ["in_library"],
+        "the text file is not looked at; the library file is skipped"
+    );
+    assert!(project.join("p1.png").exists(), "the originals stay");
+    assert!(r["imported"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| i["id"].is_string()));
+
+    let tagged = cli("library.list", json!({"filters": {"tags": ["Proyecto X"]}})).unwrap();
+    assert_eq!(tagged["count"], 4, "the folder's images, subfolders too");
+    let old = cli("library.list", json!({"filters": {"dates": ["2019"]}})).unwrap();
+    assert_eq!(old["count"], 1, "the EXIF date files the photo under 2019");
+    let path = old["items"][0]["path"].as_str().unwrap().replace('\\', "/");
+    assert!(path.contains("/2019-06/"), "in the folder of its month: {path}");
+
+    // Again, without the tag: new copies with their own names.
+    let again = cli("library.import", json!({"paths": [project], "tagFolders": false})).unwrap();
+    assert_eq!(again["imported"].as_array().unwrap().len(), 4);
+    let tagged = cli("library.list", json!({"filters": {"tags": ["Proyecto X"]}})).unwrap();
+    assert_eq!(tagged["count"], 4);
+    assert!(cli("library.import", json!({"paths": []})).is_err());
+}

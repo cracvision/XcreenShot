@@ -17,6 +17,8 @@ import {
 import { FormatOptions } from "./ExportDialog";
 import { FORMATS, rememberedOptions, type ExportFormat } from "./exportOptions";
 import { useEditor } from "./state";
+import { insideFolder } from "../library/exportState";
+import { useLibrary } from "../library/state";
 
 interface Summary {
   exported: { source: string; path: string }[];
@@ -44,6 +46,7 @@ function BatchForm({ initial }: { initial: string[] }) {
   const [progress, setProgress] = useState<{ index: number; total: number } | null>(null);
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const libraryRoot = useLibrary((st) => st.root);
   const set = (changes: Partial<BatchSettings>) => setS((prev) => ({ ...prev, ...changes }));
   const close = () => useBatchDialog.setState({ files: null });
   const tt = (k: string, o?: Record<string, unknown>) => t(`ui.editor.batch.${k}`, o ?? {});
@@ -89,6 +92,9 @@ function BatchForm({ initial }: { initial: string[] }) {
     });
 
   const ready = files.length > 0 && (s.nextToOriginal || Boolean(s.folder)) && !running;
+  const intoLibrary = s.nextToOriginal
+    ? files.some((f) => insideFolder(libraryRoot, f))
+    : insideFolder(libraryRoot, s.folder ?? "");
   const go = async () => {
     rememberBatch(s);
     setRunning(true);
@@ -296,6 +302,7 @@ function BatchForm({ initial }: { initial: string[] }) {
             />
             {tt("next_to")}
           </label>
+          {intoLibrary && <p className="warning-text">{tt("into_library")}</p>}
         </section>
         <section aria-labelledby="batch-names" className="image-form">
           <h3 id="batch-names">{tt("names")}</h3>

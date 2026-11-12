@@ -258,6 +258,12 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | LIB-013 | ¿Cómo se cumple "menos de 200 ms" con imágenes grandes? | La vista se abre al instante con la miniatura (algo borrosa) y la imagen nítida la sustituye en cuanto llega; los vecinos se piden por adelantado para que ← y → sean inmediatos. En release, una captura de 20 MP con anotaciones tarda unos 300 ms la primera vez | Provisional |
 | LIB-013 | ¿"Ajustada a la ventana" agranda las capturas pequeñas? | No: se reduce hasta caber, pero nunca se muestra más grande que un píxel de imagen por píxel de pantalla, para que no se vea borrosa | Provisional |
 | LIB-013 | ¿Qué recorre la vista rápida en la bandeja? | Los documentos abiertos, en el orden de la bandeja; Intro muestra el documento en el editor | Provisional |
+| LIB-024 / LIB-033 | El spec habla de un "menú Biblioteca" que la barra de menús no tiene | Importar archivos…, Importar una carpeta… y Exportar toda la biblioteca… están en el botón **⋯** de la barra de la biblioteca, junto a Reconstruir y Comprobar. Si prefieres un menú Biblioteca en la barra de menús, se añade | Provisional |
+| LIB-024 | ¿Qué formatos se importan? | Los que la biblioteca ya muestra: `.xshot`, PNG y JPG. GIF, WebP, BMP, TIFF, HEIC, MP4 y MOV llegan cuando la app los abra (WebP está pendiente de tu respuesta). Un archivo de otro tipo se deja fuera y el aviso lo cuenta | Provisional |
+| LIB-024 | ¿Cómo se sabe si lo soltado es una carpeta? | Por el nombre: lo que no termina en `.xshot`, `.png` o `.jpg` se trata como carpeta y el diálogo pregunta por su etiqueta; los archivos solos se importan sin preguntar | Provisional |
+| LIB-033 | Formato del CSV | `metadatos.csv` (`metadata.csv` con la app en inglés), separado por comas, UTF-8 con marca para que Excel lea los acentos, fechas `AAAA-MM-DD hh:mm:ss` en hora local y etiquetas separadas por "; ". Si tu Excel abre todo en una columna (configuración regional con punto y coma), lo cambiamos a punto y coma | Provisional |
+| LIB-033 | ¿Qué pasa si la carpeta de destino ya tiene archivos? | Nunca se sobrescribe nada: un nombre ocupado recibe "(2)". No se puede exportar dentro de la biblioteca (las copias se volverían elementos) | Provisional |
+| LIB-018 | Exportar… de un solo elemento | Guardar como del sistema, con los formatos de EDT-110/111 y sus opciones recordadas; el sistema pregunta antes de reemplazar | Provisional |
 
 ## Dudas del equipo de construcción (M1, entrega 6: lo que falta de captura y app)
 

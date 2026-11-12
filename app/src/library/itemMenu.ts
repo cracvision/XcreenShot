@@ -7,6 +7,7 @@ import { openPicker } from "../editor/templateUi";
 import { editTags, toggleFavorite } from "./marks";
 import { askResolve } from "./maintenanceState";
 import { openLibraryQuickView } from "./quickViewState";
+import { exportItems } from "./exportState";
 import { useLibrary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -74,6 +75,13 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       label: t("menu.copy_path"),
       disabled: !one,
       onSelect: () => one && copyPath(itemRef(one)),
+    },
+    // LIB-018: one item with Save as, several with the batch export.
+    {
+      id: "export",
+      label: t("menu.export_items"),
+      separator: true,
+      onSelect: () => void exportItems(items),
     },
     // LIB-012: the Details pane, which follows the selection.
     {

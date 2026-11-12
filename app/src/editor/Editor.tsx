@@ -1,5 +1,6 @@
 // Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
 // the top; the menu bar, dialogs and notices are shared by both.
+import { askImport } from "../library/importState";
 import { QuickView } from "../library/QuickView";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
@@ -133,6 +134,11 @@ export function Editor() {
         else if (e.payload.type === "leave") setDropping(false);
         else if (e.payload.type === "drop") {
           setDropping(false);
+          // On the Library, files and folders are imported (LIB-024).
+          if (useMainView.getState().view === "library") {
+            askImport(e.payload.paths);
+            return;
+          }
           // On a template's zone, an image fills it (EDT-098).
           if (dropOnZone(e.payload.paths, e.payload.position)) return;
           void openFiles(e.payload.paths);
@@ -170,7 +176,12 @@ export function Editor() {
           {toast}
         </div>
       )}
-      {dropping && doc && <div className="drop-hint">{t("ui.editor.drop_hint")}</div>}
+      {dropping && view === "editor" && doc && (
+        <div className="drop-hint">{t("ui.editor.drop_hint")}</div>
+      )}
+      {dropping && view === "library" && (
+        <div className="drop-hint">{t("ui.library.import.drop_hint")}</div>
+      )}
       <Dialogs />
       <TemplateDialogs />
       <QuickView />

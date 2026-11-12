@@ -3,6 +3,8 @@
 //! `library.*` commands: list, get, delete with Undo, rename and show in the folder.
 
 pub mod conflict;
+pub mod exif;
+pub mod import;
 pub mod index;
 pub mod query;
 pub mod recycle;
@@ -539,6 +541,62 @@ fn details(file: &Path, cloud: bool) -> Value {
     })
 }
 
+/// `library.import` (LIB-024): files and folders copied into the library, each in the
+/// folder of its month; a folder's name becomes the tag of what came from it.
+fn import_command(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let paths: Vec<PathBuf> = p
+        .get("paths")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(PathBuf::from)
+        .collect();
+    if paths.is_empty() {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", "paths"), ("reason", "give files or folders")],
+            ),
+        ));
+    }
+    let tag_folders = p.get("tagFolders").and_then(Value::as_bool).unwrap_or(true);
+    let lib = library(core);
+    let report = import::import(&lib, &paths, tag_folders);
+    lib.scan();
+    let mut by_tag: std::collections::BTreeMap<&str, Vec<String>> = std::collections::BTreeMap::new();
+    for (path, tag) in &report.tags {
+        if let Some(item) = lib.find(path) {
+            by_tag.entry(tag.as_str()).or_default().push(item.id);
+        }
+    }
+    for (tag, ids) in by_tag {
+        // A name too long for a tag is no reason to fail the import.
+        let _ = lib.tag(&ids, &[tag.to_string()], &[]);
+    }
+    let imported: Vec<Value> = report
+        .imported
+        .iter()
+        .map(|(source, path)| {
+            json!({
+                "source": source,
+                "path": path,
+                "id": lib.find(path).map(|i| i.id),
+            })
+        })
+        .collect();
+    let skipped: Vec<Value> = report
+        .skipped
+        .iter()
+        .map(|(source, reason)| json!({ "source": source, "reason": reason }))
+        .collect();
+    changed(core);
+    Ok(json!({ "imported": imported, "skipped": skipped }))
+}
+
 /// `library.search` (LIB-034): `library.list` with a parameter for each field (LIB-005,
 /// LIB-007): text, tags, type, app, site, a range of days and favorites.
 fn search(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
@@ -914,6 +972,7 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         on!("library.list", |core, ctx, p| list(&core, ctx, &p));
         on!("library.search", |core, ctx, p| search(&core, ctx, &p));
         on!("library.resolve", |core, ctx, p| resolve(&core, ctx, &p));
+        on!("library.import", |core, ctx, p| import_command(&core, ctx, &p));
         on!("library.reveal", |core, ctx, p| {
             let lib = library(&core);
             let item = match (

@@ -610,6 +610,14 @@
     "library_open_url": {
       "title": "Abrir el sitio web",
       "description": "Abre en el navegador predeterminado el sitio web donde se capturó un elemento de la biblioteca."
+    },
+    "library_export": {
+      "title": "Exportar la biblioteca",
+      "description": "Copia toda la biblioteca, o lo que muestran los filtros, a una carpeta como archivos normales: las imágenes con sus anotaciones como PNG o JPG, con las subcarpetas, y un CSV con los datos de cada elemento."
+    },
+    "library_import": {
+      "title": "Importar a la biblioteca",
+      "description": "Copia archivos y carpetas a la biblioteca, cada uno en la carpeta del mes de su fecha; el nombre de una carpeta puede ser una etiqueta."
     }
   },
   "settings": {
@@ -1234,7 +1242,8 @@
     "show_in_library": "Mostrar en la biblioteca",
     "resolve_conflict": "Resolver conflicto…",
     "details_item": "Detalles",
-    "quick_view": "Vista rápida"
+    "quick_view": "Vista rápida",
+    "export_items": "Exportar…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2413,7 +2422,8 @@
         "done_skipped_other": "{{count}} archivos ya existían y se omitieron.",
         "done_failed_one": "{{count}} archivo no se pudo exportar:",
         "done_failed_other": "{{count}} archivos no se pudieron exportar:",
-        "done_cancelled": "Cancelado: los archivos ya exportados se quedan; ninguno quedó a medias."
+        "done_cancelled": "Cancelado: los archivos ya exportados se quedan; ninguno quedó a medias.",
+        "into_library": "Los archivos exportados aparecerán en la biblioteca como elementos sueltos."
       },
       "print": {
         "title": "Imprimir",
@@ -2841,6 +2851,59 @@
         "position": "{{at}} de {{count}}",
         "open": "Abrir en el editor",
         "close": "Cerrar (Espacio o Esc)"
+      },
+      "export": {
+        "csv_file": "metadatos.csv",
+        "csv_name": "Nombre",
+        "csv_file_col": "Archivo",
+        "csv_captured": "Capturado",
+        "csv_modified": "Modificado",
+        "csv_app": "Aplicación",
+        "csv_website": "Sitio web",
+        "csv_tags": "Etiquetas",
+        "csv_favorite": "Favorito",
+        "menu": "Exportar toda la biblioteca…",
+        "title": "Exportar la biblioteca",
+        "help": "Una copia de la biblioteca como archivos normales: las imágenes con sus anotaciones, las mismas subcarpetas y una lista con los datos de cada elemento (metadatos.csv). La biblioteca no cambia.",
+        "scope": "Qué exportar",
+        "scope_all_one": "Toda la biblioteca ({{count}} elemento)",
+        "scope_all_other": "Toda la biblioteca ({{count}} elementos)",
+        "scope_filtered_one": "Solo lo que muestran los filtros ({{count}} elemento)",
+        "scope_filtered_other": "Solo lo que muestran los filtros ({{count}} elementos)",
+        "format": "Imágenes como",
+        "no_folder": "Ninguna carpeta elegida",
+        "choose": "Elegir carpeta…",
+        "in_library": "Elige una carpeta fuera de la biblioteca.",
+        "go": "Exportar",
+        "starting": "Empezando…",
+        "progress": "Exportando: {{done}} de {{total}}",
+        "done_title": "Biblioteca exportada",
+        "done_exported_one": "{{count}} imagen exportada con sus anotaciones.",
+        "done_exported_other": "{{count}} imágenes exportadas con sus anotaciones.",
+        "done_copied_one": "{{count}} archivo copiado tal cual.",
+        "done_copied_other": "{{count}} archivos copiados tal cual.",
+        "done_csv": "Los datos de cada elemento están en metadatos.csv.",
+        "done_cancelled": "Cancelado: lo exportado se queda en la carpeta.",
+        "done_failed_one": "{{count}} elemento no se pudo exportar:",
+        "done_failed_other": "{{count}} elementos no se pudieron exportar:",
+        "saved": "Exportado: {{name}}"
+      },
+      "import": {
+        "files": "Importar archivos…",
+        "folder": "Importar una carpeta…",
+        "images": "Imágenes",
+        "title": "Importar a la biblioteca",
+        "help": "Se copian a la biblioteca, cada uno en la carpeta de su mes. Los originales no cambian.",
+        "more_one": "y {{count}} más",
+        "more_other": "y {{count}} más",
+        "tag_one": "Etiquetar sus imágenes con \"{{name}}\"",
+        "tag_many": "Etiquetar las imágenes de cada carpeta con su nombre",
+        "go": "Importar",
+        "done_one": "{{count}} imagen importada.",
+        "done_other": "{{count}} imágenes importadas.",
+        "skipped_one": "{{count}} se dejó fuera.",
+        "skipped_other": "{{count}} se dejaron fuera.",
+        "drop_hint": "Suelta para importar a la biblioteca"
       }
     },
     "files": {

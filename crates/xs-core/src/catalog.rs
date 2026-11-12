@@ -764,7 +764,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     "effects": {"type": ["string", "array", "null"], "description": "A saved effect's id (EDT-054) or a stack, added to each file's own effects"},
                     "folder": {"type": "string", "description": "Where the files go"},
                     "nextToOriginal": {"type": "boolean", "default": false, "description": "Each next to its source instead"},
-                    "naming": {"type": "object", "description": "{mode: keep | base, base, start (1), digits (2), prefix, suffix}: base gives guia_01, guia_02…"},
+                    "naming": {"type": "object", "description": "{mode: keep | base | name, base, start (1), digits (2), prefix, suffix, name}: base gives guia_01, guia_02…; name gives that name (one file, LIB-018)"},
                     "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "skip"], "default": "keepBoth"}
                 }),
                 &["paths", "format"],
@@ -1425,6 +1425,41 @@ pub fn specs() -> Vec<CommandSpec> {
                 &[],
             ))
             .result(library_item()),
+        B::new("library.import", &["LIB-024", "LIB-034"])
+            .mutates()
+            .positional(&["paths"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Files (.xshot, PNG, JPG) and folders of them; they are copied, the originals do not change"},
+                    "tagFolders": {"type": "boolean", "default": true, "description": "A folder's name becomes a tag of the images that came from it"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "imported": {"type": "array", "description": "{source, path, id} of each copy"},
+                "skipped": {"type": "array", "description": "{source, reason}: unsupported, in_library or unreadable"}
+            }})),
+        B::new("library.export", &["LIB-033", "LIB-018", "LIB-034"])
+            .positional(&["folder"])
+            .params(params(
+                json!({
+                    "folder": {"type": "string", "description": "Where the copy goes: a folder outside the library"},
+                    "format": {"type": "string", "enum": ["png", "jpg"], "default": "png", "description": "What .xshot images become, with their annotations; PNG and JPG files are copied as they are"},
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items"},
+                    "filters": {"type": "object", "description": "Only what these filters show, as library.list"},
+                    "query": {"type": "string", "description": "Only what this search shows, as library.list"},
+                    "metadata": {"type": "boolean", "default": true, "description": "Add a CSV with each item's name, dates, app, website and tags"}
+                }),
+                &["folder"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "folder": {"type": "string"},
+                "exported": {"type": "integer", "description": ".xshot images written as PNG or JPG"},
+                "copied": {"type": "integer", "description": "PNG and JPG files copied"},
+                "failed": {"type": "array", "description": "{source, name, reason}"},
+                "cancelled": {"type": "boolean", "description": "Stopped with editor.cancel; what was written stays"},
+                "csv": {"type": ["string", "null"]}
+            }})),
         B::new("library.resolve", &["LIB-029", "LIB-034"])
             .mutates()
             .positional(&["id"])

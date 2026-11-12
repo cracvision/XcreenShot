@@ -29,6 +29,10 @@ import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortK
 import { TagDialogs } from "./TagDialogs";
 import { MaintenanceDialogs } from "./Maintenance";
 import { askRebuild, checkLibrary } from "./maintenanceState";
+import { askExportLibrary } from "./exportState";
+import { LibraryExportDialog } from "./LibraryExport";
+import { ImportDialog } from "./ImportDialog";
+import { importFiles, importFolder } from "./importState";
 import { Menu } from "../components/Menu";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
@@ -210,8 +214,31 @@ function LibraryToolbar() {
         chevron={false}
         align="end"
         items={[
-          { id: "rebuild", label: t("ui.library.rebuild"), onSelect: askRebuild },
+          // LIB-024.
+          {
+            id: "import_files",
+            label: t("ui.library.import.files"),
+            onSelect: () => void importFiles(),
+          },
+          {
+            id: "import_folder",
+            label: t("ui.library.import.folder"),
+            onSelect: () => void importFolder(),
+          },
+          {
+            id: "rebuild",
+            label: t("ui.library.rebuild"),
+            separator: true,
+            onSelect: askRebuild,
+          },
           { id: "check", label: t("ui.library.check"), onSelect: () => void checkLibrary() },
+          // LIB-033.
+          {
+            id: "export_all",
+            label: t("ui.library.export.menu"),
+            separator: true,
+            onSelect: askExportLibrary,
+          },
         ]}
       />
       <LanguageToggle />
@@ -876,6 +903,8 @@ export function LibraryView() {
       <TagDialogs />
       <RevealNotice />
       <MaintenanceDialogs />
+      <LibraryExportDialog />
+      <ImportDialog />
     </>
   );
 }

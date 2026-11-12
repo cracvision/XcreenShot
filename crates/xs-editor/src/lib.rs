@@ -9,6 +9,7 @@
 pub mod fit;
 pub mod flatten;
 pub mod image_ops;
+pub mod library_export;
 pub mod objects;
 pub mod pixels;
 pub mod quick_view;
@@ -4398,6 +4399,9 @@ pub fn extension() -> Extension {
         on!("document.batch_export", |core, ctx, p| batch_export(
             &core, ctx, &p
         ));
+        on!("library.export", |core, ctx, p| library_export::export_library(
+            &core, ctx, &p
+        ));
         on!("document.print_pages", |core, ctx, p| print_pages(&core, ctx, &p));
         on!("document.print", |core, ctx, p| print_document(&core, ctx, &p));
         on!("document.new_from_clipboard", |core, ctx, _p| new_from_clipboard(
@@ -4936,11 +4940,15 @@ fn export_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     }))
 }
 
-/// The name of the `index`-th exported file (EDT-113): its own, or a base name with a
-/// number (`guia_01`), between a prefix and a suffix.
+/// The name of the `index`-th exported file (EDT-113): its own, a base name with a
+/// number (`guia_01`), or one name given (`name`, Export of one library item, LIB-018),
+/// between a prefix and a suffix.
 pub fn batch_name(naming: &Value, original: &str, index: usize) -> String {
     let text = |k: &str| naming.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-    let core = if naming.get("mode").and_then(Value::as_str) == Some("base") {
+    let mode = naming.get("mode").and_then(Value::as_str);
+    let core = if mode == Some("name") && !text("name").trim().is_empty() {
+        text("name")
+    } else if mode == Some("base") {
         let start = naming.get("start").and_then(Value::as_u64).unwrap_or(1) as usize;
         let digits = naming
             .get("digits")

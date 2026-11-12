@@ -135,7 +135,8 @@ pub fn walk(root: &Path) -> Vec<Found> {
 }
 
 /// Reads what the library shows about a file: name, size of the image, and for a
-/// `.xshot` its capture metadata (CAP-056). A loose file's capture time is its own.
+/// `.xshot` its capture metadata (CAP-056). A loose file's capture time is its EXIF
+/// date, else the file's own.
 pub fn info(found: &Found) -> Info {
     let format = format_of(&found.abs).unwrap_or("png").to_string();
     let name = found
@@ -185,6 +186,10 @@ pub fn info(found: &Found) -> Info {
     {
         info.width = Some(w);
         info.height = Some(h);
+        // A photo's or picture's own date, when it has one (LIB-024).
+        if let Some(t) = crate::exif::taken(&found.abs) {
+            info.captured = t;
+        }
     }
     info
 }
