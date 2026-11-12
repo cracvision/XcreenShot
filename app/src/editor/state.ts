@@ -565,7 +565,14 @@ export interface FlatLayer {
 }
 
 export interface DocDetails extends Omit<DocSummary, "objects"> {
-  canvas: { width: number; height: number; color?: string; cornerRadius: number };
+  canvas: {
+    width: number;
+    height: number;
+    color?: string;
+    /** A gradient instead of the color (EDT-074); `color` holds its first stop. */
+    gradient?: Gradient;
+    cornerRadius: number;
+  };
   crop: { x: number; y: number; width: number; height: number };
   /** Objects a crop left outside the canvas: they do not make it grow (EDT-071). */
   outside?: string[];

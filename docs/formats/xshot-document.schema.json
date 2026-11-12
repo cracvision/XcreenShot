@@ -14,6 +14,10 @@
         "width": { "type": "integer", "minimum": 1 },
         "height": { "type": "integer", "minimum": 1 },
         "color": { "type": "string", "description": "#RRGGBB or #RRGGBBAA; absent means transparent" },
+        "gradient": {
+          "type": "object",
+          "description": "A gradient over the whole canvas instead of the color (EDT-074): {type: linear | radial, angle, stops: [{color, pos}]}; color then holds its first stop"
+        },
         "cornerRadius": { "type": "number", "minimum": 0 }
       }
     },

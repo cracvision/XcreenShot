@@ -710,6 +710,13 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
     }
 }
 
+/// The canvas's gradient, if it has a valid one (EDT-074).
+fn canvas_gradient(doc: &Document) -> Option<crate::paint::Fill> {
+    let g = doc.canvas.gradient.as_ref()?;
+    let fill: crate::paint::Fill = serde_json::from_value(g.clone()).ok()?;
+    matches!(fill, crate::paint::Fill::Gradient(_)).then_some(fill)
+}
+
 /// The canvas color, white under Simplify without one (EDT-041, EDT-074).
 fn background(doc: &Document) -> Option<tiny_skia::Color> {
     match doc.canvas.color.as_deref().and_then(Rgba::parse) {
@@ -964,8 +971,18 @@ fn image_layer(doc: &Document, base: &Base) -> Pixmap {
         );
     }
     let mut pm = Pixmap::new(w, h).expect("canvas size");
-    if let Some(c) = background(doc) {
-        pm.fill(c);
+    // A gradient canvas (EDT-074), or its color.
+    match canvas_gradient(doc).and_then(|g| g.paint([0.0, 0.0, w as f64, h as f64])) {
+        Some(paint) => {
+            if let Some(r) = tiny_skia::Rect::from_xywh(0.0, 0.0, w as f32, h as f32) {
+                pm.fill_rect(r, &paint, Transform::identity(), None);
+            }
+        }
+        None => {
+            if let Some(c) = background(doc) {
+                pm.fill(c);
+            }
+        }
     }
     let opacity = image_opacity(doc);
     if opacity > 0.0 {
@@ -986,6 +1003,7 @@ pub fn image_in_base(doc: &Document, base: &Base) -> RgbaImage {
             width: base.width,
             height: base.height,
             color: None,
+            gradient: None,
             corner_radius: 0.0,
             extra: Default::default(),
         },
@@ -1107,6 +1125,7 @@ pub fn flattened_view(doc: &Document, base: &Base) -> Option<(RgbaImage, i64, i6
             width: r.width,
             height: r.height,
             color: None,
+            gradient: None,
             corner_radius: 0.0,
             extra: Default::default(),
         },
@@ -1172,6 +1191,7 @@ pub fn baked_base(doc: &Document, base: &Base) -> Option<RgbaImage> {
             width: base.width,
             height: base.height,
             color: None,
+            gradient: None,
             corner_radius: 0.0,
             extra: Default::default(),
         },

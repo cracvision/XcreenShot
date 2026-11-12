@@ -1656,14 +1656,26 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
         }
         "canvas" => {
             if let Some(c) = p.get("color") {
+                next.canvas.gradient = None;
                 next.canvas.color = match c {
                     Value::Null => None,
                     Value::String(s) => {
                         xs_image::color::Rgba::parse(s)
-                            .ok_or_else(|| bad("color", "use #RRGGBB, #RRGGBBAA or null"))?;
+                            .ok_or_else(|| bad("color", "use #RRGGBB, #RRGGBBAA, a gradient or null"))?;
                         Some(s.clone())
                     }
-                    _ => return Err(bad("color", "use #RRGGBB, #RRGGBBAA or null")),
+                    // A gradient (EDT-020, EDT-074); the color keeps its first stop.
+                    Value::Object(_) => {
+                        let fill: xs_image::paint::Fill =
+                            serde_json::from_value(c.clone()).map_err(|e| bad("color", &e.to_string()))?;
+                        fill.check("color").map_err(|e| bad("color", &e))?;
+                        let first = fill
+                            .main_color()
+                            .ok_or_else(|| bad("color", "a gradient needs colors"))?;
+                        next.canvas.gradient = Some(c.clone());
+                        Some(first.to_hex())
+                    }
+                    _ => return Err(bad("color", "use #RRGGBB, #RRGGBBAA, a gradient or null")),
                 };
             }
             match p.get("cornerRadius") {

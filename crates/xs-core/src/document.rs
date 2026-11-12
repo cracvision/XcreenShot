@@ -36,6 +36,10 @@ pub struct Canvas {
     /// `#RRGGBB` or `#RRGGBBAA`; `None` is transparent (EDT-074).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+    /// A gradient instead of the color, `{type, angle, stops}` over the whole canvas
+    /// (EDT-020, EDT-074). `color` then holds its first stop, for what needs one color.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gradient: Option<Value>,
     #[serde(default)]
     pub corner_radius: f64,
     #[serde(flatten)]
@@ -198,6 +202,7 @@ impl Document {
                 width,
                 height,
                 color: None,
+                gradient: None,
                 corner_radius: 0.0,
                 extra: Map::new(),
             },

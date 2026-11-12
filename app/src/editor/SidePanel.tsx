@@ -1408,10 +1408,10 @@ function DocumentProperties({ doc }: { doc: DocDetails }) {
         <dt>{t("ui.editor.prop.file")}</dt>
         <dd className="path">{doc.path ?? "—"}</dd>
       </dl>
-      {/* The canvas color, editable here too (EDT-074). */}
-      <ColorPicker
+      {/* The canvas color, editable here too (EDT-074): a color or a gradient. */}
+      <FillPicker
         label={t("ui.editor.prop.canvas_color")}
-        value={doc.canvas.color ?? null}
+        value={doc.canvas.gradient ?? doc.canvas.color ?? null}
         allowTransparent
         onCommit={(color) =>
           void run("document.canvas", { documentId: doc.documentId, color }).catch((e) =>

@@ -3510,3 +3510,47 @@ fn trimming_fitting_and_cropping_to_the_canvas() {
     let r = cli(&e.core, "document.crop_to_canvas", json!({"documentId": doc}));
     assert_eq!(r["changed"], false);
 }
+
+/// EDT-074, EDT-020: a canvas with a linear gradient shows it in the space added to
+/// the canvas; a plain color takes its place again.
+#[test]
+fn a_gradient_canvas_shows_in_added_space() {
+    let e = env();
+    let (doc, _) = add_capture(&e.core, &white(100, 50), json!({"mode": "region"}), 1.0, None).unwrap();
+    let gradient = json!({"type": "linear", "angle": 0, "stops": [
+        {"color": "#FF0000", "pos": 0}, {"color": "#0000FF", "pos": 100}]});
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "color": gradient}),
+    );
+    cli(
+        &e.core,
+        "document.canvas_size",
+        json!({"documentId": doc, "width": 300, "height": 50, "anchor": "center"}),
+    );
+    let img = rendered(&e, &doc);
+    let (left, right) = (img.get_pixel(2, 25).0, img.get_pixel(297, 25).0);
+    assert!(left[0] > 200 && left[2] < 60, "red on the left: {left:?}");
+    assert!(right[2] > 200 && right[0] < 60, "blue on the right: {right:?}");
+    assert_eq!(img.get_pixel(150, 25).0, [255, 255, 255, 255], "the image on top");
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["canvas"]["color"], "#FF0000", "the first stop");
+    assert_eq!(info["canvas"]["gradient"], gradient);
+    cli(
+        &e.core,
+        "document.canvas",
+        json!({"documentId": doc, "color": "#00FF00"}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert!(info["canvas"]["gradient"].is_null());
+    assert_eq!(rendered(&e, &doc).get_pixel(2, 25).0, [0, 255, 0, 255]);
+    // A bad gradient is refused.
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.canvas",
+        json!({"documentId": doc, "color": {"type": "linear", "stops": [{"color": "#FF0000", "pos": 0}]}}),
+    );
+    assert!(bad.is_err());
+}

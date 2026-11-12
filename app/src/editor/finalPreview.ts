@@ -18,6 +18,8 @@ export function hasEffects(doc: DocDetails): boolean {
   const on = (s: Stack) => (s ?? []).some((e) => e.enabled !== false);
   return (
     doc.canvas.cornerRadius > 0 ||
+    // A gradient canvas is drawn by the core too (EDT-074).
+    Boolean(doc.canvas.gradient) ||
     on(doc.effects) ||
     doc.objects.some((o) => o.type === "image" && on((o as unknown as { effects?: Stack }).effects))
   );

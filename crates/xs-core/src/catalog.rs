@@ -754,7 +754,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "color": {"type": ["string", "null"], "description": "Canvas color #RRGGBB(AA); null is transparent"},
+                    "color": {"type": ["string", "object", "null"], "description": "Canvas color #RRGGBB(AA), a gradient {type: linear | radial, angle, stops: [{color, pos}]} over the whole canvas, or null for transparent"},
                     "cornerRadius": {"type": ["number", "string"], "description": "Rounded corners, px, or \"circle\" (first a centered square)"},
                     "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "description": "Resolution: the pixels do not change"}
                 }),

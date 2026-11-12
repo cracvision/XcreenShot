@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
-import { ColorPicker } from "./ColorPicker";
+import { FillPicker } from "./FillPicker";
 import {
   ANCHORS,
   COMMON_DPI,
@@ -569,9 +569,10 @@ function CanvasColor({ doc }: { doc: DocDetails }) {
         </button>
       }
     >
-      <ColorPicker
+      {/* A color, transparent or a gradient (EDT-020). */}
+      <FillPicker
         label={t("ui.editor.image.color")}
-        value={doc.canvas.color ?? null}
+        value={doc.canvas.gradient ?? doc.canvas.color ?? null}
         allowTransparent
         onCommit={(color) =>
           void run("document.canvas", { documentId: doc.documentId, color }).catch(fail)
