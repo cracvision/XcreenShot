@@ -40,6 +40,8 @@ import { FilterPane } from "./FilterPane";
 import { editTags, toggleFavorite } from "./marks";
 import { NO_FILTERS, SORT_KEYS, chips, dateLabel, hasFilters, toggle, type SortKey } from "./query";
 import { MaintenanceDialogs } from "./Maintenance";
+import { MergeDialogs } from "./MergeDialogs";
+import { askMerge, cancelMerge } from "./mergeState";
 import { askRebuild, checkLibrary } from "./maintenanceState";
 import { askExportLibrary } from "./exportState";
 import { LibraryExportDialog } from "./LibraryExport";
@@ -282,6 +284,12 @@ function LibraryToolbar() {
             id: "import_folder",
             label: t("ui.library.import.folder"),
             onSelect: () => void importFolder(),
+          },
+          // LIB-031.
+          {
+            id: "merge",
+            label: t("ui.library.merge.menu"),
+            onSelect: () => void askMerge(),
           },
           {
             id: "rebuild",
@@ -984,16 +992,25 @@ function LibraryStatus() {
     const off = listen<{ kind: string; payload: Record<string, unknown> }>("xs://editor", (e) => {
       const p = e.payload.payload;
       if (e.payload.kind !== "progress") return;
-      const id = p.task === "library_export" ? "export" : p.task === "batch" ? "batch" : null;
+      // A merge (LIB-031) reports the same way, with its own Cancel.
+      const merge = p.task === "library_merge";
+      const id = merge
+        ? "merge"
+        : p.task === "library_export"
+          ? "export"
+          : p.task === "batch"
+            ? "batch"
+            : null;
       if (!id) return;
-      if (p.done === null) taskDone(id, t("ui.library.status.export_done"));
+      if (p.done === null)
+        taskDone(id, t(merge ? "ui.library.status.merge_done" : "ui.library.status.export_done"));
       else
         taskProgress({
           id,
-          label: "ui.library.status.exporting",
+          label: merge ? "ui.library.status.merging" : "ui.library.status.exporting",
           done: Number(p.index ?? 0),
           total: Number(p.total ?? 0),
-          cancel: () => void run("editor.cancel").catch(() => undefined),
+          cancel: merge ? cancelMerge : () => void run("editor.cancel").catch(() => undefined),
         });
     });
     return () => void off.then((f) => f());
@@ -1144,6 +1161,7 @@ export function LibraryView() {
       <LibraryStatus />
       <RevealNotice />
       <MaintenanceDialogs />
+      <MergeDialogs />
       <LibraryExportDialog />
       <ImportDialog />
     </>

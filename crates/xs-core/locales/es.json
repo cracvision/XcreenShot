@@ -662,6 +662,10 @@
     "shortcuts_export": {
       "title": "Exportar la hoja de atajos",
       "description": "Escribe todos los atajos actuales, agrupados, como un PDF de una o dos páginas A4, una página HTML imprimible o JSON."
+    },
+    "library_merge": {
+      "title": "Fusionar otra biblioteca",
+      "description": "Copia los elementos de otra biblioteca a esta con sus etiquetas y favoritos. Los archivos que ya están aquí no se copian dos veces; la otra carpeta no cambia."
     }
   },
   "settings": {
@@ -1013,7 +1017,8 @@
     "too_many_tags": "{{name}} tendría más de {{max}} etiquetas.",
     "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?",
     "library_moving": "La biblioteca se está moviendo. Espera a que termine o cancélalo.",
-    "image_too_large": "{{name}} mide {{width}} × {{height}} px. XcreenShot abre imágenes de hasta 32.000 px por lado y 500 megapíxeles."
+    "image_too_large": "{{name}} mide {{width}} × {{height}} px. XcreenShot abre imágenes de hasta 32.000 px por lado y 500 megapíxeles.",
+    "library_merging": "Se está fusionando otra biblioteca con esta. Espera a que termine o cancélalo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -3106,7 +3111,9 @@
         "exporting": "Exportando",
         "importing": "Importando a la biblioteca…",
         "progress": "{{what}}: {{done}} de {{total}}",
-        "export_done": "Exportación terminada."
+        "export_done": "Exportación terminada.",
+        "merging": "Fusionando otra biblioteca",
+        "merge_done": "Fusión terminada."
       },
       "columns": "Columnas",
       "column_resize": "Ancho de {{column}}",
@@ -3126,7 +3133,36 @@
         "later": "Llega con la grabación de video.",
         "need_images": "Elige imágenes primero.",
         "need_selection": "Selecciona elementos primero."
-      }
+      },
+      "merge": {
+        "menu": "Fusionar otra biblioteca…",
+        "choose": "Elige la carpeta de la otra biblioteca",
+        "title": "Fusionar otra biblioteca",
+        "body_one": "El elemento de {{path}} se copiará a tu biblioteca, con sus etiquetas y su favorito.",
+        "body_other": "Los {{count}} elementos de {{path}} se copiarán a tu biblioteca, con sus etiquetas y favoritos.",
+        "not_library": "Esta carpeta no es una biblioteca de XcreenShot: sus imágenes se copian sin etiquetas.",
+        "note": "Los archivos que ya están en tu biblioteca no se copian dos veces, y las etiquetas se unen sin distinguir mayúsculas. En esa carpeta no cambia nada.",
+        "empty": "Esta carpeta no tiene imágenes para fusionar.",
+        "same": "Esa es la carpeta de tu propia biblioteca.",
+        "go": "Fusionar",
+        "done_title": "Fusión terminada",
+        "cancelled_title": "Fusión cancelada",
+        "cancelled": "No cambió nada: lo que se había copiado se quitó.",
+        "added_one": "Se añadió {{count}} elemento a tu biblioteca.",
+        "added_other": "Se añadieron {{count}} elementos a tu biblioteca.",
+        "duplicates_one": "{{count}} ya estaba en tu biblioteca y no se copió.",
+        "duplicates_other": "{{count}} ya estaban en tu biblioteca y no se copiaron.",
+        "enriched_one": "{{count}} de los tuyos ganó etiquetas o el favorito.",
+        "enriched_other": "{{count}} de los tuyos ganaron etiquetas o el favorito.",
+        "renamed_one": "{{count}} recibió otro nombre porque el suyo estaba ocupado:",
+        "renamed_other": "{{count}} recibieron otro nombre porque los suyos estaban ocupados:",
+        "failed_one": "{{count}} no se pudo copiar.",
+        "failed_other": "{{count}} no se pudieron copiar."
+      },
+      "merge_here": "Fusionarla con la mía",
+      "merge_here_help_one": "Copia su elemento a tu biblioteca, con sus etiquetas; esa carpeta no cambia y tu biblioteca sigue donde está.",
+      "merge_here_help_other": "Copia sus {{count}} elementos a tu biblioteca, con sus etiquetas; esa carpeta no cambia y tu biblioteca sigue donde está.",
+      "merging": "Fusionando la otra biblioteca: {{done}} de {{total}} elementos"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

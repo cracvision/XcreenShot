@@ -819,3 +819,180 @@ fn retry_moves_what_was_left_and_the_check_measures_room() {
     assert_eq!(i["enough"], json!(true), "{i}");
     assert_eq!(i["bigSync"], json!(false));
 }
+
+/// A small PNG whose pixels depend on `n`, so each `n` is a different file.
+fn write_png_n(path: &Path, n: u32) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let img = image::RgbaImage::from_pixel(4, 4, image::Rgba([(n % 251) as u8, (n / 251) as u8, 7, 255]));
+    std::fs::write(path, xs_image::encode::png(&img, 0.0, true).unwrap()).unwrap();
+}
+
+/// LIB-031: merging a library of 300 items, 20 of them the same as items already
+/// here, adds 280; "cliente" joins "Cliente"; the other folder keeps all its files; a
+/// taken name gets " (2)"; a duplicate brings its tags and favorite.
+#[test]
+fn merging_another_library_copies_what_is_new() {
+    let e = env();
+    let other = tempfile::tempdir().unwrap();
+    // Here: 20 items, one tagged "Cliente".
+    for n in 0..20 {
+        write_png_n(&e.path(&format!("2026-10/here{n}.png")), n);
+    }
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    let lib = library(&core);
+    lib.scan();
+    let first = lib.find(&e.path("2026-10/here0.png")).unwrap();
+    lib.tag(std::slice::from_ref(&first.id), &["Cliente".to_string()], &[])
+        .unwrap();
+
+    // There: 280 new items and the same 20 under other names; one new item tagged
+    // "cliente", one duplicate with a tag and the favorite, one new item whose name is
+    // taken here by a different file.
+    for n in 100..380 {
+        write_png_n(&other.path().join(format!("2026-11/there{n}.png")), n);
+    }
+    for n in 0..20 {
+        write_png_n(&other.path().join(format!("old/copy{n}.png")), n);
+    }
+    let side = |file: &Path, id: &str, tags: &[&str], favorite: bool| {
+        xmeta::write(
+            file,
+            &xmeta::Xmeta {
+                id: id.to_string(),
+                tags: tags.iter().map(|t| t.to_string()).collect(),
+                favorite,
+                ..xmeta::Xmeta::default()
+            },
+        )
+        .unwrap();
+    };
+    side(
+        &other.path().join("2026-11/there100.png"),
+        "other-100",
+        &["cliente"],
+        false,
+    );
+    side(
+        &other.path().join("old/copy5.png"),
+        "other-c5",
+        &["Proyecto X"],
+        true,
+    );
+    // here1.png exists here with other pixels.
+    write_png_n(&other.path().join("2026-10/here1.png"), 999);
+    let before: Vec<(PathBuf, u64)> = walk_files(other.path());
+
+    let cli = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+    let r = cli("library.merge", json!({"path": other.path()})).unwrap();
+    assert_eq!(r["added"], 281, "280 new and the one with a taken name: {r}");
+    assert_eq!(r["duplicates"], 20, "{r}");
+    assert_eq!(r["enriched"], 1, "{r}");
+    assert_eq!(r["cancelled"], false);
+    let renamed = r["renamed"].as_array().unwrap();
+    assert_eq!(renamed.len(), 1);
+    assert!(
+        renamed[0]["path"].as_str().unwrap().ends_with("here1 (2).png"),
+        "{r}"
+    );
+    assert_eq!(lib.list().len(), 20 + 281);
+
+    // One "Cliente" tag with both items, not two tags.
+    let tags: Vec<String> = lib.tags().into_iter().map(|(t, _)| t).collect();
+    assert!(tags.contains(&"Cliente".to_string()));
+    assert!(!tags.contains(&"cliente".to_string()), "{tags:?}");
+    let tagged = cli("library.list", json!({"filters": {"tags": ["Cliente"]}})).unwrap();
+    assert_eq!(tagged["count"], 2);
+    // The new item kept its ID; the duplicate's tag and favorite went to the item here.
+    assert!(lib.get("other-100").is_some());
+    let five = lib.find(&e.path("2026-10/here5.png")).unwrap();
+    assert_eq!(five.tags, vec!["Proyecto X".to_string()]);
+    assert!(five.favorite);
+
+    // The other library is as it was.
+    assert_eq!(walk_files(other.path()), before);
+
+    // Merging it again copies nothing.
+    let again = cli("library.merge", json!({"path": other.path()})).unwrap();
+    assert_eq!(again["added"], 0, "{again}");
+    assert_eq!(again["duplicates"], 301);
+
+    // Not this library itself, nor a folder inside it.
+    assert!(cli("library.merge", json!({"path": e.path("2026-10")})).is_err());
+}
+
+/// LIB-031: Cancel removes what the merge copied; nothing else changes.
+#[test]
+fn a_cancelled_merge_leaves_the_library_as_it_was() {
+    let e = env();
+    let other = tempfile::tempdir().unwrap();
+    for n in 0..5 {
+        write_png_n(&other.path().join(format!("m/x{n}.png")), n);
+    }
+    write_png_n(&e.path("keep.png"), 77);
+    let lib = e.open();
+    lib.scan();
+    let before = walk_files(e.root.path());
+    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let r = merge::merge(&lib, other.path(), &cancel, |done, _| {
+        if done == 3 {
+            cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    });
+    assert!(r.cancelled);
+    assert_eq!(walk_files(e.root.path()), before, "the copies are gone");
+    assert!(!e.path("m").exists(), "and the folder they needed");
+    assert_eq!(lib.list().len(), 1);
+    assert_eq!(walk_files(other.path()).len(), 5);
+}
+
+/// LIB-010: a tag that arrives in a sidecar joins the spelling the library has.
+#[test]
+fn tags_from_a_sidecar_join_the_existing_spelling() {
+    let e = env();
+    write_png_n(&e.path("a.png"), 1);
+    let lib = e.open();
+    lib.scan();
+    let a = lib.find(&e.path("a.png")).unwrap();
+    lib.tag(std::slice::from_ref(&a.id), &["Cliente".to_string()], &[])
+        .unwrap();
+    let b = e.path("b.png");
+    write_png_n(&b, 2);
+    xmeta::write(
+        &b,
+        &xmeta::Xmeta {
+            id: "from-elsewhere".into(),
+            tags: vec!["CLIENTE".into(), "cliente".into()],
+            ..xmeta::Xmeta::default()
+        },
+    )
+    .unwrap();
+    lib.scan();
+    let item = lib.get("from-elsewhere").unwrap();
+    assert_eq!(item.tags, vec!["Cliente".to_string()]);
+    assert_eq!(
+        xmeta::read(&b).unwrap().tags,
+        vec!["Cliente".to_string()],
+        "the sidecar too"
+    );
+}
+
+/// Every file under `dir` (sidecars too) with its size, sorted.
+fn walk_files(dir: &Path) -> Vec<(PathBuf, u64)> {
+    let mut out = Vec::new();
+    let mut dirs = vec![dir.to_path_buf()];
+    while let Some(d) = dirs.pop() {
+        for e in std::fs::read_dir(&d).unwrap().flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else {
+                out.push((p.clone(), e.metadata().unwrap().len()));
+            }
+        }
+    }
+    out.sort();
+    out
+}

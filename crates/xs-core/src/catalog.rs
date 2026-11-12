@@ -1564,6 +1564,27 @@ pub fn specs() -> Vec<CommandSpec> {
                 "imported": {"type": "array", "description": "{source, path, id} of each copy"},
                 "skipped": {"type": "array", "description": "{source, reason}: unsupported, in_library or unreadable"}
             }})),
+        B::new("library.merge", &["LIB-031", "LIB-034"])
+            .mutates()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "The other library's folder; nothing in it changes"},
+                    "background": {"type": "boolean", "default": false, "description": "Return at once and report with library_merge events (the window)"},
+                    "cancel": {"type": "boolean", "description": "Cancel the merge in progress: what was copied is removed"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "added": {"type": "integer", "description": "Items copied here"},
+                "duplicates": {"type": "integer", "description": "Items not copied: the same file is already here"},
+                "enriched": {"type": "integer", "description": "Items here that gained tags or the favorite from a duplicate"},
+                "renamed": {"type": "array", "description": "{from, path}: copies that got \" (2)\" because the name was taken"},
+                "failed": {"type": "array", "items": {"type": "string"}},
+                "cancelled": {"type": "boolean"},
+                "started": {"type": "boolean"},
+                "total": {"type": "integer"}
+            }})),
         B::new("library.export", &["LIB-033", "LIB-018", "LIB-034"])
             .positional(&["folder"])
             .params(params(

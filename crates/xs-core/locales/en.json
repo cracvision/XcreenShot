@@ -662,6 +662,10 @@
     "shortcuts_export": {
       "title": "Export the shortcut sheet",
       "description": "Writes every current shortcut, grouped, as a PDF of one or two A4 pages, a printable HTML page or JSON."
+    },
+    "library_merge": {
+      "title": "Merge another library",
+      "description": "Copies another library's items into this one with their tags and favorites. Files already here are not copied twice; the other folder does not change."
     }
   },
   "settings": {
@@ -1013,7 +1017,8 @@
     "too_many_tags": "{{name}} would have more than {{max}} tags.",
     "tag_exists": "There is already a tag {{tag}}. Merge them?",
     "library_moving": "The library is being moved. Wait until it finishes or cancel it.",
-    "image_too_large": "{{name}} is {{width}} × {{height}} px. XcreenShot opens images up to 32,000 px per side and 500 megapixels."
+    "image_too_large": "{{name}} is {{width}} × {{height}} px. XcreenShot opens images up to 32,000 px per side and 500 megapixels.",
+    "library_merging": "Another library is being merged into this one. Wait until it finishes or cancel it."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -3106,7 +3111,9 @@
         "exporting": "Exporting",
         "importing": "Importing into the library…",
         "progress": "{{what}}: {{done}} of {{total}}",
-        "export_done": "Export finished."
+        "export_done": "Export finished.",
+        "merging": "Merging another library",
+        "merge_done": "Merge finished."
       },
       "columns": "Columns",
       "column_resize": "Width of {{column}}",
@@ -3126,7 +3133,36 @@
         "later": "Arrives with video recording.",
         "need_images": "Choose images first.",
         "need_selection": "Select items first."
-      }
+      },
+      "merge": {
+        "menu": "Merge another library…",
+        "choose": "Choose the other library's folder",
+        "title": "Merge another library",
+        "body_one": "The {{count}} item of {{path}} will be copied into your library, with its tags and favorite.",
+        "body_other": "The {{count}} items of {{path}} will be copied into your library, with their tags and favorites.",
+        "not_library": "This folder is not an XcreenShot library: its images are copied without tags.",
+        "note": "Files already in your library are not copied twice, and tags join regardless of case. Nothing in that folder changes.",
+        "empty": "This folder has no images to merge.",
+        "same": "That is your library's own folder.",
+        "go": "Merge",
+        "done_title": "Merge finished",
+        "cancelled_title": "Merge cancelled",
+        "cancelled": "Nothing changed: what had been copied was removed.",
+        "added_one": "{{count}} item added to your library.",
+        "added_other": "{{count}} items added to your library.",
+        "duplicates_one": "{{count}} was already in your library and was not copied.",
+        "duplicates_other": "{{count}} were already in your library and were not copied.",
+        "enriched_one": "{{count}} of yours gained tags or the favorite.",
+        "enriched_other": "{{count}} of yours gained tags or the favorite.",
+        "renamed_one": "{{count}} got another name because its name was taken:",
+        "renamed_other": "{{count}} got another name because their names were taken:",
+        "failed_one": "{{count}} could not be copied.",
+        "failed_other": "{{count}} could not be copied."
+      },
+      "merge_here": "Merge it into mine",
+      "merge_here_help_one": "Copies its item into your library, with its tags; that folder does not change and your library stays where it is.",
+      "merge_here_help_other": "Copies its {{count}} items into your library, with their tags; that folder does not change and your library stays where it is.",
+      "merging": "Merging the other library: {{done}} of {{total}} items"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

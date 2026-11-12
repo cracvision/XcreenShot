@@ -407,6 +407,14 @@ impl Library {
             .filter(|i| on_disk.contains(i.path.as_str()))
             .map(|i| i.id.clone())
             .collect();
+        // LIB-010, LIB-031: a tag that comes in a sidecar joins the spelling the library
+        // already has ("cliente" joins "Cliente").
+        let mut spelling: HashMap<String, String> = HashMap::new();
+        for i in &known {
+            for t in &i.tags {
+                spelling.entry(t.to_lowercase()).or_insert_with(|| t.clone());
+            }
+        }
         let mut changed = false;
         for f in &found {
             if let Some(item) = by_path.get(f.rel.as_str()) {
@@ -447,17 +455,32 @@ impl Library {
                 Some(old) => build(f, old.id, old.favorite, old.tags),
                 None => match side.filter(|m| !used.contains(&m.id)) {
                     // Brought in with its sidecar from elsewhere: its ID and data come too.
-                    Some(m) => build(f, m.id, m.favorite, m.tags),
+                    Some(m) => {
+                        let mut tags: Vec<String> = Vec::new();
+                        for t in &m.tags {
+                            let s = spelling
+                                .entry(t.to_lowercase())
+                                .or_insert_with(|| t.clone())
+                                .clone();
+                            if !tags.iter().any(|x| x.to_lowercase() == s.to_lowercase()) {
+                                tags.push(s);
+                            }
+                        }
+                        build(f, m.id, m.favorite, tags)
+                    }
                     None => build(f, xmeta::new_id(), false, Vec::new()),
                 },
             };
             let current = xmeta::read(&f.abs);
-            if current.as_ref().map(|m| m.id.as_str()) != Some(item.id.as_str()) {
+            let same = current
+                .as_ref()
+                .is_some_and(|m| m.id == item.id && m.tags == item.tags);
+            if !same {
                 let meta = Xmeta {
                     id: item.id.clone(),
                     tags: item.tags.clone(),
                     favorite: item.favorite,
-                    ..Xmeta::default()
+                    extra: current.map(|m| m.extra).unwrap_or_default(),
                 };
                 if let Err(e) = xmeta::write(&f.abs, &meta) {
                     tracing::warn!(error = %e, "could not write a library sidecar");

@@ -6,6 +6,7 @@ pub mod conflict;
 pub mod exif;
 pub mod import;
 pub mod index;
+pub mod merge;
 pub mod query;
 pub mod recycle;
 pub mod relocate;
@@ -270,10 +271,111 @@ fn ctx_is_relocate(p: &Value) -> bool {
     p.get("relocate").and_then(Value::as_bool) == Some(true)
 }
 
-/// The move in progress, to cancel it (LIB-028).
 /// The last move of the library, for Retry of what it left behind (LIB-028).
 static LAST_MOVE: std::sync::Mutex<Option<(PathBuf, PathBuf)>> = std::sync::Mutex::new(None);
+/// The move in progress, to cancel it (LIB-028).
 static MOVING: std::sync::Mutex<Option<Arc<std::sync::atomic::AtomicBool>>> = std::sync::Mutex::new(None);
+/// The merge in progress, to cancel it (LIB-031).
+static MERGING: std::sync::Mutex<Option<Arc<std::sync::atomic::AtomicBool>>> = std::sync::Mutex::new(None);
+
+/// `library.merge` (LIB-031): copies another library's items into this one, in the
+/// background with `library_merge` progress events, or waiting for the report.
+fn merge_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
+    let lang = ctx.lang;
+    let bad = |param: &str, reason: &str| {
+        CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", param), ("reason", reason)],
+            ),
+        )
+    };
+    if p.get("cancel").and_then(Value::as_bool) == Some(true) {
+        let running = MERGING.lock().unwrap().clone();
+        if let Some(flag) = &running {
+            flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        return Ok(json!({ "cancelled": running.is_some() }));
+    }
+    let other = p
+        .get("path")
+        .and_then(Value::as_str)
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .ok_or_else(|| bad("path", "give the full path of the other library's folder"))?;
+    if !other.is_dir() {
+        return Err(CommandError::new(
+            ErrorCode::NotFound,
+            tr(
+                lang,
+                "errors.library_not_found",
+                &[("id", &other.to_string_lossy())],
+            ),
+        ));
+    }
+    let lib = library(core);
+    if merge::overlaps(&other, lib.root()) {
+        return Err(bad("path", "choose a folder outside this library"));
+    }
+    if MOVING.lock().unwrap().is_some() {
+        return Err(CommandError::new(
+            ErrorCode::Busy,
+            tr(lang, "errors.library_moving", &[]),
+        ));
+    }
+    let mut merging = MERGING.lock().unwrap();
+    if merging.is_some() {
+        return Err(CommandError::new(
+            ErrorCode::Busy,
+            tr(lang, "errors.library_merging", &[]),
+        ));
+    }
+    let flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    *merging = Some(flag.clone());
+    drop(merging);
+    let report = |r: &merge::Merged| {
+        json!({
+            "added": r.added,
+            "duplicates": r.duplicates,
+            "enriched": r.enriched,
+            "renamed": r.renamed.iter().map(|(from, to)| json!({ "from": from, "path": to })).collect::<Vec<_>>(),
+            "failed": r.failed,
+            "cancelled": r.cancelled,
+        })
+    };
+    if p.get("background").and_then(Value::as_bool) != Some(true) {
+        let r = merge::merge(&lib, &other, &flag, |_, _| {});
+        *MERGING.lock().unwrap() = None;
+        changed(core);
+        return Ok(report(&r));
+    }
+    let total = scan::walk(&other).len();
+    let weak = Arc::downgrade(core);
+    std::thread::spawn(move || {
+        let Some(core) = weak.upgrade() else {
+            *MERGING.lock().unwrap() = None;
+            return;
+        };
+        let host = core.host();
+        // The same progress events as the exports, for the Library's status bar.
+        let r = merge::merge(&lib, &other, &flag, |done, total| {
+            host.editor_event(
+                "progress",
+                json!({ "task": "library_merge", "done": done as f32 / total.max(1) as f32, "index": done, "total": total }),
+            );
+        });
+        *MERGING.lock().unwrap() = None;
+        changed(&core);
+        host.editor_event("progress", json!({ "task": "library_merge", "done": null }));
+        let mut end = report(&r);
+        end["finished"] = json!(true);
+        end["path"] = json!(other);
+        host.editor_event("library_merge", end);
+    });
+    Ok(json!({ "started": true, "total": total }))
+}
 
 /// Uses `to` as the library from now on: kept, opened, indexed and followed; open
 /// documents follow it (LIB-028).
@@ -394,6 +496,12 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
                 return Err(bad("path", "choose a folder outside the library"));
             }
             let mode = p.get("mode").and_then(Value::as_str).unwrap_or("move");
+            if MERGING.lock().unwrap().is_some() {
+                return Err(CommandError::new(
+                    ErrorCode::Busy,
+                    tr(lang, "errors.library_merging", &[]),
+                ));
+            }
             let mut moving = MOVING.lock().unwrap();
             if moving.is_some() {
                 return Err(CommandError::new(
@@ -1038,6 +1146,7 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
         on!("library.search", |core, ctx, p| search(&core, ctx, &p));
         on!("library.resolve", |core, ctx, p| resolve(&core, ctx, &p));
         on!("library.import", |core, ctx, p| import_command(&core, ctx, &p));
+        on!("library.merge", |core, ctx, p| merge_command(&core, ctx, &p));
         on!("library.reveal", |core, ctx, p| {
             let lib = library(&core);
             let item = match (

@@ -1,7 +1,9 @@
 // Preferences > Library: where the library is (LIB-027), Show, and Change… (LIB-028):
-// move the library to another folder, start an empty one there or use the one already
-// there; the move runs in the background, with its progress and Cancel. A note says
-// when the folder syncs to the cloud (LIB-029).
+// move the library to another folder, start an empty one there, use the one already
+// there or merge it into this one (LIB-031); the move and the merge run in the
+// background, with their progress and Cancel. A note says when the folder syncs to the
+// cloud (LIB-029).
+import { mergeSummary, type MergeReport } from "../library/mergeState";
 import type { TFunction } from "i18next";
 import { fileSize } from "../library/format";
 import { listen } from "@tauri-apps/api/event";
@@ -69,6 +71,7 @@ export function LibraryLocation() {
   const [failed, setFailed] = useState<string[]>([]);
   const started = useRef<number | null>(null);
   const [left, setLeft] = useState("");
+  const [merging, setMerging] = useState(false);
 
   const load = useCallback(() => {
     run<Where>("library.location")
@@ -110,6 +113,22 @@ export function LibraryLocation() {
     return () => void off.then((f) => f());
   }, [t, load]);
 
+  // A merge (LIB-031): its progress and its report.
+  useEffect(() => {
+    const off = listen<{ kind: string; payload: Record<string, unknown> }>("xs://editor", (e) => {
+      const p = e.payload.payload;
+      if (e.payload.kind === "progress" && p.task === "library_merge" && p.done !== null) {
+        setProgress({ done: Number(p.index ?? 0), total: Number(p.total ?? 0) });
+      } else if (e.payload.kind === "library_merge" && p.finished) {
+        setProgress(null);
+        setMerging(false);
+        setNote(mergeSummary(p as unknown as MergeReport, t).join(" "));
+        load();
+      }
+    });
+    return () => void off.then((f) => f());
+  }, [t, load]);
+
   const change = async (chosen?: string) => {
     setNote(null);
     setError(null);
@@ -118,6 +137,21 @@ export function LibraryLocation() {
     try {
       const i = await run<Inspect>("library.location", { action: "inspect", path: dir });
       if (!i.same) setChoice(i);
+    } catch (e) {
+      setError(isCommandError(e) ? e.message : String(e));
+    }
+  };
+
+  const merge = async () => {
+    if (!choice) return;
+    setChoice(null);
+    try {
+      const r = await run<{ total: number }>("library.merge", {
+        path: choice.path,
+        background: true,
+      });
+      setMerging(true);
+      setProgress({ done: 0, total: r.total });
     } catch (e) {
       setError(isCommandError(e) ? e.message : String(e));
     }
@@ -203,14 +237,21 @@ export function LibraryLocation() {
         {progress && (
           <div className="lib-move" role="status">
             <span>
-              {t("ui.library.moving", { done: progress.done, total: progress.total })}
-              {left}
+              {t(merging ? "ui.library.merging" : "ui.library.moving", {
+                done: progress.done,
+                total: progress.total,
+              })}
+              {merging ? "" : left}
             </span>
             <progress max={Math.max(1, progress.total)} value={progress.done} />
             <button
               type="button"
               className="btn small"
-              onClick={() => void run("library.relocate", { cancel: true }).catch(() => undefined)}
+              onClick={() =>
+                void run(merging ? "library.merge" : "library.relocate", { cancel: true }).catch(
+                  () => undefined,
+                )
+              }
             >
               {t("ui.editor.cancel")}
             </button>
@@ -259,18 +300,26 @@ export function LibraryLocation() {
           )}
           <div className="move-options">
             {choice.library && choice.items > 0 ? (
-              <button
-                type="button"
-                className="btn move-option"
-                data-autofocus
-                disabled={!choice.writable}
-                onClick={() => void apply("use")}
-              >
-                <strong>{t("ui.library.use_there")}</strong>
-                <span className="muted">
-                  {t("ui.library.use_there_help", { count: choice.items })}
-                </span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn move-option"
+                  data-autofocus
+                  disabled={!choice.writable}
+                  onClick={() => void apply("use")}
+                >
+                  <strong>{t("ui.library.use_there")}</strong>
+                  <span className="muted">
+                    {t("ui.library.use_there_help", { count: choice.items })}
+                  </span>
+                </button>
+                <button type="button" className="btn move-option" onClick={() => void merge()}>
+                  <strong>{t("ui.library.merge_here")}</strong>
+                  <span className="muted">
+                    {t("ui.library.merge_here_help", { count: choice.items })}
+                  </span>
+                </button>
+              </>
             ) : (
               <>
                 <button

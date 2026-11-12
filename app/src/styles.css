@@ -5227,6 +5227,21 @@ body.preparing-drag * {
   gap: var(--space-2);
 }
 
+/* Merge another library (LIB-031): a long folder path wraps; the copies that got
+   another name. */
+.merge-body {
+  overflow-wrap: anywhere;
+}
+
+.merge-list {
+  margin: 0;
+  padding-left: 1.2em;
+  max-height: 10em;
+  overflow: auto;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
 .move-option {
   display: grid;
   justify-items: start;
