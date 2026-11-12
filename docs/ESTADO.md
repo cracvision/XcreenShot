@@ -2,7 +2,9 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-12 (mañana, 6:15), con M1 y **M2 terminados en Windows**, salvo lo que espera a Carlos (sellos propios, emoji y paquetes de sellos: EDT-032, EDT-033, EDT-034). Siguiente: M3 (captura avanzada).
+**Última actualización:** 2026-11-12 (tarde, 17:15), con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets) y M3.2 (Extraer texto) hechas. Siguiente: M3.3 (captura con desplazamiento).
+
+**Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
 ## Fuentes
 
@@ -48,6 +50,23 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Sesión del 2026-11-12 (mañana y tarde): M3 empezado.** Plan en [`docs/plan-M3.md`](plan-M3.md) (propuesta).
+  - **M3.1, presets de captura** (CAP-058 a CAP-064):
+    - sección Presets del panel de captura: ejecutar, crear desde los ajustes actuales o desde cero, editar, cambiar nombre, duplicar, eliminar con Deshacer, reordenar arrastrando o con `Alt`+flechas, filtrar desde 9;
+    - atajo global por preset, que también aparece en Preferencias > Atajos (grupo Presets);
+    - submenú Presets en el menú del ícono; `.xpreset` para exportar e importar (con conversión de atajos Windows ↔ macOS);
+    - viajan en el `.xsettings` (APP-011); recurso MCP `xcreenshot://presets`;
+    - incorporados: Región al portapapeles y Extraer texto;
+    - comandos `preset.*`.
+  - **M3.2, Extraer texto** (SMT-001, SMT-003 a SMT-006):
+    - motor `xs-ocr` con el reconocimiento de Windows, a través del crate `windows` que la app ya traía (no entra ningún paquete nuevo); bloques, líneas, palabras, colores, columnas y párrafos; imágenes altas por tramos;
+    - medido: 1920 × 1080 en 249 ms; 400 líneas en 20.000 px sin perder ni repetir;
+    - Selección = Extraer texto en la pestaña Imagen, atajo `Ctrl+Alt+Mayús+T`, entrada en el menú del ícono, `smart.extract_text`;
+    - ventana Texto extraído con formato o sin él, Copiar todo, Copiar y cerrar, Guardar como texto, otro idioma y unir líneas;
+    - Preferencias > Captura: idioma del reconocimiento (Automático o hasta 3), mostrar la ventana de resultados y guardar la imagen.
+  - Arreglado de paso: la app y el CLI de **depuración** se quedaban sin pila al arrancar (el catálogo de comandos era una sola lista enorme); ahora se arma en partes.
+  - **Pregunta nueva para Carlos (SMT-004):** Windows solo reconoce los idiomas que tiene instalados (en su equipo, inglés y español). Garantizar portugués, francés y alemán pediría un motor incluido (unos 30 MB).
+  - Pruebas manuales nuevas: `tests/manual/CAP-058-064.md` y `SMT-003-006.md`.
 - **Sesión del 2026-11-12 (mañana, continuación): M2 terminado en Windows.**
   - **Seleccionar todos los de un tipo** (EDT-023): botón bajo el título de Propiedades y clic derecho > Seleccionar todos los de este tipo.
   - **Crear e imprimir desde la biblioteca** (LIB-016, LIB-017): menú **Crear** (plantilla, combinar, nueva imagen) e Imprimir con varias imágenes, una por página.
@@ -282,14 +301,15 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Instalador nuevo (2026-11-12, 6:10): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `0d1cee6`.** Todo M2 en Windows: lo del `2afe45c` más el cursor como objeto, el corrector, crear e imprimir desde la biblioteca, fusionar bibliotecas, la biblioteca en la red, Mover XcreenShot a otro equipo y `AGENTS.md` generado (también en la carpeta de instalación). Probada la compilación empaquetada en una instancia aislada: `agents-md`, `library merge`, el diálogo de mudanza en la ventana (con la política de seguridad del instalador) y `app quit --force`, que esta vez cerró sola. Sustituye al `2afe45c`.
+1. **Instalador nuevo (2026-11-12, 17:08), para una caminata informal de Carlos: `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `7f50273`.** Todo M2 más los presets (M3.1) y Extraer texto (M3.2). Probada la compilación empaquetada en una instancia aislada: presets incorporados, idiomas del reconocimiento (inglés y español disponibles), Extraer texto de una imagen con su ventana de resultados (formato legible, la línea roja en rojo), la sección Presets del panel y la opción Extraer texto en la Selección; cerró con `app quit --force`. Sustituye al `0d1cee6`.
+1. Instalador anterior (2026-11-12, 6:10), compilación `0d1cee6`. Todo M2 en Windows: lo del `2afe45c` más el cursor como objeto, el corrector, crear e imprimir desde la biblioteca, fusionar bibliotecas, la biblioteca en la red, Mover XcreenShot a otro equipo y `AGENTS.md` generado (también en la carpeta de instalación). Probada la compilación empaquetada en una instancia aislada: `agents-md`, `library merge`, el diálogo de mudanza en la ventana (con la política de seguridad del instalador) y `app quit --force`, que esta vez cerró sola. Sustituye al `2afe45c`.
 1. Instalador anterior (2026-11-12, 5:50), compilación `2afe45c`. Igual que el `f94b691` más las columnas de la lista, el espacio libre y Reintentar al mover la biblioteca, el aviso de descarga de la nube y, sobre todo, **un arreglo de memoria**: abrir una captura de 10.000 × 30.000 px con 200 flechas llegaba a más de 100 GB (cada sombra descodificaba la imagen por su cuenta); ahora son unos 1,6 GB. Medido con la compilación empaquetada (`tests/manual/APP-050.md`). Sustituye al `f94b691`.
 1. Instalador anterior (2026-11-12, 4:52), compilación `f94b691` (M2.7 casi completa: Detalles, vista rápida, exportar e importar, la bandeja entera, ajustes, hoja de atajos y MCP). Probada la compilación empaquetada en una instancia aislada: importar una carpeta con su etiqueta, fijar y duplicar en la bandeja, exportar ajustes y simular su importación, la hoja de atajos en PDF, exportar toda la biblioteca con `metadatos.csv`, el MCP (recursos, imagen con `include_image`, evento por suscripción), y en la ventana: miniaturas, vista rápida (19 ms), Detalles y la hoja con `Ctrl+/`; cerró con `app quit --force`. Sustituye al `a41e82b`.
 1. Instalador anterior (2026-11-12, 3:20), compilación `a41e82b` (M1 completo, M2.1 a M2.6 y casi toda la parte Must de M2.7). Probada la compilación empaquetada en una instancia aislada: crear una plantilla de pasos con dos imágenes, `library search --type image`, las carpetas sincronizadas detectadas (OneDrive, iCloud y Google Drive en este equipo), abrir una imagen de 10.000 × 30.000 px y exportarla en 4,4 s, y cerrar con `app quit --force`. Sustituye al `1158f3e`.
 1. **Caminata de Carlos** con el instalador nuevo y la guía [`docs/caminata-M1.md`](caminata-M1.md); lo de M2 se prueba con `tests/manual/EDT-047-048.md`, `EDT-043-046.md`, `EDT-015-021.md` y `EDT-069-077.md`. Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
-4. **M3 (captura avanzada):** siguiente. Plan propuesto en [`docs/plan-M3.md`](plan-M3.md), provisional hasta que Carlos lo apruebe; se empieza por los presets (CAP-058 a CAP-064).
+4. **M3 (captura avanzada):** en curso. Plan propuesto en [`docs/plan-M3.md`](plan-M3.md), provisional hasta que Carlos lo apruebe. Hechas M3.1 (presets) y M3.2 (Extraer texto). **Siguiente: M3.3, captura con desplazamiento (CAP-034 a CAP-036)**; después M3.4 a M3.6. Fleco de M3.2: el indicador "trabajando" junto a la zona y que la ventana de resultados recuerde su tamaño.
 5. **M2 (editor completo y biblioteca): terminado en Windows (2026-11-12)**, salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos. El spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
    - **M2.1 terminada (2026-11-11):** selección múltiple (EDT-079), posición y tamaño numéricos (EDT-086), orden de apilado con el menú **Objeto** nuevo (EDT-081), duplicar (EDT-088), alinear y distribuir (EDT-083), bloquear (EDT-085), agrupar (EDT-082), transformar varios con Igualar ancho/alto (EDT-080) y aplanar/desaplanar (EDT-091). Decisiones en `QUESTIONS.md` (sección "M2, entrega 1"). Falta en EDT-091 el criterio del Borrador: llega con las herramientas de píxeles (M2.3).
    - De paso, arreglado: al soltar, un gesto rápido perdía su último movimiento; las entradas nuevas de los menús no funcionaban porque `editor.action` no las aceptaba (ahora hay una prueba); y el diálogo Recuperar trabajo se salía del panel con rutas largas.
