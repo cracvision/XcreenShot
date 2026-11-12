@@ -2303,7 +2303,11 @@ fn fill_changes_the_image_not_the_objects() {
     assert_eq!(r, json!({"changed": true}));
     let img = rendered(&e, &doc);
     assert_eq!(img.get_pixel(300, 150).0, [0, 255, 0, 255]);
-    assert_eq!(img.get_pixel(70, 50).0, [0, 0, 255, 255], "the arrow is not filled");
+    assert_eq!(
+        img.get_pixel(70, 50).0,
+        [0, 0, 255, 255],
+        "the arrow is not filled"
+    );
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(info["undoLabel"], "Fill");
     assert_eq!(info["objects"].as_array().unwrap().len(), 1);
@@ -2415,7 +2419,11 @@ fn erasing_shows_the_canvas_color() {
         json!({"documentId": doc, "points": [[10, 150], [390, 150]], "width": 30}),
     );
     let img = rendered(&e, &doc);
-    assert_eq!(img.get_pixel(200, 140).0[3], 0, "transparent without a canvas color");
+    assert_eq!(
+        img.get_pixel(200, 140).0[3],
+        0,
+        "transparent without a canvas color"
+    );
     assert_eq!(img.get_pixel(200, 150).0, [0, 0, 255, 255], "the arrow stays");
     assert_eq!(img.get_pixel(200, 60).0, [255, 0, 0, 255]);
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
