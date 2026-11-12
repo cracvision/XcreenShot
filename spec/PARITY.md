@@ -334,7 +334,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-011 | Indicador de cambios sin guardar | M1 | Must | En curso |
 | TRY-012 | Selección múltiple y acciones | M2 | Should | — |
 | TRY-013 | Navegación con teclado | M1 | Should | En curso |
-| TRY-014 | Combinar arrastrando al lienzo | M2 | Must | — |
+| TRY-014 | Combinar arrastrando al lienzo | M2 | Must | En curso (Windows: arrastrar desde la bandeja al lienzo de otro documento crea imágenes flotantes en cascada donde se sueltan, con una marca de dónde caerán; sobre una zona de plantilla, la llena; falta la prueba manual de Carlos, porque el arrastre nativo no se puede automatizar, y lo de video llega con VID-) |
 | TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | En curso |
 | TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | — |
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | — |

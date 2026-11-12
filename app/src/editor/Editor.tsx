@@ -23,13 +23,14 @@ import { StatusBar } from "./StatusBar";
 import { Strip } from "./Strip";
 import { Toolbar } from "./Toolbar";
 import { HintBubble } from "../components/Hints";
-import { draggingOut } from "../library/dragOut";
+import { dragged, draggingOut } from "../library/dragOut";
 import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { ToolbarCustomizer } from "./ToolbarCustomizer";
 import { TemplateDialogs } from "./TemplatePicker";
-import { dropOnZone } from "./templateActions";
+import { dropOnCanvas, dropOnZone } from "./templateActions";
+import { canvasPointAt, useDropPoint } from "./templateUi";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
@@ -111,9 +112,20 @@ export function Editor() {
     let off: (() => void) | undefined;
     void getCurrentWebview()
       .onDragDropEvent((e) => {
-        // XcreenShot's own items dragged out (TRY-015) do not open here again.
+        // XcreenShot's own items dragged out (TRY-015) do not open here again; on a
+        // template's zone they fill it (EDT-098), on the canvas of another document
+        // they become floating images (TRY-014).
         if (draggingOut()) {
           setDropping(false);
+          if (e.payload.type === "over")
+            useDropPoint.setState({ at: canvasPointAt(e.payload.position) });
+          else if (e.payload.type === "leave") useDropPoint.setState({ at: null });
+          else if (e.payload.type === "drop") {
+            useDropPoint.setState({ at: null });
+            const sources = dragged()?.docs ?? [];
+            if (!dropOnZone(e.payload.paths, e.payload.position))
+              dropOnCanvas(e.payload.paths, e.payload.position, sources);
+          }
           return;
         }
         if (e.payload.type === "enter" || e.payload.type === "over") setDropping(true);

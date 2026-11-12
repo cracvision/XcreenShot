@@ -27,7 +27,16 @@ import {
 } from "./actions";
 import { canvasMenu, lockedMenu, menuPoint, selectionMenu, zoneMenu } from "./menus";
 import { captureIntoZone, templateCommand } from "./templateActions";
-import { bands, dividerAt, snapOffset, templateOf, useZones, zoneAt, zonesOf } from "./templateUi";
+import {
+  bands,
+  dividerAt,
+  snapOffset,
+  templateOf,
+  useDropPoint,
+  useZones,
+  zoneAt,
+  zonesOf,
+} from "./templateUi";
 import {
   insideSelection,
   modeOf,
@@ -497,6 +506,7 @@ export function Canvas({ doc }: Props) {
   // Templates (EDT-095 to EDT-099): the zone clicked last, the one being framed.
   const activeZone = useZones((s) => s.active);
   const framing = useZones((s) => s.framing);
+  const dropAt = useDropPoint((s) => s.at);
   const template = templateOf(doc);
   useEffect(() => () => useZones.setState({ pointAt: null, active: null, framing: null }), []);
   const shadowImages = useShadowImages(doc.documentId, doc.objects);
@@ -2293,6 +2303,42 @@ export function Canvas({ doc }: Props) {
   const zoneMarks = (() => {
     if (cropRect) return null;
     const marks: React.ReactNode[] = [];
+    // Where dragged tray items would land (TRY-014).
+    if (dropAt) {
+      const [x, y] = toScreen(dropAt);
+      if (
+        dropAt[0] >= 0 &&
+        dropAt[1] >= 0 &&
+        dropAt[0] <= canvasSize.width &&
+        dropAt[1] <= canvasSize.height
+      )
+        marks.push(
+          <Circle
+            key="drop"
+            x={x}
+            y={y}
+            radius={18}
+            stroke={ACCENT}
+            strokeWidth={2}
+            dash={[5, 4]}
+            listening={false}
+          />,
+          <Line
+            key="drop-h"
+            points={[x - 8, y, x + 8, y]}
+            stroke={ACCENT}
+            strokeWidth={2}
+            listening={false}
+          />,
+          <Line
+            key="drop-v"
+            points={[x, y - 8, x, y + 8]}
+            stroke={ACCENT}
+            strokeWidth={2}
+            listening={false}
+          />,
+        );
+    }
     const byId = (id: string | null) =>
       id ? (zonesOf(doc.objects).find((z) => z.id === id) ?? null) : null;
     const active = byId(activeZone);

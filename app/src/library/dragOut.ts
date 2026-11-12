@@ -23,10 +23,16 @@ export interface DragTarget {
 }
 
 let active = false;
+let carrying: DragTarget | null = null;
 
 /** A drag out is under way: drops on XcreenShot's own window are its own files. */
 export function draggingOut(): boolean {
   return active;
+}
+
+/** What the drag under way carries (TRY-014: an item is not dropped on itself). */
+export function dragged(): DragTarget | null {
+  return active ? carrying : null;
 }
 
 /** Whether the pointer went far enough from where the button went down. */
@@ -94,6 +100,7 @@ async function copyInstead(what: DragTarget): Promise<void> {
 /** Prepares the files and drags them out until they are dropped or cancelled. */
 export async function dragOut(what: DragTarget): Promise<void> {
   active = true;
+  carrying = what;
   let released = false;
   const up = () => (released = true);
   window.addEventListener("pointerup", up, true);

@@ -85,6 +85,27 @@ export function dropOnZone(paths: string[], at: { x: number; y: number }): boole
   return true;
 }
 
+/** Tray items dropped on the canvas of another document become floating images where
+ * they land, in a cascade (TRY-014). Returns whether the drop was taken. */
+export function dropOnCanvas(
+  paths: string[],
+  at: { x: number; y: number },
+  sources: string[],
+): boolean {
+  const { doc } = useEditor.getState();
+  const pointAt = useZones.getState().pointAt;
+  if (!doc || !pointAt || paths.length === 0 || useMainView.getState().view !== "editor")
+    return false;
+  // An item dropped on itself does nothing.
+  if (sources.includes(doc.documentId)) return true;
+  const dpr = window.devicePixelRatio || 1;
+  const p = pointAt(at.x / dpr, at.y / dpr);
+  if (!p || p[0] < 0 || p[1] < 0 || p[0] > doc.canvas.width || p[1] > doc.canvas.height)
+    return false;
+  run("document.insert_images", { documentId: doc.documentId, paths, center: p }).catch(fail);
+  return true;
+}
+
 /** Replace image… (EDT-098). */
 export async function replaceZoneImage(zone: string): Promise<void> {
   const chosen = await open({

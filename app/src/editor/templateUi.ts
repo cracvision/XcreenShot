@@ -213,5 +213,16 @@ export const useZones = create<{
   pointAt: ((clientX: number, clientY: number) => Point | null) | null;
 }>(() => ({ active: null, framing: null, pointAt: null }));
 
+/** Where tray items being dragged would land on the canvas (TRY-014); none when the
+ * drag is elsewhere. */
+export const useDropPoint = create<{ at: Point | null }>(() => ({ at: null }));
+
+/** The canvas point under a window position in physical pixels (a drop's). */
+export function canvasPointAt(at: { x: number; y: number }): Point | null {
+  const pointAt = useZones.getState().pointAt;
+  const dpr = window.devicePixelRatio || 1;
+  return pointAt ? pointAt(at.x / dpr, at.y / dpr) : null;
+}
+
 /** The Save as template dialog (EDT-101). */
 export const useSaveTemplate = create<{ open: boolean }>(() => ({ open: false }));
