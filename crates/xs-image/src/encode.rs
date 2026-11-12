@@ -14,10 +14,19 @@ pub fn within_limits(w: u32, h: u32) -> bool {
     w <= MAX_SIDE && h <= MAX_SIDE && u64::from(w) * u64::from(h) <= MAX_PIXELS
 }
 
+/// The pixels of a PNG or JPEG. Images up to the limits of APP-050 decode: the
+/// library's own default (512 MB) would refuse a 10,000 × 30,000 capture.
 pub fn decode(bytes: &[u8]) -> Result<RgbaImage, String> {
-    image::load_from_memory(bytes)
-        .map(|i| i.to_rgba8())
-        .map_err(|e| e.to_string())
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|e| e.to_string())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_SIDE);
+    limits.max_image_height = Some(MAX_SIDE);
+    // The decoded pixels and a converted copy, at 4 bytes each.
+    limits.max_alloc = Some(MAX_PIXELS * 8);
+    reader.limits(limits);
+    reader.decode().map(|i| i.to_rgba8()).map_err(|e| e.to_string())
 }
 
 /// Width and height from a PNG header, without decoding the pixels.

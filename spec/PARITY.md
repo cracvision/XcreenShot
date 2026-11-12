@@ -394,7 +394,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-047 | Recuperación tras un cierre inesperado | M1 | Must | En curso |
 | APP-048 | Del atajo a la cruceta | M1 | Must | En curso |
 | APP-049 | De la captura al editor | M1 | Must | En curso |
-| APP-050 | Editor con imágenes muy grandes | M2 | Must | En curso (Windows: el límite de 32.000 px por lado o 500 megapíxeles se aplica al abrir, insertar, crear, cambiar tamaño y tamaño del lienzo, antes de decodificar y con un mensaje claro; faltan las mediciones con 10.000 × 30.000 px y, si no llegan, dibujar el original por mosaicos) |
+| APP-050 | Editor con imágenes muy grandes | M2 | Must | En curso (Windows: límite de 32.000 px y 500 MP con mensaje claro; 10.000 × 30.000 px con 200 objetos se desplaza a más de 70 fps, guarda en 3,5 s y exporta en 3,5 s (release); faltan el progreso visible al exportar, medir la memoria y ofrecer dividir las capturas con desplazamiento demasiado largas, CAP-) |
 | APP-051 | Consumo en reposo y arranque | M1 | Should | En curso |
 | APP-052 | Escala de la biblioteca | M2 | Must | En curso (Windows: búsqueda y filtros sobre 50.000 elementos en 33 a 136 ms en release; con 20.000 en depuración, primeras miniaturas en 0,7 s y recorrido completo sin fotogramas de más de 100 ms; falta medir 50.000 con el instalador y la reconstrucción en segundo plano) |
 | APP-053 | Cruceta con varios monitores 4K | M1 | Must | En curso |

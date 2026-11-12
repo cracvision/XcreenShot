@@ -4628,3 +4628,52 @@ fn images_beyond_the_limits_are_refused() {
     )
     .is_err());
 }
+
+/// APP-050: a 10,000 × 30,000 px document with 200 objects saves in under 5 s and
+/// exports to PNG in under 10 s (release build; run by hand:
+/// `cargo test --release -p xs-editor -- --ignored huge_document`).
+#[test]
+#[ignore]
+fn huge_document_saves_and_exports_in_time() {
+    let e = env();
+    let img = image::RgbaImage::from_fn(10_000, 30_000, |x, y| {
+        let band = ((y / 500) % 6) as u8;
+        image::Rgba([
+            200 + band * 8,
+            220 - band * 5,
+            240 - (x / 250 % 2) as u8 * 20,
+            255,
+        ])
+    });
+    let (doc, _) = add_capture(&e.core, &img, json!({"mode": "scrolling"}), 1.0, Some("Big")).unwrap();
+    drop(img);
+    let objects: Vec<Value> = (0..200)
+        .map(|i| {
+            let y = 150 * i + 40;
+            if i % 2 == 1 {
+                json!({"type": "arrow", "from": [200, y], "to": [900, y + 60]})
+            } else {
+                json!({"type": "shape", "rect": {"x": 1200 + (i % 7) * 300, "y": y, "w": 260, "h": 100}})
+            }
+        })
+        .collect();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": objects}),
+    );
+    let t = Instant::now();
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let save = t.elapsed();
+    let out = e.outside.path().join("big.png");
+    let t = Instant::now();
+    cli(
+        &e.core,
+        "document.export",
+        json!({"documentId": doc, "format": "png", "path": out}),
+    );
+    let export = t.elapsed();
+    println!("save {} ms, export {} ms", save.as_millis(), export.as_millis());
+    assert!(save < Duration::from_secs(5), "save {save:?}");
+    assert!(export < Duration::from_secs(10), "export {export:?}");
+}
