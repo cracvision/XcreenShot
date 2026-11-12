@@ -446,9 +446,10 @@ fn draw_step(pm: &mut Pixmap, s: &StepObject, dpi: f64) {
     let t = turned(s.rect, s.rotation);
     blend_layer(pm, s.style.opacity, |pm| {
         let w = s.style.outline_width;
-        if let Some(fill) = s.style.fill.as_deref().and_then(Rgba::parse) {
+        let r = s.rect;
+        if let Some(fill) = s.style.fill.as_ref().and_then(|f| f.paint([r.x, r.y, r.w, r.h])) {
             if let Some(path) = step_path(s.style.shape, inner_rect(s.rect, w)) {
-                pm.fill_path(&path, &paint(fill), FillRule::Winding, t, None);
+                pm.fill_path(&path, &fill, FillRule::Winding, t, None);
             }
         }
         if w > 0.0 {
@@ -484,9 +485,10 @@ fn draw_step(pm: &mut Pixmap, s: &StepObject, dpi: f64) {
 fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
     let t = turned(s.rect, s.rotation);
     blend_layer(pm, s.style.opacity, |pm| {
-        if let Some(fill) = s.style.fill.as_deref().and_then(Rgba::parse) {
+        let r = s.rect;
+        if let Some(fill) = s.style.fill.as_ref().and_then(|f| f.paint([r.x, r.y, r.w, r.h])) {
             if let Some(path) = shape_path(s, s.rect, s.style.corner_radius) {
-                pm.fill_path(&path, &paint(fill), FillRule::Winding, t, None);
+                pm.fill_path(&path, &fill, FillRule::Winding, t, None);
             }
         }
         let w = s.style.outline_width;

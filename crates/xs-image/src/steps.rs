@@ -176,7 +176,7 @@ pub struct StepStyle {
     pub sequence: Sequence,
     pub shape: StepShape,
     /// `None` is Transparent.
-    pub fill: Option<String>,
+    pub fill: Option<crate::paint::Fill>,
     pub text_color: String,
     pub outline: String,
     /// 0–10 px.
@@ -193,7 +193,7 @@ impl Default for StepStyle {
             shadow: None,
             sequence: Sequence::Number,
             shape: StepShape::Circle,
-            fill: Some("#F2545B".to_string()),
+            fill: Some("#F2545B".into()),
             text_color: "#FFFFFF".to_string(),
             outline: "#FFFFFF".to_string(),
             outline_width: 0.0,
@@ -219,7 +219,7 @@ impl StepStyle {
         }
         let s: StepStyle = serde_json::from_value(v).map_err(|e| e.to_string())?;
         if let Some(f) = &s.fill {
-            check_color("fill", f)?;
+            f.check("fill")?;
         }
         check_color("textColor", &s.text_color)?;
         check_color("outline", &s.outline)?;

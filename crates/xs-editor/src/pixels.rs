@@ -3,7 +3,6 @@
 
 use image::RgbaImage;
 use xs_core::document::{Document, Object, Patch, PixelRect};
-use xs_image::color::Rgba;
 use xs_image::pixels;
 use xs_image::render::{image_in_base, layer_bounds};
 use xs_image::shapes::ImageObject;
@@ -15,7 +14,7 @@ pub enum Tool {
     /// EDT-047: `color` `None` is Transparent.
     Fill {
         at: [f64; 2],
-        color: Option<Rgba>,
+        color: Option<xs_image::paint::Fill>,
         tolerance: f64,
         opacity: f64,
         global: bool,
@@ -97,7 +96,7 @@ fn apply(
                 return None;
             }
             let (mask, area) = pixels::reach(img, (x as u32, y as u32), *tolerance, *global)?;
-            pixels::fill(img, &mask, *color, *opacity);
+            pixels::fill(img, &mask, color.as_ref(), *opacity, area);
             Some(area)
         }
         Tool::Erase {

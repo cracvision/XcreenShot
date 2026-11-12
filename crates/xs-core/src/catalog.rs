@@ -590,7 +590,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 json!({
                     "documentId": document_id(),
                     "at": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "The pixel clicked, in canvas pixels"},
-                    "color": {"type": ["string", "null"], "description": "#RRGGBB or #RRGGBBAA; null makes the pixels transparent (the canvas color shows)"},
+                    "color": {"type": ["string", "object", "null"], "description": "#RRGGBB or #RRGGBBAA, a gradient {type: linear | radial, angle, stops: [{color, pos}]} over the filled area, or null to make the pixels transparent (the canvas color shows)"},
                     "tolerance": {"type": "number", "minimum": 0, "maximum": 100, "default": 10, "description": "How different a color may be from the clicked one and still fill, %; 0 = only that exact color"},
                     "opacity": {"type": "number", "minimum": 0, "maximum": 100, "default": 100},
                     "global": {"type": "boolean", "default": false, "description": "Every pixel of that color in the image, touching or not"},
@@ -978,16 +978,17 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("editor.colors", &["EDT-019"])
             .scopes(ALL)
             .params(params(json!({}), &[]))
-            .result(json!({"type": "object", "properties": {"mine": {"type": "array", "items": {"type": "string"}}, "recent": {"type": "array", "items": {"type": "string"}}}})),
+            .result(json!({"type": "object", "properties": {"mine": {"type": "array", "items": {"type": "string"}}, "recent": {"type": "array", "items": {"type": "string"}}, "gradients": {"type": "array"}}})),
         B::new("editor.color", &["EDT-019"])
             .scopes(ALL)
             .positional(&["action"])
             .params(params(
                 json!({
-                    "action": {"type": "string", "enum": ["save", "remove", "used"], "description": "save: add to My colors (up to 24); remove: take it out; used: first of the 8 recent colors"},
-                    "color": {"type": "string", "description": "#RRGGBB or #RRGGBBAA"}
+                    "action": {"type": "string", "enum": ["save", "remove", "used", "save_gradient", "remove_gradient"], "description": "save: add to My colors (up to 24); remove: take it out; used: first of the 8 recent colors; save_gradient / remove_gradient: My gradients (up to 16)"},
+                    "color": {"type": "string", "description": "#RRGGBB or #RRGGBBAA"},
+                    "gradient": {"type": "object", "description": "{type: linear | radial, angle, stops: [{color, pos}]}"}
                 }),
-                &["action", "color"],
+                &["action"],
             ))
             .result(json!({"type": "object", "properties": {"mine": {"type": "array"}, "recent": {"type": "array"}}})),
         B::new("editor.themes", &["EDT-017"])

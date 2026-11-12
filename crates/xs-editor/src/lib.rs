@@ -1870,11 +1870,13 @@ fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResul
             .ok_or_else(|| bad("at", "give [x, y]"))?;
         let color = match p.get("color") {
             None | Some(Value::Null) => None,
-            Some(v) => Some(
-                v.as_str()
-                    .and_then(xs_image::color::Rgba::parse)
-                    .ok_or_else(|| bad("color", "use #RRGGBB, #RRGGBBAA or null"))?,
-            ),
+            Some(v) => {
+                // A color or a gradient (EDT-020).
+                let f: xs_image::paint::Fill = serde_json::from_value(v.clone())
+                    .map_err(|_| bad("color", "use #RRGGBB, #RRGGBBAA, a gradient or null"))?;
+                f.check("color").map_err(|r| bad("color", &r))?;
+                Some(f)
+            }
         };
         pixels::Tool::Fill {
             at,
@@ -1961,8 +1963,9 @@ fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResul
 const COLORS_KEY: &str = "colors";
 const MY_COLORS: usize = 24;
 const RECENT_COLORS: usize = 8;
+const MY_GRADIENTS: usize = 16;
 
-fn colors_of(core: &Core) -> (Vec<String>, Vec<String>) {
+fn colors_of(core: &Core) -> (Vec<String>, Vec<String>, Vec<Value>) {
     let v = core.recall(COLORS_KEY).unwrap_or_default();
     let list = |k: &str| -> Vec<String> {
         v.get(k)
@@ -1970,7 +1973,12 @@ fn colors_of(core: &Core) -> (Vec<String>, Vec<String>) {
             .map(|a| a.iter().filter_map(|c| c.as_str().map(str::to_string)).collect())
             .unwrap_or_default()
     };
-    (list("mine"), list("recent"))
+    let gradients = v
+        .get("gradients")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    (list("mine"), list("recent"), gradients)
 }
 
 /// `editor.color`: save or remove one of My colors, or note a color as used.
@@ -1983,33 +1991,60 @@ fn color_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             &[("param", param), ("reason", reason)],
         ))
     };
-    let color = p.get("color").and_then(Value::as_str).unwrap_or_default();
-    let c = xs_image::color::Rgba::parse(color).ok_or_else(|| bad("color", "use #RRGGBB or #RRGGBBAA"))?;
-    // One spelling per color: #RRGGBB, or #RRGGBBAA when not opaque.
-    let color = if c.a == 255 {
-        format!("#{:02X}{:02X}{:02X}", c.r, c.g, c.b)
-    } else {
-        format!("#{:02X}{:02X}{:02X}{:02X}", c.r, c.g, c.b, c.a)
-    };
-    let (mut mine, mut recent) = colors_of(core);
-    match p.get("action").and_then(Value::as_str).unwrap_or_default() {
-        "save" => {
-            if !mine.contains(&color) {
-                if mine.len() >= MY_COLORS {
-                    return Err(bad("color", "My colors holds 24: remove one first"));
+    let (mut mine, mut recent, mut gradients) = colors_of(core);
+    let action = p.get("action").and_then(Value::as_str).unwrap_or_default();
+    if action == "save_gradient" || action == "remove_gradient" {
+        // My gradients, up to 16 (EDT-020).
+        let g = p
+            .get("gradient")
+            .cloned()
+            .ok_or_else(|| bad("gradient", "give the gradient"))?;
+        let fill: xs_image::paint::Fill =
+            serde_json::from_value(g.clone()).map_err(|_| bad("gradient", "it is not a gradient"))?;
+        if !matches!(fill, xs_image::paint::Fill::Gradient(_)) {
+            return Err(bad("gradient", "it is not a gradient"));
+        }
+        fill.check("gradient").map_err(|r| bad("gradient", &r))?;
+        let g = serde_json::to_value(&fill).unwrap_or_default();
+        if action == "save_gradient" {
+            if !gradients.contains(&g) {
+                if gradients.len() >= MY_GRADIENTS {
+                    return Err(bad("gradient", "My gradients holds 16: remove one first"));
                 }
-                mine.push(color);
+                gradients.push(g);
             }
+        } else {
+            gradients.retain(|x| x != &g);
         }
-        "remove" => mine.retain(|x| x != &color),
-        "used" => {
-            recent.retain(|x| x != &color);
-            recent.insert(0, color);
-            recent.truncate(RECENT_COLORS);
+    } else {
+        let color = p.get("color").and_then(Value::as_str).unwrap_or_default();
+        let c =
+            xs_image::color::Rgba::parse(color).ok_or_else(|| bad("color", "use #RRGGBB or #RRGGBBAA"))?;
+        // One spelling per color: #RRGGBB, or #RRGGBBAA when not opaque.
+        let color = if c.a == 255 {
+            format!("#{:02X}{:02X}{:02X}", c.r, c.g, c.b)
+        } else {
+            format!("#{:02X}{:02X}{:02X}{:02X}", c.r, c.g, c.b, c.a)
+        };
+        match action {
+            "save" => {
+                if !mine.contains(&color) {
+                    if mine.len() >= MY_COLORS {
+                        return Err(bad("color", "My colors holds 24: remove one first"));
+                    }
+                    mine.push(color);
+                }
+            }
+            "remove" => mine.retain(|x| x != &color),
+            "used" => {
+                recent.retain(|x| x != &color);
+                recent.insert(0, color);
+                recent.truncate(RECENT_COLORS);
+            }
+            other => return Err(bad("action", other)),
         }
-        other => return Err(bad("action", other)),
     }
-    let v = json!({ "mine": mine, "recent": recent });
+    let v = json!({ "mine": mine, "recent": recent, "gradients": gradients });
     core.remember(COLORS_KEY, v.clone());
     core.host().editor_event("colors", v.clone());
     Ok(v)
@@ -3580,8 +3615,8 @@ pub fn extension() -> Extension {
         on!("editor.styles", |core, _ctx, _p| Ok(styles_list(&core)));
         // My colors and recent colors of the color selector (EDT-019).
         on!("editor.colors", |core, _ctx, _p| {
-            let (mine, recent) = colors_of(&core);
-            Ok(json!({ "mine": mine, "recent": recent }))
+            let (mine, recent, gradients) = colors_of(&core);
+            Ok(json!({ "mine": mine, "recent": recent, "gradients": gradients }))
         });
         on!("editor.color", |core, ctx, p| color_command(&core, ctx, &p));
         on!("editor.style", |core, ctx, p| style_command(&core, ctx, &p));

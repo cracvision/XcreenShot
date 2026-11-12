@@ -2,7 +2,6 @@
 //! shows without objects (`image_in_base`), or on a floating image's picture, and give
 //! back the changed rectangle as new pixels.
 
-use crate::color::Rgba;
 use image::RgbaImage;
 use tiny_skia::{LineCap, LineJoin, PathBuilder, Pixmap, Stroke, Transform};
 
@@ -62,7 +61,15 @@ pub fn reach(img: &RgbaImage, seed: (u32, u32), tolerance: f64, global: bool) ->
 }
 
 /// Paints `color` over the masked pixels at `opacity` %; `None` makes them transparent.
-pub fn fill(img: &mut RgbaImage, mask: &[bool], color: Option<Rgba>, opacity: f64) {
+/// A gradient spans `area`, the masked pixels' bounds (EDT-020).
+pub fn fill(
+    img: &mut RgbaImage,
+    mask: &[bool],
+    color: Option<&crate::paint::Fill>,
+    opacity: f64,
+    area: Area,
+) {
+    let bounds = [area[0] as f64, area[1] as f64, area[2] as f64, area[3] as f64];
     let k = (opacity / 100.0).clamp(0.0, 1.0);
     let w = img.width();
     for (i, on) in mask.iter().enumerate() {
@@ -71,14 +78,16 @@ pub fn fill(img: &mut RgbaImage, mask: &[bool], color: Option<Rgba>, opacity: f6
         }
         let (x, y) = (i as u32 % w, i as u32 / w);
         let p = img.get_pixel_mut(x, y);
-        match color {
-            Some(c) => {
+        let here = color.and_then(|f| f.color_at(x as f64 + 0.5, y as f64 + 0.5, bounds));
+        match (color, here) {
+            (Some(_), None) => {}
+            (Some(_), Some(c)) => {
                 let a = k * c.a as f64 / 255.0;
                 let mix = |old: u8, new: u8| (old as f64 * (1.0 - a) + new as f64 * a).round() as u8;
                 let alpha = (p.0[3] as f64 + (255.0 - p.0[3] as f64) * a).round() as u8;
                 p.0 = [mix(p.0[0], c.r), mix(p.0[1], c.g), mix(p.0[2], c.b), alpha];
             }
-            None => p.0[3] = (p.0[3] as f64 * (1.0 - k)).round() as u8,
+            (None, _) => p.0[3] = (p.0[3] as f64 * (1.0 - k)).round() as u8,
         }
     }
 }
@@ -172,12 +181,12 @@ mod tests {
         let (mask, _) = reach(&img, (6, 6), 0.0, true).unwrap();
         assert!(mask[(6 * 40 + 31) as usize], "global reaches the other one");
         let mut out = img.clone();
-        fill(&mut out, &mask, Rgba::parse("#00FF00"), 100.0);
+        fill(&mut out, &mask, Some(&"#00FF00".into()), 100.0, [0, 0, 40, 20]);
         assert_eq!(out.get_pixel(31, 6).0, [0, 255, 0, 255]);
         assert_eq!(out.get_pixel(20, 15).0, [255, 255, 255, 255]);
         // Transparent: the white background goes.
         let (bg, _) = reach(&img, (0, 0), 0.0, false).unwrap();
-        fill(&mut out, &bg, None, 100.0);
+        fill(&mut out, &bg, None, 100.0, [0, 0, 40, 20]);
         assert_eq!(out.get_pixel(0, 0).0[3], 0);
     }
 

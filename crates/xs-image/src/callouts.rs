@@ -64,7 +64,7 @@ pub struct CalloutStyle {
     pub shadow: Option<crate::shadows::Shadow>,
     pub shape: CalloutShape,
     /// `None` is Transparent.
-    pub fill: Option<String>,
+    pub fill: Option<crate::paint::Fill>,
     /// A soft gradient from the fill to a darker tone.
     pub shading: bool,
     pub outline: String,
@@ -99,7 +99,7 @@ impl Default for CalloutStyle {
         CalloutStyle {
             shadow: None,
             shape: CalloutShape::RoundedRectangle,
-            fill: Some("#FFFFFF".to_string()),
+            fill: Some("#FFFFFF".into()),
             shading: false,
             outline: "#F2545B".to_string(),
             outline_width: 3.0,
@@ -146,7 +146,7 @@ impl CalloutStyle {
         }
         let s: CalloutStyle = serde_json::from_value(v).map_err(|e| e.to_string())?;
         if let Some(f) = &s.fill {
-            check_color("fill", f)?;
+            f.check("fill")?;
         }
         if let Some(c) = &s.tail_color {
             check_color("tailColor", c)?;
@@ -505,7 +505,17 @@ fn darker(c: Rgba) -> Rgba {
     }
 }
 
-fn fill_paint(c: &CalloutObject, color: Rgba) -> Paint<'static> {
+fn fill_paint(c: &CalloutObject, fill: &crate::paint::Fill) -> Paint<'static> {
+    let r = c.rect;
+    // A gradient covers the body (EDT-020); a color can be shaded (EDT-028).
+    let color = match fill {
+        crate::paint::Fill::Gradient(_) => {
+            return fill
+                .paint([r.x, r.y, r.w, r.h])
+                .unwrap_or_else(|| paint(Rgba::WHITE));
+        }
+        crate::paint::Fill::Color(c) => Rgba::parse(c).unwrap_or(Rgba::WHITE),
+    };
     if !c.style.shading {
         return paint(color);
     }
@@ -536,7 +546,7 @@ pub fn draw(pm: &mut Pixmap, c: &CalloutObject, dpi: f64) {
     let s = &c.style;
     let outline = Rgba::parse(&s.outline);
     let ow = s.outline_width;
-    let fill = s.fill.as_deref().and_then(Rgba::parse);
+    let fill = s.fill.clone();
     let tail_color = s
         .tail_color
         .as_deref()
@@ -585,7 +595,7 @@ pub fn draw(pm: &mut Pixmap, c: &CalloutObject, dpi: f64) {
                 }
             }
         }
-        if let Some(f) = fill {
+        if let Some(f) = &fill {
             if !text_only {
                 for w in &wedges {
                     pm.fill_path(

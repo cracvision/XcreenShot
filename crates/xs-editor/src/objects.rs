@@ -131,7 +131,8 @@ impl WandStyle {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct FillStyle {
-    pub color: Option<String>,
+    /// A color or a gradient (EDT-020); `None` is Transparent.
+    pub color: Option<xs_image::paint::Fill>,
     /// 0–100 %: how different a color may be and still fill.
     pub tolerance: f64,
     pub opacity: f64,
@@ -142,7 +143,7 @@ pub struct FillStyle {
 impl Default for FillStyle {
     fn default() -> Self {
         FillStyle {
-            color: Some("#F2545B".to_string()),
+            color: Some("#F2545B".into()),
             tolerance: 10.0,
             opacity: 100.0,
             global: false,
@@ -200,7 +201,7 @@ impl FillStyle {
     fn merged(base: &FillStyle, changes: &Map<String, Value>) -> Result<FillStyle, String> {
         let s: FillStyle = merged(base, changes)?;
         if let Some(c) = &s.color {
-            xs_image::color::Rgba::parse(c).ok_or_else(|| format!("{c} is not a color"))?;
+            c.check("color")?;
         }
         within("tolerance", s.tolerance, 0.0, 100.0)?;
         within("opacity", s.opacity, 0.0, 100.0)?;

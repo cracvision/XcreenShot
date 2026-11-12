@@ -108,7 +108,7 @@ pub struct ShapeStyle {
     pub shadow: Option<crate::shadows::Shadow>,
     pub shape_type: ShapeKind,
     /// `None` is Transparent: only the outline (EDT-029).
-    pub fill: Option<String>,
+    pub fill: Option<crate::paint::Fill>,
     pub outline: String,
     /// 0–100 px; 0 = no outline.
     pub outline_width: f64,
@@ -138,7 +138,7 @@ impl ShapeStyle {
     pub fn merged(base: &ShapeStyle, changes: &Map<String, Value>) -> Result<ShapeStyle, String> {
         let s: ShapeStyle = merged(base, changes)?;
         if let Some(f) = &s.fill {
-            check_color("fill", f)?;
+            f.check("fill")?;
         }
         check_color("outline", &s.outline)?;
         if !(0.0..=100.0).contains(&s.outline_width) {

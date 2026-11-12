@@ -2913,3 +2913,64 @@ fn my_colors_and_recent_colors() {
     );
     assert_eq!(r["mine"].as_array().unwrap().len(), 23);
 }
+
+/// EDT-020: a 90° linear gradient goes from the top to the bottom of a shape; the Fill
+/// tool fills with a gradient; gradients are kept in My gradients.
+#[test]
+fn gradients_fill_shapes_and_areas() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let red_blue = json!({"type": "linear", "angle": 90, "stops": [{"color": "#FF0000", "pos": 0}, {"color": "#0000FF", "pos": 100}]});
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{
+            "type": "shape", "rect": {"x": 20, "y": 20, "w": 100, "h": 100},
+            "style": {"shapeType": "rectangle", "fill": red_blue, "outlineWidth": 0}
+        }]}),
+    );
+    let img = rendered(&e, &doc);
+    let (top, bottom) = (img.get_pixel(70, 22).0, img.get_pixel(70, 118).0);
+    assert!(top[0] > 230 && top[2] < 25, "red at the top: {top:?}");
+    assert!(
+        bottom[2] > 230 && bottom[0] < 25,
+        "blue at the bottom: {bottom:?}"
+    );
+    // Written as given; a bad one is refused.
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["style"]["fill"]["type"], "linear");
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"fill": {"type": "linear", "stops": [{"color": "#FF0000", "pos": 0}]}}}}),
+    );
+    assert!(bad.is_err(), "two stops at least");
+    // The Fill tool: a radial gradient over the white background.
+    let radial = json!({"type": "radial", "stops": [{"color": "#00FF00", "pos": 0}, {"color": "#000000", "pos": 100}]});
+    cli(
+        &e.core,
+        "document.fill",
+        json!({"documentId": doc, "at": [300, 100], "color": radial, "tolerance": 0}),
+    );
+    let img = rendered(&e, &doc);
+    let center = img.get_pixel(200, 100).0;
+    let corner = img.get_pixel(398, 2).0;
+    assert!(
+        center[1] > corner[1],
+        "lighter green at the center: {center:?} {corner:?}"
+    );
+    // My gradients.
+    let r = cli(
+        &e.core,
+        "editor.color",
+        json!({"action": "save_gradient", "gradient": red_blue}),
+    );
+    assert_eq!(r["gradients"].as_array().unwrap().len(), 1);
+    let r = cli(
+        &e.core,
+        "editor.color",
+        json!({"action": "remove_gradient", "gradient": red_blue}),
+    );
+    assert!(r["gradients"].as_array().unwrap().is_empty());
+}
