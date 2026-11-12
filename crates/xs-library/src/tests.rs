@@ -604,3 +604,30 @@ fn search_by_fields_and_reveal() {
         )
         .is_err());
 }
+
+/// LIB-029: a tag added on another computer arrives through the item's sidecar; the
+/// last change wins. Listing the library never reads a file only in the cloud.
+#[test]
+fn tags_from_another_computer_arrive_by_the_sidecar() {
+    let e = env();
+    write_png(&e.path("a.png"), 8, 8);
+    let lib = e.open();
+    lib.scan();
+    let item = lib.list().remove(0);
+    let file = e.path("a.png");
+    let mut meta = xmeta::read(&file).unwrap();
+    meta.tags = vec!["Desde B".into()];
+    meta.favorite = true;
+    xmeta::write(&file, &meta).unwrap();
+    assert!(lib.refresh_marks(&[xmeta::path_of(&file)]));
+    let now = lib.get(&item.id).unwrap();
+    assert_eq!(
+        (now.tags.clone(), now.favorite),
+        (vec!["Desde B".to_string()], true)
+    );
+    assert!(
+        !lib.refresh_marks(&[xmeta::path_of(&file)]),
+        "nothing new the second time"
+    );
+    assert!(!now.cloud);
+}

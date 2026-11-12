@@ -2775,7 +2775,19 @@
       "move_failed_one": "{{count}} file could not be moved and stayed where it was.",
       "move_failed_other": "{{count}} files could not be moved and stayed where they were.",
       "revealed_filters": "The filters were cleared to show the item.",
-      "not_in_library": "This file is not in the library: use Show in folder."
+      "not_in_library": "This file is not in the library: use Show in folder.",
+      "services": "Synced folders on this computer:",
+      "cloud": "In the cloud",
+      "cloud_help": "Only in the cloud: opening it downloads it.",
+      "service": {
+        "onedrive": "OneDrive",
+        "onedrive_business": "OneDrive for work or school",
+        "dropbox": "Dropbox",
+        "google_drive": "Google Drive",
+        "box": "Box",
+        "icloud": "iCloud Drive"
+      },
+      "service_has": "has a library"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

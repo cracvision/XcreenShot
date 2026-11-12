@@ -135,10 +135,21 @@ pub fn finish(batch: &Batch) {
     }
 }
 
-/// Files left waiting by a previous run (it ended during an Undo time).
+/// Files left waiting by a previous run (it ended during an Undo time). A batch still
+/// within its Undo time belongs to another library open now (another core of the same
+/// app, or a test running beside this one): it stays.
 pub fn finish_leftovers(hold: &Path) {
     let Ok(dirs) = std::fs::read_dir(hold) else { return };
     for dir in dirs.flatten() {
+        let recent = dir
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_none_or(|age| age < UNDO + std::time::Duration::from_secs(60));
+        if recent {
+            continue;
+        }
         let files: Vec<PathBuf> = std::fs::read_dir(dir.path())
             .map(|e| e.flatten().map(|f| f.path()).collect())
             .unwrap_or_default();

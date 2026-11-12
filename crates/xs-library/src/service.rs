@@ -410,8 +410,17 @@ impl Library {
         let mut changed = false;
         for f in &found {
             if let Some(item) = by_path.get(f.rel.as_str()) {
-                if item.size != f.size || item.modified != f.modified {
-                    // Saved again in place: read it again, same ID.
+                if f.cloud && (item.size != f.size || item.modified != f.modified || !item.cloud) {
+                    // Gone to the cloud: what the index knows stays; nothing is read.
+                    let _ = index.upsert(&Item {
+                        size: f.size,
+                        modified: f.modified,
+                        cloud: true,
+                        ..(*item).clone()
+                    });
+                    changed = true;
+                } else if !f.cloud && (item.size != f.size || item.modified != f.modified || item.cloud) {
+                    // Saved again in place, or downloaded: read it again, same ID.
                     let _ = index.upsert(&build(f, item.id.clone(), item.favorite, item.tags.clone()));
                     changed = true;
                 }
@@ -472,6 +481,15 @@ impl Library {
         let cache = self.thumbs.join(format!("{id}-{}.png", item.modified));
         if let Ok(bytes) = std::fs::read(&cache) {
             return Some(bytes);
+        }
+        // Only in the cloud: the last thumbnail this computer saw, else none; reading
+        // the file would download it (LIB-029).
+        if item.cloud {
+            return std::fs::read_dir(&self.thumbs)
+                .ok()?
+                .flatten()
+                .find(|e| e.file_name().to_string_lossy().starts_with(&format!("{id}-")))
+                .and_then(|e| std::fs::read(e.path()).ok());
         }
         let abs = self.abs(&item.path);
         let png = if item.format == "xshot" {
@@ -596,10 +614,44 @@ impl Library {
 
     /// Follows changes made outside XcreenShot (Explorer, Finder, sync services):
     /// `on_change` runs after each scan that changed something.
+    /// Takes the tags and favorite of sidecars changed elsewhere (another computer of a
+    /// synced library, LIB-029): the last change wins. Returns whether any changed.
+    pub fn refresh_marks(&self, sidecars: &[PathBuf]) -> bool {
+        let index = self.index.lock().unwrap();
+        let mut changed = false;
+        for side in sidecars {
+            let file = side.with_extension("");
+            let Some(rel) = scan::relative(&self.root, &file) else {
+                continue;
+            };
+            let (Ok(Some(item)), Some(meta)) = (index.by_path(&rel), xmeta::read(&file)) else {
+                continue;
+            };
+            if meta.id == item.id && (meta.tags != item.tags || meta.favorite != item.favorite) {
+                let _ = index.set_marks(&item.id, &meta.tags, meta.favorite);
+                changed = true;
+            }
+        }
+        changed
+    }
+
     pub fn watch(self: &Arc<Self>, on_change: impl Fn() + Send + 'static) {
         let weak = Arc::downgrade(self);
         let debouncer = new_debouncer(SETTLE, move |result: DebounceEventResult| {
             let Ok(events) = result else { return };
+            // Sidecars changed by another computer bring their tags (LIB-029).
+            let sidecars: Vec<PathBuf> = events
+                .iter()
+                .filter(|e| e.path.extension().is_some_and(|x| x == "xmeta"))
+                .map(|e| e.path.clone())
+                .collect();
+            if !sidecars.is_empty() {
+                if let Some(library) = weak.upgrade() {
+                    if library.refresh_marks(&sidecars) {
+                        on_change();
+                    }
+                }
+            }
             // Items, and folders (renamed or moved); not the index nor the sidecars.
             let relevant = events
                 .iter()
@@ -642,6 +694,7 @@ fn build(f: &Found, id: String, favorite: bool, tags: Vec<String>) -> Item {
         favorite,
         tags,
         text: info.text,
+        cloud: f.cloud,
     }
 }
 

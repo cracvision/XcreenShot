@@ -285,6 +285,7 @@ function Item({
           <span className="lc lc-name">
             <Star item={item} />
             {item.name}
+            {item.cloud && <CloudBadge />}
           </span>
           <span className="lc">{date}</span>
           <span className="lc">{shortDate(item.modified, i18n.language)}</span>
@@ -305,12 +306,23 @@ function Item({
               </span>
             )}
             <Star item={item} />
+            {item.cloud && <CloudBadge />}
           </div>
           <div className="lib-name">{item.name}</div>
           <div className="lib-date">{date}</div>
         </>
       )}
     </div>
+  );
+}
+
+/** Only in the cloud (LIB-029): opening it downloads it. */
+function CloudBadge() {
+  const { t } = useTranslation();
+  return (
+    <span className="lib-cloud" title={t("ui.library.cloud_help")}>
+      {t("ui.library.cloud")}
+    </span>
   );
 }
 

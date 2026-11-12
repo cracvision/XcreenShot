@@ -9,8 +9,8 @@ use serde_json::{json, Value};
 
 /// Bumped when the schema changes; an index of another version is rebuilt.
 /// 2: the text of annotations (LIB-007), and the app's name read from CAP-056's
-/// `{name, version, id}`.
-const VERSION: i64 = 2;
+/// `{name, version, id}`. 3: whether the file is only in the cloud (LIB-029).
+const VERSION: i64 = 3;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS items (
@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS items (
     url TEXT,
     favorite INTEGER NOT NULL DEFAULT 0,
     tags TEXT NOT NULL DEFAULT '[]',
-    text TEXT NOT NULL DEFAULT ''
+    text TEXT NOT NULL DEFAULT '',
+    cloud INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS items_captured ON items (captured DESC);
 ";
@@ -53,6 +54,8 @@ pub struct Item {
     pub tags: Vec<String>,
     /// What its annotations say, one line each, for the search (LIB-007).
     pub text: String,
+    /// Only in the cloud: not downloaded on this computer (LIB-029).
+    pub cloud: bool,
 }
 
 impl Item {
@@ -73,6 +76,7 @@ impl Item {
             favorite: r.get::<_, i64>("favorite")? != 0,
             tags: serde_json::from_str(&tags).unwrap_or_default(),
             text: r.get("text")?,
+            cloud: r.get::<_, i64>("cloud")? != 0,
         })
     }
 
@@ -99,6 +103,7 @@ impl Item {
             "url": self.url,
             "favorite": self.favorite,
             "tags": self.tags,
+            "cloud": self.cloud,
         })
     }
 }
@@ -131,7 +136,10 @@ impl Index {
     fn try_open(path: &Path) -> rusqlite::Result<Index> {
         let db = Connection::open(path)?;
         let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version != 0 && version != VERSION {
+        // Version 2 only lacks the cloud flag: a column, nothing to read again.
+        if version == 2 {
+            db.execute_batch("ALTER TABLE items ADD COLUMN cloud INTEGER NOT NULL DEFAULT 0")?;
+        } else if version != 0 && version != VERSION {
             return Err(rusqlite::Error::InvalidQuery);
         }
         db.execute_batch(SCHEMA)?;
@@ -149,10 +157,11 @@ impl Index {
 
     pub fn upsert(&self, item: &Item) -> rusqlite::Result<()> {
         self.db.execute(
-            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text, cloud)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
              ON CONFLICT(id) DO UPDATE SET path = ?2, name = ?3, format = ?4, size = ?5, modified = ?6,
-               captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13, text = ?14",
+               captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13, text = ?14,
+               cloud = ?15",
             params![
                 item.id,
                 item.path,
@@ -168,6 +177,7 @@ impl Index {
                 item.favorite as i64,
                 serde_json::to_string(&item.tags).unwrap_or_else(|_| "[]".into()),
                 item.text,
+                item.cloud as i64,
             ],
         )?;
         Ok(())

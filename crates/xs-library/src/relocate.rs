@@ -8,6 +8,31 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::scan;
 use crate::xmeta;
 
+/// Whether a folder looks like a library, at a glance: an index, or a sidecar among
+/// its first files and month folders. Nothing is read (a sync service's folder may hold
+/// files only in the cloud, LIB-029).
+pub fn looks_like_library(dir: &Path) -> bool {
+    if dir.join("library.db").is_file() {
+        return true;
+    }
+    let has_sidecar = |d: &Path| {
+        std::fs::read_dir(d)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .take(200)
+            .any(|e| e.path().extension().is_some_and(|x| x == "xmeta"))
+    };
+    has_sidecar(dir)
+        || std::fs::read_dir(dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.path().is_dir())
+            .take(24)
+            .any(|e| has_sidecar(&e.path()))
+}
+
 /// What a folder chosen as the new location holds.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Inspect {

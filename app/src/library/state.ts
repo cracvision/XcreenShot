@@ -31,6 +31,8 @@ export interface LibraryItem {
   url: string | null;
   favorite: boolean;
   tags: string[];
+  /** Only in the cloud: not downloaded on this computer (LIB-029). */
+  cloud?: boolean;
 }
 
 interface LibraryList {

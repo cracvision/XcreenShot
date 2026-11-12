@@ -315,7 +315,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-026 | Barra de estado de la biblioteca | M2 | Could | — |
 | LIB-027 | Ubicación por defecto | M1 | Must | En curso |
 | LIB-028 | Cambiar o mover la biblioteca | M2 | Must | En curso (Windows: Preferencias > Biblioteca > Cambiar…, mover con progreso y Cancelar que devuelve todo, empezar vacía, usar la que hay, informe de lo que no se movió, los documentos abiertos siguen a sus archivos, la automatización no puede; faltan comprobar el espacio libre, el tiempo restante, Reintentar, Fusionar (LIB-031) y el bloqueo por configuración administrada) |
-| LIB-029 | Biblioteca en una carpeta sincronizada | M2 | Must | — |
+| LIB-029 | Biblioteca en una carpeta sincronizada | M2 | Must | En curso (Windows: Cambiar… ofrece las carpetas de OneDrive (personal y trabajo), Dropbox, Google Drive, Box e iCloud y dice si ya tienen una biblioteca; los archivos solo en la nube no se leen al indexar ni al hacer miniaturas, llevan la insignia "En la nube" y la búsqueda por etiqueta los encuentra; las etiquetas de otro equipo llegan por el `.xmeta`. Faltan las copias en conflicto con Resolver, el progreso de descarga al abrir y el aviso de tamaño de más de 5 GB) |
 | LIB-030 | Biblioteca en una ubicación de red | M2 | Should | — |
 | LIB-031 | Fusionar bibliotecas | M2 | Should | — |
 | LIB-032 | Llevar la biblioteca a otro equipo | M2 | Should | — |

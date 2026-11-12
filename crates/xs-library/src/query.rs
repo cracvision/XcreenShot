@@ -531,6 +531,7 @@ mod tests {
             favorite: false,
             tags: Vec::new(),
             text: String::new(),
+            cloud: false,
         }
     }
 

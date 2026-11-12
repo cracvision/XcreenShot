@@ -17,6 +17,9 @@ pub struct Found {
     pub size: u64,
     /// Milliseconds since 1970.
     pub modified: i64,
+    /// Only in the cloud (a sync service's file on demand): reading it would download
+    /// it, so its content is not read (LIB-029).
+    pub cloud: bool,
 }
 
 /// What the index keeps about a file besides its ID.
@@ -64,6 +67,25 @@ fn hidden(path: &Path, meta: &std::fs::Metadata) -> bool {
     }
 }
 
+/// Whether a file's content lives only in the cloud (OneDrive, Dropbox, Google Drive
+/// and iCloud for Windows mark it so); macOS keeps such files as hidden `.icloud`
+/// placeholders, which the library does not list.
+pub fn cloud_only(meta: &std::fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const OFFLINE: u32 = 0x1000;
+        const RECALL_ON_OPEN: u32 = 0x40000;
+        const RECALL_ON_DATA_ACCESS: u32 = 0x40_0000;
+        meta.file_attributes() & (OFFLINE | RECALL_ON_OPEN | RECALL_ON_DATA_ACCESS) != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = meta;
+        false
+    }
+}
+
 pub fn millis(time: std::io::Result<std::time::SystemTime>) -> i64 {
     time.ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
@@ -102,6 +124,7 @@ pub fn walk(root: &Path) -> Vec<Found> {
                         rel,
                         size: meta.len(),
                         modified: millis(meta.modified()),
+                        cloud: cloud_only(&meta),
                         abs: path,
                     });
                 }
@@ -126,6 +149,10 @@ pub fn info(found: &Found) -> Info {
         captured: found.modified,
         ..Info::default()
     };
+    // Only in the cloud: its name, type and date, nothing that would download it.
+    if found.cloud {
+        return info;
+    }
     if format == "xshot" {
         if let Ok(summary) = Xshot::read_summary(&found.abs) {
             info.width = Some(summary.width);

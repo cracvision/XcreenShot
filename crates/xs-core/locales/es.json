@@ -2775,7 +2775,19 @@
       "move_failed_one": "{{count}} archivo no se pudo mover y quedó donde estaba.",
       "move_failed_other": "{{count}} archivos no se pudieron mover y quedaron donde estaban.",
       "revealed_filters": "Se quitaron los filtros para mostrar el elemento.",
-      "not_in_library": "Este archivo no está en la biblioteca: usa Mostrar en la carpeta."
+      "not_in_library": "Este archivo no está en la biblioteca: usa Mostrar en la carpeta.",
+      "services": "Carpetas sincronizadas de este equipo:",
+      "cloud": "En la nube",
+      "cloud_help": "Solo en la nube: al abrirlo se descarga.",
+      "service": {
+        "onedrive": "OneDrive",
+        "onedrive_business": "OneDrive del trabajo o centro educativo",
+        "dropbox": "Dropbox",
+        "google_drive": "Google Drive",
+        "box": "Box",
+        "icloud": "iCloud Drive"
+      },
+      "service_has": "tiene una biblioteca"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

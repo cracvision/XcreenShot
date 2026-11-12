@@ -4979,6 +4979,32 @@ body.preparing-drag * {
   white-space: normal;
 }
 
+.lib-services {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lib-cloud {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.lc-name .lib-cloud {
+  position: static;
+  box-shadow: none;
+}
+
 .check-list {
   display: grid;
   gap: 4px;

@@ -9,10 +9,20 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { isCommandError, run } from "../lib/commands";
 
+interface Service {
+  service: string;
+  account: string | null;
+  path: string;
+  library: boolean;
+  current: boolean;
+}
+
 interface Where {
   path: string;
   synced: boolean;
   moving: boolean;
+  /** The sync services' folders of this computer (LIB-029). */
+  services: Service[];
 }
 
 interface Inspect {
@@ -78,10 +88,10 @@ export function LibraryLocation() {
     return () => void off.then((f) => f());
   }, [t, load]);
 
-  const change = async () => {
+  const change = async (chosen?: string) => {
     setNote(null);
     setError(null);
-    const dir = await open({ directory: true, title: t("ui.library.choose_folder") });
+    const dir = chosen ?? (await open({ directory: true, title: t("ui.library.choose_folder") }));
     if (typeof dir !== "string") return;
     try {
       const i = await run<Inspect>("library.location", { action: "inspect", path: dir });
@@ -129,6 +139,26 @@ export function LibraryLocation() {
         </code>
         <div>{t("ui.library.location_help")}</div>
         {where.synced && <div>{t("ui.library.synced_help", { path: where.path })}</div>}
+        {where.services.some((s) => !s.current) && !busy && (
+          <div className="lib-services">
+            <span className="muted">{t("ui.library.services")}</span>
+            {where.services
+              .filter((s) => !s.current)
+              .map((s) => (
+                <button
+                  key={s.path}
+                  type="button"
+                  className="btn small"
+                  title={s.path}
+                  onClick={() => void change(s.path)}
+                >
+                  {t(`ui.library.service.${s.service}`)}
+                  {s.account ? ` (${s.account})` : ""}
+                  {s.library ? ` · ${t("ui.library.service_has")}` : ""}
+                </button>
+              ))}
+          </div>
+        )}
         {progress && (
           <div className="lib-move" role="status">
             <span>{t("ui.library.moving", { done: progress.done, total: progress.total })}</span>

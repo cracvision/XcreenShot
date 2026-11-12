@@ -8,6 +8,7 @@ pub mod recycle;
 pub mod relocate;
 pub mod scan;
 pub mod service;
+pub mod sync;
 pub mod xmeta;
 
 use std::path::{Path, PathBuf};
@@ -304,12 +305,31 @@ fn location_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Result<Value,
         p.get("action").and_then(Value::as_str).unwrap_or("get")
     };
     match action {
-        "get" => Ok(json!({
-            "path": lib.root(),
-            "default": location(),
-            "synced": synced(lib.root()),
-            "moving": MOVING.lock().unwrap().is_some(),
-        })),
+        "get" => {
+            // The sync services' folders, each with XcreenShot's folder inside it, and
+            // whether a library is already there (LIB-029).
+            let services: Vec<Value> = sync::folders()
+                .into_iter()
+                .map(|f| {
+                    let path = f.path.join("XcreenShot");
+                    json!({
+                        "service": f.service,
+                        "account": f.account,
+                        "folder": f.path,
+                        "path": path,
+                        "library": relocate::looks_like_library(&path),
+                        "current": same_path(&path, lib.root()),
+                    })
+                })
+                .collect();
+            Ok(json!({
+                "path": lib.root(),
+                "default": location(),
+                "synced": synced(lib.root()),
+                "moving": MOVING.lock().unwrap().is_some(),
+                "services": services,
+            }))
+        }
         "inspect" => {
             let dir = path()?;
             let i = relocate::inspect(&dir);
