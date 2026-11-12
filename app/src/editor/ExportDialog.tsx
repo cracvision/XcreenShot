@@ -1,5 +1,6 @@
 // File > Export (EDT-110 to EDT-112): the format, its options and the size the file
 // will have; then the system dialog asks where. Remembers the format and its options.
+import { dismissNotice, notify } from "../library/actions";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -303,14 +304,24 @@ function ExportForm({ ids }: { ids: string[] }) {
       if (!path) return;
       close();
       rememberExport(format, o);
-      // The system dialog already asked before replacing a file.
-      await run("document.export", {
-        ...(many ? { documentIds: ids } : { documentId: ids[0] }),
-        format,
-        path,
-        options: o,
-        onConflict: "replace",
-      });
+      // APP-050: a long export (a very large image) says it is under way.
+      let seq: number | undefined;
+      const slow = setTimeout(() => {
+        seq = notify(t("ui.editor.exporting"));
+      }, 300);
+      try {
+        // The system dialog already asked before replacing a file.
+        await run("document.export", {
+          ...(many ? { documentIds: ids } : { documentId: ids[0] }),
+          format,
+          path,
+          options: o,
+          onConflict: "replace",
+        });
+      } finally {
+        clearTimeout(slow);
+        if (seq !== undefined) dismissNotice(seq);
+      }
       useEditor.getState().showToast(t("ui.editor.exported"));
     } catch (e) {
       useEditor.getState().showError(e);

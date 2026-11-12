@@ -436,6 +436,10 @@ impl Inner {
 #[derive(Default)]
 pub struct DocStore {
     inner: Mutex<Inner>,
+    /// One decode of the original pixels at a time: the canvas asks for many pieces of
+    /// a new document at once (shadows, texts), and each one decoding a 300-megapixel
+    /// image on its own took tens of gigabytes (APP-050).
+    decoding: Mutex<()>,
 }
 
 /// Same file, whatever the spelling of its path.
@@ -790,6 +794,14 @@ impl DocStore {
 
     /// Decoded pixels of a document, decoding them if needed (outside the lock).
     pub fn base(&self, id: &str) -> Result<Base, String> {
+        if let Some(b) = self.cached_base(id)? {
+            return Ok(b);
+        }
+        // Whoever decodes first fills the cache; the rest wait and take it.
+        let _one = self
+            .decoding
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let (source, images, key) = {
             let mut inner = self.inner.lock().unwrap();
             inner.touch(id);
@@ -822,6 +834,15 @@ impl DocStore {
         }
         inner.evict(id);
         Ok(base)
+    }
+
+    /// The decoded original pixels of `id`, if they are already there.
+    fn cached_base(&self, id: &str) -> Result<Option<Base>, String> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.touch(id);
+        let doc = inner.get_mut(id).ok_or("document closed")?;
+        let key = doc.document.base_image.clone();
+        Ok(doc.base.as_ref().filter(|_| doc.base_key == key).cloned())
     }
 
     /// The final image of a document read from disk and not in the store.

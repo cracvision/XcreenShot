@@ -2707,7 +2707,8 @@
         "selected_one": "{{count}} selected",
         "duplicated_one": "Duplicated: {{name}}",
         "duplicated_other": "{{count}} copies made."
-      }
+      },
+      "exporting": "Exporting…"
     },
     "multi": {
       "title": "Multi-capture",

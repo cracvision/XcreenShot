@@ -5213,3 +5213,29 @@ fn the_shortcut_sheet_saves_as_a_short_pdf() {
     );
     assert!(std::fs::read_to_string(&html).unwrap().contains("<table>"));
 }
+
+/// APP-050: many pieces of a document asked for at once (the canvas asks for every
+/// shadow and text of a new document together) decode its original pixels once and
+/// share them, instead of once each.
+#[test]
+fn the_original_pixels_decode_once_for_many_requests() {
+    let e = env();
+    let big = image::RgbaImage::from_fn(3000, 2000, |x, y| {
+        image::Rgba([(x % 251) as u8, (y % 241) as u8, 90, 255])
+    });
+    let (doc, path) = add_capture(&e.core, &big, json!({"mode": "region"}), 1.0, Some("Big")).unwrap();
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let id = cli(&e.core, "document.open", json!({"path": path, "show": false}))["documentId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let ed = editor(&e.core);
+    let bases: Vec<_> = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..16).map(|_| s.spawn(|| ed.store.base(&id).unwrap())).collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    assert!(
+        bases.iter().all(|b| Arc::ptr_eq(&b.rgba, &bases[0].rgba)),
+        "one decode, shared"
+    );
+}
