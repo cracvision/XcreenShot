@@ -41,6 +41,8 @@ import { useBatchDialog } from "./batchExport";
 import { usePrintDialog } from "./printState";
 import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
+import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
+import { useZones } from "./templateUi";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -92,14 +94,18 @@ export async function openFiles(paths?: string[]): Promise<void> {
       (await open({
         multiple: true,
         filters: [
-          { name: t("ui.editor.open_filter"), extensions: ["xshot", "png", "jpg", "jpeg"] },
+          {
+            name: t("ui.editor.open_filter"),
+            extensions: ["xshot", "png", "jpg", "jpeg", "xtemplate"],
+          },
         ],
       }));
     if (!chosen) return;
     const all = Array.isArray(chosen) ? chosen : [chosen];
-    // A theme file is imported (EDT-018); the rest are opened.
+    // A theme or template file is imported (EDT-018, EDT-101); the rest are opened.
     for (const path of all.filter((p) => /\.xtheme$/i.test(p))) await importTheme(path);
-    const docs = all.filter((p) => !/\.xtheme$/i.test(p));
+    for (const path of all.filter((p) => /\.xtemplate$/i.test(p))) await importTemplate(path);
+    const docs = all.filter((p) => !/\.(xtheme|xtemplate)$/i.test(p));
     if (docs.length === 0) return;
     // All are opened; the last one is shown (EDT-105), in the Editor view.
     for (const path of docs) {
@@ -603,9 +609,21 @@ export function performAction(action: string): boolean {
       void copyObjects();
       return true;
     case "paste":
-    case "paste_in_place":
+    case "paste_in_place": {
+      // A template's zone clicked last takes the clipboard's image (EDT-098).
+      const zone = useZones.getState().active;
+      if (action === "paste" && doc && zone && doc.objects.some((o) => o.id === zone)) {
+        run("document.template", {
+          documentId: doc.documentId,
+          action: "fill_zone",
+          zone,
+          clipboard: true,
+        }).catch(() => void pasteObjects(false));
+        return true;
+      }
       void pasteObjects(action === "paste_in_place");
       return true;
+    }
     case "copy_all":
       if (!doc) return false;
       void copyAll();
@@ -647,6 +665,23 @@ export function performAction(action: string): boolean {
       return true;
     case "import_theme":
       void importTheme();
+      return true;
+    case "import_template":
+      void importTemplate();
+      return true;
+    case "new_from_template":
+      // EDT-095: with images selected in the Library view, Combine in template.
+      pickTemplate(
+        useMainView.getState().view === "library" ? selectedItems().map((i) => i.path) : [],
+      );
+      return true;
+    case "apply_template":
+      if (!doc) return false;
+      applyTemplate();
+      return true;
+    case "save_as_template":
+      if (!doc) return false;
+      askSaveTemplate();
       return true;
     case "invert_selection":
       if (!pixels) return false;

@@ -2741,7 +2741,18 @@ html.overlay-root.overlay-native #root {
 }
 
 .side-panel .panel-tabs > button {
-  flex: 1;
+  flex: 1 1 0;
+  display: block;
+  min-width: 0;
+  padding: 0 6px;
+  line-height: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* With the Template tab (EDT-097) four tabs share the row. */
+.side-panel .panel-tabs:has(> button:nth-of-type(4)) > button {
+  font-size: 12px;
 }
 
 .side-body {
@@ -4468,6 +4479,213 @@ body.preparing-drag * {
   gap: 8px;
 }
 
+/* ---------- Templates (EDT-095 to EDT-101) ---------- */
+.dialog:has(.tpl-picker) {
+  width: min(880px, 94vw);
+}
+
+.dialog .actions .spacer {
+  flex: 1;
+}
+
+.tpl-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.tpl-search input[type="search"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.tpl-warning {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  border-left: 3px solid var(--warning);
+}
+
+.tpl-groups {
+  display: grid;
+  gap: var(--space-4);
+  max-height: min(56vh, 560px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tpl-group h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.tpl-tile {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.tpl-tile:hover {
+  border-color: var(--control-line);
+}
+
+.tpl-tile[aria-selected="true"] {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+}
+
+.tpl-tile:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.tpl-thumb {
+  display: grid;
+  place-items: center;
+  height: 150px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.tpl-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tpl-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tpl-count {
+  font-size: 12px;
+}
+
+.tpl-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.tpl-sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tpl-section {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 2px 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.tpl-section-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tpl-section-tools {
+  display: flex;
+  flex: none;
+}
+
+.tpl-section > .muted {
+  flex: none;
+  margin-right: 2px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpl-tab .side-subtitle {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tpl-tab .small {
+  font-size: 12px;
+}
+
+/* A template's empty zone over the canvas: what to do with it (EDT-098). */
+.zone-empty {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* It sits on the document, always light, whatever the app's theme: a fixed dark
+     gray like the other marks on the canvas (7:1 on the zone). */
+  color: #44526b;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.zone-empty .btn {
+  pointer-events: auto;
+  color: var(--ink);
+}
+
+.zone-frame-bar {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  animation: fade-in var(--dur-fast) var(--ease-spring) both;
+}
+
+.zone-zoom {
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */
 @media (prefers-reduced-motion: reduce) {
   .menu,
@@ -4507,8 +4725,13 @@ body.preparing-drag * {
   }
 
   .quick-bar,
-  .tb-customizer {
+  .tb-customizer,
+  .zone-frame-bar {
     animation: fade-in var(--dur-instant) linear both;
+  }
+
+  .tpl-tile {
+    transition-duration: 0.01ms;
   }
 
   .btn:hover:not(:disabled),

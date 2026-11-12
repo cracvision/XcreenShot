@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next";
 import { useIndicator } from "../components/useIndicator";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
-import { applyCrop, loadFonts, resetCrop } from "./actions";
+import { applyCrop, resetCrop } from "./actions";
 import { ColorPicker } from "./ColorPicker";
-import { NumberField, SelectField } from "./Fields";
+import { FontField, NumberField, SelectField } from "./Fields";
 import { FillPicker } from "./FillPicker";
 import { Field, PositionSize } from "./PositionSize";
 import { CAPS, LINE_STYLES, type Cap, type LineStyle } from "./geometry";
@@ -45,12 +45,13 @@ import {
   type Shadow,
   WITH_SHADOW,
 } from "./state";
-import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
 import { selectPixels } from "./pixelSelection";
 import { StampBrowser } from "./StampBrowser";
 import { StylesTab } from "./StylesTab";
 import { EffectsTab } from "./EffectsTab";
+import { TemplateTab } from "./TemplateTab";
+import { templateOf } from "./templateUi";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -1398,40 +1399,6 @@ function AlignChoice({
   );
 }
 
-/** Installed fonts with search (EDT-026): a field that suggests as you type. */
-function FontField(props: {
-  value: string | undefined;
-  fonts: string[];
-  onCommit: (v: string) => void;
-}) {
-  const { t } = useTranslation();
-  const [draft, setDraft] = useDraft(props.value ?? "");
-  const typed = () => {
-    const name = draft.trim();
-    if (name && name !== props.value) props.onCommit(name);
-    setDraft(null);
-  };
-  return (
-    <>
-      <input
-        id="font-field"
-        list="font-list"
-        value={draft}
-        placeholder={props.value === undefined ? t("ui.editor.mixed") : ""}
-        onFocus={() => void loadFonts()}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={typed}
-        onKeyDown={(e) => e.key === "Enter" && typed()}
-      />
-      <datalist id="font-list">
-        {props.fonts.map((f) => (
-          <option key={f} value={f} />
-        ))}
-      </datalist>
-    </>
-  );
-}
-
 /** While Crop is active (EDT-049): the size of the box, Crop and Cancel. */
 function CropProperties() {
   const { t } = useTranslation();
@@ -1534,8 +1501,10 @@ export function SidePanel() {
   const width = usePanel((s) => s.width);
   const tab = usePanel((s) => s.tab);
   const setPanel = usePanel((s) => s.set);
-  const setTab = (tab: "props" | "styles" | "effects") => setPanel({ tab });
+  const setTab = (tab: "props" | "styles" | "effects" | "template") => setPanel({ tab });
   const doc = useEditor((s) => s.doc);
+  // The Template tab, while the document is a template (EDT-097).
+  const isTemplate = templateOf(doc) !== null;
   const tool = useEditor((s) => s.tool);
   const selection = useEditor((s) => s.selection);
   const editing = useEditor((s) => s.textEdit !== null);
@@ -1589,9 +1558,15 @@ export function SidePanel() {
   return (
     <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
       <ResizeEdge />
-      <PanelTabs tab={tab} setTab={setTab} />
+      <PanelTabs
+        tab={tab === "template" && !isTemplate ? "props" : tab}
+        setTab={setTab}
+        template={isTemplate}
+      />
       <div className="side-body" role="tabpanel">
-        {tab === "effects" ? (
+        {tab === "template" && isTemplate ? (
+          <TemplateTab />
+        ) : tab === "effects" ? (
           <EffectsTab />
         ) : tab === "styles" ? (
           <>
@@ -1613,13 +1588,15 @@ export function SidePanel() {
 function PanelTabs({
   tab,
   setTab,
+  template,
 }: {
   tab: string;
-  setTab: (tab: "styles" | "props" | "effects") => void;
+  setTab: (tab: "styles" | "props" | "effects" | "template") => void;
+  template: boolean;
 }) {
   const { t } = useTranslation();
   const tabs = useRef<HTMLDivElement>(null);
-  useIndicator(tabs, tab);
+  useIndicator(tabs, `${tab}-${template}`);
   return (
     <div className="panel-tabs seg" role="tablist" ref={tabs}>
       <span className="seg-indicator" aria-hidden="true" />
@@ -1627,6 +1604,7 @@ function PanelTabs({
         type="button"
         role="tab"
         aria-selected={tab === "styles"}
+        title={t("ui.editor.tab_styles")}
         onClick={() => setTab("styles")}
       >
         {t("ui.editor.tab_styles")}
@@ -1635,6 +1613,7 @@ function PanelTabs({
         type="button"
         role="tab"
         aria-selected={tab === "props"}
+        title={t("ui.editor.tab_properties")}
         onClick={() => setTab("props")}
       >
         {t("ui.editor.tab_properties")}
@@ -1643,10 +1622,22 @@ function PanelTabs({
         type="button"
         role="tab"
         aria-selected={tab === "effects"}
+        title={t("ui.editor.tab_effects")}
         onClick={() => setTab("effects")}
       >
         {t("ui.editor.tab_effects")}
       </button>
+      {template && (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "template"}
+          title={t("ui.editor.tab_template")}
+          onClick={() => setTab("template")}
+        >
+          {t("ui.editor.tab_template")}
+        </button>
+      )}
     </div>
   );
 }

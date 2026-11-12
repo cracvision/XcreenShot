@@ -1147,6 +1147,99 @@ pub fn specs() -> Vec<CommandSpec> {
                 "default": {"type": "array", "items": {"type": "string"}},
                 "available": {"type": "object", "description": "{tools, actions, effects} that can go on it"}
             }})),
+        B::new("editor.templates", &["EDT-095", "EDT-096", "EDT-101"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["list", "rename", "duplicate", "delete", "import", "export"], "default": "list"},
+                    "id": {"type": "string", "description": "An own template, own:<name> (rename, duplicate, delete, export)"},
+                    "name": {"type": "string", "description": "The new name (rename)"},
+                    "path": {"type": "string", "description": "The .xtemplate file to import, or where to export"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "templates": {"type": "array", "description": "{id, name, family, min, max, own} in the picker's order; own ones add path and zones"},
+                "max": {"type": "integer", "description": "Most images a template takes"},
+                "folder": {"type": "string"},
+                "result": {"description": "The new id (import, rename, duplicate) or the exported file"}
+            }})),
+        B::new("document.from_template", &["EDT-095", "EDT-096", "EDT-097"])
+            .positional(&["template"])
+            .params(params(
+                json!({
+                    "template": {"type": "string", "description": "A built-in template id (editor.templates), own:<name> or a .xtemplate file"},
+                    "images": {"type": "array", "maxItems": 100, "items": {"type": ["string", "object"]}, "description": "Files (paths) or {documentId} of open documents, in zone order; the first 20 are used"},
+                    "settings": {"type": "object", "description": "Template settings (EDT-097): scale fit|fill, title, captions, footer, author system|custom, authorText, font, textColor, background, numbering, numberColor, numberShape, reversed, theme"}
+                }),
+                &["template"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"},
+                "path": {"type": "string"},
+                "zones": {"type": "integer"},
+                "placed": {"type": "integer"},
+                "warnings": {"type": "array", "items": {"type": "string"}}
+            }})),
+        B::new("document.template", &["EDT-097", "EDT-098", "EDT-099", "EDT-101"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
+                    "settings": {"type": "object", "description": "settings: the settings to change (EDT-097)"},
+                    "kind": {"type": "string", "enum": ["step", "imageText", "text", "twoImages", "title", "footer"], "description": "add_section: its kind"},
+                    "index": {"type": "integer", "minimum": 0, "description": "add_section, move_section: its place among the sections"},
+                    "sectionId": {"type": "string"},
+                    "height": {"type": "number", "minimum": 40, "maximum": 5000, "description": "resize_section"},
+                    "zone": {"type": "string", "description": "A zone: its object id or slot (zone:<section>:<n>)"},
+                    "with": {"type": "string", "description": "swap_zones: the other zone"},
+                    "path": {"type": "string", "description": "fill_zone: an image or .xshot file"},
+                    "sourceDocumentId": {"type": "string", "description": "fill_zone: an open document's final image"},
+                    "fromObject": {"type": "string", "description": "fill_zone: a floating image that goes into the zone"},
+                    "clipboard": {"type": "boolean", "description": "fill_zone: the image on the clipboard"},
+                    "zoom": {"type": "number", "minimum": 0.1, "maximum": 10, "description": "frame_zone: 1 = fitted or filled"},
+                    "zoomBy": {"type": "number", "description": "frame_zone: steps of 10 % (+1, -1)"},
+                    "offset": {"type": "array", "items": {"type": "number"}, "description": "frame_zone: [x, y] px from the centered place"},
+                    "reset": {"type": "boolean", "description": "frame_zone: back to as placed"},
+                    "objectId": {"type": "string", "description": "convert_zone: a floating image"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "isTemplate": {"type": "boolean"},
+                "template": {"type": ["object", "null"]},
+                "sections": {"type": "array", "description": "{id, kind, top, height} of the sections shown"},
+                "zones": {"type": "array", "description": "{objectId, slot, section, rect, filled, zoom}"}
+            }})),
+        B::new("document.save_as_template", &["EDT-101"])
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "name": {"type": "string"},
+                    "family": {"type": "string", "enum": ["steps", "timeline", "compare", "collage", "mine"], "default": "mine"},
+                    "emptyZones": {"type": "boolean", "default": true},
+                    "replace": {"type": "boolean", "default": false, "description": "Overwrite an own template of that name"}
+                }),
+                &["name"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}, "path": {"type": "string"}}})),
+        B::new("document.apply_theme", &["EDT-100"])
+            .mutates()
+            .positional(&["themeId"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "themeId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "Only these; without it, every object"},
+                    "fromThemeId": {"type": "string", "description": "The theme the colors come from; default: the template's or the active one"}
+                }),
+                &["themeId"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "integer"}}})),
         B::new("editor.clipboard", &["EDT-103", "EDT-104"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {
@@ -1425,7 +1518,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 97] = [
+pub const EDITOR_ACTIONS: [&str; 101] = [
     "open",
     "save",
     "save_as",
@@ -1505,6 +1598,12 @@ pub const EDITOR_ACTIONS: [&str; 97] = [
     // File > New image and New from clipboard (EDT-103, EDT-104).
     "new_image",
     "new_from_clipboard",
+    // File > New from template, Apply template, Save as template, Import > Template
+    // (EDT-095, EDT-101).
+    "new_from_template",
+    "apply_template",
+    "save_as_template",
+    "import_template",
     // File > Batch export (EDT-113).
     "batch_export",
     // File > Print (EDT-114).

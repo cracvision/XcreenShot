@@ -422,6 +422,22 @@ const ICONS = {
       <path d="M6 8l4 4 4-4" />
     </Svg>
   ),
+  up: (
+    <Svg>
+      <path d="M6 12l4-4 4 4" />
+    </Svg>
+  ),
+  trash: (
+    <Svg>
+      <path d="M4.5 6h11M8 6V4.5h4V6M6 6l.8 9.5h6.4L14 6M8.5 9v4M11.5 9v4" />
+    </Svg>
+  ),
+  template: (
+    <Svg>
+      <rect x="3.5" y="3.5" width="13" height="13" rx="1.5" />
+      <path d="M3.5 7.5h13M10 7.5v9" />
+    </Svg>
+  ),
 };
 
 export type IconName = keyof typeof ICONS;

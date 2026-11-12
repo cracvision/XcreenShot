@@ -15,6 +15,9 @@ pub mod recovery;
 pub mod samples;
 pub mod steps;
 pub mod store;
+mod template_cmds;
+pub mod templates;
+pub use template_cmds::template_thumbnail;
 pub mod themes;
 pub mod transform;
 
@@ -4326,6 +4329,21 @@ pub fn extension() -> Extension {
         });
         on!("document.new", |core, ctx, p| new_image(&core, ctx, &p));
         on!("editor.toolbar", |core, ctx, p| toolbar_command(&core, ctx, &p));
+        on!("editor.templates", |core, ctx, p| {
+            template_cmds::templates_command(&core, ctx, &p)
+        });
+        on!("document.from_template", |core, ctx, p| {
+            template_cmds::from_template(&core, ctx, &p)
+        });
+        on!("document.template", |core, ctx, p| {
+            template_cmds::template_command(&core, ctx, &p)
+        });
+        on!("document.save_as_template", |core, ctx, p| {
+            template_cmds::save_as_template(&core, ctx, &p)
+        });
+        on!("document.apply_theme", |core, ctx, p| template_cmds::apply_theme(
+            &core, ctx, &p
+        ));
         on!("document.batch_export", |core, ctx, p| batch_export(
             &core, ctx, &p
         ));

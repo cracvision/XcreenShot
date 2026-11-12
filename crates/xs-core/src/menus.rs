@@ -137,17 +137,29 @@ fn editor_menus() -> Vec<MenuEntry> {
         Submenu {
             label: "menu.file",
             items: vec![
+                // Create (EDT-095, EDT-103, EDT-104).
+                action(
+                    "editor.new_from_template",
+                    "menu.new_from_template",
+                    "new_from_template",
+                ),
                 action("editor.new_image", "menu.new_image", "new_image"),
                 action(
                     "editor.new_from_clipboard",
                     "menu.new_from_clipboard",
                     "new_from_clipboard",
                 ),
+                action("editor.apply_template", "menu.apply_template", "apply_template"),
                 Separator,
                 action("editor.open", "menu.open", "open"),
                 Separator,
                 action("editor.save", "menu.save", "save"),
                 action("editor.save_as", "menu.save_as", "save_as"),
+                action(
+                    "editor.save_as_template",
+                    "menu.save_as_template",
+                    "save_as_template",
+                ),
                 action("editor.export", "menu.export", "export"),
                 action("editor.batch_export", "menu.batch_export", "batch_export"),
                 action("editor.print", "menu.print", "print"),
@@ -159,7 +171,14 @@ fn editor_menus() -> Vec<MenuEntry> {
                 // A theme from a .xtheme file (EDT-018).
                 Submenu {
                     label: "menu.import",
-                    items: vec![action("editor.import_theme", "menu.import_theme", "import_theme")],
+                    items: vec![
+                        action("editor.import_theme", "menu.import_theme", "import_theme"),
+                        action(
+                            "editor.import_template",
+                            "menu.import_template",
+                            "import_template",
+                        ),
+                    ],
                 },
                 Separator,
                 cmd("file_preferences", "menu.preferences", "settings.open"),
@@ -632,8 +651,9 @@ mod tests {
         let file = &menus[0]["items"];
         assert_eq!(file[0]["kind"], "command");
         assert_eq!(file[0]["command"], "editor.action");
-        assert_eq!(file[0]["params"], json!({ "action": "new_image" }));
-        assert_eq!(file[2]["kind"], "separator");
+        assert_eq!(file[0]["params"], json!({ "action": "new_from_template" }));
+        assert_eq!(file[1]["params"], json!({ "action": "new_image" }));
+        assert_eq!(file[4]["kind"], "separator");
         let view = menus[3]["items"].as_array().unwrap();
         let toolbar = view.iter().find(|i| i["kind"] == "submenu").unwrap();
         assert_eq!(toolbar["items"][1]["checked"], "editor.toolbar_labels");

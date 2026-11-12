@@ -100,6 +100,9 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                     .map(|png| (std::sync::Arc::new(png), "image/png"))
             })
         }
+        // A template of the picker (EDT-095): built-in ones laid out for `n` pictures.
+        ["template", id, n] => xs_editor::template_thumbnail(&core, &unescape(id), n.parse().unwrap_or(3))
+            .map(|png| (std::sync::Arc::new(png), "image/png")),
         ["multi", item] => xs_capture::multi::thumbnail_png(&core, item).map(|png| (png, "image/png")),
         [id, "image", name] => editor.store.image_file(id, name).map(|bytes| {
             let mime = if name.ends_with(".jpg") {
@@ -137,4 +140,29 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             .unwrap_or_default(),
         None => builder.status(404).body(Vec::new()).unwrap_or_default(),
     }
+}
+
+/// `%XX` escapes of a path segment decoded (an own template's name).
+fn unescape(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let hex = |b: u8| (b as char).to_digit(16);
+        match (
+            bytes[i],
+            bytes.get(i + 1).copied().and_then(hex),
+            bytes.get(i + 2).copied().and_then(hex),
+        ) {
+            (b'%', Some(h), Some(l)) => {
+                out.push((h * 16 + l) as u8);
+                i += 3;
+            }
+            (b, _, _) => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }

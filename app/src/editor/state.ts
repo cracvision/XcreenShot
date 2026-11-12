@@ -474,6 +474,23 @@ export interface ImageObject {
   style: ImageStyle;
 }
 
+/** A template's image zone (EDT-098, ADR 0007): a frame that crops its picture. */
+export interface ZoneObject {
+  id: string;
+  type: "zone";
+  rect: Rect;
+  /** File name in `images/`; none while empty. */
+  image?: string | null;
+  /** Fit the picture whole or fill the zone (EDT-097). */
+  fit?: "fit" | "fill";
+  /** 1 = as placed; framing (EDT-098). */
+  zoom?: number;
+  offset?: [number, number];
+  /** Its place in the template's layout: `zone:<section>:<n>`. */
+  slot?: string;
+  section?: string;
+}
+
 /** Objects of later builds are kept and drawn by the core, not edited here. */
 /** A line (EDT-025): an arrow of its own tool, without ends by default. */
 export type LineObject = Omit<ArrowObject, "type"> & { type: "line" };
@@ -498,6 +515,7 @@ export type DocObject = (
   | SpotlightObject
   | StampObject
   | SimplifyObject
+  | ZoneObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -618,6 +636,8 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   redoLabel: string | null;
   /** Remembered view (EDT-007): zoom and the image point at the center. */
   view: { zoom?: number; x?: number; y?: number } | null;
+  /** A template's settings and sections (EDT-095 to EDT-101, ADR 0007). */
+  template?: unknown;
 }
 
 export interface Pending {
@@ -929,7 +949,7 @@ export function takeZoomRequest(id: string): ZoomRequest | null {
 export interface PanelLayout {
   visible: boolean;
   width: number;
-  tab: "props" | "styles" | "effects";
+  tab: "props" | "styles" | "effects" | "template";
 }
 
 const PANEL_KEY = "xs.editor.panel";

@@ -3,6 +3,7 @@ import type { MenuItem } from "../components/Menu";
 import { shortcutOf } from "../editor/menus";
 import { askDelete, askRename, copyPath, itemRef, openItems, showInFolder } from "./actions";
 import type { LibraryItem } from "./state";
+import { openPicker } from "../editor/templateUi";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -13,6 +14,13 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
   const one = items.length === 1 ? items[0] : undefined;
   return [
     { id: "open", label: t("menu.open_item"), onSelect: () => void openItems(items) },
+    // EDT-095: the selected captures, in order, into a template's zones.
+    {
+      id: "combine",
+      label: t("menu.combine_template"),
+      shortcut: shortcutOf("editor.new_from_template"),
+      onSelect: () => openPicker(items.map((i) => i.path)),
+    },
     {
       id: "rename",
       label: t("menu.rename_item"),

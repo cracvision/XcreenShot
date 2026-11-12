@@ -18,12 +18,14 @@ import {
   toggleToolbarLabels,
   unflattenLayer,
 } from "./actions";
-import { useEditor, usePanel, type FlatLayer, type StepObject } from "./state";
+import { useEditor, usePanel, type FlatLayer, type StepObject, type ZoneObject } from "./state";
 import { useLibrary, useMainView, useTray } from "../library/state";
 import { neighbour } from "./tray";
 import { TYPES } from "./effects";
 import { useClipboard, type ClipboardInfo } from "./imageMenu";
 import { useFullscreen } from "./fullscreen";
+import { captureIntoZone, replaceZoneImage, templateCommand } from "./templateActions";
+import { useZones } from "./templateUi";
 
 interface Point {
   x: number;
@@ -170,6 +172,7 @@ export function canvasMenu(
   at: Point,
   layer?: FlatLayer,
   step?: StepObject,
+  image?: string,
 ): void {
   const items: MenuItem[] = onObject
     ? [
@@ -205,6 +208,15 @@ export function canvasMenu(
     const first = items[2];
     if (first) items[2] = { ...first, separator: true };
   }
+  if (image) {
+    // A floating image becomes a template's zone (EDT-101).
+    items.push({
+      id: "editor.convert_zone",
+      label: i18next.t("ui.editor.template.convert_zone"),
+      separator: true,
+      onSelect: () => void templateCommand("convert_zone", { objectId: image }),
+    });
+  }
   if (!onObject && layer) {
     items.push({
       id: "editor.unflatten",
@@ -216,6 +228,69 @@ export function canvasMenu(
     });
   }
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
+}
+
+/** Right click on a template's zone (EDT-098): capture, replace, paste, framing, remove
+ * the image or the caption. */
+export function zoneMenu(zone: ZoneObject, at: Point): void {
+  const tr = (k: string) => i18next.t(`ui.editor.template.${k}`);
+  const filled = Boolean(zone.image);
+  const z = zone.id;
+  const frame = (params: Record<string, unknown>) =>
+    void templateCommand("frame_zone", { zone: z, ...params });
+  const items: MenuItem[] = [
+    { id: "zone.capture", label: tr("capture"), onSelect: () => void captureIntoZone(z) },
+    {
+      id: "zone.replace",
+      label: tr(filled ? "replace" : "choose"),
+      onSelect: () => void replaceZoneImage(z),
+    },
+    {
+      id: "zone.paste",
+      label: i18next.t("menu.paste"),
+      shortcut: shortcutOf("editor.paste"),
+      onSelect: () => void templateCommand("fill_zone", { zone: z, clipboard: true }),
+    },
+    {
+      id: "zone.frame",
+      label: tr("frame"),
+      disabled: !filled,
+      separator: true,
+      onSelect: () => useZones.setState({ framing: z, active: z }),
+    },
+    {
+      id: "zone.zoom_in",
+      label: tr("zoom_in"),
+      disabled: !filled,
+      onSelect: () => frame({ zoomBy: 1 }),
+    },
+    {
+      id: "zone.zoom_out",
+      label: tr("zoom_out"),
+      disabled: !filled,
+      onSelect: () => frame({ zoomBy: -1 }),
+    },
+    {
+      id: "zone.reset",
+      label: tr("reset_frame"),
+      disabled: !filled,
+      onSelect: () => frame({ reset: true }),
+    },
+    {
+      id: "zone.clear",
+      label: tr("remove_image"),
+      disabled: !filled,
+      separator: true,
+      onSelect: () => void templateCommand("clear_zone", { zone: z }),
+    },
+    {
+      id: "zone.caption",
+      label: tr("remove_caption"),
+      disabled: !zone.slot,
+      onSelect: () => void templateCommand("remove_caption", { zone: z }),
+    },
+  ];
+  useContextMenu.setState({ open: true, ...at, label: tr("zone_menu"), items });
 }
 
 /** Right click on a locked object: Unlock (EDT-085). */
@@ -385,6 +460,11 @@ export function useMenuBar(): void {
     enabled["editor.pixel_grid"] = hasDoc;
     enabled["editor.fullscreen"] = true;
     enabled["editor.print"] = hasDoc;
+    // Templates (EDT-095, EDT-101).
+    enabled["editor.new_from_template"] = true;
+    enabled["editor.apply_template"] = hasDoc && !inLibrary;
+    enabled["editor.save_as_template"] = hasDoc && !inLibrary;
+    enabled["editor.import_template"] = true;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;
     enabled["editor.flip_objects_vertical"] = selected;

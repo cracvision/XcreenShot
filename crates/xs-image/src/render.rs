@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use image::RgbaImage;
+use serde_json::Value;
 use tiny_skia::{
     FillRule, LineCap, LineJoin, Mask, Paint, PathBuilder, Pixmap, PixmapPaint, Stroke, StrokeDash, Transform,
 };
@@ -18,7 +19,7 @@ use crate::highlights::{self, HighlightObject};
 use crate::magnify::{self, MagnifyObject};
 use crate::pens::{self, PenObject};
 use crate::shapes::{
-    inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
+    inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject, ZoneObject,
 };
 use crate::simplify::{self, SimpleObject};
 use crate::spotlights::{self, SpotlightObject};
@@ -565,9 +566,70 @@ fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
     Some((out, x, y))
 }
 
+/// Draws a template's zone (EDT-098): its picture cropped to its frame. An empty one
+/// draws nothing; the editor shows its placeholder.
+fn draw_zone(pm: &mut Pixmap, z: &ZoneObject, images: &BTreeMap<String, Arc<Pixmap>>) {
+    let Some(picture) = z.image.as_ref().and_then(|n| images.get(n)) else {
+        return;
+    };
+    let (x, y, k) = z.placement((picture.width() as f64, picture.height() as f64));
+    let Some(frame) =
+        tiny_skia::Rect::from_xywh(z.rect.x as f32, z.rect.y as f32, z.rect.w as f32, z.rect.h as f32)
+    else {
+        return;
+    };
+    let Some(mut mask) = Mask::new(pm.width(), pm.height()) else {
+        return;
+    };
+    mask.fill_path(
+        &PathBuilder::from_rect(frame),
+        FillRule::Winding,
+        true,
+        Transform::identity(),
+    );
+    let paint = PixmapPaint {
+        quality: tiny_skia::FilterQuality::Bicubic,
+        ..PixmapPaint::default()
+    };
+    let at = Transform::from_row(k as f32, 0.0, 0.0, k as f32, x as f32, y as f32);
+    pm.draw_pixmap(0, 0, picture.as_ref().as_ref(), &paint, at, Some(&mask));
+}
+
+/// What the final image shows of a template (EDT-098): empty zones, and the caption and
+/// number of each, are left out. Other documents show all their objects.
+pub fn printed_objects(objects: &[Object]) -> std::borrow::Cow<'_, [Object]> {
+    let empty: Vec<String> = objects
+        .iter()
+        .filter(|o| o.kind == "zone")
+        .filter(|o| ZoneObject::from_props(&o.props).is_ok_and(|z| z.image.is_none()))
+        .filter_map(|o| o.props.get("slot").and_then(Value::as_str))
+        .filter_map(|s| s.strip_prefix("zone:").map(str::to_string))
+        .collect();
+    if empty.is_empty() {
+        return std::borrow::Cow::Borrowed(objects);
+    }
+    std::borrow::Cow::Owned(
+        objects
+            .iter()
+            .filter(|o| {
+                let slot = o.props.get("slot").and_then(Value::as_str).unwrap_or("");
+                !slot.split_once(':').is_some_and(|(kind, rest)| {
+                    ["zone", "caption", "number"].contains(&kind) && empty.iter().any(|e| e == rest)
+                })
+            })
+            .cloned()
+            .collect(),
+    )
+}
+
 /// Draws one object. Kinds this build does not know are skipped (a newer file).
 fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
     match object.kind.as_str() {
+        "zone" => {
+            if let Ok(z) = ZoneObject::from_props(&object.props) {
+                draw_zone(pm, &z, images);
+            }
+        }
         "arrow" | "line" => {
             let Ok(a) = Arrow::from_props(&object.props) else {
                 return;
@@ -877,6 +939,7 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "image" => ImageObject::from_props(&object.props)
             .ok()
             .map(|i| (i.rect, i.rotation)),
+        "zone" => ZoneObject::from_props(&object.props).ok().map(|z| (z.rect, 0.0)),
         _ => None,
     };
     if let Some((r, rotation)) = rect {
@@ -891,7 +954,7 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
 /// objects (EDT-091).
 pub fn render(doc: &Document, base: &Base) -> RgbaImage {
     let mut pm = image_layer(doc, base);
-    draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
+    draw_all(&mut pm, &printed_objects(&doc.objects), doc.dpi, &base.images);
     straight(&pm)
 }
 
@@ -929,7 +992,7 @@ pub fn render_final(doc: &Document, base: &Base, meta: &serde_json::Value) -> (R
             pm = p;
         }
     }
-    draw_all(&mut pm, &doc.objects, doc.dpi, &base.images);
+    draw_all(&mut pm, &printed_objects(&doc.objects), doc.dpi, &base.images);
     let mut img = straight(&pm);
     if radius > 0.0 {
         img = crate::fx::round_corners(img, radius);
@@ -1241,6 +1304,19 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
             draw_all(&mut pm, &doc.objects[..index], doc.dpi, &base.images);
             let (patch, x, y) = blur_patch(&pm, &b)?;
             Some((straight(&patch), x, y))
+        }
+        // A template's zone with its picture, cropped to it (EDT-098), from its corner.
+        "zone" => {
+            let mut z = ZoneObject::from_props(&object.props).ok()?;
+            z.image.as_ref()?;
+            let (x, y) = (z.rect.x.floor(), z.rect.y.floor());
+            z.rect.x -= x;
+            z.rect.y -= y;
+            let w = (z.rect.x + z.rect.w).ceil().max(1.0) as u32;
+            let h = (z.rect.y + z.rect.h).ceil().max(1.0) as u32;
+            let mut pm = Pixmap::new(w, h)?;
+            draw_zone(&mut pm, &z, &base.images);
+            Some((straight(&pm), x as i32, y as i32))
         }
         // A step as it shows, turned shape and upright value, in a picture centered on
         // the marker's center: `(x, y)` is where its top-left corner goes.

@@ -25,7 +25,9 @@ import {
   startNewText,
   startTextEdit,
 } from "./actions";
-import { canvasMenu, lockedMenu, menuPoint, selectionMenu } from "./menus";
+import { canvasMenu, lockedMenu, menuPoint, selectionMenu, zoneMenu } from "./menus";
+import { captureIntoZone, templateCommand } from "./templateActions";
+import { bands, dividerAt, snapOffset, templateOf, useZones, zoneAt, zonesOf } from "./templateUi";
 import {
   insideSelection,
   modeOf,
@@ -66,6 +68,7 @@ import {
   StampShape,
   StepShape,
   TextShape,
+  ZoneShape,
 } from "./ObjectShapes";
 import { boxOf, extentPoints, hits, inBand, moved, reboxed } from "./objects";
 import {
@@ -79,6 +82,7 @@ import {
   type ShapeObject,
   type DocDetails,
   type DocObject,
+  type ZoneObject,
 } from "./state";
 import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
@@ -210,7 +214,12 @@ type Drag =
   | { kind: "canvas"; handle: BoxHandle; start: Box; box: Box; fromCenter: boolean }
   | { kind: "cradius"; value: number; startX: number; startY: number }
   // A strip being marked with Cut out (EDT-052); Shift turns its direction.
-  | { kind: "cut"; start: Point; end: Point; vertical: boolean };
+  | { kind: "cut"; start: Point; end: Point; vertical: boolean }
+  // A template's zone (EDT-098): its picture taken to another zone, or moved inside it
+  // while framing; a section's divider dragged (EDT-099).
+  | { kind: "zswap"; id: string; start: Point; to: Point }
+  | { kind: "zframe"; id: string; start: Point; from: [number, number]; delta: Point }
+  | { kind: "divider"; id: string; start: Point; height: number; delta: number };
 
 /** What stays put when the canvas is resized by a handle (EDT-070). */
 const ANCHOR_OF: Record<BoxHandle, string> = {
@@ -470,6 +479,7 @@ export function Canvas({ doc }: Props) {
   }, [doc.documentId]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Size | null>(null);
   const dpr = useDevicePixelRatio();
   // With flattened objects, edits of pixels or new original pixels (resized, turned,
@@ -484,6 +494,11 @@ export function Canvas({ doc }: Props) {
   const base = useBaseImage(doc.documentId, flatKey);
   const baseAt = { x: doc.baseView?.x ?? 0, y: doc.baseView?.y ?? 0 };
   const objectImages = useObjectImages(doc.documentId, doc.objects, doc.version);
+  // Templates (EDT-095 to EDT-099): the zone clicked last, the one being framed.
+  const activeZone = useZones((s) => s.active);
+  const framing = useZones((s) => s.framing);
+  const template = templateOf(doc);
+  useEffect(() => () => useZones.setState({ pointAt: null, active: null, framing: null }), []);
   const shadowImages = useShadowImages(doc.documentId, doc.objects);
   // The image with its effects over the canvas, unless something is being changed
   // (EDT-053): then the editable layers show.
@@ -697,6 +712,27 @@ export function Canvas({ doc }: Props) {
     const [x, y] = imagePoint(lay, s);
     return [x + ext.x, y + ext.y];
   };
+  // Files dropped on a zone fill it (EDT-098): the editor asks where a window point is.
+  useEffect(() => {
+    useZones.setState({
+      pointAt: (cx, cy) => {
+        const r = stageRef.current?.getBoundingClientRect();
+        return r ? toCanvas({ x: cx - r.left, y: cy - r.top }) : null;
+      },
+    });
+  });
+  /** Where a zone's picture is being framed to, held to its center and edges. */
+  const zoneOffset = (
+    z: ZoneObject,
+    image: HTMLImageElement,
+    d: { from: [number, number]; delta: Point },
+  ): [number, number] =>
+    snapOffset(
+      z,
+      { w: image.naturalWidth || image.width, h: image.naturalHeight || image.height },
+      [d.from[0] + d.delta[0], d.from[1] + d.delta[1]],
+      SNAP / (lay?.scale ?? 1),
+    );
 
   const applyZoom = (zoom: number, at?: { x: number; y: number }) => {
     if (!view || !viewport) return;
@@ -820,6 +856,9 @@ export function Canvas({ doc }: Props) {
               },
             }
           : o;
+      default:
+        // A template's zone keeps its place while its picture moves (EDT-098).
+        return o;
     }
   });
   const committed = new Map(doc.objects.map((o) => [o.id, o]));
@@ -827,8 +866,14 @@ export function Canvas({ doc }: Props) {
   const radiusPoint = (box: Box, radius: number) => radiusAt(box, radius, lay?.scale ?? 1);
   // With Move and nothing selected, the canvas has handles to resize it and a rhombus
   // for its rounded corners (EDT-070, EDT-075).
+  // A template's size comes from its sections (EDT-099): no canvas handles there.
   const canvasEdit =
-    tool === "move" && selection.length === 0 && !doc.pixelSelection && !cropping && !textEdit;
+    tool === "move" &&
+    selection.length === 0 &&
+    !doc.pixelSelection &&
+    !cropping &&
+    !textEdit &&
+    !template;
   const canvasBox: Box = { x: 0, y: 0, w: canvasSize.width, h: canvasSize.height, rotation: 0 };
   /** The rhombus for radius `r`: on the diagonal from the top-right corner. */
   const cornerPoint = (r: number): Point => {
@@ -1037,6 +1082,9 @@ export function Canvas({ doc }: Props) {
     if (e.button !== 0) return;
     const p = toCanvas(s);
     const capture = () => e.currentTarget.setPointerCapture(e.pointerId);
+    // A press outside the zone being framed ends the framing (EDT-098).
+    const framed = useZones.getState().framing;
+    if (framed && zoneAt(doc.objects, p)?.id !== framed) useZones.setState({ framing: null });
     const handle = hitHandle(s);
 
     if (cropRect) {
@@ -1275,6 +1323,21 @@ export function Canvas({ doc }: Props) {
       setPoly([...draft, e.shiftKey && last ? constrain45(last, p) : p]);
       return;
     }
+    // The divider under a template's section makes it taller or shorter (EDT-099).
+    if (
+      template &&
+      (tool === "move" || tool === "favorites") &&
+      !e.altKey &&
+      p[0] >= 0 &&
+      p[0] <= canvasSize.width
+    ) {
+      const section = dividerAt(template, p[1], HIT / lay.scale);
+      if (section) {
+        capture();
+        setDrag({ kind: "divider", id: section.id, start: p, height: section.height, delta: 0 });
+        return;
+      }
+    }
     // EDT-022: a click on an object selects it, except with Alt (draw over it).
     const hit = e.altKey && tool !== "move" ? null : hitObject(p);
     // Shift or Ctrl/Cmd adds an object to the selection, or takes it out (EDT-079).
@@ -1315,6 +1378,24 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "move", ids, start: p, delta: [0, 0], moved: false, copy });
       return;
     }
+    // A template's zone (EDT-098): a click makes it the one Paste fills; a drag takes
+    // its picture to another zone; while framing, a drag moves the picture inside it.
+    if ((tool === "move" || tool === "favorites") && !adding) {
+      const z = zoneAt(doc.objects, p);
+      if (z) {
+        setSelection([]);
+        useZones.setState({ active: z.id });
+        if (z.image) {
+          capture();
+          setDrag(
+            useZones.getState().framing === z.id
+              ? { kind: "zframe", id: z.id, start: p, from: z.offset ?? [0, 0], delta: [0, 0] }
+              : { kind: "zswap", id: z.id, start: p, to: p },
+          );
+        }
+        return;
+      }
+    }
     if (tool === "pen") {
       capture();
       setDrag({ kind: "pen", points: [p], straight: e.shiftKey });
@@ -1323,6 +1404,7 @@ export function Canvas({ doc }: Props) {
     if (tool === "move" || tool === "favorites") {
       // An empty place: a selection box (EDT-079).
       capture();
+      useZones.setState({ active: null });
       if (!adding) setSelection([]);
       setDrag({ kind: "band", start: p, end: p, touch: e.altKey, add: adding });
       return;
@@ -1525,6 +1607,12 @@ export function Canvas({ doc }: Props) {
         }
         return { ...d, delta: [dx, dy] };
       }
+      case "zswap":
+        return { ...d, to: p };
+      case "zframe":
+        return { ...d, delta: [p[0] - d.start[0], p[1] - d.start[1]] };
+      case "divider":
+        return { ...d, delta: p[1] - d.start[1] };
       case "crop": {
         const bounds = ext;
         let rect: RectBox;
@@ -1564,6 +1652,18 @@ export function Canvas({ doc }: Props) {
     }
     if (!drag) {
       const h = hitHandle(s);
+      const moving = (tool === "move" || tool === "favorites") && !cropRect;
+      if (
+        !h &&
+        moving &&
+        template &&
+        p[0] >= 0 &&
+        p[0] <= canvasSize.width &&
+        dividerAt(template, p[1], HIT / lay.scale)
+      ) {
+        setHover("s");
+        return;
+      }
       const handleName = h
         ? "crop" in h
           ? h.crop
@@ -1579,7 +1679,15 @@ export function Canvas({ doc }: Props) {
         : null;
       setHover(
         handleName ??
-          (cropRect ? null : hitObject(p) ? "object" : hitObject(p, true) ? "locked" : null),
+          (cropRect
+            ? null
+            : hitObject(p)
+              ? "object"
+              : hitObject(p, true)
+                ? "locked"
+                : moving && zoneAt(doc.objects, p)?.image
+                  ? "object"
+                  : null),
       );
       return;
     }
@@ -1601,6 +1709,40 @@ export function Canvas({ doc }: Props) {
   const finish = async (d: Drag) => {
     const id = doc.documentId;
     try {
+      if (d.kind === "zswap") {
+        const target = zoneAt(doc.objects, d.to);
+        if (target && target.id !== d.id)
+          await run("document.template", {
+            documentId: id,
+            action: "swap_zones",
+            zone: d.id,
+            with: target.id,
+          });
+        return;
+      }
+      if (d.kind === "zframe") {
+        const z = doc.objects.find((o): o is ZoneObject => o.id === d.id && o.type === "zone");
+        const image = objectImages.get(d.id);
+        if (!z || !image || (d.delta[0] === 0 && d.delta[1] === 0)) return;
+        await run("document.template", {
+          documentId: id,
+          action: "frame_zone",
+          zone: d.id,
+          offset: zoneOffset(z, image, d),
+        });
+        return;
+      }
+      if (d.kind === "divider") {
+        const height = Math.max(40, Math.round(d.height + d.delta));
+        if (height !== d.height)
+          await run("document.template", {
+            documentId: id,
+            action: "resize_section",
+            sectionId: d.id,
+            height,
+          });
+        return;
+      }
       if (d.kind === "erase") {
         const er = styles?.eraser;
         if (!er) return;
@@ -1912,6 +2054,13 @@ export function Canvas({ doc }: Props) {
       lockedMenu(locked.id, menuPoint(e));
       return;
     }
+    // A template's zone: its own menu (EDT-098).
+    const zone = hit ? null : zoneAt(doc.objects, p);
+    if (zone) {
+      useZones.setState({ active: zone.id });
+      zoneMenu(zone, menuPoint(e));
+      return;
+    }
     if (hit && !selection.includes(hit.id)) setSelection([hit.id]);
     // On a flattened place: Unflatten (EDT-091), the newest layer there.
     const layer = hit
@@ -1926,7 +2075,13 @@ export function Canvas({ doc }: Props) {
               p[1] >= l.bounds[1] &&
               p[1] <= l.bounds[3],
           );
-    canvasMenu(hit !== null, menuPoint(e), layer, hit?.type === "step" ? hit : undefined);
+    canvasMenu(
+      hit !== null,
+      menuPoint(e),
+      layer,
+      hit?.type === "step" ? hit : undefined,
+      hit?.type === "image" && !hit.locked ? hit.id : undefined,
+    );
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1948,6 +2103,14 @@ export function Canvas({ doc }: Props) {
         const next = [...entered, unit];
         useEditor.setState({ entered: next });
         setSelection(expand(doc.objects, [hit.id], next));
+        return;
+      }
+    }
+    // On a zone's picture: framing (EDT-098).
+    if ((tool === "move" || tool === "favorites") && !cropRect && !hitObject(p)) {
+      const z = zoneAt(doc.objects, p);
+      if (z?.image) {
+        useZones.setState({ framing: z.id, active: z.id });
         return;
       }
     }
@@ -2108,6 +2271,60 @@ export function Canvas({ doc }: Props) {
       />
     );
   };
+  // Zones marked on screen (EDT-098, EDT-099): the one Paste fills, the one being
+  // framed, where a dragged picture would go; a section's divider being dragged.
+  const zoneMark = (z: ZoneObject, key: string, width: number, dashed: boolean) => {
+    const [x0, y0] = toScreen([z.rect.x, z.rect.y]);
+    const [x1, y1] = toScreen([z.rect.x + z.rect.w, z.rect.y + z.rect.h]);
+    return (
+      <Rect
+        key={key}
+        x={x0}
+        y={y0}
+        width={x1 - x0}
+        height={y1 - y0}
+        stroke={ACCENT}
+        strokeWidth={width}
+        {...(dashed ? { dash: [6, 4] } : {})}
+        listening={false}
+      />
+    );
+  };
+  const zoneMarks = (() => {
+    if (cropRect) return null;
+    const marks: React.ReactNode[] = [];
+    const byId = (id: string | null) =>
+      id ? (zonesOf(doc.objects).find((z) => z.id === id) ?? null) : null;
+    const active = byId(activeZone);
+    if (active && !drag) marks.push(zoneMark(active, "active", 2, false));
+    const framed = byId(framing);
+    if (framed) marks.push(zoneMark(framed, "framing", 2, true));
+    if (drag?.kind === "zswap") {
+      const target = zoneAt(doc.objects, drag.to);
+      if (target && target.id !== drag.id) marks.push(zoneMark(target, "target", 3, false));
+    }
+    if (drag?.kind === "divider" && template) {
+      const band = bands(template).find((b) => b.section.id === drag.id);
+      if (band) {
+        const height = Math.max(40, Math.round(drag.height + drag.delta));
+        const [x0, y] = toScreen([0, band.top + height]);
+        const [x1] = toScreen([canvasSize.width, 0]);
+        marks.push(
+          <Line
+            key="divider"
+            points={[x0, y, x1, y]}
+            stroke={ACCENT}
+            strokeWidth={2}
+            dash={[6, 4]}
+            listening={false}
+          />,
+          <DragLabel key="divider-label" x={x1 - 60} y={y - 24} text={`${height} px`} />,
+        );
+      }
+    }
+    return marks;
+  })();
+
   const objectNode = (o: DocObject) => {
     switch (o.type) {
       case "arrow":
@@ -2206,6 +2423,20 @@ export function Canvas({ doc }: Props) {
             o={o}
             committed={c?.type === "callout" ? c : o}
             image={objectImages.get(o.id)}
+          />
+        );
+      }
+      case "zone": {
+        const image = objectImages.get(o.id);
+        const framed = drag?.kind === "zframe" && drag.id === o.id ? drag : null;
+        return (
+          <ZoneShape
+            key={o.id}
+            o={o}
+            image={image}
+            scale={scale}
+            offset={framed && image ? zoneOffset(o, image, framed) : undefined}
+            dim={drag?.kind === "zswap" && drag.id === o.id}
           />
         );
       }
@@ -2360,6 +2591,72 @@ export function Canvas({ doc }: Props) {
           <span className="muted">{t("ui.editor.pixel.esc_cancels")}</span>
         </div>
       )}
+      {lay &&
+        !cropRect &&
+        zonesOf(doc.objects).map((z) => {
+          const [x0, y0] = toScreen([z.rect.x, z.rect.y]);
+          const [x1, y1] = toScreen([z.rect.x + z.rect.w, z.rect.y + z.rect.h]);
+          if (!z.image)
+            return (
+              <div
+                key={z.id}
+                className="zone-empty"
+                style={{ left: x0, top: y0, width: x1 - x0, height: y1 - y0 }}
+              >
+                {x1 - x0 > 160 && y1 - y0 > 80 && <span>{t("ui.editor.template.drop_here")}</span>}
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => void captureIntoZone(z.id)}
+                >
+                  <Icon name="capture" />
+                  {t("ui.editor.template.capture")}
+                </button>
+              </div>
+            );
+          if (framing !== z.id) return null;
+          const frame = (params: Record<string, unknown>) =>
+            void templateCommand("frame_zone", { zone: z.id, ...params });
+          return (
+            <div
+              key={z.id}
+              className="zone-frame-bar"
+              role="toolbar"
+              aria-label={t("ui.editor.template.frame")}
+              style={{ left: Math.max(4, x0), top: Math.max(4, y0 - 44) }}
+            >
+              <button
+                type="button"
+                className="btn icon small"
+                aria-label={t("ui.editor.template.zoom_out")}
+                title={t("ui.editor.template.zoom_out")}
+                onClick={() => frame({ zoomBy: -1 })}
+              >
+                <Icon name="minus" />
+              </button>
+              <span className="zone-zoom">{Math.round((z.zoom ?? 1) * 100)} %</span>
+              <button
+                type="button"
+                className="btn icon small"
+                aria-label={t("ui.editor.template.zoom_in")}
+                title={t("ui.editor.template.zoom_in")}
+                onClick={() => frame({ zoomBy: 1 })}
+              >
+                <Icon name="plus" />
+              </button>
+              <button type="button" className="btn small" onClick={() => frame({ reset: true })}>
+                {t("ui.editor.template.reset_frame")}
+              </button>
+              <button
+                type="button"
+                className="btn small primary"
+                onClick={() => useZones.setState({ framing: null })}
+              >
+                {t("ui.editor.template.done")}
+              </button>
+            </div>
+          );
+        })}
       {(() => {
         // The quick edit bar by the one selected object, not while it changes (EDT-006).
         if (!quickOn || drag || textEdit || !lay || !viewport || selection.length !== 1)
@@ -2394,6 +2691,7 @@ export function Canvas({ doc }: Props) {
       {lay && viewport && (
         <div
           className="canvas-stage"
+          ref={stageRef}
           style={{ width: viewport.width, height: viewport.height, cursor }}
           tabIndex={0}
           role="application"
@@ -2530,6 +2828,7 @@ export function Canvas({ doc }: Props) {
               </Group>
             </Layer>
             <Layer>
+              {zoneMarks}
               {eraserAt && styles && (
                 <EraserOutline
                   at={eraserAt}

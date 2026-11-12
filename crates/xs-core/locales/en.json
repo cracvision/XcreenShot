@@ -546,6 +546,26 @@
     "editor_toolbar": {
       "title": "Toolbar",
       "description": "Reads or changes what the editor toolbar shows, in order: tools, commands, effects, separators and flexible spaces; reset goes back to the default."
+    },
+    "editor_templates": {
+      "title": "Templates",
+      "description": "Lists the built-in and own templates of the picker; renames, duplicates, deletes, imports or exports an own template."
+    },
+    "document_from_template": {
+      "title": "New from template",
+      "description": "Creates a document from a template with up to 20 images in its zones, in order."
+    },
+    "document_template": {
+      "title": "Template",
+      "description": "Reads or changes a template: its settings, its sections and its image zones (fill, clear, swap, frame)."
+    },
+    "document_save_as_template": {
+      "title": "Save as template",
+      "description": "Saves the document as an own template (.xtemplate) in the templates folder."
+    },
+    "document_apply_theme": {
+      "title": "Apply theme",
+      "description": "Gives the selected objects, or all, the colors and font of a theme, in one undo step."
     }
   },
   "settings": {
@@ -871,7 +891,11 @@
     "library_no_trash": "\"{{name}}\" cannot go to the trash here: deleting it would be final.",
     "library_undo_expired": "It is too late to undo that delete.",
     "fill_stopped": "The fill was stopped; nothing changed.",
-    "theme_newer": "This theme file was made by a newer version of XcreenShot. Update the app to import it."
+    "theme_newer": "This theme file was made by a newer version of XcreenShot. Update the app to import it.",
+    "template_not_found": "There is no template {{id}}.",
+    "not_a_template": "This document is not a template.",
+    "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
+    "template_exists": "There is already a template called {{name}}."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1004,7 +1028,11 @@
       "editor_batch_export": "Batch export",
       "editor_print": "Print",
       "editor_pixel_grid": "Pixel grid",
-      "editor_fullscreen": "Full screen"
+      "editor_fullscreen": "Full screen",
+      "editor_new_from_template": "New from template",
+      "editor_apply_template": "Apply template",
+      "editor_save_as_template": "Save as template",
+      "editor_import_template": "Import template"
     }
   },
   "tray": {
@@ -1144,7 +1172,12 @@
     "print": "Print…",
     "pixel_grid": "Pixel grid",
     "fullscreen": "Full screen",
-    "customize_toolbar": "Customize…"
+    "customize_toolbar": "Customize…",
+    "new_from_template": "New from template…",
+    "apply_template": "Apply template…",
+    "save_as_template": "Save as template…",
+    "import_template": "Template…",
+    "combine_template": "Combine in template…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -2389,6 +2422,87 @@
         "separator": "Separator",
         "space": "Flexible space",
         "reset": "Restore defaults"
+      },
+      "tab_template": "Template",
+      "template": {
+        "picker_title": "New from template",
+        "combine_title": "Combine in template",
+        "search": "Search templates",
+        "for_n_one": "For {{count}} image",
+        "for_n_other": "For {{count}} images",
+        "too_many": "{{count}} images are selected: a template takes {{max}}, so the first {{max}} will be used.",
+        "loading": "Loading templates…",
+        "none": "No template matches.",
+        "images_one": "{{count}} image",
+        "images_other": "{{count}} images",
+        "images_range": "{{min}} to {{max}} images",
+        "create": "Create",
+        "import": "Import…",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "export": "Export…",
+        "delete": "Delete",
+        "delete_title": "Delete the template {{name}}?",
+        "delete_body": "The template file is deleted from your templates folder. Documents made with it stay.",
+        "name": "Name",
+        "family": "Family",
+        "file": "XcreenShot template",
+        "save_title": "Save as template",
+        "empty_zones": "Empty the image zones",
+        "replace_template": "Replace it",
+        "saved": "Template {{name}} saved in My templates.",
+        "not_template": "This document is not a template. File > New from template… makes one.",
+        "scale": "Image scale",
+        "scale_fit": "Fit whole",
+        "scale_fill": "Fill the zone",
+        "show_title": "Title",
+        "captions": "Captions",
+        "footer": "Footer",
+        "author": "Author",
+        "author_system": "System name",
+        "author_custom": "Custom",
+        "author_name": "Author name",
+        "theme": "Theme",
+        "theme_active": "Active theme",
+        "text_color": "Text color",
+        "background": "Background",
+        "numbering": "Number images",
+        "number_color": "Number color",
+        "reverse": "Reverse the order",
+        "sections": "Sections",
+        "sections_help": "Drag the line between two sections on the canvas to resize them. What you draw moves with its section.",
+        "move_up": "Move up",
+        "move_down": "Move down",
+        "remove_section": "Delete section",
+        "add_section_after": "Add a section after this one",
+        "zone_menu": "Image zone",
+        "drop_here": "Drop an image here or",
+        "capture": "Capture",
+        "choose": "Choose image…",
+        "replace": "Replace image…",
+        "frame": "Frame the image",
+        "zoom_in": "Zoom in",
+        "zoom_out": "Zoom out",
+        "reset_frame": "Reset framing",
+        "done": "Done",
+        "remove_image": "Remove image",
+        "remove_caption": "Remove caption",
+        "convert_zone": "Convert to image zone",
+        "section": {
+          "title": "Title",
+          "step": "Image",
+          "imageText": "Image with text",
+          "text": "Text",
+          "twoImages": "Two images",
+          "footer": "Footer",
+          "gridRow": "Row of images",
+          "timeline": "Timeline",
+          "milestone": "Milestone",
+          "compare": "Comparison",
+          "beforeAfter": "Before and after",
+          "columns3": "Three columns",
+          "featured": "Featured and thumbnails"
+        }
       }
     },
     "multi": {
@@ -2651,7 +2765,19 @@
     "fit_canvas": "Fit canvas to content",
     "crop_to_canvas": "Crop to canvas",
     "cut_out": "Cut out",
-    "add_space": "Add space"
+    "add_space": "Add space",
+    "template_settings": "Template settings",
+    "add_section": "Add section",
+    "remove_section": "Delete section",
+    "resize_section": "Resize section",
+    "move_section": "Move section",
+    "fill_zone": "Fill zone",
+    "clear_zone": "Remove image",
+    "swap_zones": "Swap images",
+    "frame_zone": "Frame image",
+    "remove_caption": "Remove caption",
+    "convert_zone": "Convert to image zone",
+    "apply_theme": "Apply theme"
   },
   "editor": {
     "edited": "{{name}} — Edited",
@@ -2660,7 +2786,38 @@
     "still_sticking": "{{count}} annotations still stick out of the canvas: they are not cut.",
     "crossing_strip": "{{count}} objects cross the strip and stay where they were.",
     "new_image_name": "New image",
-    "clipboard_name": "Clipboard"
+    "clipboard_name": "Clipboard",
+    "template": {
+      "title": "Title",
+      "caption": "Describe this step",
+      "text": "Write your text here",
+      "date": "Date",
+      "before": "Before",
+      "after": "After",
+      "option": "Option {{n}}",
+      "too_many": "{{count}} images were selected: a template takes {{max}}, so the first {{max}} are used.",
+      "only_zones": "The template has {{count}} zones: the other images were left out.",
+      "builtin": {
+        "steps_column": "Steps in a column",
+        "steps_grid": "Steps in a 2×N grid",
+        "steps_side": "Steps with side text",
+        "steps_custom": "Custom steps",
+        "timeline_horizontal": "Horizontal",
+        "timeline_vertical": "Vertical",
+        "compare_side": "Side by side",
+        "before_after": "Before and after",
+        "three_options": "Three options",
+        "collage_featured": "Featured and thumbnails",
+        "collage_grid": "Grid"
+      },
+      "family": {
+        "steps": "Steps",
+        "timeline": "Timeline",
+        "compare": "Comparison",
+        "collage": "Collage",
+        "mine": "My templates"
+      }
+    }
   },
   "stamps": {
     "indicators": "Indicators",

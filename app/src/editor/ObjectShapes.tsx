@@ -20,7 +20,9 @@ import type {
   StampObject,
   StepObject,
   TextObject,
+  ZoneObject,
 } from "./state";
+import { placement } from "./templateUi";
 
 /** Draws its children whole and blends them once when translucent, like the export. */
 function Translucent({
@@ -267,6 +269,50 @@ export function ImageShape({ o, image }: { o: ImageObject; image: HTMLImageEleme
       opacity={o.style.opacity / 100}
       listening={false}
     />
+  );
+}
+
+/** A template's zone (EDT-098): its picture cropped to it, at its framing (`offset`
+ * while it is being moved); an empty one, a dashed placeholder the editor shows. */
+export function ZoneShape(props: {
+  o: ZoneObject;
+  image: HTMLImageElement | undefined;
+  offset?: [number, number] | undefined;
+  scale: number;
+  dim?: boolean;
+}) {
+  const { o, image, offset, scale, dim } = props;
+  const r = o.rect;
+  if (!o.image) {
+    return (
+      <Rect
+        x={r.x}
+        y={r.y}
+        width={r.w}
+        height={r.h}
+        cornerRadius={6 / scale}
+        fill="rgba(0, 100, 251, 0.06)"
+        stroke="rgba(0, 100, 251, 0.55)"
+        strokeWidth={1.5 / scale}
+        dash={[8 / scale, 5 / scale]}
+        listening={false}
+      />
+    );
+  }
+  if (!image) return null;
+  const size = { w: image.naturalWidth || image.width, h: image.naturalHeight || image.height };
+  const { x, y, k } = placement(o, size, offset);
+  return (
+    <Group clipX={r.x} clipY={r.y} clipWidth={r.w} clipHeight={r.h} listening={false}>
+      <KImage
+        image={image}
+        x={x}
+        y={y}
+        width={size.w * k}
+        height={size.h * k}
+        opacity={dim ? 0.45 : 1}
+      />
+    </Group>
   );
 }
 

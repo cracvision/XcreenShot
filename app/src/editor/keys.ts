@@ -21,6 +21,7 @@ import { useMainView } from "../library/state";
 import { inToolbar } from "../components/arrowFocus";
 import { toggleFullscreen, useFullscreen } from "./fullscreen";
 import { barTools, useToolbar } from "./toolbarLayout";
+import { useZones } from "./templateUi";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -325,6 +326,8 @@ export function useEditorKeys(): void {
             if (state.fillProgress !== null) run("editor.cancel").catch(() => undefined);
             // Full screen goes first, before closing the editor (EDT-009).
             else if (useFullscreen.getState().on) void toggleFullscreen();
+            // Ends the framing of a template's zone (EDT-098).
+            else if (useZones.getState().framing) useZones.setState({ framing: null });
             else if (state.tool === "crop" && state.cropRect) resetCrop();
             // Leaves the group a double click entered (EDT-082).
             else if (state.entered.length > 0) useEditor.setState({ entered: [] });

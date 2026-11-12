@@ -179,6 +179,10 @@ pub struct Document {
     /// original warns about it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub original_changed: bool,
+    /// A template's settings and sections (EDT-095 to EDT-101, ADR 0007); none in an
+    /// ordinary document.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<Value>,
     /// How the original shows under simplified shapes (EDT-041).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub simplify: Option<SimplifyView>,
@@ -221,6 +225,7 @@ impl Document {
             patches: Vec::new(),
             base_image: None,
             original_changed: false,
+            template: None,
             simplify: None,
             effects: Vec::new(),
             extra: Map::new(),

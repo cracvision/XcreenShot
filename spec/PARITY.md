@@ -174,13 +174,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-092 | Deshacer y rehacer | M1 | Must | Win |
 | EDT-093 | Cursor como objeto | M2 | Should | — |
 | EDT-094 | Medición en vivo | M5 | Could | — |
-| EDT-095 | Nuevo desde plantilla | M2 | Should | — |
-| EDT-096 | Plantillas incorporadas | M2 | Should | — |
-| EDT-097 | Ajustes de la plantilla | M2 | Should | — |
-| EDT-098 | Zonas de imagen | M2 | Should | — |
-| EDT-099 | Secciones | M2 | Should | — |
-| EDT-100 | Aplicar un tema a objetos existentes | M2 | Could | — |
-| EDT-101 | Plantillas propias `.xtemplate` | M2 | Should | — |
+| EDT-095 | Nuevo desde plantilla | M2 | Should | En curso (Windows: Archivo > Nuevo desde plantilla, Aplicar plantilla, Combinar desde la Biblioteca, filtro "Para N imágenes", máximo 20 con aviso; falta la selección múltiple en la Bandeja reciente) |
+| EDT-096 | Plantillas incorporadas | M2 | Should | Hecho en Windows (11 plantillas en 4 familias, con el tema activo) |
+| EDT-097 | Ajustes de la plantilla | M2 | Should | Hecho en Windows |
+| EDT-098 | Zonas de imagen | M2 | Should | En curso (Windows: llenar arrastrando un archivo, pegando, eligiendo o con Capturar; encuadrar, intercambiar, quitar; zonas vacías fuera de la imagen final. Falta arrastrar desde la Bandeja reciente y desde una imagen flotante con el ratón: hoy, por comando `fromObject`) |
+| EDT-099 | Secciones | M2 | Should | En curso (Windows: añadir, quitar, subir y bajar desde la pestaña Plantilla y el divisor en el lienzo; faltan el + y la papelera sobre el propio lienzo y arrastrar el asa para reordenar) |
+| EDT-100 | Aplicar un tema a objetos existentes | M2 | Could | En curso (núcleo y CLI hechos; falta la entrada Aplicar tema… del menú ⋯ de la pestaña Estilos) |
+| EDT-101 | Plantillas propias `.xtemplate` | M2 | Should | Hecho en Windows (falta comprobar que una plantilla exportada en macOS se importa igual en Windows) |
 | EDT-102 | Paginación al imprimir y en PDF | M2 | Should | En curso (PDF e impresión hechos; faltan las plantillas) |
 | EDT-103 | Nueva imagen | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-104 | Nueva desde el portapapeles | M2 | Should | Hecho en Windows (macOS pendiente) |

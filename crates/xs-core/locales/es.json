@@ -546,6 +546,26 @@
     "editor_toolbar": {
       "title": "Barra de herramientas",
       "description": "Lee o cambia lo que muestra la barra del editor, en orden: herramientas, comandos, efectos, separadores y espacios flexibles; reset vuelve a la barra por defecto."
+    },
+    "editor_templates": {
+      "title": "Plantillas",
+      "description": "Lista las plantillas incorporadas y propias del selector; renombra, duplica, elimina, importa o exporta una plantilla propia."
+    },
+    "document_from_template": {
+      "title": "Nuevo desde plantilla",
+      "description": "Crea un documento a partir de una plantilla con hasta 20 imágenes en sus zonas, por orden."
+    },
+    "document_template": {
+      "title": "Plantilla",
+      "description": "Lee o cambia una plantilla: sus ajustes, sus secciones y sus zonas de imagen (llenar, vaciar, intercambiar, encuadrar)."
+    },
+    "document_save_as_template": {
+      "title": "Guardar como plantilla",
+      "description": "Guarda el documento como plantilla propia (.xtemplate) en la carpeta de plantillas."
+    },
+    "document_apply_theme": {
+      "title": "Aplicar tema",
+      "description": "Da a los objetos seleccionados, o a todos, los colores y la fuente de un tema, en un solo paso de Deshacer."
     }
   },
   "settings": {
@@ -871,7 +891,11 @@
     "library_no_trash": "\"{{name}}\" no puede ir a la papelera aquí: eliminarlo sería definitivo.",
     "library_undo_expired": "Ya es tarde para deshacer esa eliminación.",
     "fill_stopped": "Se detuvo el relleno; no cambió nada.",
-    "theme_newer": "Este archivo de tema lo hizo una versión más nueva de XcreenShot. Actualiza la app para importarlo."
+    "theme_newer": "Este archivo de tema lo hizo una versión más nueva de XcreenShot. Actualiza la app para importarlo.",
+    "template_not_found": "No hay ninguna plantilla {{id}}.",
+    "not_a_template": "Este documento no es una plantilla.",
+    "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
+    "template_exists": "Ya hay una plantilla llamada {{name}}."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1004,7 +1028,11 @@
       "editor_batch_export": "Exportar por lotes",
       "editor_print": "Imprimir",
       "editor_pixel_grid": "Cuadrícula de píxeles",
-      "editor_fullscreen": "Pantalla completa"
+      "editor_fullscreen": "Pantalla completa",
+      "editor_new_from_template": "Nuevo desde plantilla",
+      "editor_apply_template": "Aplicar plantilla",
+      "editor_save_as_template": "Guardar como plantilla",
+      "editor_import_template": "Importar plantilla"
     }
   },
   "tray": {
@@ -1144,7 +1172,12 @@
     "print": "Imprimir…",
     "pixel_grid": "Cuadrícula de píxeles",
     "fullscreen": "Pantalla completa",
-    "customize_toolbar": "Personalizar…"
+    "customize_toolbar": "Personalizar…",
+    "new_from_template": "Nuevo desde plantilla…",
+    "apply_template": "Aplicar plantilla…",
+    "save_as_template": "Guardar como plantilla…",
+    "import_template": "Plantilla…",
+    "combine_template": "Combinar en plantilla…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -2389,6 +2422,87 @@
         "separator": "Separador",
         "space": "Espacio flexible",
         "reset": "Restaurar valores por defecto"
+      },
+      "tab_template": "Plantilla",
+      "template": {
+        "picker_title": "Nuevo desde plantilla",
+        "combine_title": "Combinar en plantilla",
+        "search": "Buscar plantillas",
+        "for_n_one": "Para {{count}} imagen",
+        "for_n_other": "Para {{count}} imágenes",
+        "too_many": "Hay {{count}} imágenes seleccionadas: una plantilla admite {{max}}, así que se usarán las {{max}} primeras.",
+        "loading": "Cargando plantillas…",
+        "none": "Ninguna plantilla coincide.",
+        "images_one": "{{count}} imagen",
+        "images_other": "{{count}} imágenes",
+        "images_range": "De {{min}} a {{max}} imágenes",
+        "create": "Crear",
+        "import": "Importar…",
+        "rename": "Renombrar",
+        "duplicate": "Duplicar",
+        "export": "Exportar…",
+        "delete": "Eliminar",
+        "delete_title": "¿Eliminar la plantilla {{name}}?",
+        "delete_body": "Se borra el archivo de la plantilla de tu carpeta de plantillas. Los documentos hechos con ella se quedan.",
+        "name": "Nombre",
+        "family": "Familia",
+        "file": "Plantilla de XcreenShot",
+        "save_title": "Guardar como plantilla",
+        "empty_zones": "Vaciar las zonas de imagen",
+        "replace_template": "Reemplazarla",
+        "saved": "Plantilla {{name}} guardada en Mis plantillas.",
+        "not_template": "Este documento no es una plantilla. Archivo > Nuevo desde plantilla… crea una.",
+        "scale": "Escala de la imagen",
+        "scale_fit": "Encajar entera",
+        "scale_fill": "Llenar la zona",
+        "show_title": "Título",
+        "captions": "Leyendas",
+        "footer": "Pie de página",
+        "author": "Autor",
+        "author_system": "Nombre del sistema",
+        "author_custom": "Personalizado",
+        "author_name": "Nombre del autor",
+        "theme": "Tema",
+        "theme_active": "Tema activo",
+        "text_color": "Color del texto",
+        "background": "Fondo",
+        "numbering": "Numerar imágenes",
+        "number_color": "Color de los números",
+        "reverse": "Invertir el orden",
+        "sections": "Secciones",
+        "sections_help": "Arrastra la línea entre dos secciones en el lienzo para cambiar su tamaño. Lo que dibujes se mueve con su sección.",
+        "move_up": "Subir",
+        "move_down": "Bajar",
+        "remove_section": "Eliminar sección",
+        "add_section_after": "Añadir una sección después de esta",
+        "zone_menu": "Zona de imagen",
+        "drop_here": "Arrastra una imagen aquí o",
+        "capture": "Capturar",
+        "choose": "Elegir imagen…",
+        "replace": "Reemplazar imagen…",
+        "frame": "Encuadrar la imagen",
+        "zoom_in": "Acercar",
+        "zoom_out": "Alejar",
+        "reset_frame": "Restablecer encuadre",
+        "done": "Listo",
+        "remove_image": "Quitar imagen",
+        "remove_caption": "Quitar leyenda",
+        "convert_zone": "Convertir en zona de imagen",
+        "section": {
+          "title": "Título",
+          "step": "Imagen",
+          "imageText": "Imagen con texto",
+          "text": "Texto",
+          "twoImages": "Dos imágenes",
+          "footer": "Pie",
+          "gridRow": "Fila de imágenes",
+          "timeline": "Línea de tiempo",
+          "milestone": "Hito",
+          "compare": "Comparación",
+          "beforeAfter": "Antes y después",
+          "columns3": "Tres columnas",
+          "featured": "Destacada y miniaturas"
+        }
       }
     },
     "multi": {
@@ -2651,7 +2765,19 @@
     "fit_canvas": "Ajustar el lienzo al contenido",
     "crop_to_canvas": "Recortar al lienzo",
     "cut_out": "Quitar franja",
-    "add_space": "Añadir espacio"
+    "add_space": "Añadir espacio",
+    "template_settings": "Ajustes de la plantilla",
+    "add_section": "Añadir sección",
+    "remove_section": "Eliminar sección",
+    "resize_section": "Cambiar el tamaño de la sección",
+    "move_section": "Mover sección",
+    "fill_zone": "Llenar zona",
+    "clear_zone": "Quitar imagen",
+    "swap_zones": "Intercambiar imágenes",
+    "frame_zone": "Encuadrar imagen",
+    "remove_caption": "Quitar leyenda",
+    "convert_zone": "Convertir en zona de imagen",
+    "apply_theme": "Aplicar tema"
   },
   "editor": {
     "edited": "{{name}} — Editado",
@@ -2660,7 +2786,38 @@
     "still_sticking": "{{count}} anotaciones siguen sobresaliendo del lienzo: no se recortan.",
     "crossing_strip": "{{count}} objetos cruzan la franja y se quedan donde estaban.",
     "new_image_name": "Imagen nueva",
-    "clipboard_name": "Portapapeles"
+    "clipboard_name": "Portapapeles",
+    "template": {
+      "title": "Título",
+      "caption": "Describe este paso",
+      "text": "Escribe aquí tu texto",
+      "date": "Fecha",
+      "before": "Antes",
+      "after": "Después",
+      "option": "Opción {{n}}",
+      "too_many": "Se seleccionaron {{count}} imágenes: una plantilla admite {{max}}, así que se usan las {{max}} primeras.",
+      "only_zones": "La plantilla tiene {{count}} zonas: las demás imágenes quedaron fuera.",
+      "builtin": {
+        "steps_column": "Pasos en columna",
+        "steps_grid": "Pasos en cuadrícula 2×N",
+        "steps_side": "Pasos con texto lateral",
+        "steps_custom": "Pasos personalizados",
+        "timeline_horizontal": "Horizontal",
+        "timeline_vertical": "Vertical",
+        "compare_side": "Lado a lado",
+        "before_after": "Antes y después",
+        "three_options": "Tres opciones",
+        "collage_featured": "Destacada y miniaturas",
+        "collage_grid": "Cuadrícula"
+      },
+      "family": {
+        "steps": "Pasos",
+        "timeline": "Línea de tiempo",
+        "compare": "Comparación",
+        "collage": "Collage",
+        "mine": "Mis plantillas"
+      }
+    }
   },
   "stamps": {
     "indicators": "Indicadores",

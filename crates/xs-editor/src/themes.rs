@@ -123,7 +123,7 @@ fn built_in(id: &str) -> Theme {
 }
 
 /// How light a color looks, 0–255.
-fn luminance(hex: &str) -> f64 {
+pub(crate) fn luminance(hex: &str) -> f64 {
     xs_image::color::Rgba::parse(hex)
         .map(|c| 0.2126 * c.r as f64 + 0.7152 * c.g as f64 + 0.0722 * c.b as f64)
         .unwrap_or(0.0)

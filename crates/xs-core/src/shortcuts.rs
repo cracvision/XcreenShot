@@ -620,6 +620,26 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
         editor("editor.new_image", "editor.action", r#"{"action":"new_image"}"#),
         editor(
+            "editor.new_from_template",
+            "editor.action",
+            r#"{"action":"new_from_template"}"#,
+        ),
+        editor(
+            "editor.apply_template",
+            "editor.action",
+            r#"{"action":"apply_template"}"#,
+        ),
+        editor(
+            "editor.save_as_template",
+            "editor.action",
+            r#"{"action":"save_as_template"}"#,
+        ),
+        editor(
+            "editor.import_template",
+            "editor.action",
+            r#"{"action":"import_template"}"#,
+        ),
+        editor(
             "editor.batch_export",
             "editor.action",
             r#"{"action":"batch_export"}"#,
@@ -821,6 +841,7 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
             let windows = match id {
                 "editor.open" => "Ctrl+KeyO",
                 "editor.new_image" => "Ctrl+KeyN",
+                "editor.new_from_template" => "Ctrl+Shift+KeyT",
                 "editor.print" => "Ctrl+KeyP",
                 "editor.pixel_grid" => "Ctrl+Quote",
                 "editor.fullscreen" => "F11",

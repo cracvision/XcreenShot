@@ -68,6 +68,33 @@
       }
     },
     "effects": { "type": "array", "items": { "type": "object" } },
+    "template": {
+      "type": "object",
+      "description": "A template (EDT-095 to EDT-101, ADR 0007): its built-in id, settings and stacked sections. The objects it laid out carry `slot` (their place: title, footer, zone:<section>:<n>, caption:<section>:<n>, number:<section>:<n>…) and `section`; image zones are objects of type `zone` (see $defs/zone). Absent in an ordinary document.",
+      "required": ["id", "settings", "sections"],
+      "properties": {
+        "id": { "type": "string", "description": "steps-column, before-after… or own" },
+        "settings": {
+          "type": "object",
+          "description": "scale fit|fill, title, captions, footer, author system|custom, authorText, font, textColor, background (color, gradient or null), numbering, numberColor, numberShape, reversed, theme"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "height"],
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string", "description": "title, step, imageText, text, twoImages, gridRow, footer, timeline, milestone, compare, beforeAfter, columns3, featured" },
+              "height": { "type": "number", "minimum": 1 },
+              "zones": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "width": { "type": "number" },
+        "hidden": { "type": "array", "items": { "type": "string" }, "description": "Places the user removed (a caption)" }
+      }
+    },
     "originalChanged": {
       "type": "boolean",
       "description": "base.png is no longer the image as captured or opened: a save merged edits into it or left out cropped pixels (EDT-050, EDT-076). Absent means false."
@@ -171,6 +198,22 @@
         "diamond",
         "bar"
       ]
+    },
+    "zone": {
+      "type": "object",
+      "description": "A template's image zone (EDT-098): a frame that crops its picture. An empty one, with its caption and number, is left out of the final image.",
+      "required": ["id", "type", "rect"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["zone"] },
+        "rect": { "type": "object", "required": ["x", "y", "w", "h"] },
+        "image": { "type": ["string", "null"], "description": "File name inside images/; null when empty" },
+        "fit": { "type": "string", "enum": ["fit", "fill"] },
+        "zoom": { "type": "number", "minimum": 0.1, "maximum": 10 },
+        "offset": { "$ref": "#/$defs/point" },
+        "slot": { "type": "string" },
+        "section": { "type": "string" }
+      }
     },
     "otherObject": {
       "type": "object",

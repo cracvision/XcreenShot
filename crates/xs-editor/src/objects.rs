@@ -418,6 +418,8 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "simplify" => Some(&["rect", "rotation"]),
         "magnify" => Some(&["source", "at"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
+        // A template's image zone (EDT-098): its frame, picture and framing.
+        "zone" => Some(&["rect", "image", "fit", "zoom", "offset"]),
         _ => None,
     }
 }
@@ -526,10 +528,25 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             let i = ImageObject::from_props(props)?;
             json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style})
         }
+        "zone" => {
+            let z = xs_image::shapes::ZoneObject::from_props(props)?;
+            json!({"image": z.image, "rect": z.rect, "fit": if z.fill { "fill" } else { "fit" }, "zoom": z.zoom, "offset": z.offset})
+        }
         k => return Err(format!("objects of type \"{k}\" cannot be changed in this build")),
     };
     check_shadow(value.get("style"))?;
     Ok(value.as_object().cloned().unwrap_or_default())
+}
+
+/// The props of a template's image zone (EDT-098), checked.
+pub fn zone_props(rect: [f64; 4], image: Option<&str>, fill: bool) -> Result<Map<String, Value>, String> {
+    let [x, y, w, h] = rect;
+    canonical(
+        "zone",
+        json!({"rect": {"x": x, "y": y, "w": w, "h": h}, "image": image, "fit": if fill { "fill" } else { "fit" }})
+            .as_object()
+            .expect("object"),
+    )
 }
 
 /// A stamp's style: its color, opacity and shadow (EDT-031, EDT-021).

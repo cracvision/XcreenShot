@@ -318,6 +318,66 @@ pub struct ImageObject {
     pub style: ImageStyle,
 }
 
+/// An image zone of a template (EDT-098, ADR 0007): a frame that crops its picture,
+/// fitted whole or filling it, then zoomed and moved by the framing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ZoneObject {
+    /// File name inside `images/`; none in an empty zone.
+    pub image: Option<String>,
+    pub rect: Rect,
+    /// Fill the zone (may crop) instead of fitting the picture whole.
+    pub fill: bool,
+    /// 1 = as fitted or filled.
+    pub zoom: f64,
+    /// Where the picture moved inside the zone, canvas pixels.
+    pub offset: [f64; 2],
+}
+
+impl ZoneObject {
+    pub fn from_props(props: &Map<String, Value>) -> Result<ZoneObject, String> {
+        let image = match props.get("image") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(
+                v.as_str()
+                    .filter(|n| is_image_name(n))
+                    .ok_or("image must be the name of a file in images/ or null")?
+                    .to_string(),
+            ),
+        };
+        let fill = match props.get("fit").and_then(Value::as_str).unwrap_or("fit") {
+            "fit" => false,
+            "fill" => true,
+            other => return Err(format!("fit is fit or fill, not {other}")),
+        };
+        let zoom = props.get("zoom").and_then(Value::as_f64).unwrap_or(1.0);
+        if !(0.1..=10.0).contains(&zoom) {
+            return Err("zoom must be between 0.1 and 10".to_string());
+        }
+        let offset = props
+            .get("offset")
+            .and_then(Value::as_array)
+            .and_then(|a| Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?]))
+            .unwrap_or([0.0, 0.0]);
+        Ok(ZoneObject {
+            image,
+            rect: rect(props.get("rect"))?,
+            fill,
+            zoom,
+            offset,
+        })
+    }
+
+    /// Where the picture of `size` goes: its top-left corner and its scale.
+    pub fn placement(&self, size: (f64, f64)) -> (f64, f64, f64) {
+        let (iw, ih) = (size.0.max(1.0), size.1.max(1.0));
+        let (kx, ky) = (self.rect.w / iw, self.rect.h / ih);
+        let k = if self.fill { kx.max(ky) } else { kx.min(ky) } * self.zoom;
+        let x = self.rect.x + (self.rect.w - iw * k) / 2.0 + self.offset[0];
+        let y = self.rect.y + (self.rect.h - ih * k) / 2.0 + self.offset[1];
+        (x, y, k)
+    }
+}
+
 /// A file name inside `images/`: no folders, nothing hidden.
 pub fn is_image_name(name: &str) -> bool {
     !name.is_empty()

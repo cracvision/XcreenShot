@@ -3954,3 +3954,541 @@ fn toolbar_layout_is_kept_and_reset() {
     let r = cli(&e.core, "editor.toolbar", json!({"action": "reset"}));
     assert_eq!(r["items"], r["default"]);
 }
+
+fn color_png(e: &Env, name: &str, rgb: [u8; 3], w: u32, h: u32) -> PathBuf {
+    let path = xs_library::unique(e.outside.path(), name, "png");
+    let img = image::RgbaImage::from_pixel(w, h, image::Rgba([rgb[0], rgb[1], rgb[2], 255]));
+    std::fs::write(&path, xs_image::encode::png(&img, 96.0, false).unwrap()).unwrap();
+    path
+}
+
+fn objects_of(e: &Env, doc: &str) -> Vec<Object> {
+    editor(&e.core)
+        .store
+        .with(doc, |d| d.document.objects.clone())
+        .unwrap()
+}
+
+fn slot_of(o: &Object) -> &str {
+    o.props.get("slot").and_then(Value::as_str).unwrap_or("")
+}
+
+/// The color of the picture in each zone, in order (none for an empty one).
+fn zone_colors(e: &Env, doc: &str) -> Vec<Option<[u8; 3]>> {
+    objects_of(e, doc)
+        .iter()
+        .filter(|o| o.kind == "zone")
+        .map(|o| {
+            let name = o.props.get("image")?.as_str()?;
+            let bytes = editor(&e.core).store.image_file(doc, name)?;
+            let img = xs_image::encode::decode(&bytes).ok()?;
+            let p = img.get_pixel(0, 0).0;
+            Some([p[0], p[1], p[2]])
+        })
+        .collect()
+}
+
+/// The values of the numbers, in order.
+fn numbers(e: &Env, doc: &str) -> Vec<String> {
+    objects_of(e, doc)
+        .iter()
+        .filter(|o| o.kind == "step" && slot_of(o).starts_with("number:"))
+        .filter_map(|o| o.props.get("value").and_then(Value::as_str).map(str::to_string))
+        .collect()
+}
+
+const RED: [u8; 3] = [230, 20, 20];
+const GREEN: [u8; 3] = [20, 200, 20];
+const BLUE: [u8; 3] = [20, 20, 230];
+const GOLD: [u8; 3] = [230, 180, 20];
+
+/// EDT-095, EDT-097: 4 captures in a steps template go into 4 zones in order, numbered
+/// 1 to 4; more than 20 images warn and use the first 20.
+#[test]
+fn templates_take_images_in_order() {
+    let e = env();
+    let files: Vec<PathBuf> = [RED, GREEN, BLUE, GOLD]
+        .iter()
+        .enumerate()
+        .map(|(i, c)| color_png(&e, &format!("c{i}"), *c, 40 + i as u32, 30))
+        .collect();
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": files}),
+    );
+    assert_eq!((r["zones"].as_u64(), r["placed"].as_u64()), (Some(4), Some(4)));
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    assert_eq!(
+        zone_colors(&e, &doc),
+        vec![Some(RED), Some(GREEN), Some(BLUE), Some(GOLD)]
+    );
+    assert_eq!(numbers(&e, &doc), ["1", "2", "3", "4"]);
+    let info = cli(&e.core, "document.template", json!({"documentId": doc}));
+    assert_eq!(info["isTemplate"], true);
+    assert_eq!(info["template"]["id"], "steps-column");
+    // A normal .xshot of the library, with the pictures inside.
+    let path = PathBuf::from(r["path"].as_str().unwrap());
+    assert!(path.starts_with(e.library.path()));
+    let saved = Xshot::read(&path).unwrap();
+    assert_eq!(
+        saved.document.objects.iter().filter(|o| o.kind == "zone").count(),
+        4
+    );
+    assert_eq!(saved.images.len(), 4);
+    // 25 images: a warning, and the first 20.
+    let one = color_png(&e, "many", RED, 8, 8);
+    let many = vec![one; 25];
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": many}),
+    );
+    assert_eq!(r["placed"], 20);
+    assert!(r["warnings"][0].as_str().unwrap().contains("first 20"));
+    // The picker lists every built-in template.
+    let list = cli(&e.core, "editor.templates", json!({}));
+    assert_eq!(list["max"], 20);
+    assert!(list["templates"].as_array().unwrap().len() >= 11);
+}
+
+/// EDT-096: "Before and after" puts the first image under Before; a new template takes
+/// the active theme's colors and font.
+#[test]
+fn before_after_and_the_active_theme() {
+    let e = env();
+    let a = color_png(&e, "before", RED, 30, 20);
+    let b = color_png(&e, "after", BLUE, 30, 20);
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "before-after", "images": [a, b]}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    assert_eq!(zone_colors(&e, &doc), vec![Some(RED), Some(BLUE)]);
+    let objs = objects_of(&e, &doc);
+    let header = |n: &str| {
+        objs.iter()
+            .find(|o| slot_of(o).starts_with("header:") && slot_of(o).ends_with(n))
+            .map(|o| o.props["text"].clone())
+    };
+    assert_eq!(header(":0"), Some(json!("Before")));
+    assert_eq!(header(":1"), Some(json!("After")));
+    // A gray theme with its own font.
+    cli(
+        &e.core,
+        "editor.theme",
+        json!({"action": "save", "theme": {"name": "Grises", "colors": ["#222222", "#777777", "#CCCCCC"], "font": "Georgia", "shadow": false}}),
+    );
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": [a]}),
+    );
+    let objs = objects_of(&e, r["documentId"].as_str().unwrap());
+    let title = objs.iter().find(|o| slot_of(o) == "title").unwrap();
+    assert_eq!(title.props["style"]["font"], "Georgia");
+    assert_eq!(title.props["style"]["color"], "#222222");
+    let number = objs.iter().find(|o| o.kind == "step").unwrap();
+    assert_eq!(number.props["style"]["fill"], "#777777");
+}
+
+/// EDT-097: fill instead of fit, reversing the order (and the numbers), the footer's
+/// author.
+#[test]
+fn template_settings_change_the_layout() {
+    let e = env();
+    let files: Vec<PathBuf> = [RED, GREEN, BLUE]
+        .iter()
+        .enumerate()
+        .map(|(i, c)| color_png(&e, &format!("s{i}"), *c, 200, 40))
+        .collect();
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": files}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    let zone = objects_of(&e, &doc)
+        .into_iter()
+        .find(|o| o.kind == "zone")
+        .unwrap();
+    let rect = zone.props["rect"].clone();
+    let (x, y, h) = (
+        rect["x"].as_f64().unwrap(),
+        rect["y"].as_f64().unwrap(),
+        rect["h"].as_f64().unwrap(),
+    );
+    // A wide picture fitted leaves the top of its zone empty; filled, it covers it.
+    let probe = (x as u32 + 5, y as u32 + 5);
+    assert_eq!(
+        rendered(&e, &doc).get_pixel(probe.0, probe.1).0,
+        [255, 255, 255, 255]
+    );
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "settings", "settings": {"scale": "fill"}}),
+    );
+    let p = rendered(&e, &doc).get_pixel(probe.0, probe.1).0;
+    assert_eq!([p[0], p[1], p[2]], RED);
+    assert!(h > 40.0);
+    // Reversed: the third first, numbered again.
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "settings", "settings": {"reversed": true}}),
+    );
+    assert_eq!(zone_colors(&e, &doc), vec![Some(BLUE), Some(GREEN), Some(RED)]);
+    assert_eq!(numbers(&e, &doc), ["1", "2", "3"]);
+    // One undo step each.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(zone_colors(&e, &doc), vec![Some(RED), Some(GREEN), Some(BLUE)]);
+    // The footer with the account's name.
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "settings", "settings": {"footer": true}}),
+    );
+    let objs = objects_of(&e, &doc);
+    let footer = objs.iter().find(|o| slot_of(o) == "footer").unwrap();
+    let name = xs_core::platform::account_name();
+    assert!(
+        footer.props["text"].as_str().unwrap().starts_with(&name),
+        "{footer:?}"
+    );
+    // Numbering off: no numbers.
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "settings", "settings": {"numbering": false}}),
+    );
+    assert!(numbers(&e, &doc).is_empty());
+    let bad = call(
+        &e.core,
+        Source::Cli,
+        "document.template",
+        json!({"documentId": doc, "action": "settings", "settings": {"scale": "stretch"}}),
+    );
+    assert!(bad.is_err());
+}
+
+/// EDT-098: swapping zones moves pictures and captions; + twice zooms 20 %; empty zones
+/// stay out of the final image with their captions and numbers.
+#[test]
+fn zones_swap_frame_and_stay_out_when_empty() {
+    let e = env();
+    let a = color_png(&e, "z1", RED, 60, 40);
+    let g = color_png(&e, "z2", GREEN, 60, 40);
+    let b = color_png(&e, "z3", BLUE, 60, 40);
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": [a, g, b]}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    // Three zones; empty the second.
+    let info = cli(&e.core, "document.template", json!({"documentId": doc}));
+    let zones: Vec<String> = info["zones"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|z| z["slot"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(zones.len(), 3);
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "clear_zone", "zone": zones[1]}),
+    );
+    // Captions of zones 1 and 3.
+    let caption = |n: usize| format!("caption:{}", &zones[n]["zone:".len()..]);
+    let id_of = |slot: &str| {
+        objects_of(&e, &doc)
+            .into_iter()
+            .find(|o| slot_of(o) == slot)
+            .unwrap()
+            .id
+    };
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": id_of(&caption(0)), "set": {"text": "First"}}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": id_of(&caption(2)), "set": {"text": "Third"}}),
+    );
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "swap_zones", "zone": zones[0], "with": zones[2]}),
+    );
+    assert_eq!(zone_colors(&e, &doc), vec![Some(BLUE), None, Some(RED)]);
+    let text_of = |slot: &str| {
+        objects_of(&e, &doc)
+            .into_iter()
+            .find(|o| slot_of(o) == slot)
+            .map(|o| o.props["text"].clone())
+    };
+    assert_eq!(text_of(&caption(0)), Some(json!("Third")));
+    assert_eq!(text_of(&caption(2)), Some(json!("First")));
+    // + twice: 20 % more.
+    for _ in 0..2 {
+        cli(
+            &e.core,
+            "document.template",
+            json!({"documentId": doc, "action": "frame_zone", "zone": zones[0], "zoomBy": 1}),
+        );
+    }
+    let zone = objects_of(&e, &doc)
+        .into_iter()
+        .find(|o| slot_of(o) == zones[0])
+        .unwrap();
+    assert_eq!(zone.props["zoom"].as_f64(), Some(1.2));
+    // The empty middle zone: not in the final image, nor its caption or number.
+    let snap = editor(&e.core).store.snapshot(&doc).unwrap();
+    let shown = xs_image::render::printed_objects(&snap.document.objects);
+    let middle = &zones[1]["zone:".len()..];
+    assert!(!shown.iter().any(|o| {
+        let s = slot_of(o);
+        s.ends_with(middle) && ["zone:", "caption:", "number:"].iter().any(|k| s.starts_with(k))
+    }));
+    assert!(shown.iter().any(|o| slot_of(o) == caption(0)));
+    assert_eq!(numbers(&e, &doc), ["1", "2"]);
+    // The .xshot keeps the empty zone.
+    assert_eq!(
+        snap.document.objects.iter().filter(|o| o.kind == "zone").count(),
+        3
+    );
+}
+
+/// EDT-099: a section added between steps 2 and 3 is numbered 3 once it has its
+/// picture; a taller section moves an arrow drawn below it; deleting a section undoes.
+#[test]
+fn sections_add_resize_and_delete() {
+    let e = env();
+    let files: Vec<PathBuf> = [RED, GREEN, BLUE]
+        .iter()
+        .enumerate()
+        .map(|(i, c)| color_png(&e, &format!("p{i}"), *c, 50, 30))
+        .collect();
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "steps-column", "images": files}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    let info = cli(&e.core, "document.template", json!({"documentId": doc}));
+    let sections = info["sections"].as_array().unwrap().clone();
+    assert_eq!(sections[0]["kind"], "title");
+    // An arrow in the third step.
+    let y = sections[3]["top"].as_f64().unwrap() + 100.0;
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "arrow", "from": [100, y], "to": [300, y]}]}),
+    );
+    // Taller second step: the arrow moves down with its section.
+    let second = sections[2]["id"].as_str().unwrap();
+    let h = sections[2]["height"].as_f64().unwrap();
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "resize_section", "sectionId": second, "height": h + 100.0}),
+    );
+    let arrow = objects_of(&e, &doc)
+        .into_iter()
+        .find(|o| o.kind == "arrow")
+        .unwrap();
+    assert_eq!(arrow.props["from"][1].as_f64(), Some(y + 100.0));
+    // Image with text between steps 2 and 3, then its picture.
+    let r = cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "add_section", "kind": "imageText", "index": 3}),
+    );
+    assert_eq!(r["sections"][3]["kind"], "imageText");
+    let new_zone = r["zones"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|z| z["section"] == r["sections"][3]["id"])
+        .unwrap()["objectId"]
+        .clone();
+    let gold = color_png(&e, "gold", GOLD, 50, 30);
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "fill_zone", "zone": new_zone, "path": gold}),
+    );
+    assert_eq!(
+        zone_colors(&e, &doc),
+        vec![Some(RED), Some(GREEN), Some(GOLD), Some(BLUE)]
+    );
+    assert_eq!(numbers(&e, &doc), ["1", "2", "3", "4"]);
+    // Delete it, then undo.
+    let sid = r["sections"][3]["id"].clone();
+    cli(
+        &e.core,
+        "document.template",
+        json!({"documentId": doc, "action": "remove_section", "sectionId": sid}),
+    );
+    assert_eq!(zone_colors(&e, &doc).len(), 3);
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(zone_colors(&e, &doc).len(), 4);
+}
+
+fn style_colors(v: &Value, out: &mut Vec<String>) {
+    match v {
+        Value::Object(m) => m
+            .iter()
+            .filter(|(k, _)| k.as_str() != "shadow")
+            .for_each(|(_, c)| style_colors(c, out)),
+        Value::Array(a) => a.iter().for_each(|c| style_colors(c, out)),
+        Value::String(s) if s.starts_with('#') && s.len() >= 7 => out.push(s[..7].to_uppercase()),
+        _ => {}
+    }
+}
+
+/// EDT-100: a theme applied to a template made with Base gives every color the new
+/// theme's, in one step; with objects given, only those change.
+#[test]
+fn applying_a_theme_recolors_objects() {
+    let e = env();
+    let a = color_png(&e, "t", RED, 30, 20);
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": "before-after", "images": [a, a]}),
+    );
+    let doc = r["documentId"].as_str().unwrap().to_string();
+    let sober = ["#1F1F1F", "#6B6B6B", "#B5B5B5", "#FFFFFF", "#2D7FF9"];
+    cli(
+        &e.core,
+        "document.apply_theme",
+        json!({"documentId": doc, "themeId": "sober"}),
+    );
+    let mut found = Vec::new();
+    for o in objects_of(&e, &doc).iter().filter(|o| o.kind != "zone") {
+        style_colors(&o.props["style"], &mut found);
+    }
+    assert!(!found.is_empty());
+    assert!(found.iter().all(|c| sober.contains(&c.as_str())), "{found:?}");
+    // Two callouts selected: only they change.
+    let (doc2, _) = capture(&e);
+    let r = cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc2, "objects": [
+            {"type": "callout", "rect": {"x": 10, "y": 10, "w": 80, "h": 40}, "text": "a", "style": {"fill": "#F2545B"}},
+            {"type": "callout", "rect": {"x": 100, "y": 10, "w": 80, "h": 40}, "text": "b", "style": {"fill": "#F2545B"}},
+            {"type": "arrow", "from": [10, 100], "to": [100, 100], "style": {"color": "#F2545B"}}
+        ]}),
+    );
+    let ids = r["ids"].clone();
+    let r = cli(
+        &e.core,
+        "document.apply_theme",
+        json!({"documentId": doc2, "themeId": "sober", "fromThemeId": "base", "objectIds": [ids[0], ids[1]]}),
+    );
+    assert_eq!(r["changed"], 2);
+    let objs = objects_of(&e, &doc2);
+    assert_eq!(objs[0].props["style"]["fill"], "#6B6B6B");
+    assert_eq!(objs[2].props["style"]["color"], "#F2545B");
+}
+
+/// EDT-101: a document with 3 zones saved as a template fills them from the picker; a
+/// floating image converted into a zone is empty in the saved template.
+#[test]
+fn own_templates_round_trip() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let pic = color_png(&e, "float", GREEN, 40, 30);
+    let r = cli(
+        &e.core,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [pic, pic, pic]}),
+    );
+    for id in r["ids"].as_array().unwrap() {
+        cli(
+            &e.core,
+            "document.template",
+            json!({"documentId": doc, "action": "convert_zone", "objectId": id}),
+        );
+    }
+    let name = format!("Mine {}", std::process::id());
+    let saved = cli(
+        &e.core,
+        "document.save_as_template",
+        json!({"documentId": doc, "name": name, "family": "steps"}),
+    );
+    let tid = saved["id"].as_str().unwrap().to_string();
+    let file = Xshot::read(Path::new(saved["path"].as_str().unwrap())).unwrap();
+    let zones: Vec<&Object> = file
+        .document
+        .objects
+        .iter()
+        .filter(|o| o.kind == "zone")
+        .collect();
+    assert_eq!(zones.len(), 3);
+    assert!(zones
+        .iter()
+        .all(|z| z.props.get("image").is_none_or(Value::is_null)));
+    let list = cli(&e.core, "editor.templates", json!({}));
+    let own = list["templates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["id"] == tid)
+        .unwrap()
+        .clone();
+    assert_eq!(
+        (own["family"].as_str(), own["zones"].as_u64()),
+        (Some("steps"), Some(3))
+    );
+    // A name taken asks for replace.
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "document.save_as_template",
+        json!({"documentId": doc, "name": name})
+    )
+    .is_err());
+    let files: Vec<PathBuf> = [RED, GREEN, BLUE]
+        .iter()
+        .enumerate()
+        .map(|(i, c)| color_png(&e, &format!("o{i}"), *c, 20, 20))
+        .collect();
+    let r = cli(
+        &e.core,
+        "document.from_template",
+        json!({"template": tid, "images": files}),
+    );
+    let new = r["documentId"].as_str().unwrap();
+    assert_eq!(zone_colors(&e, new), vec![Some(RED), Some(GREEN), Some(BLUE)]);
+    // Duplicate, delete.
+    let r = cli(
+        &e.core,
+        "editor.templates",
+        json!({"action": "duplicate", "id": tid}),
+    );
+    let copy = r["result"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "editor.templates",
+        json!({"action": "delete", "id": copy}),
+    );
+    cli(
+        &e.core,
+        "editor.templates",
+        json!({"action": "delete", "id": tid}),
+    );
+    let list = cli(&e.core, "editor.templates", json!({}));
+    assert!(!list["templates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|t| t["id"] == tid));
+}

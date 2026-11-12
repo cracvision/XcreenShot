@@ -19,6 +19,8 @@ export function useObjectImages(
   const wanted = objects.flatMap((o) => {
     // A picture never changes: its name is its content.
     if (o.type === "image") return [{ id: o.id, url: imageUrl(documentId, o.image) }];
+    // A template's zone draws its picture itself (EDT-098).
+    if (o.type === "zone") return o.image ? [{ id: o.id, url: imageUrl(documentId, o.image) }] : [];
     if (
       o.type !== "text" &&
       o.type !== "step" &&

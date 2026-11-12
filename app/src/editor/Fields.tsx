@@ -2,6 +2,7 @@
 // for ten steps) and a list of choices. Shared by Properties and Effects.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { loadFonts } from "./actions";
 import { useDraft } from "./useDraft";
 
 export function NumberField(props: {
@@ -106,5 +107,39 @@ export function SelectField<T extends string>(props: {
         ))}
       </select>
     </div>
+  );
+}
+
+/** Installed fonts with search (EDT-026): a field that suggests as you type. */
+export function FontField(props: {
+  value: string | undefined;
+  fonts: string[];
+  onCommit: (v: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useDraft(props.value ?? "");
+  const typed = () => {
+    const name = draft.trim();
+    if (name && name !== props.value) props.onCommit(name);
+    setDraft(null);
+  };
+  return (
+    <>
+      <input
+        id="font-field"
+        list="font-list"
+        value={draft}
+        placeholder={props.value === undefined ? t("ui.editor.mixed") : ""}
+        onFocus={() => void loadFonts()}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={typed}
+        onKeyDown={(e) => e.key === "Enter" && typed()}
+      />
+      <datalist id="font-list">
+        {props.fonts.map((f) => (
+          <option key={f} value={f} />
+        ))}
+      </datalist>
+    </>
   );
 }

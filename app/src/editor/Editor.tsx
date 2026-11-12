@@ -28,6 +28,8 @@ import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { ToolbarCustomizer } from "./ToolbarCustomizer";
+import { TemplateDialogs } from "./TemplatePicker";
+import { dropOnZone } from "./templateActions";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
@@ -118,6 +120,8 @@ export function Editor() {
         else if (e.payload.type === "leave") setDropping(false);
         else if (e.payload.type === "drop") {
           setDropping(false);
+          // On a template's zone, an image fills it (EDT-098).
+          if (dropOnZone(e.payload.paths, e.payload.position)) return;
           void openFiles(e.payload.paths);
         }
       })
@@ -155,6 +159,7 @@ export function Editor() {
       )}
       {dropping && doc && <div className="drop-hint">{t("ui.editor.drop_hint")}</div>}
       <Dialogs />
+      <TemplateDialogs />
       <EditorContextMenu />
       <div className="sr-only" role="status" aria-live="polite">
         {announcement}
