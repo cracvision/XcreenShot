@@ -131,8 +131,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-049 | Recortar | M1 | Must | Win |
 | EDT-050 | Recorte no destructivo | M1 | Must | Win |
 | EDT-051 | Recortar al lienzo y recortar bordes | M2 | Should | Hecho en Windows (macOS pendiente) |
-| EDT-052 | Quitar franja y añadir espacio | M2 | Should | — |
-| EDT-053 | Panel Efectos | M2 | Must | En curso (falta ocultarlos con Quitar franja, EDT-052) |
+| EDT-052 | Quitar franja y añadir espacio | M2 | Should | Hecho en Windows (macOS pendiente) |
+| EDT-053 | Panel Efectos | M2 | Must | Hecho en Windows (macOS pendiente) |
 | EDT-054 | Efectos guardados | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-055 | Borde | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-056 | Bordes decorativos | M2 | Should | Hecho en Windows (macOS pendiente) |
