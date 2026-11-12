@@ -432,7 +432,9 @@ fn main() -> ExitCode {
         Some(("mcp", _)) => return mcp::serve(&specs, no_launch, lang),
         // APP-033: the guide for agents, built from this build's registry.
         Some(("agents-md", _)) => {
-            print!("{}", xs_core::agents_md::render());
+            // A reader that stops early (`| head`) is not an error.
+            use std::io::Write;
+            let _ = std::io::stdout().write_all(xs_core::agents_md::render().as_bytes());
             return ExitCode::SUCCESS;
         }
         Some(("help", m)) => {
