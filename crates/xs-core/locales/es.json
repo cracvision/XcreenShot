@@ -784,7 +784,8 @@
       "editor_rename_item": "Renombrar",
       "editor_show_in_folder": "Mostrar en el Explorador o el Finder",
       "editor_delete_item": "Mover a la papelera",
-      "editor_tool_step": "Herramienta Paso"
+      "editor_tool_step": "Herramienta Paso",
+      "editor_tool_callout": "Herramienta Globo"
     }
   },
   "tray": {
@@ -1236,7 +1237,8 @@
         "blur": "Arrastra sobre lo que no debe verse: desenfoque, pixelado o sólido.",
         "crop": "Arrastra para quedarte con una parte. No se pierde nada: vuelve a recortar para recuperarlo.",
         "image": "Una imagen sobre la captura.",
-        "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande."
+        "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande.",
+        "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar."
       },
       "tool": {
         "move": "Mover",
@@ -1246,7 +1248,8 @@
         "blur": "Desenfocar",
         "crop": "Recortar",
         "image": "Imagen",
-        "step": "Paso"
+        "step": "Paso",
+        "callout": "Globo"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1306,7 +1309,15 @@
         "step_shape": "Forma",
         "text_color": "Color del texto",
         "sequence": "Tipo",
-        "step_size": "Tamaño"
+        "step_size": "Tamaño",
+        "callout_shape": "Forma",
+        "shading": "Sombreado",
+        "corner_radius": "Radio de las esquinas",
+        "tail_style": "Cola",
+        "tail_width": "Ancho de la cola",
+        "valign": "Alineación vertical",
+        "padding": "Margen interior",
+        "fit_text": "Ajustar al texto"
       },
       "cap": {
         "none": "Ninguno",
@@ -1428,7 +1439,28 @@
         "romanUpper": "I, II, III…",
         "romanLower": "i, ii, iii…"
       },
-      "ok": "Aceptar"
+      "ok": "Aceptar",
+      "callout_shape": {
+        "rectangle": "Rectángulo",
+        "roundedRectangle": "Rectángulo redondeado",
+        "ellipse": "Elipse",
+        "cloud": "Nube",
+        "thought": "Pensamiento",
+        "explosion": "Explosión",
+        "tag": "Etiqueta",
+        "arrow": "Flecha",
+        "text": "Solo texto"
+      },
+      "tail": {
+        "straight": "Recta",
+        "curved": "Curva",
+        "arrow": "Flecha"
+      },
+      "valign": {
+        "top": "Arriba",
+        "middle": "En medio",
+        "bottom": "Abajo"
+      }
     },
     "multi": {
       "title": "Multicaptura",
@@ -1621,7 +1653,13 @@
     "change_image": "Cambiar imagen",
     "delete_image": "Eliminar imagen",
     "cut_image": "Cortar imagen",
-    "paste_image": "Pegar imagen"
+    "paste_image": "Pegar imagen",
+    "draw_callout": "Añadir globo",
+    "move_callout": "Mover globo",
+    "change_callout": "Cambiar globo",
+    "delete_callout": "Eliminar globo",
+    "cut_callout": "Cortar globo",
+    "paste_callout": "Pegar globo"
   },
   "editor": {
     "edited": "{{name}} — Editado"

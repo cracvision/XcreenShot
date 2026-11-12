@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use xs_core::document::{translate_props, Object};
+use xs_image::callouts::{CalloutObject, CalloutStyle};
 use xs_image::geometry::{Arrow, ArrowStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::steps::{self, StepObject, StepStyle};
@@ -22,6 +23,7 @@ pub struct Styles {
     pub shape: ShapeStyle,
     pub blur: BlurStyle,
     pub step: StepStyle,
+    pub callout: CalloutStyle,
 }
 
 impl Styles {
@@ -33,6 +35,7 @@ impl Styles {
             "shape" => serde_json::to_value(&self.shape).ok(),
             "blur" => serde_json::to_value(&self.blur).ok(),
             "step" => serde_json::to_value(&self.step).ok(),
+            "callout" => serde_json::to_value(&self.callout).ok(),
             _ => None,
         }
     }
@@ -45,6 +48,7 @@ impl Styles {
             "shape" => self.shape = ShapeStyle::merged(&self.shape, changes)?,
             "blur" => self.blur = BlurStyle::merged(&self.blur, changes)?,
             "step" => self.step = StepStyle::merged(&self.step, changes)?,
+            "callout" => self.callout = CalloutStyle::merged(&self.callout, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -52,7 +56,7 @@ impl Styles {
 }
 
 /// Object types `document.annotate` knows (EDT-119) that arrive in later builds.
-const LATER_TYPES: &[&str] = &["line", "callout", "stamp", "highlight", "magnify", "spotlight"];
+const LATER_TYPES: &[&str] = &["line", "stamp", "highlight", "magnify", "spotlight"];
 
 /// Geometry properties of each type (everything but `style`).
 fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
@@ -61,6 +65,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "text" => Some(&["at", "width", "text", "rotation"]),
         "shape" | "blur" | "image" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
+        "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
     }
 }
@@ -126,6 +131,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
         }
+        "callout" => {
+            let c = CalloutObject::from_props(props)?;
+            json!({"rect": c.rect, "rotation": c.rotation, "text": c.text, "tails": c.tails, "style": c.style})
+        }
         "image" => {
             let i = ImageObject::from_props(props)?;
             json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style})
@@ -178,6 +187,63 @@ pub fn new_object(input: &Value, styles: &Styles) -> Result<(String, Map<String,
     }
     props.insert("style".into(), style);
     Ok((kind.to_string(), canonical(kind, &props)?))
+}
+
+/// Gives a callout drawn without tails one (EDT-028): below its body, once it fits its
+/// text, or above it when there is no room below on a `height` px canvas.
+pub fn default_tail(object: &mut Object, height: f64) {
+    if object.kind != "callout" {
+        return;
+    }
+    let Some(r) = object.props.get("rect") else {
+        return;
+    };
+    let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+    let (x, y, w, h) = (n("x"), n("y"), n("w"), n("h"));
+    let gap = (h * 0.5).clamp(24.0, 60.0);
+    let below = y + h + gap;
+    let tip_y = if below <= height - 2.0 || y - gap < 2.0 {
+        below
+    } else {
+        y - gap
+    };
+    object
+        .props
+        .insert("tails".into(), json!([[x + w * 0.25, tip_y]]));
+}
+
+/// A callout that fits its text grows to show all of it (EDT-028). Other objects stay.
+pub fn fit(object: &mut Object, dpi: f64) {
+    if object.kind != "callout" {
+        return;
+    }
+    let Ok(c) = CalloutObject::from_props(&object.props) else {
+        return;
+    };
+    let Some(h) = c.fitted_height(dpi) else {
+        return;
+    };
+    if let Some(r) = object.props.get_mut("rect").and_then(Value::as_object_mut) {
+        r.insert("h".into(), json!(h));
+    }
+    // A tip the grown body now covers moves down with it, so its tail still shows.
+    if c.rotation == 0.0 {
+        let r = c.rect;
+        let grown = h - r.h;
+        let tails: Vec<[f64; 2]> = c
+            .tails
+            .iter()
+            .map(|t| {
+                let covered = t[0] >= r.x && t[0] <= r.x + r.w && t[1] > r.y + r.h && t[1] <= r.y + h;
+                if covered {
+                    [t[0], t[1] + grown]
+                } else {
+                    *t
+                }
+            })
+            .collect();
+        object.props.insert("tails".into(), json!(tails));
+    }
 }
 
 /// The side of a step dragged or resized to `rect`: the mean of its width and height,
@@ -488,7 +554,7 @@ mod tests {
         let s = Styles::default();
         let err = |v: Value| new_object(&v, &s).unwrap_err();
         assert!(err(json!({"type": "spiral"})).contains("unknown type"));
-        assert!(err(json!({"type": "callout", "rect": {}})).contains("later build"));
+        assert!(err(json!({"type": "line", "from": [0, 0]})).contains("later build"));
         assert!(err(json!({"type": "arrow", "from": [0, 0]})).contains("to"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [0, 0]})).contains("1 pixel"));
         assert!(err(json!({"type": "arrow", "from": [0, 0], "to": [9, 9], "colour": 1})).contains("colour"));

@@ -6,7 +6,14 @@ import { useEffect, useRef } from "react";
 import { Circle, Ellipse, Group, Image as KImage, Line, Rect } from "react-konva";
 import { innerRect, pixelBounds } from "./boxes";
 import { dash, type ArrowStyle, type Geometry } from "./geometry";
-import type { BlurObject, ImageObject, ShapeObject, StepObject, TextObject } from "./state";
+import type {
+  BlurObject,
+  CalloutObject,
+  ImageObject,
+  ShapeObject,
+  StepObject,
+  TextObject,
+} from "./state";
 
 /** Draws its children whole and blends them once when translucent, like the export. */
 function Translucent({
@@ -242,6 +249,33 @@ export function StepShape(props: {
       scaleY={k}
       rotation={o.rotation - committed.rotation}
       opacity={1}
+      listening={false}
+    />
+  );
+}
+
+/** A callout as Rust draws it (EDT-028), centered on its body's center. While the body
+ * is resized or turned, the picture follows until the new one is ready; while a tail is
+ * dragged, the canvas draws that tail on top. */
+export function CalloutShape(props: {
+  o: CalloutObject;
+  committed: CalloutObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  if (!image) return null;
+  const kx = committed.rect.w > 0 ? o.rect.w / committed.rect.w : 1;
+  const ky = committed.rect.h > 0 ? o.rect.h / committed.rect.h : 1;
+  return (
+    <KImage
+      image={image}
+      x={o.rect.x + o.rect.w / 2}
+      y={o.rect.y + o.rect.h / 2}
+      offsetX={image.naturalWidth / 2}
+      offsetY={image.naturalHeight / 2}
+      scaleX={kx}
+      scaleY={ky}
+      rotation={o.rotation - committed.rotation}
       listening={false}
     />
   );

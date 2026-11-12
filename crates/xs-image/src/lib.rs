@@ -4,6 +4,7 @@
 //! The editor canvas (Konva) draws the same geometry from `app/src/editor/geometry.ts`;
 //! `tests/fixtures/arrow-geometry.json` keeps both copies in step.
 
+pub mod callouts;
 pub mod color;
 pub mod effects;
 pub mod encode;

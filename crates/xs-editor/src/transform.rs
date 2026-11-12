@@ -78,7 +78,7 @@ fn rotation_of(p: &Map<String, Value>) -> f64 {
 pub fn box_of(o: &Object, measure: Measure) -> Option<Boxed> {
     let p = &o.props;
     match o.kind.as_str() {
-        "shape" | "blur" | "image" => Some(Boxed {
+        "shape" | "blur" | "image" | "step" | "callout" => Some(Boxed {
             rect: Rect::from_value(p.get("rect")?)?,
             rotation: rotation_of(p),
         }),
@@ -260,6 +260,19 @@ pub fn transformed(o: &Object, op: &Op, measure: Measure) -> Map<String, Value> 
                             set.insert("style".into(), json!({ "size": v }));
                         }
                     }
+                    "callout" => {
+                        let mut st = Map::new();
+                        for (key, lo, hi) in [
+                            ("outlineWidth", 0.0, 20.0),
+                            ("size", 1.0, 1000.0),
+                            ("tailWidth", 2.0, 200.0),
+                        ] {
+                            if let Some(v) = grown(style_num(o, key), k, lo, hi) {
+                                st.insert(key.into(), json!(v));
+                            }
+                        }
+                        set.insert("style".into(), Value::Object(st));
+                    }
                     _ => {}
                 }
             }
@@ -312,6 +325,19 @@ pub fn transformed(o: &Object, op: &Op, measure: Measure) -> Map<String, Value> 
     }
     if rotation != rot {
         set.insert("rotation".into(), json!(rotation));
+    }
+    // A callout's tails point at the same things (EDT-028).
+    if let Some(tails) = o.props.get("tails").and_then(Value::as_array) {
+        let moved: Vec<Value> = tails
+            .iter()
+            .filter_map(|t| xy(Some(t)))
+            .map(|t| match *op {
+                Op::Scale { from, to, .. } => json!(mapped(t, &from, &to)),
+                Op::Rotate { center, degrees } => json!(turn(t, center, degrees)),
+                Op::Equal { .. } => json!(t),
+            })
+            .collect();
+        set.insert("tails".into(), Value::Array(moved));
     }
     set
 }

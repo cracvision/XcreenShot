@@ -12,7 +12,7 @@ import { aiProgress } from "./aiState";
 import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
-export type Tool = "move" | "arrow" | "text" | "shape" | "step" | "blur" | "crop";
+export type Tool = "move" | "arrow" | "text" | "callout" | "shape" | "step" | "blur" | "crop";
 
 export interface DocSummary {
   documentId: string;
@@ -83,6 +83,64 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+}
+
+/** Callouts (EDT-028). */
+export type CalloutShapeKind =
+  | "rectangle"
+  | "roundedRectangle"
+  | "ellipse"
+  | "cloud"
+  | "thought"
+  | "explosion"
+  | "tag"
+  | "arrow"
+  | "text";
+export const CALLOUT_SHAPES: CalloutShapeKind[] = [
+  "rectangle",
+  "roundedRectangle",
+  "ellipse",
+  "cloud",
+  "thought",
+  "explosion",
+  "tag",
+  "arrow",
+  "text",
+];
+export type TailStyle = "straight" | "curved" | "arrow";
+export type VAlign = "top" | "middle" | "bottom";
+
+export interface CalloutStyle {
+  shape: CalloutShapeKind;
+  fill: string | null;
+  shading: boolean;
+  outline: string;
+  outlineWidth: number;
+  lineStyle: LineStyle;
+  cornerRadius: number;
+  tailStyle: TailStyle;
+  tailWidth: number;
+  tailColor: string | null;
+  font: string;
+  size: number;
+  bold: boolean;
+  italic: boolean;
+  textColor: string;
+  align: TextAlign;
+  valign: VAlign;
+  padding: number;
+  fitText: boolean;
+  opacity: number;
+}
+
+export interface CalloutObject {
+  id: string;
+  type: "callout";
+  rect: Rect;
+  rotation: number;
+  text: string;
+  tails: Point[];
+  style: CalloutStyle;
 }
 
 /** Step markers (EDT-035). */
@@ -166,6 +224,7 @@ export type DocObject = (
   | BlurObject
   | ImageObject
   | StepObject
+  | CalloutObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -180,6 +239,7 @@ export interface Styles {
   shape: ShapeStyle;
   blur: BlurStyle;
   step: StepStyle;
+  callout: CalloutStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */
@@ -190,6 +250,8 @@ export interface TextEdit {
   text: string;
   rotation: number;
   style: TextStyle;
+  /** Typing in a callout (EDT-028): the field covers its body with this fill. */
+  callout?: { fill: string | null };
 }
 
 /** What `document.info` returns (EDT-119). */

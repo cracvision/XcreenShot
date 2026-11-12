@@ -115,7 +115,7 @@ xcreenshot app ping --json
 | `document.open` | `xcreenshot document open <path> [--show true]` | Opens a `.xshot`, PNG or JPG file as a document and returns its `documentId`. Opening a file that is already open returns the same id. Without `--show` no window opens. |
 | `document.list` | `xcreenshot document list --json` | Open documents in order, with `active` (the one in the editor), `dirty` (unsaved changes), `kind` (`library` or `external`) and size. |
 | `document.info` | `xcreenshot document info [--document-id <id>] --json` | Size, resolution (`dpi`), crop, objects with their geometry and style, capture metadata, `dirty`, and the undo and redo state. |
-| `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (`arrow`, `text`, `shape`, `blur`), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
+| `document.annotate` | `xcreenshot document annotate --document-id <id> --params '{"objects":[…]}'` | Adds objects (`arrow`, `text`, `callout`, `shape`, `step`, `blur`), in image pixels. All or none: an invalid object fails the whole command with `invalid_params` and `details.index` (1-based). One undo step. |
 | `document.arrange` | `xcreenshot document arrange --document-id <id> --object-ids '["o1"]' --to back` | Stacking order: `front`, `forward` (one place up), `backward`, `back`. Several keep their order. One undo step. |
 | `document.steps` | `xcreenshot document steps --document-id <id> restart` · `renumber` | Step markers (`type: "step"`, EDT-035): `document.annotate` places one with `at` (its center) or `rect`, and without `value` it takes the next of its sequence (`style.sequence`: number, upper, lower, romanUpper, romanLower). `restart` makes the next one the first value; `renumber` numbers them again by the order they were made (one undo step). `document.info` shows the next value of each sequence in `stepNext`. |
 | `document.flatten` | `xcreenshot document flatten --document-id <id> --object-ids '["o1"]'` · `--all true` | Merges objects into the image, in one undo step: they are no longer objects. `document.info` lists them in `flattened` (layers with their objects in base pixels and their `bounds` on the canvas). Returns the new `layers`: each blur gets a layer of its own that is `permanent` (when the file is written it merges into `base.png`, with the earlier layers it covers); the objects between blurs can come back. |
@@ -141,7 +141,7 @@ xcreenshot app ping --json
 | `editor.show` | `xcreenshot editor show [--view editor\|library] [--document-id <id>]` | Shows the main window in the Editor view (or the Library view with `--view library`), optionally with that document in front. The document shown before is saved if it is in the library. |
 | `editor.state` | `xcreenshot editor state --json` | Active tool, available tools, the current style of each tool, the open documents and how many recoverable items there are. |
 | `editor.fonts` | `xcreenshot editor fonts --json` | Font families installed on this computer, for the `font` of text objects. |
-| `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|text\|shape\|blur\|crop>` | Makes a tool active. |
+| `editor.select_tool` | `xcreenshot editor select-tool <move\|arrow\|text\|callout\|shape\|step\|blur\|crop>` | Makes a tool active. |
 | `editor.action` | `xcreenshot editor action <open\|save\|save_as\|export\|close\|close_all\|undo\|redo\|cut\|copy\|paste\|paste_in_place\|copy_all\|delete\|deselect\|side_panel\|toolbar_labels\|recover\|ai_ask\|ai_name\|view_editor\|view_library\|tray\|prev_item\|next_item\|close_others\|rename_item\|show_in_folder\|delete_item>` | Does in the editor window what its menu entry does, with the window's selection, view and dialogs. Menus and editor shortcuts run it. To change documents without the window, use the `document.*` commands. |
 | `editor.menu_state` | (UI only) | The editor window reports which menu entries can be used now and which are ticked. |
 | `editor.set_style` | `xcreenshot editor set-style --tool arrow --style '{"color":"#2D7FF9","width":4}'` | Changes the tool's current style: what the next objects drawn by the user or added without a style look like. |
@@ -255,9 +255,36 @@ around its center.
 Exported images and copies never keep what a blur hides; a `.xshot` keeps the original
 pixels under it.
 
+A callout (EDT-028): a text box with a body and tails. `tails` are the points the tips
+reach (up to 8; without `tails`, one is added below the body). With `fitText` the body
+grows to show all its text.
+
+```json
+{"type": "callout", "rect": {"x": 40, "y": 40, "w": 220, "h": 70}, "rotation": 0,
+ "text": "Click here", "tails": [[90, 190]],
+ "style": {"shape": "roundedRectangle", "fill": "#FFFFFF", "outline": "#F2545B",
+           "outlineWidth": 3, "cornerRadius": 12, "tailStyle": "straight", "tailWidth": 24}}
+```
+
+| Style property | Values |
+|---|---|
+| `shape` | `rectangle`, `roundedRectangle`, `ellipse`, `cloud`, `thought`, `explosion`, `tag`, `arrow`, `text` |
+| `fill`, `shading` | `#RRGGBB(AA)` or `null`; a soft gradient to a darker tone |
+| `outline`, `outlineWidth`, `lineStyle` | 0–20 px; `solid`, `dash`, `dot`, `dashDot` |
+| `cornerRadius` | 0–200 px |
+| `tailStyle`, `tailWidth`, `tailColor` | `straight`, `curved`, `arrow`; 2–200 px; `null` = the outline's |
+| `font`, `size`, `bold`, `italic`, `textColor`, `align`, `valign`, `padding` | As text; `valign` `top`, `middle`, `bottom`; padding 0–100 px |
+| `fitText`, `opacity` | `true`/`false`; 0–100 % |
+
+A step marker (EDT-035): `at` (its center) or a square `rect`, and `value` (up to 6
+characters; without it, the next of its sequence). Style: `sequence` (`number`,
+`upper`, `lower`, `romanUpper`, `romanLower`), `shape` (`circle`, `square`,
+`roundedSquare`, `diamond`, `marker`, `text`), `fill`, `textColor`, `outline`,
+`outlineWidth` (0–10), `size` (16–256), `opacity`.
+
 Missing style properties take the tool's current style (`editor.state`). Unknown
-properties or types fail with `invalid_params`. Other object types (`callout`, `step`,
-`highlight`…) arrive in M2.
+properties or types fail with `invalid_params`. Other object types (`line`,
+`highlight`…) arrive later in M2.
 
 `.xshot` is a ZIP with `manifest.json`, `document.json`, `base.png` (the original
 pixels, never cropped), `meta.json` and `thumb.png`. The schema of `document.json` is

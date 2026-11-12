@@ -55,7 +55,7 @@ pub struct Object {
 
 impl Object {
     /// Moves it by (`dx`, `dy`) pixels, whatever its type: its points (`from`, `to`,
-    /// `at`, `points`) and its `rect`.
+    /// `at`, `points`, `tails`) and its `rect`.
     pub fn translate(&mut self, dx: f64, dy: f64) {
         translate_props(&mut self.props, dx, dy);
     }
@@ -78,8 +78,11 @@ pub fn translate_props(props: &mut Map<String, Value>, dx: f64, dy: f64) {
             shift(v);
         }
     }
-    if let Some(points) = props.get_mut("points").and_then(Value::as_array_mut) {
-        points.iter_mut().for_each(shift);
+    // Polylines' points and callouts' tails (EDT-028).
+    for key in ["points", "tails"] {
+        if let Some(points) = props.get_mut(key).and_then(Value::as_array_mut) {
+            points.iter_mut().for_each(shift);
+        }
     }
     if let Some(r) = props.get_mut("rect").and_then(Value::as_object_mut) {
         for (key, d) in [("x", dx), ("y", dy)] {

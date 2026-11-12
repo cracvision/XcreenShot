@@ -784,7 +784,8 @@
       "editor_rename_item": "Rename",
       "editor_show_in_folder": "Show in Explorer or Finder",
       "editor_delete_item": "Move to trash",
-      "editor_tool_step": "Step tool"
+      "editor_tool_step": "Step tool",
+      "editor_tool_callout": "Callout tool"
     }
   },
   "tray": {
@@ -1236,7 +1237,8 @@
         "blur": "Drag over what should not be seen: blur, pixelate or solid.",
         "crop": "Drag to keep a part. Nothing is lost: crop again to bring it back.",
         "image": "A picture over the capture.",
-        "step": "Click to place the next number; drag for a bigger marker."
+        "step": "Click to place the next number; drag for a bigger marker.",
+        "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point."
       },
       "tool": {
         "move": "Move",
@@ -1246,7 +1248,8 @@
         "blur": "Blur",
         "crop": "Crop",
         "image": "Image",
-        "step": "Step"
+        "step": "Step",
+        "callout": "Callout"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1306,7 +1309,15 @@
         "step_shape": "Shape",
         "text_color": "Text color",
         "sequence": "Type",
-        "step_size": "Size"
+        "step_size": "Size",
+        "callout_shape": "Shape",
+        "shading": "Shading",
+        "corner_radius": "Corner radius",
+        "tail_style": "Tail",
+        "tail_width": "Tail width",
+        "valign": "Vertical alignment",
+        "padding": "Padding",
+        "fit_text": "Fit to text"
       },
       "cap": {
         "none": "None",
@@ -1428,7 +1439,28 @@
         "romanUpper": "I, II, III…",
         "romanLower": "i, ii, iii…"
       },
-      "ok": "OK"
+      "ok": "OK",
+      "callout_shape": {
+        "rectangle": "Rectangle",
+        "roundedRectangle": "Rounded rectangle",
+        "ellipse": "Ellipse",
+        "cloud": "Cloud",
+        "thought": "Thought",
+        "explosion": "Explosion",
+        "tag": "Tag",
+        "arrow": "Arrow",
+        "text": "Text only"
+      },
+      "tail": {
+        "straight": "Straight",
+        "curved": "Curved",
+        "arrow": "Arrow"
+      },
+      "valign": {
+        "top": "Top",
+        "middle": "Middle",
+        "bottom": "Bottom"
+      }
     },
     "multi": {
       "title": "Multi-capture",
@@ -1621,7 +1653,13 @@
     "change_image": "Change image",
     "delete_image": "Delete image",
     "cut_image": "Cut image",
-    "paste_image": "Paste image"
+    "paste_image": "Paste image",
+    "draw_callout": "Add callout",
+    "move_callout": "Move callout",
+    "change_callout": "Change callout",
+    "delete_callout": "Delete callout",
+    "cut_callout": "Cut callout",
+    "paste_callout": "Paste callout"
   },
   "editor": {
     "edited": "{{name}} — Edited"

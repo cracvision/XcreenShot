@@ -21,6 +21,10 @@ import {
   STEP_SHAPES,
   type StepSequence,
   type StepShapeKind,
+  CALLOUT_SHAPES,
+  type CalloutShapeKind,
+  type TailStyle,
+  type VAlign,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -114,8 +118,8 @@ interface Target {
   commit: (changes: Record<string, unknown>) => void;
 }
 
-type StyledKind = "arrow" | "text" | "shape" | "blur" | "image" | "step";
-const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image", "step"];
+type StyledKind = "arrow" | "text" | "shape" | "blur" | "image" | "step" | "callout";
+const STYLED: StyledKind[] = ["arrow", "text", "shape", "blur", "image", "step", "callout"];
 
 function useTarget(): Target | null {
   const doc = useEditor((s) => s.doc);
@@ -277,6 +281,54 @@ function Properties({ target }: { target: Target }) {
       onCommit={(shapeType) => commit({ shapeType })}
     />
   );
+  // Font, size, bold and italic, color and alignment: text and callouts (EDT-026, EDT-028).
+  const align = v<TextAlign>("align");
+  const toggle = (key: "bold" | "italic", icon: IconName) => (
+    <button
+      type="button"
+      className="btn icon"
+      aria-pressed={v<boolean>(key) === true}
+      aria-label={t(`ui.editor.prop.${key}`)}
+      title={t(`ui.editor.prop.${key}`)}
+      onClick={() => commit({ [key]: v<boolean>(key) !== true })}
+    >
+      <Icon name={icon} />
+    </button>
+  );
+  const textBlock = (colorKey: "color" | "textColor") => (
+    <>
+      <div className="prop-field">
+        <label htmlFor="font-field">{t("ui.editor.prop.font")}</label>
+        <FontField value={v<string>("font")} fonts={fonts} onCommit={(font) => commit({ font })} />
+      </div>
+      <NumberField
+        label={t("ui.editor.prop.font_size")}
+        value={num("size")}
+        min={1}
+        max={1000}
+        step={0.5}
+        unit="pt"
+        onCommit={(size) => commit({ size })}
+      />
+      <div className="prop-field">
+        <span id="style-label">{t("ui.editor.prop.text_style")}</span>
+        <div className="prop-buttons" role="group" aria-labelledby="style-label">
+          {toggle("bold", "bold")}
+          {toggle("italic", "italic")}
+        </div>
+      </div>
+      <ColorPicker
+        label={t(colorKey === "color" ? "ui.editor.prop.color" : "ui.editor.prop.text_color")}
+        value={v<string>(colorKey) ?? "#000000"}
+        mixed={v<string>(colorKey) === undefined}
+        onCommit={(color) => color && commit({ [colorKey]: color })}
+      />
+      <div className="prop-field">
+        <span id="align-label">{t("ui.editor.prop.align")}</span>
+        <AlignChoice value={align} onChange={(a) => commit({ align: a })} />
+      </div>
+    </>
+  );
   switch (kind) {
     case "arrow": {
       const caps = CAPS.map((c) => ({ value: c, label: t(`ui.editor.cap.${c}`) }));
@@ -314,60 +366,24 @@ function Properties({ target }: { target: Target }) {
         </>
       );
     }
-    case "text": {
-      const align = v<TextAlign>("align");
-      const toggle = (key: "bold" | "italic", icon: IconName) => (
-        <button
-          type="button"
-          className="btn icon"
-          aria-pressed={v<boolean>(key) === true}
-          aria-label={t(`ui.editor.prop.${key}`)}
-          title={t(`ui.editor.prop.${key}`)}
-          onClick={() => commit({ [key]: v<boolean>(key) !== true })}
-        >
-          <Icon name={icon} />
-        </button>
-      );
+    case "text":
       return (
         <>
-          <div className="prop-field">
-            <label htmlFor="font-field">{t("ui.editor.prop.font")}</label>
-            <FontField
-              value={v<string>("font")}
-              fonts={fonts}
-              onCommit={(font) => commit({ font })}
-            />
-          </div>
-          <NumberField
-            label={t("ui.editor.prop.font_size")}
-            value={num("size")}
-            min={1}
-            max={1000}
-            step={0.5}
-            unit="pt"
-            onCommit={(size) => commit({ size })}
-          />
-          <div className="prop-field">
-            <span id="style-label">{t("ui.editor.prop.text_style")}</span>
-            <div className="prop-buttons" role="group" aria-labelledby="style-label">
-              {toggle("bold", "bold")}
-              {toggle("italic", "italic")}
-            </div>
-          </div>
-          <ColorPicker
-            label={t("ui.editor.prop.color")}
-            value={v<string>("color") ?? "#000000"}
-            mixed={v<string>("color") === undefined}
-            onCommit={(color) => color && commit({ color })}
-          />
-          <div className="prop-field">
-            <span id="align-label">{t("ui.editor.prop.align")}</span>
-            <AlignChoice value={align} onChange={(a) => commit({ align: a })} />
-          </div>
+          {textBlock("color")}
           {opacity}
         </>
       );
-    }
+    case "callout":
+      return (
+        <CalloutProperties
+          v={v}
+          num={num}
+          commit={commit}
+          lineStyle={lineStyle}
+          text={textBlock("textColor")}
+          opacity={opacity}
+        />
+      );
     case "shape":
       return (
         <>
@@ -440,6 +456,116 @@ function Properties({ target }: { target: Target }) {
     case "step":
       return <StepProperties v={v} num={num} commit={commit} opacity={opacity} />;
   }
+}
+
+/** Callout (EDT-028): body, outline, corners, tails, text and Fit to text. */
+function CalloutProperties(props: {
+  v: <T>(key: string) => T | undefined;
+  num: (key: string) => number | undefined;
+  commit: (changes: Record<string, unknown>) => void;
+  lineStyle: React.ReactNode;
+  text: React.ReactNode;
+  opacity: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const { v, num, commit, lineStyle, text, opacity } = props;
+  const check = (key: "shading" | "fitText") => (
+    <label className="panel-check">
+      <input
+        type="checkbox"
+        checked={v<boolean>(key) === true}
+        onChange={(e) => commit({ [key]: e.target.checked })}
+      />
+      {t(`ui.editor.prop.${key === "fitText" ? "fit_text" : "shading"}`)}
+    </label>
+  );
+  return (
+    <>
+      <SelectField
+        label={t("ui.editor.prop.callout_shape")}
+        value={v<CalloutShapeKind>("shape")}
+        options={CALLOUT_SHAPES.map((s) => ({
+          value: s,
+          label: t(`ui.editor.callout_shape.${s}`),
+        }))}
+        onCommit={(shape) => commit({ shape })}
+      />
+      <ColorPicker
+        label={t("ui.editor.prop.fill")}
+        value={v<string | null>("fill") ?? null}
+        mixed={v<string | null>("fill") === undefined}
+        allowTransparent
+        onCommit={(fill) => commit({ fill })}
+      />
+      {check("shading")}
+      <ColorPicker
+        label={t("ui.editor.prop.outline")}
+        value={v<string>("outline") ?? "#000000"}
+        mixed={v<string>("outline") === undefined}
+        onCommit={(outline) => outline && commit({ outline })}
+      />
+      <NumberField
+        label={t("ui.editor.prop.outline_width")}
+        value={num("outlineWidth")}
+        min={0}
+        max={20}
+        step={0.5}
+        unit="px"
+        onCommit={(outlineWidth) => commit({ outlineWidth })}
+      />
+      {lineStyle}
+      {v<CalloutShapeKind>("shape") === "roundedRectangle" && (
+        <NumberField
+          label={t("ui.editor.prop.corner_radius")}
+          value={num("cornerRadius")}
+          min={0}
+          max={200}
+          step={1}
+          unit="px"
+          onCommit={(cornerRadius) => commit({ cornerRadius })}
+        />
+      )}
+      <SelectField
+        label={t("ui.editor.prop.tail_style")}
+        value={v<TailStyle>("tailStyle")}
+        options={(["straight", "curved", "arrow"] as const).map((s) => ({
+          value: s,
+          label: t(`ui.editor.tail.${s}`),
+        }))}
+        onCommit={(tailStyle) => commit({ tailStyle })}
+      />
+      <NumberField
+        label={t("ui.editor.prop.tail_width")}
+        value={num("tailWidth")}
+        min={2}
+        max={200}
+        step={1}
+        unit="px"
+        onCommit={(tailWidth) => commit({ tailWidth })}
+      />
+      {text}
+      <SelectField
+        label={t("ui.editor.prop.valign")}
+        value={v<VAlign>("valign")}
+        options={(["top", "middle", "bottom"] as const).map((s) => ({
+          value: s,
+          label: t(`ui.editor.valign.${s}`),
+        }))}
+        onCommit={(valign) => commit({ valign })}
+      />
+      <NumberField
+        label={t("ui.editor.prop.padding")}
+        value={num("padding")}
+        min={0}
+        max={100}
+        step={1}
+        unit="px"
+        onCommit={(padding) => commit({ padding })}
+      />
+      {check("fitText")}
+      {opacity}
+    </>
+  );
 }
 
 /** Step (EDT-035): shape, colors, size, sequence; Restart sequence and Renumber. */

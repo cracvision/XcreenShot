@@ -12,6 +12,7 @@ export function boxOf(o: DocObject): Box | null {
     case "blur":
     case "image":
     case "step":
+    case "callout":
       return { ...o.rect, rotation: o.rotation };
     case "text":
       return {
@@ -30,6 +31,14 @@ export function boxOf(o: DocObject): Box | null {
 export function hits(o: DocObject, p: Point, reach: number): boolean {
   if (o.type === "arrow")
     return distanceToSegment(p, o.from, o.to) <= Math.max(o.style.width / 2, reach);
+  // A callout is also picked by its tails (EDT-028).
+  if (o.type === "callout") {
+    const c: Point = [o.rect.x + o.rect.w / 2, o.rect.y + o.rect.h / 2];
+    const near = o.tails.some(
+      (t) => distanceToSegment(p, c, t) <= Math.max(o.style.tailWidth / 4, reach),
+    );
+    if (near) return true;
+  }
   const b = boxOf(o);
   if (!b) return false;
   const local = toLocalAbs(b, p);
@@ -75,6 +84,15 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
       return [{ ...o, rect }, { rect }];
     }
+    case "callout": {
+      // The tails go with the body (EDT-028).
+      const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
+      const tails = o.tails.map((t): Point => [t[0] + dx, t[1] + dy]);
+      return [
+        { ...o, rect, tails },
+        { rect, tails },
+      ];
+    }
     case "image": {
       // Whole pixels keep a picture sharp (EDT-078).
       const rect = { ...o.rect, x: Math.round(o.rect.x + dx), y: Math.round(o.rect.y + dy) };
@@ -115,6 +133,14 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
         { rect, rotation: b.rotation },
       ];
     }
+    case "callout": {
+      // The body changes; the tails keep pointing where they did (EDT-028).
+      const rect: Rect = { x: b.x, y: b.y, w: b.w, h: b.h };
+      return [
+        { ...o, rect, rotation: b.rotation },
+        { rect, rotation: b.rotation },
+      ];
+    }
     case "step": {
       // Square, 16 to 256 px; its size becomes the tool's (EDT-035, EDT-014).
       const size = Math.round(Math.min(256, Math.max(16, (b.w + b.h) / 2)));
@@ -138,6 +164,7 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
 export function extentPoints(o: DocObject): Point[] {
   if (o.type === "arrow") return [o.from, o.to];
   const b = boxOf(o);
+  if (o.type === "callout" && b) return [...corners(b), ...o.tails];
   return b ? corners(b) : [];
 }
 

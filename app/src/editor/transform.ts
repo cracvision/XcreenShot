@@ -113,6 +113,21 @@ export function transformed(o: DocObject, op: TransformOp): DocObject {
     case "blur":
     case "image":
       return { ...o, rect, rotation };
+    case "callout": {
+      const tails = o.tails.map((t) =>
+        op.kind === "rotate" ? turn(t, op.center, op.degrees) : mapped(t, op.from, op.to),
+      );
+      const style =
+        op.kind === "scale" && op.strokes
+          ? {
+              ...o.style,
+              outlineWidth: grown(o.style.outlineWidth, k, 0, 20),
+              size: grown(o.style.size, k, 1, 1000),
+              tailWidth: grown(o.style.tailWidth, k, 2, 200),
+            }
+          : o.style;
+      return { ...o, rect, rotation, tails, style };
+    }
     case "step": {
       // Square: the core keeps it so (EDT-035).
       const size = Math.min(256, Math.max(16, (rect.w + rect.h) / 2));

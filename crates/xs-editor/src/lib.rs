@@ -30,7 +30,9 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 7] = ["move", "arrow", "text", "shape", "step", "blur", "crop"];
+pub const AVAILABLE_TOOLS: [&str; 8] = [
+    "move", "arrow", "text", "callout", "shape", "step", "blur", "crop",
+];
 /// Zoom steps in percent (EDT-007).
 pub const ZOOM_STEPS: [f64; 16] = [
     10.0, 25.0, 33.0, 50.0, 67.0, 100.0, 150.0, 200.0, 300.0, 400.0, 600.0, 800.0, 1200.0, 1600.0, 2400.0,
@@ -1471,6 +1473,11 @@ pub fn extension() -> Extension {
                 objects::label("draw", &kinds)
             };
             let auto = auto_expand(&core);
+            // A callout without tails gets one once it fits its text (EDT-028).
+            let tailless: Vec<bool> = p["objects"]
+                .as_array()
+                .map(|a| a.iter().map(|o| o.get("tails").is_none()).collect())
+                .unwrap_or_default();
             // A step without a value takes the next one of its sequence (EDT-035).
             let unnumbered: Vec<bool> = p["objects"]
                 .as_array()
@@ -1506,11 +1513,16 @@ pub fn extension() -> Extension {
                             }
                         }
                         let oid = doc.next_object_id();
-                        doc.objects.push(Object {
+                        let mut o = Object {
                             id: oid.clone(),
                             kind,
                             props,
-                        });
+                        };
+                        objects::fit(&mut o, doc.dpi);
+                        if tailless.get(i).copied().unwrap_or(false) {
+                            objects::default_tail(&mut o, doc.canvas.height as f64);
+                        }
+                        doc.objects.push(o);
                         ids.push(oid);
                     }
                     if auto {
@@ -1614,6 +1626,7 @@ pub fn extension() -> Extension {
             let updated = editor(&core)
                 .store
                 .mutate(&id, &objects::label(action, &kind_refs), |doc| {
+                    let dpi = doc.dpi;
                     for oid in &oids {
                         let o = doc
                             .object_mut(oid)
@@ -1631,6 +1644,7 @@ pub fn extension() -> Extension {
                                 &[("param", "set"), ("reason", &r)],
                             ))
                         })?;
+                        objects::fit(o, dpi);
                     }
                     if auto {
                         fit::fit_canvas(doc);
@@ -1790,6 +1804,7 @@ pub fn extension() -> Extension {
                             .object_mut(&o.id)
                             .ok_or_else(|| CommandError::internal("object vanished"))?;
                         objects::update(target, &set).map_err(|r| bad("objectIds", &r))?;
+                        objects::fit(target, dpi);
                     }
                     if auto {
                         fit::fit_canvas(doc);

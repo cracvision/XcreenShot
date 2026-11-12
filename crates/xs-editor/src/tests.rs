@@ -1937,3 +1937,72 @@ fn steps_count_restart_and_renumber() {
     let last = info["objects"].as_array().unwrap().last().unwrap().clone();
     assert_eq!(last["rect"], json!({"x": 20.0, "y": 110.0, "w": 40.0, "h": 40.0}));
 }
+
+/// EDT-028: a callout with two lines and a second tail moves with both tails; a tail
+/// taken away comes back with Undo; with Fit to text, ten lines make the body grow.
+#[test]
+fn callouts_keep_their_tails_and_fit_their_text() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{
+            "type": "callout",
+            "rect": {"x": 40, "y": 20, "w": 200, "h": 60},
+            "text": "Line one\nLine two",
+            "tails": [[60, 150]]
+        }]}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"tails": [[60, 150], [300, 150]]}}),
+    );
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "move": [10, 5]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let c = &info["objects"][0];
+    assert_eq!(c["tails"], json!([[70.0, 155.0], [310.0, 155.0]]));
+    assert_eq!(c["rect"]["x"], json!(50.0));
+    // Taking a tail away (dragged into the body) and Undo.
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"tails": [[70.0, 155.0]]}}),
+    );
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["tails"].as_array().unwrap().len(), 2);
+    // Ten lines: the body grows to show them all.
+    let before = info["objects"][0]["rect"]["h"].as_f64().unwrap();
+    let ten: Vec<String> = (1..=10).map(|n| format!("Line {n}")).collect();
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"text": ten.join("\n")}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let after = info["objects"][0]["rect"]["h"].as_f64().unwrap();
+    assert!(after > before * 2.0, "{before} -> {after}");
+    // Without tails given, one is added below the body.
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "callout", "rect": {"x": 10, "y": 10, "w": 100, "h": 40}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][1]["tails"].as_array().unwrap().len(), 1);
+    // Scaling several objects moves the tails with them (EDT-080).
+    cli(
+        &e.core,
+        "document.transform",
+        json!({"documentId": doc, "objectIds": ["o2"], "scale": {"from": [10, 10, 100, 100], "to": [10, 10, 200, 200]}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    // Its default tail was at (35, 74): x + w / 4, below the body by 24.
+    assert_eq!(info["objects"][1]["tails"][0], json!([60.0, 138.0]));
+}

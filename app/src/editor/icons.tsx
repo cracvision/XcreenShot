@@ -106,6 +106,12 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A speech bubble (EDT-028).
+  callout: (
+    <Svg>
+      <path d="M4 4h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+    </Svg>
+  ),
   // A numbered marker (EDT-035).
   step: (
     <Svg>

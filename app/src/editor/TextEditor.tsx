@@ -49,6 +49,8 @@ export function TextEditor({ edit, toScreen, scale, dpi }: Props) {
     color: style.color,
     textAlign: style.align,
     transform: `rotate(${edit.rotation}deg)`,
+    // In a callout, the field covers the text Rust drew (EDT-028).
+    ...(edit.callout ? { background: edit.callout.fill ?? "transparent" } : {}),
     whiteSpace: edit.width ? "pre-wrap" : "pre",
     ...(edit.width
       ? { width: edit.width * scale, fieldSizing: "content" }

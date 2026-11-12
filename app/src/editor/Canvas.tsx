@@ -7,7 +7,13 @@ import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { setting, useSetting } from "../store";
-import { applyCrop, duplicateSelection, startNewText, startTextEdit } from "./actions";
+import {
+  applyCrop,
+  duplicateSelection,
+  startCalloutEdit,
+  startNewText,
+  startTextEdit,
+} from "./actions";
 import { canvasMenu, lockedMenu, menuPoint } from "./menus";
 import {
   center,
@@ -18,6 +24,8 @@ import {
   resize,
   RESIZE_HANDLES,
   rotateTo,
+  toLocal,
+  toWorld,
   type Box,
   type Handle,
   type Rect as RectBox,
@@ -27,6 +35,7 @@ import { useObjectImages } from "./objectImages";
 import {
   ArrowShape,
   BlurShape,
+  CalloutShape,
   ImageShape,
   ShapeShape,
   StepShape,
@@ -38,6 +47,7 @@ import {
   takeZoomRequest,
   useEditor,
   usePointer,
+  type CalloutObject,
   type DocDetails,
   type DocObject,
 } from "./state";
@@ -45,6 +55,7 @@ import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
 import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
+import { hasRadius, MAX_TAILS } from "./callouts";
 import {
   fitZoom,
   imagePoint,
@@ -77,12 +88,16 @@ type HandleHit =
   | { object: ArrowObj; end: "from" | "to" }
   | { object: DocObject; handle: Handle }
   // A handle of the box around several selected objects (EDT-080).
-  | { multi: Handle };
+  | { multi: Handle }
+  // A callout's tail tip, its + (a new tail), its corner radius, its anchor (EDT-028).
+  | { tail: CalloutObject; index: number | null }
+  | { radius: CalloutObject }
+  | { anchor: CalloutObject };
 
 type Drag =
   | {
       kind: "draw";
-      tool: "arrow" | "shape" | "blur" | "text" | "step";
+      tool: "arrow" | "shape" | "blur" | "text" | "step" | "callout";
       from: Point;
       to: Point;
       startX: number;
@@ -101,6 +116,10 @@ type Drag =
   // Several objects stretched or turned with their common box (EDT-080).
   | { kind: "mresize"; handle: BoxHandle; start: Box; box: Box }
   | { kind: "mrotate"; start: Box; angle: number }
+  // A callout's tail tip (index null: a new one), radius or body alone (EDT-028).
+  | { kind: "tail"; id: string; index: number | null; point: Point; start: Point }
+  | { kind: "radius"; id: string; box: Box; value: number }
+  | { kind: "anchor"; id: string; start: Point; delta: Point }
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
   | { kind: "pan"; x: number; y: number; left: number; top: number };
 
@@ -170,9 +189,21 @@ function handlesOf(o: DocObject): Handle[] {
   if (o.type === "text") return ["w", "e", "rotate"];
   // A step stays square: its corners (EDT-035).
   if (o.type === "step") return ["nw", "ne", "se", "sw", "rotate"];
+  if (o.type === "callout") return [...RESIZE_HANDLES, "rotate"];
   if (o.type === "shape" || o.type === "blur" || o.type === "image")
     return [...RESIZE_HANDLES, "rotate"];
   return [];
+}
+
+/** Where a callout's + is: beside the middle of its right side (EDT-028). */
+function plusAt(box: Box, scale: number): Point {
+  return toWorld(box, [box.w / 2 + 18 / scale, 0]);
+}
+
+/** Where a callout's radius handle is: on its top side, as far in as the radius. */
+function radiusAt(box: Box, radius: number, scale: number): Point {
+  const r = Math.max(radius, 14 / scale);
+  return toWorld(box, [-box.w / 2 + r, -box.h / 2 + 10 / scale]);
 }
 
 const clampRect = (r: RectBox, bounds: RectBox): RectBox => {
@@ -403,9 +434,88 @@ export function Canvas({ doc }: Props) {
       case "resize":
       case "rotate":
         return reboxed(o, drag.box)[0];
+      case "tail": {
+        if (o.type !== "callout") return o;
+        const i = drag.index;
+        const tails =
+          i === null
+            ? [...o.tails, drag.point]
+            : o.tails.map((t, k): Point => (k === i ? drag.point : t));
+        return { ...o, tails };
+      }
+      case "radius":
+        return o.type === "callout" ? { ...o, style: { ...o.style, cornerRadius: drag.value } } : o;
+      case "anchor":
+        // The body moves; the tails stay where they point (EDT-028).
+        return o.type === "callout"
+          ? {
+              ...o,
+              rect: { ...o.rect, x: o.rect.x + drag.delta[0], y: o.rect.y + drag.delta[1] },
+            }
+          : o;
     }
   });
   const committed = new Map(doc.objects.map((o) => [o.id, o]));
+  const plusPoint = (box: Box) => plusAt(box, lay?.scale ?? 1);
+  const radiusPoint = (box: Box, radius: number) => radiusAt(box, radius, lay?.scale ?? 1);
+  /** A selected callout's tails, +, radius and anchor (EDT-028). */
+  const calloutHandles = (o: CalloutObject, box: Box) => {
+    const c = toScreen(center(box));
+    const [px, py] = toScreen(plusPoint(box));
+    const dragging = drag?.kind === "tail" && drag.id === o.id;
+    return (
+      <>
+        {dragging &&
+          o.tails.map((t, i) => (
+            <Line key={`tl${i}`} points={[...c, ...toScreen(t)]} stroke={ACCENT} dash={[4, 3]} />
+          ))}
+        {o.tails.map((t, i) => {
+          const [x, y] = toScreen(t);
+          return (
+            <Rect
+              key={`t${i}`}
+              x={x}
+              y={y}
+              width={HANDLE}
+              height={HANDLE}
+              offsetX={HANDLE / 2}
+              offsetY={HANDLE / 2}
+              rotation={45}
+              fill={ACCENT}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
+          );
+        })}
+        {o.tails.length < MAX_TAILS && (
+          <Group x={px} y={py}>
+            <Circle radius={HANDLE / 2 + 1} fill="#ffffff" stroke={ACCENT} strokeWidth={1.5} />
+            <Line points={[-3.5, 0, 3.5, 0]} stroke={ACCENT} strokeWidth={1.5} />
+            <Line points={[0, -3.5, 0, 3.5]} stroke={ACCENT} strokeWidth={1.5} />
+          </Group>
+        )}
+        {hasRadius(o) &&
+          (() => {
+            const [x, y] = toScreen(radiusPoint(box, o.style.cornerRadius));
+            return (
+              <Rect
+                x={x}
+                y={y}
+                width={HANDLE - 3}
+                height={HANDLE - 3}
+                offsetX={(HANDLE - 3) / 2}
+                offsetY={(HANDLE - 3) / 2}
+                rotation={45 + box.rotation}
+                fill="#ffffff"
+                stroke={ACCENT}
+                strokeWidth={1.5}
+              />
+            );
+          })()}
+        <Circle x={c[0]} y={c[1]} radius={3.5} fill={ACCENT} stroke="#ffffff" strokeWidth={1} />
+      </>
+    );
+  };
   /** The box around several selected objects, as they are stored (EDT-080). */
   const multiBox = (): Box | null => {
     if (selection.length < 2) return null;
@@ -441,6 +551,18 @@ export function Canvas({ doc }: Props) {
     if (selection.length !== 1) return null;
     const o = shown.find((x) => x.id === selection[0]);
     if (!o) return null;
+    if (o.type === "callout" && !o.locked) {
+      const box = boxOf(o);
+      if (box) {
+        for (let i = o.tails.length - 1; i >= 0; i--) {
+          const t = o.tails[i];
+          if (t && near(t, s)) return { tail: o, index: i };
+        }
+        if (o.tails.length < MAX_TAILS && near(plusPoint(box), s)) return { tail: o, index: null };
+        if (hasRadius(o) && near(radiusPoint(box, o.style.cornerRadius), s)) return { radius: o };
+        if (near(center(box), s)) return { anchor: o };
+      }
+    }
     if (o.type === "arrow") {
       for (const end of ["to", "from"] as const) if (near(o[end], s)) return { object: o, end };
       return null;
@@ -505,6 +627,31 @@ export function Canvas({ doc }: Props) {
         );
         return;
       }
+    }
+    if (handle && "tail" in handle) {
+      capture();
+      const c = handle.tail;
+      const at = handle.index === null ? p : (c.tails[handle.index] ?? p);
+      setDrag({ kind: "tail", id: c.id, index: handle.index, point: at, start: p });
+      return;
+    }
+    if (handle && "radius" in handle) {
+      const box = boxOf(handle.radius);
+      if (box) {
+        capture();
+        setDrag({
+          kind: "radius",
+          id: handle.radius.id,
+          box,
+          value: handle.radius.style.cornerRadius,
+        });
+        return;
+      }
+    }
+    if (handle && "anchor" in handle) {
+      capture();
+      setDrag({ kind: "anchor", id: handle.anchor.id, start: p, delta: [0, 0] });
+      return;
     }
     if (handle && "end" in handle) {
       capture();
@@ -571,7 +718,8 @@ export function Canvas({ doc }: Props) {
       tool === "shape" ||
       tool === "blur" ||
       tool === "text" ||
-      tool === "step"
+      tool === "step" ||
+      tool === "callout"
     ) {
       capture();
       setDrag({
@@ -639,6 +787,22 @@ export function Canvas({ doc }: Props) {
       }
       case "mrotate":
         return { ...d, angle: normalized(rotateTo(d.start, p, e.shiftKey)) };
+      case "tail":
+        return { ...d, point: p };
+      case "radius": {
+        const [lx] = toLocal(d.box, p);
+        const most = Math.min(200, d.box.w / 2, d.box.h / 2);
+        return { ...d, value: Math.round(Math.max(0, Math.min(most, lx + d.box.w / 2))) };
+      }
+      case "anchor": {
+        let dx = p[0] - d.start[0];
+        let dy = p[1] - d.start[1];
+        if (e.shiftKey) {
+          if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+          else dx = 0;
+        }
+        return { ...d, delta: [dx, dy] };
+      }
       case "crop": {
         const bounds = ext;
         let rect: RectBox;
@@ -674,9 +838,11 @@ export function Canvas({ doc }: Props) {
           ? h.crop
           : "multi" in h
             ? h.multi
-            : "end" in h
+            : "end" in h || "tail" in h || "radius" in h
               ? "end"
-              : h.handle
+              : "anchor" in h
+                ? "anchor"
+                : h.handle
         : null;
       setHover(
         handleName ??
@@ -711,11 +877,33 @@ export function Canvas({ doc }: Props) {
                 d.click
                 ? { type: "step", at: d.from }
                 : { type: "step", rect: dragRect(d.from, d.to, true, d.fromCenter) }
-              : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
+              : d.tool === "callout"
+                ? // A callout: a click makes one of a usual size (EDT-028).
+                  {
+                    type: "callout",
+                    text: "",
+                    rect: d.click
+                      ? { x: d.from[0], y: d.from[1], w: 200, h: 60 }
+                      : dragRect(d.from, d.to, d.square, d.fromCenter),
+                  }
+                : { type: d.tool, rect: dragRect(d.from, d.to, d.square, d.fromCenter) };
         const r = await run<{ ids: string[] }>("document.annotate", {
           documentId: id,
           objects: [object],
         });
+        // Then the text is typed in it.
+        if (d.tool === "callout" && r.ids[0] && styles) {
+          startCalloutEdit({
+            id: r.ids[0],
+            type: "callout",
+            rect: (object as { rect: RectBox }).rect,
+            rotation: 0,
+            text: "",
+            tails: [],
+            style: styles.callout,
+          });
+          return;
+        }
         // The new object stays selected to adjust it (EDT-022, editor.autoSelectAfterDraw).
         if (r.ids[0] && setting("editor.autoSelectAfterDraw", true)) setSelection([r.ids[0]]);
       } else if (d.kind === "move" && d.moved && d.copy) {
@@ -751,6 +939,34 @@ export function Canvas({ doc }: Props) {
           const [next, set] = reboxed(o, d.box);
           await update(next, set);
         }
+      } else if (d.kind === "tail") {
+        const c = committed.get(d.id);
+        const box = c ? boxOf(c) : null;
+        if (c?.type !== "callout" || !box) return;
+        // A click on + adds a tail beside the body.
+        const click = Math.hypot(d.point[0] - d.start[0], d.point[1] - d.start[1]) * scale < 3;
+        const point: Point =
+          d.index === null && click ? toWorld(box, [box.w / 2 + 50, box.h / 2 + 30]) : d.point;
+        // A tip let go inside the body takes that tail away.
+        const inside = contains(box, point);
+        let tails: Point[];
+        if (d.index === null) {
+          if (inside) return;
+          tails = [...c.tails, point];
+        } else if (inside) tails = c.tails.filter((_, k) => k !== d.index);
+        else tails = c.tails.map((t, k): Point => (k === d.index ? point : t));
+        await run("document.update_object", { documentId: id, objectId: d.id, set: { tails } });
+      } else if (d.kind === "radius") {
+        await run("document.update_object", {
+          documentId: id,
+          objectId: d.id,
+          set: { style: { cornerRadius: d.value } },
+        });
+      } else if (d.kind === "anchor") {
+        const c = committed.get(d.id);
+        if (c?.type !== "callout" || (d.delta[0] === 0 && d.delta[1] === 0)) return;
+        const rect = { ...c.rect, x: c.rect.x + d.delta[0], y: c.rect.y + d.delta[1] };
+        await run("document.update_object", { documentId: id, objectId: d.id, set: { rect } });
       } else if (d.kind === "mresize") {
         const { start, box } = d;
         if (start.w === box.w && start.h === box.h && start.x === box.x && start.y === box.y)
@@ -797,8 +1013,8 @@ export function Canvas({ doc }: Props) {
         }
         return;
       }
-      if (click && d.tool !== "step") return;
-      if (d.tool === "step") {
+      if (click && d.tool !== "step" && d.tool !== "callout") return;
+      if (d.tool === "step" || d.tool === "callout") {
         void finish({ ...d, click });
         return;
       }
@@ -864,6 +1080,8 @@ export function Canvas({ doc }: Props) {
     if (hit?.type === "text") startTextEdit(hit);
     // Edit value (EDT-035).
     if (hit?.type === "step") useEditor.setState({ stepEdit: { id: hit.id, value: hit.value } });
+    // Types into a callout (EDT-028).
+    if (hit?.type === "callout") startCalloutEdit(hit);
   };
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -912,6 +1130,7 @@ export function Canvas({ doc }: Props) {
     w: "ew-resize",
     rotate: "grab",
     end: "pointer",
+    anchor: "move",
   };
   const cursor =
     drag?.kind === "pan"
@@ -986,6 +1205,17 @@ export function Canvas({ doc }: Props) {
         );
       case "image":
         return <ImageShape key={o.id} o={o} image={objectImages.get(o.id)} />;
+      case "callout": {
+        const c = committed.get(o.id);
+        return (
+          <CalloutShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "callout" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "step": {
         const c = committed.get(o.id);
         return (
@@ -1002,7 +1232,7 @@ export function Canvas({ doc }: Props) {
     }
   };
 
-  const dashedBox = (kind: "blur" | "text" | "step") => {
+  const dashedBox = (kind: "blur" | "text" | "step" | "callout") => {
     if (drawing?.tool !== kind) return null;
     const r = dragRect(
       drawing.from,
@@ -1046,6 +1276,7 @@ export function Canvas({ doc }: Props) {
       )}
       {dashedBox("text")}
       {dashedBox("step")}
+      {dashedBox("callout")}
     </>
   );
   const blurPreview = dashedBox("blur");
@@ -1363,6 +1594,7 @@ export function Canvas({ doc }: Props) {
                               />
                             );
                           })}
+                        {o.type === "callout" && calloutHandles(o, box)}
                       </Group>
                     );
                   })}

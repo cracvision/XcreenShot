@@ -10,6 +10,7 @@ use tiny_skia::{
 };
 use xs_core::document::{Canvas, Document, Flattened, Object, PixelRect};
 
+use crate::callouts::{self, CalloutObject};
 use crate::color::Rgba;
 use crate::effects;
 use crate::geometry::{dash, Arrow, Geometry, Shape};
@@ -103,14 +104,14 @@ fn base_window(doc: &Document, base: &Base) -> Option<(Pixmap, i32, i32)> {
     Some((pm, (x0 - c.x) as i32, (y0 - c.y) as i32))
 }
 
-fn paint(color: Rgba) -> Paint<'static> {
+pub(crate) fn paint(color: Rgba) -> Paint<'static> {
     let mut p = Paint::default();
     p.set_color_rgba8(color.r, color.g, color.b, color.a);
     p.anti_alias = true;
     p
 }
 
-fn stroke(width: f64, dash: Option<&[f64]>) -> Stroke {
+pub(crate) fn stroke(width: f64, dash: Option<&[f64]>) -> Stroke {
     Stroke {
         width: width as f32,
         line_cap: LineCap::Butt,
@@ -120,7 +121,7 @@ fn stroke(width: f64, dash: Option<&[f64]>) -> Stroke {
     }
 }
 
-fn draw_geometry(pm: &mut Pixmap, g: &Geometry, color: Rgba) {
+pub(crate) fn draw_geometry(pm: &mut Pixmap, g: &Geometry, color: Rgba) {
     let p = paint(color);
     if let Some([x1, y1, x2, y2]) = g.shaft {
         let mut pb = PathBuilder::new();
@@ -196,7 +197,7 @@ fn draw_geometry(pm: &mut Pixmap, g: &Geometry, color: Rgba) {
 
 /// Draws `layer` over `pm` at `opacity` %: translucent objects are drawn whole first,
 /// so their own parts (head and shaft, fill and outline) do not darken each other.
-fn blend_layer(pm: &mut Pixmap, opacity: f64, draw: impl FnOnce(&mut Pixmap)) {
+pub(crate) fn blend_layer(pm: &mut Pixmap, opacity: f64, draw: impl FnOnce(&mut Pixmap)) {
     if opacity >= 100.0 {
         draw(pm);
         return;
@@ -213,7 +214,7 @@ fn blend_layer(pm: &mut Pixmap, opacity: f64, draw: impl FnOnce(&mut Pixmap)) {
 }
 
 /// Rotation around the center of `r`, in the canvas.
-fn turned(r: Rect, rotation: f64) -> Transform {
+pub(crate) fn turned(r: Rect, rotation: f64) -> Transform {
     Transform::from_rotate_at(
         rotation as f32,
         (r.x + r.w / 2.0) as f32,
@@ -539,6 +540,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 draw_step(pm, &s, dpi);
             }
         }
+        "callout" => {
+            if let Ok(c) = CalloutObject::from_props(&object.props) {
+                callouts::draw(pm, &c, dpi);
+            }
+        }
         "image" => {
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
@@ -691,6 +697,14 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "step" => StepObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
+        // Its turned body and its tails, with room for the outline and a tail's base.
+        "callout" => {
+            let c = CalloutObject::from_props(&object.props).ok()?;
+            let [x0, y0, x1, y1] = callouts::bounds(&c);
+            add(x0, y0);
+            add(x1, y1);
+            None
+        }
         "image" => ImageObject::from_props(&object.props)
             .ok()
             .map(|i| (i.rect, i.rotation)),
@@ -862,13 +876,21 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         }
         // A step as it shows, turned shape and upright value, in a picture centered on
         // the marker's center: `(x, y)` is where its top-left corner goes.
-        "step" => {
-            let s = StepObject::from_props(&object.props).ok()?;
-            let r = s.rect;
-            let side = (r.w.hypot(r.h)).ceil() as u32 + 2;
+        // A step or a callout as it shows, in a picture centered on the center of its
+        // body: `(x, y)` is where its top-left corner goes.
+        "step" | "callout" => {
+            let r = match object.kind.as_str() {
+                "step" => StepObject::from_props(&object.props).ok()?.rect,
+                _ => CalloutObject::from_props(&object.props).ok()?.rect,
+            };
             let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
-            let (ox, oy) = (cx - side as f64 / 2.0, cy - side as f64 / 2.0);
-            let mut pm = Pixmap::new(side, side)?;
+            let b = object_bounds(object, doc.dpi)?;
+            let reach = r.w.hypot(r.h) / 2.0;
+            let hw = (cx - b[0]).max(b[2] - cx).max(reach) + 2.0;
+            let hh = (cy - b[1]).max(b[3] - cy).max(reach) + 2.0;
+            let (w, h) = ((2.0 * hw).ceil() as u32, (2.0 * hh).ceil() as u32);
+            let (ox, oy) = (cx - w as f64 / 2.0, cy - h as f64 / 2.0);
+            let mut pm = Pixmap::new(w.min(16384), h.min(16384))?;
             let mut moved = object.clone();
             moved.translate(-ox, -oy);
             draw_object(&mut pm, &moved, doc.dpi, &base.images);
@@ -1148,5 +1170,40 @@ mod tests {
             let img = render(&doc, &base);
             assert!(img.pixels().any(|p| p.0 != [255, 255, 255, 255]), "{shape}");
         }
+    }
+
+    /// EDT-028: a rounded callout with a curved tail and a dotted outline: white inside,
+    /// coral on its edge, the tail reaching its tip, and the text grows the body.
+    #[test]
+    fn a_callout_draws_its_body_tail_and_text() {
+        let base = Base::from_image(RgbaImage::from_pixel(300, 200, image::Rgba([40, 40, 40, 255])));
+        let mut doc = Document::new(300, 200, 96.0);
+        let props = json!({
+            "rect": {"x": 40, "y": 30, "w": 160, "h": 60},
+            "rotation": 0,
+            "text": "Hola",
+            "tails": [[60, 170]],
+            "style": {"cornerRadius": 24, "tailStyle": "curved", "lineStyle": "dot", "outlineWidth": 4}
+        });
+        doc.objects.push(Object {
+            id: "o1".into(),
+            kind: "callout".into(),
+            props: props.as_object().unwrap().clone(),
+        });
+        let img = render(&doc, &base);
+        assert_eq!(img.get_pixel(150, 80).0, [255, 255, 255, 255], "filled white");
+        assert_eq!(
+            img.get_pixel(41, 31).0,
+            [40, 40, 40, 255],
+            "the rounded corner is cut"
+        );
+        // Along the tail, near its tip, it is not the background.
+        assert_ne!(img.get_pixel(61, 160).0, [40, 40, 40, 255], "the tail");
+        let c = callouts::CalloutObject::from_props(props.as_object().unwrap()).unwrap();
+        assert!(c.fitted_height(96.0).is_none(), "one line fits");
+        let mut ten = c.clone();
+        ten.text = (1..=10).map(|n| n.to_string()).collect::<Vec<_>>().join("\n");
+        let h = ten.fitted_height(96.0).expect("ten lines need more room");
+        assert!(h > 150.0, "{h}");
     }
 }

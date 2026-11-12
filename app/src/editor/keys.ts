@@ -10,6 +10,7 @@ import {
   performAction,
   resetCrop,
   selectTool,
+  startCalloutEdit,
   startNewText,
   startTextEdit,
 } from "./actions";
@@ -157,7 +158,9 @@ function insert(): void {
         ? { type: tool, rect: { x: c[0] - INSERT.w / 2, y: c[1] - INSERT.h / 2, ...INSERT } }
         : tool === "step"
           ? { type: "step", at: c }
-          : null;
+          : tool === "callout"
+            ? { type: "callout", rect: { x: c[0] - 100, y: c[1] - 60, w: 200, h: 60 } }
+            : null;
   if (!object) return;
   run<{ ids: string[] }>("document.annotate", { documentId: active, objects: [object] })
     .then((r) => r.ids[0] && setSelection([r.ids[0]]))
@@ -170,6 +173,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   text: "color",
   shape: "outline",
   step: "fill",
+  callout: "fill",
   blur: "color",
 };
 
@@ -314,6 +318,7 @@ export function useEditorKeys(): void {
             const selected = state.doc?.objects.find((o) => o.id === state.selection[0]);
             if (state.tool === "crop") void applyCrop();
             else if (selected?.type === "text") startTextEdit(selected);
+            else if (selected?.type === "callout") startCalloutEdit(selected);
             else handled = false;
             break;
           }

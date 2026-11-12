@@ -13,6 +13,7 @@ import {
   type RecoveryItem,
   type TextObject,
   type Tool,
+  type CalloutObject,
 } from "./state";
 import { setting, useApp } from "../store";
 import { openAi } from "./aiState";
@@ -30,6 +31,7 @@ import { selectedItems, showView, useMainView, useTray } from "../library/state"
 import { focusedTrayItem, neighbour, trayOrder } from "./tray";
 import { extentPoints } from "./objects";
 import { alignMoves, distributeMoves, frameOf, type AlignTo, type Extent } from "./align";
+import { textBox } from "./callouts";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -722,12 +724,47 @@ export function startTextEdit(o: TextObject): void {
   });
 }
 
+/** Types into a callout's body (EDT-028): double click, or right after drawing it. */
+export function startCalloutEdit(o: CalloutObject): void {
+  const b = textBox(o);
+  useEditor.setState({
+    selection: [o.id],
+    textEdit: {
+      id: o.id,
+      at: [b.x, b.y],
+      width: b.w,
+      text: o.text,
+      rotation: o.rotation,
+      style: {
+        font: o.style.font,
+        size: o.style.size,
+        bold: o.style.bold,
+        italic: o.style.italic,
+        color: o.style.textColor,
+        align: o.style.align,
+        opacity: 100,
+      },
+      callout: { fill: o.style.fill },
+    },
+  });
+}
+
 /** Ends typing: a new box becomes a text object; an empty box is removed (EDT-026). */
 export async function finishTextEdit(text: string): Promise<void> {
   const { textEdit: edit, active } = useEditor.getState();
   useEditor.setState({ textEdit: null });
   if (!edit || !active) return;
   try {
+    // A callout keeps its body even without text (EDT-028).
+    if (edit.callout && edit.id) {
+      if (text !== edit.text)
+        await run("document.update_object", {
+          documentId: active,
+          objectId: edit.id,
+          set: { text },
+        });
+      return;
+    }
     if (edit.id === null) {
       if (!text.trim()) return;
       const r = await run<{ ids: string[] }>("document.annotate", {
