@@ -5,6 +5,15 @@ use image::RgbaImage;
 use crate::color::Rgba;
 
 /// Decodes a PNG or JPG (any format the `image` features allow) to straight RGBA.
+/// The largest image XcreenShot opens (APP-050): sides and pixels.
+pub const MAX_SIDE: u32 = 32_000;
+pub const MAX_PIXELS: u64 = 500_000_000;
+
+/// Whether an image of `w` × `h` is within the limits of APP-050.
+pub fn within_limits(w: u32, h: u32) -> bool {
+    w <= MAX_SIDE && h <= MAX_SIDE && u64::from(w) * u64::from(h) <= MAX_PIXELS
+}
+
 pub fn decode(bytes: &[u8]) -> Result<RgbaImage, String> {
     image::load_from_memory(bytes)
         .map(|i| i.to_rgba8())

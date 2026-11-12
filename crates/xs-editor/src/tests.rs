@@ -4560,3 +4560,71 @@ fn moving_the_library() {
         (id.as_str(), vec!["Cliente".to_string()])
     );
 }
+
+/// APP-050: an image beyond 32,000 px per side is refused, before decoding it, with a
+/// clear message, opened or inserted; new images and resizing keep to the limits.
+#[test]
+fn images_beyond_the_limits_are_refused() {
+    let e = env();
+    // A PNG header that says 40,000 × 10,000: nothing to decode.
+    let path = e.outside.path().join("huge.png");
+    let crc = |data: &[u8]| {
+        !data.iter().fold(!0u32, |c, b| {
+            (0..8).fold(c ^ u32::from(*b), |c, _| {
+                if c & 1 == 1 {
+                    (c >> 1) ^ 0xEDB8_8320
+                } else {
+                    c >> 1
+                }
+            })
+        })
+    };
+    let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut ihdr = b"IHDR".to_vec();
+    ihdr.extend_from_slice(&40_000u32.to_be_bytes());
+    ihdr.extend_from_slice(&10_000u32.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
+    for chunk in [ihdr, b"IDAT".to_vec(), b"IEND".to_vec()] {
+        bytes.extend_from_slice(&((chunk.len() - 4) as u32).to_be_bytes());
+        bytes.extend_from_slice(&chunk);
+        bytes.extend_from_slice(&crc(&chunk).to_be_bytes());
+    }
+    std::fs::write(&path, &bytes).unwrap();
+    let opened = call(&e.core, Source::Cli, "document.open", json!({"path": path})).unwrap_err();
+    assert_eq!(
+        opened.details.as_ref().map(|d| d["reason"].clone()),
+        Some(json!("too_large")),
+        "{opened:?}"
+    );
+    assert!(opened.message.contains("40000 × 10000"), "{}", opened.message);
+    let (doc, _) = capture(&e);
+    let inserted = call(
+        &e.core,
+        Source::Cli,
+        "document.insert_images",
+        json!({"documentId": doc, "paths": [path]}),
+    )
+    .unwrap_err();
+    assert_eq!(inserted.details.unwrap()["reason"], "too_large");
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "document.new",
+        json!({"width": 40000, "height": 100})
+    )
+    .is_err());
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "document.resize",
+        json!({"documentId": doc, "width": 32001})
+    )
+    .is_err());
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "document.canvas_size",
+        json!({"documentId": doc, "width": 30000, "height": 30000})
+    )
+    .is_err());
+}

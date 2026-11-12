@@ -163,7 +163,14 @@ function Resize({ doc }: { doc: DocDetails }) {
   const W = fixed ? w0 : Math.round(w);
   const H = fixed ? h0 : Math.round(h);
   const enlarging = !fixed && (W > w0 || H > h0);
-  const valid = W >= 1 && H >= 1 && W <= 50_000 && H <= 50_000 && dpi >= 1 && dpi <= 10_000;
+  const valid =
+    W >= 1 &&
+    H >= 1 &&
+    W <= 32_000 &&
+    H <= 32_000 &&
+    W * H <= 500_000_000 &&
+    dpi >= 1 &&
+    dpi <= 10_000;
   const ok = () =>
     apply(
       "document.resize",
@@ -276,7 +283,7 @@ function CanvasSize({ doc }: { doc: DocDetails }) {
   };
   const W = Math.round(w);
   const H = Math.round(h);
-  const valid = W >= 1 && H >= 1 && W <= 50_000 && H <= 50_000;
+  const valid = W >= 1 && H >= 1 && W <= 32_000 && H <= 32_000 && W * H <= 500_000_000;
   return (
     <Dialog
       title={t("ui.editor.image.canvas_title")}
@@ -661,7 +668,14 @@ function NewImage() {
   const [remember, setRemember] = useState(false);
   const W = Math.round(w);
   const H = Math.round(h);
-  const valid = W >= 1 && H >= 1 && W <= 50_000 && H <= 50_000 && dpi >= 1 && dpi <= 10_000;
+  const valid =
+    W >= 1 &&
+    H >= 1 &&
+    W <= 32_000 &&
+    H <= 32_000 &&
+    W * H <= 500_000_000 &&
+    dpi >= 1 &&
+    dpi <= 10_000;
   const quick = (key: string) => {
     if (key === "clipboard" && clip?.image) {
       setW(clip.image.width);

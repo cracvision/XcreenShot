@@ -283,14 +283,14 @@ pub fn definitions() -> Vec<SettingDef> {
         def(
             "editor.newImage.width",
             "editor",
-            json!({"type": "integer", "minimum": 1, "maximum": 50000}),
+            json!({"type": "integer", "minimum": 1, "maximum": 32000}),
             json!(1280),
             "EDT-103",
         ),
         def(
             "editor.newImage.height",
             "editor",
-            json!({"type": "integer", "minimum": 1, "maximum": 50000}),
+            json!({"type": "integer", "minimum": 1, "maximum": 32000}),
             json!(720),
             "EDT-103",
         ),

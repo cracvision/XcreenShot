@@ -927,7 +927,8 @@
     "invalid_tag": "\"{{tag}}\" no es una etiqueta válida: usa de 1 a 50 caracteres.",
     "too_many_tags": "{{name}} tendría más de {{max}} etiquetas.",
     "tag_exists": "Ya existe la etiqueta {{tag}}. ¿Fusionarlas?",
-    "library_moving": "La biblioteca se está moviendo. Espera a que termine o cancélalo."
+    "library_moving": "La biblioteca se está moviendo. Espera a que termine o cancélalo.",
+    "image_too_large": "{{name}} mide {{width}} × {{height}} px. XcreenShot abre imágenes de hasta 32.000 px por lado y 500 megapíxeles."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

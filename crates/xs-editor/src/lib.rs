@@ -687,6 +687,16 @@ fn open_error(lang: Lang, path: &Path, e: OpenError) -> CommandError {
             "errors.cannot_open",
             &[("name", &name), ("reason", &reason)],
         )),
+        OpenError::TooLarge(w, h) => invalid(tr(
+            lang,
+            "errors.image_too_large",
+            &[
+                ("name", &name),
+                ("width", &w.to_string()),
+                ("height", &h.to_string()),
+            ],
+        ))
+        .with_details(json!({"reason": "too_large", "width": w, "height": h})),
     }
 }
 
@@ -1131,6 +1141,15 @@ fn picture_of(core: &Core, lang: Lang, path: &Path) -> Result<Picture, CommandEr
         Some(format) => {
             let bytes = std::fs::read(path)
                 .map_err(|e| open_error(lang, path, OpenError::Unreadable(e.to_string())))?;
+            // Too large is said before decoding it (APP-050).
+            if let Some((w, h)) = image::ImageReader::new(std::io::Cursor::new(&bytes))
+                .with_guessed_format()
+                .ok()
+                .and_then(|r| r.into_dimensions().ok())
+                .filter(|(w, h)| !xs_image::encode::within_limits(*w, *h))
+            {
+                return Err(open_error(lang, path, OpenError::TooLarge(w, h)));
+            }
             let image = xs_image::encode::decode(&bytes)
                 .map_err(|e| open_error(lang, path, OpenError::Unreadable(e)))?;
             Ok(picture(bytes, format.ext(), image.width(), image.height()))
@@ -1658,8 +1677,14 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
                 (None, None, Some(h)) => (h / ch, h / ch),
                 _ => return Err(bad("width", "give width, height or percent")),
             };
-            if !(kx > 0.0 && ky > 0.0 && kx * cw <= 50_000.0 && ky * ch <= 50_000.0) {
-                return Err(bad("width", "the size must be between 1 and 50000 px"));
+            if !(kx > 0.0
+                && ky > 0.0
+                && xs_image::encode::within_limits((kx * cw).round() as u32, (ky * ch).round() as u32))
+            {
+                return Err(bad(
+                    "width",
+                    "up to 32000 px per side and 500 megapixels (APP-050)",
+                ));
             }
             if let Some(dpi) = num("dpi") {
                 next.dpi = dpi.clamp(1.0, 10_000.0);
@@ -2055,8 +2080,11 @@ fn image_command(core: &Core, ctx: &Context, p: &Value, which: &str) -> CommandR
                 num("width").unwrap_or(doc.canvas.width as f64),
                 num("height").unwrap_or(doc.canvas.height as f64),
             );
-            if !(1.0..=50_000.0).contains(&w) || !(1.0..=50_000.0).contains(&h) {
-                return Err(bad("width", "the size must be between 1 and 50000 px"));
+            if w < 1.0 || h < 1.0 || !xs_image::encode::within_limits(w.round() as u32, h.round() as u32) {
+                return Err(bad(
+                    "width",
+                    "1 px to 32000 px per side and 500 megapixels (APP-050)",
+                ));
             }
             let anchor = p.get("anchor").and_then(Value::as_str).unwrap_or("center");
             image_ops::canvas_size(&mut next, w.round() as u32, h.round() as u32, anchor);
@@ -5298,8 +5326,8 @@ fn new_image(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .or_else(|| setting(&format!("editor.newImage.{k}")).as_f64())
             .unwrap_or(fallback as f64)
             .round();
-        if !(1.0..=50_000.0).contains(&v) {
-            return Err(bad(k, "between 1 and 50000 px"));
+        if !(1.0..=f64::from(xs_image::encode::MAX_SIDE)).contains(&v) {
+            return Err(bad(k, "between 1 and 32000 px (APP-050)"));
         }
         Ok(v as u32)
     };

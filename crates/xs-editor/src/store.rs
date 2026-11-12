@@ -342,6 +342,8 @@ pub enum OpenError {
     Unsupported,
     Newer,
     Unreadable(String),
+    /// Beyond 32,000 px per side or 500 megapixels (APP-050).
+    TooLarge(u32, u32),
 }
 
 #[derive(Default)]
@@ -438,6 +440,9 @@ impl DocStore {
                     .map_err(|e| unreadable(&e))?
                     .into_dimensions()
                     .map_err(|e| unreadable(&e))?;
+                if !xs_image::encode::within_limits(w, h) {
+                    return Err(OpenError::TooLarge(w, h));
+                }
                 let (mime, dpi) = if format == Format::Png {
                     ("image/png", xs_image::encode::png_dpi(&bytes).unwrap_or(96.0))
                 } else {

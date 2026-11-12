@@ -927,7 +927,8 @@
     "invalid_tag": "\"{{tag}}\" is not a valid tag: use 1 to 50 characters.",
     "too_many_tags": "{{name}} would have more than {{max}} tags.",
     "tag_exists": "There is already a tag {{tag}}. Merge them?",
-    "library_moving": "The library is being moved. Wait until it finishes or cancel it."
+    "library_moving": "The library is being moved. Wait until it finishes or cancel it.",
+    "image_too_large": "{{name}} is {{width}} × {{height}} px. XcreenShot opens images up to 32,000 px per side and 500 megapixels."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

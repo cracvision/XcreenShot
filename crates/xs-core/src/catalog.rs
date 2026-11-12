@@ -778,8 +778,8 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("document.new", &["EDT-103", "EDT-119"])
             .params(params(
                 json!({
-                    "width": {"type": "integer", "minimum": 1, "maximum": 50000, "description": "Defaults to editor.newImage.width"},
-                    "height": {"type": "integer", "minimum": 1, "maximum": 50000, "description": "Defaults to editor.newImage.height"},
+                    "width": {"type": "integer", "minimum": 1, "maximum": 32000, "description": "Defaults to editor.newImage.width"},
+                    "height": {"type": "integer", "minimum": 1, "maximum": 32000, "description": "Defaults to editor.newImage.height"},
                     "color": {"type": ["string", "object", "null"], "description": "Canvas color #RRGGBB(AA), a gradient, or null for transparent; defaults to editor.newImage.color"},
                     "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "default": 96},
                     "remember": {"type": "boolean", "default": false, "description": "Make the size and color the defaults"}
@@ -839,8 +839,8 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "width": {"type": "number", "minimum": 1, "maximum": 50000},
-                    "height": {"type": "number", "minimum": 1, "maximum": 50000},
+                    "width": {"type": "number", "minimum": 1, "maximum": 32000},
+                    "height": {"type": "number", "minimum": 1, "maximum": 32000},
                     "anchor": {"type": "string", "enum": ["topLeft", "top", "topRight", "left", "center", "right", "bottomLeft", "bottom", "bottomRight"], "default": "center", "description": "What stays put: the canvas grows or shrinks on the other sides"}
                 }),
                 &[],
