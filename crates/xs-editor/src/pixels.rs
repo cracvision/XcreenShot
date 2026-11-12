@@ -289,20 +289,44 @@ pub struct Changed {
     pub area: [u32; 4],
 }
 
-/// Deletes the selected pixels, leaving `gap`.
-pub fn delete(pixels: &RgbaImage, mask: &Mask, gap: Gap) -> Option<Changed> {
-    let area = mask.bounds()?;
+/// A Photo fill stopped before it ended (EDT-045).
+#[derive(Debug)]
+pub struct Stopped;
+
+/// Deletes the selected pixels, leaving `gap`; `go_on` hears a Photo fill's progress.
+pub fn delete(
+    pixels: &RgbaImage,
+    mask: &Mask,
+    gap: Gap,
+    go_on: &mut dyn FnMut(f32) -> bool,
+) -> Result<Option<Changed>, Stopped> {
+    let Some(area) = mask.bounds() else {
+        return Ok(None);
+    };
     let mut out = pixels.clone();
-    selection::fill_gap(&mut out, mask, gap);
-    Some(Changed { pixels: out, area })
+    if !selection::fill_gap_with(&mut out, mask, gap, go_on) {
+        return Err(Stopped);
+    }
+    Ok(Some(Changed { pixels: out, area }))
 }
 
 /// Moves the selected pixels by whole pixels, leaving `gap` where they were; the
 /// moved selection too.
-pub fn shift(pixels: &RgbaImage, mask: &Mask, dx: i64, dy: i64, gap: Gap) -> Option<(Changed, Mask)> {
-    let (cut, at) = selection::selected_pixels(pixels, mask)?;
+pub fn shift(
+    pixels: &RgbaImage,
+    mask: &Mask,
+    dx: i64,
+    dy: i64,
+    gap: Gap,
+    go_on: &mut dyn FnMut(f32) -> bool,
+) -> Result<Option<(Changed, Mask)>, Stopped> {
+    let Some((cut, at)) = selection::selected_pixels(pixels, mask) else {
+        return Ok(None);
+    };
     let mut out = pixels.clone();
-    selection::fill_gap(&mut out, mask, gap);
+    if !selection::fill_gap_with(&mut out, mask, gap, go_on) {
+        return Err(Stopped);
+    }
     image::imageops::overlay(&mut out, &cut, at[0] as i64 + dx, at[1] as i64 + dy);
     let moved = mask.shifted(dx, dy);
     let (w, h) = (pixels.width() as i64, pixels.height() as i64);
@@ -315,10 +339,10 @@ pub fn shift(pixels: &RgbaImage, mask: &Mask, dx: i64, dy: i64, gap: Gap) -> Opt
         .max(at[1] as i64 + at[3] as i64 + dy)
         .clamp(0, h);
     if x1 <= x0 || y1 <= y0 {
-        return None;
+        return Ok(None);
     }
     let area = [x0 as u32, y0 as u32, (x1 - x0) as u32, (y1 - y0) as u32];
-    Some((Changed { pixels: out, area }, moved))
+    Ok(Some((Changed { pixels: out, area }, moved)))
 }
 
 /// The part `area` of `img`.

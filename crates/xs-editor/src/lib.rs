@@ -93,6 +93,8 @@ pub struct Editor {
     requested_view: Mutex<Option<String>>,
     /// New captures while automatic saving is off (LIB-020).
     unsaved_dir: Mutex<PathBuf>,
+    /// The Photo fill running, to stop it (EDT-045).
+    filling: Mutex<Option<Arc<std::sync::atomic::AtomicBool>>>,
 }
 
 /// What `document.copy_objects` put on the clipboard.
@@ -131,6 +133,7 @@ impl Editor {
             forget_open: std::sync::atomic::AtomicBool::new(false),
             requested_view: Mutex::new(None),
             unsaved_dir: Mutex::new(core.paths.local_dir.join("unsaved")),
+            filling: Mutex::new(None),
         }
     }
 
@@ -1624,6 +1627,7 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             .and_then(xs_image::color::Rgba::parse)
             .map(Gap::Color)
             .unwrap_or(Gap::Transparent),
+        _ if p.get("quality").and_then(Value::as_str) == Some("photo") => Gap::Photo,
         _ => Gap::Smart,
     };
     let base = ed.store.base(&id).map_err(|e| internal(lang, "", e))?;
@@ -1655,9 +1659,39 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     }
     let mut next = Some(sel.clone());
     let mut made: Vec<String> = Vec::new();
+    // A Photo fill can take a while: after 300 ms the editor shows its progress, and
+    // `editor.cancel` stops it (EDT-045).
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    *ed.filling.lock().unwrap() = Some(stop.clone());
+    let started = Instant::now();
+    let mut shown = Instant::now();
+    let mut go_on = |done: f32| {
+        if started.elapsed() >= Duration::from_millis(300)
+            && (shown.elapsed() >= Duration::from_millis(100) || done >= 1.0)
+        {
+            shown = Instant::now();
+            core.host()
+                .editor_event("progress", json!({ "task": "fill", "done": done }));
+        }
+        !stop.load(std::sync::atomic::Ordering::Relaxed)
+    };
+    // The fill is over, done or stopped: the progress goes away.
+    let end = || {
+        *ed.filling.lock().unwrap() = None;
+        if started.elapsed() >= Duration::from_millis(300) {
+            core.host()
+                .editor_event("progress", json!({ "task": "fill", "done": null }));
+        }
+    };
+    let stopped =
+        |_: pixels::Stopped| CommandError::new(ErrorCode::Cancelled, tr(lang, "errors.fill_stopped", &[]));
     let (changed_px, label) = match action {
         "delete" | "cut" => (
-            pixels::delete(&pixels, mask, gap),
+            {
+                let r = pixels::delete(&pixels, mask, gap, &mut go_on);
+                end();
+                r.map_err(stopped)?
+            },
             if action == "cut" {
                 "history.cut_pixels"
             } else {
@@ -1678,7 +1712,9 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             ];
             to_target.map_points(&mut v);
             let (dx, dy) = ((v[1].x - v[0].x).round() as i64, (v[1].y - v[0].y).round() as i64);
-            match pixels::shift(&pixels, mask, dx, dy, gap) {
+            let r = pixels::shift(&pixels, mask, dx, dy, gap, &mut go_on);
+            end();
+            match r.map_err(stopped)? {
                 Some((c, moved)) => {
                     let shape = sel
                         .shape
@@ -1737,7 +1773,9 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             )
             .map_err(invalid)?;
             float = Some((name, props));
-            if let Some(c) = pixels::delete(&pixels, mask, gap) {
+            let r = pixels::delete(&pixels, mask, gap, &mut go_on);
+            end();
+            if let Some(c) = r.map_err(stopped)? {
                 let gap_name = store_picture(core, &id, &pixels::cut_area(&c.pixels, c.area), lang)?;
                 float_gap = Some((gap_name, pixels::rect_of(c.area)));
             }
@@ -2594,6 +2632,14 @@ pub fn extension() -> Extension {
         on!("document.selection_action", |core, ctx, p| selection_action(
             &core, ctx, &p
         ));
+        // Stops a Photo fill (EDT-045): the image stays as it was.
+        on!("editor.cancel", |core, _ctx, _p| {
+            let running = editor(&core).filling.lock().unwrap().clone();
+            if let Some(stop) = &running {
+                stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(json!({ "cancelled": running.is_some() }))
+        });
         // Stacking order (EDT-081): one undo step.
         on!("document.arrange", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;

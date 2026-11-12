@@ -124,7 +124,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-042 | Mover | M1 | Must | En curso |
 | EDT-043 | Selección | M2 | Must | En curso (falta mantenerla al cambiar el tamaño de la imagen, con EDT-069) |
 | EDT-044 | Acciones sobre la selección | M2 | Must | En curso (faltan efectos, guardar, imprimir, sello y texto: llegan con sus IDs) |
-| EDT-045 | Relleno del hueco | M2 | Should | En curso (falta la calidad Fotográfica) |
+| EDT-045 | Relleno del hueco | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-046 | Varita mágica | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-047 | Relleno | M2 | Should | En curso (falta el relleno degradado, con EDT-020) |
 | EDT-048 | Borrador | M2 | Should | Hecho en Windows (macOS pendiente) |

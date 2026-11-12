@@ -2646,3 +2646,34 @@ fn selecting_on_a_floating_image() {
     );
     assert!(crop.is_err(), "crop works on the image");
 }
+
+/// EDT-045: Photo quality fills the gap too; Cancel with nothing running says so.
+#[test]
+fn photo_quality_fills_and_cancel_is_safe() {
+    let e = env();
+    let doc = with_button(&e);
+    let r = cli(&e.core, "editor.cancel", json!({}));
+    assert_eq!(r["cancelled"], false);
+    cli(
+        &e.core,
+        "document.select_pixels",
+        json!({"documentId": doc, "shape": "rectangle", "rect": {"x": 56, "y": 36, "w": 88, "h": 32}}),
+    );
+    cli(
+        &e.core,
+        "document.selection_action",
+        json!({"documentId": doc, "action": "delete", "quality": "photo"}),
+    );
+    let img = rendered(&e, &doc);
+    assert!(
+        img.pixels().all(|p| p.0[0] >= 250 && p.0[2] >= 250),
+        "no button left"
+    );
+    let style = call(
+        &e.core,
+        Source::Ui,
+        "editor.set_style",
+        json!({"tool": "select", "style": {"quality": "slow"}}),
+    );
+    assert!(style.is_err(), "fast or photo");
+}

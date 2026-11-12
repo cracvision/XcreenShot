@@ -1795,6 +1795,7 @@ export function Canvas({ doc }: Props) {
 
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
+  const fillProgress = useEditor((s) => s.fillProgress);
   // The eraser's outline follows the pointer at its real size (EDT-048).
   const eraserAt = usePointer((s) => (tool === "eraser" && !space ? s.screen : null));
   const erasing = drag?.kind === "erase" && styles ? drag : null;
@@ -2064,6 +2065,14 @@ export function Canvas({ doc }: Props) {
   return (
     <div className="canvas-area">
       {/* Over a locked object, a small lock by the pointer (EDT-085). */}
+      {fillProgress !== null && (
+        // A long Photo fill (EDT-045): how far it is, and Esc to stop it.
+        <div className="fill-progress" role="status">
+          <span>{t("ui.editor.pixel.filling")}</span>
+          <progress max={1} value={fillProgress} aria-label={t("ui.editor.pixel.filling")} />
+          <span className="muted">{t("ui.editor.pixel.esc_cancels")}</span>
+        </div>
+      )}
       {hover === "locked" && lockAt && (
         <span
           className="lock-badge"

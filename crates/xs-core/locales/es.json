@@ -438,6 +438,10 @@
     "document_selection_action": {
       "title": "Actuar sobre los píxeles seleccionados",
       "description": "Borra, corta, copia, mueve, separa como imagen flotante o recorta a los píxeles seleccionados, rellenando el hueco que dejan."
+    },
+    "editor_cancel": {
+      "title": "Cancelar",
+      "description": "Detiene una tarea larga del editor que esté en marcha: el relleno inteligente Fotográfico. No cambia nada."
     }
   },
   "settings": {
@@ -721,7 +725,8 @@
     "cli_missing": "La herramienta de línea de comandos xcreenshot no está instalada junto a la app. Vuelve a instalar XcreenShot.",
     "library_not_found": "El elemento \"{{id}}\" no está en la biblioteca.",
     "library_no_trash": "\"{{name}}\" no puede ir a la papelera aquí: eliminarlo sería definitivo.",
-    "library_undo_expired": "Ya es tarde para deshacer esa eliminación."
+    "library_undo_expired": "Ya es tarde para deshacer esa eliminación.",
+    "fill_stopped": "Se detuvo el relleno; no cambió nada."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1629,7 +1634,13 @@
         "sel_w": "An",
         "sel_h": "Al",
         "polygon_help": "Haz clic en cada esquina; doble clic o Enter la cierra.",
-        "floating_only": "Esto funciona sobre la imagen, no sobre una imagen flotante."
+        "floating_only": "Esto funciona sobre la imagen, no sobre una imagen flotante.",
+        "quality": "Calidad",
+        "quality_fast": "Rápida",
+        "quality_photo": "Fotográfica",
+        "quality_help": "Rápida, para interfaces y fondos planos; Fotográfica, para fotos y texturas (más lenta).",
+        "filling": "Rellenando…",
+        "esc_cancels": "Esc cancela"
       }
     },
     "multi": {

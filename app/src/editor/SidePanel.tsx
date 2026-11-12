@@ -338,6 +338,21 @@ function Properties({ target }: { target: Target }) {
       onCommit={(gapFill) => commit({ gapFill })}
     />
   );
+  // Smart fill: Fast or Photo (EDT-045).
+  const qualityField = v<GapFill>("gapFill") === "smart" && (
+    <>
+      <SelectField
+        label={t("ui.editor.pixel.quality")}
+        value={v<"fast" | "photo">("quality")}
+        options={(["fast", "photo"] as const).map((q) => ({
+          value: q,
+          label: t(`ui.editor.pixel.quality_${q}`),
+        }))}
+        onCommit={(quality) => commit({ quality })}
+      />
+      <p className="muted hint">{t("ui.editor.pixel.quality_help")}</p>
+    </>
+  );
   const lineStyle = (
     <SelectField
       label={t("ui.editor.prop.line_style")}
@@ -803,6 +818,7 @@ function Properties({ target }: { target: Target }) {
             onCommit={(feather) => commit({ feather })}
           />
           {gapField}
+          {qualityField}
           <SelectionBox />
         </>
       );
@@ -829,6 +845,7 @@ function Properties({ target }: { target: Target }) {
             {t("ui.editor.pixel.global")}
           </label>
           {gapField}
+          {qualityField}
         </>
       );
     case "eraser":

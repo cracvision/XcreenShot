@@ -42,8 +42,10 @@ pub enum Gap {
     Transparent,
     /// A solid color.
     Color(Rgba),
-    /// Rebuilt from the pixels around it.
+    /// Rebuilt from the pixels around it: smooth or sharp (Fast).
     Smart,
+    /// Rebuilt with pieces of the picture around it (Photo quality).
+    Photo,
 }
 
 impl Mask {
@@ -290,6 +292,15 @@ pub fn selected_pixels(img: &RgbaImage, mask: &Mask) -> Option<(RgbaImage, [u32;
 
 /// Fills the place of the selected pixels as `gap` says (EDT-045).
 pub fn fill_gap(img: &mut RgbaImage, mask: &Mask, gap: Gap) {
+    fill_gap_with(img, mask, gap, &mut |_| true);
+}
+
+/// [`fill_gap`], telling `go_on` the progress of a Photo fill; when it says stop, the
+/// image stays as it was and this returns `false`.
+pub fn fill_gap_with(img: &mut RgbaImage, mask: &Mask, gap: Gap, go_on: &mut dyn FnMut(f32) -> bool) -> bool {
+    if gap == Gap::Photo {
+        return crate::inpaint::inpaint(img, mask, go_on);
+    }
     match gap {
         Gap::Transparent => {
             for (p, &m) in img.pixels_mut().zip(&mask.alpha) {
@@ -309,7 +320,9 @@ pub fn fill_gap(img: &mut RgbaImage, mask: &Mask, gap: Gap) {
             }
         }
         Gap::Smart => smart_fill(img, mask),
+        Gap::Photo => {}
     }
+    true
 }
 
 /// Rebuilds the selected place from its surroundings (EDT-045 Smart fill, Fast): the
@@ -429,7 +442,7 @@ fn sides_alike(color: &[[f32; 4]], known: &[f32], w: usize, h: usize) -> Vec<Opt
 
 /// Fills the unknown cells (`known` 0) of a grid so each is the mean of its
 /// neighbors: a coarser grid gives the start, then a few relaxations at this one.
-fn membrane(color: &[[f32; 4]], known: &[f32], w: usize, h: usize) -> Vec<[f32; 4]> {
+pub(crate) fn membrane(color: &[[f32; 4]], known: &[f32], w: usize, h: usize) -> Vec<[f32; 4]> {
     let mut out = color.to_vec();
     if known.iter().all(|&k| k > 0.0) || known.iter().all(|&k| k == 0.0) {
         return out;

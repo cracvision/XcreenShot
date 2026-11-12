@@ -1,7 +1,7 @@
 // Pixel selection (EDT-043 to EDT-046): what the editor knows of it and the commands
 // it runs. The selection itself lives in the core; `document.info` reports its outline
 // in canvas pixels.
-import { run } from "../lib/commands";
+import { isCommandError, run } from "../lib/commands";
 import type { Point } from "./geometry";
 import { useEditor, type PixelSelectionInfo } from "./state";
 
@@ -53,16 +53,20 @@ export async function selectionAction(
 ): Promise<{ changed: boolean; ids?: string[] } | null> {
   const { doc, tool, styles, showError } = useEditor.getState();
   if (!doc?.pixelSelection) return null;
-  const gapFill = (tool === "wand" ? styles?.wand.gapFill : styles?.select.gapFill) ?? "smart";
+  const style = tool === "wand" ? styles?.wand : styles?.select;
+  const gapFill = style?.gapFill ?? "smart";
+  const quality = style?.quality ?? "fast";
   try {
     return await run<{ changed: boolean; ids?: string[] }>("document.selection_action", {
       documentId: doc.documentId,
       action,
       gapFill,
+      quality,
       ...extra,
     });
   } catch (e) {
-    showError(e);
+    // Stopped with Esc: nothing changed, nothing to say (EDT-045).
+    if (!(isCommandError(e) && e.code === "cancelled")) showError(e);
     return null;
   }
 }

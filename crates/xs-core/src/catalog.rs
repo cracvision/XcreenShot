@@ -643,7 +643,8 @@ pub fn specs() -> Vec<CommandSpec> {
                     "documentId": document_id(),
                     "action": {"type": "string", "enum": ["delete", "cut", "copy", "move", "float", "crop"], "description": "delete or cut leave the gap filled; copy puts the pixels on the clipboard; move takes them by `offset`; float makes them a floating image; crop crops to them"},
                     "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "move: [dx, dy] in canvas pixels"},
-                    "gapFill": {"type": "string", "enum": ["smart", "transparent", "canvas"], "default": "smart", "description": "What fills the place the pixels leave"}
+                    "gapFill": {"type": "string", "enum": ["smart", "transparent", "canvas"], "default": "smart", "description": "What fills the place the pixels leave"},
+                    "quality": {"type": "string", "enum": ["fast", "photo"], "default": "fast", "description": "Smart fill: fast for interfaces and flat backgrounds; photo rebuilds textures (slower; editor.cancel stops it)"}
                 }),
                 &["action"],
             ))
@@ -932,6 +933,9 @@ pub fn specs() -> Vec<CommandSpec> {
                 &["action"],
             ))
             .result(json!({"type": "object"})),
+        B::new("editor.cancel", &["EDT-045"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean", "description": "Whether something was running"}}})),
         B::new("editor.menu_state", &["EDT-002"])
             .scopes(UI)
             .params(params(

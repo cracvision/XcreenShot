@@ -319,7 +319,8 @@ export function useEditorKeys(): void {
           case "Escape":
             // Cancels the crop, else deselects (EDT-117); with nothing to cancel, closes
             // the editor if the user asked for it (EDT-012). Documents stay open.
-            if (state.tool === "crop" && state.cropRect) resetCrop();
+            if (state.fillProgress !== null) run("editor.cancel").catch(() => undefined);
+            else if (state.tool === "crop" && state.cropRect) resetCrop();
             // Leaves the group a double click entered (EDT-082).
             else if (state.entered.length > 0) useEditor.setState({ entered: [] });
             else if (state.doc?.pixelSelection) void selectPixels({ shape: "none" });

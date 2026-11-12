@@ -167,6 +167,7 @@ export interface SelectStyle {
   snap: boolean;
   level: number;
   gapFill: GapFill;
+  quality: "fast" | "photo";
 }
 
 /** The Magic wand (EDT-046). */
@@ -174,6 +175,7 @@ export interface WandStyle {
   tolerance: number;
   global: boolean;
   gapFill: GapFill;
+  quality: "fast" | "photo";
 }
 
 /** The pixel selection as `document.info` reports it, in canvas pixels (EDT-043). */
@@ -586,6 +588,8 @@ interface EditorState {
   stepEdit: { id: string; value: string } | null;
   /** Flattening a blur waits for this question (EDT-091). */
   flattenAsk: { all: boolean } | null;
+  /** A Photo fill's progress (0–1) while it takes long (EDT-045). */
+  fillProgress: number | null;
   /** The group a double click entered, outermost first (EDT-082). */
   entered: string[];
   /** Last view of each document in this session. */
@@ -636,6 +640,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   doc: null,
   selection: [],
   flattenAsk: null,
+  fillProgress: null,
   stepEdit: null,
   entered: [],
   views: {},
@@ -672,6 +677,12 @@ export const useEditor = create<EditorState>((set, get) => ({
               if (get().active === active) set({ doc });
             });
           }
+          break;
+        }
+        case "progress": {
+          // A long fill's progress; null when it ends (EDT-045).
+          if (payload.task === "fill")
+            set({ fillProgress: (payload.done as number | null) ?? null });
           break;
         }
         case "document": {

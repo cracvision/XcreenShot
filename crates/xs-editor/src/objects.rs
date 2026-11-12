@@ -56,6 +56,8 @@ pub struct SelectStyle {
     pub level: f64,
     /// "smart", "transparent" or "canvas".
     pub gap_fill: String,
+    /// Smart fill: "fast" or "photo".
+    pub quality: String,
 }
 
 impl Default for SelectStyle {
@@ -67,6 +69,7 @@ impl Default for SelectStyle {
             snap: false,
             level: 50.0,
             gap_fill: "smart".to_string(),
+            quality: "fast".to_string(),
         }
     }
 }
@@ -78,6 +81,7 @@ pub struct WandStyle {
     pub tolerance: f64,
     pub global: bool,
     pub gap_fill: String,
+    pub quality: String,
 }
 
 impl Default for WandStyle {
@@ -86,16 +90,19 @@ impl Default for WandStyle {
             tolerance: 15.0,
             global: false,
             gap_fill: "smart".to_string(),
+            quality: "fast".to_string(),
         }
     }
 }
 
-fn gap_fill_ok(v: &str) -> Result<(), String> {
-    if ["smart", "transparent", "canvas"].contains(&v) {
-        Ok(())
-    } else {
-        Err("gapFill is smart, transparent or canvas".into())
+fn gap_fill_ok(v: &str, quality: &str) -> Result<(), String> {
+    if !["smart", "transparent", "canvas"].contains(&v) {
+        return Err("gapFill is smart, transparent or canvas".into());
     }
+    if !["fast", "photo"].contains(&quality) {
+        return Err("quality is fast or photo".into());
+    }
+    Ok(())
 }
 
 impl SelectStyle {
@@ -106,7 +113,7 @@ impl SelectStyle {
         }
         within("feather", s.feather, 0.0, 50.0)?;
         within("level", s.level, 0.0, 100.0)?;
-        gap_fill_ok(&s.gap_fill)?;
+        gap_fill_ok(&s.gap_fill, &s.quality)?;
         Ok(s)
     }
 }
@@ -115,7 +122,7 @@ impl WandStyle {
     fn merged(base: &WandStyle, changes: &Map<String, Value>) -> Result<WandStyle, String> {
         let s: WandStyle = merged(base, changes)?;
         within("tolerance", s.tolerance, 0.0, 100.0)?;
-        gap_fill_ok(&s.gap_fill)?;
+        gap_fill_ok(&s.gap_fill, &s.quality)?;
         Ok(s)
     }
 }

@@ -10,6 +10,7 @@ pub mod effects;
 pub mod encode;
 pub mod geometry;
 pub mod highlights;
+pub mod inpaint;
 pub mod magnify;
 pub mod pens;
 pub mod pixels;
