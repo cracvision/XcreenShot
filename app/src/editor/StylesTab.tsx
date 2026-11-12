@@ -12,8 +12,8 @@ import { loadFonts } from "./actions";
 import { ColorPicker } from "./ColorPicker";
 import { Icon, type IconName } from "./icons";
 import { useContextMenu } from "./menus";
-import { announceImport, importTheme, STYLED_TOOLS, themeRun } from "./themesUi";
-import { useEditor, xsdocUrl, type Tool } from "./state";
+import { announceImport, importTheme, same, sampleUrl, STYLED_TOOLS, themeRun } from "./themesUi";
+import { useEditor, type Tool } from "./state";
 
 interface Saved {
   id: string;
@@ -38,35 +38,6 @@ interface ThemeInfo {
   shadow: boolean;
   shadowOff: string[];
   builtIn: boolean;
-}
-
-/** The same style, whatever the key order. */
-function same(a: unknown, b: unknown): boolean {
-  return JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
-}
-function sorted(v: unknown): unknown {
-  if (Array.isArray(v)) return v.map(sorted);
-  if (v && typeof v === "object")
-    return Object.fromEntries(
-      Object.keys(v as object)
-        .sort()
-        .filter((k) => (v as Record<string, unknown>)[k] !== null)
-        .map((k) => [k, sorted((v as Record<string, unknown>)[k])]),
-    );
-  return v;
-}
-function hashOf(v: unknown): string {
-  const text = JSON.stringify(sorted(v));
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36);
-}
-
-function sampleUrl(tool: string, which: string, style: unknown): string {
-  return xsdocUrl(`sample/${tool}/${which}?v=${hashOf(style)}`);
 }
 
 /** Saved styles and themes, read again whenever the core says they changed. */

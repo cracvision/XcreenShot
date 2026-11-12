@@ -687,6 +687,10 @@
     "editor_simplifyLockOnExit": {
       "label": "Bloquear las formas simplificadas al salir",
       "description": "Al dejar la herramienta Simplificar, sus formas se bloquean para no moverlas sin querer."
+    },
+    "editor_cursorStylePreview": {
+      "label": "Vista previa del estilo junto al puntero",
+      "description": "Con una herramienta de dibujo, una muestra pequeña de su estilo actual acompaña al puntero sobre el lienzo."
     }
   },
   "errors": {

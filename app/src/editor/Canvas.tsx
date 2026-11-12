@@ -39,6 +39,7 @@ import {
 } from "./boxes";
 import { arrowGeometry, constrain45, type Point } from "./geometry";
 import { useObjectImages, useShadowImages } from "./objectImages";
+import { sampleUrl, STYLED_TOOLS } from "./themesUi";
 import {
   ArrowShape,
   BlurShape,
@@ -1797,6 +1798,16 @@ export function Canvas({ doc }: Props) {
   const drawing = drag?.kind === "draw" && styles ? drag : null;
   const lockAt = usePointer((s) => (hover === "locked" ? s.screen : null));
   const fillProgress = useEditor((s) => s.fillProgress);
+  // A sample of the current style by the pointer, when asked for (EDT-015).
+  const previewOn = useSetting("editor.cursorStylePreview", false);
+  const previewTool = (STYLED_TOOLS as readonly string[]).includes(tool) ? tool : null;
+  const previewAt = usePointer((s) => (previewOn && previewTool && !drag ? s.screen : null));
+  const previewStyle =
+    previewTool && styles ? (styles as unknown as Record<string, unknown>)[previewTool] : null;
+  const stylePreview =
+    previewOn && previewTool && previewStyle
+      ? sampleUrl(previewTool, "current", previewStyle)
+      : null;
   // The eraser's outline follows the pointer at its real size (EDT-048).
   const eraserAt = usePointer((s) => (tool === "eraser" && !space ? s.screen : null));
   const erasing = drag?.kind === "erase" && styles ? drag : null;
@@ -2086,6 +2097,16 @@ export function Canvas({ doc }: Props) {
   return (
     <div className="canvas-area">
       {/* Over a locked object, a small lock by the pointer (EDT-085). */}
+      {stylePreview && previewAt && (
+        // The current style next to the pointer (EDT-015 `editor.cursorStylePreview`).
+        <img
+          className="style-preview"
+          src={stylePreview}
+          alt=""
+          aria-hidden="true"
+          style={{ left: previewAt.x + 18, top: previewAt.y + 18 }}
+        />
+      )}
       {fillProgress !== null && (
         // A long Photo fill (EDT-045): how far it is, and Esc to stop it.
         <div className="fill-progress" role="status">

@@ -687,6 +687,10 @@
     "editor_simplifyLockOnExit": {
       "label": "Lock simplified shapes on exit",
       "description": "When you leave the Simplify tool, its shapes are locked so they do not move by accident."
+    },
+    "editor_cursorStylePreview": {
+      "label": "Style preview by the pointer",
+      "description": "With a drawing tool, a small sample of its current style follows the pointer over the canvas."
     }
   },
   "errors": {

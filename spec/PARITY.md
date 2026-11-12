@@ -94,7 +94,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-012 | Cambios sin guardar y copia de recuperación | M1 | Must | Win |
 | EDT-013 | Accesibilidad del lienzo | M1 | Should | Win |
 | EDT-014 | Propiedades y estilo actual | M1 | Must | En curso |
-| EDT-015 | Estilos guardados | M2 | Must | En curso (falta la vista previa junto al puntero) |
+| EDT-015 | Estilos guardados | M2 | Must | Hecho en Windows (macOS pendiente) |
 | EDT-016 | Favoritos | M2 | Should | En curso (faltan los efectos favoritos, con EDT-054) |
 | EDT-017 | Temas | M2 | Should | Hecho en Windows (macOS pendiente) |
 | EDT-018 | Exportar e importar temas `.xtheme` | M2 | Should | En curso (faltan el doble clic en el archivo y `policy.themes`) |

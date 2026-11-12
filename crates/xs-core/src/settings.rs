@@ -239,6 +239,13 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         def("editor.scaleStrokes", "editor", boolean(), json!(true), "EDT-080"),
         def(
+            "editor.cursorStylePreview",
+            "editor",
+            boolean(),
+            json!(false),
+            "EDT-015",
+        ),
+        def(
             "editor.autoExpandCanvas",
             "editor",
             boolean(),
