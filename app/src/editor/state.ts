@@ -13,7 +13,17 @@ import { showView, useLibrary, useTray, type MainView } from "../library/state";
 import { arrived } from "./tray";
 
 export type Tool =
-  "move" | "arrow" | "line" | "text" | "callout" | "shape" | "step" | "highlight" | "blur" | "crop";
+  | "move"
+  | "arrow"
+  | "line"
+  | "text"
+  | "callout"
+  | "shape"
+  | "step"
+  | "highlight"
+  | "pen"
+  | "blur"
+  | "crop";
 
 export interface DocSummary {
   documentId: string;
@@ -84,6 +94,27 @@ export interface ShapeObject {
   rect: Rect;
   rotation: number;
   style: ShapeStyle;
+}
+
+/** Pen (EDT-037). */
+export type PenTip = "circle" | "square" | "slash" | "bar";
+export const PEN_TIPS: PenTip[] = ["circle", "square", "slash", "bar"];
+
+export interface PenStyle {
+  color: string;
+  width: number;
+  opacity: number;
+  tip: PenTip;
+  antialias: boolean;
+  smooth: number;
+  editable: boolean;
+}
+
+export interface PenObject {
+  id: string;
+  type: "pen";
+  points: Point[];
+  style: PenStyle;
 }
 
 /** Highlighter (EDT-036). */
@@ -254,6 +285,7 @@ export type DocObject = (
   | StepObject
   | CalloutObject
   | HighlightObject
+  | PenObject
   | { id: string; type: "other" }
 ) & {
   /** Locked: the mouse does not select or move it (EDT-085). */
@@ -271,6 +303,7 @@ export interface Styles {
   step: StepStyle;
   callout: CalloutStyle;
   highlight: HighlightStyle;
+  pen: PenStyle;
 }
 
 /** A text box being typed (EDT-026): a new one (`id` null) or an existing one. */

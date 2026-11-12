@@ -23,6 +23,7 @@ export function useObjectImages(
       o.type !== "text" &&
       o.type !== "step" &&
       o.type !== "callout" &&
+      o.type !== "pen" &&
       !(o.type === "blur" && o.style.blurType !== "solid")
     )
       return [];

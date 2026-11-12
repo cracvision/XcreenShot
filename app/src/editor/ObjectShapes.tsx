@@ -11,6 +11,7 @@ import type {
   CalloutObject,
   HighlightObject,
   ImageObject,
+  PenObject,
   ShapeObject,
   StepObject,
   TextObject,
@@ -306,5 +307,65 @@ export function HighlightShape({ o }: { o: HighlightObject }) {
         />
       )}
     </Group>
+  );
+}
+
+/** The middle of a stroke's points: where Rust centers its picture. */
+function middle(points: [number, number][]): [number, number] {
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+}
+
+/** A stroke as Rust draws it (EDT-037), centered on the middle of its points; while it
+ * is moved or stretched, the picture follows until the new one is ready. */
+export function PenShape(props: {
+  o: PenObject;
+  committed: PenObject;
+  image: HTMLImageElement | undefined;
+}) {
+  const { o, committed, image } = props;
+  if (!image || o.points.length === 0) return null;
+  const [cx, cy] = middle(o.points);
+  const span = (pts: [number, number][], i: 0 | 1) =>
+    Math.max(...pts.map((p) => p[i])) - Math.min(...pts.map((p) => p[i]));
+  const k = (i: 0 | 1) => {
+    const before = span(committed.points, i);
+    return before > 0 ? span(o.points, i) / before : 1;
+  };
+  return (
+    <KImage
+      image={image}
+      x={cx}
+      y={cy}
+      offsetX={image.naturalWidth / 2}
+      offsetY={image.naturalHeight / 2}
+      scaleX={k(0)}
+      scaleY={k(1)}
+      listening={false}
+    />
+  );
+}
+
+/** The stroke being drawn (EDT-037), before Rust smooths and draws it. */
+export function PenPreview(props: {
+  points: [number, number][];
+  color: string;
+  width: number;
+  opacity: number;
+  square: boolean;
+}) {
+  const { points, color, width, opacity, square } = props;
+  return (
+    <Line
+      points={points.flat()}
+      stroke={color}
+      strokeWidth={width}
+      opacity={opacity / 100}
+      lineCap={square ? "square" : "round"}
+      lineJoin={square ? "miter" : "round"}
+      tension={0.3}
+      listening={false}
+    />
   );
 }

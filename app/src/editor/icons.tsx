@@ -106,6 +106,13 @@ const ICONS = {
       <rect x="3" y="5" width="14" height="10" rx="1" />
     </Svg>
   ),
+  // A pen (EDT-037).
+  pen: (
+    <Svg>
+      <path d="m4 16 1-4 8-8 3 3-8 8z" />
+      <path d="m11 6 3 3" />
+    </Svg>
+  ),
   // A marker's stroke (EDT-036).
   highlight: (
     <Svg>

@@ -10,6 +10,7 @@ use xs_core::document::{translate_props, Object};
 use xs_image::callouts::{CalloutObject, CalloutStyle};
 use xs_image::geometry::{Arrow, ArrowStyle, Cap};
 use xs_image::highlights::{HighlightObject, HighlightStyle};
+use xs_image::pens::{self, PenObject, PenStyle};
 use xs_image::shapes::{BlurObject, BlurStyle, ImageObject, ShapeObject, ShapeStyle};
 use xs_image::steps::{self, StepObject, StepStyle};
 use xs_image::text::{Text, TextStyle};
@@ -28,6 +29,7 @@ pub struct Styles {
     pub step: StepStyle,
     pub callout: CalloutStyle,
     pub highlight: HighlightStyle,
+    pub pen: PenStyle,
 }
 
 impl Default for Styles {
@@ -41,6 +43,7 @@ impl Default for Styles {
             step: StepStyle::default(),
             callout: CalloutStyle::default(),
             highlight: HighlightStyle::default(),
+            pen: PenStyle::default(),
         }
     }
 }
@@ -67,6 +70,7 @@ impl Styles {
             "step" => serde_json::to_value(&self.step).ok(),
             "callout" => serde_json::to_value(&self.callout).ok(),
             "highlight" => serde_json::to_value(&self.highlight).ok(),
+            "pen" => serde_json::to_value(&self.pen).ok(),
             _ => None,
         }
     }
@@ -82,6 +86,7 @@ impl Styles {
             "step" => self.step = StepStyle::merged(&self.step, changes)?,
             "callout" => self.callout = CalloutStyle::merged(&self.callout, changes)?,
             "highlight" => self.highlight = HighlightStyle::merged(&self.highlight, changes)?,
+            "pen" => self.pen = PenStyle::merged(&self.pen, changes)?,
             k => return Err(format!("the {k} tool has no style")),
         }
         self.of(kind).ok_or_else(|| "style".to_string())
@@ -98,6 +103,7 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "text" => Some(&["at", "width", "text", "rotation"]),
         "shape" | "blur" | "image" | "highlight" => Some(&["rect", "rotation"]),
         "step" => Some(&["rect", "rotation", "value"]),
+        "pen" => Some(&["points"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         _ => None,
     }
@@ -164,6 +170,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
             style["size"] = json!(r.w);
             json!({"rect": r, "rotation": s.rotation, "value": s.value, "style": style})
         }
+        "pen" => {
+            let p = PenObject::from_props(props)?;
+            json!({"points": p.points, "style": p.style})
+        }
         "highlight" => {
             let h = HighlightObject::from_props(props)?;
             json!({"rect": h.rect, "rotation": h.rotation, "style": h.style})
@@ -220,6 +230,22 @@ pub fn new_object(input: &Value, styles: &Styles) -> Result<(String, Map<String,
                 "rect".into(),
                 json!({"x": c[0] - s / 2.0, "y": c[1] - s / 2.0, "w": s, "h": s}),
             );
+        }
+    }
+    // A new stroke is smoothed as its style says (EDT-037).
+    if kind == "pen" {
+        let amount = style["smooth"].as_f64().unwrap_or(30.0);
+        let points: Vec<[f64; 2]> = props
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(|p| Some([p.get(0)?.as_f64()?, p.get(1)?.as_f64()?]))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if !points.is_empty() {
+            props.insert("points".into(), json!(pens::smoothed(&points, amount)));
         }
     }
     props.insert("style".into(), style);
@@ -322,6 +348,7 @@ fn origin(kind: &str, p: &Map<String, Value>) -> Option<[f64; 2]> {
     let xy = |v: &Value| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]);
     match kind {
         "arrow" | "line" => xy(p.get("from")?),
+        "pen" => xy(p.get("points")?.get(0)?),
         "text" => xy(p.get("at")?),
         _ => {
             let r = p.get("rect")?;

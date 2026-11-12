@@ -38,6 +38,8 @@ import {
   CalloutShape,
   HighlightShape,
   ImageShape,
+  PenPreview,
+  PenShape,
   ShapeShape,
   StepShape,
   TextShape,
@@ -123,7 +125,9 @@ type Drag =
   | { kind: "radius"; id: string; box: Box; value: number }
   | { kind: "anchor"; id: string; start: Point; delta: Point }
   | { kind: "crop"; mode: "new" | "move" | BoxHandle; start: Point; from: RectBox; rect: RectBox }
-  | { kind: "pan"; x: number; y: number; left: number; top: number };
+  | { kind: "pan"; x: number; y: number; left: number; top: number }
+  // A freehand stroke being drawn (EDT-037); Shift keeps it straight.
+  | { kind: "pen"; points: Point[]; straight: boolean };
 
 function useBaseImage(id: string, key: number): HTMLImageElement | null {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
@@ -708,6 +712,11 @@ export function Canvas({ doc }: Props) {
       setDrag({ kind: "move", ids, start: p, delta: [0, 0], moved: false, copy });
       return;
     }
+    if (tool === "pen") {
+      capture();
+      setDrag({ kind: "pen", points: [p], straight: e.shiftKey });
+      return;
+    }
     if (tool === "move") {
       // An empty place: a selection box (EDT-079).
       capture();
@@ -761,6 +770,14 @@ export function Canvas({ doc }: Props) {
         };
       case "end":
         return { ...d, point: e.shiftKey ? constrain45(d.other, p) : p };
+      case "pen": {
+        const first = d.points[0] ?? p;
+        // Shift: a straight line, level, upright or at 45° (EDT-037).
+        if (e.shiftKey) return { ...d, points: [first, constrain45(first, p)], straight: true };
+        const last = d.points[d.points.length - 1] ?? p;
+        const far = Math.hypot(p[0] - last[0], p[1] - last[1]) * (lay?.scale ?? 1) >= 1;
+        return far ? { ...d, points: [...d.points, p], straight: false } : d;
+      }
       case "band":
         return { ...d, end: p, touch: e.altKey };
       case "move": {
@@ -872,6 +889,17 @@ export function Canvas({ doc }: Props) {
   const finish = async (d: Drag) => {
     const id = doc.documentId;
     try {
+      if (d.kind === "pen") {
+        const pen = styles?.pen;
+        const r = await run<{ ids: string[] }>("document.annotate", {
+          documentId: id,
+          objects: [{ type: "pen", points: d.points }],
+        });
+        // A stroke painted into the image is no object to select.
+        if (r.ids[0] && pen?.editable !== false && setting("editor.autoSelectAfterDraw", true))
+          setSelection([r.ids[0]]);
+        return;
+      }
       if (d.kind === "draw") {
         const object =
           d.tool === "arrow" || d.tool === "line"
@@ -1194,6 +1222,17 @@ export function Canvas({ doc }: Props) {
         return <ShapeShape key={o.id} o={o} scale={scale} />;
       case "highlight":
         return <HighlightShape key={o.id} o={o} />;
+      case "pen": {
+        const c = committed.get(o.id);
+        return (
+          <PenShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "pen" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
       case "blur": {
         const c = committed.get(o.id);
         return (
@@ -1284,6 +1323,15 @@ export function Canvas({ doc }: Props) {
       {dashedBox("text")}
       {dashedBox("step")}
       {dashedBox("callout")}
+      {drag?.kind === "pen" && styles && (
+        <PenPreview
+          points={drag.points}
+          color={styles.pen.color}
+          width={styles.pen.width}
+          opacity={styles.pen.opacity}
+          square={styles.pen.tip === "square"}
+        />
+      )}
       {drawing && styles && drawing.tool === "highlight" && (
         <HighlightShape
           o={{
@@ -1563,6 +1611,28 @@ export function Canvas({ doc }: Props) {
                           />
                         );
                       });
+                    }
+                    // A stroke: a dashed box around it, to show it is selected (EDT-037).
+                    if (o.type === "pen") {
+                      const all = boundsOf([o]);
+                      if (!all) return null;
+                      const pad = o.style.width / 2 + 2 / scale;
+                      return (
+                        <Line
+                          key={o.id}
+                          points={corners({
+                            x: all.x - pad,
+                            y: all.y - pad,
+                            w: all.w + 2 * pad,
+                            h: all.h + 2 * pad,
+                            rotation: 0,
+                          }).flatMap(toScreen)}
+                          closed
+                          stroke={ACCENT}
+                          strokeWidth={1}
+                          dash={[4, 3]}
+                        />
+                      );
                     }
                     const box = boxOf(o);
                     if (!box) return null;

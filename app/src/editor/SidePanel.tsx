@@ -27,6 +27,8 @@ import {
   type VAlign,
   HIGHLIGHT_SHAPES,
   type HighlightShapeKind,
+  PEN_TIPS,
+  type PenTip,
 } from "./state";
 import { useDraft } from "./useDraft";
 import { stepSequence } from "./actions";
@@ -121,7 +123,7 @@ interface Target {
 }
 
 type StyledKind =
-  "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout" | "highlight";
+  "arrow" | "line" | "text" | "shape" | "blur" | "image" | "step" | "callout" | "highlight" | "pen";
 const STYLED: StyledKind[] = [
   "arrow",
   "line",
@@ -132,6 +134,7 @@ const STYLED: StyledKind[] = [
   "step",
   "callout",
   "highlight",
+  "pen",
 ];
 
 function useTarget(): Target | null {
@@ -467,6 +470,59 @@ function Properties({ target }: { target: Target }) {
     }
     case "image":
       return opacity;
+    case "pen":
+      // Pen (EDT-037): color, width, tip, smoothing; editable is how new strokes are made.
+      return (
+        <>
+          <ColorPicker
+            label={t("ui.editor.prop.color")}
+            value={v<string>("color") ?? "#000000"}
+            mixed={v<string>("color") === undefined}
+            onCommit={(color) => color && commit({ color })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.width")}
+            value={num("width")}
+            min={1}
+            max={100}
+            step={1}
+            unit="px"
+            onCommit={(width) => commit({ width })}
+          />
+          <SelectField
+            label={t("ui.editor.prop.pen_tip")}
+            value={v<PenTip>("tip")}
+            options={PEN_TIPS.map((s) => ({ value: s, label: t(`ui.editor.pen_tip.${s}`) }))}
+            onCommit={(tip) => commit({ tip })}
+          />
+          <NumberField
+            label={t("ui.editor.prop.smooth")}
+            value={num("smooth")}
+            min={0}
+            max={100}
+            step={1}
+            unit="%"
+            onCommit={(smooth) => commit({ smooth })}
+          />
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={v<boolean>("antialias") !== false}
+              onChange={(e) => commit({ antialias: e.target.checked })}
+            />
+            {t("ui.editor.prop.antialias")}
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={v<boolean>("editable") !== false}
+              onChange={(e) => commit({ editable: e.target.checked })}
+            />
+            {t("ui.editor.prop.editable")}
+          </label>
+          {opacity}
+        </>
+      );
     case "highlight":
       // Highlighter (EDT-036): color, opacity and shape.
       return (

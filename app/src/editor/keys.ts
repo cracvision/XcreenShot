@@ -176,6 +176,7 @@ const COLOR_KEY: Partial<Record<Tool, string>> = {
   step: "fill",
   callout: "fill",
   highlight: "color",
+  pen: "color",
   blur: "color",
 };
 

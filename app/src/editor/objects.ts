@@ -31,6 +31,21 @@ export function boxOf(o: DocObject): Box | null {
 /** Whether canvas point `p` is on the object; `reach` is the pointer tolerance. */
 export function hits(o: DocObject, p: Point, reach: number): boolean {
   if (isSegment(o)) return distanceToSegment(p, o.from, o.to) <= Math.max(o.style.width / 2, reach);
+  // A stroke is picked along its points (EDT-037).
+  if (o.type === "pen") {
+    const r = Math.max(o.style.width / 2, reach);
+    const pts = o.points;
+    if (pts.length === 1) {
+      const [only] = pts;
+      return only ? Math.hypot(p[0] - only[0], p[1] - only[1]) <= r : false;
+    }
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      if (a && b && distanceToSegment(p, a, b) <= r) return true;
+    }
+    return false;
+  }
   // A callout is also picked by its tails (EDT-028).
   if (o.type === "callout") {
     const c: Point = [o.rect.x + o.rect.w / 2, o.rect.y + o.rect.h / 2];
@@ -85,6 +100,10 @@ export function moved(o: DocObject, dx: number, dy: number): [DocObject, Record<
     case "highlight": {
       const rect = { ...o.rect, x: o.rect.x + dx, y: o.rect.y + dy };
       return [{ ...o, rect }, { rect }];
+    }
+    case "pen": {
+      const points = o.points.map((q): Point => [q[0] + dx, q[1] + dy]);
+      return [{ ...o, points }, { points }];
     }
     case "callout": {
       // The tails go with the body (EDT-028).
@@ -166,6 +185,7 @@ export function reboxed(o: DocObject, b: Box): [DocObject, Record<string, unknow
 /** Canvas points an object reaches, to tell whether it is outside the canvas. */
 export function extentPoints(o: DocObject): Point[] {
   if (isSegment(o)) return [o.from, o.to];
+  if (o.type === "pen") return o.points;
   const b = boxOf(o);
   if (o.type === "callout" && b) return [...corners(b), ...o.tails];
   return b ? corners(b) : [];

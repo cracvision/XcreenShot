@@ -787,7 +787,8 @@
       "editor_tool_step": "Step tool",
       "editor_tool_callout": "Callout tool",
       "editor_tool_line": "Line tool",
-      "editor_tool_highlight": "Highlighter tool"
+      "editor_tool_highlight": "Highlighter tool",
+      "editor_tool_pen": "Pen tool"
     }
   },
   "tray": {
@@ -1242,7 +1243,8 @@
         "step": "Click to place the next number; drag for a bigger marker.",
         "callout": "Drag to draw a box with a tail, then type. Drag a tail’s tip to point.",
         "line": "Drag to draw a line; Shift keeps it straight or at 45°.",
-        "highlight": "Drag over what to mark; dark text stays readable."
+        "highlight": "Drag over what to mark; dark text stays readable.",
+        "pen": "Draw freehand; Shift draws a straight line."
       },
       "tool": {
         "move": "Move",
@@ -1255,7 +1257,8 @@
         "step": "Step",
         "callout": "Callout",
         "line": "Line",
-        "highlight": "Highlighter"
+        "highlight": "Highlighter",
+        "pen": "Pen"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -1324,7 +1327,11 @@
         "valign": "Vertical alignment",
         "padding": "Padding",
         "fit_text": "Fit to text",
-        "highlight_shape": "Shape"
+        "highlight_shape": "Shape",
+        "pen_tip": "Tip",
+        "smooth": "Smooth stroke",
+        "antialias": "Smooth edges",
+        "editable": "Create as editable stroke"
       },
       "cap": {
         "none": "None",
@@ -1472,7 +1479,14 @@
         "rectangle": "Rectangle",
         "roundedRectangle": "Rounded rectangle",
         "ellipse": "Oval"
-      }
+      },
+      "pen_tip": {
+        "circle": "Circle",
+        "square": "Square",
+        "slash": "Slanted bar",
+        "bar": "Horizontal bar"
+      },
+      "unflatten_painted": "It was painted into the image, so it cannot be unflattened."
     },
     "multi": {
       "title": "Multi-capture",
@@ -1683,7 +1697,13 @@
     "change_highlight": "Change highlight",
     "delete_highlight": "Delete highlight",
     "cut_highlight": "Cut highlight",
-    "paste_highlight": "Paste highlight"
+    "paste_highlight": "Paste highlight",
+    "draw_pen": "Draw",
+    "move_pen": "Move stroke",
+    "change_pen": "Change stroke",
+    "delete_pen": "Delete stroke",
+    "cut_pen": "Cut stroke",
+    "paste_pen": "Paste stroke"
   },
   "editor": {
     "edited": "{{name}} — Edited"

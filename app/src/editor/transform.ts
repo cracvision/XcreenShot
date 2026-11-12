@@ -51,6 +51,17 @@ const grown = (v: number, k: number, min: number, max: number) =>
 
 /** `o` after `op`, as the canvas shows it while the gesture goes on. */
 export function transformed(o: DocObject, op: TransformOp): DocObject {
+  if (o.type === "pen") {
+    if (op.kind === "rotate")
+      return { ...o, points: o.points.map((q) => turn(q, op.center, op.degrees)) };
+    const [sx, sy] = factors(op.from, op.to);
+    const width = op.strokes ? grown(o.style.width, Math.sqrt(sx * sy), 1, 100) : o.style.width;
+    return {
+      ...o,
+      points: o.points.map((q) => mapped(q, op.from, op.to)),
+      style: { ...o.style, width },
+    };
+  }
   if (isSegment(o)) {
     if (op.kind === "rotate")
       return {

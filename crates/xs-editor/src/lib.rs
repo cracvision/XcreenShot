@@ -30,7 +30,7 @@ use crate::objects::Styles;
 use crate::store::{DocStore, Format, Kind, OpenError, Snapshot};
 
 /// Tools that exist in this build (EDT-003); the rest of `catalog::TOOLS` come later.
-pub const AVAILABLE_TOOLS: [&str; 10] = [
+pub const AVAILABLE_TOOLS: [&str; 11] = [
     "move",
     "arrow",
     "line",
@@ -39,6 +39,7 @@ pub const AVAILABLE_TOOLS: [&str; 10] = [
     "shape",
     "step",
     "highlight",
+    "pen",
     "blur",
     "crop",
 ];
@@ -1533,6 +1534,25 @@ pub fn extension() -> Extension {
                         }
                         doc.objects.push(o);
                         ids.push(oid);
+                    }
+                    // A stroke that is not editable is painted into the image: a
+                    // flattened layer that cannot come back (EDT-037, EDT-091).
+                    let painted: Vec<String> = doc
+                        .objects
+                        .iter()
+                        .filter(|o| {
+                            ids.contains(&o.id)
+                                && o.kind == "pen"
+                                && o.props["style"]["editable"] == json!(false)
+                        })
+                        .map(|o| o.id.clone())
+                        .collect();
+                    if !painted.is_empty() {
+                        if let Some(made) = flatten::flatten(doc, &painted) {
+                            for l in doc.flattened.iter_mut().filter(|l| made.layers.contains(&l.id)) {
+                                l.permanent = Some("painted".into());
+                            }
+                        }
                     }
                     if auto {
                         fit::fit_canvas(doc);

@@ -15,6 +15,7 @@ use crate::color::Rgba;
 use crate::effects;
 use crate::geometry::{dash, Arrow, Geometry, Shape};
 use crate::highlights::{self, HighlightObject};
+use crate::pens::{self, PenObject};
 use crate::shapes::{
     inner_rect, pixel_bounds, BlurObject, BlurType, ImageObject, Rect, ShapeKind, ShapeObject,
 };
@@ -551,6 +552,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 highlights::draw(pm, &h);
             }
         }
+        "pen" => {
+            if let Ok(p) = PenObject::from_props(&object.props) {
+                pens::draw(pm, &p);
+            }
+        }
         "image" => {
             let Ok(i) = ImageObject::from_props(&object.props) else {
                 return;
@@ -710,6 +716,13 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "callout" => {
             let c = CalloutObject::from_props(&object.props).ok()?;
             let [x0, y0, x1, y1] = callouts::bounds(&c);
+            add(x0, y0);
+            add(x1, y1);
+            None
+        }
+        "pen" => {
+            let p = PenObject::from_props(&object.props).ok()?;
+            let [x0, y0, x1, y1] = p.bounds();
             add(x0, y0);
             add(x1, y1);
             None
@@ -885,16 +898,22 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         }
         // A step as it shows, turned shape and upright value, in a picture centered on
         // the marker's center: `(x, y)` is where its top-left corner goes.
-        // A step or a callout as it shows, in a picture centered on the center of its
-        // body: `(x, y)` is where its top-left corner goes.
-        "step" | "callout" => {
-            let r = match object.kind.as_str() {
-                "step" => StepObject::from_props(&object.props).ok()?.rect,
-                _ => CalloutObject::from_props(&object.props).ok()?.rect,
-            };
-            let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
+        // A step, a callout or a stroke as it shows, in a picture centered on the
+        // center of its body (of its points for a stroke): `(x, y)` is where its top-left
+        // corner goes. The editor places it by that center.
+        "step" | "callout" | "pen" => {
             let b = object_bounds(object, doc.dpi)?;
-            let reach = r.w.hypot(r.h) / 2.0;
+            let (cx, cy, reach) = match object.kind.as_str() {
+                "step" => {
+                    let r = StepObject::from_props(&object.props).ok()?.rect;
+                    (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
+                }
+                "callout" => {
+                    let r = CalloutObject::from_props(&object.props).ok()?.rect;
+                    (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
+                }
+                _ => ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0, 0.0),
+            };
             let hw = (cx - b[0]).max(b[2] - cx).max(reach) + 2.0;
             let hh = (cy - b[1]).max(b[3] - cy).max(reach) + 2.0;
             let (w, h) = ((2.0 * hw).ceil() as u32, (2.0 * hh).ceil() as u32);

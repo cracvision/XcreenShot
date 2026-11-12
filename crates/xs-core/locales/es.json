@@ -787,7 +787,8 @@
       "editor_tool_step": "Herramienta Paso",
       "editor_tool_callout": "Herramienta Globo",
       "editor_tool_line": "Herramienta Línea",
-      "editor_tool_highlight": "Herramienta Resaltador"
+      "editor_tool_highlight": "Herramienta Resaltador",
+      "editor_tool_pen": "Herramienta Lápiz"
     }
   },
   "tray": {
@@ -1242,7 +1243,8 @@
         "step": "Haz clic para poner el número siguiente; arrastra para un marcador más grande.",
         "callout": "Arrastra para dibujar un cuadro con cola y escribe. Arrastra la punta de la cola para señalar.",
         "line": "Arrastra para trazar una línea; Mayús la deja recta o a 45°.",
-        "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible."
+        "highlight": "Arrastra sobre lo que quieras marcar; el texto oscuro sigue legible.",
+        "pen": "Dibuja a mano alzada; Mayús traza una línea recta."
       },
       "tool": {
         "move": "Mover",
@@ -1255,7 +1257,8 @@
         "step": "Paso",
         "callout": "Globo",
         "line": "Línea",
-        "highlight": "Resaltador"
+        "highlight": "Resaltador",
+        "pen": "Lápiz"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -1324,7 +1327,11 @@
         "valign": "Alineación vertical",
         "padding": "Margen interior",
         "fit_text": "Ajustar al texto",
-        "highlight_shape": "Forma"
+        "highlight_shape": "Forma",
+        "pen_tip": "Punta",
+        "smooth": "Suavizar trazo",
+        "antialias": "Suavizado de bordes",
+        "editable": "Crear como trazo editable"
       },
       "cap": {
         "none": "Ninguno",
@@ -1472,7 +1479,14 @@
         "rectangle": "Rectángulo",
         "roundedRectangle": "Rectángulo redondeado",
         "ellipse": "Óvalo"
-      }
+      },
+      "pen_tip": {
+        "circle": "Círculo",
+        "square": "Cuadrado",
+        "slash": "Barra inclinada",
+        "bar": "Barra horizontal"
+      },
+      "unflatten_painted": "Se pintó directamente en la imagen, así que no se puede desaplanar."
     },
     "multi": {
       "title": "Multicaptura",
@@ -1683,7 +1697,13 @@
     "change_highlight": "Cambiar resaltado",
     "delete_highlight": "Eliminar resaltado",
     "cut_highlight": "Cortar resaltado",
-    "paste_highlight": "Pegar resaltado"
+    "paste_highlight": "Pegar resaltado",
+    "draw_pen": "Dibujar",
+    "move_pen": "Mover trazo",
+    "change_pen": "Cambiar trazo",
+    "delete_pen": "Eliminar trazo",
+    "cut_pen": "Cortar trazo",
+    "paste_pen": "Pegar trazo"
   },
   "editor": {
     "edited": "{{name}} — Editado"

@@ -2033,3 +2033,40 @@ fn lines_have_no_ends_and_their_own_style() {
     let info = cli(&e.core, "document.info", json!({"documentId": doc}));
     assert_eq!(info["objects"][0]["type"], "line");
 }
+
+/// EDT-037: an editable stroke is an object whose color changes; one that is not is
+/// painted into the image and cannot be picked or unflattened.
+#[test]
+fn pen_strokes_are_objects_or_paint() {
+    let e = env();
+    let (doc, _) = capture(&e);
+    let wiggle: Vec<[f64; 2]> = (0..30)
+        .map(|i| [20.0 + i as f64 * 4.0, 50.0 + if i % 2 == 0 { 0.0 } else { 3.0 }])
+        .collect();
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "pen", "points": wiggle, "style": {"smooth": 100}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let stroke = &info["objects"][0];
+    assert_eq!(stroke["type"], "pen");
+    let kept = stroke["points"].as_array().unwrap().len();
+    assert!(kept < 30, "smoothed and simplified: {kept} points");
+    cli(
+        &e.core,
+        "document.update_object",
+        json!({"documentId": doc, "objectId": "o1", "set": {"style": {"color": "#FF0000"}}}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["style"]["color"], "#FF0000");
+    // Not editable: painted.
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [{"type": "pen", "points": [[10, 100], [80, 120]], "style": {"editable": false}}]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"].as_array().unwrap().len(), 1, "no new object");
+    assert_eq!(info["flattened"][0]["permanent"], "painted");
+}

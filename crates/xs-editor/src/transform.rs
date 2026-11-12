@@ -120,6 +120,14 @@ fn corners(b: &Boxed) -> [[f64; 2]; 4] {
 
 /// Canvas points an object reaches: an arrow's ends or its box's corners.
 pub fn extent(o: &Object, measure: Measure) -> Vec<[f64; 2]> {
+    if o.kind == "pen" {
+        return o
+            .props
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|p| xy(Some(p))).collect())
+            .unwrap_or_default();
+    }
     if o.kind == "arrow" || o.kind == "line" {
         return [xy(o.props.get("from")), xy(o.props.get("to"))]
             .into_iter()
@@ -202,6 +210,37 @@ fn around(c: [f64; 2], w: f64, h: f64) -> Rect {
 /// The `set` that applies `op` to `o`; empty when it does not change.
 pub fn transformed(o: &Object, op: &Op, measure: Measure) -> Map<String, Value> {
     let mut set = Map::new();
+    // A stroke's points move like a polyline's (EDT-037).
+    if o.kind == "pen" {
+        let points: Vec<[f64; 2]> = o
+            .props
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|p| xy(Some(p))).collect())
+            .unwrap_or_default();
+        match *op {
+            Op::Scale {
+                from: a,
+                to: b,
+                strokes,
+            } => {
+                let moved: Vec<[f64; 2]> = points.iter().map(|p| mapped(*p, &a, &b)).collect();
+                set.insert("points".into(), json!(moved));
+                if strokes {
+                    let (sx, sy) = factors(&a, &b);
+                    if let Some(w) = grown(style_num(o, "width"), (sx * sy).sqrt(), 1.0, 100.0) {
+                        set.insert("style".into(), json!({ "width": w }));
+                    }
+                }
+            }
+            Op::Rotate { center, degrees } => {
+                let moved: Vec<[f64; 2]> = points.iter().map(|p| turn(*p, center, degrees)).collect();
+                set.insert("points".into(), json!(moved));
+            }
+            Op::Equal { .. } => {}
+        }
+        return set;
+    }
     if o.kind == "arrow" || o.kind == "line" {
         let (Some(from), Some(to)) = (xy(o.props.get("from")), xy(o.props.get("to"))) else {
             return set;
