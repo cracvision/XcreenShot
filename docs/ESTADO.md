@@ -232,7 +232,9 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Caminata de Carlos** con el instalador `bbc74be` y la guía [`docs/caminata-M1.md`](caminata-M1.md). Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
+1. **Instalador nuevo (2026-11-12): `targeteleaseundle
+sis\XcreenShot_0.2.0_x64-setup.exe`, compilación `fe74bfe`** (M1 completo + M2.1 a M2.4). Probada la compilación empaquetada en una instancia aislada (abrir, selección, relleno Fotográfico, estilos, degradado con sombra, exportar). Sustituye al `bbc74be` para la caminata.
+1. **Caminata de Carlos** con el instalador nuevo y la guía [`docs/caminata-M1.md`](caminata-M1.md); lo de M2 se prueba con `tests/manual/EDT-047-048.md`, `EDT-043-046.md` y `EDT-015-021.md`. Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
 4. **M2 (editor completo y biblioteca):** el spec de M2 ya está completo. Plan por entregas propuesto en [`docs/plan-M2.md`](plan-M2.md), **provisional hasta que Carlos lo apruebe**.
