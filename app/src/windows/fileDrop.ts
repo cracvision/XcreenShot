@@ -4,6 +4,7 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useState } from "react";
 import { isCommandError, run } from "../lib/commands";
+import { askImport } from "./presetActions";
 
 /** Whether something is being dragged over the window; drops go to `capture.file`. */
 export function useFileDrop(onError?: (message: string) => void, onOver?: () => void): boolean {
@@ -20,7 +21,12 @@ export function useFileDrop(onError?: (message: string) => void, onOver?: () => 
         else if (kind === "drop") {
           setOver(false);
           if (!e.payload.paths.length) return;
-          void run("capture.file", { paths: e.payload.paths }).catch((err: unknown) => {
+          // Presets (.xpreset) are imported (CAP-063); the rest become captures.
+          const presets = e.payload.paths.filter((p) => p.toLowerCase().endsWith(".xpreset"));
+          const files = e.payload.paths.filter((p) => !p.toLowerCase().endsWith(".xpreset"));
+          if (presets.length) void askImport(presets);
+          if (!files.length) return;
+          void run("capture.file", { paths: files }).catch((err: unknown) => {
             if (isCommandError(err) && err.code === "cancelled") return;
             onError?.(isCommandError(err) ? err.message : String(err));
           });

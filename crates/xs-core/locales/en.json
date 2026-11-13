@@ -2118,7 +2118,8 @@
         "builtins_keep": "Keep them",
         "builtins_reset": "Put them back",
         "builtins_restored": "Built-in presets restored.",
-        "builtins_there": "Every built-in preset is there already."
+        "builtins_there": "Every built-in preset is there already.",
+        "running": "running"
       },
       "sel_text": "Extract text",
       "copy_text": "Copy the text",

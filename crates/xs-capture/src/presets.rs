@@ -356,7 +356,9 @@ pub fn to_json(core: &Core, p: &Preset, lang: Lang) -> Value {
         "shortcut": shortcut.as_ref().map(|a| a.to_string()),
         "shortcutDisplay": shortcut.as_ref().map(|a| a.display(platform)),
         "slot": slot_of(&p.id).id,
-        "running": false,
+        // Its interval series runs or its schedule waits (CAP-049, CAP-050, CAP-058).
+        "running": crate::interval::of_preset(core, &p.id).is_some()
+            || crate::schedule::of_preset(core, &p.id).is_some(),
         "warnings": warnings,
     })
 }

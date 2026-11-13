@@ -2118,7 +2118,8 @@
         "builtins_keep": "Dejarlos así",
         "builtins_reset": "Restablecerlos",
         "builtins_restored": "Presets incorporados restaurados.",
-        "builtins_there": "Ya están todos los presets incorporados."
+        "builtins_there": "Ya están todos los presets incorporados.",
+        "running": "en marcha"
       },
       "sel_text": "Extraer texto",
       "copy_text": "Copiar el texto",

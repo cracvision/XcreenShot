@@ -1895,6 +1895,12 @@ html.overlay-root.overlay-native #root {
   word-break: break-all;
 }
 
+/* A preset whose interval runs or whose schedule waits (CAP-058). */
+.preset-running {
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
 /* Something dragged over the capture panel or the launcher (CAP-005). */
 .panel.dropping,
 .launcher-box.dropping {

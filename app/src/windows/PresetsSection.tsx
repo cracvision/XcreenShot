@@ -56,9 +56,12 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
       if (e.payload.kind === "presets") void loadPresets();
     });
     const offKeys = listen("xs://shortcuts", () => void loadPresets());
+    // A preset's interval or schedule starts or ends (CAP-058).
+    const offTimed = listen("xs://interval", () => void loadPresets());
     return () => {
       void off.then((f) => f());
       void offKeys.then((f) => f());
+      void offTimed.then((f) => f());
     };
   }, []);
 
@@ -255,6 +258,9 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
                   )}
                   <span className="preset-summary">
                     {t(`ui.panel.presets.kind_${p.kind}`)} · {p.summary}
+                    {p.running && (
+                      <span className="preset-running"> · {t("ui.panel.presets.running")}</span>
+                    )}
                   </span>
                 </span>
                 {p.warnings.length > 0 && (
