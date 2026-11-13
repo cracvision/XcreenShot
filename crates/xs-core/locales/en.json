@@ -850,6 +850,14 @@
     "capture_webpage_suggest": {
       "title": "Suggested web address",
       "description": "The web address on the clipboard, or the last one captured."
+    },
+    "capture_send_pending": {
+      "title": "Send a capture",
+      "description": "Sends a capture opened in the editor to its destinations, as it is now (or does not send it)."
+    },
+    "capture_pending_shares": {
+      "title": "Captures waiting to be sent",
+      "description": "The captures opened in the editor that wait to be sent to their destinations."
     }
   },
   "settings": {
@@ -1322,7 +1330,8 @@
     "webpage_timeout": "{{url}} did not finish loading in 30 seconds. No capture was made.",
     "webpage_unreachable": "{{url}} could not be opened: check the address and the connection. No capture was made.",
     "webpage_failed": "{{url}} could not be captured ({{reason}}).",
-    "webpage_series_url": "Capture the page once first (Selection = Web page, Capture): the series uses that address."
+    "webpage_series_url": "Capture the page once first (Selection = Web page, Capture): the series uses that address.",
+    "nothing_pending": "This document has nothing waiting to be sent."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -3336,7 +3345,11 @@
       "bar_more": "More options",
       "series_quit_title": "Quit XcreenShot?",
       "series_quit": "These interval captures stop when XcreenShot quits: {{names}}.",
-      "quit": "Quit"
+      "quit": "Quit",
+      "dest_file": "File",
+      "pending_share": "Waiting to send to: {{destinations}}",
+      "send": "Send",
+      "dont_send": "Don’t send"
     },
     "multi": {
       "title": "Multi-capture",

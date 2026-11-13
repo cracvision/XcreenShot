@@ -1895,6 +1895,23 @@ html.overlay-root.overlay-native #root {
   word-break: break-all;
 }
 
+/* Waiting to send (CAP-052): a glass strip over the canvas, under the toolbar. */
+.pending-share {
+  position: fixed;
+  top: 112px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px 6px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  font-size: 13px;
+  color: var(--ink);
+}
+
 /* A preset whose interval runs or whose schedule waits (CAP-058). */
 .preset-running {
   color: var(--brand-ink);
@@ -3837,7 +3854,8 @@ html.launcher-root #root {
 .ws-bottom .strip,
 .quick-bar,
 .zone-frame-bar,
-.hint-bubble {
+.hint-bubble,
+.pending-share {
   border: 1px solid var(--glass-edge);
   background: transparent;
   box-shadow:
@@ -3852,7 +3870,8 @@ html.launcher-root #root {
 .ws-bottom .strip::before,
 .quick-bar::before,
 .zone-frame-bar::before,
-.hint-bubble::before {
+.hint-bubble::before,
+.pending-share::before {
   content: "";
   position: absolute;
   inset: 0;

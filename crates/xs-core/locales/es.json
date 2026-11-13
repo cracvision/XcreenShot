@@ -850,6 +850,14 @@
     "capture_webpage_suggest": {
       "title": "Dirección web sugerida",
       "description": "La dirección web del portapapeles, o la última capturada."
+    },
+    "capture_send_pending": {
+      "title": "Enviar una captura",
+      "description": "Envía a sus destinos una captura abierta en el editor, tal como está ahora (o no la envía)."
+    },
+    "capture_pending_shares": {
+      "title": "Capturas pendientes de enviar",
+      "description": "Las capturas abiertas en el editor que esperan para enviarse a sus destinos."
     }
   },
   "settings": {
@@ -1322,7 +1330,8 @@
     "webpage_timeout": "{{url}} no terminó de cargar en 30 segundos. No se creó ninguna captura.",
     "webpage_unreachable": "{{url}} no se pudo abrir: revisa la dirección y la conexión. No se creó ninguna captura.",
     "webpage_failed": "{{url}} no se pudo capturar ({{reason}}).",
-    "webpage_series_url": "Captura antes la página una vez (Selección = Página web, Capturar): la serie usa esa dirección."
+    "webpage_series_url": "Captura antes la página una vez (Selección = Página web, Capturar): la serie usa esa dirección.",
+    "nothing_pending": "Este documento no tiene nada pendiente de enviar."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -3336,7 +3345,11 @@
       "bar_more": "Más opciones",
       "series_quit_title": "¿Salir de XcreenShot?",
       "series_quit": "Estas capturas por intervalo se detienen al salir de XcreenShot: {{names}}.",
-      "quit": "Salir"
+      "quit": "Salir",
+      "dest_file": "Archivo",
+      "pending_share": "Pendiente de enviar a: {{destinations}}",
+      "send": "Enviar",
+      "dont_send": "No enviar"
     },
     "multi": {
       "title": "Multicaptura",

@@ -707,6 +707,8 @@ interface EditorState {
   recoveryShown: boolean;
   /** Documents to decide on before closing or quitting, and what was being closed. */
   decision: { kind: "close" | "quit"; pending: Pending[]; targets: string[] | "all" } | null;
+  /** Captures waiting to be sent, by document: their destinations (CAP-052). */
+  pendingShare: Record<string, string[]>;
   /** The text box being typed, if any (EDT-026). */
   textEdit: TextEdit | null;
   /** The crop being adjusted, in canvas pixels (EDT-049). */
@@ -775,6 +777,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   recovery: [],
   recoveryShown: true,
   decision: null,
+  pendingShare: {},
   flatten: null,
   textEdit: null,
   cropRect: null,
@@ -783,6 +786,14 @@ export const useEditor = create<EditorState>((set, get) => ({
   error: null,
 
   boot: async () => {
+    // Captures already waiting to be sent (CAP-052).
+    void run<{ items: { documentId: string; destinations: string[] }[] }>("capture.pending_shares")
+      .then((r) =>
+        set({
+          pendingShare: Object.fromEntries(r.items.map((i) => [i.documentId, i.destinations])),
+        }),
+      )
+      .catch(() => undefined);
     // A capture that went to the clipboard says so, also to screen readers (APP-044).
     await listen<{ result: { copied?: boolean } }>("xs://capture", (e) => {
       if (e.payload.result.copied) get().showToast(i18next.t("ui.editor.capture_copied"));
@@ -883,6 +894,19 @@ export const useEditor = create<EditorState>((set, get) => ({
             },
           });
           break;
+        case "pending_share": {
+          // Waiting to send, or sent / not sent (CAP-052).
+          const id = payload.documentId as string;
+          const rest = Object.fromEntries(
+            Object.entries(get().pendingShare).filter(([k]) => k !== id),
+          );
+          set({
+            pendingShare: payload.waiting
+              ? { ...rest, [id]: payload.destinations as string[] }
+              : rest,
+          });
+          break;
+        }
         case "quit":
           set({
             decision: { kind: "quit", pending: payload.pending as Pending[], targets: "all" },

@@ -19,6 +19,7 @@ import { useApp } from "../store";
 import { openCapturePanel, openFiles } from "./actions";
 import { Canvas } from "./Canvas";
 import { Dialogs } from "./Dialogs";
+import { PendingShare } from "./PendingShare";
 import { useEditorKeys } from "./keys";
 import { closeContextMenu, useContextMenu, useMenuBar } from "./menus";
 import { useAnnouncement } from "./announce";
@@ -168,6 +169,7 @@ export function Editor() {
         </Workspace>
       )}
       <UndoNotice />
+      {view === "editor" && <PendingShare />}
       {/* One hint at a time, the first time (APP-014). */}
       {view === "editor" && <HintBubble trayItems={trayItems} />}
       {toast && (

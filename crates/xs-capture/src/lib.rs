@@ -24,6 +24,7 @@ pub mod multi;
 mod multi_win;
 pub mod panel;
 pub mod pdf;
+pub mod pending;
 pub mod picker;
 pub mod platform;
 pub mod pointer;
@@ -680,22 +681,38 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         let dpi = (96.0 * shot.scale as f64).round();
         let host_for_dialog = core.host();
         let choose = move |p: &std::path::Path| host_for_dialog.pick_save(p);
-        match filedest::write(core, dest, outgoing, &path, &values, dpi, Some(&meta), &choose) {
-            Ok(written) => files.push(written.to_string_lossy().into_owned()),
-            // Cancelled in the Save dialog: the capture stays in the library only.
-            Err(e) if e == "cancelled" => {}
-            Err(e) => {
-                tracing::warn!(error = %e, "file destination: not written");
-                warnings.push(format!("file: {e}"));
-                host.notify(
-                    "problems",
-                    &tr(lang, "app.name", &[]),
-                    &tr(
-                        lang,
-                        "notify.file_destination_failed",
-                        &[("folder", &dest.folder().to_string_lossy())],
-                    ),
-                );
+        // Into the editor: nothing is sent until Send (CAP-052). Series and schedules
+        // send at once.
+        let later = opts.open_editor && opts.series.is_none() && opts.schedule.is_none();
+        if later {
+            pending::wait(
+                core,
+                &document_id,
+                pending::Waiting {
+                    file: dest.clone(),
+                    values,
+                    dpi,
+                    meta: meta.clone(),
+                },
+            );
+        } else {
+            match filedest::write(core, dest, outgoing, &path, &values, dpi, Some(&meta), &choose) {
+                Ok(written) => files.push(written.to_string_lossy().into_owned()),
+                // Cancelled in the Save dialog: the capture stays in the library only.
+                Err(e) if e == "cancelled" => {}
+                Err(e) => {
+                    tracing::warn!(error = %e, "file destination: not written");
+                    warnings.push(format!("file: {e}"));
+                    host.notify(
+                        "problems",
+                        &tr(lang, "app.name", &[]),
+                        &tr(
+                            lang,
+                            "notify.file_destination_failed",
+                            &[("folder", &dest.folder().to_string_lossy())],
+                        ),
+                    );
+                }
             }
         }
     }
@@ -1570,6 +1587,24 @@ pub fn extension() -> Extension {
             // The receive folder (CAP-043): watched while one is chosen.
             inbox::install(&core);
         }
+        // Sending later from the editor (CAP-052).
+        let w = weak.clone();
+        reg.handle("capture.send_pending", move |ctx, p| {
+            pending::send(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.pending_shares", move |ctx, _p| {
+            Ok(pending::list(&*upgrade(&w)?, ctx.lang))
+        });
+        let w = weak.clone();
+        reg.add_observer(Box::new(move |_ctx, spec, result| {
+            // A document closed without sending sends nothing (CAP-052).
+            if spec.id == "document.close" && result.is_ok() {
+                if let Some(core) = w.upgrade() {
+                    pending::forget_closed(&core);
+                }
+            }
+        }));
         // A file as the source (CAP-040) and Import PDF (CAP-041).
         let w = weak.clone();
         reg.handle("capture.file", move |ctx, p| {
