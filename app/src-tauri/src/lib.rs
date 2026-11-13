@@ -279,6 +279,18 @@ fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
     ipc::serve_with_streams(&ipc::endpoint(), handler, Some(streams)).map(|_| ())
 }
 
+/// The files on the command line: what the system passes on a double click or "Open
+/// with" (APP-001). Flags (`--background`) are not files.
+fn opened_files() -> Vec<String> {
+    std::env::args()
+        .skip(1)
+        .filter(|a| !a.starts_with("--"))
+        .filter_map(|a| std::path::absolute(&a).ok())
+        .filter(|p| p.is_file())
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect()
+}
+
 pub fn run() {
     let started = std::time::Instant::now();
     let background = std::env::args().any(|a| a == "--background");
@@ -286,17 +298,25 @@ pub fn run() {
     let log = logging::init(&paths.logs_dir(), false);
     let endpoint = ipc::endpoint();
 
+    // Files to open (double click, "Open with"; APP-001).
+    let files = opened_files();
+
     // Single instance (APP-001): hand over to the running one and leave.
     if ipc::is_running(&endpoint) {
-        if !background {
+        if !background || !files.is_empty() {
+            let (command, params) = if files.is_empty() {
+                ("app.show", json!({}))
+            } else {
+                ("app.open_files", json!({ "paths": files }))
+            };
             let req = Request {
                 v: ipc::PROTOCOL_VERSION,
-                command: "app.show".into(),
-                params: json!({}),
+                command: command.into(),
+                params,
                 source: Source::Ui,
                 lang: None,
             };
-            let _ = ipc::send(&endpoint, &req, Some(Duration::from_secs(5)));
+            let _ = ipc::send(&endpoint, &req, Some(Duration::from_secs(30)));
         }
         return;
     }
@@ -441,6 +461,20 @@ pub fn run() {
                 windows::open_welcome(&handle)?;
             } else if !background {
                 windows::show_main(&handle)?;
+            }
+            // The files it was opened with, once the commands are there (APP-001).
+            if !files.is_empty() {
+                let opener = core.clone();
+                let files = files.clone();
+                std::thread::spawn(move || {
+                    while !opener.is_ready() {
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                    if let Err(e) = opener.call(Source::Ui, "app.open_files", json!({ "paths": files }), None)
+                    {
+                        tracing::warn!(code = e.code.as_str(), "files not opened");
+                    }
+                });
             }
             // Selection windows wait hidden so the crosshair appears fast (APP-048).
             overlay::prewarm(&handle, xs_capture::monitors().map(|m| m.len()).unwrap_or(1));

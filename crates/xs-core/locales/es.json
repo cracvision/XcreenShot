@@ -862,6 +862,14 @@
     "capture_details_text": {
       "title": "Texto de los detalles de captura",
       "description": "Responde al cuadro que pide el texto de Detalles de captura al terminar una captura (vacío: sin texto)."
+    },
+    "app_open_files": {
+      "title": "Abrir archivos con XcreenShot",
+      "description": "Abre capturas e imágenes en el editor e inicia la importación de temas, plantillas y presets, como un doble clic en el archivo."
+    },
+    "app_take_opening": {
+      "title": "Archivos que esperan a una ventana",
+      "description": "Los archivos abiertos con XcreenShot cuya importación espera al editor o al panel de captura (una vez)."
     }
   },
   "settings": {
@@ -1336,7 +1344,9 @@
     "webpage_failed": "{{url}} no se pudo capturar ({{reason}}).",
     "webpage_series_url": "Captura antes la página una vez (Selección = Página web, Capturar): la serie usa esa dirección.",
     "nothing_pending": "Este documento no tiene nada pendiente de enviar.",
-    "nothing_asked": "Ninguna captura está pidiendo texto."
+    "nothing_asked": "Ninguna captura está pidiendo texto.",
+    "file_not_found": "El archivo no existe.",
+    "cannot_open_file": "XcreenShot no abre este tipo de archivo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

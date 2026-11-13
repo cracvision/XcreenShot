@@ -218,6 +218,24 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("app.commands", &["APP-027"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("app.show", &["APP-001"]).scopes(ALL).assignable(),
         B::new("app.close_window", &["APP-004"]).scopes(UI_SHORTCUT).assignable(),
+        B::new("app.open_files", &["APP-001", "CAP-063"])
+            .mutates()
+            .params(params(
+                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG and JPG open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel"}}),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "opened": {"type": "array", "description": "documentId of each document opened"},
+                "imports": {"type": "integer", "description": "Files whose import started (it asks in its window)"},
+                "skipped": {"type": "array", "description": "{path, reason}"}
+            }})),
+        B::new("app.take_opening", &["APP-001"])
+            .mutates()
+            .params(params(
+                json!({"kind": {"type": "string", "enum": ["editor", "presets"]}}),
+                &["kind"],
+            ))
+            .result(json!({"type": "object", "properties": {"paths": {"type": "array", "items": {"type": "string"}}}})),
         B::new("app.quit", &["APP-004"])
             .scopes(ALL)
             .assignable()

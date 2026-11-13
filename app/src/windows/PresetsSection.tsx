@@ -13,6 +13,7 @@ import { ShortcutRecorder } from "../prefs/ShortcutRecorder";
 import { useApp, useSetting } from "../store";
 import { ImageOptions, UniversalOptions } from "./CaptureOptions";
 import {
+  askImport,
   createPreset,
   deletePresets,
   duplicatePreset,
@@ -52,9 +53,16 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
 
   useEffect(() => {
     void loadPresets();
+    // A .xpreset opened with XcreenShot (double click, CAP-063): its import asks here.
+    const takeOpened = () =>
+      void run<{ paths: string[] }>("app.take_opening", { kind: "presets" })
+        .then((r) => (r.paths.length > 0 ? askImport(r.paths) : undefined))
+        .catch(() => undefined);
+    takeOpened();
     // Changed elsewhere: the icon menu's shortcut, the CLI, an import.
-    const off = listen<{ kind: string }>("xs://editor", (e) => {
+    const off = listen<{ kind: string; payload?: { kind?: string } }>("xs://editor", (e) => {
       if (e.payload.kind === "presets") void loadPresets();
+      if (e.payload.kind === "opening" && e.payload.payload?.kind === "presets") takeOpened();
     });
     const offKeys = listen("xs://shortcuts", () => void loadPresets());
     // A preset's interval or schedule starts or ends (CAP-058).

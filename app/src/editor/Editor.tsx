@@ -5,7 +5,9 @@ import { MoveComputer } from "../library/MoveComputer";
 import { TagDialogs } from "../library/TagDialogs";
 import { askImport } from "../library/importState";
 import { QuickView } from "../library/QuickView";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { run } from "../lib/commands";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import logoDark from "../assets/brand/logo-dark.webp";
@@ -106,6 +108,19 @@ export function Editor() {
 
   useEffect(() => {
     void useEditor.getState().boot();
+  }, []);
+
+  // Themes and templates opened with XcreenShot start their import here (APP-001).
+  useEffect(() => {
+    const take = () =>
+      void run<{ paths: string[] }>("app.take_opening", { kind: "editor" })
+        .then((r) => (r.paths.length > 0 ? openFiles(r.paths) : undefined))
+        .catch(() => undefined);
+    take();
+    const off = listen<{ kind: string; payload: { kind?: string } }>("xs://editor", (e) => {
+      if (e.payload.kind === "opening" && e.payload.payload.kind === "editor") take();
+    });
+    return () => void off.then((f) => f());
   }, []);
 
   // Files dropped on the window open as documents (EDT-105). Floating images on the

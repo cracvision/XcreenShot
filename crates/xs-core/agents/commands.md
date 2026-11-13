@@ -11,6 +11,8 @@ exists fails a test.
 | `app.ping` | `xcreenshot app ping` | Version, platform, architecture, state, whether automation is on, UI language. |
 | `app.commands` | `xcreenshot app commands --json` | Every command with JSON Schemas for params and result, scopes, and flags (`mutates`, `network`, `destructive`, `interactive`). |
 | `app.show` | `xcreenshot app show` | Shows the main window. |
+| `app.open_files` | `xcreenshot app open-files --paths C:\\Shots\\a.xshot --json` | What a double click on the file does (APP-001): `.xshot`, PNG and JPG open in the editor (`opened` has their ids); `.xtheme` and `.xtemplate` start their import in the editor and `.xpreset` in the capture panel, which ask there (`imports`); other files are in `skipped` with the reason. |
+| `app.take_opening` | `xcreenshot app take-opening --kind presets --json` | For the windows: the opened files whose import waits for them, once. An agent does not need it. |
 | `app.close_window` | (UI and shortcuts only) | Closes the focused XcreenShot window. |
 | `app.quit` | `xcreenshot app quit [--force]` | Quits the app. If documents opened from outside the library have unsaved changes, nothing quits: the result is `status: needs_decision` with them in `pending`, and the app asks the user. `--force` quits anyway; those changes stay recoverable (`editor.recovery_list`). |
 | `app.diagnostics` | `xcreenshot app diagnostics [--copy]` | Version, OS, monitors, permissions, shortcut conflicts, last 200 log lines. No user content. |

@@ -17,6 +17,7 @@ pub mod i18n;
 pub mod ipc;
 pub mod logging;
 pub mod menus;
+pub mod opening;
 pub mod paths;
 pub mod platform;
 pub mod schema;

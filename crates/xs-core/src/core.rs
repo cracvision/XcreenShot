@@ -639,6 +639,11 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         .host()
         .show_main_window()
         .map(|_| json!({})));
+    // Files opened with XcreenShot (APP-001, CAP-063).
+    on!("app.open_files", |core, ctx, p| crate::opening::open_files(
+        &core, ctx, &p
+    ));
+    on!("app.take_opening", |core, ctx, p| crate::opening::take(&core, &p));
     on!("app.close_window", |core, ctx, _p| core
         .host()
         .close_focused_window()
