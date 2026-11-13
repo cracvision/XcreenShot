@@ -10,6 +10,8 @@ pub mod areas;
 pub mod compose;
 pub mod extract;
 pub mod feedback;
+pub mod filedest;
+pub mod filename;
 pub mod interactive;
 pub mod menus;
 pub mod multi;
@@ -374,6 +376,8 @@ pub struct Options {
     /// Extract text: show its results window (default: the setting, or no for
     /// automation).
     pub show: Option<bool>,
+    /// The File destination, when Share includes it (CAP-052, CAP-053).
+    pub file: Option<filedest::FileDest>,
 }
 
 impl Options {
@@ -391,6 +395,16 @@ impl Options {
             delay: p.get("delay").and_then(Value::as_f64).unwrap_or(0.0),
             extract: p.get("extract").and_then(Value::as_bool).unwrap_or(false),
             show: p.get("show").and_then(Value::as_bool),
+            file: p
+                .get("share")
+                .and_then(Value::as_array)
+                .is_some_and(|s| s.iter().any(|d| d == "file"))
+                .then(|| {
+                    p.get("file")
+                        .and_then(|f| serde_json::from_value::<filedest::FileDest>(f.clone()).ok())
+                        .filter(|f| f.validate().is_ok())
+                        .unwrap_or_default()
+                }),
         }
     }
 }
@@ -554,6 +568,38 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         let png = xs_image::encode::png(outgoing, dpi, false).map_err(|e| failed(lang, e))?;
         std::fs::write(out, png).map_err(|e| failed(lang, e))?;
         files.push(out.to_string_lossy().into_owned());
+    }
+
+    // The File destination (CAP-052, CAP-053): also written to its folder, named by its
+    // pattern. If the folder cannot be used, the capture stays in the library.
+    if let Some(dest) = &opts.file {
+        let values = filename::Values {
+            prefix: dest.prefix.clone(),
+            app: shot.app.as_ref().map(|a| a.name.clone()),
+            title: shot.window_title.clone(),
+            site: None,
+            mode: shot.mode.to_string(),
+            width: outgoing.width(),
+            height: outgoing.height(),
+            user: platform::user_and_machine().0,
+        };
+        let dpi = (96.0 * shot.scale as f64).round();
+        match filedest::write(core, dest, outgoing, &path, &values, dpi) {
+            Ok(written) => files.push(written.to_string_lossy().into_owned()),
+            Err(e) => {
+                tracing::warn!(error = %e, "file destination: not written");
+                warnings.push(format!("file: {e}"));
+                host.notify(
+                    "problems",
+                    &tr(lang, "app.name", &[]),
+                    &tr(
+                        lang,
+                        "notify.file_destination_failed",
+                        &[("folder", &dest.folder().to_string_lossy())],
+                    ),
+                );
+            }
+        }
     }
 
     tracing::info!(
@@ -1072,6 +1118,44 @@ pub fn extension() -> Extension {
                 panel::with_overrides(panel::load(&core).image_options(), &p)
             };
             dispatch(&core, ctx, "capture.menu", &p, json!({}))
+        });
+        // The File destination's name preview and counter (CAP-053).
+        let w = weak.clone();
+        reg.handle("capture.file_name", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let dest: filedest::FileDest =
+                serde_json::from_value(p.get("file").cloned().unwrap_or(json!({})))
+                    .map_err(|e| CommandError::new(ErrorCode::InvalidParams, e.to_string()))?;
+            dest.validate().map_err(|e| {
+                CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(
+                        ctx.lang,
+                        "errors.invalid_param",
+                        &[("param", "file"), ("reason", &e)],
+                    ),
+                )
+            })?;
+            if let Some(next) = p.get("next").and_then(Value::as_u64) {
+                filedest::set_counter(&core, &dest, next.clamp(1, u32::MAX as u64 - 1) as u32);
+            }
+            let values = filename::Values {
+                prefix: dest.prefix.clone(),
+                app: Some("Excel".into()),
+                title: Some(tr(ctx.lang, "ui.panel.file_sample_title", &[])),
+                site: None,
+                mode: "region".into(),
+                width: 1920,
+                height: 1080,
+                user: platform::user_and_machine().0,
+            };
+            Ok(json!({
+                "folder": dest.folder(),
+                "name": filedest::preview(&core, &dest, &values),
+                "next": filedest::next_counter(&core, &dest),
+                "counter": filename::uses_counter(&dest.pattern),
+                "markers": filename::MARKERS,
+            }))
         });
         // Choose on screen (CAP-026): an area for the fixed region, nothing captured.
         let w = weak.clone();

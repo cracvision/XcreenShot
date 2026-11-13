@@ -782,6 +782,10 @@
     "capture_picker_choose": {
       "title": "Elegir en el selector de ventanas",
       "description": "Captura una ventana del selector abierto, o lo cancela."
+    },
+    "capture_file_name": {
+      "title": "Nombre del destino Archivo",
+      "description": "El nombre que daría ahora el destino Archivo a una captura, su carpeta y su contador; permite fijar el siguiente número."
     }
   },
   "settings": {
@@ -1518,7 +1522,8 @@
     "scroll_full": "La captura con desplazamiento llegó a su tamaño máximo (60.000 píxeles). Se conserva lo capturado hasta ahí.",
     "scroll_still": "El contenido no se movió: solo se capturó el área visible. Prueba el desplazamiento manual, moviéndolo tú.",
     "scroll_doubtful": "{{count}} uniones de la captura con desplazamiento pueden tener un corte (contenido que se mueve o animado).",
-    "no_menu": "No se encontró ningún menú abierto (algunas apps dibujan los suyos). Selecciona el área a mano."
+    "no_menu": "No se encontró ningún menú abierto (algunas apps dibujan los suyos). Selecciona el área a mano.",
+    "file_destination_failed": "No se pudo guardar la captura en {{folder}} (la carpeta no está disponible o no se puede escribir). Está en la biblioteca."
   },
   "source": {
     "ui": "la interfaz",
@@ -1994,7 +1999,38 @@
       "sel_menu": "Menú",
       "menu_submenus": "Incluir submenús abiertos",
       "menu_menubar": "Incluir la barra de menús",
-      "sel_picker": "Selector de ventanas"
+      "sel_picker": "Selector de ventanas",
+      "share": "Compartir",
+      "share_file": "Guardar en un archivo",
+      "file_options": "Opciones del archivo",
+      "file_folder": "Carpeta",
+      "file_choose": "Elegir…",
+      "file_default_folder": "Imágenes\\XcreenShot",
+      "file_prefix": "Prefijo",
+      "file_pattern": "Nombre",
+      "file_insert": "Insertar",
+      "file_preview": "Ejemplo: {{name}}",
+      "file_format": "Formato",
+      "file_quality": "Calidad",
+      "file_on_exists": "Si el archivo ya existe",
+      "file_number": "Añadir un número",
+      "file_overwrite": "Sobrescribir",
+      "file_next": "Siguiente número",
+      "file_sample_title": "Informe T3",
+      "marker_prefix": "El prefijo",
+      "marker_date": "Fecha, AAAA-MM-DD",
+      "marker_date:compact": "Fecha, AAAAMMDD",
+      "marker_time": "Hora, HH-MM-SS",
+      "marker_time:compact": "Hora, HHMMSS",
+      "marker_app": "La aplicación de origen",
+      "marker_title": "El título de la ventana",
+      "marker_site": "El dominio de la página (navegadores)",
+      "marker_mode": "El modo de captura",
+      "marker_width": "Ancho en píxeles",
+      "marker_height": "Alto en píxeles",
+      "marker_user": "Tu usuario",
+      "marker_counter": "Un contador de 4 cifras",
+      "marker_counter:4": "Un contador de N cifras (1 a 9)"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

@@ -782,6 +782,10 @@
     "capture_picker_choose": {
       "title": "Choose in the window picker",
       "description": "Captures a window of the open picker, or cancels it."
+    },
+    "capture_file_name": {
+      "title": "File destination name",
+      "description": "The name the File destination gives a capture now, its folder and its counter; can set the next number."
     }
   },
   "settings": {
@@ -1518,7 +1522,8 @@
     "scroll_full": "The scrolling capture reached its largest size (60,000 pixels). What was captured up to there is kept.",
     "scroll_still": "The content did not move: only the visible area was captured. Try a manual scrolling capture, scrolling it yourself.",
     "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content).",
-    "no_menu": "No open menu was found (some apps draw their own). Select the area instead."
+    "no_menu": "No open menu was found (some apps draw their own). Select the area instead.",
+    "file_destination_failed": "The capture could not be saved in {{folder}} (the folder is not available or cannot be written). It is in the library."
   },
   "source": {
     "ui": "the interface",
@@ -1994,7 +1999,38 @@
       "sel_menu": "Menu",
       "menu_submenus": "Include open submenus",
       "menu_menubar": "Include the menu bar",
-      "sel_picker": "Window picker"
+      "sel_picker": "Window picker",
+      "share": "Share",
+      "share_file": "Save to a file",
+      "file_options": "File options",
+      "file_folder": "Folder",
+      "file_choose": "Choose…",
+      "file_default_folder": "Pictures\\XcreenShot",
+      "file_prefix": "Prefix",
+      "file_pattern": "Name",
+      "file_insert": "Insert",
+      "file_preview": "Example: {{name}}",
+      "file_format": "Format",
+      "file_quality": "Quality",
+      "file_on_exists": "If the file exists",
+      "file_number": "Add a number",
+      "file_overwrite": "Overwrite",
+      "file_next": "Next number",
+      "file_sample_title": "Q3 report",
+      "marker_prefix": "The prefix",
+      "marker_date": "Date, YYYY-MM-DD",
+      "marker_date:compact": "Date, YYYYMMDD",
+      "marker_time": "Time, HH-MM-SS",
+      "marker_time:compact": "Time, HHMMSS",
+      "marker_app": "The app it comes from",
+      "marker_title": "The window title",
+      "marker_site": "The domain of the page (browsers)",
+      "marker_mode": "The capture mode",
+      "marker_width": "Width in pixels",
+      "marker_height": "Height in pixels",
+      "marker_user": "Your user name",
+      "marker_counter": "A counter, 4 digits",
+      "marker_counter:4": "A counter with N digits (1 to 9)"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",

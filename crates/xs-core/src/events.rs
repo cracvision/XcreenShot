@@ -24,6 +24,9 @@ pub const CAPTURE_COMMANDS: &[&str] = &[
     "capture.fullscreen",
     "capture.repeat_last",
     "capture.repeat_last_area",
+    "capture.scrolling",
+    "capture.menu",
+    "capture.window_picker",
 ];
 
 /// Commands whose result names a file they wrote.

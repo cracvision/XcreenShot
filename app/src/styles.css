@@ -1754,9 +1754,16 @@ html.overlay-root.overlay-native #root {
 
 .panel-field {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 110px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
+}
+
+/* What sits in a field's second column never makes the panel wider. */
+.panel-field > .panel-row,
+.panel-field > input,
+.panel-field > select {
+  min-width: 0;
 }
 
 .panel-row {
@@ -1778,6 +1785,19 @@ html.overlay-root.overlay-native #root {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
+}
+
+.panel-path {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.panel-preview {
+  grid-column: 2;
+  font-size: 12px;
+  word-break: break-all;
 }
 
 .panel-note {

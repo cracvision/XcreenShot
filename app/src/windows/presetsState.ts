@@ -20,9 +20,27 @@ export interface Preset {
 /** The Filter field shows from this many presets on (CAP-058). */
 export const FILTER_FROM = 9;
 
+/** The File destination's defaults (CAP-053). */
+const FILE_DEFAULTS: PanelSettings["image"]["file"] = {
+  folder: "",
+  prefix: "XcreenShot",
+  pattern: "{prefix}_{date}_{time}",
+  format: "png",
+  quality: 90,
+  onExists: "number",
+};
+
 /** CAP-003 defaults of each kind, for "New preset". */
 export const DEFAULTS: { universal: PanelSettings["universal"]; image: PanelSettings["image"] } = {
-  universal: { selection: "region", copy: true, cursor: false, open: "editor", delay5: false },
+  universal: {
+    selection: "region",
+    copy: true,
+    cursor: false,
+    open: "editor",
+    delay5: false,
+    share: [],
+    file: FILE_DEFAULTS,
+  },
   image: {
     selection: "region",
     copy: true,
@@ -34,6 +52,8 @@ export const DEFAULTS: { universal: PanelSettings["universal"]; image: PanelSett
     region: { fixed: false, width: 800, height: 600, positioned: false, monitor: "", x: 0, y: 0 },
     areas: { composition: "original", gap: 10 },
     menu: { submenus: true, menubar: false },
+    share: [],
+    file: FILE_DEFAULTS,
   },
 };
 

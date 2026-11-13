@@ -19,6 +19,10 @@ pub struct UniversalTab {
     pub open: String,
     /// Fixed 5 s countdown (CAP-010, CAP-048).
     pub delay5: bool,
+    /// Destinations (CAP-052): `file` for now.
+    pub share: Vec<String>,
+    /// The File destination's options (CAP-053).
+    pub file: crate::filedest::FileDest,
 }
 
 impl Default for UniversalTab {
@@ -29,6 +33,8 @@ impl Default for UniversalTab {
             cursor: false,
             open: "editor".into(),
             delay5: false,
+            share: Vec::new(),
+            file: crate::filedest::FileDest::default(),
         }
     }
 }
@@ -176,6 +182,10 @@ pub struct ImageTab {
     pub areas: AreasTab,
     /// Selection = Menu (CAP-031).
     pub menu: MenuTab,
+    /// Destinations (CAP-052): `file` for now.
+    pub share: Vec<String>,
+    /// The File destination's options (CAP-053).
+    pub file: crate::filedest::FileDest,
 }
 
 impl Default for ImageTab {
@@ -191,6 +201,8 @@ impl Default for ImageTab {
             region: RegionTab::default(),
             areas: AreasTab::default(),
             menu: MenuTab::default(),
+            share: Vec::new(),
+            file: crate::filedest::FileDest::default(),
         }
     }
 }
@@ -268,6 +280,15 @@ impl PanelSettings {
         if self.image.areas.gap > 500 {
             return Err("image.areas.gap: must be between 0 and 500".into());
         }
+        for (tab, share, file) in [
+            ("universal", &self.universal.share, &self.universal.file),
+            ("image", &self.image.share, &self.image.file),
+        ] {
+            if share.iter().any(|d| d != "file") {
+                return Err(format!("{tab}.share: only file is available"));
+            }
+            file.validate().map_err(|e| format!("{tab}.{e}"))?;
+        }
         let r = &self.image.region;
         if r.width == 0 || r.height == 0 || r.width > 100_000 || r.height > 100_000 {
             return Err("image.region: width and height must be between 1 and 100000".into());
@@ -293,6 +314,8 @@ impl PanelSettings {
             "cursor": i.cursor,
             "open": i.open,
             "delay": if i.timing == "delay" { i.delay } else { 0 },
+            "share": i.share,
+            "file": i.file,
         })
     }
 
@@ -305,6 +328,8 @@ impl PanelSettings {
                 "cursor": u.cursor,
                 "open": u.open,
                 "delay": if u.delay5 { 5 } else { 0 },
+                "share": u.share,
+                "file": u.file,
             });
             let extra = json!({
                 "windowsOnly": u.selection == "window",
@@ -414,7 +439,10 @@ mod tests {
                 copy: true,
                 cursor: false,
                 open: "editor".into(),
-                delay5: false
+                delay5: false,
+                // No destination by default (CAP-052).
+                share: Vec::new(),
+                file: crate::filedest::FileDest::default(),
             }
         );
         assert_eq!(s.image.selection, "region");
@@ -472,10 +500,15 @@ mod tests {
         s.image.open = "none".into();
         s.image.timing = "delay".into();
         s.image.delay = 7;
+        let o = s.image_options();
         assert_eq!(
-            s.image_options(),
-            json!({"copy": true, "cursor": false, "open": "none", "delay": 7})
+            (&o["copy"], &o["cursor"], &o["open"], &o["delay"]),
+            (&json!(true), &json!(false), &json!("none"), &json!(7))
         );
+        assert!(o.get("selection").is_none());
+        // And the destinations with their options (CAP-052, CAP-053).
+        assert_eq!(o["share"], json!([]));
+        assert_eq!(o["file"]["pattern"], "{prefix}_{date}_{time}");
     }
 
     #[test]

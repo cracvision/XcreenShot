@@ -1,14 +1,17 @@
 // The options of the capture panel's tabs (CAP-002, CAP-010), shared by the panel and
 // the preset editor (CAP-060).
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   isCommandError,
   run,
+  type FileDest,
   type PanelSettings,
   type RegionProps,
   type ScrollProps,
 } from "../lib/commands";
+import { Menu } from "../components/Menu";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
@@ -125,6 +128,7 @@ export function UniversalOptions({
         />
         {t("ui.panel.delay5")}
       </label>
+      <ShareOptions share={value.share} file={value.file} onChange={onChange} />
     </>
   );
 }
@@ -219,6 +223,9 @@ export function ImageOptions({
           </label>
         )}
       </div>
+      {value.selection !== "text" && (
+        <ShareOptions share={value.share} file={value.file} onChange={onChange} />
+      )}
     </>
   );
 }
@@ -513,6 +520,208 @@ function AreasOptions({
             }}
           />
         </label>
+      )}
+    </fieldset>
+  );
+}
+
+/** Share (CAP-052): the File destination for now, with its options (CAP-053): folder,
+ * prefix, name pattern with its markers and a preview, format and what to do when the
+ * name is taken. */
+function ShareOptions({
+  share,
+  file,
+  onChange,
+}: {
+  share: "file"[];
+  file: FileDest;
+  onChange: (patch: { share?: "file"[]; file?: FileDest }) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const on = share.includes("file");
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<
+    Partial<Record<"prefix" | "pattern" | "next" | "quality", string>>
+  >({});
+  const [info, setInfo] = useState<{
+    folder: string;
+    name: string;
+    next: number;
+    counter: boolean;
+    markers: string[];
+  } | null>(null);
+  const patch = (p: Partial<FileDest>) => onChange({ file: { ...file, ...p } });
+  const drop = (k: "prefix" | "pattern" | "next" | "quality") =>
+    setDraft((d) => Object.fromEntries(Object.entries(d).filter(([key]) => key !== k)));
+  useEffect(() => {
+    if (!on || !open) return;
+    run<{ folder: string; name: string; next: number; counter: boolean; markers: string[] }>(
+      "capture.file_name",
+      {
+        file: {
+          ...file,
+          pattern: draft.pattern ?? file.pattern,
+          prefix: draft.prefix ?? file.prefix,
+        },
+      },
+    )
+      .then(setInfo)
+      .catch(() => setInfo(null));
+  }, [on, open, file, draft.pattern, draft.prefix]);
+  const commitText = (field: "prefix" | "pattern") => {
+    const v = draft[field];
+    drop(field);
+    if (v !== undefined && v !== file[field]) patch({ [field]: v });
+  };
+  const insert = (marker: string) => {
+    const current = draft.pattern ?? file.pattern;
+    patch({ pattern: `${current}{${marker}}` });
+    drop("pattern");
+  };
+  const chooseFolder = async () => {
+    const dir = await openDialog({ directory: true, title: t("ui.panel.file_folder") });
+    if (typeof dir === "string") patch({ folder: dir });
+  };
+  return (
+    <fieldset className="panel-props">
+      <legend className="sr-only">{t("ui.panel.share")}</legend>
+      <div className="panel-row">
+        <label className="panel-check">
+          <input
+            type="checkbox"
+            checked={on}
+            onChange={(e) => onChange({ share: e.target.checked ? ["file"] : [] })}
+          />
+          {t("ui.panel.share_file")}
+        </label>
+        {on && (
+          <button
+            type="button"
+            className="btn small"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {t("ui.panel.file_options")}
+          </button>
+        )}
+      </div>
+      {on && open && (
+        <>
+          <div className="panel-field">
+            <span>{t("ui.panel.file_folder")}</span>
+            <div className="panel-row">
+              <code className="panel-path">
+                {file.folder || info?.folder || t("ui.panel.file_default_folder")}
+              </code>
+              <button type="button" className="btn small" onClick={() => void chooseFolder()}>
+                {t("ui.panel.file_choose")}
+              </button>
+            </div>
+          </div>
+          <label className="panel-field" htmlFor={`${id}-prefix`}>
+            <span>{t("ui.panel.file_prefix")}</span>
+            <input
+              id={`${id}-prefix`}
+              type="text"
+              value={draft.prefix ?? file.prefix}
+              onChange={(e) => setDraft((d) => ({ ...d, prefix: e.target.value }))}
+              onBlur={() => commitText("prefix")}
+            />
+          </label>
+          <div className="panel-field">
+            <label htmlFor={`${id}-pattern`}>{t("ui.panel.file_pattern")}</label>
+            <div className="panel-row">
+              <input
+                id={`${id}-pattern`}
+                type="text"
+                value={draft.pattern ?? file.pattern}
+                aria-describedby={`${id}-preview`}
+                onChange={(e) => setDraft((d) => ({ ...d, pattern: e.target.value }))}
+                onBlur={() => commitText("pattern")}
+              />
+              <Menu
+                label={t("ui.panel.file_insert")}
+                triggerClass="btn small"
+                align="end"
+                items={(info?.markers ?? []).map((m) => ({
+                  id: m,
+                  label: `{${m}}`,
+                  trailing: <span className="muted">{t(`ui.panel.marker_${m}`)}</span>,
+                  onSelect: () => insert(m),
+                }))}
+              />
+            </div>
+            {info && (
+              <span id={`${id}-preview`} className="panel-preview muted">
+                {t("ui.panel.file_preview", { name: info.name })}
+              </span>
+            )}
+          </div>
+          <div className="panel-row">
+            <label className="panel-field" htmlFor={`${id}-format`}>
+              <span>{t("ui.panel.file_format")}</span>
+              <select
+                id={`${id}-format`}
+                value={file.format}
+                onChange={(e) => patch({ format: e.target.value as FileDest["format"] })}
+              >
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="xshot">.xshot</option>
+              </select>
+            </label>
+            {file.format === "jpg" && (
+              <label className="panel-field narrow" htmlFor={`${id}-quality`}>
+                <span>{t("ui.panel.file_quality")}</span>
+                <input
+                  id={`${id}-quality`}
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={draft.quality ?? String(file.quality)}
+                  onChange={(e) => setDraft((d) => ({ ...d, quality: e.target.value }))}
+                  onBlur={() => {
+                    const n = Math.round(Number(draft.quality));
+                    drop("quality");
+                    if (Number.isFinite(n) && n >= 1 && n <= 100) patch({ quality: n });
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          <label className="panel-field" htmlFor={`${id}-exists`}>
+            <span>{t("ui.panel.file_on_exists")}</span>
+            <select
+              id={`${id}-exists`}
+              value={file.onExists}
+              onChange={(e) => patch({ onExists: e.target.value as FileDest["onExists"] })}
+            >
+              <option value="number">{t("ui.panel.file_number")}</option>
+              <option value="overwrite">{t("ui.panel.file_overwrite")}</option>
+            </select>
+          </label>
+          {info?.counter && (
+            <label className="panel-field narrow" htmlFor={`${id}-next`}>
+              <span>{t("ui.panel.file_next")}</span>
+              <input
+                id={`${id}-next`}
+                type="number"
+                min={1}
+                value={draft.next ?? String(info.next)}
+                onChange={(e) => setDraft((d) => ({ ...d, next: e.target.value }))}
+                onBlur={() => {
+                  const n = Math.round(Number(draft.next));
+                  drop("next");
+                  if (Number.isFinite(n) && n >= 1)
+                    void run("capture.file_name", { file, next: n }).then((r) =>
+                      setInfo(r as typeof info),
+                    );
+                }}
+              />
+            </label>
+          )}
+        </>
       )}
     </fieldset>
   );

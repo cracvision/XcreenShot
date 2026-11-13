@@ -97,6 +97,17 @@ export interface CommandEvent {
 }
 
 /** Capture panel settings (CAP-001, CAP-002, CAP-010), as `capture.settings` returns them. */
+/** The File destination's options (CAP-053). */
+export interface FileDest {
+  /** Empty: Pictures\\XcreenShot. */
+  folder: string;
+  prefix: string;
+  pattern: string;
+  format: "png" | "jpg" | "xshot";
+  quality: number;
+  onExists: "number" | "overwrite";
+}
+
 /** The properties of Selection = Region (CAP-026). */
 export interface RegionProps {
   fixed: boolean;
@@ -129,6 +140,9 @@ export interface PanelSettings {
     cursor: boolean;
     open: "editor" | "none";
     delay5: boolean;
+    /** Destinations (CAP-052): `file` for now. */
+    share: "file"[];
+    file: FileDest;
   };
   image: {
     /** `scrolling`: CAP-034, CAP-035; `menu`: CAP-031; `multi`: CAP-033; `text`: SMT-005. */
@@ -147,5 +161,8 @@ export interface PanelSettings {
     areas: { composition: "original" | "stacked" | "row"; gap: number };
     /** Selection = Menu (CAP-031). */
     menu: { submenus: boolean; menubar: boolean };
+    /** Destinations (CAP-052): `file` for now. */
+    share: "file"[];
+    file: FileDest;
   };
 }

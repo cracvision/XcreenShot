@@ -59,8 +59,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-049 | Intervalo | M3 | Should | — |
 | CAP-050 | Programada | M3 | Should | — |
 | CAP-051 | Efectos al capturar | M3 | Should | — |
-| CAP-052 | Compartir al capturar | M3 | Should | — |
-| CAP-053 | Nombre, formato y carpeta del destino Archivo | M3 | Should | — |
+| CAP-052 | Compartir al capturar | M3 | Should | En curso (Windows: Compartir en las pestañas Universal e Imagen con el único destino que existe, **Archivo**; `share` en los comandos de captura. Falta, con Abrir en = Editor, la franja "Pendiente de enviar" con Enviar y No enviar: por ahora se envía al momento; los demás destinos llegan con SHR- en M6) |
+| CAP-053 | Nombre, formato y carpeta del destino Archivo | M3 | Should | En curso (Windows: carpeta (por defecto Imágenes\XcreenShot), prefijo, patrón con los marcadores del spec, **Insertar** y vista previa, contador por carpeta, patrón y formato con **Siguiente número**, `/` para subcarpetas, limpieza del nombre igual en las dos plataformas, PNG, JPG con calidad o `.xshot`, Añadir un número o Sobrescribir; si la carpeta no se puede usar, la captura queda en la biblioteca y avisa; evento `file.written`. Faltan Preguntar nombre y carpeta, Preguntar si existe, el formato por defecto al compartir y los metadatos en el archivo) |
 | CAP-054 | Ruta de la captura | M1 | Must | En curso |
 | CAP-055 | Confirmación de captura | M1 | Should | En curso |
 | CAP-056 | Metadatos de captura | M1 | Must | En curso |

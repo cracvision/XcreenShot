@@ -108,7 +108,9 @@ fn capture_params(own: Value) -> Value {
         "copy": {"type": "boolean", "description": "Copy to the clipboard (CAP-046)"},
         "open": {"type": "string", "enum": ["editor", "none"], "description": "Open in (CAP-045)"},
         "out": {"type": "string", "description": "Also write a PNG to this path"},
-        "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"}
+        "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"},
+        "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the capture also goes to (CAP-052): file"},
+        "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"}
     });
     if let (Some(p), Some(o)) = (props.as_object_mut(), own.as_object()) {
         p.extend(o.clone());
@@ -772,6 +774,18 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "menubar": {"type": "boolean", "default": false, "description": "Include the menu bar item the menu hangs from"}
             })))
             .result(capture_result()),
+        B::new("capture.file_name", &["CAP-053"])
+            .params(params(
+                json!({
+                    "file": {"type": "object", "description": "The File destination's options"},
+                    "next": {"type": "integer", "minimum": 1, "description": "Set its counter's next number"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "folder": {"type": "string"}, "name": {"type": "string"}, "next": {"type": "integer"},
+                "counter": {"type": "boolean"}, "markers": {"type": "array"}
+            }})),
         B::new("capture.pick_area", &["CAP-026"])
             .scopes(UI_CLI)
             .interactive()
