@@ -438,6 +438,9 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.panel", "capture.panel", ""),
         // No default (CAP-067); assignable in Preferences > Shortcuts.
         capture("capture.multi_start", "capture.multi_start", ""),
+        // The open menu, without a countdown (CAP-031). No default yet: the spec's
+        // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
+        capture("capture.menu", "capture.menu", ""),
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),

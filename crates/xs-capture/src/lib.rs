@@ -11,6 +11,7 @@ pub mod compose;
 pub mod extract;
 pub mod feedback;
 pub mod interactive;
+pub mod menus;
 pub mod multi;
 #[cfg(windows)]
 mod multi_win;
@@ -775,6 +776,20 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
         }
+        // Menu capture (CAP-031): after the delay (from the panel, at least the time to
+        // open the menu), the open menus are found on the frozen screens.
+        "capture.menu" => {
+            let opts = Options::from_params(p, ctx.source);
+            wait_delay(core, &opts, ctx.lang)?;
+            let extra = panel::with_overrides(
+                extra,
+                &json!({ "menu": {
+                    "submenus": p.get("submenus").and_then(Value::as_bool).unwrap_or(true),
+                    "menubar": p.get("menubar").and_then(Value::as_bool).unwrap_or(false),
+                } }),
+            );
+            interactive::run(core, ctx, &opts, "menu", extra)
+        }
         "capture.scrolling" => {
             let opts = Options::from_params(p, ctx.source);
             wait_delay(core, &opts, ctx.lang)?;
@@ -1011,6 +1026,16 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("capture.menu", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            dispatch(&core, ctx, "capture.menu", &p, json!({}))
         });
         // Choose on screen (CAP-026): an area for the fixed region, nothing captured.
         let w = weak.clone();

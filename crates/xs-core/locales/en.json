@@ -766,6 +766,10 @@
     "capture_pick_area": {
       "title": "Choose an area on screen",
       "description": "Lets the user select an area and returns it from the top left of its monitor, without capturing (for a fixed region)."
+    },
+    "capture_menu": {
+      "title": "Menu capture",
+      "description": "Captures the open menu (and its submenus) with its shape, transparent around it. From the shortcut, at once; from the panel, after a countdown to open the menu."
     }
   },
   "settings": {
@@ -1500,7 +1504,8 @@
     "action_view": "View",
     "scroll_full": "The scrolling capture reached its largest size (60,000 pixels). What was captured up to there is kept.",
     "scroll_still": "The content did not move: only the visible area was captured. Try a manual scrolling capture, scrolling it yourself.",
-    "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content)."
+    "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content).",
+    "no_menu": "No open menu was found (some apps draw their own). Select the area instead."
   },
   "source": {
     "ui": "the interface",
@@ -1836,7 +1841,8 @@
       "scroll_auto_b": "Scroll both ways automatically (X)",
       "areas": "{{count}} areas",
       "finish_areas": "Finish",
-      "remove_area": "Remove area {{n}}"
+      "remove_area": "Remove area {{n}}",
+      "hint_menu": "Click or press Enter to capture the highlighted menu, or drag an area"
     },
     "panel": {
       "title": "XcreenShot · Capture",
@@ -1971,7 +1977,10 @@
       "areas_original": "Original position",
       "areas_stacked": "Stacked",
       "areas_row": "In a row",
-      "areas_gap": "Space (px)"
+      "areas_gap": "Space (px)",
+      "sel_menu": "Menu",
+      "menu_submenus": "Include open submenus",
+      "menu_menubar": "Include the menu bar"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3756,7 +3765,8 @@
       "fullscreen": "Full screen",
       "text": "Extract text",
       "scrolling": "Scrolling",
-      "multi": "Multiple areas"
+      "multi": "Multiple areas",
+      "menu": "Menu"
     },
     "kind": {
       "universal": "Universal",

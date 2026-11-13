@@ -14,7 +14,7 @@ import { tenStep } from "../lib/numberKeys";
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
 /** The Image tab also scrolls (CAP-034, CAP-035), takes several areas (CAP-033) and
  * extracts text (SMT-005). */
-const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "multi", "text"] as const;
+const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "menu", "multi", "text"] as const;
 
 interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];
@@ -37,8 +37,8 @@ function CommonOptions<T extends Common>({
   const { t } = useTranslation();
   const id = useId();
   const text = value.selection === "text";
-  // A scrolling capture has no pointer (CAP-002).
-  const noCursor = text || value.selection === "scrolling";
+  // A scrolling or menu capture has no pointer (CAP-002).
+  const noCursor = text || value.selection === "scrolling" || value.selection === "menu";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>
@@ -153,6 +153,26 @@ export function ImageOptions({
           value={value.region}
           onChange={(r) => onChange({ region: { ...value.region, ...r } })}
         />
+      )}
+      {value.selection === "menu" && (
+        <fieldset className="panel-props">
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={value.menu.submenus}
+              onChange={(e) => onChange({ menu: { ...value.menu, submenus: e.target.checked } })}
+            />
+            {t("ui.panel.menu_submenus")}
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={value.menu.menubar}
+              onChange={(e) => onChange({ menu: { ...value.menu, menubar: e.target.checked } })}
+            />
+            {t("ui.panel.menu_menubar")}
+          </label>
+        </fieldset>
       )}
       {value.selection === "multi" && (
         <AreasOptions

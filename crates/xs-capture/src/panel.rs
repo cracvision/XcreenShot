@@ -33,6 +33,23 @@ impl Default for UniversalTab {
     }
 }
 
+/// The properties of Selection = Menu (CAP-031).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MenuTab {
+    pub submenus: bool,
+    pub menubar: bool,
+}
+
+impl Default for MenuTab {
+    fn default() -> Self {
+        MenuTab {
+            submenus: true,
+            menubar: false,
+        }
+    }
+}
+
 /// The properties of Selection = Multiple areas (CAP-033).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -157,6 +174,8 @@ pub struct ImageTab {
     pub region: RegionTab,
     /// Selection = Multiple areas (CAP-033).
     pub areas: AreasTab,
+    /// Selection = Menu (CAP-031).
+    pub menu: MenuTab,
 }
 
 impl Default for ImageTab {
@@ -171,6 +190,7 @@ impl Default for ImageTab {
             scroll: ScrollTab::default(),
             region: RegionTab::default(),
             areas: AreasTab::default(),
+            menu: MenuTab::default(),
         }
     }
 }
@@ -199,7 +219,15 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 6] = ["region", "window", "fullscreen", "scrolling", "multi", "text"];
+const IMAGE_SELECTIONS: [&str; 7] = [
+    "region",
+    "window",
+    "fullscreen",
+    "scrolling",
+    "menu",
+    "multi",
+    "text",
+];
 
 impl PanelSettings {
     /// Checks every value; returns the offending field.
@@ -290,6 +318,19 @@ impl PanelSettings {
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
                 return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "menu" {
+                // From the panel there is always time to open the menu: the delay, or
+                // 5 s without one (CAP-031). No pointer in a menu capture.
+                params["delay"] = json!(if self.image.timing == "delay" {
+                    self.image.delay
+                } else {
+                    5
+                });
+                params["cursor"] = json!(false);
+                params["submenus"] = json!(self.image.menu.submenus);
+                params["menubar"] = json!(self.image.menu.menubar);
+                return ("capture.menu", params, json!({}));
             }
             if self.image.selection == "multi" {
                 let a = &self.image.areas;

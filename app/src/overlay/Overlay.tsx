@@ -29,7 +29,7 @@ import {
   type Rect,
 } from "./geometry";
 
-type Mode = "region" | "window" | "universal" | "scrolling" | "multi";
+type Mode = "region" | "window" | "universal" | "scrolling" | "multi" | "menu";
 type Phase = "aiming" | "dragging" | "adjusting";
 
 interface Monitor {
@@ -72,6 +72,8 @@ interface Start {
     helpHint?: boolean;
     /** Region with a fixed size (CAP-026): a rectangle of this size follows the pointer. */
     fixedSize?: { width: number; height: number };
+    /** Menu capture (CAP-031): the open menus found, outermost first. */
+    menus?: Rect[];
   };
 }
 
@@ -342,6 +344,18 @@ export function Overlay() {
     if (!simple) {
       ctx.fillStyle = DIM;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    // Menu capture (CAP-031): the menus found, clear and outlined, while aiming.
+    if (st.phase === "aiming" && start.request.menus) {
+      for (const menu of start.request.menus) {
+        const a = intersect(menu, M);
+        if (!a) continue;
+        if (!simple) ctx.clearRect(a.x - M.x, a.y - M.y, a.width, a.height);
+        ctx.lineWidth = 2 * px;
+        ctx.setLineDash([]);
+        ctx.strokeStyle = ACCENT;
+        ctx.strokeRect(a.x - M.x, a.y - M.y, a.width, a.height);
+      }
     }
     // Multiple areas (CAP-033): each one clear, outlined and numbered.
     st.areas.forEach((area, i) => {
@@ -834,6 +848,15 @@ export function Overlay() {
         schedule();
         return;
       }
+      // Menu capture: a click without dragging takes the menus found (CAP-031).
+      if (
+        start.request.mode === "menu" &&
+        start.request.menus?.length &&
+        (!it || it.kind === "draw")
+      ) {
+        finish({ kind: "menu" });
+        return;
+      }
       // A click without dragging: the detected window, or nothing (CAP-025 edge case).
       if (!it || it.kind === "draw") {
         st.sel = null;
@@ -842,7 +865,17 @@ export function Overlay() {
       }
       schedule();
     },
-    [start, desktop, chooseRect, chooseWindow, setSelBoth, setPhaseBoth, broadcast, schedule],
+    [
+      start,
+      desktop,
+      chooseRect,
+      chooseWindow,
+      setSelBoth,
+      setPhaseBoth,
+      broadcast,
+      schedule,
+      finish,
+    ],
   );
 
   // ---------------------------------------------------------------- keyboard
@@ -889,6 +922,13 @@ export function Overlay() {
         chooseRect(monitor.rect);
       } else if (key === "a" && st.phase === "aiming" && !windowsOnly(start)) {
         chooseRect(desktop);
+      } else if (
+        e.key === "Enter" &&
+        st.phase === "aiming" &&
+        start.request.mode === "menu" &&
+        start.request.menus?.length
+      ) {
+        finish({ kind: "menu" });
       } else if (st.multi && e.key === "Enter") {
         if (st.areas.length > 0) finish({ kind: "multi", rects: st.areas });
       } else if (st.multi && e.key === "Backspace") {
@@ -1062,7 +1102,11 @@ export function Overlay() {
       )}
       {start && phase === "aiming" && !help && (
         <div className="overlay-hint">
-          {windowsOnly(start) ? t("ui.overlay.hint_window") : t("ui.overlay.hint")}
+          {start.request.mode === "menu" && start.request.menus?.length
+            ? t("ui.overlay.hint_menu")
+            : windowsOnly(start)
+              ? t("ui.overlay.hint_window")
+              : t("ui.overlay.hint")}
           {start.request.helpHint &&
             ` · ${t("ui.overlay.help_hint", { key: start.request.compatibility ? "F1" : "H" })}`}
         </div>

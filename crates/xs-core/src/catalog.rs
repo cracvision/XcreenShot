@@ -746,6 +746,16 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 }
             })))
             .result(capture_result()),
+        B::new("capture.menu", &["CAP-031", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({
+                "submenus": {"type": "boolean", "default": true, "description": "Include the open submenus"},
+                "menubar": {"type": "boolean", "default": false, "description": "Include the menu bar item the menu hangs from"}
+            })))
+            .result(capture_result()),
         B::new("capture.pick_area", &["CAP-026"])
             .scopes(UI_CLI)
             .interactive()

@@ -318,8 +318,25 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());
     }
+    // Menu capture (CAP-031): the menus open now, while the screens are frozen.
+    let menus = if mode == "menu" {
+        let found = crate::menus::open_menus();
+        if found.levels.is_empty() {
+            tracing::info!("menu capture: no system menu open");
+            core.host().notify(
+                "problems",
+                &tr(lang, "app.name", &[]),
+                &tr(lang, "notify.no_menu", &[]),
+            );
+        }
+        request["menus"] = json!(found.levels);
+        Some(found)
+    } else {
+        None
+    };
     let scroll_params = request.get("scroll").cloned().unwrap_or_else(|| json!({}));
     let multiple_params = request.get("multiple").cloned().unwrap_or_else(|| json!({}));
+    let scroll_menu_params = request.get("menu").cloned().unwrap_or_else(|| json!({}));
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
     if outcome.get("slow").and_then(Value::as_bool).unwrap_or(false) {
         offer_simple_crosshair(core, lang);
@@ -351,6 +368,43 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         let scroll_kind = crate::scroll_kind(core, &p);
         let place = place_of(core, area);
         return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
+    }
+    // Menu capture (CAP-031): the menus as they were, with their shape.
+    if kind == Some("menu") {
+        let Some(found) = menus.filter(|m| !m.levels.is_empty()) else {
+            return Err(crate::cancelled(lang));
+        };
+        let props = &scroll_menu_params;
+        let parts = crate::menus::parts(
+            &found,
+            props["submenus"].as_bool().unwrap_or(true),
+            props["menubar"].as_bool().unwrap_or(false),
+        );
+        let area = crate::menus::bounds(&parts).ok_or_else(|| crate::cancelled(lang))?;
+        let mut image = crop_frames(&frozen.monitors, &frozen.frames, area);
+        let scale = frozen
+            .monitors
+            .iter()
+            .find(|m| m.rect.intersect(&area).is_some())
+            .map(|m| m.scale)
+            .unwrap_or(1.0);
+        // Windows 11 rounds the corners of menus; the bar item stays square.
+        let rounded: Vec<bool> = parts.iter().map(|r| Some(*r) != found.bar_item).collect();
+        crate::menus::cut_out(&mut image, area, &parts, (8.0 * scale).round() as u32, &rounded);
+        let place = place_of(core, area);
+        let shot = Shot {
+            image,
+            rect: area,
+            mode: "menu",
+            scale: place.scale,
+            monitor: place.monitor,
+            app: place.app,
+            window_title: place.window_title,
+            window_id: None,
+            pointer: None,
+            warnings: Vec::new(),
+        };
+        return finish(core, ctx, shot, opts);
     }
     // Multiple areas (CAP-033): each cut from the frozen screens, joined as the Image
     // tab says; in the editor each one becomes an image object of its own.
