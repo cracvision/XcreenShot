@@ -239,9 +239,30 @@ pub fn deliver(
     image: RgbaImage,
     copy: bool,
     show: Option<bool>,
+    zone: Option<crate::Rect>,
 ) -> CommandResult {
     let lang = ctx.lang;
-    let result = recognize(core, image, None, lang)?;
+    // Taking more than 300 ms: an indicator next to the zone says it is working
+    // (SMT-005).
+    let done = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let shown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    if let (Some(zone), false) = (zone, ctx.source.is_automation()) {
+        let host = core.host();
+        let (done, shown) = (done.clone(), shown.clone());
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            if !done.load(std::sync::atomic::Ordering::SeqCst) {
+                shown.store(true, std::sync::atomic::Ordering::SeqCst);
+                host.working(Some(serde_json::json!(zone)));
+            }
+        });
+    }
+    let result = recognize(core, image, None, lang);
+    done.store(true, std::sync::atomic::Ordering::SeqCst);
+    if shown.load(std::sync::atomic::Ordering::SeqCst) {
+        core.host().working(None);
+    }
+    let result = result?;
     let id = result["id"].as_str().unwrap_or_default().to_string();
     let found = result["found"] == json!(true);
     let plain = core.settings.get_bool("smart.extractText.plain");
@@ -318,7 +339,7 @@ fn extract_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
                     )
                 })?
                 .to_rgba8();
-            deliver(core, ctx, image, copy, show)
+            deliver(core, ctx, image, copy, show, None)
         }
         _ => {
             let mut params = json!({

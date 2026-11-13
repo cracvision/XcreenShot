@@ -360,6 +360,15 @@ impl Host for TauriHost {
         crate::webpage::cancel();
     }
 
+    fn working(&self, zone: Option<Value>) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::working(&app, zone) {
+                tracing::warn!(error = %e, "working indicator");
+            }
+        });
+    }
+
     fn webpage_prompt(&self) -> Result<(), CommandError> {
         let app = self.app.clone();
         self.app

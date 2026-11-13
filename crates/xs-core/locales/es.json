@@ -3821,7 +3821,8 @@
       "tip_frame": "Deja fuera de la zona marcos, bordes e imágenes.",
       "tip_letters": "Las letras muy decorativas, escritas a mano o con contorno se leen mal.",
       "tip_language": "Prueba con otro idioma en Más > Reconocer en otro idioma.",
-      "up_to_three": "Hasta 3 idiomas."
+      "up_to_three": "Hasta 3 idiomas.",
+      "working": "Leyendo el texto…"
     },
     "scroll": {
       "title": "Captura con desplazamiento",

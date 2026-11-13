@@ -18,6 +18,7 @@ pub const PICKER: &str = "picker";
 pub const HELP: &str = "help";
 pub const WELCOME: &str = "welcome";
 pub const WEBPAGE: &str = "webpage";
+pub const WORKING: &str = "working";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -156,6 +157,25 @@ pub fn open_welcome(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Where the size and place of the last results window are kept (SMT-006).
+pub const TEXT_WINDOW_KEY: &str = "smart.textWindow";
+
+/// Keeps the size and place of a results window that closes (SMT-006).
+pub fn remember_text_window(app: &AppHandle, w: &tauri::Window) {
+    let (Ok(pos), Ok(size), Ok(scale)) = (w.outer_position(), w.inner_size(), w.scale_factor()) else {
+        return;
+    };
+    app.state::<AppState>().core.remember(
+        TEXT_WINDOW_KEY,
+        json!({
+            "x": pos.x,
+            "y": pos.y,
+            "width": size.width as f64 / scale,
+            "height": size.height as f64 / scale,
+        }),
+    );
+}
+
 /// A results window of Extract text (SMT-006): one per extraction, near the pointer,
 /// resizable, without a minimize button. Its label carries the result's id.
 pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
@@ -164,8 +184,12 @@ pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
         focus(&w);
         return Ok(());
     }
-    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.extract.title", &[]);
-    let (width, height) = (560.0, 420.0);
+    let core = &app.state::<AppState>().core;
+    let title = xs_core::i18n::tr(core.lang(), "ui.extract.title", &[]);
+    // The size and place it had last (SMT-006).
+    let kept = core.recall(TEXT_WINDOW_KEY);
+    let dim = |k: &str, d: f64| kept.as_ref().and_then(|v| v[k].as_f64()).unwrap_or(d);
+    let (width, height) = (dim("width", 560.0).max(360.0), dim("height", 420.0).max(260.0));
     let w = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
         .title(title)
         .inner_size(width, height)
@@ -174,6 +198,22 @@ pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
         .visible(false)
         .theme(theme(app))
         .build()?;
+    // Where it was last, if that is still on a monitor.
+    if let Some((x, y)) = kept
+        .as_ref()
+        .and_then(|v| Some((v["x"].as_i64()? as i32, v["y"].as_i64()? as i32)))
+    {
+        let on_screen = app
+            .monitor_from_point(x as f64 + 20.0, y as f64 + 20.0)
+            .ok()
+            .flatten()
+            .is_some();
+        if on_screen {
+            let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
+            focus(&w);
+            return Ok(());
+        }
+    }
     // Near the zone, which ends under the pointer: below and to the right of it, kept
     // inside its monitor.
     let pointer = app.cursor_position().ok();
@@ -191,6 +231,53 @@ pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
         let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
     }
     focus(&w);
+    Ok(())
+}
+
+/// "Working" next to a zone of the screen (SMT-005): small, in front, without taking
+/// the focus, never in a capture. `None` closes it.
+pub fn working(app: &AppHandle, zone: Option<serde_json::Value>) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window(WORKING) {
+        w.destroy()?;
+    }
+    let Some(zone) = zone else { return Ok(()) };
+    let n = |k: &str| zone[k].as_f64().unwrap_or(0.0);
+    let (x, y, w, h) = (n("x"), n("y"), n("width"), n("height"));
+    let monitor = app
+        .monitor_from_point(x + w / 2.0, y + h / 2.0)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let scale = monitor.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let (width, height) = (190.0, 40.0);
+    // Under the zone's bottom left, or inside it at the bottom when there is no room.
+    let mut px = x as i32;
+    let mut py = (y + h) as i32 + (8.0 * scale) as i32;
+    if let Some(m) = &monitor {
+        let area = m.work_area();
+        let right = area.position.x + area.size.width as i32 - (width * scale) as i32;
+        let bottom = area.position.y + area.size.height as i32 - (height * scale) as i32;
+        px = px.clamp(area.position.x, right.max(area.position.x));
+        if py > bottom {
+            py = ((y + h) as i32 - ((height + 8.0) * scale) as i32).max(area.position.y);
+        }
+    }
+    let win = WebviewWindowBuilder::new(app, WORKING, WebviewUrl::App("index.html".into()))
+        .title("XcreenShot")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focused(false)
+        .visible(false)
+        .content_protected(true)
+        .inner_size(width, height)
+        .theme(theme(app))
+        .build()?;
+    win.set_position(tauri::PhysicalPosition::new(px, py))?;
+    win.show()?;
     Ok(())
 }
 

@@ -2011,6 +2011,39 @@ html.launcher-root #root {
   outline: none;
 }
 
+/* "Working" next to the zone (SMT-005): a small pill with a pulsing dot. */
+.working-pill {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.working-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: working-pulse 1s var(--ease-in) infinite alternate;
+}
+
+@keyframes working-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.25;
+  }
+}
+
 /* The web address box (CAP-037). */
 .webpage-prompt {
   display: grid;
@@ -7003,7 +7036,8 @@ button.lc-head:hover,
 
   .menu-item,
   .menu-check .icon,
-  .recorder .dot {
+  .recorder .dot,
+  .working-dot {
     animation: none;
   }
 

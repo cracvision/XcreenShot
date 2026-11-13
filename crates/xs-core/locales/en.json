@@ -3821,7 +3821,8 @@
       "tip_frame": "Leave frames, borders and pictures out of the zone.",
       "tip_letters": "Very decorative, handwritten or outlined letters are hard to read.",
       "tip_language": "Try another language in More > Recognize in another language.",
-      "up_to_three": "Up to 3 languages."
+      "up_to_three": "Up to 3 languages.",
+      "working": "Reading the text…"
     },
     "scroll": {
       "title": "Scrolling capture",

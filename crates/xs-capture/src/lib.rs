@@ -560,7 +560,7 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
                 tracing::warn!(error = %e, "extract text: the image was not kept");
             }
         }
-        return extract::deliver(core, ctx, shot.image, opts.copy, opts.show);
+        return extract::deliver(core, ctx, shot.image, opts.copy, opts.show, Some(shot.rect));
     }
     // The pointer, if asked for and inside the image (CAP-047): a floating image in
     // the document, and laid over the image that leaves without the editor.

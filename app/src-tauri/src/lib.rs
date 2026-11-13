@@ -471,6 +471,11 @@ pub fn run() {
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
                     let core = app.state::<AppState>().core.clone();
+                    // Extract text's results window: its size and place for the next
+                    // one (SMT-006).
+                    if window.label().starts_with("text-") {
+                        windows::remember_text_window(app, window);
+                    }
                     if window.label() == windows::MAIN {
                         // Library documents save themselves when the editor closes (EDT-012).
                         let core = core.clone();

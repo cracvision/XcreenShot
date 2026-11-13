@@ -222,6 +222,9 @@ pub trait Host: Send + Sync {
     }
     /// Stops the page being loaded (CAP-037).
     fn cancel_webpage(&self) {}
+    /// "Working" next to a zone of the screen (`{x, y, width, height}`, physical), or
+    /// gone with `None` (SMT-005).
+    fn working(&self, zone: Option<Value>) {}
     /// The window that asks for a web address (CAP-037).
     fn webpage_prompt(&self) -> Result<(), CommandError> {
         Err(unsupported())
