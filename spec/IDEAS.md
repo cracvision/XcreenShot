@@ -145,3 +145,27 @@ Formato de cada idea:
 - Por eso, solo cuando el usuario pulse el botón y con una copia de seguridad.
 
 **Hito propuesto:** con las correcciones de SMT-043, en M1.
+
+---
+
+## IDEA-005 · Compartir capturas y videos con otros usuarios por la red (2026-11-13)
+
+> **Sin aprobar.** Carlos la dejó anotada para no olvidarla; no se construye hasta que conteste las preguntas y elija el hito.
+
+**Lo que propone Carlos:**
+- Desde la biblioteca, buscar a otro usuario de XcreenShot y enviarle una captura o un video.
+- El otro usuario lo recibe cuando está en línea.
+
+**Relación con el spec:** compartir (`SHR-`, que se completa antes de M6), la biblioteca (`LIB-`) y la bandeja (`TRY-`): lo recibido llegaría a la biblioteca de quien lo recibe, como CAP-043 (carpeta de recepción).
+
+**Qué choca o qué riesgos tiene:**
+- **Privacidad (CLAUDE.md):** hoy la única red es compartir cuando el usuario lo elige, las actualizaciones y la IA en la nube. Esta idea es compartir, pero "buscar usuarios" y "estar en línea" necesitan algo que diga quién existe y quién está conectado.
+- **Fuera de la misma red** hace falta un servidor (o un servicio de terceros) que guarde los envíos hasta que el otro se conecte: alguien tiene que mantenerlo, pagarlo y protegerlo, y por él pasarían las capturas.
+- **Seguridad:** las capturas pueden tener datos sensibles; habría que cifrar de extremo a extremo y que nadie pueda recibir sin aceptar.
+
+**Preguntas pendientes, con una propuesta para cada una:**
+1. ¿Solo dentro de la misma red (oficina, VPN) o también por internet? *Propuesta:* empezar por la misma red, sin servidor: los equipos se descubren solos (mDNS) y se envía directo de uno a otro.
+2. ¿Qué pasa si el otro no está en línea? *Propuesta:* en la misma red, el envío espera en el equipo de quien envía y sale cuando el otro aparece; por internet, haría falta el servidor.
+3. ¿Cómo se identifica a un usuario? *Propuesta:* nombre visible y equipo; la primera vez, los dos aceptan (como emparejar un dispositivo).
+4. ¿Hay que aceptar cada envío? *Propuesta:* sí, con un aviso; de un contacto de confianza, se puede aceptar siempre.
+5. ¿Hito? *Propuesta:* con compartir, en M6 o después.
