@@ -17,7 +17,32 @@ function Decision() {
   const { t } = useTranslation();
   const decision = useEditor((s) => s.decision);
   if (!decision) return null;
-  const one = decision.pending.length === 1 ? decision.pending[0] : undefined;
+  const docs = decision.pending.filter((p) => p.kind !== "series");
+  const series = decision.pending.filter((p) => p.kind === "series");
+  const one = docs.length === 1 ? docs[0] : undefined;
+  // Quitting stops the interval captures (CAP-049, APP-004).
+  const seriesNote = series.length > 0 && (
+    <p>{t("ui.editor.series_quit", { names: series.map((s) => s.name).join(", ") })}</p>
+  );
+  if (docs.length === 0)
+    return (
+      <Dialog
+        title={t("ui.editor.series_quit_title")}
+        onCancel={() => void decide("cancel")}
+        actions={
+          <>
+            <button type="button" className="btn primary" onClick={() => void decide("discard")}>
+              {t("ui.editor.quit")}
+            </button>
+            <button type="button" className="btn" onClick={() => void decide("cancel")}>
+              {t("ui.editor.cancel")}
+            </button>
+          </>
+        }
+      >
+        {seriesNote}
+      </Dialog>
+    );
   return (
     <Dialog
       title={
@@ -43,11 +68,12 @@ function Decision() {
       <p>{t(decision.kind === "quit" ? "ui.editor.unsaved_quit" : "ui.editor.unsaved_close")}</p>
       {!one && (
         <ul>
-          {decision.pending.map((p) => (
+          {docs.map((p) => (
             <li key={p.documentId}>{p.name}</li>
           ))}
         </ul>
       )}
+      {seriesNote}
     </Dialog>
   );
 }

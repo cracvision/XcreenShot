@@ -198,6 +198,8 @@ pub trait Host: Send + Sync {
     /// The scrolling capture's state changed (`{running, auto, started, width, height,
     /// full, preview}`): the panel shows it.
     fn scroll_event(&self, state: Value) {}
+    /// The interval series changed (CAP-049): started, a capture, stopped.
+    fn interval_event(&self, state: Value) {}
     /// Shows or closes the window picker (CAP-030): over the monitor under the pointer,
     /// never part of a capture.
     fn picker_window(&self, show: bool) {}

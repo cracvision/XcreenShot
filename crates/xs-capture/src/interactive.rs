@@ -288,6 +288,33 @@ fn rect_from(v: &Value) -> Option<Rect> {
     })
 }
 
+/// A window chosen on screen once (Interval with Selection = Window, CAP-049): its id.
+pub fn pick_window(core: &Core, ctx: &Context) -> Result<u32, CommandError> {
+    let lang = ctx.lang;
+    let frozen = freeze(lang)?;
+    let request = json!({
+        "mode": "window",
+        "monitors": frozen.monitors,
+        "windows": frozen.windows,
+        "pointer": frozen.pointer,
+        "autoDetect": true,
+        "showMagnifier": false,
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        "helpHint": false,
+        "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+    });
+    let outcome = core.host().select_on_screen(request, frozen.frames.clone())?;
+    match outcome.get("kind").and_then(Value::as_str) {
+        Some("window") => outcome
+            .get("id")
+            .and_then(Value::as_u64)
+            .map(|id| id as u32)
+            .ok_or_else(|| crate::cancelled(lang)),
+        _ => Err(crate::cancelled(lang)),
+    }
+}
+
 /// The last tool of quick annotation (CAP-057).
 const QUICK_TOOL_KEY: &str = "capture.quickAnnotate.lastTool";
 

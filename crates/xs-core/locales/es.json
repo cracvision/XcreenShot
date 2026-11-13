@@ -794,6 +794,18 @@
     "capture_quick_annotate": {
       "title": "Anotación rápida",
       "description": "Selecciona un área como en la captura universal, márcala en la pantalla con flechas, formas, texto, resaltado, desenfoque o pasos y cópiala sin abrir el editor. Es una función en prueba: actívala en Preferencias > Funciones en prueba."
+    },
+    "capture_interval": {
+      "title": "Captura por intervalo",
+      "description": "Captura otra vez cada pocos segundos (la región o la ventana se eligen una vez) hasta que se detiene, tras un número de capturas, tras un tiempo o a una hora. Se pueden descartar las capturas iguales a la anterior."
+    },
+    "capture_interval_state": {
+      "title": "Series por intervalo",
+      "description": "Las series por intervalo activas: cuántas capturas lleva cada una y cuándo es la siguiente."
+    },
+    "capture_interval_stop": {
+      "title": "Detener la captura por intervalo",
+      "description": "Detiene una serie por intervalo, o todas."
     }
   },
   "settings": {
@@ -1213,7 +1225,9 @@
     "fixed_region": "La región fija no cabe: el monitor \"{{monitor}}\" no está conectado o la región se sale de su borde. Elígela de nuevo en pantalla o usa el monitor principal.",
     "picker_not_open": "El selector de ventanas no está abierto.",
     "clipboard_empty": "El portapapeles no contiene una imagen ni texto.",
-    "quick_annotate_off": "La anotación rápida es una función en prueba que está desactivada. Actívala en Preferencias > Funciones en prueba."
+    "quick_annotate_off": "La anotación rápida es una función en prueba que está desactivada. Actívala en Preferencias > Funciones en prueba.",
+    "interval_selection": "El intervalo funciona con Región, Ventana, Pantalla completa, Menú y Portapapeles.",
+    "series_not_found": "No hay ninguna serie por intervalo {{id}} activa."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1381,7 +1395,9 @@
     "presets_empty": "Sin presets",
     "extract_text": "Extraer texto",
     "finish_scrolling": "Terminar desplazamiento",
-    "quick_annotate": "Anotación rápida"
+    "quick_annotate": "Anotación rápida",
+    "stop_series": "Detener captura: {{name}}",
+    "tooltip_timer": "XcreenShot · capturando por intervalo"
   },
   "menu": {
     "flatten": "A&planar",
@@ -1551,7 +1567,10 @@
     "scroll_doubtful": "{{count}} uniones de la captura con desplazamiento pueden tener un corte (contenido que se mueve o animado).",
     "no_menu": "No se encontró ningún menú abierto (algunas apps dibujan los suyos). Selecciona el área a mano.",
     "file_destination_failed": "No se pudo guardar la captura en {{folder}} (la carpeta no está disponible o no se puede escribir). Está en la biblioteca.",
-    "clipboard_text_cut": "El texto copiado era demasiado largo: se cortó a 60.000 píxeles."
+    "clipboard_text_cut": "El texto copiado era demasiado largo: se cortó a 60.000 píxeles.",
+    "series_done": "{{name}} terminó. Capturas: {{count}}.",
+    "series_window_gone": "{{name}} se detuvo: la ventana se cerró.",
+    "series_monitor_gone": "{{name}} se detuvo: el monitor de su área no está conectado."
   },
   "source": {
     "ui": "la interfaz",
@@ -2067,7 +2086,25 @@
       "effects_up": "Subir {{name}}",
       "effects_empty": "Sin efectos: las capturas salen tal cual.",
       "sel_clipboard": "Portapapeles",
-      "open_quick": "Anotación rápida"
+      "open_quick": "Anotación rápida",
+      "timing_interval": "Intervalo",
+      "start": "Iniciar",
+      "stop": "Detener",
+      "every": "Cada (s)",
+      "every_min": "Como mínimo 3 segundos: se puso en 3.",
+      "stop_when": "Detener",
+      "stop_manual": "Manualmente",
+      "stop_count": "Tras N capturas",
+      "stop_duration": "Tras un tiempo",
+      "stop_time": "A una hora",
+      "stop_captures": "Capturas",
+      "stop_minutes": "Minutos",
+      "stop_at": "Hora",
+      "discard_same": "Descartar si no hay cambios",
+      "sensitivity": "Sensibilidad",
+      "sensitivity_exact": "Exacta",
+      "sensitivity_small": "Ignorar cambios pequeños",
+      "series_status": "Capturas: {{count}} · siguiente: {{time}}"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3147,7 +3184,10 @@
         "highlight_accent": "Círculo de acento",
         "title": "Cursor"
       },
-      "bar_more": "Más opciones"
+      "bar_more": "Más opciones",
+      "series_quit_title": "¿Salir de XcreenShot?",
+      "series_quit": "Estas capturas por intervalo se detienen al salir de XcreenShot: {{names}}.",
+      "quit": "Salir"
     },
     "multi": {
       "title": "Multicaptura",
@@ -3900,5 +3940,8 @@
     },
     "copy_name": "{{name}} (copia)",
     "warning_settings": "Algunos de sus ajustes no existen en esta versión. Edítalo."
+  },
+  "interval": {
+    "name": "Intervalo"
   }
 }

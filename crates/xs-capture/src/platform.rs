@@ -84,6 +84,24 @@ mod imp {
 
     /// Restores a minimized window without activating it, or minimizes it again
     /// (CAP-030).
+    /// The session is locked (or on the secure desktop): nothing to capture
+    /// (CAP-049, CAP-050).
+    pub fn session_locked() -> bool {
+        use windows_sys::Win32::System::StationsAndDesktops::{
+            CloseDesktop, OpenInputDesktop, DESKTOP_READOBJECTS,
+        };
+        // SAFETY: opens and closes a handle to the input desktop; it fails while the
+        // lock screen has it.
+        unsafe {
+            let desk = OpenInputDesktop(0, 0, DESKTOP_READOBJECTS);
+            if desk.is_null() {
+                return true;
+            }
+            CloseDesktop(desk);
+        }
+        false
+    }
+
     pub fn show_window(id: u32, show: bool) {
         use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_MINIMIZE, SW_SHOWNOACTIVATE};
         // SAFETY: a window handle; an invalid one does nothing.
@@ -282,6 +300,10 @@ mod imp {
 
     pub fn show_window(_id: u32, _show: bool) {}
 
+    pub fn session_locked() -> bool {
+        false
+    }
+
     pub fn foreground_pid() -> Option<u32> {
         // Frontmost-app lookup arrives with the macOS capture work (Windows first).
         None
@@ -326,5 +348,5 @@ mod imp {
 
 pub use imp::{
     app_info, cursor_position, foreground_pid, is_app_window, is_cloaked, is_regular_window, os_info,
-    show_window, user_and_machine,
+    session_locked, show_window, user_and_machine,
 };

@@ -64,15 +64,26 @@ fn cmd(id: &'static str, label: &'static str, command: &'static str) -> MenuEntr
 /// the presets, `(id, name)` in their order (CAP-058). The status block, video, quick
 /// annotation and Recent items arrive with their features.
 pub fn tray_menu(presets: &[(String, String)]) -> Vec<MenuEntry> {
-    tray_menu_with(presets, false, false)
+    tray_menu_with(presets, &TrayState::default())
+}
+
+/// What the icon's menu shows besides its fixed entries, as things are now.
+#[derive(Debug, Clone, Default)]
+pub struct TrayState {
+    /// A scrolling capture runs: Finish scrolling (CAP-034).
+    pub scrolling: bool,
+    /// Quick annotation's trial is on (CAP-057, APP-034).
+    pub quick: bool,
+    /// Running interval series: their id and "Stop capture: <name>" (CAP-005, CAP-049).
+    pub series: Vec<(String, String)>,
 }
 
 /// The tray menu; while a scrolling capture runs it starts with Finish scrolling, for
 /// when its panel is covered (CAP-034).
-pub fn tray_menu_with(presets: &[(String, String)], scrolling: bool, quick: bool) -> Vec<MenuEntry> {
+pub fn tray_menu_with(presets: &[(String, String)], state: &TrayState) -> Vec<MenuEntry> {
     let mut menu = tray_entries(presets);
     // Quick annotation (CAP-057), after Image capture, while its trial is on (APP-034).
-    if quick {
+    if state.quick {
         let at = menu
             .iter()
             .position(|e| {
@@ -91,7 +102,22 @@ pub fn tray_menu_with(presets: &[(String, String)], scrolling: bool, quick: bool
             cmd("quick_annotate", "tray.quick_annotate", "capture.quick_annotate"),
         );
     }
-    if scrolling {
+    // Stop capture: <name>, one per running series, first (CAP-005, CAP-049).
+    if !state.series.is_empty() {
+        let mut stops: Vec<MenuEntry> = state
+            .series
+            .iter()
+            .map(|(id, text)| MenuEntry::Named {
+                id: format!("series.{id}"),
+                text: text.clone(),
+                command: "capture.interval_stop",
+                params: json!({ "id": id }),
+            })
+            .collect();
+        stops.push(MenuEntry::Separator);
+        menu.splice(0..0, stops);
+    }
+    if state.scrolling {
         menu.splice(
             0..0,
             [
@@ -732,11 +758,38 @@ mod tests {
     /// CAP-057, APP-034: Quick annotation follows Image capture only while it is on.
     #[test]
     fn quick_annotation_is_in_the_icon_menu_only_while_on() {
-        let off = commands_in(&tray_menu_with(&[], false, false));
+        let off = commands_in(&tray_menu_with(&[], &TrayState::default()));
         assert!(!off.contains(&"capture.quick_annotate"));
-        let on = commands_in(&tray_menu_with(&[], false, true));
+        let quick = TrayState {
+            quick: true,
+            ..TrayState::default()
+        };
+        let on = commands_in(&tray_menu_with(&[], &quick));
         let at = on.iter().position(|c| *c == "capture.quick_annotate").unwrap();
         assert_eq!(on[at - 1], "capture.image");
+    }
+
+    /// CAP-005, CAP-049: each running series has its Stop capture entry, first.
+    #[test]
+    fn running_series_can_be_stopped_from_the_icon() {
+        let state = TrayState {
+            series: vec![("s1".into(), "Stop capture: Interval".into())],
+            ..TrayState::default()
+        };
+        let menu = tray_menu_with(&[], &state);
+        match &menu[0] {
+            MenuEntry::Named {
+                command,
+                params,
+                text,
+                ..
+            } => {
+                assert_eq!(*command, "capture.interval_stop");
+                assert_eq!(params["id"], "s1");
+                assert_eq!(text, "Stop capture: Interval");
+            }
+            _ => panic!("the first entry stops the series"),
+        }
     }
 
     #[test]

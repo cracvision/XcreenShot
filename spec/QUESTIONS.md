@@ -254,6 +254,17 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 6: intervalo)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-049 | Avisos de cada captura de una serie | No hay una confirmación (CAP-055) por cada captura: serían decenas. El panel dice cuántas lleva y cuándo es la siguiente, el ícono muestra un reloj y, al terminar sola, una notificación dice cuántas hizo | Provisional |
+| CAP-049 | Qué opciones usa cada vuelta | Las del momento de **Iniciar**: cambiar el panel con la serie en marcha no la cambia. Desde el CLI o un agente, solo las que se pasan (sin los efectos ni los destinos del panel) | Provisional |
+| CAP-049 | Selecciones sin intervalo | Desplazamiento, Selector de ventanas, Múltiples áreas y Extraer texto no se repiten: **Iniciar** dice con qué selecciones funciona | Provisional |
+| CAP-049 | "Detener: tras un tiempo" y "a una hora" | Tras un tiempo se da en minutos (1 a 10 080, una semana). A una hora: si esa hora de hoy ya pasó, es la de mañana | Provisional |
+| CAP-049 | Región de tamaño fijo con Intervalo | El tamaño fijo que sigue al puntero (CAP-026) no se usa: el área se elige una vez como una región normal. Una región fija con posición sí se usa tal cual | Provisional |
+| CAP-049 | El identificador de la serie | En los comandos, corto (`s1`, `s2`…); en los metadatos de cada captura, único también entre arranques (fecha y hora de inicio más ese número), para que la biblioteca agrupe bien | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 5: anotación rápida)
 
 | ID | Duda | Propuesta | Estado |

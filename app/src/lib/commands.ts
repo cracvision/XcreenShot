@@ -122,6 +122,29 @@ export interface RegionProps {
 }
 
 /** The properties of Selection = Scrolling (CAP-034, CAP-035). */
+/** Timing = Interval (CAP-049): seconds between captures, when it stops, duplicates. */
+export interface IntervalProps {
+  every: number;
+  stop: "manual" | "count" | "duration" | "time";
+  count: number;
+  minutes: number;
+  /** HH:MM, local time. */
+  until: string;
+  discard: boolean;
+  sensitivity: "exact" | "small";
+}
+
+/** A running interval series (capture.interval_state). */
+export interface IntervalSeries {
+  id: string;
+  name: string;
+  preset: string | null;
+  count: number;
+  every: number;
+  nextAt: string;
+  endsAt: string | null;
+}
+
 export interface ScrollProps {
   type: "manual" | "auto";
   direction: "vertical" | "horizontal" | "both";
@@ -159,8 +182,10 @@ export interface PanelSettings {
     copy: boolean;
     cursor: boolean;
     open: "editor" | "quick" | "none";
-    timing: "none" | "delay";
+    timing: "none" | "delay" | "interval";
     delay: number;
+    /** Timing = Interval (CAP-049). */
+    interval: IntervalProps;
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

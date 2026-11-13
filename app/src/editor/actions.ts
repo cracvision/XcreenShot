@@ -276,7 +276,8 @@ export async function decide(choice: "save" | "discard" | "cancel"): Promise<voi
   const decision = useEditor.getState().decision;
   useEditor.setState({ decision: null });
   if (!decision || choice === "cancel") return;
-  const ids = decision.pending.map((p) => p.documentId);
+  // Interval series only need the yes to quit (CAP-049); documents need their choice.
+  const ids = decision.pending.filter((p) => p.kind !== "series").map((p) => p.documentId);
   const save = choice === "save" ? ids : [];
   const discard = choice === "discard" ? ids : [];
   try {

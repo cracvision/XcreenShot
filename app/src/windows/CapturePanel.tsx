@@ -14,6 +14,7 @@ import {
   isCommandError,
   run,
   type CommandEvent,
+  type IntervalSeries,
   type PanelSettings,
   type ShortcutRow,
 } from "../lib/commands";
@@ -41,6 +42,16 @@ export function CapturePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  // The panel's interval series, if one runs (CAP-049).
+  const [series, setSeries] = useState<IntervalSeries | null>(null);
+
+  useEffect(() => {
+    const pick = (state: { series: IntervalSeries[] }) =>
+      setSeries(state.series.find((x) => x.preset === "@panel") ?? null);
+    void run<{ series: IntervalSeries[] }>("capture.interval_state").then(pick);
+    const un = listen<{ series: IntervalSeries[] }>("xs://interval", (e) => pick(e.payload));
+    return () => void un.then((f) => f());
+  }, []);
 
   const load = useCallback(() => {
     void run<PanelSettings>("capture.settings").then(setSettings);
@@ -107,6 +118,13 @@ export function CapturePanel() {
 
   if (!settings) return <div className="panel" ref={root} />;
   const tab = settings.tab;
+  // Timing = Interval: Start, and Stop while its series runs (CAP-049).
+  const interval = tab === "image" && settings.image.timing === "interval";
+  const label = series
+    ? t("ui.panel.stop")
+    : interval
+      ? t("ui.panel.start")
+      : t("ui.panel.capture");
 
   return (
     <div className="panel" ref={root}>
@@ -145,11 +163,29 @@ export function CapturePanel() {
       )}
 
       <div className="panel-bottom">
-        <button type="button" className="btn primary panel-capture" onClick={() => void capture()}>
-          {t("ui.panel.capture")}
+        <button
+          type="button"
+          className="btn primary panel-capture"
+          onClick={() =>
+            void (series ? run("capture.interval_stop", { id: series.id }) : capture())
+          }
+        >
+          {label}
         </button>
         <CaptureShortcut />
       </div>
+      {series && (
+        <p className="panel-status" role="status">
+          {t("ui.panel.series_status", {
+            count: series.count,
+            time: new Date(series.nextAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          })}
+        </p>
+      )}
       {status && (
         <p className="panel-status" role="alert">
           {status}

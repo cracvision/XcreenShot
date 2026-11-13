@@ -310,6 +310,13 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://scroll", state);
     }
 
+    fn interval_event(&self, state: Value) {
+        let _ = self.app.emit("xs://interval", state);
+        // The clock on the icon and its Stop capture entries (APP-002, CAP-005).
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || crate::tray::refresh(&app));
+    }
+
     fn picker_window(&self, show: bool) {
         let app = self.app.clone();
         let (tx, rx) = std::sync::mpsc::channel();

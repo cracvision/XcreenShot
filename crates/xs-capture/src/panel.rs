@@ -170,8 +170,10 @@ pub struct ImageTab {
     pub copy: bool,
     pub cursor: bool,
     pub open: String,
-    /// `none` or `delay` (CAP-048; interval and scheduled arrive in M3).
+    /// `none`, `delay` (CAP-048) or `interval` (CAP-049).
     pub timing: String,
+    /// Timing = Interval (CAP-049).
+    pub interval: crate::interval::IntervalTab,
     /// Delay seconds, 1–60 (default 5).
     pub delay: u32,
     /// Selection = Scrolling (CAP-034, CAP-035).
@@ -199,6 +201,7 @@ impl Default for ImageTab {
             cursor: false,
             open: "editor".into(),
             timing: "none".into(),
+            interval: crate::interval::IntervalTab::default(),
             delay: 5,
             scroll: ScrollTab::default(),
             region: RegionTab::default(),
@@ -266,7 +269,8 @@ impl PanelSettings {
         )?;
         one_of("image.selection", &self.image.selection, &IMAGE_SELECTIONS)?;
         one_of("image.open", &self.image.open, &["editor", "quick", "none"])?;
-        one_of("image.timing", &self.image.timing, &["none", "delay"])?;
+        one_of("image.timing", &self.image.timing, &["none", "delay", "interval"])?;
+        self.image.interval.validate()?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
         }
@@ -333,7 +337,27 @@ impl PanelSettings {
     }
 
     /// Command and parameters that "Capture" runs with `tab` (CAP-006, CAP-065).
+    /// With Timing = Interval, the series that runs that capture again (CAP-049).
     pub fn plan(&self, tab: &str) -> (&'static str, Value, Value) {
+        let (command, params, extra) = self.plan_once(tab);
+        if tab == "universal" || self.image.timing != "interval" {
+            return (command, params, extra);
+        }
+        let selection = match (command, self.image.selection.as_str()) {
+            ("capture.region", "region") => "region",
+            ("capture.window", _) => "window",
+            ("capture.fullscreen", _) => "fullscreen",
+            ("capture.menu", _) => "menu",
+            ("capture.clipboard", _) => "clipboard",
+            // Not with an interval: the start says so.
+            (_, other) => other,
+        };
+        let mut params = with_overrides(params, &self.image.interval.params());
+        params["selection"] = json!(selection);
+        ("capture.interval", params, json!({}))
+    }
+
+    fn plan_once(&self, tab: &str) -> (&'static str, Value, Value) {
         if tab == "universal" {
             let u = &self.universal;
             let params = json!({

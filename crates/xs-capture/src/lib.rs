@@ -14,6 +14,7 @@ pub mod feedback;
 pub mod filedest;
 pub mod filename;
 pub mod interactive;
+pub mod interval;
 pub mod menus;
 pub mod multi;
 #[cfg(windows)]
@@ -389,6 +390,8 @@ pub struct Options {
     /// Saved in the library (true) or kept unsaved (false), whatever the setting
     /// (LIB-020); `None` follows the setting.
     pub keep: Option<bool>,
+    /// The interval series this capture belongs to (CAP-049).
+    pub series: Option<String>,
 }
 
 impl Options {
@@ -429,6 +432,7 @@ impl Options {
             objects: Vec::new(),
             quick: p.get("open").and_then(Value::as_str) == Some("quick"),
             keep: None,
+            series: p.get("series").and_then(Value::as_str).map(str::to_string),
         }
     }
 }
@@ -497,6 +501,18 @@ fn copy_to_clipboard(image: &RgbaImage) -> Result<(), arboard::Error> {
 /// Runs the capture route: save, clipboard, extra file, notify, open (CAP-054).
 pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> CommandResult {
     let lang = ctx.lang;
+    // A series (CAP-049): a capture just like the last one kept is dropped.
+    let series = opts.series.as_deref().and_then(|id| interval::find(core, id));
+    let mut series_index = None;
+    if let Some(s) = &series {
+        match s.accept(&shot.image) {
+            Some(n) => series_index = Some(n),
+            None => {
+                tracing::info!(series = %s.id, "interval: unchanged, not kept");
+                return Ok(json!({ "status": "skipped", "reason": "unchanged", "series": s.id }));
+            }
+        }
+    }
     let now = chrono::Local::now();
     let started = std::time::Instant::now();
     let host = core.host();
@@ -553,7 +569,11 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let outgoing = flat.as_ref().unwrap_or(&shot.image);
 
     // 1-2. Keep it safe first: a `.xshot` in the library, open for the editor (LIB-020).
-    let meta = metadata(core, &shot, now);
+    let mut meta = metadata(core, &shot, now);
+    // The series and its order, so the library can group them (CAP-049, CAP-056).
+    if let (Some(s), Some(n)) = (&series, series_index) {
+        meta["series"] = json!({ "id": s.group(), "index": n, "name": s.title(lang) });
+    }
     let app = shot.app.as_ref().map(|a| a.name.as_str());
     let keep = opts
         .keep
@@ -678,7 +698,8 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
             &tr(lang, "app.name", &[]),
             &tr(lang, "notify.automation_capture", &[("source", &source)]),
         );
-    } else if !opts.open_editor {
+    } else if !opts.open_editor && series.is_none() {
+        // A series says so in the icon's menu and the panel, not once per capture.
         let body = if copied {
             tr(lang, "notify.capture_copied", &[])
         } else if opts.out.is_none() && path.starts_with(xs_editor::editor(core).library()) {
@@ -1055,7 +1076,107 @@ fn repeat_last_area(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
 fn capture_with_tab(core: &Core, ctx: &Context, tab: &str, p: &Value) -> CommandResult {
     let settings = panel::load(core);
     let (command, base, extra) = settings.plan(tab);
-    dispatch(core, ctx, command, &panel::with_overrides(base, p), extra)
+    let params = panel::with_overrides(base, p);
+    // Interval (CAP-049): the panel's Start; again, Stop.
+    if command == "capture.interval" {
+        if let Some(id) = interval::of_preset(core, PANEL_SERIES) {
+            return interval::stop(core, ctx.lang, Some(&id));
+        }
+        return start_interval(core, ctx, &params, None, Some(PANEL_SERIES.into()));
+    }
+    dispatch(core, ctx, command, &params, extra)
+}
+
+/// The series the capture panel started (CAP-049).
+const PANEL_SERIES: &str = "@panel";
+
+/// Keys of `capture.interval` that are not the capture's own.
+const INTERVAL_KEYS: [&str; 9] = [
+    "every",
+    "stop",
+    "count",
+    "minutes",
+    "until",
+    "discard",
+    "sensitivity",
+    "selection",
+    "name",
+];
+
+/// Starts an interval series (CAP-049): the area or window is chosen once, then each
+/// turn runs the capture command of the selection, without opening the editor.
+pub(crate) fn start_interval(
+    core: &Core,
+    ctx: &Context,
+    p: &Value,
+    name: Option<String>,
+    origin: Option<String>,
+) -> CommandResult {
+    let lang = ctx.lang;
+    let plan = interval::Plan::from_params(p, chrono::Local::now())
+        .map_err(|e| CommandError::new(ErrorCode::InvalidParams, e))?;
+    let selection = p.get("selection").and_then(Value::as_str).unwrap_or("fullscreen");
+    let mut params = p.clone();
+    if let Some(o) = params.as_object_mut() {
+        for k in INTERVAL_KEYS
+            .iter()
+            .chain(&["size", "multiple", "extract", "target"])
+        {
+            o.remove(*k);
+        }
+    }
+    params["open"] = json!("none");
+    params["delay"] = json!(0);
+    // Each turn uses the options the series started with (from the panel, all of
+    // them): the panel's effects and destinations are not added later.
+    for (k, v) in [
+        ("copy", json!(true)),
+        ("cursor", json!(false)),
+        ("effects", json!([])),
+        ("share", json!([])),
+    ] {
+        if params.get(k).is_none() {
+            params[k] = v;
+        }
+    }
+    let pick = |f: &dyn Fn() -> CommandResult| -> CommandResult {
+        let _busy = Busy::take(lang)?;
+        core.host().capture_session(true);
+        let picked = f();
+        core.host().capture_session(false);
+        picked
+    };
+    let command = match selection {
+        "region" => {
+            if params.get("rect").is_none() {
+                params["rect"] = pick(&|| interactive::pick(core, ctx))?;
+            }
+            "capture.region"
+        }
+        "window" => {
+            // A window id from automation, or the one the user picks.
+            let id = match p.get("id").filter(|v| v.is_u64()) {
+                Some(id) => id.clone(),
+                None => pick(&|| interactive::pick_window(core, ctx).map(|id| json!(id)))?,
+            };
+            params["target"] = json!("id");
+            params["id"] = id;
+            "capture.window"
+        }
+        "fullscreen" => "capture.fullscreen",
+        "menu" => "capture.menu",
+        "clipboard" => {
+            params["cursor"] = json!(false);
+            "capture.clipboard"
+        }
+        _ => {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(lang, "errors.interval_selection", &[]),
+            ))
+        }
+    };
+    interval::start(core, ctx, command, params, plan, name, origin)
 }
 
 fn upgrade(weak: &Weak<Core>) -> Result<Arc<Core>, CommandError> {
@@ -1177,6 +1298,30 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        // Interval capture (CAP-049): start a series, list them, stop one or all.
+        if let Some(core) = weak.upgrade() {
+            interval::install(&core);
+        }
+        let w = weak.clone();
+        reg.handle("capture.interval", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            let name = p.get("name").and_then(Value::as_str).map(str::to_string);
+            start_interval(&core, ctx, &p, name, None)
+        });
+        let w = weak.clone();
+        reg.handle("capture.interval_state", move |ctx, _p| {
+            Ok(interval::state(&*upgrade(&w)?, ctx.lang))
+        });
+        let w = weak.clone();
+        reg.handle("capture.interval_stop", move |ctx, p| {
+            let core = upgrade(&w)?;
+            interval::stop(&core, ctx.lang, p.get("id").and_then(Value::as_str))
         });
         // Quick annotation (CAP-057): only while its trial is on (APP-034). From the app
         // it takes Capture cursor from the Image tab; effects and Share only come from a

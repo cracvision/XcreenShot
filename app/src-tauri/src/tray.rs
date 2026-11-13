@@ -22,7 +22,18 @@ const BASE_ICON: &[u8] = include_bytes!("../icons/tray.png");
 pub struct Visual {
     pub paused: bool,
     pub attention: bool,
+    /// An interval or scheduled capture is active: a small clock (APP-002, CAP-049).
+    pub timer: bool,
     pub monochrome: bool,
+}
+
+/// What the icon's menu shows now besides its fixed entries.
+fn tray_state(core: &Core) -> xs_core::menus::TrayState {
+    xs_core::menus::TrayState {
+        scrolling: xs_capture::scroll::running(core),
+        quick: core.settings.get_bool("experimental.quickAnnotate"),
+        series: xs_capture::interval::menu_items(core),
+    }
 }
 
 fn light_taskbar() -> bool {
@@ -71,6 +82,19 @@ pub fn render(v: Visual) -> Image<'static> {
             }
         }
     }
+    // The clock's place (below): a gap cut out of the glyph.
+    let (clock_x, clock_y, clock_r) = (size * 0.76, size * 0.76, size * 0.24);
+    if v.timer {
+        let gap = clock_r + size * 0.06;
+        for y in 0..h {
+            for x in 0..w {
+                let (fx, fy) = (x as f32 + 0.5 - clock_x, y as f32 + 0.5 - clock_y);
+                if (fx * fx + fy * fy).sqrt() < gap {
+                    px[((y * w + x) * 4 + 3) as usize] = 0;
+                }
+            }
+        }
+    }
     let mut paint = |x: u32, y: u32, color: [u8; 3], alpha: f32| {
         let i = ((y * w + x) * 4) as usize;
         let a = alpha.clamp(0.0, 1.0);
@@ -106,6 +130,27 @@ pub fn render(v: Visual) -> Image<'static> {
             for x in 0..w {
                 let d = ((x as f32 + 0.5 - cx).powi(2) + (y as f32 + 0.5 - cy).powi(2)).sqrt();
                 paint(x, y, color, r - d + 0.5);
+            }
+        }
+    }
+    if v.timer {
+        // A small clock in the bottom-right corner, on a gap cut out of the glyph:
+        // a ring and two hands.
+        let (cx, cy, r) = (clock_x, clock_y, clock_r);
+
+        let ink = if v.monochrome { glyph } else { [77, 124, 255] };
+        for y in 0..h {
+            for x in 0..w {
+                let (fx, fy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+                let d = (fx * fx + fy * fy).sqrt();
+                // The rim.
+                paint(x, y, ink, (r - d + 0.5).min(d - (r - size * 0.07) + 0.5));
+                // The hands: up to 12 and to 3.
+                let up = fx.abs() <= size * 0.035 && fy <= 0.0 && fy >= -r * 0.62;
+                let right = fy.abs() <= size * 0.035 && fx >= 0.0 && fx <= r * 0.5;
+                if up || right {
+                    paint(x, y, ink, 1.0);
+                }
             }
         }
     }
@@ -274,11 +319,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let menu = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu_with(
-            &xs_capture::presets::menu_items(core),
-            xs_capture::scroll::running(core),
-            core.settings.get_bool("experimental.quickAnnotate"),
-        ),
+        &xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
         Shortcuts::Accelerators,
         &mut actions,
     )?;
@@ -328,6 +369,8 @@ fn tooltip(core: &Core, v: Visual) -> String {
     let lang = core.lang();
     if v.paused {
         tr(lang, "tray.tooltip_paused", &[])
+    } else if v.timer {
+        tr(lang, "tray.tooltip_timer", &[])
     } else if v.attention {
         tr(lang, "tray.tooltip_attention", &[])
     } else {
@@ -345,6 +388,7 @@ pub fn current_visual(app: &AppHandle) -> Visual {
     Visual {
         paused: core.shortcuts.user_paused(),
         attention,
+        timer: xs_capture::interval::running(core),
         monochrome: core.settings.get_bool("general.monochromeIcon"),
     }
 }
@@ -365,11 +409,7 @@ pub fn refresh(app: &AppHandle) {
     if let Ok(menu) = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu_with(
-            &xs_capture::presets::menu_items(core),
-            xs_capture::scroll::running(core),
-            core.settings.get_bool("experimental.quickAnnotate"),
-        ),
+        &xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
         Shortcuts::Accelerators,
         &mut actions,
     ) {
@@ -392,6 +432,7 @@ mod tests {
         let base = Visual {
             paused: false,
             attention: false,
+            timer: false,
             monochrome: true,
         };
         let normal = render(base);
@@ -400,6 +441,7 @@ mod tests {
             attention: true,
             ..base
         });
+        let timer = render(Visual { timer: true, ..base });
         let shapes = |i: &Image| {
             i.rgba()
                 .as_chunks::<4>()
@@ -411,6 +453,7 @@ mod tests {
         assert_ne!(shapes(&normal), shapes(&paused));
         assert_ne!(shapes(&normal), shapes(&attention));
         assert_ne!(shapes(&paused), shapes(&attention));
+        assert_ne!(shapes(&normal), shapes(&timer));
         assert!(alpha_sum(&attention) > alpha_sum(&normal));
     }
 }
@@ -425,14 +468,16 @@ fn dump_icons() {
     };
     let dir = std::path::PathBuf::from(dir);
     for mono in [false, true] {
-        for (name, paused, attention) in [
-            ("normal", false, false),
-            ("paused", true, false),
-            ("attention", false, true),
+        for (name, paused, attention, timer) in [
+            ("normal", false, false, false),
+            ("paused", true, false, false),
+            ("attention", false, true, false),
+            ("timer", false, false, true),
         ] {
             let img = render(Visual {
                 paused,
                 attention,
+                timer,
                 monochrome: mono,
             });
             let file = dir.join(format!(

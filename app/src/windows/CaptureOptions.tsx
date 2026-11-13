@@ -10,6 +10,7 @@ import {
   type PanelSettings,
   type RegionProps,
   type ScrollProps,
+  type IntervalProps,
 } from "../lib/commands";
 import { Menu, type MenuItem } from "../components/Menu";
 import { useSetting } from "../store";
@@ -214,10 +215,13 @@ export function ImageOptions({
           <select
             id={`${id}-timing`}
             value={value.timing}
-            onChange={(e) => onChange({ timing: e.target.value as "none" | "delay" })}
+            onChange={(e) =>
+              onChange({ timing: e.target.value as PanelSettings["image"]["timing"] })
+            }
           >
             <option value="none">{t("ui.panel.timing_none")}</option>
             <option value="delay">{t("ui.panel.timing_delay")}</option>
+            <option value="interval">{t("ui.panel.timing_interval")}</option>
           </select>
         </label>
         {value.timing === "delay" && (
@@ -241,6 +245,12 @@ export function ImageOptions({
           </label>
         )}
       </div>
+      {value.timing === "interval" && (
+        <IntervalOptions
+          value={value.interval}
+          onChange={(i) => onChange({ interval: { ...value.interval, ...i } })}
+        />
+      )}
       {value.selection !== "text" && (
         <>
           <EffectsOptions value={value.effects} onChange={(effects) => onChange({ effects })} />
@@ -333,6 +343,145 @@ function ScrollOptions({
             {t("ui.panel.scroll_restore")}
           </label>
         </>
+      )}
+    </fieldset>
+  );
+}
+
+/** Timing = Interval (CAP-049): every how many seconds (3 at least, with a notice),
+ * when it stops, and whether a capture like the last one is dropped. */
+function IntervalOptions({
+  value,
+  onChange,
+}: {
+  value: IntervalProps;
+  onChange: (patch: Partial<IntervalProps>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [every, setEvery] = useState<string | null>(null);
+  const [raised, setRaised] = useState(false);
+  const [count, setCount] = useState<string | null>(null);
+  const [minutes, setMinutes] = useState<string | null>(null);
+  const commitEvery = () => {
+    const n = Math.round(Number(every));
+    if (every !== null && Number.isFinite(n) && n > 0) {
+      setRaised(n < 3);
+      onChange({ every: Math.min(86400, Math.max(3, n)) });
+    }
+    setEvery(null);
+  };
+  const commitWhole = (text: string | null, max: number, apply: (n: number) => void) => {
+    const n = Math.round(Number(text));
+    if (text !== null && Number.isFinite(n) && n >= 1) apply(Math.min(max, n));
+  };
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-field narrow" htmlFor={`${id}-every`}>
+        <span>{t("ui.panel.every")}</span>
+        <input
+          id={`${id}-every`}
+          type="number"
+          min={3}
+          max={86400}
+          step={1}
+          value={every ?? String(value.every)}
+          aria-describedby={raised ? `${id}-raised` : undefined}
+          onChange={(e) => setEvery(e.target.value)}
+          onBlur={commitEvery}
+          onKeyDown={(e) => {
+            tenStep(e, (n) => setEvery(String(n)));
+            if (e.key === "Enter") commitEvery();
+          }}
+        />
+      </label>
+      {raised && (
+        <p className="panel-note" id={`${id}-raised`} role="status">
+          {t("ui.panel.every_min")}
+        </p>
+      )}
+      <label className="panel-field" htmlFor={`${id}-stop`}>
+        <span>{t("ui.panel.stop_when")}</span>
+        <select
+          id={`${id}-stop`}
+          value={value.stop}
+          onChange={(e) => onChange({ stop: e.target.value as IntervalProps["stop"] })}
+        >
+          <option value="manual">{t("ui.panel.stop_manual")}</option>
+          <option value="count">{t("ui.panel.stop_count")}</option>
+          <option value="duration">{t("ui.panel.stop_duration")}</option>
+          <option value="time">{t("ui.panel.stop_time")}</option>
+        </select>
+      </label>
+      {value.stop === "count" && (
+        <label className="panel-field narrow" htmlFor={`${id}-count`}>
+          <span>{t("ui.panel.stop_captures")}</span>
+          <input
+            id={`${id}-count`}
+            type="number"
+            min={1}
+            max={100000}
+            value={count ?? String(value.count)}
+            onChange={(e) => setCount(e.target.value)}
+            onBlur={() => {
+              commitWhole(count, 100000, (n) => onChange({ count: n }));
+              setCount(null);
+            }}
+          />
+        </label>
+      )}
+      {value.stop === "duration" && (
+        <label className="panel-field narrow" htmlFor={`${id}-minutes`}>
+          <span>{t("ui.panel.stop_minutes")}</span>
+          <input
+            id={`${id}-minutes`}
+            type="number"
+            min={1}
+            max={10080}
+            value={minutes ?? String(value.minutes)}
+            onChange={(e) => setMinutes(e.target.value)}
+            onBlur={() => {
+              commitWhole(minutes, 10080, (n) => onChange({ minutes: n }));
+              setMinutes(null);
+            }}
+          />
+        </label>
+      )}
+      {value.stop === "time" && (
+        <label className="panel-field narrow" htmlFor={`${id}-until`}>
+          <span>{t("ui.panel.stop_at")}</span>
+          <input
+            id={`${id}-until`}
+            type="time"
+            value={value.until}
+            onChange={(e) => {
+              if (/^\d{2}:\d{2}$/.test(e.target.value)) onChange({ until: e.target.value });
+            }}
+          />
+        </label>
+      )}
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={value.discard}
+          onChange={(e) => onChange({ discard: e.target.checked })}
+        />
+        {t("ui.panel.discard_same")}
+      </label>
+      {value.discard && (
+        <label className="panel-field" htmlFor={`${id}-sens`}>
+          <span>{t("ui.panel.sensitivity")}</span>
+          <select
+            id={`${id}-sens`}
+            value={value.sensitivity}
+            onChange={(e) =>
+              onChange({ sensitivity: e.target.value as IntervalProps["sensitivity"] })
+            }
+          >
+            <option value="exact">{t("ui.panel.sensitivity_exact")}</option>
+            <option value="small">{t("ui.panel.sensitivity_small")}</option>
+          </select>
+        </label>
       )}
     </fieldset>
   );
@@ -818,7 +967,7 @@ function EffectsOptions({
     <fieldset className="panel-props">
       <legend className="panel-legend">{t("ui.panel.effects")}</legend>
       {value.length === 0 ? (
-        <p className="panel-preview muted">{t("ui.panel.effects_empty")}</p>
+        <p className="panel-empty muted">{t("ui.panel.effects_empty")}</p>
       ) : (
         <ol className="panel-effects">
           {value.map((e, i) => (

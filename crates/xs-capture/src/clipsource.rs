@@ -145,11 +145,14 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options) -> CommandResult {
             finish(core, ctx, shot(canvas), &opts)
         }
         Content::Nothing => {
-            core.host().notify(
-                "problems",
-                &tr(lang, "app.name", &[]),
-                &tr(lang, "errors.clipboard_empty", &[]),
-            );
+            // A series (CAP-049) just waits for something to be copied.
+            if opts.series.is_none() {
+                core.host().notify(
+                    "problems",
+                    &tr(lang, "app.name", &[]),
+                    &tr(lang, "errors.clipboard_empty", &[]),
+                );
+            }
             Err(empty(lang))
         }
     }

@@ -111,7 +111,8 @@ fn capture_params(own: Value) -> Value {
         "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"},
         "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects for the capture (CAP-051), the editor's entries {type, …settings}: border, shadow, edges, corners, scale, rotate, filters, watermark…; editable in the document, applied in the clipboard and files"},
         "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the capture also goes to (CAP-052): file"},
-        "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"}
+        "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"},
+        "series": {"type": "string", "description": "Internal: the interval series the capture belongs to (CAP-049)"}
     });
     if let (Some(p), Some(o)) = (props.as_object_mut(), own.as_object()) {
         p.extend(o.clone());
@@ -749,6 +750,41 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 }
             })))
             .result(capture_result()),
+        B::new("capture.interval", &["CAP-049", "CAP-045", "CAP-056"])
+            .scopes(ALL)
+            .interactive()
+            .mutates()
+            .params(capture_params(json!({
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
+                "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen once"},
+                "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
+                "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen once"},
+                "every": {"type": "number", "minimum": 1, "maximum": 86400, "default": 60, "description": "Seconds between captures; fewer than 3 become 3"},
+                "stop": {"type": "string", "enum": ["manual", "count", "duration", "time"], "default": "manual", "description": "manual (capture.interval_stop), after `count` captures, after `minutes`, or at `until`"},
+                "count": {"type": "integer", "minimum": 1, "maximum": 100000, "default": 10},
+                "minutes": {"type": "integer", "minimum": 1, "maximum": 10080, "default": 60},
+                "until": {"type": "string", "description": "HH:MM, local time (today, or tomorrow if it has passed)"},
+                "discard": {"type": "boolean", "default": true, "description": "Drop a capture just like the last one kept"},
+                "sensitivity": {"type": "string", "enum": ["exact", "small"], "default": "exact", "description": "exact: any pixel counts as a change; small: changes in fewer than 0.5 % of the pixels do not"},
+                "name": {"type": "string", "description": "Shown in the icon's menu (Stop capture: <name>)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["started"]},
+                "series": {"type": "object", "description": "id, name, count, every, startedAt, nextAt, endsAt, stopAfter"}
+            }})),
+        B::new("capture.interval_state", &["CAP-049"]).result(json!({"type": "object", "properties": {
+            "running": {"type": "boolean"},
+            "series": {"type": "array", "items": {"type": "object"}, "description": "id, name, preset, command, count (captures kept), every, startedAt, nextAt, endsAt, stopAfter"}
+        }})),
+        B::new("capture.interval_stop", &["CAP-049", "CAP-005"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The series (capture.interval_state); omit to stop them all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"stopped": {"type": "array", "items": {"type": "string"}}}})),
         B::new("capture.quick_annotate", &["CAP-057", "CAP-065", "APP-034"])
             .scopes(ALL)
             .interactive()
@@ -812,10 +848,11 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .assignable()
             .mutates()
             .params(capture_params(json!({
-                "target": {"type": "string", "enum": ["active", "interactive", "point", "title"], "default": "active"},
+                "target": {"type": "string", "enum": ["active", "interactive", "point", "title", "id"], "default": "active"},
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
-                "title": {"type": "string", "description": "Part of the window title or process name (first match)"}
+                "title": {"type": "string", "description": "Part of the window title or process name (first match)"},
+                "id": {"type": "integer", "description": "target id: a window by its id (as the window picker lists them); an interval series uses it (CAP-049)"}
             })))
             .result(capture_result()),
         // Editor and documents (EDT-119). Handlers live in xs-editor.

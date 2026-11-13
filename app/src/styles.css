@@ -1895,6 +1895,12 @@ html.overlay-root.overlay-native #root {
   word-break: break-all;
 }
 
+/* A box with nothing in it yet (no effects, CAP-051). */
+.panel-empty {
+  margin: 0;
+  font-size: 12px;
+}
+
 .panel-note {
   margin: 0;
   color: var(--warning);

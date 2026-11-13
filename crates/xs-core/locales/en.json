@@ -794,6 +794,18 @@
     "capture_quick_annotate": {
       "title": "Quick annotation",
       "description": "Select an area as in Universal Capture, mark it on screen with arrows, shapes, text, highlights, blur or steps, and copy it without opening the editor. A trial feature: turn it on in Preferences > Experimental features."
+    },
+    "capture_interval": {
+      "title": "Interval capture",
+      "description": "Captures again every few seconds (the region or window is chosen once), until it is stopped, after a number of captures, after a time or at an hour. Captures just like the last one can be dropped."
+    },
+    "capture_interval_state": {
+      "title": "Interval series",
+      "description": "The interval series running now: how many captures each has and when the next one is."
+    },
+    "capture_interval_stop": {
+      "title": "Stop interval capture",
+      "description": "Stops one interval series, or all of them."
     }
   },
   "settings": {
@@ -1213,7 +1225,9 @@
     "fixed_region": "The fixed region does not fit: the monitor \"{{monitor}}\" is not connected, or the region goes past its edge. Choose it again on screen, or pick the main monitor.",
     "picker_not_open": "The window picker is not open.",
     "clipboard_empty": "The clipboard holds no image or text.",
-    "quick_annotate_off": "Quick annotation is a trial feature that is off. Turn it on in Preferences > Experimental features."
+    "quick_annotate_off": "Quick annotation is a trial feature that is off. Turn it on in Preferences > Experimental features.",
+    "interval_selection": "Interval works with Region, Window, Full screen, Menu and Clipboard.",
+    "series_not_found": "There is no interval series {{id}} running."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1381,7 +1395,9 @@
     "presets_empty": "No presets",
     "extract_text": "Extract text",
     "finish_scrolling": "Finish scrolling",
-    "quick_annotate": "Quick annotation"
+    "quick_annotate": "Quick annotation",
+    "stop_series": "Stop capture: {{name}}",
+    "tooltip_timer": "XcreenShot · capturing at intervals"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -1551,7 +1567,10 @@
     "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content).",
     "no_menu": "No open menu was found (some apps draw their own). Select the area instead.",
     "file_destination_failed": "The capture could not be saved in {{folder}} (the folder is not available or cannot be written). It is in the library.",
-    "clipboard_text_cut": "The copied text was too long: it was cut at 60,000 pixels."
+    "clipboard_text_cut": "The copied text was too long: it was cut at 60,000 pixels.",
+    "series_done": "{{name}} finished. Captures: {{count}}.",
+    "series_window_gone": "{{name}} stopped: the window was closed.",
+    "series_monitor_gone": "{{name}} stopped: the monitor of its area is not connected."
   },
   "source": {
     "ui": "the interface",
@@ -2067,7 +2086,25 @@
       "effects_up": "Move {{name}} up",
       "effects_empty": "No effects: captures come as they are.",
       "sel_clipboard": "Clipboard",
-      "open_quick": "Quick annotation"
+      "open_quick": "Quick annotation",
+      "timing_interval": "Interval",
+      "start": "Start",
+      "stop": "Stop",
+      "every": "Every (s)",
+      "every_min": "At least 3 seconds: it was set to 3.",
+      "stop_when": "Stop",
+      "stop_manual": "Manually",
+      "stop_count": "After N captures",
+      "stop_duration": "After a time",
+      "stop_time": "At an hour",
+      "stop_captures": "Captures",
+      "stop_minutes": "Minutes",
+      "stop_at": "Hour",
+      "discard_same": "Discard if nothing changed",
+      "sensitivity": "Sensitivity",
+      "sensitivity_exact": "Exact",
+      "sensitivity_small": "Ignore small changes",
+      "series_status": "Captures: {{count}} · next: {{time}}"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3147,7 +3184,10 @@
         "highlight_accent": "Accent circle",
         "title": "Cursor"
       },
-      "bar_more": "More options"
+      "bar_more": "More options",
+      "series_quit_title": "Quit XcreenShot?",
+      "series_quit": "These interval captures stop when XcreenShot quits: {{names}}.",
+      "quit": "Quit"
     },
     "multi": {
       "title": "Multi-capture",
@@ -3900,5 +3940,8 @@
     },
     "copy_name": "{{name}} (copy)",
     "warning_settings": "Some of its settings do not exist in this version. Edit it."
+  },
+  "interval": {
+    "name": "Interval"
   }
 }

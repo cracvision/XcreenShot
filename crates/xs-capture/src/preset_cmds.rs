@@ -326,6 +326,14 @@ fn run(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         )
         .with_details(json!({ "id": preset.id, "reason": "settings" }))
     })?;
+    // A preset with Interval is a switch (CAP-049, CAP-062).
+    if command == "capture.interval" {
+        if let Some(id) = crate::interval::of_preset(core, &preset.id) {
+            return crate::interval::stop(core, lang, Some(&id));
+        }
+        let name = presets::display_name(preset, lang);
+        return crate::start_interval(core, ctx, &params, Some(name), Some(preset.id.clone()));
+    }
     crate::dispatch(core, ctx, command, &params, extra)
 }
 

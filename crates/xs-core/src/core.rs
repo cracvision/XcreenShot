@@ -1198,7 +1198,14 @@ mod tests {
     fn menus_only_reference_registered_commands() {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
-        let mut all = menus::tray_menu_with(&[], true, true);
+        let mut all = menus::tray_menu_with(
+            &[],
+            &menus::TrayState {
+                scrolling: true,
+                quick: true,
+                series: vec![("s1".into(), "Stop".into())],
+            },
+        );
         all.extend(menus::app_menu(Platform::Windows));
         all.extend(menus::app_menu(Platform::Macos));
         for id in menus::commands_in(&all) {

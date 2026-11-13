@@ -646,6 +646,9 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
 }
 
 export interface Pending {
+  /** `document` (unsaved changes) or `series` (an interval capture that quitting stops,
+   * CAP-049). */
+  kind?: "document" | "series";
   documentId: string;
   name: string;
   path: string | null;
