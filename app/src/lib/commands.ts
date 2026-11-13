@@ -169,6 +169,8 @@ export interface ScrollProps {
   /** Seconds between steps, 0 to 5. */
   wait: number;
   restore: boolean;
+  /** Detect fixed parts (CAP-036). */
+  fixed: boolean;
 }
 
 export interface PanelSettings {

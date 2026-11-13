@@ -498,6 +498,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "startFrom": {"type": "string", "enum": ["start", "current"], "description": "Automatic: from the beginning or from where the content is"},
                 "wait": {"type": "number", "minimum": 0, "maximum": 5, "description": "Automatic: seconds between steps, for content that loads late"},
                 "restore": {"type": "boolean", "description": "Automatic: put the content back where it was"},
+                "fixed": {"type": "boolean", "default": true, "description": "Detect fixed parts (CAP-036): headers, footers and bars appear once; off, every frame goes in whole"},
                 "rect": {"type": "object", "description": "The area, a rectangle of the desktop in physical pixels, without selecting on screen"}
             })))
             .result(capture_result()),

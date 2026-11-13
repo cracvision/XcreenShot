@@ -134,6 +134,8 @@ pub struct ScrollTab {
     pub wait: f64,
     /// Automatic: put the content back where it was.
     pub restore: bool,
+    /// Detect fixed parts: headers, footers and bars once (CAP-036).
+    pub fixed: bool,
 }
 
 impl Default for ScrollTab {
@@ -144,6 +146,7 @@ impl Default for ScrollTab {
             start_from: "start".into(),
             wait: 0.3,
             restore: true,
+            fixed: true,
         }
     }
 }
@@ -157,6 +160,7 @@ impl ScrollTab {
             "startFrom": self.start_from,
             "wait": self.wait,
             "restore": self.restore,
+            "fixed": self.fixed,
         })
     }
 }

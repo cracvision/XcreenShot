@@ -1193,6 +1193,7 @@ pub(crate) fn scroll_kind(core: &Core, p: &Value) -> scroll::Kind {
         from_start: text("startFrom", &tab.start_from) != "current",
         wait: std::time::Duration::from_millis((wait * 1000.0) as u64),
         restore: p.get("restore").and_then(Value::as_bool).unwrap_or(tab.restore),
+        fixed: p.get("fixed").and_then(Value::as_bool).unwrap_or(tab.fixed),
     })
 }
 

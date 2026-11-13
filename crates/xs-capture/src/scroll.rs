@@ -57,6 +57,8 @@ pub struct Auto {
     pub wait: Duration,
     /// Put the content back where it was at the end.
     pub restore: bool,
+    /// Detect fixed parts (CAP-036).
+    pub fixed: bool,
 }
 
 impl Auto {
@@ -80,6 +82,7 @@ impl Auto {
             from_start: core.settings.get_str("capture.scroll.startFrom") != "current",
             wait: Duration::from_millis((wait * 1000.0) as u64),
             restore: core.settings.get_bool("capture.scroll.restore"),
+            fixed: crate::panel::load(core).image.scroll.fixed,
         }
     }
 }
@@ -214,7 +217,7 @@ pub fn drive(driver: &mut dyn Driver, auto: Auto, progress: &mut dyn Progress) -
         }
     }
 
-    let mut stitcher = Stitcher::new(auto.direction);
+    let mut stitcher = Stitcher::new(auto.direction).keep_fixed(auto.fixed);
     let Ok(first) = driver.grab() else {
         return (stitcher, Ended::Keep);
     };
@@ -638,7 +641,7 @@ fn manual(
         }
         report_start(core);
     }
-    let mut stitcher = Stitcher::new(Direction::Both);
+    let mut stitcher = Stitcher::new(Direction::Both).keep_fixed(crate::panel::load(core).image.scroll.fixed);
     let mut last_preview = Instant::now() - PREVIEW_EVERY;
     let mut changed = true;
     loop {
@@ -773,6 +776,7 @@ mod tests {
             from_start,
             wait: Duration::ZERO,
             restore: true,
+            fixed: true,
         }
     }
 

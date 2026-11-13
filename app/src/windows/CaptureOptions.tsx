@@ -395,6 +395,14 @@ function ScrollOptions({
           </label>
         </>
       )}
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={value.fixed}
+          onChange={(e) => onChange({ fixed: e.target.checked })}
+        />
+        {t("ui.panel.scroll_fixed")}
+      </label>
     </fieldset>
   );
 }

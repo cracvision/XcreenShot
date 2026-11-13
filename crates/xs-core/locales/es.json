@@ -2249,7 +2249,8 @@
       "freehand_free": "Libre",
       "freehand_polygon": "Polígono",
       "freehand_ellipse": "Elipse",
-      "windows_as_objects": "Cada ventana como un objeto"
+      "windows_as_objects": "Cada ventana como un objeto",
+      "scroll_fixed": "Detectar elementos fijos (cabeceras, pies, barras)"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

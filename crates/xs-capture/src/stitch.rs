@@ -100,6 +100,9 @@ pub struct Stitcher {
     tails: Vec<Keyed>,
     /// The first frame waits until the first join tells what in it is fixed.
     pending_first: bool,
+    /// Detect fixed parts (CAP-036): headers, footers and bars appear once. Off, every
+    /// frame is painted whole.
+    fixed: bool,
     joins: usize,
     doubtful: usize,
     full: bool,
@@ -117,10 +120,17 @@ impl Stitcher {
             heads: Vec::new(),
             tails: Vec::new(),
             pending_first: false,
+            fixed: true,
             joins: 0,
             doubtful: 0,
             full: false,
         }
+    }
+
+    /// Detect fixed parts (default) or paint every frame whole (CAP-036).
+    pub fn keep_fixed(mut self, on: bool) -> Self {
+        self.fixed = on;
+        self
     }
 
     /// The size of one frame.
@@ -168,7 +178,7 @@ impl Stitcher {
         if frame.dimensions() != (self.width, self.height) {
             return Pushed::Lost;
         }
-        let Some(shift) = find_shift(prev, &frame, self.direction) else {
+        let Some(mut shift) = find_shift(prev, &frame, self.direction) else {
             return if prev.as_raw() == frame.as_raw() || nothing_moved(prev, &frame) {
                 Pushed::Same
             } else {
@@ -177,6 +187,11 @@ impl Stitcher {
         };
         if shift.dx == 0 && shift.dy == 0 {
             return Pushed::Same;
+        }
+        // Without fixed parts, nothing stays at the edges: each frame goes in whole.
+        if !self.fixed {
+            shift.lead = 0;
+            shift.trail = 0;
         }
         let at = (self.at.0 + shift.dx as i64, self.at.1 + shift.dy as i64);
         // Would the result grow past its largest size?
@@ -742,6 +757,37 @@ pub(crate) mod tests {
         let out = s.finish().expect("an image");
         assert_eq!(out.dimensions(), (400, 3000));
         assert!(out.as_raw() == content.as_raw());
+    }
+
+    /// CAP-036: with Detect fixed parts off, the header is in every frame's place.
+    #[test]
+    fn without_detection_fixed_parts_repeat() {
+        let content = page(400, 3000, 7);
+        let header = RgbaImage::from_fn(400, 80, |x, y| {
+            Rgba([10, (x % 200) as u8, (y * 3 % 256) as u8, 255])
+        });
+        let footer = RgbaImage::from_fn(400, 40, |x, _| Rgba([200, (x % 90) as u8, 40, 255]));
+        let mut s = Stitcher::new(Direction::Vertical).keep_fixed(false);
+        for y in (0..=1200).step_by(300) {
+            s.push(with_bars(view(&content, 0, y, 400, 600), &header, &footer));
+        }
+        let out = s.finish().unwrap();
+        let once = {
+            let mut s = Stitcher::new(Direction::Vertical);
+            for y in (0..=1200).step_by(300) {
+                s.push(with_bars(view(&content, 0, y, 400, 600), &header, &footer));
+            }
+            s.finish().unwrap()
+        };
+        assert_eq!(out.width(), once.width());
+        // The header shows again further down, where the second frame begins.
+        let head_at =
+            |img: &RgbaImage, y: u32| (0..400).all(|x| img.get_pixel(x, y) == header.get_pixel(x, 0));
+        assert!(head_at(&once, 0));
+        let again = (100..out.height()).any(|y| head_at(&out, y));
+        assert!(again, "the header repeats");
+        let again_once = (100..once.height()).any(|y| head_at(&once, y));
+        assert!(!again_once, "with detection it shows once");
     }
 
     #[test]

@@ -373,7 +373,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | CAP-035 | "Volver a la posición inicial" | Se vuelve contando píxeles: XcreenShot sabe cuánto se movió el contenido por las uniones y cuánto mueve una vuelta de rueda, así que el regreso puede quedar a menos de una vuelta de rueda de la posición original | Provisional |
 | CAP-035 | Dirección = Ambas | Recorre el contenido en columnas: baja hasta el final, da un paso a la derecha, sube por la siguiente columna, y así hasta el borde derecho | Provisional |
 | CAP-036 | Barra de progreso del procesamiento | La unión se hace a medida que llegan las imágenes, así que al pulsar Listo el resultado está casi listo: no hay espera ni barra. Si algún día un caso lo necesita, se añade | Provisional |
-| CAP-036 | Detectar elementos fijos (activada por defecto) | Siempre activa por ahora; la casilla para desactivarla llega con las propiedades de Desplazamiento en el engranaje (CAP-002) | Provisional |
+| CAP-036 | Detectar elementos fijos (activada por defecto) | Casilla en las propiedades de Desplazamiento del panel (`fixed` en `capture.scrolling`). Desactivada, cada tramo entra entero y las cabeceras se repiten | Provisional |
 | CAP-002 | Propiedades de Selección = Desplazamiento | Se muestran debajo de Selección, en un recuadro, en vez de detrás del engranaje: Tipo, y con Automático, Dirección, Empezar desde, Espera entre pasos y Volver a la posición inicial | Provisional |
 
 ## Dudas del equipo de construcción (M3, entrega 2: extraer texto)
