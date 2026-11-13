@@ -180,7 +180,7 @@ export interface ScrollProps {
 export interface PanelSettings {
   tab: "universal" | "image" | "video";
   /** The Video tab (VID-001); pointer and sound are settings (video.cursor, video.systemAudio). */
-  video: { selection: "region" | "fullscreen"; limit: number };
+  video: { selection: "region" | "window" | "fullscreen"; limit: number };
   expanded: boolean;
   universal: {
     selection: "region" | "window" | "fullscreen";

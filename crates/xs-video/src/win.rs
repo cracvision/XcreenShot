@@ -154,8 +154,9 @@ struct Converter {
     frame: ID3D11Texture2D,
     /// What is converted: the picture with the pointer drawn on it (GDI-compatible).
     composite: ID3D11Texture2D,
-    /// The monitor's top left on the virtual screen.
+    /// The monitor's top left on the virtual screen, and its size.
     origin: (i32, i32),
+    monitor: (u32, u32),
     width: u32,
     height: u32,
 }
@@ -246,6 +247,18 @@ fn converter(
         ctx.VideoProcessorSetStreamDestRect(&vp, 0, true, Some(&whole));
         ctx.VideoProcessorSetOutputTargetRect(&vp, true, Some(&whole));
         // Screen RGB (full range) to video YCbCr (studio range).
+        // Black around a window whose shape changed (VID-005).
+        let black = D3D11_VIDEO_COLOR {
+            Anonymous: D3D11_VIDEO_COLOR_0 {
+                RGBA: D3D11_VIDEO_COLOR_RGBA {
+                    R: 0.0,
+                    G: 0.0,
+                    B: 0.0,
+                    A: 1.0,
+                },
+            },
+        };
+        ctx.VideoProcessorSetOutputBackgroundColor(&vp, false, &black);
         ctx.VideoProcessorSetStreamColorSpace1(&vp, 0, DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709);
         ctx.VideoProcessorSetOutputColorSpace1(
             &vp,
@@ -262,6 +275,7 @@ fn converter(
             frame,
             composite,
             origin,
+            monitor,
             width: size.0,
             height: size.1,
         })
@@ -269,6 +283,40 @@ fn converter(
 }
 
 impl Converter {
+    /// Records `area` (virtual-screen pixels) from now on, fitted into the video with
+    /// black bands if its shape changed (VID-005). False when it is not on this
+    /// monitor any more.
+    fn retarget(&self, gpu: &Gpu, area: RECT) -> bool {
+        let (mw, mh) = (self.monitor.0 as i32, self.monitor.1 as i32);
+        let src = RECT {
+            left: (area.left - self.origin.0).clamp(0, mw),
+            top: (area.top - self.origin.1).clamp(0, mh),
+            right: (area.right - self.origin.0).clamp(0, mw),
+            bottom: (area.bottom - self.origin.1).clamp(0, mh),
+        };
+        let (sw, sh) = ((src.right - src.left) as f64, (src.bottom - src.top) as f64);
+        if sw < 2.0 || sh < 2.0 {
+            return false;
+        }
+        let (w, h) = (self.width as f64, self.height as f64);
+        let f = (w / sw).min(h / sh);
+        let (dw, dh) = (sw * f, sh * f);
+        let dest = RECT {
+            left: ((w - dw) / 2.0).round() as i32,
+            top: ((h - dh) / 2.0).round() as i32,
+            right: ((w + dw) / 2.0).round() as i32,
+            bottom: ((h + dh) / 2.0).round() as i32,
+        };
+        // SAFETY: state of the video processor, set on the immediate context.
+        unsafe {
+            gpu.vctx
+                .VideoProcessorSetStreamSourceRect(&self.vp, 0, true, Some(&src));
+            gpu.vctx
+                .VideoProcessorSetStreamDestRect(&self.vp, 0, true, Some(&dest));
+        }
+        true
+    }
+
     /// The last picture, with the pointer on it when `cursor` (VID-044).
     fn compose(&self, gpu: &Gpu, cursor: bool) {
         use windows::Win32::UI::WindowsAndMessaging::*;
@@ -636,6 +684,33 @@ fn snapshot(gpu: &Gpu, conv: &Converter, monitor: RECT) -> Result<(), String> {
     }
 }
 
+/// Where a window is (its visible frame, without the invisible resize borders), or
+/// `Err(true)` when it closed, `Err(false)` while it is minimized.
+fn window_bounds(hwnd: isize) -> Result<RECT, bool> {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
+    use windows::Win32::UI::WindowsAndMessaging::{IsIconic, IsWindow};
+    let h = HWND(hwnd as *mut core::ffi::c_void);
+    // SAFETY: plain queries on a window handle; a closed one answers false.
+    unsafe {
+        if !IsWindow(Some(h)).as_bool() {
+            return Err(true);
+        }
+        if IsIconic(h).as_bool() {
+            return Err(false);
+        }
+        let mut r = RECT::default();
+        DwmGetWindowAttribute(
+            h,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            &mut r as *mut RECT as *mut core::ffi::c_void,
+            std::mem::size_of::<RECT>() as u32,
+        )
+        .map_err(|_| false)?;
+        Ok(r)
+    }
+}
+
 /// Free bytes on the disk that holds `path` (VID-023).
 fn free_space(path: &std::path::Path) -> Option<u64> {
     let dir = path.parent()?;
@@ -804,6 +879,10 @@ pub(crate) fn record(
     // The disk is looked at every two seconds (VID-023).
     let mut last_disk = Instant::now();
     let mut low_disk = false;
+    // A followed window (VID-005): where it was, and whether it closed or hides.
+    let mut window_at: Option<RECT> = None;
+    let mut window_closed = false;
+    let mut hold = false;
     let now_recorded = || {
         shared
             .clock
@@ -836,6 +915,26 @@ pub(crate) fn record(
         }
         if options.limit.is_some_and(|l| now_recorded() >= l.as_secs_f64()) {
             break;
+        }
+        if let Some(hwnd) = options.window {
+            match window_bounds(hwnd) {
+                Ok(r) => {
+                    hold = false;
+                    if window_at != Some(r) {
+                        // It moved or resized: follow it; off this monitor, hold.
+                        hold = !conv.retarget(&gpu, r);
+                        window_at = Some(r);
+                        dirty = true;
+                    }
+                }
+                Err(true) => {
+                    tracing::info!("video: the window closed, stopping");
+                    window_closed = true;
+                    break;
+                }
+                // Minimized: the last picture stays (VID-005).
+                Err(false) => hold = true,
+            }
         }
         if last_disk.elapsed() > Duration::from_secs(2) {
             last_disk = Instant::now();
@@ -929,7 +1028,7 @@ pub(crate) fn record(
             dirty = true;
         }
         let due = last_write.is_none_or(|t| t.elapsed().as_secs_f64() >= interval);
-        if dirty && due {
+        if dirty && due && !hold {
             match write_frame(&w, &mut last_frame, &mut last_time, &mut frames) {
                 Ok(()) => {
                     last_write = Some(Instant::now());
@@ -982,6 +1081,7 @@ pub(crate) fn record(
             all_black: false,
             audio: false,
             low_disk: false,
+            window_closed: false,
             cancelled: true,
         });
     }
@@ -1034,6 +1134,7 @@ pub(crate) fn record(
         all_black: false,
         audio: audio_rate.is_some(),
         low_disk,
+        window_closed,
         cancelled: false,
     })
 }
@@ -1289,6 +1390,7 @@ mod tests {
                 software_only: software,
                 cursor: false,
                 system_audio: false,
+                window: None,
                 path: path.clone(),
             })
             .unwrap();
@@ -1372,6 +1474,78 @@ mod tests {
         d
     }
 
+    /// Follows the test window of `colors_survive` (shown by hand) while it moves and
+    /// resizes, and stops when it closes (VID-005).
+    #[test]
+    #[ignore]
+    fn follows_a_window() {
+        use windows::core::w;
+        use windows::Win32::UI::WindowsAndMessaging::*;
+        unsafe {
+            let _ = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        let hwnd = unsafe { FindWindowW(None, w!("XS color test")) }.expect("the test window");
+        let r = window_bounds(hwnd.0 as isize).unwrap();
+        let dir = tempfile_dir();
+        let path = dir.join("window.mp4");
+        let rec = Recorder::start(Options {
+            area: Area {
+                x: r.left,
+                y: r.top,
+                width: (r.right - r.left) as u32,
+                height: (r.bottom - r.top) as u32,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: false,
+            window: Some(hwnd.0 as isize),
+            path: path.clone(),
+        })
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(500));
+        unsafe {
+            let _ = SetWindowPos(
+                hwnd,
+                None,
+                r.left + 300,
+                r.top + 120,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOZORDER,
+            );
+        }
+        std::thread::sleep(Duration::from_millis(500));
+        unsafe {
+            let _ = SetWindowPos(hwnd, None, 0, 0, 500, 500, SWP_NOMOVE | SWP_NOZORDER);
+        }
+        std::thread::sleep(Duration::from_millis(500));
+        unsafe {
+            let _ = PostMessageW(
+                Some(hwnd),
+                WM_CLOSE,
+                windows::Win32::Foundation::WPARAM(0),
+                windows::Win32::Foundation::LPARAM(0),
+            );
+        }
+        std::thread::sleep(Duration::from_millis(800));
+        assert!(rec.finished(), "it stopped when the window closed");
+        let s = rec.stop().unwrap();
+        println!("{s:?}");
+        assert!(s.window_closed);
+        assert!(s.frames >= 2);
+        let (w, h, px) = first_frame(&path).unwrap();
+        let i = (((h / 2) * w + w / 4) * 4) as usize;
+        println!(
+            "first frame {w}x{h}: left middle {:?}",
+            [px[i + 2], px[i + 1], px[i]]
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// With the system's sound on, the video has a stereo AAC track as long as the
     /// picture (silence when nothing plays).
     #[test]
@@ -1394,6 +1568,7 @@ mod tests {
             software_only: false,
             cursor: false,
             system_audio: true,
+            window: None,
             path: path.clone(),
         })
         .unwrap();
@@ -1450,6 +1625,7 @@ mod tests {
             software_only: false,
             cursor: true,
             system_audio: false,
+            window: None,
             path: path.clone(),
         })
         .unwrap();
@@ -1501,6 +1677,7 @@ mod tests {
                 software_only: software,
                 cursor: false,
                 system_audio: false,
+                window: None,
                 path: path.clone(),
             })
             .unwrap();

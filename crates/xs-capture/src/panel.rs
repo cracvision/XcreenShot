@@ -287,7 +287,8 @@ impl Default for ImageTab {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct VideoTab {
-    /// `region` (chosen on screen) or `fullscreen` (the monitor under the pointer).
+    /// `region` (chosen on screen), `window` (followed, VID-005) or `fullscreen` (the
+    /// monitor under the pointer).
     pub selection: String,
     /// Seconds after which it stops by itself; 0: no limit (VID-015).
     pub limit: u32,
@@ -358,7 +359,7 @@ impl PanelSettings {
         one_of(
             "video.selection",
             &self.video.selection,
-            &["region", "fullscreen"],
+            &["region", "window", "fullscreen"],
         )?;
         if self.video.limit > 4 * 3600 {
             return Err("video.limit: at most 4 hours".into());
@@ -680,7 +681,7 @@ mod tests {
         assert_eq!(command, "record.video");
         assert_eq!(params["selection"], "fullscreen");
         assert_eq!(params["limit"], 600);
-        assert!(s.patched(&json!({"video": {"selection": "window"}})).is_err());
+        assert!(s.patched(&json!({"video": {"selection": "camera"}})).is_err());
     }
 
     /// CAP-006, CAP-001: Capture follows the tab's settings.

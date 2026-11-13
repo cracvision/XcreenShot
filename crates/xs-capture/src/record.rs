@@ -33,6 +33,8 @@ struct Ready {
     source: Value,
     /// Stops by itself after this long (the Video tab's timer, VID-015).
     limit: Option<Duration>,
+    /// The window followed (VID-005).
+    window: Option<u32>,
 }
 
 #[derive(Default)]
@@ -91,6 +93,23 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .and_then(Value::as_f64)
         .filter(|s| *s > 0.0)
         .map(Duration::from_secs_f64);
+    if p.get("selection").and_then(Value::as_str) == Some("window") {
+        // A window chosen on screen, followed while it moves (VID-005).
+        let id = crate::interactive::pick_window(core, ctx)?;
+        let (rect, scale, source) = window_area(id, ctx.lang)?;
+        let r = Ready {
+            rect,
+            scale,
+            source,
+            limit,
+            window: Some(id),
+        };
+        *svc.ready.lock().unwrap() = Some(r.clone());
+        let state = ready_state(core, &r);
+        bar(core, Some(state.clone()));
+        tell(core, ctx.source, "record.ready", state.clone());
+        return Ok(state);
+    }
     if p.get("selection").and_then(Value::as_str) == Some("fullscreen") {
         let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": "pointer" }), ctx.lang)?;
         let r = Ready {
@@ -98,6 +117,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             scale,
             source,
             limit,
+            window: None,
         };
         *svc.ready.lock().unwrap() = Some(r.clone());
         let state = ready_state(core, &r);
@@ -117,6 +137,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         scale: monitor.scale as f64,
         source: json!({ "type": "region", "rect": rect }),
         limit,
+        window: None,
     };
     *svc.ready.lock().unwrap() = Some(r.clone());
     let state = ready_state(core, &r);
@@ -231,6 +252,33 @@ fn area(p: &Value, lang: Lang) -> Result<(Rect, f64, Value), CommandError> {
         }
         _ => Err(bad("source: screen or region")),
     }
+}
+
+/// A window's area (VID-005): its place now, its monitor's scale, and the source.
+fn window_area(id: u32, lang: Lang) -> Result<(Rect, f64, Value), CommandError> {
+    let w = xcap::Window::all()
+        .ok()
+        .and_then(|l| l.into_iter().find(|w| w.id().ok() == Some(id)))
+        .ok_or_else(|| {
+            CommandError::new(
+                ErrorCode::NotFound,
+                tr(lang, "errors.window_not_found", &[("title", &id.to_string())]),
+            )
+        })?;
+    let rect = Rect {
+        x: w.x().unwrap_or(0),
+        y: w.y().unwrap_or(0),
+        width: w.width().unwrap_or(0),
+        height: w.height().unwrap_or(0),
+    };
+    let (monitor, scale) = monitor_of(rect).ok_or_else(|| crate::failed(lang, "no monitor"))?;
+    let rect = rect.intersect(&monitor).unwrap_or(rect);
+    let title = w.title().unwrap_or_default();
+    Ok((
+        rect,
+        scale,
+        json!({ "type": "window", "id": id, "title": title, "rect": rect }),
+    ))
 }
 
 /// Where the video goes: the path asked for, or the library's month folder.
@@ -350,9 +398,12 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         }
     }
     let ready_limit = ready.as_ref().and_then(|r| r.limit);
-    let (rect, scale, source) = match ready {
-        Some(r) => (r.rect, r.scale, r.source),
-        None => area(p, lang)?,
+    let asked_window = p.get("window").and_then(Value::as_u64).map(|w| w as u32);
+    let window = ready.as_ref().and_then(|r| r.window).or(asked_window);
+    let (rect, scale, source) = match (ready, asked_window) {
+        (Some(r), _) => (r.rect, r.scale, r.source),
+        (None, Some(id)) => window_area(id, lang)?,
+        (None, None) => area(p, lang)?,
     };
     let mut current = svc.current.lock().unwrap();
     if current.is_some() {
@@ -410,6 +461,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .get("systemAudio")
             .and_then(Value::as_bool)
             .unwrap_or_else(|| core.settings.get_bool("video.systemAudio")),
+        window: window.map(|w| w as isize),
         path: path.clone(),
     })
     .map_err(|e| {
@@ -522,6 +574,10 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     });
     let mut value = value;
     let mut warnings = Vec::new();
+    if result.window_closed {
+        // The window it followed closed (VID-005).
+        warnings.push(tr(lang, "notify.recording_window_closed", &[]));
+    }
     if result.low_disk {
         // It stopped by itself: less than 1 GB was left (VID-023).
         warnings.push(tr(lang, "notify.recording_low_disk", &[]));

@@ -192,6 +192,7 @@ export function VideoOptions({
           }
         >
           <option value="region">{t("ui.panel.video_selection_region")}</option>
+          <option value="window">{t("ui.panel.video_selection_window")}</option>
           <option value="fullscreen">{t("ui.panel.video_selection_fullscreen")}</option>
         </select>
       </label>

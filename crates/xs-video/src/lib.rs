@@ -173,6 +173,9 @@ pub struct Options {
     pub cursor: bool,
     /// What the computer plays (VID-040).
     pub system_audio: bool,
+    /// A window to follow (its handle): the area moves and resizes with it
+    /// (VID-005, Window area mode).
+    pub window: Option<isize>,
     pub path: PathBuf,
 }
 
@@ -206,6 +209,8 @@ pub struct Summary {
     pub audio: bool,
     /// It stopped by itself because the disk was almost full (VID-023).
     pub low_disk: bool,
+    /// It stopped because the window it followed closed (VID-005).
+    pub window_closed: bool,
     pub cancelled: bool,
 }
 

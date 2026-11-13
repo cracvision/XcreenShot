@@ -1790,7 +1790,8 @@
     "recording_saved_title": "Video saved",
     "recording_saved_body": "{{seconds}} s recorded, in the library.",
     "recording_no_audio": "No system sound was recorded: no sound output was on.",
-    "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk."
+    "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk.",
+    "recording_window_closed": "The window closed: the recording stopped and was saved."
   },
   "source": {
     "ui": "the interface",
@@ -2379,7 +2380,8 @@
       "video_limit": "Timer",
       "video_limit_none": "No limit",
       "video_limit_min": "{{n}} min",
-      "video_quality_hint": "Quality and size: Preferences > Video."
+      "video_quality_hint": "Quality and size: Preferences > Video.",
+      "video_selection_window": "Window"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
