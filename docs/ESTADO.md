@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-13 (madrugada), con el aspecto **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos), **M3 terminado en Windows** salvo HDR (CAP-022), la cámara (CAP-038) y unos flecos, y **M4 empezado**: se puede grabar video (entrega M4.1 de [`docs/plan-M4.md`](plan-M4.md)). **Instalador nuevo: `00a0b45`** (2026-11-13, 4:19). Siguiente: la caminata de Carlos con ese instalador (ver "Siguiente paso") y que apruebe o cambie el plan de M4.
+**Última actualización:** 2026-11-13 (madrugada), con el aspecto **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos), **M3 terminado en Windows** salvo HDR (CAP-022), la cámara (CAP-038) y unos flecos, y **M4 empezado**: se puede grabar video (entrega M4.1 de [`docs/plan-M4.md`](plan-M4.md)). **Instalador nuevo: `00a0b45`** (2026-11-13, 4:19). Siguiente: la caminata de Carlos con ese instalador, con la guía corta [`docs/caminata-2026-11-13.md`](caminata-2026-11-13.md), y que apruebe o cambie el plan de M4.
 
 **Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
