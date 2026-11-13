@@ -19,6 +19,7 @@ pub const HELP: &str = "help";
 pub const WELCOME: &str = "welcome";
 pub const WEBPAGE: &str = "webpage";
 pub const WORKING: &str = "working";
+pub const ASK_TEXT: &str = "ask-text";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -292,6 +293,34 @@ pub fn open_webpage_prompt(app: &AppHandle) -> tauri::Result<()> {
     let w = WebviewWindowBuilder::new(app, WEBPAGE, WebviewUrl::App("index.html".into()))
         .title(title)
         .inner_size(520.0, 190.0)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .always_on_top(true)
+        .center()
+        .theme(theme(app))
+        .build()?;
+    focus(&w);
+    Ok(())
+}
+
+/// The box that asks for the text of Capture details when a capture ends (CAP-051):
+/// centered and on top; `open: false` closes it.
+pub fn ask_text(app: &AppHandle, open: bool) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window(ASK_TEXT) {
+        if open {
+            focus(&w);
+            return Ok(());
+        }
+        return w.destroy();
+    }
+    if !open {
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.ask_text.title", &[]);
+    let w = WebviewWindowBuilder::new(app, ASK_TEXT, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(440.0, 176.0)
         .resizable(false)
         .maximizable(false)
         .minimizable(false)

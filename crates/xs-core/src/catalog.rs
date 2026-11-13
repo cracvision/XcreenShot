@@ -827,6 +827,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "lazy": {"type": "boolean", "default": true, "description": "Scroll to the bottom first so content that loads on scrolling appears"}
             })))
             .result(capture_result()),
+        B::new("capture.details_text", &["CAP-051"])
+            .mutates()
+            .params(params(
+                json!({"text": {"type": "string", "default": "", "description": "Empty: no text (Esc)"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"accepted": {"type": "boolean"}}})),
         B::new("capture.send_pending", &["CAP-052"])
             .mutates()
             .params(params(

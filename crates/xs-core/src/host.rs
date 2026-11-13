@@ -234,6 +234,15 @@ pub trait Host: Send + Sync {
     fn webpage_prompt(&self) -> Result<(), CommandError> {
         Err(unsupported())
     }
+    /// Shows or closes the box that asks for the text of Capture details (CAP-051); it
+    /// answers with `capture.details_text`.
+    fn ask_text_window(&self, open: bool) -> Result<(), CommandError> {
+        if open {
+            Err(unsupported())
+        } else {
+            Ok(())
+        }
+    }
     /// Shows or closes the window picker (CAP-030): over the monitor under the pointer,
     /// never part of a capture.
     fn picker_window(&self, show: bool) {}

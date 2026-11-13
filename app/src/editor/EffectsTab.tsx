@@ -6,175 +6,14 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
-import { ColorPicker } from "./ColorPicker";
-import { NumberField, SelectField } from "./Fields";
 import { selectionAction } from "./pixelSelection";
 import { useEditor } from "./state";
 import { Dialog } from "../components/Dialog";
 import { useContextMenu } from "./menus";
 import { sampleUrl } from "./themesUi";
 import { DEFAULTS, TYPES } from "./effects";
-
-type Effect = Record<string, unknown> & { type: string; enabled?: boolean };
-
-type Field =
-  | { k: string; kind: "number"; min: number; max: number; step?: number; unit?: string }
-  | { k: string; kind: "select"; options: string[] }
-  | { k: string; kind: "color"; transparent?: boolean }
-  | { k: string; kind: "check" }
-  | { k: string; kind: "text" }
-  /** A filter's switch and its value (EDT-062). */
-  | { k: string; kind: "filter"; min?: number; max?: number; unit?: string };
-
-const SIDES: Field[] = ["top", "bottom", "left", "right"].map((s) => ({
-  k: `sides.${s}`,
-  kind: "check",
-}));
-
-/** The options of each effect. Dotted keys are inside an object (`sides.top`). */
-const FIELDS: Record<string, Field[]> = {
-  border: [
-    { k: "color", kind: "color" },
-    { k: "width", kind: "number", min: 1, max: 100, unit: "px" },
-    { k: "position", kind: "select", options: ["outside", "inside"] },
-  ],
-  edges: [
-    {
-      k: "style",
-      kind: "select",
-      options: ["torn", "wavy", "sawtooth", "bevel", "fade", "scallop"],
-    },
-    { k: "size", kind: "number", min: 2, max: 80, unit: "px" },
-    ...SIDES,
-    { k: "randomness", kind: "number", min: 0, max: 100, unit: "%" },
-    { k: "shadow", kind: "check" },
-    { k: "shadowColor", kind: "color" },
-    { k: "shadowAngle", kind: "number", min: 0, max: 359, unit: "°" },
-  ],
-  shadow: [
-    { k: "angle", kind: "number", min: 0, max: 359, unit: "°" },
-    { k: "distance", kind: "number", min: 0, max: 100, unit: "px" },
-    { k: "blur", kind: "number", min: 0, max: 100, unit: "px" },
-    { k: "opacity", kind: "number", min: 0, max: 100, unit: "%" },
-    { k: "color", kind: "color" },
-    { k: "background", kind: "select", options: ["transparent", "canvas"] },
-  ],
-  perspective: [
-    { k: "style", kind: "select", options: ["perspective", "skew"] },
-    { k: "horizontal", kind: "number", min: -45, max: 45, unit: "°" },
-    { k: "vertical", kind: "number", min: -45, max: 45, unit: "°" },
-    { k: "depth", kind: "number", min: 0, max: 100, unit: "%" },
-  ],
-  pageCurl: [
-    { k: "corner", kind: "select", options: ["bottomRight", "bottomLeft", "topRight", "topLeft"] },
-    { k: "size", kind: "number", min: 5, max: 50, unit: "%" },
-    { k: "color", kind: "color" },
-  ],
-  reflection: [
-    { k: "size", kind: "number", min: 10, max: 100, unit: "%" },
-    { k: "opacity", kind: "number", min: 0, max: 100, unit: "%" },
-    { k: "gap", kind: "number", min: 0, max: 50, unit: "px" },
-  ],
-  fade: [
-    { k: "size", kind: "number", min: 2, max: 200, unit: "px" },
-    { k: "intensity", kind: "number", min: 0, max: 100, unit: "%" },
-    ...SIDES,
-  ],
-  filters: [
-    { k: "soften", kind: "filter", min: 1, max: 10 },
-    { k: "sharpen", kind: "filter", min: 1, max: 10 },
-    { k: "grayscale", kind: "filter" },
-    { k: "sepia", kind: "filter", min: 0, max: 100, unit: "%" },
-    { k: "mono", kind: "filter", min: 0, max: 255 },
-    { k: "invert", kind: "filter" },
-    { k: "opacity", kind: "filter", min: 0, max: 100, unit: "%" },
-    { k: "baseOnly", kind: "check" },
-  ],
-  color: [
-    { k: "brightness", kind: "number", min: -100, max: 100 },
-    { k: "contrast", kind: "number", min: -100, max: 100 },
-    { k: "hue", kind: "number", min: -180, max: 180, unit: "°" },
-    { k: "saturation", kind: "number", min: -100, max: 100 },
-    { k: "gamma", kind: "number", min: 0.1, max: 5, step: 0.1 },
-  ],
-  replace: [
-    { k: "mode", kind: "select", options: ["replace", "swap"] },
-    { k: "a", kind: "color", transparent: true },
-    { k: "b", kind: "color", transparent: true },
-    { k: "tolerance", kind: "number", min: 0, max: 100, unit: "%" },
-  ],
-  watermark: [
-    { k: "source", kind: "select", options: ["text", "image"] },
-    { k: "text", kind: "text" },
-    { k: "size", kind: "number", min: 6, max: 400, unit: "pt" },
-    { k: "color", kind: "color" },
-    {
-      k: "position",
-      kind: "select",
-      options: [
-        "topLeft",
-        "top",
-        "topRight",
-        "left",
-        "center",
-        "right",
-        "bottomLeft",
-        "bottom",
-        "bottomRight",
-        "tile",
-      ],
-    },
-    { k: "margin", kind: "number", min: 0, max: 200, unit: "px" },
-    { k: "scale", kind: "number", min: 5, max: 200, unit: "%" },
-    { k: "opacity", kind: "number", min: 0, max: 100, unit: "%" },
-    { k: "rotation", kind: "number", min: -90, max: 90, unit: "°" },
-    { k: "layer", kind: "select", options: ["above", "below"] },
-  ],
-  details: [
-    ...["app", "url", "title", "date", "os", "user", "computer"].map((f): Field => ({
-      k: `fields.${f}`,
-      kind: "check",
-    })),
-    { k: "customText", kind: "text" },
-    { k: "dateFormat", kind: "select", options: ["system", "iso", "custom"] },
-    { k: "dateCustom", kind: "text" },
-    { k: "placement", kind: "select", options: ["band", "overlay"] },
-    { k: "side", kind: "select", options: ["bottom", "top"] },
-    { k: "corner", kind: "select", options: ["bottomRight", "bottomLeft", "topRight", "topLeft"] },
-    { k: "size", kind: "number", min: 6, max: 72, unit: "pt" },
-    { k: "color", kind: "color" },
-    { k: "background", kind: "color", transparent: true },
-    { k: "align", kind: "select", options: ["left", "center", "right"] },
-    { k: "padding", kind: "number", min: 0, max: 100, unit: "px" },
-  ],
-  trim: [{ k: "tolerance", kind: "number", min: 0, max: 100, unit: "%" }],
-  corners: [
-    { k: "shape", kind: "select", options: ["radius", "circle"] },
-    { k: "radius", kind: "number", min: 0, max: 2000, unit: "px" },
-  ],
-  scale: [
-    { k: "mode", kind: "select", options: ["percent", "longest", "width", "height"] },
-    { k: "value", kind: "number", min: 1, max: 20000 },
-  ],
-  rotate: [{ k: "angle", kind: "select", options: ["90", "180", "270"] }],
-};
-
-/** A value inside an effect, by a dotted key. */
-function read(e: Effect | undefined, key: string): unknown {
-  return key
-    .split(".")
-    .reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], e);
-}
-
-/** The top-level change that sets a dotted key to `value`. */
-function change(e: Effect | undefined, key: string, value: unknown): Record<string, unknown> {
-  const [head, ...rest] = key.split(".");
-  if (!head) return {};
-  if (rest.length === 0) return { [head]: value };
-  const inner = { ...((e?.[head] as Record<string, unknown> | undefined) ?? {}) };
-  inner[rest.join(".")] = value;
-  return { [head]: inner };
-}
+import { EffectFields } from "./EffectFields";
+import { read, type Effect } from "./effectOptions";
 
 interface SavedEffect {
   id: string;
@@ -357,8 +196,6 @@ export function EffectsTab() {
       useEditor.getState().showError(e),
     );
   const name = (k: string) => t(`ui.editor.fx.${k}.name`);
-  const label = (type: string, key: string) =>
-    t(`ui.editor.fx.${type}.${key.replaceAll(".", "_")}`);
   const pixels = doc.pixelSelection;
 
   const toggle = (type: string) => {
@@ -377,97 +214,6 @@ export function EffectsTab() {
       index: -1,
     })),
   ];
-
-  const fieldNode = (type: string, i: number, f: Field) => {
-    const e = stack[i];
-    const v = read(e, f.k);
-    const set = (value: unknown) => update(i, change(e, f.k, value));
-    const lbl = label(type, f.k);
-    switch (f.kind) {
-      case "number":
-        return (
-          <NumberField
-            key={f.k}
-            label={lbl}
-            value={typeof v === "number" ? v : Number(v ?? f.min)}
-            min={f.min}
-            max={f.max}
-            step={f.step ?? 1}
-            unit={f.unit ?? ""}
-            onCommit={set}
-          />
-        );
-      case "select":
-        return (
-          <SelectField
-            key={f.k}
-            label={lbl}
-            value={String(v ?? f.options[0])}
-            options={f.options.map((o) => ({ value: o, label: t(`ui.editor.fx.opt.${o}`) }))}
-            onCommit={(o) => set(type === "rotate" ? Number(o) : o)}
-          />
-        );
-      case "color":
-        return (
-          <ColorPicker
-            key={f.k}
-            label={lbl}
-            value={(v as string | null | undefined) ?? (f.transparent ? null : "#000000")}
-            allowTransparent={f.transparent ?? false}
-            onCommit={set}
-          />
-        );
-      case "check":
-        return (
-          <label key={f.k} className="panel-check">
-            <input type="checkbox" checked={v === true} onChange={(ev) => set(ev.target.checked)} />
-            {lbl}
-          </label>
-        );
-      case "text":
-        return (
-          <label key={f.k} className="prop-field">
-            <span>{lbl}</span>
-            <input
-              type="text"
-              defaultValue={String(v ?? "")}
-              onBlur={(ev) => ev.target.value !== String(v ?? "") && set(ev.target.value)}
-              onKeyDown={(ev) => ev.key === "Enter" && (ev.target as HTMLInputElement).blur()}
-            />
-          </label>
-        );
-      case "filter": {
-        const on =
-          v === true ||
-          (typeof v === "object" && v !== null && (v as { on?: boolean }).on === true);
-        const value =
-          typeof v === "object" && v !== null ? (v as { value?: number }).value : undefined;
-        return (
-          <div key={f.k} className="fx-filter">
-            <label className="panel-check">
-              <input
-                type="checkbox"
-                checked={on}
-                onChange={(ev) => set({ on: ev.target.checked, value: value ?? f.max ?? 0 })}
-              />
-              {lbl}
-            </label>
-            {on && f.min !== undefined && f.max !== undefined && (
-              <NumberField
-                label={`${lbl} · ${t("ui.editor.fx.value")}`}
-                value={value ?? f.max}
-                min={f.min}
-                max={f.max}
-                step={1}
-                unit={f.unit ?? ""}
-                onCommit={(n) => set({ on: true, value: n })}
-              />
-            )}
-          </div>
-        );
-      }
-    }
-  };
 
   const onDrop = (to: number) => (ev: DragEvent) => {
     ev.preventDefault();
@@ -590,7 +336,10 @@ export function EffectsTab() {
                   {type === "details" && (
                     <p className="muted hint">{t("ui.editor.fx.details.notice")}</p>
                   )}
-                  {(FIELDS[type] ?? []).map((f) => fieldNode(type, index, f))}
+                  <EffectFields
+                    effect={stack[index] as Effect}
+                    onChange={(c) => update(index, c)}
+                  />
                   <button
                     type="button"
                     className="btn small"

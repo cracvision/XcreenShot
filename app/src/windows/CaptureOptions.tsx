@@ -14,6 +14,10 @@ import {
   type ScheduleProps,
 } from "../lib/commands";
 import { Menu, type MenuItem } from "../components/Menu";
+import { EffectFields } from "../editor/EffectFields";
+import { dropIndex } from "./presetsState";
+import { FIELDS } from "../editor/effectOptions";
+import { DEFAULTS as FX_DEFAULTS } from "../editor/effects";
 import { useSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
 
@@ -1195,6 +1199,21 @@ function EffectsOptions({
       .catch(() => setSaved([]));
   }, []);
   const name = (e: Effect) => t(`ui.editor.fx.${e.type}.name`);
+  // The effect whose options are open (CAP-051).
+  const [open_, setOpen] = useState<number | null>(null);
+  // Dragging an effect to another place (CAP-051).
+  const [drag, setDrag] = useState<{ from: number; over: number; after: boolean } | null>(null);
+  const drop = () => {
+    if (!drag) return;
+    const to = dropIndex(drag.from, drag.over, drag.after);
+    setDrag(null);
+    if (to === drag.from) return;
+    const next = [...value];
+    const [moving] = next.splice(drag.from, 1);
+    if (moving) next.splice(to, 0, moving);
+    setOpen(null);
+    onChange(next);
+  };
   const move = (i: number) => {
     if (i <= 0) return;
     const next = [...value];
@@ -1205,7 +1224,7 @@ function EffectsOptions({
     ...CAPTURE_EFFECTS.map((type) => ({
       id: type,
       label: t(`ui.editor.fx.${type}.name`),
-      onSelect: () => onChange([...value, { type }]),
+      onSelect: () => onChange([...value, { type, ...(FX_DEFAULTS[type] ?? {}) }]),
     })),
     ...(saved.length
       ? [
@@ -1231,8 +1250,50 @@ function EffectsOptions({
       ) : (
         <ol className="panel-effects">
           {value.map((e, i) => (
-            <li key={`${i}-${e.type}`}>
+            <li
+              key={`${i}-${e.type}`}
+              className={
+                drag && drag.over === i && drag.from !== i
+                  ? drag.after
+                    ? "drop-after"
+                    : "drop-before"
+                  : undefined
+              }
+              draggable
+              onDragStart={(ev) => {
+                ev.dataTransfer.effectAllowed = "move";
+                ev.dataTransfer.setData("text/plain", e.type);
+                setDrag({ from: i, over: i, after: false });
+              }}
+              onDragOver={(ev) => {
+                if (!drag) return;
+                ev.preventDefault();
+                const box = ev.currentTarget.getBoundingClientRect();
+                const after = ev.clientY > box.top + Math.min(box.height, 36) / 2;
+                if (drag.over !== i || drag.after !== after) setDrag({ ...drag, over: i, after });
+              }}
+              onDrop={(ev) => {
+                ev.preventDefault();
+                drop();
+              }}
+              onDragEnd={() => setDrag(null)}
+            >
+              <span className="preset-grip" aria-hidden="true">
+                ⋮⋮
+              </span>
               <span>{name(e)}</span>
+              {(FIELDS[e.type] ?? []).length > 0 && (
+                <button
+                  type="button"
+                  className="btn icon small"
+                  aria-expanded={open_ === i}
+                  aria-label={t("ui.panel.effects_options", { name: name(e) })}
+                  title={t("ui.panel.effects_options", { name: name(e) })}
+                  onClick={() => setOpen(open_ === i ? null : i)}
+                >
+                  ⚙
+                </button>
+              )}
               <button
                 type="button"
                 className="btn icon small"
@@ -1252,6 +1313,15 @@ function EffectsOptions({
               >
                 ×
               </button>
+              {open_ === i && (
+                <div className="panel-fx-options">
+                  <EffectFields
+                    capture
+                    effect={e}
+                    onChange={(c) => onChange(value.map((x, k) => (k === i ? { ...x, ...c } : x)))}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ol>

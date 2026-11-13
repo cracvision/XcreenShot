@@ -858,6 +858,10 @@
     "capture_pending_shares": {
       "title": "Captures waiting to be sent",
       "description": "The captures opened in the editor that wait to be sent to their destinations."
+    },
+    "capture_details_text": {
+      "title": "Text for the capture details",
+      "description": "Answers the box that asks for the text of Capture details when a capture ends (empty: no text)."
     }
   },
   "settings": {
@@ -1331,7 +1335,8 @@
     "webpage_unreachable": "{{url}} could not be opened: check the address and the connection. No capture was made.",
     "webpage_failed": "{{url}} could not be captured ({{reason}}).",
     "webpage_series_url": "Capture the page once first (Selection = Web page, Capture): the series uses that address.",
-    "nothing_pending": "This document has nothing waiting to be sent."
+    "nothing_pending": "This document has nothing waiting to be sent.",
+    "nothing_asked": "No capture is asking for text."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2264,7 +2269,8 @@
       "scroll_fixed": "Detect fixed parts (headers, footers, bars)",
       "file_ask_exists": "Ask",
       "file_ask": "Ask for the name and folder at each capture",
-      "file_metadata": "Include the capture details in the file (PNG)"
+      "file_metadata": "Include the capture details in the file (PNG)",
+      "effects_options": "Options of {{name}}"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -2882,7 +2888,8 @@
           "background": "Background",
           "align": "Alignment",
           "padding": "Padding",
-          "notice": "These details become pixels of the image you share."
+          "notice": "These details become pixels of the image you share.",
+          "askText": "Ask for text when capturing"
         },
         "trim": {
           "name": "Trim borders",
@@ -3929,6 +3936,13 @@
       "cancel": "Cancel",
       "loading": "Loading {{url}}…",
       "private": "Loaded privately: without your browser’s sessions or cookies."
+    },
+    "ask_text": {
+      "title": "Capture details",
+      "label": "Text for this capture",
+      "hint": "It appears with the capture’s details. Esc: no text.",
+      "add": "Add",
+      "skip": "No text"
     }
   },
   "history": {

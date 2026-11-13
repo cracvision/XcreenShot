@@ -254,6 +254,15 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 16: opciones de los efectos al capturar)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-051 | Pedir texto al capturar, ¿y el texto propio que ya tenía el efecto? | Lo escrito lo sustituye en esa captura (Esc lo deja vacío). La opción no llega al documento: en el editor el efecto queda con el texto escrito | Provisional |
+| CAP-051 | ¿Preguntan las series (Intervalo) y las programadas? | No: puede no haber nadie delante. Usan el texto propio del efecto tal como está | Provisional |
+| CAP-051 | ¿Cuánto espera el cuadro? | 5 minutos; después la captura sigue sin texto. Cerrar el cuadro es lo mismo que Esc | Provisional |
+| CAP-051 | ¿Dónde están las opciones de cada efecto en el panel? | Bajo su fila, al pulsar su engranaje: las mismas de la pestaña Efectos del editor. Un efecto nuevo entra con sus valores por defecto. Se reordena arrastrando o con la flecha ↑ (para el teclado) | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 15: carpeta de recepción)
 
 | ID | Duda | Propuesta | Estado |

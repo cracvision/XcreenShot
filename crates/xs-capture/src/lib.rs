@@ -7,6 +7,7 @@
 //! on-screen selection arrives in build 2.
 
 pub mod areas;
+pub mod asktext;
 pub mod clipsource;
 pub mod compose;
 pub mod extract;
@@ -634,7 +635,14 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let with_effects = if opts.effects.is_empty() && opts.objects.is_empty() {
         None
     } else {
-        apply_effects(core, &document_id, &opts.objects, &opts.effects)
+        // Capture details may ask for its text now (CAP-051); series and schedules
+        // do not ask.
+        let effects = asktext::fill(
+            core,
+            &opts.effects,
+            opts.series.is_none() && opts.schedule.is_none(),
+        );
+        apply_effects(core, &document_id, &opts.objects, &effects)
     };
     let outgoing = with_effects.as_ref().unwrap_or(outgoing);
 
@@ -1587,6 +1595,11 @@ pub fn extension() -> Extension {
             // The receive folder (CAP-043): watched while one is chosen.
             inbox::install(&core);
         }
+        // The text box of Capture details (CAP-051).
+        let w = weak.clone();
+        reg.handle("capture.details_text", move |ctx, p| {
+            asktext::answer(&*upgrade(&w)?, ctx.lang, &p)
+        });
         // Sending later from the editor (CAP-052).
         let w = weak.clone();
         reg.handle("capture.send_pending", move |ctx, p| {

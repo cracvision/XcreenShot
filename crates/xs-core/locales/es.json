@@ -858,6 +858,10 @@
     "capture_pending_shares": {
       "title": "Capturas pendientes de enviar",
       "description": "Las capturas abiertas en el editor que esperan para enviarse a sus destinos."
+    },
+    "capture_details_text": {
+      "title": "Texto de los detalles de captura",
+      "description": "Responde al cuadro que pide el texto de Detalles de captura al terminar una captura (vacío: sin texto)."
     }
   },
   "settings": {
@@ -1331,7 +1335,8 @@
     "webpage_unreachable": "{{url}} no se pudo abrir: revisa la dirección y la conexión. No se creó ninguna captura.",
     "webpage_failed": "{{url}} no se pudo capturar ({{reason}}).",
     "webpage_series_url": "Captura antes la página una vez (Selección = Página web, Capturar): la serie usa esa dirección.",
-    "nothing_pending": "Este documento no tiene nada pendiente de enviar."
+    "nothing_pending": "Este documento no tiene nada pendiente de enviar.",
+    "nothing_asked": "Ninguna captura está pidiendo texto."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2264,7 +2269,8 @@
       "scroll_fixed": "Detectar elementos fijos (cabeceras, pies, barras)",
       "file_ask_exists": "Preguntar",
       "file_ask": "Preguntar nombre y carpeta en cada captura",
-      "file_metadata": "Incluir los metadatos de captura en el archivo (PNG)"
+      "file_metadata": "Incluir los metadatos de captura en el archivo (PNG)",
+      "effects_options": "Opciones de {{name}}"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -2882,7 +2888,8 @@
           "background": "Fondo",
           "align": "Alineación",
           "padding": "Margen interior",
-          "notice": "Estos datos se convierten en píxeles de la imagen que compartas."
+          "notice": "Estos datos se convierten en píxeles de la imagen que compartas.",
+          "askText": "Pedir texto al capturar"
         },
         "trim": {
           "name": "Recortar bordes",
@@ -3929,6 +3936,13 @@
       "cancel": "Cancelar",
       "loading": "Cargando {{url}}…",
       "private": "Se carga en privado: sin las sesiones ni las cookies de tu navegador."
+    },
+    "ask_text": {
+      "title": "Detalles de captura",
+      "label": "Texto para esta captura",
+      "hint": "Aparece junto a los detalles de la captura. Esc: sin texto.",
+      "add": "Añadir",
+      "skip": "Sin texto"
     }
   },
   "history": {

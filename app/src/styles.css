@@ -1873,13 +1873,48 @@ html.overlay-root.overlay-native #root {
 }
 
 .panel-effects li {
+  position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.panel-effects li > span {
+.panel-effects li > span:not(.preset-grip) {
   flex: 1;
+}
+
+.panel-effects li:hover > .preset-grip {
+  opacity: 1;
+}
+
+/* Where a dragged effect falls (CAP-051). */
+.panel-effects li.drop-before::before,
+.panel-effects li.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--brand);
+}
+
+.panel-effects li.drop-before::before {
+  top: -3px;
+}
+
+.panel-effects li.drop-after::after {
+  bottom: -3px;
+}
+
+/* An effect's options in the panel (CAP-051), under its row. */
+.panel-fx-options {
+  flex-basis: 100%;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  border-left: 2px solid var(--line);
 }
 
 .panel-path {
