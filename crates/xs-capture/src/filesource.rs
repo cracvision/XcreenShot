@@ -23,6 +23,8 @@ pub enum Kind {
     Image,
     Pdf,
     Document,
+    /// An Internet shortcut (`.url`): its web page (CAP-037).
+    Shortcut,
     Other,
 }
 
@@ -34,6 +36,7 @@ pub fn kind_of(path: &Path) -> Kind {
     match ext.as_str() {
         "pdf" => Kind::Pdf,
         "xshot" => Kind::Document,
+        "url" => Kind::Shortcut,
         e if IMAGE_FILES.contains(&e) => Kind::Image,
         _ => Kind::Other,
     }
@@ -117,6 +120,21 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
                     dialogs.push(id);
                 }
             }
+            Kind::Shortcut => {
+                // A link dropped as an Internet shortcut: its page (CAP-037).
+                let url = std::fs::read_to_string(path)
+                    .ok()
+                    .and_then(|text| shortcut_url(&text));
+                match url {
+                    Some(url) => match crate::webcap::run(core, ctx, opts, &json!({ "url": url })) {
+                        Ok(r) => documents.push(r["documentId"].clone()),
+                        Err(e) => skipped.push(json!({ "path": path, "reason": e.message })),
+                    },
+                    None => {
+                        skipped.push(json!({ "path": path, "reason": tr(lang, "errors.webpage_url", &[]) }))
+                    }
+                }
+            }
             Kind::Document => {
                 let opened = core.call(
                     Source::Ui,
@@ -188,9 +206,13 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
         );
     }
     if documents.is_empty() && dialogs.is_empty() && !skipped.is_empty() && paths.len() == skipped.len() {
+        // One file: its own reason; several: that none could be read.
+        let message = match skipped.as_slice() {
+            [one] => one["reason"].as_str().unwrap_or_default().to_string(),
+            _ => tr(lang, "errors.file_unreadable", &[]),
+        };
         return Err(
-            CommandError::new(ErrorCode::InvalidParams, tr(lang, "errors.file_unreadable", &[]))
-                .with_details(json!({ "skipped": skipped })),
+            CommandError::new(ErrorCode::InvalidParams, message).with_details(json!({ "skipped": skipped }))
         );
     }
     Ok(json!({
@@ -202,9 +224,35 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
     }))
 }
 
+/// The address of an Internet shortcut (`[InternetShortcut]` … `URL=…`).
+pub fn shortcut_url(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find_map(|l| l.strip_prefix("URL=").or_else(|| l.strip_prefix("url=")))
+        .map(|u| u.trim().to_string())
+        .filter(|u| u.starts_with("http://") || u.starts_with("https://"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn internet_shortcuts() {
+        let text = "[InternetShortcut]
+URL=https://example.com/page
+IDList=
+";
+        assert_eq!(shortcut_url(text).as_deref(), Some("https://example.com/page"));
+        assert_eq!(
+            shortcut_url(
+                "[InternetShortcut]
+URL=file:///C:/x"
+            ),
+            None
+        );
+        assert_eq!(kind_of(Path::new("site.url")), Kind::Shortcut);
+    }
 
     #[test]
     fn kinds() {

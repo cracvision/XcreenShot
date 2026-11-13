@@ -24,6 +24,7 @@ import { useApp } from "../store";
 import { ImageOptions, UniversalOptions } from "./CaptureOptions";
 import { askImport, exportPresets, restoreBuiltins } from "./presetActions";
 import { PresetsSection } from "./PresetsSection";
+import { useFileDrop } from "./fileDrop";
 
 type Tab = PanelSettings["tab"];
 const TABS: Tab[] = ["universal", "image"];
@@ -43,6 +44,8 @@ export function CapturePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  // Files dropped on the panel (CAP-005).
+  const dropping = useFileDrop(setStatus);
   // The panel's interval series (CAP-049) and schedule (CAP-050), if any.
   const [series, setSeries] = useState<IntervalSeries | null>(null);
   const [scheduled, setScheduled] = useState<ScheduledCapture | null>(null);
@@ -138,7 +141,7 @@ export function CapturePanel() {
           : t("ui.panel.capture");
 
   return (
-    <div className="panel" ref={root}>
+    <div className={`panel${dropping ? " dropping" : ""}`} ref={root}>
       <div className="panel-top">
         <Tabs value={tab} onChange={(next) => void change({ tab: next })} />
         <button

@@ -7,6 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run, type CommandEvent } from "../lib/commands";
+import { useFileDrop } from "./fileDrop";
 
 type Mode = "tab" | "open" | "list";
 
@@ -35,6 +36,12 @@ export function Launcher() {
       if (r.edge) setEdge(r.edge);
     });
   }, []);
+
+  // Files dropped on the launcher (CAP-005): it opens to show it takes them.
+  const openForDrop = useCallback(() => {
+    if (mode === "tab") go("open");
+  }, [mode, go]);
+  const dropping = useFileDrop(undefined, openForDrop);
 
   const loadPresets = useCallback(() => {
     void run<{ presets: PresetRow[] }>("preset.list").then((r) => {
@@ -114,7 +121,11 @@ export function Launcher() {
   }
 
   return (
-    <div className="launcher-box" onMouseEnter={enter} onMouseLeave={exit}>
+    <div
+      className={`launcher-box${dropping ? " dropping" : ""}`}
+      onMouseEnter={enter}
+      onMouseLeave={exit}
+    >
       <div className="launcher-row">
         <span
           className="launcher-grip"

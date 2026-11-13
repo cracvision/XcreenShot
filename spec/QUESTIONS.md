@@ -254,6 +254,12 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 13: soltar sobre el panel)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-005 / CAP-037 | Soltar una dirección arrastrada desde la barra del navegador | Windows la entrega como texto, no como archivo, y el gestor de soltar de la app solo recibe archivos. Por ahora funcionan los archivos (imágenes, PDF, `.xshot`) y los accesos directos de Internet (`.url`, lo que queda al arrastrar un enlace al escritorio). Recibir el texto pide un gestor de soltar propio para el panel | Abierta |
+
 ## Dudas del equipo de construcción (M3, entrega 12: mano alzada)
 
 | ID | Duda | Propuesta | Estado |
