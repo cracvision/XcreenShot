@@ -109,6 +109,24 @@ pub fn duplicate(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .extension()
             .map(|e| e.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default();
+        // A video: its file, with its cuts when they are not saved yet (VID-066).
+        let video = source
+            .doc
+            .as_ref()
+            .filter(|id| ed.store.with(id, |d| d.is_video()).unwrap_or(false));
+        if let Some(id) = video {
+            let dir = source.path.parent().map(Path::to_path_buf).unwrap_or_default();
+            let target = copy_name(&dir, &name, &ext, &word);
+            let tmp = core.paths.local_dir.join("tmp").join("duplicate");
+            let file = crate::video::current_file(core, id, &tmp).map_err(|e| internal(lang, &name, e))?;
+            std::fs::copy(&file, &target).map_err(|e| internal(lang, &name, e))?;
+            if file != source.path {
+                let _ = std::fs::remove_file(&file);
+            }
+            let tags = lib.find(&source.path).map(|i| i.tags).unwrap_or_default();
+            copies.push((source, target, tags));
+            continue;
+        }
         // The state to copy: the open document's (with its unsaved changes) or the file.
         let open_state = source.doc.as_ref().and_then(|id| {
             ed.store

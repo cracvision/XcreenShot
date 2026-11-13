@@ -5425,6 +5425,22 @@ fn a_video_in_the_editor() {
     assert_eq!(xs_video::audio_info(silent).unwrap(), None);
     assert!(silent.file_name().unwrap().to_string_lossy().contains("(silent)"));
 
+    // VID-066: dragging it out or duplicating it gives the cut video (2 s), not a
+    // picture; the original file is still 3 s until saved.
+    let out = e.outside.path().join("drag");
+    let dragged = files_for_drag(&e.core, std::slice::from_ref(&id), &[], &out).unwrap();
+    assert_eq!(dragged.len(), 1);
+    assert_eq!(dragged[0].extension().unwrap(), "mp4");
+    assert!((xs_video::info(&dragged[0]).unwrap().duration - 2.0).abs() < 0.15);
+    let dup = cli(&e.core, "library.duplicate", json!({"documentIds": [id]}));
+    let dup_path = dup["copies"][0]["path"]
+        .as_str()
+        .or_else(|| dup["path"].as_str())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| panic!("{dup}"));
+    assert!((xs_video::info(&dup_path).unwrap().duration - 2.0).abs() < 0.15);
+    assert!((xs_video::info(&path).unwrap().duration - 3.0).abs() < 0.15);
+
     // Saving writes the cut video to its file: 2 s, no cuts, nothing to undo.
     cli(&e.core, "document.save", json!({"documentId": id}));
     let i = info(&e.core);

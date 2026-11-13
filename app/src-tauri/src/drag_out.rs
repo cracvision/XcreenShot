@@ -42,9 +42,14 @@ fn drag_dir(core: &Core) -> PathBuf {
 /// A small picture of the first file for the pointer, saved next to the files.
 fn drag_image(first: &Path, dir: &Path) -> Option<PathBuf> {
     let bytes = std::fs::read(first).ok()?;
-    let image = xs_image::encode::decode(&bytes).ok()?;
-    let small = xs_image::encode::thumbnail(&image, DRAG_IMAGE);
-    let png = xs_image::encode::png(&small, 96.0, true).ok()?;
+    let png = match xs_image::encode::decode(&bytes) {
+        Ok(image) => {
+            let small = xs_image::encode::thumbnail(&image, DRAG_IMAGE);
+            xs_image::encode::png(&small, 96.0, true).ok()?
+        }
+        // A video: its first frame (VID-066).
+        Err(_) => xs_editor::video::poster_png(first, DRAG_IMAGE)?,
+    };
     std::fs::create_dir_all(dir).ok()?;
     let path = dir.join(".drag-image.png");
     std::fs::write(&path, png).ok()?;

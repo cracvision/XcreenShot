@@ -257,6 +257,11 @@ pub fn files_for_drag(
         Ok(target)
     };
     let from_doc = |id: &str, files: &mut Vec<PathBuf>| -> Result<(), String> {
+        // A video: its file, cut when it has cuts not saved (VID-066).
+        if ed.store.with(id, |d| d.is_video()).unwrap_or(false) {
+            files.push(video::current_file(core, id, out)?);
+            return Ok(());
+        }
         let snap = ed.store.snapshot(id)?;
         let dirty = ed.store.with(id, |d| d.dirty()).unwrap_or(true);
         match &snap.path {
@@ -4500,6 +4505,19 @@ pub fn extension() -> Extension {
         });
         on!("document.copy_all", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
+            // A video: its file, with its cuts, for apps that take files (VID-066).
+            if editor(&core).store.with(&id, |d| d.is_video()).unwrap_or(false) {
+                let dir = core.paths.local_dir.join("clipboard");
+                // Only the last copy is kept there.
+                let _ = std::fs::remove_dir_all(&dir);
+                let copy_failed =
+                    |_| CommandError::new(ErrorCode::Internal, tr(ctx.lang, "errors.copy_failed", &[]));
+                let file = video::current_file(&core, &id, &dir).map_err(copy_failed)?;
+                arboard::Clipboard::new()
+                    .and_then(|mut c| c.set().file_list(&[&file]))
+                    .map_err(|e| copy_failed(e.to_string()))?;
+                return Ok(json!({ "files": [file] }));
+            }
             let snap = editor(&core)
                 .store
                 .snapshot(&id)

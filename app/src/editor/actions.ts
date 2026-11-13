@@ -140,10 +140,14 @@ export async function saveAs(): Promise<void> {
   const { active, doc } = useEditor.getState();
   if (!active || !doc) return;
   try {
-    const path = await save({ defaultPath: doc.name, filters: filters(true) });
+    // A video is saved as MP4, with its cuts (VID-066).
+    const path = await save({
+      defaultPath: doc.name,
+      filters: doc.video ? [{ name: "MP4", extensions: ["mp4"] }] : filters(true),
+    });
     if (!path) return;
     await run("document.save", { documentId: active, path });
-    rememberFormat(path);
+    if (!doc.video) rememberFormat(path);
   } catch (e) {
     fail(e);
   }
@@ -154,6 +158,8 @@ export async function saveAs(): Promise<void> {
  * options, then asks where. */
 export function exportImage(): Promise<void> {
   const { active, doc } = useEditor.getState();
+  // A video exports as MP4 for now (VID-066); GIF arrives with VID-068.
+  if (doc?.video) return saveAs();
   if (active && doc) useExportDialog.setState({ ids: [active] });
   return Promise.resolve();
 }

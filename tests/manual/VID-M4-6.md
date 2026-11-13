@@ -46,5 +46,9 @@ Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../
 13. [ ] Con un corte sin guardar, cierra el video: pregunta si guardar. **Guardar** tarda un poco (vuelve a codificar el video, con su progreso en la barra); después el archivo dura menos.
 14. [ ] Pestaña **Video** del panel > **Abrir en** = Nada: al detener una grabación no se abre ninguna ventana y aparece la notificación; al hacer clic en ella, el video se abre en el editor.
 15. [ ] En la Biblioteca, doble clic en un video: se abre en el editor (ya no en el reproductor de Windows).
+16. [ ] **Copiar todo** con un video y pega en una carpeta del Explorador: aparece el MP4. Con un corte sin guardar, el MP4 pegado ya va cortado.
+17. [ ] Arrastra el video desde la bandeja a una carpeta: se copia el MP4 al momento. **Duplicar** (clic derecho en la bandeja) crea una copia en la biblioteca.
+18. [ ] Menú **Video** de la barra de menús: Reproducir/Pausar, fotogramas, Ir al inicio y al final, **Ir a…**, Cortar selección, Guardar selección, Guardar fotograma, Extraer texto, Copia sin sonido e Información. Con una imagen a la vista, todo el menú está apagado; con un video, el menú **Imagen** está apagado.
+19. [ ] Abre cualquier menú (Archivo, Objeto…): se ve entero, por encima de la barra de herramientas (antes, la barra tapaba sus primeras entradas).
 
-Todavía no: el menú **Video** de la barra de menús, exportar a GIF o a H.264, Copiar todo y arrastrar el video con sus cortes, y Combinar videos.
+Todavía no: exportar a GIF o a H.264 y Combinar videos.

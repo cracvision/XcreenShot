@@ -270,6 +270,35 @@ pub fn save(core: &Arc<Core>, ctx: &Context, id: &str, target: Option<&Path>) ->
     }
 }
 
+/// The file of an open video as it is now (VID-066): its own file without cuts at
+/// once, or, with cuts not saved, a cut copy written into `dir`.
+pub fn current_file(core: &Core, id: &str, dir: &Path) -> Result<PathBuf, String> {
+    let o = open_video(core, Lang::En, &json!({ "documentId": id })).map_err(|e| e.message)?;
+    let cut = editor(core)
+        .store
+        .with(id, |d| !d.document.cuts.is_empty())
+        .unwrap_or(false);
+    if !cut {
+        return Ok(o.path);
+    }
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let ext = "mp4";
+    let target = xs_library::unique(dir, &o.name, ext);
+    write(core, id, "save", &o.path, &target, &o.kept, o.facts.sound)?;
+    Ok(target)
+}
+
+/// A small picture of a video's first frame, as PNG (for dragging it out, TRY-015).
+pub fn poster_png(path: &Path, max: u32) -> Option<Vec<u8>> {
+    let (w, h, mut px) = xs_video::frame_at(path, 0.0).ok()?;
+    for p in px.as_chunks_mut::<4>().0 {
+        p.swap(0, 2);
+    }
+    let image = image::RgbaImage::from_raw(w, h, px)?;
+    let small = xs_image::encode::thumbnail(&image, max);
+    xs_image::encode::png(&small, 96.0, true).ok()
+}
+
 /// `video.save_selection` (VID-060): `start..end` of the video as it is now, as a new
 /// video in the library and the tray; the original does not change.
 pub fn save_selection(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
