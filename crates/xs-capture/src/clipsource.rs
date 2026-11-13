@@ -105,7 +105,8 @@ fn shot(image: RgbaImage) -> Shot {
         mode: "clipboard",
         scale: 1.0,
         monitor: String::new(),
-        app: None,
+        // The app that copied it, when the system says (CAP-039, CAP-056).
+        app: crate::platform::clipboard_app(),
         window_title: None,
         window_id: None,
         pointer: None,

@@ -157,6 +157,22 @@ mod imp {
         };
     }
 
+    /// The process that put the clipboard's content there (CAP-039), if the system
+    /// knows it.
+    pub fn clipboard_owner_pid() -> Option<u32> {
+        use windows_sys::Win32::System::DataExchange::GetClipboardOwner;
+        // SAFETY: plain calls; no owner or a closed window yields nothing.
+        unsafe {
+            let hwnd = GetClipboardOwner();
+            if hwnd.is_null() {
+                return None;
+            }
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            (pid != 0).then_some(pid)
+        }
+    }
+
     pub fn foreground_pid() -> Option<u32> {
         // SAFETY: plain calls; a null window yields pid 0.
         unsafe {
@@ -338,6 +354,11 @@ mod imp {
         None
     }
 
+    pub fn clipboard_owner_pid() -> Option<u32> {
+        // The pasteboard does not say who wrote it.
+        None
+    }
+
     pub fn app_info(_pid: u32, fallback_name: &str) -> AppInfo {
         AppInfo {
             name: fallback_name.to_string(),
@@ -376,6 +397,13 @@ mod imp {
 }
 
 pub use imp::{
-    app_info, cursor_position, foreground_pid, is_app_window, is_cloaked, is_regular_window, os_info,
-    session_locked, show_window, user_and_machine,
+    app_info, clipboard_owner_pid, cursor_position, foreground_pid, is_app_window, is_cloaked,
+    is_regular_window, os_info, session_locked, show_window, user_and_machine,
 };
+
+/// The app that copied what is on the clipboard (CAP-039), if the system says.
+pub fn clipboard_app() -> Option<AppInfo> {
+    clipboard_owner_pid()
+        .map(|pid| app_info(pid, ""))
+        .filter(|a| !a.name.is_empty())
+}
