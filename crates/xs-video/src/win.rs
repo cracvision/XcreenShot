@@ -712,7 +712,7 @@ fn window_bounds(hwnd: isize) -> Result<RECT, bool> {
 }
 
 /// Free bytes on the disk that holds `path` (VID-023).
-fn free_space(path: &std::path::Path) -> Option<u64> {
+pub fn free_space(path: &std::path::Path) -> Option<u64> {
     let dir = path.parent()?;
     let mut free = 0u64;
     // SAFETY: a plain query with an out-parameter.

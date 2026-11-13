@@ -16,12 +16,17 @@ interface RecState {
   cursor?: boolean;
   /** The system's sound, chosen while Ready (VID-040). */
   systemAudio?: boolean;
+  /** The Ready summary (VID-006): frames, codec and minutes that fit (VID-023). */
+  fps?: number;
+  codec?: string;
+  minutesFree?: number | null;
 }
 
 export function RecordBar() {
   const { t } = useTranslation();
   const [state, setState] = useState<RecState>({ status: "ready" });
-  const [asking, setAsking] = useState(false);
+  // Restart or Cancel waiting for a yes, after 10 s recorded (VID-014).
+  const [asking, setAsking] = useState<"cancel" | "restart" | null>(null);
   // When the last state arrived, and now: the time moves on between updates.
   const [since, setSince] = useState(0);
   const [now, setNow] = useState(0);
@@ -54,15 +59,39 @@ export function RecordBar() {
   const recording = state.status === "recording";
   const paused = state.status === "paused";
   const ready = state.status === "ready";
+  // Losing up to 10 s needs no question (VID-014).
+  const drop = (what: "cancel" | "restart") => {
+    if (elapsed > 10) setAsking(what);
+    else act(`record.${what}`);
+  };
+  const fits = (m: number) => (m >= 120 ? `${Math.floor(m / 60)} h` : `${m} min`);
 
   if (asking) {
+    const question = t(
+      asking === "cancel" ? "ui.recbar.cancel_lost" : "ui.recbar.restart_confirm",
+      {
+        time: clock(elapsed),
+      },
+    );
     return (
-      <div className="recbar glass" role="alertdialog" aria-label={t("ui.recbar.cancel_confirm")}>
-        <span className="recbar-ask">{t("ui.recbar.cancel_confirm")}</span>
-        <button type="button" className="btn small danger" onClick={() => act("record.cancel")}>
-          {t("ui.recbar.cancel")}
+      <div
+        className="recbar glass"
+        role="alertdialog"
+        aria-label={question}
+        onKeyDown={(e) => e.key === "Escape" && setAsking(null)}
+      >
+        <span className="recbar-ask">{question}</span>
+        <button
+          type="button"
+          className="btn small danger"
+          onClick={() => {
+            setAsking(null);
+            act(`record.${asking}`);
+          }}
+        >
+          {t(asking === "cancel" ? "ui.recbar.cancel" : "ui.recbar.restart")}
         </button>
-        <button type="button" className="btn small" autoFocus onClick={() => setAsking(false)}>
+        <button type="button" className="btn small" autoFocus onClick={() => setAsking(null)}>
           {t("ui.recbar.keep")}
         </button>
       </div>
@@ -70,7 +99,19 @@ export function RecordBar() {
   }
 
   return (
-    <div className="recbar glass" role="toolbar" aria-label={t("ui.recbar.title")}>
+    <div
+      className="recbar glass"
+      role="toolbar"
+      aria-label={t("ui.recbar.title")}
+      onKeyDown={(e) => {
+        // Esc on the bar: cancels when Ready, asks while recording (VID-014). Esc in
+        // the app being recorded never reaches here.
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        if (ready) act("record.cancel");
+        else if (recording || paused) drop("cancel");
+      }}
+    >
       <span className="recbar-grip" data-tauri-drag-region aria-hidden="true">
         ⋮⋮
       </span>
@@ -85,6 +126,20 @@ export function RecordBar() {
       {state.width && state.height && (
         <span className="recbar-size">
           {t("ui.recbar.size", { width: state.width, height: state.height })}
+        </span>
+      )}
+      {ready && state.fps && (
+        <span
+          className={`recbar-size${state.minutesFree != null && state.minutesFree < 10 ? " low" : ""}`}
+          title={
+            state.minutesFree != null
+              ? t("ui.recbar.fits", { time: fits(state.minutesFree) })
+              : undefined
+          }
+        >
+          {state.minutesFree != null && state.minutesFree < 10
+            ? t("ui.recbar.little_space", { minutes: state.minutesFree })
+            : t("ui.recbar.summary", { fps: state.fps, codec: state.codec ?? "H.264" })}
         </span>
       )}
       <span className="recbar-fill" data-tauri-drag-region />
@@ -151,6 +206,15 @@ export function RecordBar() {
           >
             {t("ui.recbar.stop")}
           </button>
+          <button
+            type="button"
+            className="btn icon small"
+            aria-label={t("ui.recbar.restart")}
+            title={t("ui.recbar.restart")}
+            onClick={() => drop("restart")}
+          >
+            ↺
+          </button>
         </>
       )}
       <button
@@ -158,7 +222,7 @@ export function RecordBar() {
         className="btn icon small"
         aria-label={t("ui.recbar.cancel")}
         title={t("ui.recbar.cancel")}
-        onClick={() => (ready ? act("record.cancel") : setAsking(true))}
+        onClick={() => (ready ? act("record.cancel") : drop("cancel"))}
       >
         ×
       </button>

@@ -1666,6 +1666,10 @@ pub fn extension() -> Extension {
             record::cancel(&*upgrade(&w)?, ctx)
         });
         let w = weak.clone();
+        reg.handle("record.restart", move |ctx, _p| {
+            record::restart(&*upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
         reg.handle("record.pause", move |ctx, _p| {
             record::pause(&*upgrade(&w)?, ctx, true)
         });

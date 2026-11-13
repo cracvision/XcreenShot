@@ -910,6 +910,10 @@
     "video_info": {
       "title": "Información del video",
       "description": "Tamaño, duración, fotogramas por segundo (media y máximo), códec, tasa de bits y pistas de sonido de un MP4."
+    },
+    "record_restart": {
+      "title": "Reiniciar la grabación",
+      "description": "Descarta lo grabado y vuelve a Lista con la misma área; Grabar vuelve a tener cuenta atrás."
     }
   },
   "settings": {
@@ -4075,7 +4079,13 @@
       "keep": "Seguir grabando",
       "cursor": "Puntero",
       "countdown": "Empezando…",
-      "sound": "Sonido"
+      "sound": "Sonido",
+      "restart": "Reiniciar",
+      "restart_confirm": "¿Reiniciar? Se perderán {{time}} de grabación.",
+      "cancel_lost": "¿Cancelar? Se perderán {{time}} de grabación.",
+      "summary": "{{fps}} fps · {{codec}}",
+      "fits": "caben unas {{time}} en el disco",
+      "little_space": "Poco espacio: caben unos {{minutes}} min"
     }
   },
   "history": {

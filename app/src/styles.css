@@ -2164,6 +2164,11 @@ html.launcher-root #root {
   font-size: 12px;
 }
 
+.recbar-size.low {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 .recbar-ask {
   flex: 1;
   padding-left: 8px;

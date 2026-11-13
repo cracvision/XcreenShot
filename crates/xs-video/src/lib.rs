@@ -18,7 +18,13 @@ mod audio;
 mod win;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
-pub use win::{audio_info, first_frame, info, probe, size};
+pub use win::{audio_info, first_frame, free_space, info, probe, size};
+
+/// Free bytes on the disk of `path` (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn free_space(_path: &std::path::Path) -> Option<u64> {
+    None
+}
 
 /// What a video holds (not available on this platform yet).
 #[cfg(not(windows))]

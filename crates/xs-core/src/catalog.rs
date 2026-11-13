@@ -923,7 +923,14 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "frames": {"type": "integer"}, "bytes": {"type": "integer"},
                 "encoder": {"type": "string", "enum": ["hardware", "software"]}
             }})),
+        B::new("record.restart", &["VID-014", "VID-024"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string", "description": "ready: the same area, waiting for Record"}}})),
         B::new("record.cancel", &["VID-024", "VID-014"])
+            .scopes(ALL)
+            .assignable()
             .mutates()
             .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
         B::new("record.pause", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {

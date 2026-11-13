@@ -61,6 +61,7 @@ exists fails a test.
 | `video.info` | `xcreenshot video info C:\Videos\demo.mp4 --json` | What an MP4 holds (VID-064): `width`, `height`, `duration`, `frames`, `fpsAverage`, `fpsMax` (the busiest second), `codec`, `bitrate`, `audio` (channels and rate of each track), `bytes` and `created`. |
 | `record.toggle` | `xcreenshot record toggle --json` | Record when Ready, Pause while recording, Resume when paused (VID-012); with nothing going on, Video capture. Shortcut Ctrl+Shift+F9. |
 | `record.stop` | `xcreenshot record stop --json` | Stops and waits for the file: `path`, `duration`, `width`, `height`, `fps`, `frames`, `bytes`, `encoder` (hardware or software). `not_found` when nothing is recording. |
+| `record.restart` | `xcreenshot record restart --json` | Drops what was recorded and goes back to Ready with the same area and settings (VID-014); Record counts down again. |
 | `record.cancel` | `xcreenshot record cancel --json` | Stops without keeping a file. |
 | `record.pause` | `xcreenshot record pause --json` | Pauses; the pause is left out of the video. |
 | `record.resume` | `xcreenshot record resume --json` | Goes on after a pause. |

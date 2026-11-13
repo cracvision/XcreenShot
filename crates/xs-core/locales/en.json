@@ -910,6 +910,10 @@
     "video_info": {
       "title": "Video information",
       "description": "Size, length, frames per second (average and most), codec, bit rate and sound tracks of an MP4."
+    },
+    "record_restart": {
+      "title": "Restart recording",
+      "description": "Drops what was recorded and goes back to Ready with the same area; Record counts down again."
     }
   },
   "settings": {
@@ -4075,7 +4079,13 @@
       "keep": "Keep recording",
       "cursor": "Pointer",
       "countdown": "Starting…",
-      "sound": "Sound"
+      "sound": "Sound",
+      "restart": "Restart",
+      "restart_confirm": "Restart? {{time}} of recording will be lost.",
+      "cancel_lost": "Cancel? {{time}} of recording will be lost.",
+      "summary": "{{fps}} fps · {{codec}}",
+      "fits": "about {{time}} fit on the disk",
+      "little_space": "Little space: about {{minutes}} min fit"
     }
   },
   "history": {

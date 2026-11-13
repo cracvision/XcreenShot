@@ -445,6 +445,9 @@ pub fn slots() -> Vec<Slot> {
         capture("record.video", "record.video", ""),
         capture("record.toggle", "record.toggle", ""),
         capture("record.stop", "record.stop", ""),
+        // No default: losing a recording by accident is worse (VID-075).
+        capture("record.restart", "record.restart", ""),
+        capture("record.cancel", "record.cancel", ""),
         // The clipboard as a source (CAP-039). No default.
         capture("capture.clipboard", "capture.clipboard", ""),
         // Quick annotation (CAP-057): only while its trial feature is on (APP-034).

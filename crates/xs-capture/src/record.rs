@@ -23,6 +23,8 @@ struct Running {
     rect: Rect,
     /// The system's sound was asked for (VID-040).
     wants_audio: bool,
+    /// What Restart goes back to (VID-014).
+    again: Ready,
 }
 
 /// An area chosen and waiting for Record (the *Ready* state, VID-002).
@@ -148,6 +150,17 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
 
 fn ready_state(core: &Core, r: &Ready) -> Value {
     let (width, height) = planned(core, r.rect, r.scale);
+    // The summary (VID-006): frames, codec and how long fits on the disk (VID-023),
+    // at the most the quality's bit rate writes.
+    let quality = core
+        .settings
+        .get("video.quality")
+        .and_then(|v| v.as_str().and_then(Quality::parse))
+        .unwrap_or(Quality::High);
+    let per_minute = quality.bitrate(width, height) as u64 / 8 * 60;
+    let folder = xs_library::library(core).root().to_path_buf();
+    let minutes = xs_video::free_space(&folder.join("x"))
+        .map(|free| free.saturating_sub(xs_video::MIN_FREE) / per_minute.max(1));
     json!({
         "status": "ready",
         "elapsed": 0.0,
@@ -155,6 +168,9 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "area": r.rect,
         "width": width,
         "height": height,
+        "fps": quality.fps(),
+        "codec": "H.264",
+        "minutesFree": minutes,
         "cursor": core.settings.get_bool("video.cursor"),
         "systemAudio": core.settings.get_bool("video.systemAudio"),
     })
@@ -398,6 +414,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         }
     }
     let ready_limit = ready.as_ref().and_then(|r| r.limit);
+    let again_of = ready.clone();
     let asked_window = p.get("window").and_then(Value::as_u64).map(|w| w as u32);
     let window = ready.as_ref().and_then(|r| r.window).or(asked_window);
     let (rect, scale, source) = match (ready, asked_window) {
@@ -477,12 +494,20 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .get("systemAudio")
         .and_then(Value::as_bool)
         .unwrap_or_else(|| core.settings.get_bool("video.systemAudio"));
+    let again = again_of.unwrap_or(Ready {
+        rect,
+        scale,
+        source: source.clone(),
+        limit,
+        window,
+    });
     let running = Running {
         recorder,
         source,
         path,
         rect,
         wants_audio,
+        again,
     };
     let status = status_of(&running);
     *current = Some(running);
@@ -644,6 +669,22 @@ pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
     }
     let r = take(core, ctx.lang)?;
     finish(core, ctx.source, r, true, ctx.lang)
+}
+
+/// `record.restart` (VID-014): drops what was recorded and goes back to Ready, same
+/// area and settings; Record counts down again.
+pub fn restart(core: &Core, ctx: &Context) -> CommandResult {
+    let r = take(core, ctx.lang)?;
+    let again = r.again.clone();
+    let _ = r.recorder.cancel();
+    if core.settings.get_bool("capture.hideOnCapture") {
+        core.host().hide_for_capture(false);
+    }
+    *service(core).ready.lock().unwrap() = Some(again.clone());
+    let state = ready_state(core, &again);
+    bar(core, Some(state.clone()));
+    tell(core, ctx.source, "record.ready", state.clone());
+    Ok(state)
 }
 
 /// `record.pause` and `record.resume` (VID-012).
