@@ -198,6 +198,11 @@ pub trait Host: Send + Sync {
     /// The scrolling capture's state changed (`{running, auto, started, width, height,
     /// full, preview}`): the panel shows it.
     fn scroll_event(&self, state: Value) {}
+    /// Shows or closes the window picker (CAP-030): over the monitor under the pointer,
+    /// never part of a capture.
+    fn picker_window(&self, show: bool) {}
+    /// The window picker's list changed (`{open, windows}`), e.g. a thumbnail is ready.
+    fn picker_event(&self, state: Value) {}
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

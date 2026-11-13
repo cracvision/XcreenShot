@@ -468,6 +468,13 @@ pub fn run() {
                         let core = core.clone();
                         std::thread::spawn(move || xs_editor::save_library_documents(&core));
                     }
+                    if window.label() == windows::PICKER {
+                        // Closing the picker cancels it (CAP-030).
+                        let core = core.clone();
+                        std::thread::spawn(move || {
+                            xs_capture::picker::choose(&core, xs_capture::picker::Choice::Cancel);
+                        });
+                    }
                     if window.label() == windows::SCROLL_PANEL {
                         // Closing the scrolling capture's panel cancels it (CAP-034).
                         let core = core.clone();

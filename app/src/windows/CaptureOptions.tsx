@@ -14,7 +14,7 @@ import { tenStep } from "../lib/numberKeys";
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
 /** The Image tab also scrolls (CAP-034, CAP-035), takes several areas (CAP-033) and
  * extracts text (SMT-005). */
-const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "menu", "multi", "text"] as const;
+const IMAGE_SELECTIONS = [...SELECTIONS, "picker", "scrolling", "menu", "multi", "text"] as const;
 
 interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];

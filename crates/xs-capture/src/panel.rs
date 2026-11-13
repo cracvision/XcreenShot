@@ -219,10 +219,11 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 7] = [
+const IMAGE_SELECTIONS: [&str; 8] = [
     "region",
     "window",
     "fullscreen",
+    "picker",
     "scrolling",
     "menu",
     "multi",
@@ -318,6 +319,9 @@ impl PanelSettings {
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
                 return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "picker" {
+                return ("capture.window_picker", params, json!({}));
             }
             if self.image.selection == "menu" {
                 // From the panel there is always time to open the menu: the delay, or

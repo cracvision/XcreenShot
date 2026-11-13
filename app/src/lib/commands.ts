@@ -132,7 +132,8 @@ export interface PanelSettings {
   };
   image: {
     /** `scrolling`: CAP-034, CAP-035; `menu`: CAP-031; `multi`: CAP-033; `text`: SMT-005. */
-    selection: "region" | "window" | "fullscreen" | "scrolling" | "menu" | "multi" | "text";
+    selection:
+      "region" | "window" | "fullscreen" | "picker" | "scrolling" | "menu" | "multi" | "text";
     copy: boolean;
     cursor: boolean;
     open: "editor" | "none";

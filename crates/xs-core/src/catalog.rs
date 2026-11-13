@@ -746,6 +746,22 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 }
             })))
             .result(capture_result()),
+        B::new("capture.window_picker", &["CAP-030", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.picker_state", &["CAP-030"]).result(json!({"type": "object", "properties": {
+            "open": {"type": "boolean"}, "windows": {"type": "array", "items": {"type": "object"}}
+        }})),
+        B::new("capture.picker_choose", &["CAP-030"])
+            .params(params(
+                json!({"id": {"type": "integer", "description": "The window to capture; without it, the picker is cancelled"}}),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
         B::new("capture.menu", &["CAP-031", "CAP-065"])
             .scopes(ALL)
             .assignable()

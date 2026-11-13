@@ -16,6 +16,7 @@ pub mod multi;
 #[cfg(windows)]
 mod multi_win;
 pub mod panel;
+pub mod picker;
 pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
@@ -776,6 +777,11 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
         }
+        "capture.window_picker" => {
+            let opts = Options::from_params(p, ctx.source);
+            wait_delay(core, &opts, ctx.lang)?;
+            picker::run(core, ctx, &opts)
+        }
         // Menu capture (CAP-031): after the delay (from the panel, at least the time to
         // open the menu), the open menus are found on the frozen screens.
         "capture.menu" => {
@@ -1026,6 +1032,36 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        // Window picker (CAP-030).
+        let w = weak.clone();
+        reg.handle("capture.window_picker", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            dispatch(&core, ctx, "capture.window_picker", &p, json!({}))
+        });
+        let w = weak.clone();
+        reg.handle("capture.picker_state", move |_ctx, _p| {
+            Ok(picker::state(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("capture.picker_choose", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let choice = match p.get("id").and_then(Value::as_u64) {
+                Some(id) => picker::Choice::Window(id as u32),
+                None => picker::Choice::Cancel,
+            };
+            if !picker::choose(&core, choice) {
+                return Err(CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(ctx.lang, "errors.picker_not_open", &[]),
+                ));
+            }
+            Ok(json!({ "ok": true }))
         });
         let w = weak.clone();
         reg.handle("capture.menu", move |ctx, p| {

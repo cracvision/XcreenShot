@@ -50,6 +50,51 @@ mod imp {
         (unsafe { GetCursorPos(&mut p) } != 0).then_some((p.x, p.y))
     }
 
+    /// A window hidden by the system: on another virtual desktop, or a suspended app
+    /// (CAP-030).
+    pub fn is_cloaked(id: u32) -> bool {
+        use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
+        let mut cloaked: u32 = 0;
+        // SAFETY: out-parameter of the right size; an invalid handle fails.
+        let ok = unsafe {
+            DwmGetWindowAttribute(
+                id as usize as _,
+                DWMWA_CLOAKED as u32,
+                &mut cloaked as *mut u32 as *mut _,
+                std::mem::size_of::<u32>() as u32,
+            )
+        } == 0;
+        ok && cloaked != 0
+    }
+
+    /// A window the task switcher would show: not owned by another one (a popup or a
+    /// helper of an app), unless it asks to be (CAP-030).
+    pub fn is_app_window(id: u32) -> bool {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindow, GW_OWNER, WS_EX_APPWINDOW};
+        let hwnd = id as usize as _;
+        // SAFETY: reading a window's owner and style; an invalid handle gives null and 0.
+        let (owner, ex) = unsafe {
+            (
+                GetWindow(hwnd, GW_OWNER),
+                GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32,
+            )
+        };
+        owner.is_null() || ex & WS_EX_APPWINDOW != 0
+    }
+
+    /// Restores a minimized window without activating it, or minimizes it again
+    /// (CAP-030).
+    pub fn show_window(id: u32, show: bool) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_MINIMIZE, SW_SHOWNOACTIVATE};
+        // SAFETY: a window handle; an invalid one does nothing.
+        unsafe {
+            ShowWindow(
+                id as usize as _,
+                if show { SW_SHOWNOACTIVATE } else { SW_MINIMIZE },
+            )
+        };
+    }
+
     pub fn foreground_pid() -> Option<u32> {
         // SAFETY: plain calls; a null window yields pid 0.
         unsafe {
@@ -142,12 +187,18 @@ mod imp {
     pub fn app_info(pid: u32, fallback_name: &str) -> AppInfo {
         let path = exe_path(pid);
         let (version, description) = path.as_deref().map(version_info).unwrap_or((None, None));
+        let stem = |p: &str| {
+            std::path::Path::new(p)
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+        };
+        // Packaged apps (Notepad, Calculator…) do not let their version info be read and
+        // give their full path as a name: their file name then.
         let name = description.unwrap_or_else(|| {
             if fallback_name.is_empty() {
-                path.as_deref()
-                    .and_then(|p| std::path::Path::new(p).file_stem())
-                    .map(|s| s.to_string_lossy().into_owned())
-                    .unwrap_or_default()
+                path.as_deref().and_then(stem).unwrap_or_default()
+            } else if fallback_name.contains(['\\', '/']) {
+                stem(fallback_name).unwrap_or_else(|| fallback_name.to_string())
             } else {
                 fallback_name.to_string()
             }
@@ -221,6 +272,16 @@ mod imp {
         true
     }
 
+    pub fn is_cloaked(_id: u32) -> bool {
+        false
+    }
+
+    pub fn is_app_window(_id: u32) -> bool {
+        true
+    }
+
+    pub fn show_window(_id: u32, _show: bool) {}
+
     pub fn foreground_pid() -> Option<u32> {
         // Frontmost-app lookup arrives with the macOS capture work (Windows first).
         None
@@ -263,4 +324,7 @@ mod imp {
     }
 }
 
-pub use imp::{app_info, cursor_position, foreground_pid, is_regular_window, os_info, user_and_machine};
+pub use imp::{
+    app_info, cursor_position, foreground_pid, is_app_window, is_cloaked, is_regular_window, os_info,
+    show_window, user_and_machine,
+};

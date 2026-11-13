@@ -438,6 +438,8 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.panel", "capture.panel", ""),
         // No default (CAP-067); assignable in Preferences > Shortcuts.
         capture("capture.multi_start", "capture.multi_start", ""),
+        // The window picker (CAP-030).
+        capture("capture.window_picker", "capture.window_picker", ""),
         // The open menu, without a countdown (CAP-031). No default yet: the spec's
         // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
         capture("capture.menu", "capture.menu", ""),
@@ -779,6 +781,8 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.window", Global, Compatibility, Macos) => "Ctrl+Shift+KeyW",
         ("capture.window", Global, _, _) => "Ctrl+Alt+Shift+KeyW",
         ("capture.active_window", Global, _, _) => "Ctrl+Alt+Shift+KeyA",
+        ("capture.window_picker", Global, Compatibility, Macos) => "Ctrl+Shift+KeyM",
+        ("capture.window_picker", Global, _, _) => "Ctrl+Alt+Shift+KeyM",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",

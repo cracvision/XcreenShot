@@ -1021,14 +1021,14 @@ mod tests {
         // From a Mac: Cmd becomes Ctrl.
         let mac = dir.path().join("mac.xpreset");
         let from_mac = json!({"format": "xcreenshot-presets", "formatVersion": 1, "platform": "macos",
-            "presets": [{"name": "Del Mac", "kind": "image", "settings": {}, "shortcut": "Super+Alt+Shift+KeyM"}]});
+            "presets": [{"name": "Del Mac", "kind": "image", "settings": {}, "shortcut": "Super+Alt+Shift+KeyJ"}]});
         std::fs::write(&mac, from_mac.to_string()).unwrap();
         let c = core();
         call(&c, "preset.import", json!({"paths": [mac]}));
         let del_mac = presets::load(&c).presets.last().cloned().unwrap();
         assert_eq!(
             presets::shortcut_of(&c, &del_mac.id).unwrap().to_string(),
-            "Ctrl+Alt+Shift+KeyM"
+            "Ctrl+Alt+Shift+KeyJ"
         );
 
         // Damaged or newer: nothing at all.

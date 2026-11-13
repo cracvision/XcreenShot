@@ -14,6 +14,7 @@ pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
 pub const MULTI_PANEL: &str = "multicapture";
 pub const SCROLL_PANEL: &str = "scroll";
+pub const PICKER: &str = "picker";
 pub const HELP: &str = "help";
 pub const WELCOME: &str = "welcome";
 /// Logical width of the capture panel; its height follows the content.
@@ -411,6 +412,40 @@ pub fn scroll_panel(app: &AppHandle, place: Option<serde_json::Value>) -> tauri:
     w.set_position(tauri::PhysicalPosition::new(x, y))?;
     w.set_size(tauri::PhysicalSize::new(size.0 as u32, size.1 as u32))?;
     w.show()?;
+    Ok(())
+}
+
+/// The window picker (CAP-030): the work area of the monitor under the pointer, in
+/// front of everything and never part of a capture. `false` closes it.
+pub fn picker_window(app: &AppHandle, show: bool) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window(PICKER) {
+        w.destroy()?;
+    }
+    if !show {
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.picker.title", &[]);
+    let w = WebviewWindowBuilder::new(app, PICKER, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .decorations(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible(false)
+        .content_protected(true)
+        .theme(theme(app))
+        .build()?;
+    let pointer = app.cursor_position().ok();
+    let monitor = pointer
+        .and_then(|p| app.monitor_from_point(p.x, p.y).ok().flatten())
+        .or_else(|| app.primary_monitor().ok().flatten());
+    if let Some(m) = monitor {
+        let area = m.work_area();
+        w.set_position(tauri::PhysicalPosition::new(area.position.x, area.position.y))?;
+        w.set_size(tauri::PhysicalSize::new(area.size.width, area.size.height))?;
+    }
+    w.show()?;
+    w.set_focus()?;
     Ok(())
 }
 

@@ -770,6 +770,18 @@
     "capture_menu": {
       "title": "Menu capture",
       "description": "Captures the open menu (and its submenus) with its shape, transparent around it. From the shortcut, at once; from the panel, after a countdown to open the menu."
+    },
+    "capture_window_picker": {
+      "title": "Window picker",
+      "description": "Shows every window of the desktop, covered and minimized ones too, to capture one at its real size."
+    },
+    "capture_picker_state": {
+      "title": "Window picker state",
+      "description": "Whether the window picker is open, and its windows."
+    },
+    "capture_picker_choose": {
+      "title": "Choose in the window picker",
+      "description": "Captures a window of the open picker, or cancels it."
     }
   },
   "settings": {
@@ -1170,7 +1182,8 @@
     "text_result_gone": "That extracted text is no longer open ({{id}}).",
     "scroll_too_small": "The area is too small to scroll: it must be at least {{min}} × {{min}} pixels.",
     "scroll_not_running": "No scrolling capture is running.",
-    "fixed_region": "The fixed region does not fit: the monitor \"{{monitor}}\" is not connected, or the region goes past its edge. Choose it again on screen, or pick the main monitor."
+    "fixed_region": "The fixed region does not fit: the monitor \"{{monitor}}\" is not connected, or the region goes past its edge. Choose it again on screen, or pick the main monitor.",
+    "picker_not_open": "The window picker is not open."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1980,7 +1993,8 @@
       "areas_gap": "Space (px)",
       "sel_menu": "Menu",
       "menu_submenus": "Include open submenus",
-      "menu_menubar": "Include the menu bar"
+      "menu_menubar": "Include the menu bar",
+      "sel_picker": "Window picker"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3566,6 +3580,15 @@
       "preview": "Joined image so far",
       "full": "Largest size reached",
       "finish_menu": "Finish scrolling"
+    },
+    "picker": {
+      "title": "Window picker",
+      "filter": "Filter by app or title",
+      "hint": "Arrows to move, Enter to capture, Esc to cancel",
+      "minimized": "Minimized",
+      "none": "No window matches",
+      "cancel": "Cancel",
+      "loading": "Taking the pictures…"
     }
   },
   "history": {
@@ -3766,7 +3789,8 @@
       "text": "Extract text",
       "scrolling": "Scrolling",
       "multi": "Multiple areas",
-      "menu": "Menu"
+      "menu": "Menu",
+      "picker": "Window picker"
     },
     "kind": {
       "universal": "Universal",

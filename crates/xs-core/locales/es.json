@@ -770,6 +770,18 @@
     "capture_menu": {
       "title": "Captura de menú",
       "description": "Captura el menú abierto (y sus submenús) con su forma, transparente alrededor. Desde el atajo, al momento; desde el panel, tras una cuenta atrás para abrir el menú."
+    },
+    "capture_window_picker": {
+      "title": "Selector de ventanas",
+      "description": "Muestra todas las ventanas del escritorio, también las tapadas y minimizadas, para capturar una a tamaño real."
+    },
+    "capture_picker_state": {
+      "title": "Estado del selector de ventanas",
+      "description": "Si el selector de ventanas está abierto, y sus ventanas."
+    },
+    "capture_picker_choose": {
+      "title": "Elegir en el selector de ventanas",
+      "description": "Captura una ventana del selector abierto, o lo cancela."
     }
   },
   "settings": {
@@ -1170,7 +1182,8 @@
     "text_result_gone": "Ese texto extraído ya no está abierto ({{id}}).",
     "scroll_too_small": "El área es demasiado pequeña para desplazarla: debe medir al menos {{min}} × {{min}} píxeles.",
     "scroll_not_running": "No hay ninguna captura con desplazamiento en curso.",
-    "fixed_region": "La región fija no cabe: el monitor \"{{monitor}}\" no está conectado o la región se sale de su borde. Elígela de nuevo en pantalla o usa el monitor principal."
+    "fixed_region": "La región fija no cabe: el monitor \"{{monitor}}\" no está conectado o la región se sale de su borde. Elígela de nuevo en pantalla o usa el monitor principal.",
+    "picker_not_open": "El selector de ventanas no está abierto."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1980,7 +1993,8 @@
       "areas_gap": "Separación (px)",
       "sel_menu": "Menú",
       "menu_submenus": "Incluir submenús abiertos",
-      "menu_menubar": "Incluir la barra de menús"
+      "menu_menubar": "Incluir la barra de menús",
+      "sel_picker": "Selector de ventanas"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3566,6 +3580,15 @@
       "preview": "Imagen unida hasta ahora",
       "full": "Tamaño máximo alcanzado",
       "finish_menu": "Terminar desplazamiento"
+    },
+    "picker": {
+      "title": "Selector de ventanas",
+      "filter": "Filtrar por aplicación o título",
+      "hint": "Flechas para moverte, Enter para capturar, Esc para cancelar",
+      "minimized": "Minimizada",
+      "none": "Ninguna ventana coincide",
+      "cancel": "Cancelar",
+      "loading": "Tomando las imágenes…"
     }
   },
   "history": {
@@ -3766,7 +3789,8 @@
       "text": "Extraer texto",
       "scrolling": "Desplazamiento",
       "multi": "Múltiples áreas",
-      "menu": "Menú"
+      "menu": "Menú",
+      "picker": "Selector de ventanas"
     },
     "kind": {
       "universal": "Universal",

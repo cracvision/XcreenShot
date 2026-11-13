@@ -310,6 +310,25 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://scroll", state);
     }
 
+    fn picker_window(&self, show: bool) {
+        let app = self.app.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let queued = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::picker_window(&app, show) {
+                tracing::error!(error = %e, "window picker");
+            }
+            let _ = tx.send(());
+        });
+        // Gone before the window is captured.
+        if queued.is_ok() {
+            let _ = rx.recv_timeout(Duration::from_secs(2));
+        }
+    }
+
+    fn picker_event(&self, state: Value) {
+        let _ = self.app.emit("xs://picker", state);
+    }
+
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         let (tx, rx) = std::sync::mpsc::channel();
         let app = self.app.clone();
