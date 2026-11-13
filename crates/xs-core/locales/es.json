@@ -750,6 +750,18 @@
     "smart_language_settings": {
       "title": "Ajustes de idiomas de reconocimiento",
       "description": "Abre la página del sistema donde se añade un idioma de reconocimiento."
+    },
+    "capture_scrolling": {
+      "title": "Captura con desplazamiento",
+      "description": "Captura un área mientras su contenido se desplaza, a mano (manual) o por XcreenShot (automático), y lo une en una sola imagen."
+    },
+    "capture_scroll_action": {
+      "title": "Terminar desplazamiento",
+      "description": "Actúa sobre la captura con desplazamiento en curso: iniciarla, conservar lo capturado (Listo, Detener aquí) o cancelarla."
+    },
+    "capture_scroll_state": {
+      "title": "Estado de la captura con desplazamiento",
+      "description": "Si hay una captura con desplazamiento en curso y el tamaño de lo unido hasta ahora."
     }
   },
   "settings": {
@@ -1062,6 +1074,10 @@
     "smart_extractText_plain": {
       "label": "Texto extraído sin formato",
       "description": "Copia solo el texto, sin fuentes ni colores."
+    },
+    "capture_scrollAskStart": {
+      "label": "Pedir Iniciar antes de desplazar",
+      "description": "Una captura con desplazamiento manual espera a Iniciar antes de tomar imágenes."
     }
   },
   "errors": {
@@ -1143,7 +1159,9 @@
     "text_cancelled": "Se canceló la extracción de texto.",
     "ocr_not_supported": "El reconocimiento de texto aún no está disponible en este sistema.",
     "ocr_no_language": "Este equipo no tiene un idioma de reconocimiento para eso. Añade uno en la configuración del sistema (Hora e idioma > Idioma).",
-    "text_result_gone": "Ese texto extraído ya no está abierto ({{id}})."
+    "text_result_gone": "Ese texto extraído ya no está abierto ({{id}}).",
+    "scroll_too_small": "El área es demasiado pequeña para desplazarla: debe medir al menos {{min}} × {{min}} píxeles.",
+    "scroll_not_running": "No hay ninguna captura con desplazamiento en curso."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1473,7 +1491,10 @@
     "waiting_moved_body_other": "La biblioteca vuelve a estar disponible: {{count}} capturas hechas mientras tanto ya están en ella.",
     "text_copied": "Texto copiado ({{count}} palabras).",
     "text_none": "No se encontró texto en la zona seleccionada.",
-    "action_view": "Ver"
+    "action_view": "Ver",
+    "scroll_full": "La captura con desplazamiento llegó a su tamaño máximo (60.000 píxeles). Se conserva lo capturado hasta ahí.",
+    "scroll_still": "El contenido no se movió: solo se capturó el área visible. Prueba el desplazamiento manual, moviéndolo tú.",
+    "scroll_doubtful": "{{count}} uniones de la captura con desplazamiento pueden tener un corte (contenido que se mueve o animado)."
   },
   "source": {
     "ui": "la interfaz",
@@ -1781,7 +1802,9 @@
         "move": "mover la selección 1 px",
         "move_more": "con las flechas: 10 px",
         "resize": "cambiar su tamaño",
-        "redo": "volver a seleccionar"
+        "redo": "volver a seleccionar",
+        "scroll": "captura con desplazamiento, desplazando tú",
+        "scroll_auto": "desplazar solo hacia abajo, a la derecha o en ambas direcciones"
       },
       "fullscreen": "Pantalla completa",
       "all_monitors": "Todos los monitores",
@@ -1796,7 +1819,12 @@
       "width": "Ancho",
       "height": "Alto",
       "bar": "Barra de captura",
-      "clamped": "Ajustado a la pantalla"
+      "clamped": "Ajustado a la pantalla",
+      "scrolling": "Desplazamiento",
+      "scroll_small": "El desplazamiento necesita un área de al menos 50 × 50 píxeles",
+      "scroll_auto_v": "Desplazar hacia abajo automáticamente (D)",
+      "scroll_auto_h": "Desplazar a la derecha automáticamente (R)",
+      "scroll_auto_b": "Desplazar en las dos direcciones automáticamente (X)"
     },
     "panel": {
       "title": "XcreenShot · Captura",
@@ -1900,7 +1928,22 @@
       "sel_text": "Extraer texto",
       "copy_text": "Copiar el texto",
       "text_no_open": "Extraer texto abre su ventana de resultados, no el editor.",
-      "text_no_cursor": "El puntero no forma parte del texto."
+      "text_no_cursor": "El puntero no forma parte del texto.",
+      "sel_scrolling": "Desplazamiento",
+      "scroll_type": "Tipo",
+      "scroll_manual": "Manual",
+      "scroll_auto": "Automático",
+      "scroll_direction": "Dirección",
+      "scroll_vertical": "Vertical",
+      "scroll_horizontal": "Horizontal",
+      "scroll_both": "Ambas",
+      "scroll_start_from": "Empezar desde",
+      "scroll_from_start": "El principio",
+      "scroll_from_current": "La posición actual",
+      "scroll_wait": "Espera entre pasos",
+      "scroll_restore": "Volver a la posición inicial al terminar",
+      "scroll_no_cursor": "Una captura con desplazamiento no lleva el puntero",
+      "scroll_wait_range": "De 0 a 5 segundos"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3472,6 +3515,20 @@
       "tip_letters": "Las letras muy decorativas, escritas a mano o con contorno se leen mal.",
       "tip_language": "Prueba con otro idioma en Más > Reconocer en otro idioma.",
       "up_to_three": "Hasta 3 idiomas."
+    },
+    "scroll": {
+      "title": "Captura con desplazamiento",
+      "manual_hint": "Desplaza el contenido: con la rueda, las barras de desplazamiento, arrastrando o con el teclado.",
+      "auto_hint": "XcreenShot está desplazando el contenido. Haz clic o mueve la rueda dentro de él para detenerlo.",
+      "ask_hint": "Deja el contenido donde quieras empezar y pulsa Iniciar.",
+      "size": "{{width}} × {{height}} px",
+      "start": "Iniciar",
+      "done": "Listo",
+      "stop_here": "Detener aquí",
+      "cancel": "Cancelar",
+      "preview": "Imagen unida hasta ahora",
+      "full": "Tamaño máximo alcanzado",
+      "finish_menu": "Terminar desplazamiento"
     }
   },
   "history": {
@@ -3662,13 +3719,15 @@
   "presets": {
     "builtin": {
       "region_clipboard": "Región al portapapeles",
-      "extract_text": "Extraer texto"
+      "extract_text": "Extraer texto",
+      "scrolling": "Desplazamiento"
     },
     "selection": {
       "region": "Región",
       "window": "Ventana",
       "fullscreen": "Pantalla completa",
-      "text": "Extraer texto"
+      "text": "Extraer texto",
+      "scrolling": "Desplazamiento"
     },
     "kind": {
       "universal": "Universal",

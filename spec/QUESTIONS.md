@@ -254,6 +254,18 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 3: desplazamiento)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-035 | ¿Cómo se desplaza el contenido "desde fuera"? | Con la rueda del ratón: XcreenShot pone el puntero en el centro del área y gira la rueda (como lo haría el usuario), y al terminar lo devuelve a su sitio. Funciona en navegadores, documentos, listas y la mayoría de las apps sin permisos especiales. El primer paso es corto; después XcreenShot mide cuánto mueve cada vuelta de rueda y avanza más o menos media área por paso | Provisional |
+| CAP-035 | Las flechas "al pasar por un área que se puede desplazar" | Saber de antemano si un área se deja desplazar exige la Accesibilidad de Windows (UI Automation), que todavía no usamos. Por ahora las flechas ↓, → y ↘ (y `D`, `R`, `X`) están en la barra de captura, sobre cualquier área elegida; si el contenido no se mueve, se avisa y queda el área visible, como pide el spec | Provisional |
+| CAP-035 | "Volver a la posición inicial" | Se vuelve contando píxeles: XcreenShot sabe cuánto se movió el contenido por las uniones y cuánto mueve una vuelta de rueda, así que el regreso puede quedar a menos de una vuelta de rueda de la posición original | Provisional |
+| CAP-035 | Dirección = Ambas | Recorre el contenido en columnas: baja hasta el final, da un paso a la derecha, sube por la siguiente columna, y así hasta el borde derecho | Provisional |
+| CAP-036 | Barra de progreso del procesamiento | La unión se hace a medida que llegan las imágenes, así que al pulsar Listo el resultado está casi listo: no hay espera ni barra. Si algún día un caso lo necesita, se añade | Provisional |
+| CAP-036 | Detectar elementos fijos (activada por defecto) | Siempre activa por ahora; la casilla para desactivarla llega con las propiedades de Desplazamiento en el engranaje (CAP-002) | Provisional |
+| CAP-002 | Propiedades de Selección = Desplazamiento | Se muestran debajo de Selección, en un recuadro, en vez de detrás del engranaje: Tipo, y con Automático, Dirección, Empezar desde, Espera entre pasos y Volver a la posición inicial | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 2: extraer texto)
 
 | ID | Duda | Propuesta | Estado |

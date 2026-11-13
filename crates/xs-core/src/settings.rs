@@ -441,6 +441,13 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
         def(
+            "capture.scrollAskStart",
+            "capture",
+            boolean(),
+            json!(false),
+            "CAP-034",
+        ),
+        def(
             "capture.simpleCrosshair",
             "capture",
             boolean(),

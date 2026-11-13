@@ -6,6 +6,7 @@ import { Help } from "./windows/Help";
 import { Countdown } from "./windows/Countdown";
 import { MultiCapture } from "./windows/MultiCapture";
 import { Preferences } from "./windows/Preferences";
+import { ScrollPanel } from "./windows/ScrollPanel";
 import { TextResult } from "./windows/TextResult";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
@@ -26,6 +27,8 @@ export function App() {
       return <Countdown />;
     case "multicapture":
       return <MultiCapture />;
+    case "scroll":
+      return <ScrollPanel />;
     case "help":
       return <Help />;
     case "welcome":

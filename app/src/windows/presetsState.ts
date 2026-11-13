@@ -30,6 +30,7 @@ export const DEFAULTS: { universal: PanelSettings["universal"]; image: PanelSett
     open: "editor",
     timing: "none",
     delay: 5,
+    scroll: { type: "manual", direction: "vertical", startFrom: "start", wait: 0.3, restore: true },
   },
 };
 

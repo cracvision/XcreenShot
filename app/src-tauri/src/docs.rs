@@ -12,6 +12,8 @@
 //! - `/sample/<tool>/<styleId | favoriteId | current>` returns the sample of a style
 //!   (EDT-015); the URL carries the style's hash, so a changed one gets a new one.
 //! - `/multi/<itemId>` returns the thumbnail of a multi-capture (CAP-067).
+//! - `/scroll/preview` returns the joined image of the running scrolling capture, small
+//!   (CAP-034).
 //! - `/library/<itemId>/thumb` returns the thumbnail of a library item (LIB-001); the
 //!   URL carries the item's modified time, so a changed file gets a new one.
 
@@ -108,6 +110,7 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
         ["template", id, n] => xs_editor::template_thumbnail(&core, &unescape(id), n.parse().unwrap_or(3))
             .map(|png| (std::sync::Arc::new(png), "image/png")),
         ["multi", item] => xs_capture::multi::thumbnail_png(&core, item).map(|png| (png, "image/png")),
+        ["scroll", "preview"] => xs_capture::scroll::preview_png(&core).map(|png| (png, "image/png")),
         [id, "image", name] => editor.store.image_file(id, name).map(|bytes| {
             let mime = if name.ends_with(".jpg") {
                 "image/jpeg"

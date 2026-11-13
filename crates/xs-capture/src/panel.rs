@@ -33,6 +33,48 @@ impl Default for UniversalTab {
     }
 }
 
+/// The properties of Selection = Scrolling (CAP-034, CAP-035).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ScrollTab {
+    /// `manual` or `auto`.
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// Automatic: `vertical`, `horizontal` or `both`.
+    pub direction: String,
+    /// Automatic: `start` (the beginning) or `current`.
+    pub start_from: String,
+    /// Automatic: seconds between steps, 0 to 5.
+    pub wait: f64,
+    /// Automatic: put the content back where it was.
+    pub restore: bool,
+}
+
+impl Default for ScrollTab {
+    fn default() -> Self {
+        ScrollTab {
+            kind: "manual".into(),
+            direction: "vertical".into(),
+            start_from: "start".into(),
+            wait: 0.3,
+            restore: true,
+        }
+    }
+}
+
+impl ScrollTab {
+    /// The parameters of `capture.scrolling` these properties stand for.
+    pub fn params(&self) -> Value {
+        json!({
+            "type": self.kind,
+            "direction": self.direction,
+            "startFrom": self.start_from,
+            "wait": self.wait,
+            "restore": self.restore,
+        })
+    }
+}
+
 /// Image tab (CAP-002). Defaults from CAP-003.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -46,6 +88,8 @@ pub struct ImageTab {
     pub timing: String,
     /// Delay seconds, 1–60 (default 5).
     pub delay: u32,
+    /// Selection = Scrolling (CAP-034, CAP-035).
+    pub scroll: ScrollTab,
 }
 
 impl Default for ImageTab {
@@ -57,6 +101,7 @@ impl Default for ImageTab {
             open: "editor".into(),
             timing: "none".into(),
             delay: 5,
+            scroll: ScrollTab::default(),
         }
     }
 }
@@ -84,8 +129,8 @@ impl Default for PanelSettings {
 }
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
-/// The Image tab also has Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 4] = ["region", "window", "fullscreen", "text"];
+/// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
+const IMAGE_SELECTIONS: [&str; 5] = ["region", "window", "fullscreen", "scrolling", "text"];
 
 impl PanelSettings {
     /// Checks every value; returns the offending field.
@@ -105,6 +150,17 @@ impl PanelSettings {
         one_of("image.timing", &self.image.timing, &["none", "delay"])?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
+        }
+        let s = &self.image.scroll;
+        one_of("image.scroll.type", &s.kind, &["manual", "auto"])?;
+        one_of(
+            "image.scroll.direction",
+            &s.direction,
+            &["vertical", "horizontal", "both"],
+        )?;
+        one_of("image.scroll.startFrom", &s.start_from, &["start", "current"])?;
+        if !(0.0..=5.0).contains(&s.wait) {
+            return Err("image.scroll.wait: must be between 0 and 5".into());
         }
         Ok(())
     }
@@ -153,6 +209,15 @@ impl PanelSettings {
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
                 return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "scrolling" {
+                // No pointer in a scrolling capture (CAP-002).
+                params["cursor"] = json!(false);
+                return (
+                    "capture.scrolling",
+                    with_overrides(params, &self.image.scroll.params()),
+                    json!({}),
+                );
             }
             let command = match self.image.selection.as_str() {
                 "window" => {
@@ -230,7 +295,16 @@ mod tests {
         let p = s.patched(&json!({"image": {"selection": "window"}})).unwrap();
         assert_eq!(p.image.selection, "window");
         assert_eq!(p.image.delay, 5, "untouched fields stay");
-        assert!(s.patched(&json!({"image": {"selection": "scrolling"}})).is_err());
+        assert!(s.patched(&json!({"image": {"selection": "webpage"}})).is_err());
+        let p = s
+            .patched(&json!({"image": {"selection": "scrolling", "scroll": {"type": "auto"}}}))
+            .unwrap();
+        let (command, params, _) = p.plan("image");
+        assert_eq!(command, "capture.scrolling");
+        assert_eq!(params["type"], "auto");
+        assert_eq!(params["direction"], "vertical");
+        assert_eq!(params["startFrom"], "start");
+        assert!(s.patched(&json!({"image": {"scroll": {"wait": 9}}})).is_err());
         assert!(s.patched(&json!({"image": {"delay": 0}})).is_err());
         assert!(s.patched(&json!({"tab": "video"})).is_err());
     }

@@ -192,6 +192,12 @@ pub trait Host: Send + Sync {
     fn multicapture_panel(&self, show: bool) {}
     /// The multi-capture state changed (`{capturing, items}`): the panel shows it.
     fn multicapture_event(&self, state: Value) {}
+    /// Shows the scrolling capture's panel beside `{rect, auto}` (CAP-034, CAP-035), or
+    /// closes it with `None`. Never part of a capture.
+    fn scroll_panel(&self, place: Option<Value>) {}
+    /// The scrolling capture's state changed (`{running, auto, started, width, height,
+    /// full, preview}`): the panel shows it.
+    fn scroll_event(&self, state: Value) {}
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

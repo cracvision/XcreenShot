@@ -97,6 +97,16 @@ export interface CommandEvent {
 }
 
 /** Capture panel settings (CAP-001, CAP-002, CAP-010), as `capture.settings` returns them. */
+/** The properties of Selection = Scrolling (CAP-034, CAP-035). */
+export interface ScrollProps {
+  type: "manual" | "auto";
+  direction: "vertical" | "horizontal" | "both";
+  startFrom: "start" | "current";
+  /** Seconds between steps, 0 to 5. */
+  wait: number;
+  restore: boolean;
+}
+
 export interface PanelSettings {
   tab: "universal" | "image";
   expanded: boolean;
@@ -108,12 +118,14 @@ export interface PanelSettings {
     delay5: boolean;
   };
   image: {
-    /** `text`: Extract text (SMT-005). */
-    selection: "region" | "window" | "fullscreen" | "text";
+    /** `scrolling`: CAP-034, CAP-035; `text`: Extract text (SMT-005). */
+    selection: "region" | "window" | "fullscreen" | "scrolling" | "text";
     copy: boolean;
     cursor: boolean;
     open: "editor" | "none";
     timing: "none" | "delay";
     delay: number;
+    /** Selection = Scrolling (CAP-034, CAP-035). */
+    scroll: ScrollProps;
   };
 }

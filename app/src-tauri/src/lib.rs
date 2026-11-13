@@ -468,6 +468,13 @@ pub fn run() {
                         let core = core.clone();
                         std::thread::spawn(move || xs_editor::save_library_documents(&core));
                     }
+                    if window.label() == windows::SCROLL_PANEL {
+                        // Closing the scrolling capture's panel cancels it (CAP-034).
+                        let core = core.clone();
+                        std::thread::spawn(move || {
+                            xs_capture::scroll::act(&core, xs_capture::scroll::Action::Cancel);
+                        });
+                    }
                     if window.label() == windows::MULTI_PANEL {
                         // Closing the panel ends the session (CAP-067); its captures
                         // stay in the library.

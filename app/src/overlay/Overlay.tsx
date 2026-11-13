@@ -29,7 +29,7 @@ import {
   type Rect,
 } from "./geometry";
 
-type Mode = "region" | "window" | "universal";
+type Mode = "region" | "window" | "universal" | "scrolling";
 type Phase = "aiming" | "dragging" | "adjusting";
 
 interface Monitor {
@@ -72,6 +72,16 @@ interface Start {
     helpHint?: boolean;
   };
 }
+
+/** Smallest area a scrolling capture accepts (CAP-034), in physical pixels. */
+const SCROLL_MIN = 50;
+
+/** Scrolling is offered from Universal and Region (CAP-034, CAP-035). */
+const scrollable = (start: Start, sel: Rect | null) =>
+  start.request.mode !== "window" &&
+  sel !== null &&
+  sel.width >= SCROLL_MIN &&
+  sel.height >= SCROLL_MIN;
 
 /** Only windows can be picked: window capture, or Universal set to Window. */
 const windowsOnly = (start: Start) =>
@@ -776,6 +786,19 @@ export function Overlay() {
         chooseWindow(st.hover);
       } else if ((e.key === "Enter" || key === "i") && st.phase === "adjusting" && st.sel) {
         finish({ kind: "rect", rect: st.sel });
+      } else if (
+        ["s", "d", "r", "x"].includes(key) &&
+        st.phase === "adjusting" &&
+        scrollable(start, st.sel) &&
+        st.sel
+      ) {
+        // Scrolling (CAP-034): S by hand; D, R and X scroll by themselves (CAP-035).
+        const direction = { d: "vertical", r: "horizontal", x: "both" }[key];
+        finish(
+          direction
+            ? { kind: "scroll", type: "auto", direction, rect: st.sel }
+            : { kind: "scroll", type: "manual", rect: st.sel },
+        );
       } else if (e.key === "Backspace" && st.phase === "adjusting") {
         redo();
       } else if (e.key.startsWith("Arrow") && st.phase === "adjusting" && st.sel) {
@@ -889,6 +912,17 @@ export function Overlay() {
             schedule();
           }}
           onImage={() => finish({ kind: "rect", rect: sel })}
+          onScroll={
+            start && start.request.mode !== "window" && start.request.mode !== "scrolling"
+              ? (direction) =>
+                  finish(
+                    direction
+                      ? { kind: "scroll", type: "auto", direction, rect: sel }
+                      : { kind: "scroll", type: "manual", rect: sel },
+                  )
+              : undefined
+          }
+          scrollOk={start ? scrollable(start, sel) : false}
           onRedo={redo}
           onCancel={cancel}
         />
@@ -917,6 +951,8 @@ function KeysHelp({
   const k = (keys: string, what: string) => rows.push([keys, t(`ui.overlay.keys.${what}`)]);
   if (phase === "adjusting") {
     k("Enter · I", "capture");
+    k("S", "scroll");
+    k("D · R · X", "scroll_auto");
     k("← ↑ → ↓", "move");
     k("Shift", "move_more");
     k("Alt + ← ↑ → ↓", "resize");
@@ -1011,6 +1047,10 @@ interface BarProps {
   clamped: boolean;
   onApply: (r: Rect) => void;
   onImage: () => void;
+  /** Scrolling (CAP-034): by hand, or by itself in a direction (CAP-035). */
+  onScroll: ((direction?: "vertical" | "horizontal" | "both") => void) | undefined;
+  /** The selection is big enough to scroll. */
+  scrollOk: boolean;
   onRedo: () => void;
   onCancel: () => void;
 }
@@ -1023,6 +1063,8 @@ function CaptureBar({
   clamped,
   onApply,
   onImage,
+  onScroll,
+  scrollOk,
   onRedo,
   onCancel,
 }: BarProps) {
@@ -1106,6 +1148,35 @@ function CaptureBar({
       <button className="overlay-btn primary" onClick={onImage} autoFocus>
         {t("ui.overlay.image")} <kbd>Enter</kbd>
       </button>
+      {onScroll && (
+        <span
+          className="overlay-scroll"
+          title={scrollOk ? undefined : t("ui.overlay.scroll_small")}
+        >
+          <button className="overlay-btn" disabled={!scrollOk} onClick={() => onScroll()}>
+            {t("ui.overlay.scrolling")} <kbd>S</kbd>
+          </button>
+          {(
+            [
+              ["vertical", "D", "↓", "scroll_auto_v"],
+              ["horizontal", "R", "→", "scroll_auto_h"],
+              ["both", "X", "↘", "scroll_auto_b"],
+            ] as const
+          ).map(([direction, key, arrow, label]) => (
+            <button
+              key={direction}
+              className="overlay-btn icon"
+              disabled={!scrollOk}
+              aria-label={t(`ui.overlay.${label}`)}
+              title={t(`ui.overlay.${label}`)}
+              aria-keyshortcuts={key}
+              onClick={() => onScroll(direction)}
+            >
+              {arrow}
+            </button>
+          ))}
+        </span>
+      )}
       <button className="overlay-btn" onClick={onRedo} title="Backspace">
         {t("ui.overlay.redo")}
       </button>

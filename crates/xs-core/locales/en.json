@@ -750,6 +750,18 @@
     "smart_language_settings": {
       "title": "Recognition language settings",
       "description": "Opens the system's page where a recognition language is added."
+    },
+    "capture_scrolling": {
+      "title": "Scrolling capture",
+      "description": "Captures an area while its content scrolls, by hand (manual) or by XcreenShot (automatic), and joins it into one image."
+    },
+    "capture_scroll_action": {
+      "title": "Finish scrolling",
+      "description": "Acts on the running scrolling capture: start it, keep what it has (Done, Stop here) or cancel it."
+    },
+    "capture_scroll_state": {
+      "title": "Scrolling capture state",
+      "description": "Whether a scrolling capture runs, and the size of what it has joined so far."
     }
   },
   "settings": {
@@ -1062,6 +1074,10 @@
     "smart_extractText_plain": {
       "label": "Extracted text without format",
       "description": "Copies only the text, without fonts or colors."
+    },
+    "capture_scrollAskStart": {
+      "label": "Ask before scrolling",
+      "description": "A manual scrolling capture waits for Start before taking frames."
     }
   },
   "errors": {
@@ -1143,7 +1159,9 @@
     "text_cancelled": "Text extraction cancelled.",
     "ocr_not_supported": "Text recognition is not available on this system yet.",
     "ocr_no_language": "This computer has no recognition language for that. Add one in the system settings (Time & language > Language).",
-    "text_result_gone": "That extracted text is no longer open ({{id}})."
+    "text_result_gone": "That extracted text is no longer open ({{id}}).",
+    "scroll_too_small": "The area is too small to scroll: it must be at least {{min}} × {{min}} pixels.",
+    "scroll_not_running": "No scrolling capture is running."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1473,7 +1491,10 @@
     "waiting_moved_body_other": "The library is reachable again: {{count}} captures made meanwhile are in it now.",
     "text_copied": "Text copied ({{count}} words).",
     "text_none": "No text was found in the selected zone.",
-    "action_view": "View"
+    "action_view": "View",
+    "scroll_full": "The scrolling capture reached its largest size (60,000 pixels). What was captured up to there is kept.",
+    "scroll_still": "The content did not move: only the visible area was captured. Try a manual scrolling capture, scrolling it yourself.",
+    "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content)."
   },
   "source": {
     "ui": "the interface",
@@ -1781,7 +1802,9 @@
         "move": "move the selection 1 px",
         "move_more": "with the arrows: 10 px",
         "resize": "change its size",
-        "redo": "select again"
+        "redo": "select again",
+        "scroll": "scrolling capture, scrolling it yourself",
+        "scroll_auto": "scroll down, right or both ways by itself"
       },
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
@@ -1796,7 +1819,12 @@
       "width": "Width",
       "height": "Height",
       "bar": "Capture bar",
-      "clamped": "Adjusted to the screen"
+      "clamped": "Adjusted to the screen",
+      "scrolling": "Scrolling",
+      "scroll_small": "Scrolling needs an area of at least 50 × 50 pixels",
+      "scroll_auto_v": "Scroll down automatically (D)",
+      "scroll_auto_h": "Scroll right automatically (R)",
+      "scroll_auto_b": "Scroll both ways automatically (X)"
     },
     "panel": {
       "title": "XcreenShot · Capture",
@@ -1900,7 +1928,22 @@
       "sel_text": "Extract text",
       "copy_text": "Copy the text",
       "text_no_open": "Extract text opens its results window, not the editor.",
-      "text_no_cursor": "The pointer is not part of the text."
+      "text_no_cursor": "The pointer is not part of the text.",
+      "sel_scrolling": "Scrolling",
+      "scroll_type": "Type",
+      "scroll_manual": "Manual",
+      "scroll_auto": "Automatic",
+      "scroll_direction": "Direction",
+      "scroll_vertical": "Vertical",
+      "scroll_horizontal": "Horizontal",
+      "scroll_both": "Both",
+      "scroll_start_from": "Start from",
+      "scroll_from_start": "The beginning",
+      "scroll_from_current": "The current position",
+      "scroll_wait": "Wait between steps",
+      "scroll_restore": "Go back to the starting position",
+      "scroll_no_cursor": "A scrolling capture has no pointer",
+      "scroll_wait_range": "From 0 to 5 seconds"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3472,6 +3515,20 @@
       "tip_letters": "Very decorative, handwritten or outlined letters are hard to read.",
       "tip_language": "Try another language in More > Recognize in another language.",
       "up_to_three": "Up to 3 languages."
+    },
+    "scroll": {
+      "title": "Scrolling capture",
+      "manual_hint": "Scroll the content: with the wheel, the scroll bars, dragging or the keyboard.",
+      "auto_hint": "XcreenShot is scrolling the content. Click or turn the wheel inside it to stop.",
+      "ask_hint": "Get the content where you want to begin, then press Start.",
+      "size": "{{width}} × {{height}} px",
+      "start": "Start",
+      "done": "Done",
+      "stop_here": "Stop here",
+      "cancel": "Cancel",
+      "preview": "Joined image so far",
+      "full": "Largest size reached",
+      "finish_menu": "Finish scrolling"
     }
   },
   "history": {
@@ -3662,13 +3719,15 @@
   "presets": {
     "builtin": {
       "region_clipboard": "Region to clipboard",
-      "extract_text": "Extract text"
+      "extract_text": "Extract text",
+      "scrolling": "Scrolling"
     },
     "selection": {
       "region": "Region",
       "window": "Window",
       "fullscreen": "Full screen",
-      "text": "Extract text"
+      "text": "Extract text",
+      "scrolling": "Scrolling"
     },
     "kind": {
       "universal": "Universal",

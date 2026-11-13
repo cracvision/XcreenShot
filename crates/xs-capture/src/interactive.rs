@@ -148,6 +148,51 @@ pub fn crop_frames(monitors: &[MonitorInfo], frames: &[Frame], area: Rect) -> Rg
     out
 }
 
+/// A rectangle given as `{x, y, width, height}`.
+pub fn rect_of(v: &Value) -> Option<Rect> {
+    rect_from(v)
+}
+
+/// Where an area is, for the capture's metadata (CAP-056): its monitor and scale, and
+/// the window covering most of it.
+pub fn place_of(core: &Core, area: Rect) -> crate::scroll::Place {
+    let _ = core;
+    let list: Vec<MonitorInfo> = monitors()
+        .map(|l| l.into_iter().map(|(_, i)| i).collect())
+        .unwrap_or_default();
+    let hit: Vec<&MonitorInfo> = list
+        .iter()
+        .filter(|m| m.rect.intersect(&area).is_some())
+        .collect();
+    let main = hit
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
+    let window = app_windows()
+        .into_iter()
+        .filter_map(|w| {
+            let r = Rect {
+                x: w.x().ok()?,
+                y: w.y().ok()?,
+                width: w.width().ok()?,
+                height: w.height().ok()?,
+            };
+            Some((r.intersect(&area)?.area(), w))
+        })
+        .max_by_key(|(a, _)| *a)
+        .map(|(_, w)| w);
+    crate::scroll::Place {
+        scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
+        monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
+        app: window.as_ref().and_then(|w| {
+            Some(platform::app_info(
+                w.pid().ok()?,
+                &w.app_name().unwrap_or_default(),
+            ))
+        }),
+        window_title: window.and_then(|w| w.title().ok()),
+    }
+}
+
 fn rect_from(v: &Value) -> Option<Rect> {
     Some(Rect {
         x: v.get("x")?.as_i64()? as i32,
@@ -187,6 +232,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());
     }
+    let scroll_params = request.get("scroll").cloned().unwrap_or_else(|| json!({}));
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
     if outcome.get("slow").and_then(Value::as_bool).unwrap_or(false) {
         offer_simple_crosshair(core, lang);
@@ -194,7 +240,32 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
     if let Some(zoom) = outcome.get("magnifierZoom").filter(|z| z.is_u64()) {
         core.remember("capture.magnifierZoom", zoom.clone());
     }
-    match outcome.get("kind").and_then(Value::as_str) {
+    // Scrolling (CAP-034, CAP-035): from the capture bar's Scrolling button or arrows, or
+    // any area or window picked with Selection = Scrolling.
+    let scrolling = mode == "scrolling";
+    let kind = outcome.get("kind").and_then(Value::as_str);
+    if kind == Some("scroll") || (scrolling && matches!(kind, Some("rect") | Some("window"))) {
+        let area = match kind {
+            Some("window") => {
+                let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
+                frozen.windows.iter().find(|w| w.id == id).map(|w| w.rect)
+            }
+            _ => outcome.get("rect").and_then(rect_from),
+        }
+        .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
+        // The bar's buttons and keys say manual or automatic; otherwise the Image tab.
+        let mut p = scroll_params;
+        if kind == Some("scroll") {
+            p["type"] = outcome.get("type").cloned().unwrap_or(json!("manual"));
+            if let Some(d) = outcome.get("direction") {
+                p["direction"] = d.clone();
+            }
+        }
+        let scroll_kind = crate::scroll_kind(core, &p);
+        let place = place_of(core, area);
+        return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
+    }
+    match kind {
         Some("rect") => {
             let area = outcome
                 .get("rect")

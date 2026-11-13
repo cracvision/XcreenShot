@@ -2,12 +2,12 @@
 // the preset editor (CAP-060).
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PanelSettings } from "../lib/commands";
+import type { PanelSettings, ScrollProps } from "../lib/commands";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
-/** The Image tab also extracts text (SMT-005). */
-const IMAGE_SELECTIONS = [...SELECTIONS, "text"] as const;
+/** The Image tab also scrolls (CAP-034, CAP-035) and extracts text (SMT-005). */
+const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "text"] as const;
 
 interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];
@@ -30,6 +30,8 @@ function CommonOptions<T extends Common>({
   const { t } = useTranslation();
   const id = useId();
   const text = value.selection === "text";
+  // A scrolling capture has no pointer (CAP-002).
+  const noCursor = text || value.selection === "scrolling";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>
@@ -72,13 +74,19 @@ function CommonOptions<T extends Common>({
       </label>
       {/* The pointer arrives as its own object, to move or delete (CAP-047). */}
       <label
-        className={`panel-check${text ? " disabled" : ""}`}
-        title={text ? t("ui.panel.text_no_cursor") : t("ui.panel.cursor_help")}
+        className={`panel-check${noCursor ? " disabled" : ""}`}
+        title={
+          text
+            ? t("ui.panel.text_no_cursor")
+            : noCursor
+              ? t("ui.panel.scroll_no_cursor")
+              : t("ui.panel.cursor_help")
+        }
       >
         <input
           type="checkbox"
-          disabled={text}
-          checked={value.cursor && !text}
+          disabled={noCursor}
+          checked={value.cursor && !noCursor}
           onChange={(e) => onChange({ cursor: e.target.checked })}
         />
         {t("ui.panel.cursor")}
@@ -133,6 +141,12 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "scrolling" && (
+        <ScrollOptions
+          value={value.scroll}
+          onChange={(s) => onChange({ scroll: { ...value.scroll, ...s } })}
+        />
+      )}
       <div className="panel-row">
         <label className="panel-field" htmlFor={`${id}-timing`}>
           <span>{t("ui.panel.timing")}</span>
@@ -167,5 +181,92 @@ export function ImageOptions({
         )}
       </div>
     </>
+  );
+}
+
+/** The properties of Selection = Scrolling (CAP-034, CAP-035): manual or automatic, and
+ * how an automatic one moves. */
+function ScrollOptions({
+  value,
+  onChange,
+}: {
+  value: ScrollProps;
+  onChange: (patch: Partial<ScrollProps>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const auto = value.type === "auto";
+  const [wait, setWait] = useState<string | null>(null);
+  const commitWait = () => {
+    const n = Math.round(Number(wait) * 10) / 10;
+    if (wait !== null && Number.isFinite(n) && n >= 0 && n <= 5) onChange({ wait: n });
+    setWait(null);
+  };
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-field" htmlFor={`${id}-type`}>
+        <span>{t("ui.panel.scroll_type")}</span>
+        <select
+          id={`${id}-type`}
+          value={value.type}
+          onChange={(e) => onChange({ type: e.target.value as ScrollProps["type"] })}
+        >
+          <option value="manual">{t("ui.panel.scroll_manual")}</option>
+          <option value="auto">{t("ui.panel.scroll_auto")}</option>
+        </select>
+      </label>
+      {auto && (
+        <>
+          <label className="panel-field" htmlFor={`${id}-dir`}>
+            <span>{t("ui.panel.scroll_direction")}</span>
+            <select
+              id={`${id}-dir`}
+              value={value.direction}
+              onChange={(e) => onChange({ direction: e.target.value as ScrollProps["direction"] })}
+            >
+              <option value="vertical">{t("ui.panel.scroll_vertical")}</option>
+              <option value="horizontal">{t("ui.panel.scroll_horizontal")}</option>
+              <option value="both">{t("ui.panel.scroll_both")}</option>
+            </select>
+          </label>
+          <label className="panel-field" htmlFor={`${id}-from`}>
+            <span>{t("ui.panel.scroll_start_from")}</span>
+            <select
+              id={`${id}-from`}
+              value={value.startFrom}
+              onChange={(e) => onChange({ startFrom: e.target.value as ScrollProps["startFrom"] })}
+            >
+              <option value="start">{t("ui.panel.scroll_from_start")}</option>
+              <option value="current">{t("ui.panel.scroll_from_current")}</option>
+            </select>
+          </label>
+          <label className="panel-field narrow" htmlFor={`${id}-wait`}>
+            <span>{t("ui.panel.scroll_wait")}</span>
+            <input
+              id={`${id}-wait`}
+              type="number"
+              min={0}
+              max={5}
+              step={0.1}
+              value={wait ?? String(value.wait)}
+              title={t("ui.panel.scroll_wait_range")}
+              onChange={(e) => setWait(e.target.value)}
+              onBlur={commitWait}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitWait();
+              }}
+            />
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={value.restore}
+              onChange={(e) => onChange({ restore: e.target.checked })}
+            />
+            {t("ui.panel.scroll_restore")}
+          </label>
+        </>
+      )}
+    </fieldset>
   );
 }

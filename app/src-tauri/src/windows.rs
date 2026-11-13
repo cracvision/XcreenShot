@@ -13,6 +13,7 @@ pub const MAIN: &str = "main";
 pub const PREFERENCES: &str = "preferences";
 pub const CAPTURE_PANEL: &str = "capture-panel";
 pub const MULTI_PANEL: &str = "multicapture";
+pub const SCROLL_PANEL: &str = "scroll";
 pub const HELP: &str = "help";
 pub const WELCOME: &str = "welcome";
 /// Logical width of the capture panel; its height follows the content.
@@ -295,6 +296,124 @@ pub fn multicapture_panel(app: &AppHandle, show: bool) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Logical size of the scrolling capture's panel (CAP-034, CAP-035).
+const SCROLL_WIDTH: f64 = 300.0;
+const SCROLL_HEIGHT: f64 = 520.0;
+const SCROLL_AUTO_HEIGHT: f64 = 300.0;
+const SCROLL_GAP: f64 = 12.0;
+
+/// A rectangle in physical pixels of the desktop.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Area {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
+/// Where the scrolling capture's panel goes (CAP-034): beside the area, on the side of its
+/// monitor with most room; if it fits on no side, on another monitor; at worst in a corner
+/// of the area's monitor (it never shows in the capture anyway). `size` is the panel's,
+/// `gap` the space it keeps from the area and the edges; `monitors` are work areas, the
+/// area's first.
+pub fn scroll_panel_place(area: Area, size: (i32, i32), gap: i32, monitors: &[Area]) -> (i32, i32) {
+    let (pw, ph) = size;
+    let Some(m) = monitors.first() else {
+        return (area.x + area.w + gap, area.y);
+    };
+    let clamp_y = |y: i32, m: &Area| y.clamp(m.y + gap, (m.y + m.h - ph - gap).max(m.y + gap));
+    let clamp_x = |x: i32, m: &Area| x.clamp(m.x + gap, (m.x + m.w - pw - gap).max(m.x + gap));
+    // Room on each side of the area, inside its monitor.
+    let right = m.x + m.w - (area.x + area.w);
+    let left = area.x - m.x;
+    let below = m.y + m.h - (area.y + area.h);
+    let above = area.y - m.y;
+    let mut sides = [
+        (right - pw - 2 * gap, (area.x + area.w + gap, clamp_y(area.y, m))),
+        (left - pw - 2 * gap, (area.x - gap - pw, clamp_y(area.y, m))),
+        (below - ph - 2 * gap, (clamp_x(area.x, m), area.y + area.h + gap)),
+        (above - ph - 2 * gap, (clamp_x(area.x, m), area.y - gap - ph)),
+    ];
+    sides.sort_by_key(|(room, _)| -room);
+    if sides[0].0 >= 0 {
+        return sides[0].1;
+    }
+    // Another monitor: its top right corner.
+    if let Some(other) = monitors
+        .iter()
+        .skip(1)
+        .find(|o| o.w >= pw + 2 * gap && o.h >= ph + 2 * gap)
+    {
+        return (other.x + other.w - pw - gap, other.y + gap);
+    }
+    (m.x + m.w - pw - gap, m.y + m.h - ph - gap)
+}
+
+/// The scrolling capture's panel (CAP-034, CAP-035): always in front, never part of a
+/// capture, without taking the focus from the app being scrolled. `None` closes it.
+pub fn scroll_panel(app: &AppHandle, place: Option<serde_json::Value>) -> tauri::Result<()> {
+    let existing = app.get_webview_window(SCROLL_PANEL);
+    let Some(place) = place else {
+        if let Some(w) = existing {
+            w.destroy()?;
+        }
+        return Ok(());
+    };
+    if let Some(w) = existing {
+        w.destroy()?;
+    }
+    let auto = place["auto"].as_bool().unwrap_or(false);
+    let rect = &place["rect"];
+    let area = Area {
+        x: rect["x"].as_i64().unwrap_or(0) as i32,
+        y: rect["y"].as_i64().unwrap_or(0) as i32,
+        w: rect["width"].as_i64().unwrap_or(0) as i32,
+        h: rect["height"].as_i64().unwrap_or(0) as i32,
+    };
+    let height = if auto { SCROLL_AUTO_HEIGHT } else { SCROLL_HEIGHT };
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.scroll.title", &[]);
+    let w = WebviewWindowBuilder::new(app, SCROLL_PANEL, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(SCROLL_WIDTH, height)
+        .resizable(false)
+        .always_on_top(true)
+        .maximizable(false)
+        .minimizable(false)
+        .skip_taskbar(true)
+        .focused(false)
+        .visible(false)
+        .content_protected(true)
+        .theme(theme(app))
+        .build()?;
+    // The area's monitor first, then the others.
+    let mut monitors: Vec<(Area, f64)> = app
+        .available_monitors()?
+        .into_iter()
+        .map(|m| {
+            let wa = m.work_area();
+            (
+                Area {
+                    x: wa.position.x,
+                    y: wa.position.y,
+                    w: wa.size.width as i32,
+                    h: wa.size.height as i32,
+                },
+                m.scale_factor(),
+            )
+        })
+        .collect();
+    let (cx, cy) = (area.x + area.w / 2, area.y + area.h / 2);
+    monitors.sort_by_key(|(m, _)| !(cx >= m.x && cx < m.x + m.w && cy >= m.y && cy < m.y + m.h));
+    let scale = monitors.first().map(|(_, s)| *s).unwrap_or(1.0);
+    let size = ((SCROLL_WIDTH * scale) as i32, (height * scale) as i32);
+    let areas: Vec<Area> = monitors.iter().map(|(m, _)| *m).collect();
+    let (x, y) = scroll_panel_place(area, size, (SCROLL_GAP * scale) as i32, &areas);
+    w.set_position(tauri::PhysicalPosition::new(x, y))?;
+    w.set_size(tauri::PhysicalSize::new(size.0 as u32, size.1 as u32))?;
+    w.show()?;
+    Ok(())
+}
+
 /// The panel fits its content (compact or expanded view, CAP-001).
 pub fn fit_capture_panel(app: &AppHandle, height: f64) {
     if let Some(w) = app.get_webview_window(CAPTURE_PANEL) {
@@ -407,5 +526,47 @@ pub fn close_focused(app: &AppHandle) {
         .find(|w| w.is_focused().unwrap_or(false))
     {
         let _ = w.close();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SCREEN: Area = Area {
+        x: 0,
+        y: 0,
+        w: 1920,
+        h: 1040,
+    };
+
+    /// CAP-034: the panel goes beside the area, on the side with most room.
+    #[test]
+    fn the_scroll_panel_goes_on_the_side_with_most_room() {
+        let area = Area {
+            x: 100,
+            y: 100,
+            w: 900,
+            h: 700,
+        };
+        assert_eq!(scroll_panel_place(area, (300, 520), 12, &[SCREEN]), (1012, 100));
+        let right = Area { x: 1000, ..area };
+        assert_eq!(scroll_panel_place(right, (300, 520), 12, &[SCREEN]), (688, 100));
+    }
+
+    /// With no room beside the area, another monitor; with none, a corner.
+    #[test]
+    fn a_full_screen_area_sends_the_panel_elsewhere() {
+        let other = Area {
+            x: 1920,
+            y: 0,
+            w: 1280,
+            h: 1000,
+        };
+        assert_eq!(
+            scroll_panel_place(SCREEN, (300, 520), 12, &[SCREEN, other]),
+            (2888, 12)
+        );
+        assert_eq!(scroll_panel_place(SCREEN, (300, 520), 12, &[SCREEN]), (1608, 508));
     }
 }

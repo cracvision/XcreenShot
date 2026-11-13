@@ -95,8 +95,9 @@ pub struct Stitcher {
     canvas: Canvas,
     /// The fixed start (header or left bar) of the frame furthest up or left, and the
     /// fixed end (footer or right bar) of the one furthest down or right.
-    head: Option<Edge>,
-    tail: Option<Edge>,
+    /// With both directions there is one for each column (or row) of frames.
+    heads: Vec<Keyed>,
+    tails: Vec<Keyed>,
     /// The first frame waits until the first join tells what in it is fixed.
     pending_first: bool,
     joins: usize,
@@ -113,13 +114,24 @@ impl Stitcher {
             prev: None,
             at: (0, 0),
             canvas: Canvas::default(),
-            head: None,
-            tail: None,
+            heads: Vec::new(),
+            tails: Vec::new(),
             pending_first: false,
             joins: 0,
             doubtful: 0,
             full: false,
         }
+    }
+
+    /// The size of one frame.
+    pub fn frame_size(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+
+    /// Where the last frame joined sits, from the first one (pixels; positive: down or
+    /// right).
+    pub fn position(&self) -> (i64, i64) {
+        self.at
     }
 
     /// How many joins were made, and how many of them are doubtful.
@@ -202,7 +214,11 @@ impl Stitcher {
         if self.pending_first || self.joins == 0 {
             return self.prev.take();
         }
-        for edge in [self.head.take(), self.tail.take()].into_iter().flatten() {
+        let edges = std::mem::take(&mut self.heads)
+            .into_iter()
+            .chain(std::mem::take(&mut self.tails));
+        for keyed in edges {
+            let edge = keyed.edge;
             self.canvas.paint(&edge.image, edge.x, edge.y, None);
         }
         let (x0, y0, x1, y1) = self.bounds();
@@ -221,7 +237,7 @@ impl Stitcher {
 
     fn bounds(&self) -> (i64, i64, i64, i64) {
         let mut b = self.canvas.painted;
-        for e in [self.head.as_ref(), self.tail.as_ref()].into_iter().flatten() {
+        for e in self.heads.iter().chain(&self.tails).map(|k| &k.edge) {
             let (x1, y1) = (e.x + e.image.width() as i64, e.y + e.image.height() as i64);
             b = (b.0.min(e.x), b.1.min(e.y), b.2.max(x1), b.3.max(y1));
         }
@@ -265,45 +281,66 @@ impl Stitcher {
     }
 
     /// Keeps the fixed start of the frame furthest up (or left) and the fixed end of the
-    /// one furthest down (or right).
+    /// one furthest down (or right), for each column (or row) of frames.
     fn keep_edges(&mut self, frame: &RgbaImage, at: (i64, i64), shift: Shift) {
         let (w, h) = (self.width, self.height);
         let vertical = shift.dy != 0;
         let along = if vertical { at.1 } else { at.0 };
-        let start_of = |e: &Edge| if vertical { e.y } else { e.x };
-        if shift.lead > 0 && self.head.as_ref().is_none_or(|e| along <= start_of(e)) {
+        let key = (vertical, if vertical { at.0 } else { at.1 });
+        if shift.lead > 0 {
             let image = if vertical {
                 image::imageops::crop_imm(frame, 0, 0, w, shift.lead as u32).to_image()
             } else {
                 image::imageops::crop_imm(frame, 0, 0, shift.lead as u32, h).to_image()
             };
-            self.head = Some(Edge {
+            let edge = Edge {
                 x: at.0,
                 y: at.1,
                 image,
-            });
+            };
+            keep(
+                &mut self.heads,
+                key,
+                edge,
+                |e| -(if vertical { e.y } else { e.x }),
+                -along,
+            );
         }
         if shift.trail > 0 {
             let end = along + if vertical { h as i64 } else { w as i64 };
-            let end_of = |e: &Edge| {
+            let t = shift.trail as u32;
+            let (image, x, y) = if vertical {
+                let img = image::imageops::crop_imm(frame, 0, h - t, w, t).to_image();
+                (img, at.0, at.1 + (h - t) as i64)
+            } else {
+                let img = image::imageops::crop_imm(frame, w - t, 0, t, h).to_image();
+                (img, at.0 + (w - t) as i64, at.1)
+            };
+            let end_of = move |e: &Edge| {
                 if vertical {
                     e.y + e.image.height() as i64
                 } else {
                     e.x + e.image.width() as i64
                 }
             };
-            if self.tail.as_ref().is_none_or(|e| end >= end_of(e)) {
-                let t = shift.trail as u32;
-                let (image, x, y) = if vertical {
-                    let img = image::imageops::crop_imm(frame, 0, h - t, w, t).to_image();
-                    (img, at.0, at.1 + (h - t) as i64)
-                } else {
-                    let img = image::imageops::crop_imm(frame, w - t, 0, t, h).to_image();
-                    (img, at.0 + (w - t) as i64, at.1)
-                };
-                self.tail = Some(Edge { x, y, image });
-            }
+            keep(&mut self.tails, key, Edge { x, y, image }, end_of, end);
         }
+    }
+}
+
+/// A fixed start or end, for one column (vertical moves, keyed by x) or row of frames.
+struct Keyed {
+    key: (bool, i64),
+    edge: Edge,
+}
+
+/// Keeps `edge` for `key` if it reaches further (`reach`, larger is further) than the one
+/// kept, or if none is.
+fn keep(list: &mut Vec<Keyed>, key: (bool, i64), edge: Edge, reach_of: impl Fn(&Edge) -> i64, reach: i64) {
+    match list.iter_mut().find(|k| k.key == key) {
+        Some(k) if reach >= reach_of(&k.edge) => k.edge = edge,
+        Some(_) => {}
+        None => list.push(Keyed { key, edge }),
     }
 }
 
@@ -646,12 +683,12 @@ impl Canvas {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use image::Rgba;
 
     /// A tall "page" with varied content: text-like lines, boxes and blank stretches.
-    pub(super) fn page(w: u32, h: u32, seed: u32) -> RgbaImage {
+    pub(crate) fn page(w: u32, h: u32, seed: u32) -> RgbaImage {
         let mut img = RgbaImage::from_pixel(w, h, Rgba([250, 250, 252, 255]));
         let mut s = seed;
         let mut rnd = || {

@@ -289,6 +289,25 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://multicapture", state);
     }
 
+    fn scroll_panel(&self, place: Option<Value>) {
+        let app = self.app.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let queued = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::scroll_panel(&app, place) {
+                tracing::error!(error = %e, "scrolling capture panel");
+            }
+            let _ = tx.send(());
+        });
+        // Wait until it is shown or gone: the first frame must not race with it.
+        if queued.is_ok() {
+            let _ = rx.recv_timeout(Duration::from_secs(2));
+        }
+    }
+
+    fn scroll_event(&self, state: Value) {
+        let _ = self.app.emit("xs://scroll", state);
+    }
+
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         let (tx, rx) = std::sync::mpsc::channel();
         let app = self.app.clone();

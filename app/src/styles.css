@@ -1582,6 +1582,25 @@ html.overlay-root #root {
   border-color: #0c9afc;
 }
 
+/* Scrolling and its three automatic arrows (CAP-034, CAP-035). */
+.overlay-scroll {
+  display: flex;
+  gap: 4px;
+}
+
+.overlay-btn.icon {
+  min-width: 32px;
+  padding: 6px 8px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.overlay-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: rgb(255 255 255 / 0.25);
+}
+
 .overlay-btn kbd {
   background: rgb(255 255 255 / 0.15);
   border-color: rgb(255 255 255 / 0.3);
@@ -1714,6 +1733,17 @@ html.overlay-root.overlay-native #root {
 
 .panel-row .panel-field:first-child {
   flex: 1;
+}
+
+/* The properties of a selection mode (Scrolling, CAP-034, CAP-035). */
+.panel-props {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
 }
 
 .panel-field.narrow {
@@ -3157,6 +3187,97 @@ html.overlay-root.overlay-native #root {
 
 .tb-redo:active:not(:disabled) svg {
   transform: rotate(40deg);
+}
+
+/* ---------- Scrolling capture panel (CAP-034, CAP-035) ---------- */
+.scroll-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100vh;
+  padding: var(--space-4);
+  background: var(--surface);
+}
+
+.scroll-hint {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.scroll-preview {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(circle at 1px 1px, var(--canvas-dot) 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+/* The whole joined image, scaled to fit. */
+.scroll-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top center;
+}
+
+.scroll-size {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.scroll-full,
+.scroll-problem {
+  color: var(--warning);
+}
+
+.scroll-problem {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* An automatic capture's bar: it moves while XcreenShot scrolls. */
+.scroll-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--range-off);
+}
+
+.scroll-progress span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--brand);
+  animation: scroll-busy 1.2s var(--ease-standard) infinite;
+}
+
+@keyframes scroll-busy {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.scroll-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.scroll-actions kbd {
+  border-bottom-width: 1px;
+  padding: 0 5px;
+  font-size: 11px;
 }
 
 /* ---------- Glass (Cristal, general.glassIntensity) ---------- */
@@ -6447,6 +6568,13 @@ button.lc-head:hover,
   .recent-dot,
   .prop-buttons > .btn[aria-pressed="true"] svg {
     animation: none;
+  }
+
+  /* The scrolling capture's busy bar stays still. */
+  .scroll-progress span {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
   }
 
   /* The REC light stays lit, without blinking. */

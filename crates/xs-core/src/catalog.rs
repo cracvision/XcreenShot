@@ -480,6 +480,32 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("capture.multi_clear", &["CAP-067"])
             .mutates()
             .result(multi_state()),
+        // Scrolling capture (CAP-034 to CAP-036).
+        B::new("capture.scrolling", &["CAP-034", "CAP-035", "CAP-036", "CAP-008"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({
+                "type": {"type": "string", "enum": ["manual", "auto"], "description": "manual: the user scrolls and presses Done; auto: XcreenShot scrolls (default: the Image tab's)"},
+                "direction": {"type": "string", "enum": ["vertical", "horizontal", "both"], "description": "Automatic: which way to scroll (default: the Image tab's)"},
+                "startFrom": {"type": "string", "enum": ["start", "current"], "description": "Automatic: from the beginning or from where the content is"},
+                "wait": {"type": "number", "minimum": 0, "maximum": 5, "description": "Automatic: seconds between steps, for content that loads late"},
+                "restore": {"type": "boolean", "description": "Automatic: put the content back where it was"},
+                "rect": {"type": "object", "description": "The area, a rectangle of the desktop in physical pixels, without selecting on screen"}
+            })))
+            .result(capture_result()),
+        B::new("capture.scroll_action", &["CAP-034", "CAP-035"])
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": ["start", "done", "cancel"], "description": "start (with Ask before scrolling), done (keep what was captured; Stop here) or cancel"}}),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"running": {"type": "boolean"}}})),
+        B::new("capture.scroll_state", &["CAP-034", "CAP-035"]).result(json!({"type": "object", "properties": {
+            "running": {"type": "boolean"}, "auto": {"type": "boolean"}, "started": {"type": "boolean"},
+            "width": {"type": "integer"}, "height": {"type": "integer"}, "full": {"type": "boolean"}
+        }})),
         B::new("capture.settings", &["CAP-001", "CAP-002", "CAP-010"]).result(json!({"type": "object"})),
         B::new("capture.configure", &["CAP-001", "CAP-002", "CAP-010"])
             .mutates()

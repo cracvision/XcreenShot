@@ -295,7 +295,7 @@ fn restore_builtins(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             }
             Some(i) => {
                 let x = &mut stored.presets[i];
-                if x.settings != original || x.renamed {
+                if !presets::same_settings(kind, &x.settings, &original) || x.renamed {
                     modified.push(presets::display_name(x, lang));
                     if reset {
                         x.settings = original;
@@ -452,7 +452,7 @@ fn settings_import(
         stored.presets.iter().any(|p| {
             presets::display_name(p, lang).to_lowercase() == x.name.to_lowercase()
                 && p.kind == x.kind
-                && p.settings == x.settings
+                && presets::same_settings(&p.kind, &p.settings, &x.settings)
         })
     };
     // What is here as the file has it is not imported again.
@@ -714,11 +714,15 @@ mod tests {
         // Extract text comes with the app too (SMT-005).
         assert_eq!(list["presets"][1]["builtin"], "extract_text");
         assert_eq!(list["presets"][1]["settings"]["selection"], "text");
+        // And Scrolling, automatic and vertical from the beginning (CAP-064, CAP-035).
+        assert_eq!(list["presets"][2]["builtin"], "scrolling");
+        assert_eq!(list["presets"][2]["settings"]["scroll"]["type"], "auto");
+        assert_eq!(list["presets"][2]["settings"]["scroll"]["direction"], "vertical");
         let id = first["id"].as_str().unwrap();
         call(&c, "preset.delete", json!({"ids": [id]}));
         assert_eq!(
             names(&c),
-            ["Extract text"],
+            ["Extract text", "Scrolling"],
             "it does not come back at the next load"
         );
         let r = call(&c, "preset.restore_builtins", json!({}));
@@ -832,7 +836,13 @@ mod tests {
         assert_eq!(copy["shortcut"], Value::Null);
         assert_eq!(
             names(&c),
-            ["Region to clipboard", "Extract text", "Ventana", "Ventana (copy)"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Ventana",
+                "Ventana (copy)"
+            ]
         );
         // Delete and Undo.
         let r = call(&c, "preset.delete", json!({"ids": [id]}));
@@ -840,12 +850,23 @@ mod tests {
         assert!(presets::shortcut_of(&c, &id).is_none(), "the keys are free");
         assert_eq!(
             names(&c),
-            ["Region to clipboard", "Extract text", "Ventana (copy)"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Ventana (copy)"
+            ]
         );
         call(&c, "preset.restore", json!({"undo": r["undo"]}));
         assert_eq!(
             names(&c),
-            ["Region to clipboard", "Extract text", "Ventana", "Ventana (copy)"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Ventana",
+                "Ventana (copy)"
+            ]
         );
         assert_eq!(
             presets::shortcut_of(&c, &id).unwrap().to_string(),
@@ -855,7 +876,13 @@ mod tests {
         call(&c, "preset.move", json!({"id": copy["id"], "index": 0}));
         assert_eq!(
             names(&c),
-            ["Ventana (copy)", "Region to clipboard", "Extract text", "Ventana"]
+            [
+                "Ventana (copy)",
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Ventana"
+            ]
         );
         let menu: Vec<String> = presets::menu_items(&c).into_iter().map(|(_, n)| n).collect();
         assert_eq!(menu, names(&c));
@@ -881,7 +908,7 @@ mod tests {
         call(&a, "settings.export", json!({"out": file}));
         let text = std::fs::read_to_string(&file).unwrap();
         let exported: Value = serde_json::from_str(&text).unwrap();
-        assert_eq!(exported["groups"]["presets"]["presets"][2]["name"], "Uno");
+        assert_eq!(exported["groups"]["presets"]["presets"][3]["name"], "Uno");
         assert!(
             !exported["groups"]["shortcuts"]["overrides"]
                 .as_object()
@@ -903,7 +930,10 @@ mod tests {
             "settings.import",
             json!({"path": file, "groups": ["presets"]}),
         );
-        assert_eq!(names(&b), ["Region to clipboard", "Extract text", "Uno"]);
+        assert_eq!(
+            names(&b),
+            ["Region to clipboard", "Extract text", "Scrolling", "Uno"]
+        );
         let uno = by_name(&b, "Uno");
         assert_eq!(
             presets::shortcut_of(&b, &uno.id).unwrap().to_string(),
@@ -937,13 +967,13 @@ mod tests {
             json!({"command": one["slot"], "shortcut": "Ctrl+Alt+Shift+I"}),
         );
         let r = call(&a, "preset.export", json!({"out": file}));
-        assert_eq!(r["count"], 4);
+        assert_eq!(r["count"], 5);
         let text = std::fs::read_to_string(&file).unwrap();
         assert!(text.contains("\"format\": \"xcreenshot-presets\""));
 
         let b = core();
         let dry = call(&b, "preset.import", json!({"paths": [file], "dryRun": true}));
-        assert_eq!(dry["presets"].as_array().unwrap().len(), 4);
+        assert_eq!(dry["presets"].as_array().unwrap().len(), 5);
         assert_eq!(
             dry["presets"][0]["exists"], true,
             "Region to clipboard is there already"
@@ -953,7 +983,10 @@ mod tests {
             "preset.import",
             json!({"paths": [file], "onConflict": "skip"}),
         );
-        assert_eq!(names(&b), ["Region to clipboard", "Extract text", "Uno", "Dos"]);
+        assert_eq!(
+            names(&b),
+            ["Region to clipboard", "Extract text", "Scrolling", "Uno", "Dos"]
+        );
         let uno = by_name(&b, "Uno");
         assert_eq!(uno.settings["selection"], "window");
         assert_eq!(
@@ -965,11 +998,18 @@ mod tests {
         assert_eq!(r["withoutShortcut"], json!(["Uno"]));
         assert_eq!(
             names(&b),
-            ["Region to clipboard", "Extract text", "Uno", "Dos", "Uno (2)"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Uno",
+                "Dos",
+                "Uno (2)"
+            ]
         );
         // Replace changes the one there.
         let mut changed: Value = serde_json::from_str(&text).unwrap();
-        changed["presets"][2]["settings"]["selection"] = json!("fullscreen");
+        changed["presets"][3]["settings"]["selection"] = json!("fullscreen");
         std::fs::write(&file, serde_json::to_vec(&changed).unwrap()).unwrap();
         call(
             &b,

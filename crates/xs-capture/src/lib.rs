@@ -18,6 +18,9 @@ pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
+pub mod scroll;
+#[cfg(windows)]
+mod scroll_win;
 pub mod stitch;
 
 use std::path::PathBuf;
@@ -764,8 +767,48 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
         }
+        "capture.scrolling" => {
+            let opts = Options::from_params(p, ctx.source);
+            wait_delay(core, &opts, ctx.lang)?;
+            let kind = scroll_kind(core, p);
+            match p.get("rect").and_then(interactive::rect_of) {
+                Some(area) => {
+                    let place = interactive::place_of(core, area);
+                    scroll::run(core, ctx, &opts, area, kind, place)
+                }
+                None => {
+                    let extra = panel::with_overrides(extra, &json!({ "scroll": p }));
+                    interactive::run(core, ctx, &opts, "scrolling", extra)
+                }
+            }
+        }
         other => Err(CommandError::internal(format!("not a capture command: {other}"))),
     }
+}
+
+/// Manual or automatic, from `capture.scrolling`'s parameters (CAP-034, CAP-035).
+pub(crate) fn scroll_kind(core: &Core, p: &Value) -> scroll::Kind {
+    let tab = panel::load(core).image.scroll;
+    let text = |key: &str, default: &str| p.get(key).and_then(Value::as_str).unwrap_or(default).to_string();
+    if text("type", &tab.kind) != "auto" {
+        return scroll::Kind::Manual;
+    }
+    let direction = match text("direction", &tab.direction).as_str() {
+        "horizontal" => stitch::Direction::Horizontal,
+        "both" => stitch::Direction::Both,
+        _ => stitch::Direction::Vertical,
+    };
+    let wait = p
+        .get("wait")
+        .and_then(Value::as_f64)
+        .unwrap_or(tab.wait)
+        .clamp(0.0, 5.0);
+    scroll::Kind::Auto(scroll::Auto {
+        direction,
+        from_start: text("startFrom", &tab.start_from) != "current",
+        wait: std::time::Duration::from_millis((wait * 1000.0) as u64),
+        restore: p.get("restore").and_then(Value::as_bool).unwrap_or(tab.restore),
+    })
 }
 
 /// "Repeat last area" (CAP-007): the same screen rectangle at once, without the
@@ -926,6 +969,37 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        // Scrolling capture (CAP-034 to CAP-036).
+        let w = weak.clone();
+        reg.handle("capture.scrolling", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            dispatch(&core, ctx, "capture.scrolling", &p, json!({}))
+        });
+        let w = weak.clone();
+        reg.handle("capture.scroll_action", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let action = match p.get("action").and_then(Value::as_str) {
+                Some("start") => scroll::Action::Start,
+                Some("done") => scroll::Action::Done,
+                _ => scroll::Action::Cancel,
+            };
+            if !scroll::act(&core, action) {
+                return Err(CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(ctx.lang, "errors.scroll_not_running", &[]),
+                ));
+            }
+            Ok(json!({ "running": true }))
+        });
+        let w = weak.clone();
+        reg.handle("capture.scroll_state", move |_ctx, _p| {
+            Ok(scroll::state(&*upgrade(&w)?))
         });
         // CAP-058 to CAP-064; their shortcut rows exist from the start (CAP-062).
         preset_cmds::register(reg, &weak);

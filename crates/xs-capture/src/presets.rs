@@ -58,8 +58,8 @@ pub struct Stored {
     pub builtins_seen: Vec<String>,
 }
 
-/// The presets that come with the app, in order (CAP-064). Scrolling, the step
-/// recorder and Extract text arrive with their features.
+/// The presets that come with the app, in order (CAP-064). The step recorder arrives
+/// with its feature.
 pub fn builtins() -> Vec<(&'static str, &'static str, Value)> {
     vec![
         (
@@ -71,6 +71,12 @@ pub fn builtins() -> Vec<(&'static str, &'static str, Value)> {
             "extract_text",
             "image",
             json!({"selection": "text", "open": "none", "copy": true, "cursor": false, "timing": "none", "delay": 5}),
+        ),
+        (
+            "scrolling",
+            "image",
+            json!({"selection": "scrolling", "open": "editor", "copy": true, "cursor": false, "timing": "none", "delay": 5,
+                "scroll": {"type": "auto", "direction": "vertical", "startFrom": "start", "wait": 0.3, "restore": true}}),
         ),
     ]
 }
@@ -192,6 +198,13 @@ pub fn checked_settings(kind: &str, settings: &Value) -> Result<Value, String> {
         }
     }
     Ok(normalized)
+}
+
+/// Whether two settings of a `kind` preset mean the same: fields a newer build added
+/// with their default values count as the same as missing ones.
+pub fn same_settings(kind: &str, a: &Value, b: &Value) -> bool {
+    let norm = |v: &Value| checked_settings(kind, v).unwrap_or_else(|_| v.clone());
+    norm(a) == norm(b)
 }
 
 /// Panel settings whose `kind` tab is the preset's, for planning a capture.
