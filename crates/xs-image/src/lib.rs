@@ -17,6 +17,7 @@ pub mod fx_marks;
 pub mod fx_shapes;
 pub mod fx_spot;
 pub mod geometry;
+pub mod gif_anim;
 pub mod highlights;
 pub mod inpaint;
 pub mod magnify;

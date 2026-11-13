@@ -90,8 +90,8 @@ export function StatusBar() {
       <footer className="status-bar">
         <RecentButton />
         <span className="status-item">
-          {doc.video.width} × {doc.video.height} px · {doc.video.codec} ·{" "}
-          {t("ui.video.fps", { fps: doc.video.fps })}
+          {doc.video.width} × {doc.video.height} px · {doc.video.codec}
+          {doc.video.codec !== "GIF" && ` · ${t("ui.video.fps", { fps: doc.video.fps })}`}
         </span>
       </footer>
     );

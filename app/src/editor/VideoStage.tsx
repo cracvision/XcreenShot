@@ -127,18 +127,28 @@ export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets })
           left: insets.left,
         }}
       >
-        <video
-          ref={ref}
-          className="video-picture"
-          // The version changes when the file does (saved with its cuts).
-          src={xsdocUrl(`${doc.documentId}/video?v=${doc.version}`)}
-          preload="auto"
-          playsInline
-          aria-label={t("ui.video.picture", { name: doc.name })}
-          style={{ aspectRatio: v ? `${v.width} / ${v.height}` : undefined }}
-          onClick={playPause}
-          onError={() => useVideo.setState({ playing: false })}
-        />
+        {v?.codec === "GIF" ? (
+          <img
+            className="video-picture"
+            src={xsdocUrl(`${doc.documentId}/video?v=${doc.version}`)}
+            alt={t("ui.video.picture", { name: doc.name })}
+            style={{ aspectRatio: `${v.width} / ${v.height}` }}
+            draggable={false}
+          />
+        ) : (
+          <video
+            ref={ref}
+            className="video-picture"
+            // The version changes when the file does (saved with its cuts).
+            src={xsdocUrl(`${doc.documentId}/video?v=${doc.version}`)}
+            preload="auto"
+            playsInline
+            aria-label={t("ui.video.picture", { name: doc.name })}
+            style={{ aspectRatio: v ? `${v.width} / ${v.height}` : undefined }}
+            onClick={playPause}
+            onError={() => useVideo.setState({ playing: false })}
+          />
+        )}
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
 import { VideoStage } from "./VideoStage";
+import { GifDialog } from "./GifDialog";
 import { TemplateDialogs } from "./TemplatePicker";
 import { dropOnCanvas, dropOnZone } from "./templateActions";
 import { canvasPointAt, useDropPoint } from "./templateUi";
@@ -203,6 +204,7 @@ export function Editor() {
         <div className="drop-hint">{t("ui.library.import.drop_hint")}</div>
       )}
       <Dialogs />
+      <GifDialog />
       <TemplateDialogs />
       <QuickView />
       <TagDialogs />

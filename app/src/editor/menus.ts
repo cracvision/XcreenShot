@@ -351,6 +351,7 @@ const VIDEO_ACTIONS = [
   "video_cut",
   "video_save_selection",
   "video_save_frame",
+  "video_gif",
   "video_extract_text",
   "video_silent_copy",
   "video_info",
@@ -418,6 +419,7 @@ export function useMenuBar(): void {
   // A video shown (ADR 0008): its menu on, the image's off.
   const isVideo = !!doc?.video && !inLibrary;
   const videoSound = doc?.video?.sound ?? false;
+  const isGif = isVideo && doc?.video?.codec === "GIF";
   const videoCuttable = useVideo((s) => {
     const length = doc?.video?.length ?? 0;
     return s.end - s.start < length - 1e-6;
@@ -517,6 +519,8 @@ export function useMenuBar(): void {
     for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;
     enabled["editor.video_cut"] = hasDoc && isVideo && videoCuttable;
     enabled["editor.video_silent_copy"] = hasDoc && isVideo && videoSound;
+    // A GIF plays and shows its information; it is not edited (VID-068).
+    if (isGif) for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = a === "video_info";
     // Image things a video does not have (VID-065).
     if (isVideo)
       for (const a of [
@@ -542,6 +546,7 @@ export function useMenuBar(): void {
   }, [
     hasDoc,
     isVideo,
+    isGif,
     videoSound,
     videoCuttable,
     libraryDoc,

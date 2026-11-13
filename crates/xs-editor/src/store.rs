@@ -27,6 +27,9 @@ pub enum Format {
     Jpg,
     /// A video (`.mp4`, `.m4v`, `.mov`) open in the editor (ADR 0008).
     Video,
+    /// An animated GIF (VID-068): it plays in the editor, like a video, and is not
+    /// edited.
+    Gif,
 }
 
 impl Format {
@@ -41,6 +44,7 @@ impl Format {
             "png" => Some(Format::Png),
             "jpg" | "jpeg" => Some(Format::Jpg),
             "mp4" | "m4v" | "mov" => Some(Format::Video),
+            "gif" => Some(Format::Gif),
             _ => None,
         }
     }
@@ -51,6 +55,7 @@ impl Format {
             Format::Png => "png",
             Format::Jpg => "jpg",
             Format::Video => "mp4",
+            Format::Gif => "gif",
         }
     }
 }
@@ -230,8 +235,9 @@ impl Doc {
         }
     }
 
+    /// A video or an animated GIF: they play, image tools do not apply (VID-065).
     pub fn is_video(&self) -> bool {
-        self.format == Format::Video
+        matches!(self.format, Format::Video | Format::Gif)
     }
 
     /// Short description for lists (`document.list`).
@@ -535,6 +541,48 @@ impl DocStore {
                 );
                 doc.base_size = (w, h);
                 doc.video = Some(facts);
+                Ok(doc)
+            }
+            // An animated GIF (VID-068): it plays as it is; its first frame for the
+            // tray.
+            Format::Gif => {
+                let bytes = std::fs::read(path).map_err(|e| unreadable(&e))?;
+                let info = xs_image::gif_anim::info(&bytes).ok_or_else(|| unreadable(&"GIF"))?;
+                let first = xs_image::gif_anim::first_frame(&bytes).ok_or_else(|| unreadable(&"GIF"))?;
+                let png = xs_image::encode::png(&first, 0.0, false).map_err(|e| unreadable(&e))?;
+                let (w, h) = (info.width, info.height);
+                let mut document = Document::new(w, h, 96.0);
+                document.kind = "video".into();
+                let kind = if xs_library::contains(library, path) {
+                    Kind::Library
+                } else {
+                    Kind::External
+                };
+                let mut doc = Doc::new(
+                    Some(path.to_path_buf()),
+                    kind,
+                    format,
+                    document,
+                    json!({}),
+                    BaseSource {
+                        bytes: Arc::new(png),
+                        mime: "image/png",
+                    },
+                );
+                doc.base_size = (w, h);
+                let fps = if info.duration > 0.0 {
+                    (info.frames as f64 / info.duration).round() as u32
+                } else {
+                    0
+                };
+                doc.video = Some(xs_video::Facts {
+                    width: w,
+                    height: h,
+                    duration: info.duration,
+                    fps,
+                    codec: "GIF".into(),
+                    sound: false,
+                });
                 Ok(doc)
             }
             Format::Png | Format::Jpg => {

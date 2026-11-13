@@ -7,7 +7,12 @@ use xs_core::document::Xshot;
 
 /// Formats the library lists: what the editor opens, and the videos XcreenShot
 /// records (VID-054). GIF and the rest arrive with their features.
-pub const FORMATS: [&str; 5] = ["xshot", "png", "jpg", "jpeg", "mp4"];
+pub const FORMATS: [&str; 8] = ["xshot", "png", "jpg", "jpeg", "mp4", "m4v", "mov", "gif"];
+
+/// The formats that are videos (VID-054, VID-055).
+pub fn is_video(format: &str) -> bool {
+    matches!(format, "mp4" | "m4v" | "mov")
+}
 
 /// A file found in the library folder.
 #[derive(Debug, Clone, PartialEq)]
@@ -180,11 +185,20 @@ pub fn info(found: &Found) -> Info {
                 info.captured = t.timestamp_millis();
             }
         }
-    } else if format == "mp4" {
+    } else if is_video(&format) {
         // Only its header: the size (VID-054).
         if let Ok((w, h)) = xs_video::size(&found.abs) {
             info.width = Some(w);
             info.height = Some(h);
+        }
+    } else if format == "gif" {
+        // An animated GIF (VID-068): its size from its header.
+        if let Some(i) = std::fs::read(&found.abs)
+            .ok()
+            .and_then(|b| xs_image::gif_anim::info(&b))
+        {
+            info.width = Some(i.width);
+            info.height = Some(i.height);
         }
     } else if let Ok((w, h)) = image::ImageReader::open(&found.abs)
         .and_then(|r| r.with_guessed_format())

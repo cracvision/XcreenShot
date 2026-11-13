@@ -942,6 +942,18 @@
     "video_silent_copy": {
       "title": "Make a silent copy",
       "description": "The video, with its cuts, as a new video without any sound."
+    },
+    "video_gif": {
+      "title": "Create animated GIF",
+      "description": "The selection or the whole video as an animated GIF in the library, opened in the editor."
+    },
+    "video_gif_estimate": {
+      "title": "Estimate a GIF",
+      "description": "The size, length and frames a GIF would have, with a preview of its first seconds."
+    },
+    "video_cancel": {
+      "title": "Cancel the GIF",
+      "description": "Stops the GIF being made from a video; nothing is left behind."
     }
   },
   "settings": {
@@ -1548,7 +1560,9 @@
     "video_no_image_tools": "Image tools do not work on a video. To mark a moment, use Save frame and annotate the image; to point things out in a video, use Live drawing while recording.",
     "not_a_video": "That document is not a video.",
     "video_cut_all": "The whole video cannot be cut: leave at least one frame.",
-    "video_no_sound": "This video has no sound."
+    "video_no_sound": "This video has no sound.",
+    "gif_no_edit": "A GIF is not cut or turned into a GIF again: use the video it came from.",
+    "gif_cancelled": "The GIF was cancelled: nothing was saved."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1877,7 +1891,8 @@
     "video_save_frame": "Save frame",
     "video_extract_text": "Extract text from frame",
     "video_silent_copy": "Make a silent copy",
-    "video_info": "Information"
+    "video_info": "Information",
+    "video_gif": "Create animated GIF…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -4271,7 +4286,41 @@
         "location": "Location",
         "copy": "Copy information"
       },
-      "fps": "{{fps}} fps"
+      "fps": "{{fps}} fps",
+      "gif": {
+        "title": "Create animated GIF",
+        "button": "GIF",
+        "create": "Create GIF",
+        "what": "What to convert",
+        "selection": "Current selection ({{seconds}} s)",
+        "all": "Whole video ({{seconds}} s)",
+        "optimize": "Optimize for",
+        "optimize_screen": "Screen recording",
+        "optimize_motion": "Lots of motion (camera, games)",
+        "optimize_small": "Small file",
+        "optimize_best": "Best quality",
+        "optimize_custom": "Custom",
+        "fps": "Frames per second",
+        "unit": "Size in",
+        "pixels": "Pixels",
+        "percent": "Percent",
+        "dither": "Dithering",
+        "dither_hint": "Mixes pixels to smooth gradients: fewer color bands, a bigger file.",
+        "dynamic": "Dynamic colors",
+        "dynamic_hint": "Each frame has its own palette: better colors when scenes change, a bit bigger.",
+        "loops": "Repeat",
+        "loops_forever": "Always",
+        "loops_once": "Once",
+        "loops_times": "Number of times",
+        "times": "Times",
+        "fade": "Fade to black at the end",
+        "fade_seconds": "Fade (seconds)",
+        "preview": "Preview of the first seconds",
+        "estimate": "About {{size}} · {{seconds}} s · {{width}} × {{height}} px · {{fps}} fps",
+        "estimating": "Estimating…",
+        "guide": "This GIF will be long or heavy: many services limit GIFs, and a GIF weighs much more than the video. Select a shorter part or choose a smaller size."
+      },
+      "busy_gif": "Creating the GIF… {{percent}} %"
     }
   },
   "history": {

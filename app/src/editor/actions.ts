@@ -904,6 +904,7 @@ export function performAction(action: string): boolean {
     case "video_cut":
     case "video_save_selection":
     case "video_save_frame":
+    case "video_gif":
     case "video_extract_text":
     case "video_silent_copy":
     case "video_info":

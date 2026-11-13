@@ -554,7 +554,11 @@ impl Library {
         let abs = self.abs(&item.path);
         let png = if item.format == "xshot" {
             Some(Xshot::read_summary(&abs).ok()?.thumb_png).filter(|b| !b.is_empty())?
-        } else if item.format == "mp4" {
+        } else if item.format == "gif" {
+            // An animated GIF: its first frame (VID-068).
+            let image = xs_image::gif_anim::first_frame(&std::fs::read(&abs).ok()?)?;
+            xs_image::encode::png(&xs_image::encode::thumbnail(&image, THUMB), 0.0, true).ok()?
+        } else if crate::scan::is_video(&item.format) {
             // A video: its first frame (VID-054).
             let (w, h, mut px) = xs_video::first_frame(&abs).ok()?;
             for p in px.as_chunks_mut::<4>().0 {

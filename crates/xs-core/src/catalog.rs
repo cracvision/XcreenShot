@@ -958,6 +958,55 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &["time"],
             ))
             .result(json!({"type": "object", "description": "As smart.extract_text"})),
+        B::new("video.gif", &["VID-068", "VID-069", "VID-070"])
+            .mutates()
+            .params(params(json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "With end: only this part (seconds of the video as it is now); without: the whole video"},
+                    "end": {"type": "number", "minimum": 0},
+                    "optimize": {"type": "string", "enum": ["screen", "motion", "small", "best", "custom"], "description": "Optimize for (VID-069); default screen"},
+                    "fps": {"type": "number", "minimum": 1, "maximum": 30, "description": "custom: frames per second"},
+                    "percent": {"type": "number", "minimum": 1, "maximum": 100, "description": "custom: size in percent"},
+                    "width": {"type": "integer", "minimum": 16, "description": "custom: width in pixels"},
+                    "height": {"type": "integer", "minimum": 16, "description": "custom: height in pixels"},
+                    "dither": {"type": "boolean", "description": "custom: dithering"},
+                    "dynamic": {"type": "boolean", "description": "custom: a palette per frame (default true)"},
+                    "loops": {"description": "forever (default), once, or 1 to 100 plays"},
+                    "fade": {"type": "number", "minimum": 0, "maximum": 3, "description": "Seconds of fade to black at the end"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the GIF in the editor (default) or leave it in the tray"}
+                }), &[]))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"},
+                "fps": {"type": "number"}, "duration": {"type": "number"}, "bytes": {"type": "integer"}
+            }})),
+        B::new("video.gif_estimate", &["VID-068", "VID-069", "VID-070"])
+            .params(params(json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "With end: only this part (seconds of the video as it is now); without: the whole video"},
+                    "end": {"type": "number", "minimum": 0},
+                    "optimize": {"type": "string", "enum": ["screen", "motion", "small", "best", "custom"], "description": "Optimize for (VID-069); default screen"},
+                    "fps": {"type": "number", "minimum": 1, "maximum": 30, "description": "custom: frames per second"},
+                    "percent": {"type": "number", "minimum": 1, "maximum": 100, "description": "custom: size in percent"},
+                    "width": {"type": "integer", "minimum": 16, "description": "custom: width in pixels"},
+                    "height": {"type": "integer", "minimum": 16, "description": "custom: height in pixels"},
+                    "dither": {"type": "boolean", "description": "custom: dithering"},
+                    "dynamic": {"type": "boolean", "description": "custom: a palette per frame (default true)"},
+                    "loops": {"description": "forever (default), once, or 1 to 100 plays"},
+                    "fade": {"type": "number", "minimum": 0, "maximum": 3, "description": "Seconds of fade to black at the end"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the GIF in the editor (default) or leave it in the tray"}
+                }), &[]))
+            .result(json!({"type": "object", "properties": {
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "number"},
+                "duration": {"type": "number"}, "bytes": {"type": "integer", "description": "Estimated size"},
+                "long": {"type": "boolean", "description": "Longer than 30 s"},
+                "heavy": {"type": "boolean", "description": "More than 10 MB"},
+                "preview": {"type": "string", "description": "The first seconds as a GIF data URL"}
+            }})),
+        B::new("video.cancel", &["VID-068"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
         B::new("video.silent_copy", &["VID-063"])
             .mutates()
             .params(params(json!({"documentId": document_id()}), &[]))
@@ -2570,7 +2619,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 118] = [
+pub const EDITOR_ACTIONS: [&str; 119] = [
     "open",
     "save",
     "save_as",
@@ -2698,6 +2747,7 @@ pub const EDITOR_ACTIONS: [&str; 118] = [
     "video_cut",
     "video_save_selection",
     "video_save_frame",
+    "video_gif",
     "video_extract_text",
     "video_silent_copy",
     "video_info",

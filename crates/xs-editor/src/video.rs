@@ -12,7 +12,7 @@ use xs_core::i18n::tr;
 use xs_core::{CommandError, CommandResult, Context, Core, ErrorCode, Lang};
 use xs_video::timeline::{self, Span};
 
-use crate::store::DocStore;
+use crate::store::{DocStore, Format};
 use crate::{activate, editor, emit_document, emit_list, invalid, library_target, resolve};
 
 /// Commands that only make sense for an image: with a video they say why not
@@ -100,6 +100,17 @@ struct Open {
 
 fn open_video(core: &Core, lang: Lang, p: &Value) -> Result<Open, CommandError> {
     let id = resolve(core, lang, p)?;
+    // A GIF plays, but is not cut or converted again (VID-068).
+    if editor(core)
+        .store
+        .with(&id, |d| d.format == Format::Gif)
+        .unwrap_or(false)
+    {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.gif_no_edit", &[]),
+        ));
+    }
     editor(core)
         .store
         .with(&id, |d| {
@@ -401,9 +412,340 @@ pub fn extract_text(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult
     result
 }
 
+// ---------------------------------------------------------------------------
+// Animated GIF (VID-068 to VID-070)
+
+/// Long jobs that can be cancelled, by document (`video.cancel`).
+static JOBS: std::sync::Mutex<Option<std::collections::HashMap<String, Arc<AtomicBool>>>> =
+    std::sync::Mutex::new(None);
+
+fn job(id: &str) -> Arc<AtomicBool> {
+    let flag = Arc::new(AtomicBool::new(false));
+    JOBS.lock()
+        .unwrap()
+        .get_or_insert_with(Default::default)
+        .insert(id.to_string(), flag.clone());
+    flag
+}
+
+fn job_done(id: &str) {
+    if let Some(map) = JOBS.lock().unwrap().as_mut() {
+        map.remove(id);
+    }
+}
+
+/// `video.cancel`: stops the GIF being made from a video; nothing is left behind.
+pub fn cancel(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let id = resolve(core, ctx.lang, p)?;
+    let flag = JOBS.lock().unwrap().as_ref().and_then(|m| m.get(&id).cloned());
+    if let Some(f) = &flag {
+        f.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+    Ok(json!({ "cancelled": flag.is_some() }))
+}
+
+/// What a GIF will be (VID-069, VID-070).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GifSettings {
+    pub fps: f64,
+    pub width: u32,
+    pub height: u32,
+    pub dither: bool,
+    pub dynamic: bool,
+    pub loops: xs_image::gif_anim::Loops,
+    /// Seconds of fade to black at the end; 0: none.
+    pub fade: f64,
+}
+
+/// The presets of Optimize for (VID-069): frames per second, longest side, dithering
+/// and dynamic colors.
+fn preset(name: &str) -> Option<(u32, Option<u32>, bool, bool)> {
+    Some(match name {
+        "screen" => (15, Some(1280), false, true),
+        "motion" => (20, Some(800), true, true),
+        "small" => (8, Some(200), false, false),
+        "best" => (30, None, false, true),
+        _ => return None,
+    })
+}
+
+/// The settings asked for, never more frames or pixels than the video (VID-069).
+pub fn gif_settings(p: &Value, video: (u32, u32, u32)) -> Result<GifSettings, String> {
+    let (vw, vh, vfps) = video;
+    let vfps = vfps.clamp(1, 240);
+    let optimize = p.get("optimize").and_then(Value::as_str).unwrap_or("screen");
+    let num = |k: &str| p.get(k).and_then(Value::as_f64);
+    let flag = |k: &str, d: bool| p.get(k).and_then(Value::as_bool).unwrap_or(d);
+    let fit = |longest: Option<u32>| -> (u32, u32) {
+        let k = longest
+            .map(|l| (l as f64 / vw.max(vh) as f64).min(1.0))
+            .unwrap_or(1.0);
+        (
+            ((vw as f64 * k).round() as u32).max(1),
+            ((vh as f64 * k).round() as u32).max(1),
+        )
+    };
+    let (fps, (width, height), dither, dynamic) = match preset(optimize) {
+        Some((fps, longest, dither, dynamic)) => (fps as f64, fit(longest), dither, dynamic),
+        None if optimize == "custom" => {
+            let fps = num("fps").unwrap_or(15.0).clamp(1.0, 30.0);
+            let size = match (num("percent"), num("width"), num("height")) {
+                (Some(pc), _, _) => {
+                    let k = (pc / 100.0).clamp(0.01, 1.0);
+                    ((vw as f64 * k).round() as u32, (vh as f64 * k).round() as u32)
+                }
+                (None, Some(w), Some(h)) => (w as u32, h as u32),
+                // One side: the other keeps the proportion.
+                (None, Some(w), None) => (w as u32, (w * vh as f64 / vw as f64).round() as u32),
+                (None, None, Some(h)) => ((h * vw as f64 / vh as f64).round() as u32, h as u32),
+                (None, None, None) => (vw, vh),
+            };
+            (fps, size, flag("dither", false), flag("dynamic", true))
+        }
+        None => return Err(format!("optimize: {optimize}")),
+    };
+    let loops = match p.get("loops") {
+        None => xs_image::gif_anim::Loops::Forever,
+        Some(v) if v == "forever" => xs_image::gif_anim::Loops::Forever,
+        Some(v) if v == "once" => xs_image::gif_anim::Loops::Times(1),
+        Some(v) => xs_image::gif_anim::Loops::Times(
+            v.as_u64()
+                .filter(|n| (1..=100).contains(n))
+                .ok_or("loops: forever, once or 1 to 100")? as u16,
+        ),
+    };
+    Ok(GifSettings {
+        fps: fps.min(vfps as f64),
+        width: width.clamp(16.min(vw), vw),
+        height: height.clamp(16.min(vh), vh),
+        dither: if optimize == "custom" {
+            flag("dither", dither)
+        } else {
+            dither
+        },
+        dynamic: if optimize == "custom" {
+            flag("dynamic", dynamic)
+        } else {
+            dynamic
+        },
+        loops,
+        fade: num("fade").unwrap_or(0.0).clamp(0.0, 3.0),
+    })
+}
+
+/// The parts of the file a GIF takes: the selection or the whole video (VID-068).
+fn gif_parts(o: &Open, p: &Value) -> Vec<Span> {
+    match (
+        p.get("start").and_then(Value::as_f64),
+        p.get("end").and_then(Value::as_f64),
+    ) {
+        (Some(a), Some(b)) if b > a => timeline::source_spans(&o.kept, a, b),
+        _ => o.kept.clone(),
+    }
+}
+
+/// Encodes `parts` of `path` as a GIF; `each` gets the progress and says whether to go
+/// on. `until`: stop after that many seconds (the estimate's sample).
+fn encode_gif(
+    path: &Path,
+    parts: &[Span],
+    s: &GifSettings,
+    until: Option<f64>,
+    each: &mut dyn FnMut(f64) -> bool,
+) -> Result<Option<Vec<u8>>, String> {
+    let total = timeline::length(parts);
+    let shared = if s.dynamic {
+        None
+    } else {
+        // One palette from frames across the GIF.
+        let mut samples = Vec::new();
+        for k in 0..6 {
+            let at = timeline::to_source(parts, total * (k as f64 + 0.5) / 6.0);
+            if let Ok((w, h, mut px)) = xs_video::frame_at(path, at) {
+                for p in px.as_chunks_mut::<4>().0 {
+                    p.swap(0, 2);
+                }
+                if let Some(img) = image::RgbaImage::from_raw(w, h, px) {
+                    samples.push(image::imageops::thumbnail(
+                        &img,
+                        s.width.min(320),
+                        s.height.min(320),
+                    ));
+                }
+            }
+        }
+        Some(xs_image::gif_anim::shared_palette(&samples))
+    };
+    let mut gif = xs_image::gif_anim::Animation::new(s.width, s.height, s.loops, shared, s.dither);
+    let frames_total = (total * s.fps).ceil().max(1.0);
+    let mut k = 0u64;
+    let mut stopped = false;
+    let mut failure: Option<String> = None;
+    let fade_from = total - s.fade;
+    let step = 1.0 / s.fps;
+    xs_video::frames(path, parts, s.fps, &mut |t, w, h, bgra| {
+        if until.is_some_and(|u| t >= u) {
+            return false;
+        }
+        let mut px = bgra.to_vec();
+        for p in px.as_chunks_mut::<4>().0 {
+            p.swap(0, 2);
+            p[3] = 255;
+        }
+        let Some(img) = image::RgbaImage::from_raw(w, h, px) else {
+            return false;
+        };
+        let mut img = if (w, h) == (s.width, s.height) {
+            img
+        } else {
+            image::imageops::resize(&img, s.width, s.height, image::imageops::FilterType::Triangle)
+        };
+        // Fade to black (VID-070): darker each frame, black on the last.
+        if s.fade > 0.0 && t >= fade_from {
+            let k = (1.0 - (t - fade_from) / (s.fade - step).max(step)).clamp(0.0, 1.0);
+            for p in img.pixels_mut() {
+                for c in 0..3 {
+                    p.0[c] = (p.0[c] as f64 * k).round() as u8;
+                }
+            }
+        }
+        // Hundredths, rounded so the total stays right.
+        let delay = ((k + 1) as f64 * 100.0 / s.fps).round() - (k as f64 * 100.0 / s.fps).round();
+        k += 1;
+        if let Err(e) = gif.push(img, delay.max(1.0) as u32) {
+            failure = Some(e);
+            return false;
+        }
+        if !each((k as f64 / frames_total).min(1.0)) {
+            stopped = true;
+            return false;
+        }
+        true
+    })?;
+    if let Some(e) = failure {
+        return Err(e);
+    }
+    if stopped {
+        return Ok(None);
+    }
+    gif.finish().map(Some)
+}
+
+/// `video.gif_estimate` (VID-068): the GIF's size, length and frames before making
+/// it, from a sample of its first seconds, which is also its preview.
+pub fn gif_estimate(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let o = open_video(core, lang, p)?;
+    let s = gif_settings(p, (o.facts.width, o.facts.height, o.facts.fps)).map_err(|e| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", "optimize"), ("reason", &e)],
+        ))
+    })?;
+    let parts = gif_parts(&o, p);
+    let length = timeline::length(&parts);
+    let sample = length.min(2.0);
+    let bytes = encode_gif(&o.path, &parts, &s, Some(sample), &mut |_| true)
+        .map_err(|e| failed(lang, &o.name, e))?
+        .unwrap_or_default();
+    let estimate = if sample > 0.0 {
+        (bytes.len() as f64 * length / sample) as u64
+    } else {
+        bytes.len() as u64
+    };
+    use base64::Engine as _;
+    Ok(json!({
+        "width": s.width,
+        "height": s.height,
+        "fps": s.fps,
+        "duration": (length * 10.0).round() / 10.0,
+        "bytes": estimate,
+        "dither": s.dither,
+        "dynamic": s.dynamic,
+        // The size guide (VID-068): a warning, never a block.
+        "long": length > 30.0,
+        "heavy": estimate > 10 * 1024 * 1024,
+        "preview": format!("data:image/gif;base64,{}", base64::engine::general_purpose::STANDARD.encode(&bytes)),
+    }))
+}
+
+/// `video.gif` (VID-068): the selection or the whole video as an animated GIF in the
+/// library, opened in the editor; with progress, and `video.cancel` leaves no file.
+pub fn gif(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let o = open_video(core, lang, p)?;
+    let s = gif_settings(p, (o.facts.width, o.facts.height, o.facts.fps)).map_err(|e| {
+        invalid(tr(
+            lang,
+            "errors.invalid_param",
+            &[("param", "optimize"), ("reason", &e)],
+        ))
+    })?;
+    let parts = gif_parts(&o, p);
+    let dir = library_target(core).join(chrono::Local::now().format("%Y-%m").to_string());
+    let dst = xs_library::unique(&dir, &o.name, "gif");
+    let flag = job(&o.id);
+    let mut report = progress(core, &o.id, "gif");
+    let result = encode_gif(&o.path, &parts, &s, None, &mut |done| {
+        report(done.min(0.99));
+        !flag.load(std::sync::atomic::Ordering::Relaxed)
+    });
+    job_done(&o.id);
+    report(1.0);
+    let bytes = match result.map_err(|e| failed(lang, &o.name, e))? {
+        Some(b) => b,
+        None => {
+            return Err(CommandError::new(
+                ErrorCode::Cancelled,
+                tr(lang, "errors.gif_cancelled", &[]),
+            ))
+        }
+    };
+    std::fs::create_dir_all(&dir).map_err(|e| failed(lang, &o.name, e))?;
+    crate::write_file(&dst, &bytes).map_err(|e| failed(lang, &o.name, e))?;
+    xs_library::library(core).scan();
+    let open = p.get("open").and_then(Value::as_str).unwrap_or("editor") == "editor";
+    let id = if open {
+        crate::open(core, lang, &dst, true)?
+    } else {
+        new_video(core, &dst).map_err(|e| failed(lang, &o.name, e))?
+    };
+    Ok(json!({
+        "documentId": id,
+        "path": dst,
+        "width": s.width,
+        "height": s.height,
+        "fps": s.fps,
+        "duration": (timeline::length(&parts) * 10.0).round() / 10.0,
+        "bytes": bytes.len(),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// VID-069: the presets never go beyond the video.
+    #[test]
+    fn gif_presets() {
+        let s = gif_settings(&json!({"optimize": "small"}), (1920, 1080, 30)).unwrap();
+        assert_eq!((s.width, s.height, s.fps), (200, 113, 8.0));
+        let s = gif_settings(&json!({}), (1280, 720, 30)).unwrap();
+        assert_eq!((s.width, s.height, s.fps, s.dynamic), (1280, 720, 15.0, true));
+        let s = gif_settings(&json!({"optimize": "best"}), (640, 360, 10)).unwrap();
+        assert_eq!(s.fps, 10.0);
+        let s = gif_settings(&json!({"optimize": "custom", "percent": 50}), (1600, 900, 30)).unwrap();
+        assert_eq!((s.width, s.height), (800, 450));
+        let s = gif_settings(
+            &json!({"optimize": "custom", "loops": 3, "fade": 1}),
+            (100, 100, 30),
+        )
+        .unwrap();
+        assert_eq!(s.loops, xs_image::gif_anim::Loops::Times(3));
+        assert_eq!(s.fade, 1.0);
+        assert!(gif_settings(&json!({"optimize": "huge"}), (100, 100, 30)).is_err());
+    }
 
     #[test]
     fn stamps_for_file_names() {

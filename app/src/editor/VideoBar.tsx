@@ -8,6 +8,7 @@ import { Menu } from "../components/Menu";
 import { Icon } from "./icons";
 import { useEditor } from "./state";
 import {
+  cancelGif,
   canCut,
   cutSelection,
   extractText,
@@ -23,6 +24,7 @@ import {
   SPEEDS,
   stepFrame,
   useVideo,
+  videoAction,
 } from "./videoState";
 import { formatTime, parseTime, snap } from "./videoTimeline";
 
@@ -245,7 +247,8 @@ export function VideoBar() {
   const progress = useVideo((s) => s.progress);
   const back = useRepeat(() => stepFrame(-1));
   const next = useRepeat(() => stepFrame(1));
-  if (!v) return null;
+  // A GIF plays by itself, in a loop: no controls (VID-068).
+  if (!v || v.codec === "GIF") return null;
   const cuttable = canCut();
   return (
     <div className="video-bar" role="group" aria-label={t("ui.video.bar")}>
@@ -291,6 +294,11 @@ export function VideoBar() {
           <span className="vb-progress" role="status">
             {t(`ui.video.busy_${busy}`, { percent: Math.round((progress ?? 0) * 100) })}
             <progress max={1} value={progress ?? 0} />
+            {busy === "gif" && (
+              <button type="button" className="btn small" onClick={cancelGif}>
+                {t("ui.editor.cancel")}
+              </button>
+            )}
           </span>
         )}
         <button
@@ -312,6 +320,15 @@ export function VideoBar() {
         >
           <Icon name="frame" />
           <span className="tb-label">{t("ui.video.save_frame")}</span>
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy !== null}
+          title={t("ui.video.gif.title")}
+          onClick={() => videoAction("video_gif")}
+        >
+          <span className="tb-label">{t("ui.video.gif.button")}</span>
         </button>
         <Menu
           label={<Icon name="more" />}

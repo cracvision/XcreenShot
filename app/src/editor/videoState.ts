@@ -5,7 +5,7 @@
 import { listen } from "@tauri-apps/api/event";
 import i18next from "i18next";
 import { create } from "zustand";
-import { run } from "../lib/commands";
+import { isCommandError, run } from "../lib/commands";
 import { useEditor, usePanel, type DocDetails } from "./state";
 import {
   clampSelection,
@@ -38,6 +38,8 @@ interface VideoState {
   previewing: boolean;
   /** Go to… is open: the time can be typed (VID-056). */
   goTo: boolean;
+  /** The Create GIF dialog is open (VID-068). */
+  gifDialog: boolean;
 }
 
 export const useVideo = create<VideoState>(() => ({
@@ -54,6 +56,7 @@ export const useVideo = create<VideoState>(() => ({
   busy: null,
   previewing: false,
   goTo: false,
+  gifDialog: false,
 }));
 
 function video(): DocDetails["video"] {
@@ -209,7 +212,9 @@ async function job<T>(
   try {
     return await run<T>(command, { documentId: doc.documentId, ...params });
   } catch (e) {
-    failed(e);
+    // Cancelled on purpose: said, not an error (VID-068).
+    if (isCommandError(e) && e.code === "cancelled") useEditor.getState().showToast(e.message);
+    else failed(e);
     return null;
   } finally {
     useVideo.setState({ busy: null, progress: null });
@@ -267,6 +272,17 @@ export async function extractText(): Promise<void> {
   }
 }
 
+/** Create GIF (VID-068): in the background; the GIF opens in the editor when done. */
+export async function createGif(params: Record<string, unknown>): Promise<void> {
+  await job("gif", "video.gif", params);
+}
+
+/** Cancel the GIF being made (VID-068). */
+export function cancelGif(): void {
+  const doc = useEditor.getState().doc;
+  if (doc) void run("video.cancel", { documentId: doc.documentId }).catch(() => undefined);
+}
+
 /** Silent copy (VID-063). */
 export async function silentCopy(): Promise<void> {
   const r = await job<{ path: string }>("silent", "video.silent_copy", {});
@@ -322,6 +338,11 @@ export function videoAction(action: string): boolean {
     case "video_silent_copy":
       if (!v.sound) return false;
       void silentCopy();
+      break;
+    case "video_gif":
+      if (v.codec === "GIF") return false;
+      useVideo.getState().element?.pause();
+      useVideo.setState({ gifDialog: true, playing: false });
       break;
     case "video_info":
       // The side panel shows it (VID-064).

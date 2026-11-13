@@ -5449,3 +5449,54 @@ fn a_video_in_the_editor() {
     assert_eq!(i["canUndo"], false);
     assert!((xs_video::info(&path).unwrap().duration - 2.0).abs() < 0.15);
 }
+
+/// VID-068 to VID-070: a GIF of a video's first second, its estimate first, opened in
+/// the editor; a GIF plays but is not cut or turned into a GIF again.
+#[cfg(windows)]
+#[test]
+fn a_gif_from_a_video() {
+    let e = env();
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+    let path = e.library.path().join("clip.mp4");
+    std::fs::copy(&src, &path).unwrap();
+    let doc = cli(&e.core, "document.open", json!({"path": path, "show": true}));
+    let id = doc["documentId"].as_str().unwrap().to_string();
+    let est = cli(
+        &e.core,
+        "video.gif_estimate",
+        json!({"documentId": id, "optimize": "custom", "percent": 50, "fps": 5, "start": 0.0, "end": 1.0}),
+    );
+    assert_eq!(
+        (est["width"].as_u64(), est["height"].as_u64()),
+        (Some(160), Some(120))
+    );
+    assert_eq!(est["fps"], 5.0);
+    assert!(est["bytes"].as_u64().unwrap() > 100);
+    assert!(est["preview"]
+        .as_str()
+        .unwrap()
+        .starts_with("data:image/gif;base64,"));
+    assert_eq!(est["long"], false);
+    let g = cli(
+        &e.core,
+        "video.gif",
+        json!({"documentId": id, "optimize": "custom", "percent": 50, "fps": 5, "start": 0.0, "end": 1.0, "loops": 3}),
+    );
+    let gif = PathBuf::from(g["path"].as_str().unwrap());
+    assert!(gif.starts_with(e.library.path()));
+    let info = xs_image::gif_anim::info(&std::fs::read(&gif).unwrap()).unwrap();
+    assert_eq!((info.width, info.height), (160, 120));
+    // One second, all red: one frame of 1 s.
+    assert!((info.duration - 1.0).abs() < 0.05, "{info:?}");
+    let shown = cli(&e.core, "document.info", json!({}));
+    assert_eq!(shown["format"], "gif");
+    assert_eq!(shown["documentId"], g["documentId"]);
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "video.cut",
+        json!({"documentId": g["documentId"], "start": 0.0, "end": 0.5}),
+    )
+    .unwrap_err();
+    assert!(err.message.contains("GIF"), "{}", err.message);
+}

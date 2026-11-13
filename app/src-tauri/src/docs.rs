@@ -229,6 +229,7 @@ fn video(path: &std::path::Path, request: &Request<Vec<u8>>) -> Response<Vec<u8>
         .as_deref()
     {
         Some("mov") => "video/quicktime",
+        Some("gif") => "image/gif",
         _ => "video/mp4",
     };
     let asked = request

@@ -27,7 +27,11 @@ mod win_fx;
 pub use win::{audio_info, first_frame, free_space, info, probe, size};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
 #[cfg(windows)]
-pub use win_edit::{export, facts, frame_at};
+pub use win_edit::{export, facts, frame_at, frames};
+
+/// Gets each frame of [`frames`]: its time in the result, width, height and BGRA
+/// pixels; returns false to stop.
+pub type FrameSink<'a> = dyn FnMut(f64, u32, u32, &[u8]) -> bool + 'a;
 
 /// What the editor needs to open a video (ADR 0008).
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -51,6 +55,17 @@ pub fn facts(_path: &std::path::Path) -> Result<Facts, String> {
 /// The frame at a moment of a video (not available on this platform yet).
 #[cfg(not(windows))]
 pub fn frame_at(_path: &std::path::Path, _seconds: f64) -> Result<(u32, u32, Vec<u8>), String> {
+    Err("not available on this platform yet".into())
+}
+
+/// The frames of parts of a video at a rate (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn frames(
+    _path: &std::path::Path,
+    _spans: &[timeline::Span],
+    _fps: f64,
+    _each: &mut FrameSink,
+) -> Result<(), String> {
     Err("not available on this platform yet".into())
 }
 

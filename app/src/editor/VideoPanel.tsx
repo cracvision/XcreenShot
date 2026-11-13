@@ -31,8 +31,9 @@ export function VideoPanel({ doc }: { doc: DocDetails }) {
   const [loaded, setLoaded] = useState<{ key: string; info: FullInfo } | null>(null);
   const full = loaded?.key === key ? loaded.info : null;
   const v = doc.video;
+  const gif = v?.codec === "GIF";
   useEffect(() => {
-    if (!doc.path) return;
+    if (!doc.path || gif) return;
     let live = true;
     void run<FullInfo>("video.info", { path: doc.path })
       .then((info) => live && setLoaded({ key, info }))
@@ -40,13 +41,14 @@ export function VideoPanel({ doc }: { doc: DocDetails }) {
     return () => {
       live = false;
     };
-  }, [doc.path, key]);
+  }, [doc.path, key, gif]);
 
   if (!v) return null;
   const rows: [string, string][] = [
     [t("ui.video.info.size"), `${v.width} × ${v.height}`],
     [t("ui.video.info.duration"), formatTime(v.length)],
-    [t("ui.video.info.fps"), `${v.fps}`],
+    // A GIF's frames last what each needs: no single rate (VID-068).
+    ...(gif ? [] : [[t("ui.video.info.fps"), `${v.fps}`] as [string, string]]),
     [t("ui.video.info.codec"), v.codec],
     [t("ui.video.info.sound"), v.sound ? t("ui.video.info.yes") : t("ui.video.info.no")],
   ];
@@ -87,44 +89,50 @@ export function VideoPanel({ doc }: { doc: DocDetails }) {
       <button type="button" className="btn small" onClick={copy}>
         {t("ui.video.info.copy")}
       </button>
-      <h3 className="side-subtitle">{t("ui.video.actions")}</h3>
-      <div className="video-actions">
-        <button
-          type="button"
-          className="btn"
-          disabled={busy !== null}
-          onClick={() => void saveFrame()}
-        >
-          <Icon name="frame" />
-          {t("ui.video.save_frame")}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={busy !== null}
-          onClick={() => void saveSelection()}
-        >
-          {t("ui.video.save_selection")}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={busy !== null}
-          onClick={() => void extractText()}
-        >
-          {t("ui.video.extract_text")}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={busy !== null || !v.sound}
-          title={v.sound ? undefined : t("errors.video_no_sound")}
-          onClick={() => void silentCopy()}
-        >
-          {t("ui.video.silent_copy")}
-        </button>
-      </div>
-      <p className="muted video-note">{t("errors.video_no_image_tools")}</p>
+      {gif ? (
+        <p className="muted video-note">{t("errors.gif_no_edit")}</p>
+      ) : (
+        <>
+          <h3 className="side-subtitle">{t("ui.video.actions")}</h3>
+          <div className="video-actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={busy !== null}
+              onClick={() => void saveFrame()}
+            >
+              <Icon name="frame" />
+              {t("ui.video.save_frame")}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy !== null}
+              onClick={() => void saveSelection()}
+            >
+              {t("ui.video.save_selection")}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy !== null}
+              onClick={() => void extractText()}
+            >
+              {t("ui.video.extract_text")}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy !== null || !v.sound}
+              title={v.sound ? undefined : t("errors.video_no_sound")}
+              onClick={() => void silentCopy()}
+            >
+              {t("ui.video.silent_copy")}
+            </button>
+          </div>
+          <p className="muted video-note">{t("errors.video_no_image_tools")}</p>
+        </>
+      )}
     </div>
   );
 }

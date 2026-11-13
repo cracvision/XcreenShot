@@ -613,6 +613,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                     "menu.video_save_frame",
                     "video_save_frame",
                 ),
+                action("editor.video_gif", "menu.video_gif", "video_gif"),
                 action(
                     "editor.video_extract_text",
                     "menu.video_extract_text",

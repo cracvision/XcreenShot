@@ -7428,6 +7428,33 @@ button.lc-head:hover,
   accent-color: var(--brand);
 }
 
+/* Create GIF (VID-068). */
+.gif-form fieldset {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gif-form legend {
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+.gif-estimate {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.gif-preview {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+}
+
 /* The side panel of a video (VID-064). */
 .video-info {
   display: grid;

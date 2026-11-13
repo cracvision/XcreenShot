@@ -251,6 +251,102 @@ fn nv12_reader(
     }
 }
 
+/// The frames of `spans` of a video at `fps` (an animated GIF, VID-068): calls `each`
+/// with the time in the result, the size and the BGRA pixels of the picture shown then;
+/// `each` returns false to stop.
+pub fn frames(
+    path: &Path,
+    spans: &[Span],
+    fps: f64,
+    each: &mut crate::FrameSink,
+) -> Result<(), String> {
+    start();
+    let reader = reader(path, true)?;
+    let (Some(video), _) = streams(&reader) else {
+        return Err("the file has no picture".into());
+    };
+    let step = 1.0 / fps.max(0.1);
+    // SAFETY: Media Foundation reading calls; samples are copied as they are read.
+    let g = unsafe {
+        let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
+        let _ = reader.SetStreamSelection(video, true);
+        let want = MFCreateMediaType().map_err(|e| err("media type", e))?;
+        let _ = want.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video);
+        let _ = want.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_RGB32);
+        reader
+            .SetCurrentMediaType(video, None, &want)
+            .map_err(|e| err("video type", e))?;
+        geometry(
+            &reader
+                .GetCurrentMediaType(video)
+                .map_err(|e| err("video type", e))?,
+        )?
+    };
+    let (w, h) = g.shown;
+    let picture = |s: &IMFSample| -> Result<Vec<u8>, String> {
+        let mut px = Vec::with_capacity((w * h * 4) as usize);
+        read_rows(s, g.buffer.0 as usize * 4, 0..h as usize, w as usize * 4, |r| {
+            px.extend_from_slice(r)
+        })?;
+        Ok(px)
+    };
+    let mut out = 0.0;
+    for span in spans.iter().filter(|s| !s.is_empty()) {
+        seek(&reader, span.start)?;
+        let mut tick = span.start;
+        let mut held: Option<Vec<u8>> = None;
+        loop {
+            let mut flags = 0u32;
+            let mut time = 0i64;
+            let mut sample = None;
+            // SAFETY: a read from the selected stream.
+            unsafe {
+                reader
+                    .ReadSample(
+                        video,
+                        0,
+                        None,
+                        Some(&mut flags),
+                        Some(&mut time),
+                        Some(&mut sample),
+                    )
+                    .map_err(|e| err("reading a frame", e))?;
+            }
+            if let Some(s) = sample {
+                let t = time as f64 / HNS;
+                // The ticks before this frame show the one held.
+                while tick < span.end - 1e-9 && t > tick + 1e-4 {
+                    if let Some(p) = &held {
+                        if !each(out, w, h, p) {
+                            return Ok(());
+                        }
+                        out += step;
+                    }
+                    tick += step;
+                }
+                if t >= span.end - 1e-9 || tick >= span.end - 1e-9 {
+                    break;
+                }
+                held = Some(picture(&s)?);
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                break;
+            }
+        }
+        // A still end: the last picture until the part ends.
+        if let Some(p) = &held {
+            while tick < span.end - 1e-9 {
+                if !each(out, w, h, p) {
+                    return Ok(());
+                }
+                out += step;
+                tick += step;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// What the editor needs to open a video at once (ADR 0008), without reading all of
 /// it: its size, length, frame rate, codec and whether it has sound.
 pub fn facts(path: &Path) -> Result<crate::Facts, String> {
@@ -785,6 +881,32 @@ mod tests {
         assert!(near(color_at(&dst, 0.5), GREEN));
         let info = crate::info(&dst).unwrap();
         assert!((info.duration - 1.0).abs() < 0.1, "duration {}", info.duration);
+    }
+
+    /// VID-068: frames at a steady rate across parts, each the picture shown then.
+    #[test]
+    fn frames_at_a_steady_rate() {
+        let src = dir().join("frames-rate.mp4");
+        three(&src, false);
+        let mut seen = Vec::new();
+        frames(
+            &src,
+            &[Span::new(0.5, 1.5), Span::new(2.0, 2.5)],
+            4.0,
+            &mut |t, w, h, px| {
+                let i = (((h / 2) * w + w / 2) * 4) as usize;
+                seen.push((t, [px[i + 2], px[i + 1], px[i]]));
+                true
+            },
+        )
+        .unwrap();
+        // 1 s at 4 fps, then 0.5 s: 6 frames, 0.25 s apart.
+        assert_eq!(seen.len(), 6, "{seen:?}");
+        assert!((seen[5].0 - 1.25).abs() < 1e-9);
+        assert!(
+            near(seen[0].1, RED) && near(seen[3].1, GREEN) && near(seen[4].1, BLUE),
+            "{seen:?}"
+        );
     }
 
     /// Opening a video reads its size, length and sound without reading it all.

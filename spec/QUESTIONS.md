@@ -266,6 +266,10 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | VID-058 | Colores y formas de los tiradores | Inicio: pestaña azul (el acento) a la izquierda del tramo; fin: pestaña amarilla a la derecha. El cabezal es una línea con un círculo | Provisional |
 | VID-056, VID-076 | Teclas del reproductor | Espacio (o K) reproduce y pausa; flechas, un fotograma; Inicio y Fin; I y O marcan la selección; Esc selecciona todo; Supr o Retroceso cortan. Solo con un video a la vista y sin un campo de texto con el foco | Provisional |
 | VID-064, VID-065 | ¿Dónde está la información del video? | En el panel lateral, que con un video sustituye a las pestañas de propiedades, estilos y efectos; también las acciones del video | Provisional |
+| VID-068 | ¿Con qué se escribe el GIF? | Con el escritor de GIF propio que ya tenía la exportación de imágenes (paleta por corte de la mediana y compresión LZW con `weezl`), ampliado a animación: no hace falta el crate `gif` que preveía el plan | Provisional |
+| VID-068 | ¿Cómo se estima el tamaño? | Codificando los primeros 2 s con los ajustes elegidos y extrapolando a la duración; esa muestra es también la vista previa | Provisional |
+| VID-068 | ¿Dónde se abre un GIF? | En el editor, como un documento que se reproduce solo (en bucle, según su repetición), con su información en el panel; no se corta ni se convierte otra vez, y las herramientas de imagen no se aplican. La biblioteca lista los GIF con su primer fotograma | Provisional |
+| VID-070 | Colores no dinámicos | Una sola paleta, sacada de 6 fotogramas repartidos por el tramo | Provisional |
 | VID-052 | Notificación con Abrir en = Editor | No se muestra (el editor ya enseña el video), salvo que haya un aviso (sin sonido, poco disco, ventana cerrada) | Provisional |
 
 ## Dudas del equipo de construcción (M4, entrega 4: cursor y teclas)

@@ -1,6 +1,6 @@
 # El video en el editor (M4.6)
 
-Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../docs/adr/0008-video-en-el-editor.md)). IDs: VID-052, VID-056 a VID-066.
+Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../docs/adr/0008-video-en-el-editor.md)). IDs: VID-052, VID-056 a VID-066 y VID-068 a VID-070.
 
 ## Visto en la instancia de desarrollo (2026-11-13, tarde)
 
@@ -51,4 +51,12 @@ Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../
 18. [ ] Menú **Video** de la barra de menús: Reproducir/Pausar, fotogramas, Ir al inicio y al final, **Ir a…**, Cortar selección, Guardar selección, Guardar fotograma, Extraer texto, Copia sin sonido e Información. Con una imagen a la vista, todo el menú está apagado; con un video, el menú **Imagen** está apagado.
 19. [ ] Abre cualquier menú (Archivo, Objeto…): se ve entero, por encima de la barra de herramientas (antes, la barra tapaba sus primeras entradas).
 
-Todavía no: exportar a GIF o a H.264 y Combinar videos.
+### GIF animado (VID-068 a VID-070)
+
+20. [ ] Con un video abierto, botón **GIF** de la barra (o Video > Crear GIF animado…): el diálogo muestra Selección actual / Video completo, Optimizar para, la estimación ("Unos … · … s · … × … px · … fps") y una vista previa que se mueve.
+21. [ ] Cambia Optimizar para a **Archivo pequeño**: la estimación baja y el tamaño pasa a 200 px de lado mayor. Con un tramo de más de 30 s aparece el aviso de duración.
+22. [ ] **Personalizado**: 50 %, Difuminado, Repetición 3 veces, Fundido a negro 1 s. **Crear GIF**: la barra muestra "Creando el GIF… %" con **Cancelar**; mientras tanto puedes hacer una captura. Al terminar, el GIF se abre en el editor y se reproduce 3 veces, oscureciéndose al final.
+23. [ ] Repite y pulsa **Cancelar** a mitad: no aparece ningún GIF en la biblioteca.
+24. [ ] Con el GIF abierto, el botón GIF y el menú Video (salvo Información) están apagados; arrástralo a un chat o a una carpeta.
+
+Todavía no: GIF desde Exportar, exportar a H.264 y Combinar videos.

@@ -942,6 +942,18 @@
     "video_silent_copy": {
       "title": "Copia sin sonido",
       "description": "El video, con sus cortes, como un video nuevo sin ningún sonido."
+    },
+    "video_gif": {
+      "title": "Crear GIF animado",
+      "description": "La selección o el video completo como GIF animado en la biblioteca, abierto en el editor."
+    },
+    "video_gif_estimate": {
+      "title": "Estimar un GIF",
+      "description": "El tamaño, la duración y los fotogramas que tendría un GIF, con una vista previa de sus primeros segundos."
+    },
+    "video_cancel": {
+      "title": "Cancelar el GIF",
+      "description": "Detiene el GIF que se está creando de un video; no queda nada."
     }
   },
   "settings": {
@@ -1548,7 +1560,9 @@
     "video_no_image_tools": "Las herramientas de imagen no funcionan sobre un video. Para anotar un instante, usa Guardar fotograma y anota la imagen; para señalar cosas en un video, usa Dibujo en vivo al grabar.",
     "not_a_video": "Ese documento no es un video.",
     "video_cut_all": "No se puede cortar todo el video: deja al menos un fotograma.",
-    "video_no_sound": "Este video no tiene sonido."
+    "video_no_sound": "Este video no tiene sonido.",
+    "gif_no_edit": "Un GIF no se corta ni se vuelve a convertir en GIF: usa el video del que salió.",
+    "gif_cancelled": "Se canceló el GIF: no se guardó nada."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1877,7 +1891,8 @@
     "video_save_frame": "Guardar fotograma",
     "video_extract_text": "Extraer texto del fotograma",
     "video_silent_copy": "Copia sin sonido",
-    "video_info": "Información"
+    "video_info": "Información",
+    "video_gif": "Crear GIF animado…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -4271,7 +4286,41 @@
         "location": "Ubicación",
         "copy": "Copiar información"
       },
-      "fps": "{{fps}} fps"
+      "fps": "{{fps}} fps",
+      "gif": {
+        "title": "Crear GIF animado",
+        "button": "GIF",
+        "create": "Crear GIF",
+        "what": "Qué convertir",
+        "selection": "Selección actual ({{seconds}} s)",
+        "all": "Video completo ({{seconds}} s)",
+        "optimize": "Optimizar para",
+        "optimize_screen": "Grabación de pantalla",
+        "optimize_motion": "Mucho movimiento (cámara, juegos)",
+        "optimize_small": "Archivo pequeño",
+        "optimize_best": "Máxima calidad",
+        "optimize_custom": "Personalizado",
+        "fps": "Fotogramas por segundo",
+        "unit": "Tamaño en",
+        "pixels": "Píxeles",
+        "percent": "Porcentaje",
+        "dither": "Difuminado",
+        "dither_hint": "Mezcla píxeles para suavizar los degradados: menos bandas de color, más tamaño.",
+        "dynamic": "Colores dinámicos",
+        "dynamic_hint": "Cada fotograma tiene su propia paleta: mejores colores cuando cambian las escenas, algo más de tamaño.",
+        "loops": "Repetición",
+        "loops_forever": "Siempre",
+        "loops_once": "Una vez",
+        "loops_times": "Número de veces",
+        "times": "Veces",
+        "fade": "Fundido a negro al final",
+        "fade_seconds": "Fundido (segundos)",
+        "preview": "Vista previa de los primeros segundos",
+        "estimate": "Unos {{size}} · {{seconds}} s · {{width}} × {{height}} px · {{fps}} fps",
+        "estimating": "Calculando…",
+        "guide": "Este GIF será largo o pesado: muchos servicios limitan los GIF, y un GIF pesa mucho más que el video. Selecciona un tramo más corto o un tamaño menor."
+      },
+      "busy_gif": "Creando el GIF… {{percent}} %"
     }
   },
   "history": {

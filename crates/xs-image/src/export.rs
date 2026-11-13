@@ -252,7 +252,7 @@ fn set_dpi<W: Write>(enc: &mut png::Encoder<W>, dpi: f64) {
 // 256 colors: median cut over a 15-bit histogram, then a lookup table.
 
 /// A palette of at most `max` colors for `img`'s opaque-enough pixels.
-fn palette(img: &RgbaImage, max: usize) -> Vec<[u8; 3]> {
+pub(crate) fn palette(img: &RgbaImage, max: usize) -> Vec<[u8; 3]> {
     let mut hist: HashMap<u16, u32> = HashMap::new();
     for p in img.pixels().filter(|p| p.0[3] >= 128) {
         let key = ((p.0[0] as u16 >> 3) << 10) | ((p.0[1] as u16 >> 3) << 5) | (p.0[2] as u16 >> 3);
@@ -320,7 +320,7 @@ fn palette(img: &RgbaImage, max: usize) -> Vec<[u8; 3]> {
 }
 
 /// For each 15-bit color, the nearest palette entry.
-fn lookup(pal: &[[u8; 3]]) -> Vec<u8> {
+pub(crate) fn lookup(pal: &[[u8; 3]]) -> Vec<u8> {
     (0..32768u32)
         .map(|k| {
             let c = [
@@ -344,7 +344,7 @@ fn lookup(pal: &[[u8; 3]]) -> Vec<u8> {
         .collect()
 }
 
-fn index_of(table: &[u8], p: &[u8; 4]) -> u8 {
+pub(crate) fn index_of(table: &[u8], p: &[u8; 4]) -> u8 {
     table[(((p[0] as usize) >> 3) << 10) | (((p[1] as usize) >> 3) << 5) | ((p[2] as usize) >> 3)]
 }
 

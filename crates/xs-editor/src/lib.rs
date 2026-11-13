@@ -467,7 +467,7 @@ fn encode(snap: &Snapshot, format: Format, quality: u8) -> Result<Vec<u8>, Strin
             quality,
             xs_image::color::Rgba::WHITE,
         ),
-        Format::Video => Err("a video is not an image".into()),
+        Format::Video | Format::Gif => Err("a video is not an image".into()),
         Format::Xshot => {
             let mut buf = std::io::Cursor::new(Vec::new());
             snap.to_xshot(false)?
@@ -3599,6 +3599,11 @@ pub fn extension() -> Extension {
         on!("document.list", |core, ctx, _p| Ok(list(&core)));
         // Videos in the editor (ADR 0008, VID-059 to VID-063).
         on!("video.cut", |core, ctx, p| video::cut(&core, ctx, &p));
+        on!("video.gif", |core, ctx, p| video::gif(&core, ctx, &p));
+        on!("video.gif_estimate", |core, ctx, p| video::gif_estimate(
+            &core, ctx, &p
+        ));
+        on!("video.cancel", |core, ctx, p| video::cancel(&core, ctx, &p));
         on!("video.save_selection", |core, ctx, p| video::save_selection(
             &core, ctx, &p
         ));

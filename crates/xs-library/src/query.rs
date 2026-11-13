@@ -108,7 +108,7 @@ pub fn app_name(app: &str) -> String {
 /// The type of an item for the Type filter.
 pub fn kind(item: &Item) -> &'static str {
     match item.format.as_str() {
-        "mp4" | "mov" | "webm" => "video",
+        "mp4" | "m4v" | "mov" | "webm" => "video",
         "gif" => "gif",
         "xguide" => "guide",
         _ => "image",
