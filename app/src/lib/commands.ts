@@ -131,8 +131,8 @@ export interface PanelSettings {
     delay5: boolean;
   };
   image: {
-    /** `scrolling`: CAP-034, CAP-035; `text`: Extract text (SMT-005). */
-    selection: "region" | "window" | "fullscreen" | "scrolling" | "text";
+    /** `scrolling`: CAP-034, CAP-035; `multi`: CAP-033; `text`: Extract text (SMT-005). */
+    selection: "region" | "window" | "fullscreen" | "scrolling" | "multi" | "text";
     copy: boolean;
     cursor: boolean;
     open: "editor" | "none";
@@ -142,5 +142,7 @@ export interface PanelSettings {
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */
     region: RegionProps;
+    /** Selection = Multiple areas (CAP-033). */
+    areas: { composition: "original" | "stacked" | "row"; gap: number };
   };
 }

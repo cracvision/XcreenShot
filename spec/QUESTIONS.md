@@ -260,6 +260,8 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 |---|---|---|---|
 | CAP-026 | Dónde queda el rectángulo de tamaño fijo respecto al puntero | Centrado en el puntero y siempre dentro del monitor que está debajo | Provisional |
 | CAP-026 | Aviso cuando el monitor guardado no está o la región no cabe | Por ahora es un mensaje de error (sin captura) que dice qué pasa y qué hacer; los botones **Elegir de nuevo** y **Usar el monitor principal** dentro del aviso llegan con las notificaciones con acciones | Provisional |
+| CAP-033 | Múltiples áreas desde Universal | Al terminar no aparece la barra de captura: se captura directamente como Imagen (es lo único que admite, según el spec) | Provisional |
+| CAP-033 | `Ctrl` + arrastrar con el perfil de compatibilidad | Ese perfil usa `Ctrl` para fijar la proporción (CAP-066), así que ahí las áreas múltiples se eligen con Selección = Múltiples áreas | Provisional |
 | CAP-026 | Dos monitores con el mismo nombre | Se toma el primero; si Carlos los tiene, se añade la posición para distinguirlos | Provisional |
 
 ## Dudas del equipo de construcción (M3, entrega 3: desplazamiento)

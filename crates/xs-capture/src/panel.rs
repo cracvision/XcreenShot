@@ -33,6 +33,25 @@ impl Default for UniversalTab {
     }
 }
 
+/// The properties of Selection = Multiple areas (CAP-033).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AreasTab {
+    /// `original`, `stacked` or `row`.
+    pub composition: String,
+    /// Space between stacked or side by side areas, in pixels.
+    pub gap: u32,
+}
+
+impl Default for AreasTab {
+    fn default() -> Self {
+        AreasTab {
+            composition: "original".into(),
+            gap: 10,
+        }
+    }
+}
+
 /// The properties of Selection = Region (CAP-026): a fixed size, and a fixed place.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -136,6 +155,8 @@ pub struct ImageTab {
     pub scroll: ScrollTab,
     /// Selection = Region (CAP-026).
     pub region: RegionTab,
+    /// Selection = Multiple areas (CAP-033).
+    pub areas: AreasTab,
 }
 
 impl Default for ImageTab {
@@ -149,6 +170,7 @@ impl Default for ImageTab {
             delay: 5,
             scroll: ScrollTab::default(),
             region: RegionTab::default(),
+            areas: AreasTab::default(),
         }
     }
 }
@@ -177,7 +199,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 5] = ["region", "window", "fullscreen", "scrolling", "text"];
+const IMAGE_SELECTIONS: [&str; 6] = ["region", "window", "fullscreen", "scrolling", "multi", "text"];
 
 impl PanelSettings {
     /// Checks every value; returns the offending field.
@@ -208,6 +230,14 @@ impl PanelSettings {
         one_of("image.scroll.startFrom", &s.start_from, &["start", "current"])?;
         if !(0.0..=5.0).contains(&s.wait) {
             return Err("image.scroll.wait: must be between 0 and 5".into());
+        }
+        one_of(
+            "image.areas.composition",
+            &self.image.areas.composition,
+            &["original", "stacked", "row"],
+        )?;
+        if self.image.areas.gap > 500 {
+            return Err("image.areas.gap: must be between 0 and 500".into());
         }
         let r = &self.image.region;
         if r.width == 0 || r.height == 0 || r.width > 100_000 || r.height > 100_000 {
@@ -259,6 +289,11 @@ impl PanelSettings {
                 // the clipboard apply; the pointer and Open in do not.
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
+                return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "multi" {
+                let a = &self.image.areas;
+                params["multiple"] = json!({ "composition": a.composition, "gap": a.gap });
                 return ("capture.region", params, json!({}));
             }
             if self.image.selection == "scrolling" {

@@ -726,6 +726,15 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "required": ["x", "y", "width", "height"],
                     "additionalProperties": false
                 },
+                "multiple": {
+                    "type": "object",
+                    "description": "Multiple areas (CAP-033): the user picks several areas (drag or click each) and Enter ends; they become one image",
+                    "properties": {
+                        "composition": {"type": "string", "enum": ["original", "stacked", "row"], "default": "original"},
+                        "gap": {"type": "integer", "minimum": 0, "maximum": 500, "default": 10}
+                    },
+                    "additionalProperties": false
+                },
                 "size": {
                     "type": "object",
                     "description": "Fixed region (CAP-026): a rectangle of this size follows the pointer; a click places it and captures",

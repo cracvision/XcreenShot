@@ -12,8 +12,9 @@ import {
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
-/** The Image tab also scrolls (CAP-034, CAP-035) and extracts text (SMT-005). */
-const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "text"] as const;
+/** The Image tab also scrolls (CAP-034, CAP-035), takes several areas (CAP-033) and
+ * extracts text (SMT-005). */
+const IMAGE_SELECTIONS = [...SELECTIONS, "scrolling", "multi", "text"] as const;
 
 interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];
@@ -151,6 +152,12 @@ export function ImageOptions({
         <RegionOptions
           value={value.region}
           onChange={(r) => onChange({ region: { ...value.region, ...r } })}
+        />
+      )}
+      {value.selection === "multi" && (
+        <AreasOptions
+          value={value.areas}
+          onChange={(a) => onChange({ areas: { ...value.areas, ...a } })}
         />
       )}
       {value.selection === "scrolling" && (
@@ -434,6 +441,58 @@ function RegionOptions({
         <p className="panel-note" role="status">
           {note}
         </p>
+      )}
+    </fieldset>
+  );
+}
+
+/** The properties of Selection = Multiple areas (CAP-033): how the areas are put together. */
+function AreasOptions({
+  value,
+  onChange,
+}: {
+  value: PanelSettings["image"]["areas"];
+  onChange: (patch: Partial<PanelSettings["image"]["areas"]>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [gap, setGap] = useState<string | null>(null);
+  const commitGap = () => {
+    const n = Math.round(Number(gap));
+    if (gap !== null && Number.isFinite(n) && n >= 0 && n <= 500) onChange({ gap: n });
+    setGap(null);
+  };
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-field" htmlFor={`${id}-comp`}>
+        <span>{t("ui.panel.areas_composition")}</span>
+        <select
+          id={`${id}-comp`}
+          value={value.composition}
+          onChange={(e) => onChange({ composition: e.target.value as typeof value.composition })}
+        >
+          <option value="original">{t("ui.panel.areas_original")}</option>
+          <option value="stacked">{t("ui.panel.areas_stacked")}</option>
+          <option value="row">{t("ui.panel.areas_row")}</option>
+        </select>
+      </label>
+      {value.composition !== "original" && (
+        <label className="panel-field narrow" htmlFor={`${id}-gap`}>
+          <span>{t("ui.panel.areas_gap")}</span>
+          <input
+            id={`${id}-gap`}
+            type="number"
+            min={0}
+            max={500}
+            step={1}
+            value={gap ?? String(value.gap)}
+            onChange={(e) => setGap(e.target.value)}
+            onBlur={commitGap}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitGap();
+            }}
+          />
+        </label>
       )}
     </fieldset>
   );

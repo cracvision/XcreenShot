@@ -1582,6 +1582,40 @@ html.overlay-root #root {
   border-color: #0c9afc;
 }
 
+/* Multiple areas (CAP-033): how many, Finish, and an X on each area. */
+.overlay-count {
+  align-self: center;
+  padding: 0 4px;
+  color: #fff;
+  font:
+    600 13px "Segoe UI",
+    system-ui,
+    sans-serif;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.overlay-area-x {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: 50%;
+  background: rgb(20 24 28 / 0.9);
+  color: #fff;
+  font:
+    16px/1 "Segoe UI",
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+.overlay-area-x:hover,
+.overlay-area-x:focus-visible {
+  border-color: #0c9afc;
+  outline: none;
+}
+
 /* Scrolling and its three automatic arrows (CAP-034, CAP-035). */
 .overlay-scroll {
   display: flex;

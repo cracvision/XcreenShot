@@ -1810,7 +1810,10 @@
         "resize": "cambiar su tamaño",
         "redo": "volver a seleccionar",
         "scroll": "captura con desplazamiento, desplazando tú",
-        "scroll_auto": "desplazar solo hacia abajo, a la derecha o en ambas direcciones"
+        "scroll_auto": "desplazar solo hacia abajo, a la derecha o en ambas direcciones",
+        "add_area": "añadir un área (desde Universal o Región)",
+        "remove_last_area": "quitar la última área",
+        "finish_areas": "terminar (con al menos un área)"
       },
       "fullscreen": "Pantalla completa",
       "all_monitors": "Todos los monitores",
@@ -1830,7 +1833,10 @@
       "scroll_small": "El desplazamiento necesita un área de al menos 50 × 50 píxeles",
       "scroll_auto_v": "Desplazar hacia abajo automáticamente (D)",
       "scroll_auto_h": "Desplazar a la derecha automáticamente (R)",
-      "scroll_auto_b": "Desplazar en las dos direcciones automáticamente (X)"
+      "scroll_auto_b": "Desplazar en las dos direcciones automáticamente (X)",
+      "areas": "{{count}} áreas",
+      "finish_areas": "Terminar",
+      "remove_area": "Quitar el área {{n}}"
     },
     "panel": {
       "title": "XcreenShot · Captura",
@@ -1959,7 +1965,13 @@
       "region_y": "Y",
       "region_pick": "Elegir en pantalla",
       "region_limited": "Limitado al monitor ({{width}} × {{height}} px)",
-      "region_any_monitor": "Cualquiera"
+      "region_any_monitor": "Cualquiera",
+      "sel_multi": "Múltiples áreas",
+      "areas_composition": "Composición",
+      "areas_original": "Posición original",
+      "areas_stacked": "Apiladas",
+      "areas_row": "En fila",
+      "areas_gap": "Separación (px)"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3743,7 +3755,8 @@
       "window": "Ventana",
       "fullscreen": "Pantalla completa",
       "text": "Extraer texto",
-      "scrolling": "Desplazamiento"
+      "scrolling": "Desplazamiento",
+      "multi": "Múltiples áreas"
     },
     "kind": {
       "universal": "Universal",

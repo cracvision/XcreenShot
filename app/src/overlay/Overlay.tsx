@@ -29,7 +29,7 @@ import {
   type Rect,
 } from "./geometry";
 
-type Mode = "region" | "window" | "universal" | "scrolling";
+type Mode = "region" | "window" | "universal" | "scrolling" | "multi";
 type Phase = "aiming" | "dragging" | "adjusting";
 
 interface Monitor {
@@ -126,6 +126,9 @@ interface Sync {
   snapped: [number, number] | null;
   /** The keys panel (CAP-020). */
   help: boolean;
+  /** Multiple areas (CAP-033): on, and the areas so far. */
+  multi: boolean;
+  areas: Rect[];
 }
 
 type Interaction =
@@ -195,8 +198,14 @@ export function Overlay() {
     asked: 0,
     lag: { sum: 0, count: 0, since: 0 },
     slow: false,
+    // Multiple areas (CAP-033): on from the start (Selection = Multiple areas) or by
+    // holding Ctrl while dragging, which also ends it when Ctrl is let go.
+    multi: false,
+    ctrlMulti: false,
+    areas: [] as Rect[],
   });
   const [help, setHelp] = useState(false);
+  const [areas, setAreas] = useState<Rect[]>([]);
 
   const monitor = start?.request.monitors[myIndex] ?? null;
   const desktop = start ? bounding(start.request.monitors.map((m) => m.rect)) : null;
@@ -334,6 +343,30 @@ export function Overlay() {
       ctx.fillStyle = DIM;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+    // Multiple areas (CAP-033): each one clear, outlined and numbered.
+    st.areas.forEach((area, i) => {
+      const a = intersect(area, M);
+      if (!a) return;
+      if (!simple) ctx.clearRect(a.x - M.x, a.y - M.y, a.width, a.height);
+      ctx.lineWidth = 2 * px;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = ACCENT;
+      ctx.strokeRect(a.x - M.x, a.y - M.y, a.width, a.height);
+      const r = 12 * px;
+      const cx = area.x - M.x + r + 4 * px;
+      const cy = area.y - M.y + r + 4 * px;
+      ctx.fillStyle = ACCENT;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `600 ${13 * px}px "Segoe UI", system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(i + 1), cx, cy + px);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    });
     const f = focus ? intersect(focus, M) : null;
     if (f) {
       if (!simple) ctx.clearRect(f.x - M.x, f.y - M.y, f.width, f.height);
@@ -457,6 +490,8 @@ export function Overlay() {
       anchor: st.anchor,
       snapped: st.snapped,
       help: st.help,
+      multi: st.multi,
+      areas: st.areas,
     };
     void emit("xs://overlay-sync", msg);
   }, [start]);
@@ -538,6 +573,10 @@ export function Overlay() {
       st.snapped = null;
       st.help = false;
       setHelp(false);
+      st.multi = payload.request.mode === "multi";
+      st.ctrlMulti = false;
+      st.areas = [];
+      setAreas([]);
       st.asked = 0;
       st.lag = { sum: 0, count: 0, since: 0 };
       st.slow = false;
@@ -622,6 +661,9 @@ export function Overlay() {
       s.current.anchor = m.anchor;
       s.current.snapped = m.snapped;
       s.current.help = m.help;
+      s.current.multi = m.multi;
+      s.current.areas = m.areas;
+      setAreas(m.areas);
       setSel(m.sel);
       setPhase(m.phase);
       setHelp(m.help);
@@ -726,6 +768,18 @@ export function Overlay() {
       const st = s.current;
       const p = toDesktop(e);
       st.pointer = p;
+      // Ctrl while dragging adds areas (CAP-033); the compatibility profile uses Ctrl
+      // for the aspect ratio (CAP-066).
+      if (
+        !st.multi &&
+        e.ctrlKey &&
+        start.request.compatibility !== true &&
+        (start.request.mode === "universal" || start.request.mode === "region") &&
+        st.phase === "aiming"
+      ) {
+        st.multi = true;
+        st.ctrlMulti = true;
+      }
       // A fixed-size region: a click places it and captures (CAP-026).
       const fixed = st.phase === "aiming" ? fixedRect(start, p) : null;
       if (fixed) {
@@ -752,6 +806,25 @@ export function Overlay() {
       const st = s.current;
       const it = st.interaction;
       st.interaction = null;
+      if (st.multi) {
+        // Each drag adds an area, and each click the window under it (CAP-033).
+        const added =
+          st.phase === "dragging" && st.sel
+            ? st.sel
+            : !it || it.kind === "draw"
+              ? (st.hover?.rect ?? null)
+              : null;
+        if (added && desktop) {
+          st.areas = [...st.areas, intersect(added, desktop) ?? added];
+          setAreas(st.areas);
+        }
+        st.sel = null;
+        setSel(null);
+        if (st.phase !== "aiming") setPhaseBoth("aiming");
+        broadcast();
+        schedule();
+        return;
+      }
       if (st.phase === "dragging" && st.sel) {
         setSelBoth(st.sel);
         chooseRect(st.sel);
@@ -769,7 +842,7 @@ export function Overlay() {
       }
       schedule();
     },
-    [start, chooseRect, chooseWindow, setSelBoth, schedule],
+    [start, desktop, chooseRect, chooseWindow, setSelBoth, setPhaseBoth, broadcast, schedule],
   );
 
   // ---------------------------------------------------------------- keyboard
@@ -816,6 +889,12 @@ export function Overlay() {
         chooseRect(monitor.rect);
       } else if (key === "a" && st.phase === "aiming" && !windowsOnly(start)) {
         chooseRect(desktop);
+      } else if (st.multi && e.key === "Enter") {
+        if (st.areas.length > 0) finish({ kind: "multi", rects: st.areas });
+      } else if (st.multi && e.key === "Backspace") {
+        st.areas = st.areas.slice(0, -1);
+        setAreas(st.areas);
+        broadcast();
       } else if (
         start.request.fixedSize &&
         st.phase === "aiming" &&
@@ -873,8 +952,19 @@ export function Overlay() {
       e.preventDefault();
       schedule();
     };
+    // Letting go of Ctrl ends the areas begun with it, with two or more (CAP-033).
+    const onKeyUp = (e: KeyboardEvent) => {
+      const st = s.current;
+      if (e.key === "Control" && st.ctrlMulti && st.areas.length >= 2) {
+        finish({ kind: "multi", rects: st.areas });
+      }
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
   }, [
     start,
     monitor,
@@ -921,7 +1011,44 @@ export function Overlay() {
           {toast}
         </div>
       )}
-      {showButtons && (
+      {start && myIndex === 0 && areas.length > 0 && (
+        <div className="overlay-top multi" role="toolbar" aria-label={t("ui.overlay.bar")}>
+          <span className="overlay-count">{t("ui.overlay.areas", { count: areas.length })}</span>
+          <button
+            className="overlay-btn primary"
+            onClick={() => finish({ kind: "multi", rects: s.current.areas })}
+          >
+            {t("ui.overlay.finish_areas")} <kbd>Enter</kbd>
+          </button>
+        </div>
+      )}
+      {monitor &&
+        areas.map((area, i) => {
+          const a = intersect(area, monitor.rect);
+          if (!a || a.x + a.width !== area.x + area.width || a.y !== area.y) return null;
+          return (
+            <button
+              key={`${i}-${area.x}-${area.y}`}
+              className="overlay-area-x"
+              aria-label={t("ui.overlay.remove_area", { n: i + 1 })}
+              title={t("ui.overlay.remove_area", { n: i + 1 })}
+              style={{
+                left: (area.x + area.width - monitor.rect.x) * cssPerPx - 26,
+                top: (area.y - monitor.rect.y) * cssPerPx + 4,
+              }}
+              onClick={() => {
+                const st = s.current;
+                st.areas = st.areas.filter((_, k) => k !== i);
+                setAreas(st.areas);
+                broadcast();
+                schedule();
+              }}
+            >
+              ×
+            </button>
+          );
+        })}
+      {showButtons && areas.length === 0 && (
         <div className="overlay-top" role="toolbar" aria-label={t("ui.overlay.bar")}>
           <button className="overlay-btn" onClick={() => monitor && chooseRect(monitor.rect)}>
             {t("ui.overlay.fullscreen")} <kbd>F</kbd>
@@ -1020,6 +1147,8 @@ function KeysHelp({
     k(t("ui.overlay.keys.click_key"), "click_window");
     k("Enter", "enter_window");
     k(compatibility ? "Shift · Ctrl · Ctrl+Shift" : "Shift · Alt · Alt+Shift", "ratio");
+    if (!compatibility) k("Ctrl + " + t("ui.overlay.keys.drag_key"), "add_area");
+    k("⌫", "remove_last_area");
     k("G", "guides");
     k("F", "fullscreen");
     if (monitors > 1) k("A", "all_monitors");

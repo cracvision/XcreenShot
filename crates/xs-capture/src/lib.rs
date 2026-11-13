@@ -6,6 +6,7 @@
 //! (CAP-054: save, clipboard, file, notify) and capture metadata (CAP-056). The
 //! on-screen selection arrives in build 2.
 
+pub mod areas;
 pub mod compose;
 pub mod extract;
 pub mod feedback;
@@ -738,6 +739,11 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
         }
         "capture.region" => match p.get("rect") {
             None => {
+                // Multiple areas (CAP-033).
+                if let Some(multiple) = p.get("multiple") {
+                    let extra = panel::with_overrides(extra, &json!({ "multiple": multiple }));
+                    return run_interactive(core, ctx, p, "multi", extra);
+                }
                 // A fixed size follows the pointer (CAP-026).
                 let extra = match p.get("size") {
                     Some(size) => panel::with_overrides(extra, &json!({ "fixedSize": size })),

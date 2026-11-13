@@ -148,6 +148,46 @@ pub fn crop_frames(monitors: &[MonitorInfo], frames: &[Frame], area: Rect) -> Rg
     out
 }
 
+/// In the editor, each area of a multiple-area capture is an image object of its own
+/// over a transparent canvas, to move apart (CAP-033): its pixels are floated off the
+/// base, which keeps the flat image the clipboard and files got.
+fn areas_as_objects(core: &Core, id: &str, places: &[Rect]) {
+    for r in places {
+        let picked = core.call(
+            xs_core::Source::Ui,
+            "document.select_pixels",
+            json!({ "documentId": id, "shape": "rectangle", "antialias": false,
+                "rect": { "x": r.x, "y": r.y, "w": r.width, "h": r.height } }),
+            None,
+        );
+        let floated = picked.and_then(|_| {
+            core.call(
+                xs_core::Source::Ui,
+                "document.selection_action",
+                json!({ "documentId": id, "action": "float", "gapFill": "transparent" }),
+                None,
+            )
+        });
+        if let Err(e) = floated {
+            tracing::warn!(error = %e.message, "multiple areas: an area stays in the base");
+        }
+    }
+    let _ = core.call(
+        xs_core::Source::Ui,
+        "document.select_pixels",
+        json!({ "documentId": id, "shape": "none" }),
+        None,
+    );
+    if let Err(e) = core.call(
+        xs_core::Source::Ui,
+        "document.save",
+        json!({ "documentId": id }),
+        None,
+    ) {
+        tracing::warn!(error = %e.message, "multiple areas: not saved");
+    }
+}
+
 /// Lets the user select an area and returns it from the top left of the monitor it is
 /// mostly on, without capturing (Choose on screen, CAP-026).
 pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
@@ -279,6 +319,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         r.extend(e.clone());
     }
     let scroll_params = request.get("scroll").cloned().unwrap_or_else(|| json!({}));
+    let multiple_params = request.get("multiple").cloned().unwrap_or_else(|| json!({}));
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
     if outcome.get("slow").and_then(Value::as_bool).unwrap_or(false) {
         offer_simple_crosshair(core, lang);
@@ -310,6 +351,53 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         let scroll_kind = crate::scroll_kind(core, &p);
         let place = place_of(core, area);
         return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
+    }
+    // Multiple areas (CAP-033): each cut from the frozen screens, joined as the Image
+    // tab says; in the editor each one becomes an image object of its own.
+    if kind == Some("multi") {
+        let rects: Vec<Rect> = outcome
+            .get("rects")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(rect_from).collect())
+            .unwrap_or_default();
+        if rects.is_empty() {
+            return Err(crate::cancelled(lang));
+        }
+        let multiple = multiple_params.clone();
+        let composition =
+            crate::areas::Composition::parse(multiple["composition"].as_str().unwrap_or("original"));
+        let gap = multiple["gap"].as_u64().unwrap_or(10).min(500) as u32;
+        let parts: Vec<(Rect, RgbaImage)> = rects
+            .iter()
+            .map(|r| (*r, crop_frames(&frozen.monitors, &frozen.frames, *r)))
+            .collect();
+        let (image, places) = crate::areas::compose(&parts, composition, gap);
+        let around = rects.iter().skip(1).fold(rects[0], |a, r| crate::compose::Rect {
+            x: a.x.min(r.x),
+            y: a.y.min(r.y),
+            width: (a.right().max(r.right()) - a.x.min(r.x)) as u32,
+            height: (a.bottom().max(r.bottom()) - a.y.min(r.y)) as u32,
+        });
+        let place = place_of(core, around);
+        let shot = Shot {
+            image,
+            rect: around,
+            mode: "multi",
+            scale: place.scale,
+            monitor: place.monitor,
+            app: place.app,
+            window_title: place.window_title,
+            window_id: None,
+            pointer: None,
+            warnings: Vec::new(),
+        };
+        let result = finish(core, ctx, shot, opts)?;
+        if places.len() > 1 {
+            if let Some(id) = result.get("documentId").and_then(Value::as_str) {
+                areas_as_objects(core, id, &places);
+            }
+        }
+        return Ok(result);
     }
     match kind {
         Some("rect") => {

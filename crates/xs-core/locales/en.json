@@ -1810,7 +1810,10 @@
         "resize": "change its size",
         "redo": "select again",
         "scroll": "scrolling capture, scrolling it yourself",
-        "scroll_auto": "scroll down, right or both ways by itself"
+        "scroll_auto": "scroll down, right or both ways by itself",
+        "add_area": "add an area (from Universal or Region)",
+        "remove_last_area": "remove the last area",
+        "finish_areas": "finish (with at least one area)"
       },
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
@@ -1830,7 +1833,10 @@
       "scroll_small": "Scrolling needs an area of at least 50 × 50 pixels",
       "scroll_auto_v": "Scroll down automatically (D)",
       "scroll_auto_h": "Scroll right automatically (R)",
-      "scroll_auto_b": "Scroll both ways automatically (X)"
+      "scroll_auto_b": "Scroll both ways automatically (X)",
+      "areas": "{{count}} areas",
+      "finish_areas": "Finish",
+      "remove_area": "Remove area {{n}}"
     },
     "panel": {
       "title": "XcreenShot · Capture",
@@ -1959,7 +1965,13 @@
       "region_y": "Y",
       "region_pick": "Choose on screen",
       "region_limited": "Limited to the monitor ({{width}} × {{height}} px)",
-      "region_any_monitor": "Any"
+      "region_any_monitor": "Any",
+      "sel_multi": "Multiple areas",
+      "areas_composition": "Composition",
+      "areas_original": "Original position",
+      "areas_stacked": "Stacked",
+      "areas_row": "In a row",
+      "areas_gap": "Space (px)"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3743,7 +3755,8 @@
       "window": "Window",
       "fullscreen": "Full screen",
       "text": "Extract text",
-      "scrolling": "Scrolling"
+      "scrolling": "Scrolling",
+      "multi": "Multiple areas"
     },
     "kind": {
       "universal": "Universal",
