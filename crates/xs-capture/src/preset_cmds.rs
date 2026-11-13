@@ -90,10 +90,10 @@ fn settings_from(
                 "the panel's active tab is of another kind",
             ));
         }
-        let tab = if kind == "universal" {
-            serde_json::to_value(&panel.universal)
-        } else {
-            serde_json::to_value(&panel.image)
+        let tab = match kind {
+            "universal" => serde_json::to_value(&panel.universal),
+            "video" => serde_json::to_value(&panel.video),
+            _ => serde_json::to_value(&panel.image),
         }
         .unwrap_or_default();
         return presets::checked_settings(kind, &tab).map_err(|e| bad(lang, "settings", &e));
@@ -122,7 +122,7 @@ fn create(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             .to_string()
     };
     if !presets::KINDS.contains(&kind.as_str()) {
-        return Err(bad(lang, "kind", "universal or image"));
+        return Err(bad(lang, "kind", "universal, image or video"));
     }
     let settings = settings_from(core, p, &kind, &json!({}), lang)?;
     let mut stored = presets::load(core);
@@ -341,6 +341,10 @@ fn run(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         }
         let name = presets::display_name(preset, lang);
         return crate::start_schedule(core, ctx, &params, Some(name), Some(preset.id.clone()));
+    }
+    // A video preset records (VID-009).
+    if command.starts_with("record.") {
+        return core.call(ctx.source, command, params, Some(lang));
     }
     crate::dispatch(core, ctx, command, &params, extra)
 }

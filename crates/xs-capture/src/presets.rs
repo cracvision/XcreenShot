@@ -21,7 +21,7 @@ use crate::panel::{ImageTab, PanelSettings, UniversalTab};
 pub const MEMORY_KEY: &str = "capture.presets";
 
 /// The kinds of preset that exist in this build (video arrives with M4).
-pub const KINDS: [&str; 2] = ["universal", "image"];
+pub const KINDS: [&str; 3] = ["universal", "image", "video"];
 
 /// Longest name (CAP-059).
 pub const NAME_MAX: usize = 64;
@@ -188,6 +188,8 @@ pub fn checked_settings(kind: &str, settings: &Value) -> Result<Value, String> {
     let panel = panel_with(kind, settings)?;
     let mut normalized = match kind {
         "universal" => serde_json::to_value(&panel.universal),
+        // Video presets (VID-009): what to record and the timer.
+        "video" => serde_json::to_value(&panel.video),
         _ => serde_json::to_value(&panel.image),
     }
     .map_err(|e| e.to_string())?;
@@ -218,6 +220,10 @@ fn panel_with(kind: &str, settings: &Value) -> Result<PanelSettings, String> {
             panel.universal =
                 serde_json::from_value::<UniversalTab>(settings.clone()).map_err(|e| e.to_string())?
         }
+        "video" => {
+            panel.video = serde_json::from_value::<crate::panel::VideoTab>(settings.clone())
+                .map_err(|e| e.to_string())?
+        }
         _ => panel.image = serde_json::from_value::<ImageTab>(settings.clone()).map_err(|e| e.to_string())?,
     }
     panel.validate()?;
@@ -242,6 +248,9 @@ pub fn proposed_name(kind: &str, settings: &Value, lang: Lang) -> String {
     if kind == "universal" {
         return tr(lang, "presets.universal_name", &[("selection", &base)]);
     }
+    if kind == "video" {
+        return tr(lang, "presets.video_name", &[("selection", &base)]);
+    }
     base
 }
 
@@ -249,6 +258,18 @@ pub fn proposed_name(kind: &str, settings: &Value, lang: Lang) -> String {
 pub fn summary(p: &Preset, lang: Lang) -> String {
     let s = &p.settings;
     let mut parts = vec![selection_word(s["selection"].as_str().unwrap_or("region"), lang)];
+    // Video (VID-009): Video · Region · 5 min.
+    if p.kind == "video" {
+        parts.insert(0, tr(lang, "presets.kind.video", &[]));
+        if let Some(limit) = s["limit"].as_u64().filter(|l| *l > 0) {
+            parts.push(tr(
+                lang,
+                "presets.summary.limit",
+                &[("minutes", &(limit / 60).max(1).to_string())],
+            ));
+        }
+        return parts.join(" · ");
+    }
     if p.kind == "universal" {
         parts.insert(0, tr(lang, "presets.kind.universal", &[]));
     }
@@ -466,7 +487,18 @@ mod tests {
         assert_eq!(ok["open"], "editor", "the defaults fill what is missing");
         assert_eq!(ok["iphone"], json!({"x": 1}));
         assert!(checked_settings("image", &json!({"selection": "nope"})).is_err());
-        assert!(checked_settings("video", &json!({})).is_err());
+        assert!(checked_settings("camera", &json!({})).is_err());
+        // Video presets (VID-009): the Video tab's settings, defaults filled in.
+        let v = checked_settings("video", &json!({"selection": "window", "limit": 300})).unwrap();
+        assert_eq!(v, json!({"selection": "window", "limit": 300}));
+        assert!(checked_settings("video", &json!({"selection": "camera"})).is_err());
+        let mut p = preset("Grabar ventana");
+        p.kind = "video".into();
+        p.settings = v;
+        let (command, params, _) = plan(&p).unwrap();
+        assert_eq!(command, "record.video");
+        assert_eq!(params["selection"], "window");
+        assert_eq!(summary(&p, Lang::Es), "Video · Ventana · 5 min");
     }
 
     #[test]

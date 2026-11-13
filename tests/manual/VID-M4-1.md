@@ -24,6 +24,7 @@ Motor de grabación, comandos `record.*`, Captura de video con la barra de graba
 10. [ ] Pestaña **Video** > Selección = **Ventana**, **Capturar** y elige una ventana. Graba y mueve la ventana o cámbiale el tamaño: el video la sigue. Ciérrala: la grabación se detiene y se guarda sola.
 11. [ ] En *Lista*, **Imagen** (o `I`) toma una captura del área en lugar de grabar. Grabando, **↺** (Reiniciar) vuelve a *Lista* con la misma área; pasados 10 s pregunta antes.
 12. [ ] Haz dos grabaciones seguidas de áreas distintas: la barra y el borde salen bien colocados y del tamaño correcto las dos veces.
-13. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
+13. [ ] Pestaña **Video** > Pantalla completa, Temporizador 5 min > Presets **+ > Desde los ajustes actuales**: aparece "Video: Pantalla completa" con una "V". Ejecútalo desde la lista o el menú del ícono: la barra queda lista para grabar.
+14. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
 
 Todavía no hay micrófono, cámara, efectos del cursor, "Solo la ventana" ni reproductor en el editor: llegan en las siguientes partes de M4.

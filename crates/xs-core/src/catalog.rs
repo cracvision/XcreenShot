@@ -631,7 +631,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "name": {"type": "string", "description": "1 to 64 characters; a taken one gets \" (2)\". Without it, a name that says what it does"},
-                    "kind": {"type": "string", "enum": ["universal", "image"], "default": "image"},
+                    "kind": {"type": "string", "enum": ["universal", "image", "video"], "default": "image"},
                     "settings": {"type": "object", "description": "The tab's settings (capture.settings shows them); missing ones take their defaults"},
                     "fromCurrent": {"type": "boolean", "description": "Copy the capture panel's active tab"}
                 }),

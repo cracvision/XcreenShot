@@ -2249,7 +2249,9 @@
         "builtins_there": "Ya están todos los presets incorporados.",
         "running": "en marcha",
         "picked": "{{count}} presets elegidos",
-        "unpick": "Quitar la selección"
+        "unpick": "Quitar la selección",
+        "new_video": "Nuevo preset de video…",
+        "kind_video": "Video"
       },
       "sel_text": "Extraer texto",
       "copy_text": "Copiar el texto",
@@ -4302,7 +4304,8 @@
     },
     "kind": {
       "universal": "Universal",
-      "image": "Imagen"
+      "image": "Imagen",
+      "video": "Video"
     },
     "universal_name": "Universal: {{selection}}",
     "summary": {
@@ -4310,11 +4313,13 @@
       "no_editor": "Sin editor",
       "clipboard": "Portapapeles",
       "cursor": "Cursor",
-      "delay": "{{seconds}} s"
+      "delay": "{{seconds}} s",
+      "limit": "{{minutes}} min"
     },
     "copy_name": "{{name}} (copia)",
     "warning_settings": "Algunos de sus ajustes no existen en esta versión. Edítalo.",
-    "warning_path": "“{{path}}” no existe en este equipo. Revísalo."
+    "warning_path": "“{{path}}” no existe en este equipo. Revísalo.",
+    "video_name": "Video: {{selection}}"
   },
   "interval": {
     "name": "Intervalo"

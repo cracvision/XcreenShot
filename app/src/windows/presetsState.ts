@@ -5,7 +5,7 @@ import type { PanelSettings } from "../lib/commands";
 export interface Preset {
   id: string;
   name: string;
-  kind: "universal" | "image";
+  kind: "universal" | "image" | "video";
   settings: Record<string, unknown>;
   summary: string;
   builtin: string | null;

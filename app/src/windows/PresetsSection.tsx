@@ -11,7 +11,7 @@ import { display } from "../lib/accelerator";
 import { isCommandError, run, type PanelSettings } from "../lib/commands";
 import { ShortcutRecorder } from "../prefs/ShortcutRecorder";
 import { useApp, useSetting } from "../store";
-import { ImageOptions, UniversalOptions } from "./CaptureOptions";
+import { ImageOptions, UniversalOptions, VideoOptions } from "./CaptureOptions";
 import {
   askImport,
   createPreset,
@@ -198,8 +198,6 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
             {
               id: "current",
               label: t("ui.panel.presets.from_current"),
-              // Video presets arrive with VID-009.
-              disabled: tab === "video",
               onSelect: () => void createPreset({ fromCurrent: true }),
             },
             {
@@ -309,7 +307,7 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
                     ⋮⋮
                   </span>
                   <span className={`preset-kind kind-${p.kind}`} aria-hidden="true">
-                    {p.kind === "universal" ? "U" : "I"}
+                    {p.kind === "universal" ? "U" : p.kind === "video" ? "V" : "I"}
                   </span>
                   <span className="preset-text">
                     {renaming === p.id ? (
@@ -445,7 +443,12 @@ function EditDialog({ preset, kind }: { preset?: Preset; kind?: "universal" | "i
     ...DEFAULTS.image,
     ...(presetKind === "image" ? (preset?.settings as Partial<PanelSettings["image"]>) : {}),
   });
-  const settings = presetKind === "universal" ? universal : image;
+  const [video, setVideo] = useState<PanelSettings["video"]>({
+    selection: "region",
+    limit: 0,
+    ...(presetKind === "video" ? (preset?.settings as Partial<PanelSettings["video"]>) : {}),
+  });
+  const settings = presetKind === "universal" ? universal : presetKind === "video" ? video : image;
   const save = async () => {
     if (preset) {
       await savePreset(preset, name, settings as unknown as Record<string, unknown>);
@@ -484,7 +487,9 @@ function EditDialog({ preset, kind }: { preset?: Preset; kind?: "universal" | "i
           />
         </label>
         <p className="muted">{t(`ui.panel.presets.kind_${presetKind}`)}</p>
-        {presetKind === "universal" ? (
+        {presetKind === "video" ? (
+          <VideoOptions value={video} onChange={(v) => setVideo({ ...video, ...v })} />
+        ) : presetKind === "universal" ? (
           <UniversalOptions
             value={universal}
             onChange={(u) => setUniversal({ ...universal, ...u })}

@@ -2249,7 +2249,9 @@
         "builtins_there": "Every built-in preset is there already.",
         "running": "running",
         "picked": "{{count}} presets chosen",
-        "unpick": "Clear"
+        "unpick": "Clear",
+        "new_video": "New video preset…",
+        "kind_video": "Video"
       },
       "sel_text": "Extract text",
       "copy_text": "Copy the text",
@@ -4302,7 +4304,8 @@
     },
     "kind": {
       "universal": "Universal",
-      "image": "Image"
+      "image": "Image",
+      "video": "Video"
     },
     "universal_name": "Universal: {{selection}}",
     "summary": {
@@ -4310,11 +4313,13 @@
       "no_editor": "No editor",
       "clipboard": "Clipboard",
       "cursor": "Cursor",
-      "delay": "{{seconds}} s"
+      "delay": "{{seconds}} s",
+      "limit": "{{minutes}} min"
     },
     "copy_name": "{{name}} (copy)",
     "warning_settings": "Some of its settings do not exist in this version. Edit it.",
-    "warning_path": "“{{path}}” does not exist on this computer. Check it."
+    "warning_path": "“{{path}}” does not exist on this computer. Check it.",
+    "video_name": "Video: {{selection}}"
   },
   "interval": {
     "name": "Interval"
