@@ -1051,6 +1051,19 @@ export function Overlay() {
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
+      // Multiple areas with the compatibility profile (CAP-033, CAP-066): a right click
+      // ends them.
+      if (
+        start &&
+        e.button === 2 &&
+        start.request.compatibility === true &&
+        s.current.multi &&
+        s.current.areas.length > 0
+      ) {
+        e.preventDefault();
+        finish({ kind: "multi", rects: s.current.areas });
+        return;
+      }
       if (!start || e.button !== 0) return;
       (e.target as Element).setPointerCapture(e.pointerId);
       const st = s.current;
