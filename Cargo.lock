@@ -7290,6 +7290,11 @@ version = "0.2.0"
 [[package]]
 name = "xs-video"
 version = "0.2.0"
+dependencies = [
+ "serde",
+ "tracing",
+ "windows 0.62.2",
+]
 
 [[package]]
 name = "yazi"

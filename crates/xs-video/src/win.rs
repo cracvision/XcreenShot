@@ -1,0 +1,1025 @@
+//! The Windows engine: Desktop Duplication → D3D11 video processor (crop, scale,
+//! BGRA → NV12 on the GPU) → Media Foundation Sink Writer (H.264 in MP4).
+//!
+//! A new frame is written only when the screen changed, at most `fps` times a second
+//! (variable frame rate, VID-025). The hardware encoder gets the GPU frames directly;
+//! without one (or with "always software", VID-029) the frames go through memory to
+//! the system's software encoder.
+
+#![allow(clippy::too_many_arguments)]
+
+use std::mem::ManuallyDrop;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use windows::core::{Interface, BOOL, HSTRING};
+use windows::Win32::Foundation::{HMODULE, RECT};
+use windows::Win32::Graphics::Direct3D::{
+    D3D_DRIVER_TYPE_UNKNOWN, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_11_0,
+};
+use windows::Win32::Graphics::Direct3D11::*;
+use windows::Win32::Graphics::Dxgi::Common::*;
+use windows::Win32::Graphics::Dxgi::*;
+use windows::Win32::Media::MediaFoundation::*;
+use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
+use windows::Win32::UI::HiDpi::{SetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2};
+
+use crate::{Area, Options, Shared, State, Summary};
+
+/// 100-nanosecond units in a second (Media Foundation's clock).
+const HNS: f64 = 10_000_000.0;
+
+fn err(context: &str, e: windows::core::Error) -> String {
+    format!("{context}: {} (0x{:08X})", e.message(), e.code().0 as u32)
+}
+
+/// The adapter and output that show the middle of `area`, with the output's place.
+fn find_output(area: Area) -> Result<(IDXGIAdapter1, IDXGIOutput1, RECT), String> {
+    let cx = area.x + area.width as i32 / 2;
+    let cy = area.y + area.height as i32 / 2;
+    // SAFETY: plain DXGI enumeration; every interface is reference counted.
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().map_err(|e| err("DXGI", e))?;
+        let mut a = 0;
+        while let Ok(adapter) = factory.EnumAdapters1(a) {
+            let mut o = 0;
+            while let Ok(output) = adapter.EnumOutputs(o) {
+                o += 1;
+                let Ok(desc) = output.GetDesc() else { continue };
+                let r = desc.DesktopCoordinates;
+                if desc.AttachedToDesktop.as_bool()
+                    && cx >= r.left
+                    && cx < r.right
+                    && cy >= r.top
+                    && cy < r.bottom
+                {
+                    let output1: IDXGIOutput1 = output.cast().map_err(|e| err("DXGI output", e))?;
+                    return Ok((adapter, output1, r));
+                }
+            }
+            a += 1;
+        }
+    }
+    Err("no monitor shows the area".into())
+}
+
+struct Gpu {
+    device: ID3D11Device,
+    context: ID3D11DeviceContext,
+    video: ID3D11VideoDevice,
+    vctx: ID3D11VideoContext1,
+}
+
+fn gpu(adapter: &IDXGIAdapter1) -> Result<Gpu, String> {
+    // SAFETY: device creation with out-parameters that live through the call.
+    unsafe {
+        let mut device = None;
+        let mut context = None;
+        D3D11CreateDevice(
+            adapter,
+            D3D_DRIVER_TYPE_UNKNOWN,
+            HMODULE::default(),
+            D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+            Some(&[D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1]),
+            D3D11_SDK_VERSION,
+            Some(&mut device),
+            None,
+            Some(&mut context),
+        )
+        .map_err(|e| err("Direct3D", e))?;
+        let device: ID3D11Device = device.ok_or("no Direct3D device")?;
+        let context: ID3D11DeviceContext = context.ok_or("no Direct3D context")?;
+        // The encoder uses the device from its own threads.
+        if let Ok(mt) = context.cast::<ID3D11Multithread>() {
+            let _ = mt.SetMultithreadProtected(true);
+        }
+        let video: ID3D11VideoDevice = device.cast().map_err(|e| err("video device", e))?;
+        let vctx: ID3D11VideoContext1 = context.cast().map_err(|e| err("video context", e))?;
+        Ok(Gpu {
+            device,
+            context,
+            video,
+            vctx,
+        })
+    }
+}
+
+fn texture(
+    gpu: &Gpu,
+    w: u32,
+    h: u32,
+    format: DXGI_FORMAT,
+    bind: u32,
+    staging: bool,
+) -> Result<ID3D11Texture2D, String> {
+    let desc = D3D11_TEXTURE2D_DESC {
+        Width: w,
+        Height: h,
+        MipLevels: 1,
+        ArraySize: 1,
+        Format: format,
+        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+        Usage: if staging {
+            D3D11_USAGE_STAGING
+        } else {
+            D3D11_USAGE_DEFAULT
+        },
+        BindFlags: bind,
+        CPUAccessFlags: if staging {
+            D3D11_CPU_ACCESS_READ.0 as u32
+        } else {
+            0
+        },
+        MiscFlags: 0,
+    };
+    let mut t = None;
+    // SAFETY: the description and out-parameter live through the call.
+    unsafe { gpu.device.CreateTexture2D(&desc, None, Some(&mut t)) }.map_err(|e| err("texture", e))?;
+    t.ok_or_else(|| "no texture".to_string())
+}
+
+/// HD video is BT.709; smaller video BT.601, which is what players assume when the
+/// file does not say.
+fn hd(size: (u32, u32)) -> bool {
+    size.0 >= 1280 || size.1 >= 720
+}
+
+/// Crops, scales and converts the monitor's picture into NV12 frames.
+struct Converter {
+    venum: ID3D11VideoProcessorEnumerator,
+    vp: ID3D11VideoProcessor,
+    input: ID3D11VideoProcessorInputView,
+    /// The last picture of the monitor (BGRA).
+    frame: ID3D11Texture2D,
+    width: u32,
+    height: u32,
+}
+
+fn converter(
+    gpu: &Gpu,
+    monitor: (u32, u32),
+    source: RECT,
+    size: (u32, u32),
+    fps: u32,
+) -> Result<Converter, String> {
+    let frame = texture(
+        gpu,
+        monitor.0,
+        monitor.1,
+        DXGI_FORMAT_B8G8R8A8_UNORM,
+        (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+        false,
+    )?;
+    let rate = DXGI_RATIONAL {
+        Numerator: fps,
+        Denominator: 1,
+    };
+    let content = D3D11_VIDEO_PROCESSOR_CONTENT_DESC {
+        InputFrameFormat: D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+        InputFrameRate: rate,
+        InputWidth: monitor.0,
+        InputHeight: monitor.1,
+        OutputFrameRate: rate,
+        OutputWidth: size.0,
+        OutputHeight: size.1,
+        Usage: D3D11_VIDEO_USAGE_OPTIMAL_QUALITY,
+    };
+    // SAFETY: COM calls with descriptions that live through each call.
+    unsafe {
+        let venum = gpu
+            .video
+            .CreateVideoProcessorEnumerator(&content)
+            .map_err(|e| err("video processor", e))?;
+        let vp = gpu
+            .video
+            .CreateVideoProcessor(&venum, 0)
+            .map_err(|e| err("video processor", e))?;
+        let desc = D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC {
+            FourCC: 0,
+            ViewDimension: D3D11_VPIV_DIMENSION_TEXTURE2D,
+            Anonymous: D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC_0 {
+                Texture2D: D3D11_TEX2D_VPIV {
+                    MipSlice: 0,
+                    ArraySlice: 0,
+                },
+            },
+        };
+        let mut input = None;
+        gpu.video
+            .CreateVideoProcessorInputView(&frame, &venum, &desc, Some(&mut input))
+            .map_err(|e| err("video input", e))?;
+        let input = input.ok_or("no video input")?;
+        let ctx = &gpu.vctx;
+        ctx.VideoProcessorSetStreamFrameFormat(&vp, 0, D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE);
+        ctx.VideoProcessorSetStreamAutoProcessingMode(&vp, 0, false);
+        ctx.VideoProcessorSetStreamSourceRect(&vp, 0, true, Some(&source));
+        let whole = RECT {
+            left: 0,
+            top: 0,
+            right: size.0 as i32,
+            bottom: size.1 as i32,
+        };
+        ctx.VideoProcessorSetStreamDestRect(&vp, 0, true, Some(&whole));
+        ctx.VideoProcessorSetOutputTargetRect(&vp, true, Some(&whole));
+        // Screen RGB (full range) to video YCbCr (studio range).
+        ctx.VideoProcessorSetStreamColorSpace1(&vp, 0, DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709);
+        ctx.VideoProcessorSetOutputColorSpace1(
+            &vp,
+            if hd(size) {
+                DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709
+            } else {
+                DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P601
+            },
+        );
+        Ok(Converter {
+            venum,
+            vp,
+            input,
+            frame,
+            width: size.0,
+            height: size.1,
+        })
+    }
+}
+
+impl Converter {
+    /// A new NV12 frame from the last picture.
+    fn nv12(&self, gpu: &Gpu) -> Result<ID3D11Texture2D, String> {
+        let out = texture(
+            gpu,
+            self.width,
+            self.height,
+            DXGI_FORMAT_NV12,
+            D3D11_BIND_RENDER_TARGET.0 as u32,
+            false,
+        )?;
+        let desc = D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC {
+            ViewDimension: D3D11_VPOV_DIMENSION_TEXTURE2D,
+            Anonymous: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC_0 {
+                Texture2D: D3D11_TEX2D_VPOV { MipSlice: 0 },
+            },
+        };
+        // SAFETY: COM calls; the stream's input view is released after the blit.
+        unsafe {
+            let mut view = None;
+            gpu.video
+                .CreateVideoProcessorOutputView(&out, &self.venum, &desc, Some(&mut view))
+                .map_err(|e| err("video output", e))?;
+            let view = view.ok_or("no video output")?;
+            let stream = D3D11_VIDEO_PROCESSOR_STREAM {
+                Enable: BOOL::from(true),
+                pInputSurface: ManuallyDrop::new(Some(self.input.clone())),
+                ..Default::default()
+            };
+            let streams = [stream];
+            let blit = gpu.vctx.VideoProcessorBlt(&self.vp, &view, 0, &streams);
+            let [stream] = streams;
+            drop(ManuallyDrop::into_inner(stream.pInputSurface));
+            blit.map_err(|e| err("video conversion", e))?;
+        }
+        Ok(out)
+    }
+}
+
+/// The Media Foundation writer and how it gets its frames.
+struct Writer {
+    sink: IMFSinkWriter,
+    stream: u32,
+    hardware: bool,
+    /// For the software encoder: frames go through memory.
+    staging: Option<ID3D11Texture2D>,
+    width: u32,
+    height: u32,
+}
+
+fn media_type(
+    subtype: &windows::core::GUID,
+    size: (u32, u32),
+    fps: u32,
+    bitrate: Option<u32>,
+) -> Result<IMFMediaType, String> {
+    // SAFETY: attribute setters on a new media type.
+    unsafe {
+        let t = MFCreateMediaType().map_err(|e| err("media type", e))?;
+        let set = |r: windows::core::Result<()>| r.map_err(|e| err("media type", e));
+        set(t.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video))?;
+        set(t.SetGUID(&MF_MT_SUBTYPE, subtype))?;
+        set(t.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32))?;
+        set(t.SetUINT64(&MF_MT_FRAME_SIZE, ((size.0 as u64) << 32) | size.1 as u64))?;
+        set(t.SetUINT64(&MF_MT_FRAME_RATE, ((fps as u64) << 32) | 1))?;
+        set(t.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, (1u64 << 32) | 1))?;
+        let matrix = if hd(size) {
+            MFVideoTransferMatrix_BT709
+        } else {
+            MFVideoTransferMatrix_BT601
+        };
+        set(t.SetUINT32(&MF_MT_YUV_MATRIX, matrix.0 as u32))?;
+        set(t.SetUINT32(&MF_MT_VIDEO_NOMINAL_RANGE, MFNominalRange_16_235.0 as u32))?;
+        if let Some(b) = bitrate {
+            set(t.SetUINT32(&MF_MT_AVG_BITRATE, b))?;
+        } else {
+            set(t.SetUINT32(&MF_MT_DEFAULT_STRIDE, size.0))?;
+        }
+        Ok(t)
+    }
+}
+
+fn writer(
+    gpu: &Gpu,
+    path: &std::path::Path,
+    size: (u32, u32),
+    fps: u32,
+    bitrate: u32,
+    hardware: bool,
+) -> Result<Writer, String> {
+    // SAFETY: Media Foundation calls with arguments that live through each call.
+    unsafe {
+        let mut attrs = None;
+        MFCreateAttributes(&mut attrs, 4).map_err(|e| err("attributes", e))?;
+        let attrs: IMFAttributes = attrs.ok_or("no attributes")?;
+        let set = |r: windows::core::Result<()>| r.map_err(|e| err("attributes", e));
+        set(attrs.SetUINT32(&MF_SINK_WRITER_DISABLE_THROTTLING, 1))?;
+        set(attrs.SetGUID(&MF_TRANSCODE_CONTAINERTYPE, &MFTranscodeContainerType_MPEG4))?;
+        if hardware {
+            let mut token = 0u32;
+            let mut manager = None;
+            MFCreateDXGIDeviceManager(&mut token, &mut manager).map_err(|e| err("device manager", e))?;
+            let manager: IMFDXGIDeviceManager = manager.ok_or("no device manager")?;
+            manager
+                .ResetDevice(&gpu.device, token)
+                .map_err(|e| err("device manager", e))?;
+            set(attrs.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1))?;
+            set(attrs.SetUnknown(&MF_SINK_WRITER_D3D_MANAGER, &manager))?;
+        } else {
+            set(attrs.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 0))?;
+        }
+        let sink = MFCreateSinkWriterFromURL(&HSTRING::from(path.as_os_str()), None, &attrs)
+            .map_err(|e| err("video file", e))?;
+        let out = media_type(&MFVideoFormat_H264, size, fps, Some(bitrate))?;
+        let _ = out.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32);
+        let stream = match sink.AddStream(&out) {
+            Ok(s) => s,
+            Err(_) => {
+                // Some encoders refuse the High profile: their default then.
+                let _ = out.DeleteItem(&MF_MT_MPEG2_PROFILE);
+                sink.AddStream(&out).map_err(|e| err("video stream", e))?
+            }
+        };
+        let input = media_type(&MFVideoFormat_NV12, size, fps, None)?;
+        sink.SetInputMediaType(stream, &input, None)
+            .map_err(|e| err("video input type", e))?;
+        sink.BeginWriting().map_err(|e| err("video writing", e))?;
+        let staging = if hardware {
+            None
+        } else {
+            Some(texture(gpu, size.0, size.1, DXGI_FORMAT_NV12, 0, true)?)
+        };
+        Ok(Writer {
+            sink,
+            stream,
+            hardware,
+            staging,
+            width: size.0,
+            height: size.1,
+        })
+    }
+}
+
+impl Writer {
+    /// Writes `frame` (NV12 on the GPU) at `time` (seconds) lasting `length`.
+    fn write(&self, gpu: &Gpu, frame: &ID3D11Texture2D, time: f64, length: f64) -> Result<(), String> {
+        // SAFETY: Media Foundation and D3D11 calls; a mapped texture is unmapped before
+        // returning and the copy stays within both buffers.
+        unsafe {
+            let buffer = if self.hardware {
+                let b = MFCreateDXGISurfaceBuffer(&ID3D11Texture2D::IID, frame, 0, false)
+                    .map_err(|e| err("frame buffer", e))?;
+                if let Ok(b2) = b.cast::<IMF2DBuffer>() {
+                    if let Ok(len) = b2.GetContiguousLength() {
+                        let _ = b.SetCurrentLength(len);
+                    }
+                }
+                b
+            } else {
+                let staging = self.staging.as_ref().ok_or("no staging")?;
+                gpu.context.CopyResource(staging, frame);
+                let (w, h) = (self.width as usize, self.height as usize);
+                let size = w * h * 3 / 2;
+                let b = MFCreateMemoryBuffer(size as u32).map_err(|e| err("frame buffer", e))?;
+                let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
+                gpu.context
+                    .Map(staging, 0, D3D11_MAP_READ, 0, Some(&mut mapped))
+                    .map_err(|e| err("frame copy", e))?;
+                let mut dst = std::ptr::null_mut();
+                let locked = b.Lock(&mut dst, None, None);
+                if locked.is_ok() {
+                    let pitch = mapped.RowPitch as usize;
+                    let src = mapped.pData as *const u8;
+                    // Luma rows, then the interleaved chroma rows below them.
+                    for row in 0..h + h / 2 {
+                        std::ptr::copy_nonoverlapping(src.add(row * pitch), dst.add(row * w), w);
+                    }
+                    let _ = b.Unlock();
+                    let _ = b.SetCurrentLength(size as u32);
+                }
+                gpu.context.Unmap(staging, 0);
+                locked.map_err(|e| err("frame copy", e))?;
+                b
+            };
+            let sample = MFCreateSample().map_err(|e| err("sample", e))?;
+            sample.AddBuffer(&buffer).map_err(|e| err("sample", e))?;
+            sample
+                .SetSampleTime((time * HNS) as i64)
+                .map_err(|e| err("sample", e))?;
+            sample
+                .SetSampleDuration((length * HNS).max(1.0) as i64)
+                .map_err(|e| err("sample", e))?;
+            self.sink
+                .WriteSample(self.stream, &sample)
+                .map_err(|e| err("encoding", e))
+        }
+    }
+
+    fn finish(&self) -> Result<(), String> {
+        // SAFETY: closes the file.
+        unsafe { self.sink.Finalize() }.map_err(|e| err("closing the video", e))
+    }
+}
+
+/// The monitor's picture as it is now, read with GDI into `conv.frame`: the first
+/// frame, so a screen that does not change (or a display that sleeps, when Desktop
+/// Duplication gets nothing) is never recorded black.
+fn snapshot(gpu: &Gpu, conv: &Converter, monitor: RECT) -> Result<(), String> {
+    use windows::Win32::Graphics::Gdi::*;
+    let (w, h) = (monitor.right - monitor.left, monitor.bottom - monitor.top);
+    // SAFETY: GDI objects are released on every path; the bits pointer is valid while
+    // the DIB section lives and holds w × h × 4 bytes.
+    unsafe {
+        let screen = GetDC(None);
+        let mem = CreateCompatibleDC(Some(screen));
+        let info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut bits = std::ptr::null_mut();
+        let result = match CreateDIBSection(Some(mem), &info, DIB_RGB_COLORS, &mut bits, None, 0) {
+            Ok(dib) => {
+                let old = SelectObject(mem, dib.into());
+                let copied = BitBlt(
+                    mem,
+                    0,
+                    0,
+                    w,
+                    h,
+                    Some(screen),
+                    monitor.left,
+                    monitor.top,
+                    SRCCOPY | CAPTUREBLT,
+                );
+                if copied.is_ok() {
+                    // GDI leaves alpha at 0: the converter ignores it.
+                    gpu.context
+                        .UpdateSubresource(&conv.frame, 0, None, bits, (w * 4) as u32, 0);
+                }
+                SelectObject(mem, old);
+                let _ = DeleteObject(dib.into());
+                copied.map_err(|e| err("screen picture", e))
+            }
+            Err(e) => Err(err("screen picture", e)),
+        };
+        let _ = DeleteDC(mem);
+        ReleaseDC(None, screen);
+        result
+    }
+}
+
+/// Grabs the next picture into `conv.frame`: true when the screen changed.
+fn grab(
+    gpu: &Gpu,
+    dup: &IDXGIOutputDuplication,
+    conv: &Converter,
+    wait_ms: u32,
+) -> Result<bool, windows::core::Error> {
+    // SAFETY: the frame is released before returning; the copy is a GPU command.
+    unsafe {
+        let mut info = DXGI_OUTDUPL_FRAME_INFO::default();
+        let mut resource = None;
+        match dup.AcquireNextFrame(wait_ms, &mut info, &mut resource) {
+            Ok(()) => {}
+            Err(e) if e.code() == DXGI_ERROR_WAIT_TIMEOUT => return Ok(false),
+            Err(e) => return Err(e),
+        }
+        let changed = info.LastPresentTime != 0 || info.AccumulatedFrames > 0;
+        if changed {
+            if let Some(tex) = resource.and_then(|r| r.cast::<ID3D11Texture2D>().ok()) {
+                gpu.context.CopyResource(&conv.frame, &tex);
+            }
+        }
+        let _ = dup.ReleaseFrame();
+        Ok(changed)
+    }
+}
+
+pub(crate) fn record(
+    options: Options,
+    size: (u32, u32),
+    shared: Arc<Shared>,
+    ready: std::sync::mpsc::Sender<Result<(), String>>,
+) -> Result<Summary, String> {
+    // SAFETY: COM and DPI setup for this thread only.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        // Desktop Duplication needs physical pixels.
+        let _ = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+    }
+    let fps = options.quality.fps();
+    let setup = (|| {
+        let (adapter, output, mr) = find_output(options.area)?;
+        let gpu = gpu(&adapter)?;
+        // SAFETY: duplication of the output on this device.
+        let dup = unsafe { output.DuplicateOutput(&gpu.device) }.map_err(|e| err("screen duplication", e))?;
+        let monitor = ((mr.right - mr.left) as u32, (mr.bottom - mr.top) as u32);
+        // SAFETY: a plain query.
+        let mode = unsafe { dup.GetDesc() }.ModeDesc;
+        tracing::info!(
+            width = mode.Width,
+            height = mode.Height,
+            format = mode.Format.0,
+            "video: duplicating the screen"
+        );
+        // The area inside the monitor, clipped to it.
+        let a = options.area;
+        let source = RECT {
+            left: (a.x - mr.left).clamp(0, monitor.0 as i32),
+            top: (a.y - mr.top).clamp(0, monitor.1 as i32),
+            right: (a.x - mr.left + a.width as i32).clamp(0, monitor.0 as i32),
+            bottom: (a.y - mr.top + a.height as i32).clamp(0, monitor.1 as i32),
+        };
+        if source.right - source.left < 2 || source.bottom - source.top < 2 {
+            return Err("the area is outside the monitor".to_string());
+        }
+        let conv = converter(&gpu, monitor, source, size, fps)?;
+        let bitrate = options.quality.bitrate(size.0, size.1);
+        let _ = std::fs::remove_file(&options.path);
+        let w = if options.software_only {
+            writer(&gpu, &options.path, size, fps, bitrate, false)?
+        } else {
+            match writer(&gpu, &options.path, size, fps, bitrate, true) {
+                Ok(w) => w,
+                Err(e) => {
+                    tracing::info!(error = %e, "video: no hardware encoder, software instead");
+                    let _ = std::fs::remove_file(&options.path);
+                    writer(&gpu, &options.path, size, fps, bitrate, false)?
+                }
+            }
+        };
+        // The first picture, whatever Desktop Duplication does.
+        snapshot(&gpu, &conv, mr)?;
+        Ok((gpu, output, dup, conv, w))
+    })();
+    let (gpu, output, mut dup, conv, mut w) = match setup {
+        Ok(s) => s,
+        Err(e) => {
+            let _ = ready.send(Err(e.clone()));
+            return Err(e);
+        }
+    };
+    shared.clock.lock().unwrap().started = Some(Instant::now());
+    shared.set_state(State::Recording);
+    let _ = ready.send(Ok(()));
+
+    let interval = 1.0 / fps as f64;
+    let mut frames = 0u64;
+    let mut last_write: Option<Instant> = None;
+    let mut last_time = -1.0f64;
+    let mut last_frame: Option<ID3D11Texture2D> = None;
+    // The snapshot is the first frame.
+    let mut dirty = true;
+    let mut was_paused = false;
+    let mut failure: Option<String> = None;
+    let now_recorded = || {
+        shared
+            .clock
+            .lock()
+            .unwrap()
+            .recorded(Instant::now())
+            .as_secs_f64()
+    };
+
+    // Writes the current picture at the recorded time. A hardware encoder that fails
+    // on the first frame is replaced by software; one that fails later stops the
+    // recording with what was written (continuing in software: still to do, VID-029).
+    let write_frame = |w: &Writer,
+                       last_frame: &mut Option<ID3D11Texture2D>,
+                       last_time: &mut f64,
+                       frames: &mut u64|
+     -> Result<(), String> {
+        let frame = conv.nv12(&gpu)?;
+        let t = now_recorded().max(*last_time + 0.001);
+        w.write(&gpu, &frame, t, interval)?;
+        *last_time = t;
+        *last_frame = Some(frame);
+        *frames += 1;
+        Ok(())
+    };
+
+    loop {
+        if shared.stop.load(Ordering::Relaxed) {
+            break;
+        }
+        if options.limit.is_some_and(|l| now_recorded() >= l.as_secs_f64()) {
+            break;
+        }
+        let due_in = match last_write {
+            Some(t) if dirty => (interval - t.elapsed().as_secs_f64()).max(0.0),
+            _ => 0.1,
+        };
+        match grab(&gpu, &dup, &conv, (due_in * 1000.0) as u32) {
+            Ok(true) => dirty = true,
+            Ok(false) => {}
+            Err(e) if e.code() == DXGI_ERROR_ACCESS_LOST => {
+                // A mode change, or the secure desktop: duplicate again.
+                std::thread::sleep(Duration::from_millis(100));
+                // SAFETY: duplication of the output on this device.
+                match unsafe { output.DuplicateOutput(&gpu.device) } {
+                    Ok(d) => {
+                        dup = d;
+                        dirty = true;
+                    }
+                    Err(_) => continue,
+                }
+            }
+            Err(e) => {
+                failure = Some(err("screen", e));
+                break;
+            }
+        }
+        if shared.paused.load(Ordering::Relaxed) {
+            was_paused = true;
+            continue;
+        }
+        if was_paused {
+            // The picture at the moment it resumed.
+            was_paused = false;
+            dirty = true;
+        }
+        let due = last_write.is_none_or(|t| t.elapsed().as_secs_f64() >= interval);
+        if dirty && due {
+            match write_frame(&w, &mut last_frame, &mut last_time, &mut frames) {
+                Ok(()) => {
+                    last_write = Some(Instant::now());
+                    dirty = false;
+                }
+                Err(e) if w.hardware && frames == 0 => {
+                    // The hardware encoder failed on the first frame: software.
+                    tracing::warn!(error = %e, "video: hardware encoder failed, software instead");
+                    let _ = std::fs::remove_file(&options.path);
+                    match writer(
+                        &gpu,
+                        &options.path,
+                        size,
+                        fps,
+                        options.quality.bitrate(size.0, size.1),
+                        false,
+                    ) {
+                        Ok(sw) => w = sw,
+                        Err(e) => {
+                            failure = Some(e);
+                            break;
+                        }
+                    }
+                }
+                Err(e) => {
+                    failure = Some(e);
+                    break;
+                }
+            }
+        }
+    }
+
+    shared.set_state(State::Finalizing);
+    let cancelled = shared.cancel.load(Ordering::Relaxed);
+    let duration = now_recorded();
+    if cancelled {
+        drop(w);
+        let _ = std::fs::remove_file(&options.path);
+        shared.set_state(State::Done);
+        return Ok(Summary {
+            path: options.path,
+            width: size.0,
+            height: size.1,
+            fps,
+            duration,
+            frames,
+            bytes: 0,
+            encoder: "none",
+            all_black: false,
+            cancelled: true,
+        });
+    }
+    if failure.is_none() {
+        // The last change, and the last picture held until the end.
+        if dirty {
+            let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames);
+        }
+        if let Some(f) = &last_frame {
+            if duration - last_time > interval {
+                let t = (duration - interval).max(last_time + 0.001);
+                let _ = w.write(&gpu, f, t, interval);
+            }
+        }
+    }
+    let encoder = if w.hardware { "hardware" } else { "software" };
+    let finished = if frames > 0 {
+        w.finish()
+    } else {
+        Err("nothing was recorded".into())
+    };
+    drop(w);
+    shared.set_state(State::Done);
+    if let Some(e) = failure {
+        if frames == 0 {
+            let _ = std::fs::remove_file(&options.path);
+            return Err(e);
+        }
+        tracing::warn!(error = %e, "video: stopped early");
+    }
+    finished?;
+    let bytes = std::fs::metadata(&options.path).map(|m| m.len()).unwrap_or(0);
+    Ok(Summary {
+        path: options.path,
+        width: size.0,
+        height: size.1,
+        fps,
+        duration,
+        frames,
+        bytes,
+        encoder,
+        all_black: false,
+        cancelled: false,
+    })
+}
+
+/// What a video file holds, read back with Media Foundation: size, frames and the
+/// last frame's time (for tests and `video.info`).
+pub fn probe(path: &std::path::Path) -> Result<(u32, u32, u64, f64), String> {
+    // SAFETY: Media Foundation reading calls; samples are dropped as read.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)
+            .map_err(|e| err("reading the video", e))?;
+        let stream = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
+        let t = reader
+            .GetCurrentMediaType(stream)
+            .map_err(|e| err("video type", e))?;
+        let size = t.GetUINT64(&MF_MT_FRAME_SIZE).map_err(|e| err("video size", e))?;
+        let (w, h) = ((size >> 32) as u32, size as u32);
+        let mut frames = 0u64;
+        let mut last = 0i64;
+        loop {
+            let mut flags = 0u32;
+            let mut time = 0i64;
+            let mut sample = None;
+            reader
+                .ReadSample(
+                    stream,
+                    0,
+                    None,
+                    Some(&mut flags),
+                    Some(&mut time),
+                    Some(&mut sample),
+                )
+                .map_err(|e| err("reading a frame", e))?;
+            if sample.is_some() {
+                frames += 1;
+                last = last.max(time);
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                break;
+            }
+        }
+        Ok((w, h, frames, last as f64 / HNS))
+    }
+}
+
+/// The first frame of a video as BGRA pixels (width, height, pixels): for
+/// thumbnails, "Save frame" (VID-061) and spotting all-black recordings (VID-029).
+pub fn first_frame(path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String> {
+    // SAFETY: Media Foundation reading calls; the buffer is unlocked before returning
+    // and the copy stays within it.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        let mut attrs = None;
+        MFCreateAttributes(&mut attrs, 1).map_err(|e| err("attributes", e))?;
+        let attrs: IMFAttributes = attrs.ok_or("no attributes")?;
+        let _ = attrs.SetUINT32(&MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1);
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), &attrs)
+            .map_err(|e| err("reading the video", e))?;
+        let stream = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
+        let want = MFCreateMediaType().map_err(|e| err("media type", e))?;
+        let _ = want.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video);
+        let _ = want.SetGUID(&MF_MT_SUBTYPE, &MFVideoFormat_RGB32);
+        reader
+            .SetCurrentMediaType(stream, None, &want)
+            .map_err(|e| err("video type", e))?;
+        let t = reader
+            .GetCurrentMediaType(stream)
+            .map_err(|e| err("video type", e))?;
+        let size = t.GetUINT64(&MF_MT_FRAME_SIZE).map_err(|e| err("video size", e))?;
+        let (w, h) = ((size >> 32) as u32, size as u32);
+        loop {
+            let mut flags = 0u32;
+            let mut sample = None;
+            reader
+                .ReadSample(stream, 0, None, Some(&mut flags), None, Some(&mut sample))
+                .map_err(|e| err("reading a frame", e))?;
+            if let Some(sample) = sample {
+                let buffer = sample.ConvertToContiguousBuffer().map_err(|e| err("frame", e))?;
+                let mut data = std::ptr::null_mut();
+                let mut len = 0u32;
+                buffer
+                    .Lock(&mut data, None, Some(&mut len))
+                    .map_err(|e| err("frame", e))?;
+                let need = (w * h * 4) as usize;
+                let pixels = std::slice::from_raw_parts(data, (len as usize).min(need)).to_vec();
+                let _ = buffer.Unlock();
+                return Ok((w, h, pixels));
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                return Err("the video has no frames".into());
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{MaxSize, Quality, Recorder};
+
+    #[test]
+    #[ignore]
+    fn duplication_diagnostics() {
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let prev = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            println!("dpi context set: {:?}", prev.0);
+        }
+        let (adapter, output, r) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 1280,
+            height: 720,
+        })
+        .unwrap();
+        println!("monitor {:?}", (r.left, r.top, r.right, r.bottom));
+        let gpu = gpu(&adapter).unwrap();
+        let dup = unsafe { output.DuplicateOutput(&gpu.device) }.unwrap();
+        let d = unsafe { dup.GetDesc() };
+        println!(
+            "mode {}x{} format {} rotation {} in system memory {}",
+            d.ModeDesc.Width,
+            d.ModeDesc.Height,
+            d.ModeDesc.Format.0,
+            d.Rotation.0,
+            d.DesktopImageInSystemMemory.as_bool()
+        );
+        for i in 0..5 {
+            unsafe {
+                let mut info = DXGI_OUTDUPL_FRAME_INFO::default();
+                let mut res = None;
+                let r = dup.AcquireNextFrame(200, &mut info, &mut res);
+                println!(
+                    "{i}: {:?} present {} accumulated {} resource {}",
+                    r.as_ref().map_err(|e| format!("0x{:08X}", e.code().0 as u32)),
+                    info.LastPresentTime,
+                    info.AccumulatedFrames,
+                    res.is_some()
+                );
+                if r.is_ok() {
+                    let _ = dup.ReleaseFrame();
+                }
+            }
+        }
+    }
+
+    /// Records a test window of known colors (red left, blue right) shown at
+    /// (100, 100) logical (150 % here) by hand, and checks them in the decoded video.
+    #[test]
+    #[ignore]
+    fn colors_survive() {
+        let dir = std::env::temp_dir().join("xs-video-test");
+        let _ = std::fs::create_dir_all(&dir);
+        for (software, width, height) in [
+            (false, 1280, 720),
+            (true, 1280, 720),
+            (false, 900, 500),
+            (true, 900, 500),
+        ] {
+            let path = dir.join("color.mp4");
+            let r = Recorder::start(Options {
+                area: Area {
+                    x: 150,
+                    y: 150,
+                    width,
+                    height,
+                },
+                scale: 1.0,
+                quality: Quality::High,
+                max_size: MaxSize::Original,
+                limit: None,
+                software_only: software,
+                path: path.clone(),
+            })
+            .unwrap();
+            std::thread::sleep(Duration::from_millis(700));
+            let s = r.stop().unwrap();
+            let (w, _h, px) = first_frame(&path).unwrap();
+            let at = |x: u32, y: u32| {
+                let i = ((y * w + x) * 4) as usize;
+                [px[i + 2], px[i + 1], px[i]]
+            };
+            println!(
+                "{} {:?}: left {:?} right {:?}",
+                s.encoder,
+                (s.width, s.height),
+                at(200, 300),
+                at(700, 300)
+            );
+            let near =
+                |a: [u8; 3], b: [u8; 3]| a.iter().zip(b).all(|(x, y)| (*x as i32 - y as i32).abs() <= 12);
+            assert!(near(at(200, 300), [200, 40, 40]));
+            if width > 700 {
+                assert!(near(at(700, 300), [30, 160, 220]));
+            }
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+
+    /// Records two seconds of the primary monitor's top-left corner and reads the file
+    /// back. It records the real screen: run it by hand (`--ignored`).
+    #[test]
+    #[ignore]
+    fn records_and_reads_back() {
+        let dir = std::env::temp_dir().join("xs-video-test");
+        let _ = std::fs::create_dir_all(&dir);
+        for software in [false, true] {
+            let path = dir.join(if software { "sw.mp4" } else { "hw.mp4" });
+            let r = Recorder::start(Options {
+                area: Area {
+                    x: 0,
+                    y: 0,
+                    width: 1280,
+                    height: 720,
+                },
+                scale: 1.0,
+                quality: Quality::High,
+                max_size: MaxSize::Original,
+                limit: Some(Duration::from_secs(2)),
+                software_only: software,
+                path: path.clone(),
+            })
+            .unwrap();
+            std::thread::sleep(Duration::from_millis(2500));
+            let s = r.stop().unwrap();
+            println!("{s:?}");
+            assert!(s.frames >= 1 && s.bytes > 0);
+            let (w, h, frames, last) = probe(&path).unwrap();
+            println!("read back: {w}x{h}, {frames} frames, last at {last:.2}s");
+            assert_eq!((w, h), (1280, 720));
+            assert!(frames >= 1);
+            assert!((1.5..2.6).contains(&last), "{last}");
+            let (fw, fh, px) = first_frame(&path).unwrap();
+            let n = (px.len() / 4).max(1) as f64;
+            let mean = px
+                .chunks(4)
+                .map(|p| p[0] as f64 + p[1] as f64 + p[2] as f64)
+                .sum::<f64>()
+                / n
+                / 3.0;
+            let distinct: std::collections::HashSet<[u8; 3]> = px
+                .chunks(4)
+                .step_by(97)
+                .map(|p| [p[0] / 16, p[1] / 16, p[2] / 16])
+                .collect();
+            println!(
+                "first frame {fw}x{fh}: mean {mean:.1}, {} distinct colors",
+                distinct.len()
+            );
+            assert!(mean > 8.0, "not black");
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+}
