@@ -53,8 +53,30 @@ export function markFromDrag(
 }
 
 /** The number's color on a step of `fill`: dark on the light colors. */
-export const inkOn = (fill: string) =>
-  fill === "#FFFFFF" || fill === "#FFB000" ? "#111318" : "#FFFFFF";
+export function inkOn(fill: string): string {
+  return luminance(fill) > 0.45 ? "#111318" : "#FFFFFF";
+}
+
+/** The relative luminance of a `#RRGGBB` color, 0 (black) to 1 (white). */
+export function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex);
+  if (!m) return 0;
+  const lin = (h: string) => {
+    const c = parseInt(h, 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(m[1] as string) + 0.7152 * lin(m[2] as string) + 0.0722 * lin(m[3] as string);
+}
+
+/** The color a mark starts with: the theme's first that is neither near black nor
+ * near white, else its first. */
+export function firstColor(colors: string[]): string {
+  const vivid = colors.find((c) => {
+    const l = luminance(c);
+    return l > 0.04 && l < 0.85;
+  });
+  return vivid ?? colors[0] ?? (COLORS[0] as string);
+}
 
 /** The marks as the editor's objects, in the capture's pixels (`sel` is its corner).
  * Text sizes are points at the capture's resolution (`scale` × 96 dpi). */

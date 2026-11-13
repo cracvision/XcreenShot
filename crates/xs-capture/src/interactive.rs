@@ -389,6 +389,18 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
             .recall(QUICK_TOOL_KEY)
             .filter(|_| core.settings.get_str("capture.quickAnnotate.firstTool") == "last");
         request["quickTool"] = last.unwrap_or(json!("arrow"));
+        // The marks' colors: the active theme's (EDT-017).
+        if let Ok(themes) = core.call(xs_core::Source::Ui, "editor.themes", json!({}), None) {
+            let active = themes["active"].clone();
+            if let Some(colors) = themes["themes"]
+                .as_array()
+                .and_then(|list| list.iter().find(|t| t["id"] == active))
+                .map(|t| t["colors"].clone())
+                .filter(|c| c.as_array().is_some_and(|a| !a.is_empty()))
+            {
+                request["quickColors"] = colors;
+            }
+        }
     }
     // Menu capture (CAP-031): the menus open now, while the screens are frozen.
     let menus = if mode == "menu" {

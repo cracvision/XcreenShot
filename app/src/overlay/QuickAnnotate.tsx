@@ -1,12 +1,13 @@
 // Quick annotation's bar (CAP-057): the tools, color and width, undo and redo, and
 // Copy, Open in the editor and Cancel.
 import { useTranslation } from "react-i18next";
-import { COLORS, TOOLS, WIDTHS, type Tool } from "./quickMarks";
+import { TOOLS, WIDTHS, type Tool } from "./quickMarks";
 
 /** The compact bar of quick annotation (CAP-057), placed like the capture bar. */
 export function QuickBar({
   style,
   tool,
+  colors,
   color,
   width,
   ellipse,
@@ -24,6 +25,8 @@ export function QuickBar({
 }: {
   style: React.CSSProperties;
   tool: Tool;
+  /** The active theme's colors (EDT-017). */
+  colors: string[];
   color: string;
   width: number;
   ellipse: boolean;
@@ -60,7 +63,7 @@ export function QuickBar({
         </button>
       )}
       <span className="overlay-colors" role="radiogroup" aria-label={t("ui.quick.color")}>
-        {COLORS.map((c) => (
+        {colors.map((c) => (
           <button
             key={c}
             type="button"

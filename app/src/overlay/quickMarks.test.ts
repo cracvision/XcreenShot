@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { hitMark, inkOn, markFromDrag, moveMark, toObjects, type Mark } from "./quickMarks";
+import {
+  firstColor,
+  hitMark,
+  inkOn,
+  markFromDrag,
+  moveMark,
+  toObjects,
+  type Mark,
+} from "./quickMarks";
 
 const sel = { x: 100, y: 200, width: 400, height: 300 };
 
@@ -67,7 +75,14 @@ describe("quick annotation marks (CAP-057)", () => {
     });
   });
 
+  it("the first color is a vivid one of the theme", () => {
+    expect(firstColor(["#1F2430", "#F2545B", "#2D7FF9"])).toBe("#F2545B");
+    expect(firstColor(["#FFFFFF"])).toBe("#FFFFFF");
+  });
+
   it("the number of a step is light on dark colors", () => {
+    expect(inkOn("#F5A524")).toBe("#111318");
+    expect(inkOn("#1F2430")).toBe("#FFFFFF");
     expect(inkOn("#2563EB")).toBe("#FFFFFF");
     expect(inkOn("#FFFFFF")).toBe("#111318");
   });

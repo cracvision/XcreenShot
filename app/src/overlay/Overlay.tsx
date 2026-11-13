@@ -12,6 +12,7 @@ import { closes, ellipsePoints, extend, SCISSORS, type FreehandShape } from "./f
 import {
   COLORS,
   drawMarks,
+  firstColor,
   hitMark,
   markBounds,
   markFromDrag,
@@ -94,6 +95,8 @@ interface Start {
     freehand?: FreehandShape;
     /** Its first tool: Arrow, or the last one used (CAP-057). */
     quickTool?: Tool;
+    /** The active theme's colors for the marks (CAP-057, EDT-017). */
+    quickColors?: string[];
   };
 }
 
@@ -255,6 +258,7 @@ export function Overlay() {
   // Quick annotation (CAP-057): what the bar shows, and a text being typed.
   const [quick, setQuick] = useState({
     tool: "arrow" as Tool,
+    colors: COLORS,
     color: COLORS[0] as string,
     width: 4,
     ellipse: false,
@@ -823,7 +827,17 @@ export function Overlay() {
           ? payload.request.quickTool
           : "arrow";
       st.markTool = firstTool;
-      setQuick((q) => ({ ...q, tool: firstTool, marks: 0, undone: 0 }));
+      const palette = payload.request.quickColors?.length ? payload.request.quickColors : COLORS;
+      const startColor = firstColor(palette);
+      st.markColor = startColor;
+      setQuick((q) => ({
+        ...q,
+        tool: firstTool,
+        colors: palette,
+        color: startColor,
+        marks: 0,
+        undone: 0,
+      }));
       st.asked = 0;
       st.lag = { sum: 0, count: 0, since: 0 };
       st.slow = false;
@@ -1540,6 +1554,7 @@ export function Overlay() {
         <QuickBar
           style={quickBarStyle(sel, monitor.rect, cssPerPx)}
           tool={quick.tool}
+          colors={quick.colors}
           color={quick.color}
           width={quick.width}
           ellipse={quick.ellipse}
