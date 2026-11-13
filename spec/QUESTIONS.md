@@ -254,6 +254,15 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 7: programada)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-050 | Una programada de Ventana tras reiniciar | La ventana se recuerda por su identificador, que cambia si la app de esa ventana se cierra o el equipo se reinicia: entonces se omite con aviso, como pide el spec cuando "la ventana elegida no existe" | Provisional |
+| CAP-050 | Fecha vacía | Es hoy; el campo muestra la fecha de hoy. Con Repetir, la primera captura es la de esa fecha y hora y las siguientes, las que tocan | Provisional |
+| CAP-050 | Días laborables | De lunes a viernes, sin tener en cuenta festivos | Provisional |
+| CAP-050 | Si la app estuvo cerrada varios días con una programada diaria | Al volver se hace la de hoy si está dentro de los 5 minutos; las anteriores se omiten con un solo aviso y sigue con la siguiente que toque | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 6: intervalo)
 
 | ID | Duda | Propuesta | Estado |

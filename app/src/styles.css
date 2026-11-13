@@ -1948,6 +1948,11 @@ html.overlay-root.overlay-native #root {
   max-width: none;
 }
 
+/* How a running interval or a pending schedule is going (CAP-049, CAP-050). */
+.panel-status.info {
+  color: var(--ink-muted);
+}
+
 .panel-more {
   position: relative;
 }

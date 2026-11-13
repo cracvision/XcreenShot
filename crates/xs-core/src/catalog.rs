@@ -112,7 +112,8 @@ fn capture_params(own: Value) -> Value {
         "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects for the capture (CAP-051), the editor's entries {type, …settings}: border, shadow, edges, corners, scale, rotate, filters, watermark…; editable in the document, applied in the clipboard and files"},
         "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the capture also goes to (CAP-052): file"},
         "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"},
-        "series": {"type": "string", "description": "Internal: the interval series the capture belongs to (CAP-049)"}
+        "series": {"type": "string", "description": "Internal: the interval series the capture belongs to (CAP-049)"},
+        "schedule": {"type": "object", "description": "Internal: the schedule that makes the capture, {id, at, late} (CAP-050)"}
     });
     if let (Some(p), Some(o)) = (props.as_object_mut(), own.as_object()) {
         p.extend(o.clone());
@@ -772,6 +773,36 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "enum": ["started"]},
                 "series": {"type": "object", "description": "id, name, count, every, startedAt, nextAt, endsAt, stopAfter"}
             }})),
+        B::new("capture.schedule", &["CAP-050", "CAP-045", "CAP-056"])
+            .scopes(ALL)
+            .interactive()
+            .mutates()
+            .params(capture_params(json!({
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
+                "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen now"},
+                "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
+                "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen now"},
+                "date": {"type": "string", "description": "YYYY-MM-DD, local; omit for today"},
+                "time": {"type": "string", "description": "HH:MM, local; the capture is made at second 0 of that minute. A moment already gone is refused"},
+                "repeat": {"type": "string", "enum": ["once", "daily", "weekdays", "weekly"], "default": "once"},
+                "name": {"type": "string", "description": "Shown in the icon's menu (Stop capture: <name>)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["scheduled"]},
+                "schedule": {"type": "object", "description": "id, name, preset, command, at (RFC 3339), repeat"}
+            }})),
+        B::new("capture.schedule_list", &["CAP-050"]).result(json!({"type": "object", "properties": {
+            "schedules": {"type": "array", "items": {"type": "object"}, "description": "id, name, preset, command, at (the next capture, RFC 3339), repeat"}
+        }})),
+        B::new("capture.schedule_cancel", &["CAP-050", "CAP-005"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The schedule (capture.schedule_list); omit to cancel them all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "array", "items": {"type": "string"}}}})),
         B::new("capture.interval_state", &["CAP-049"]).result(json!({"type": "object", "properties": {
             "running": {"type": "boolean"},
             "series": {"type": "array", "items": {"type": "object"}, "description": "id, name, preset, command, count (captures kept), every, startedAt, nextAt, endsAt, stopAfter"}

@@ -806,6 +806,18 @@
     "capture_interval_stop": {
       "title": "Detener la captura por intervalo",
       "description": "Detiene una serie por intervalo, o todas."
+    },
+    "capture_schedule": {
+      "title": "Captura programada",
+      "description": "Captura un día y minuto concretos (en el segundo 0), una vez o cada día, cada día laborable o cada semana. Se conserva al reiniciar XcreenShot."
+    },
+    "capture_schedule_list": {
+      "title": "Capturas programadas",
+      "description": "Las capturas que esperan su hora."
+    },
+    "capture_schedule_cancel": {
+      "title": "Cancelar una captura programada",
+      "description": "Cancela una captura programada, o todas."
     }
   },
   "settings": {
@@ -1227,7 +1239,9 @@
     "clipboard_empty": "El portapapeles no contiene una imagen ni texto.",
     "quick_annotate_off": "La anotación rápida es una función en prueba que está desactivada. Actívala en Preferencias > Funciones en prueba.",
     "interval_selection": "El intervalo funciona con Región, Ventana, Pantalla completa, Menú y Portapapeles.",
-    "series_not_found": "No hay ninguna serie por intervalo {{id}} activa."
+    "series_not_found": "No hay ninguna serie por intervalo {{id}} activa.",
+    "schedule_past": "Esa hora ya pasó: elige una que todavía no haya llegado.",
+    "schedule_not_found": "No hay ninguna captura programada {{id}}."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1397,7 +1411,8 @@
     "finish_scrolling": "Terminar desplazamiento",
     "quick_annotate": "Anotación rápida",
     "stop_series": "Detener captura: {{name}}",
-    "tooltip_timer": "XcreenShot · capturando por intervalo"
+    "tooltip_timer": "XcreenShot · capturando por intervalo",
+    "stop_schedule": "Detener captura: {{name}} (próxima: {{when}})"
   },
   "menu": {
     "flatten": "A&planar",
@@ -1570,7 +1585,11 @@
     "clipboard_text_cut": "El texto copiado era demasiado largo: se cortó a 60.000 píxeles.",
     "series_done": "{{name}} terminó. Capturas: {{count}}.",
     "series_window_gone": "{{name}} se detuvo: la ventana se cerró.",
-    "series_monitor_gone": "{{name}} se detuvo: el monitor de su área no está conectado."
+    "series_monitor_gone": "{{name}} se detuvo: el monitor de su área no está conectado.",
+    "schedule_missed": "{{name}} se omitió: XcreenShot no estaba abierto a esa hora.",
+    "schedule_locked": "{{name}} se omitió: la sesión estaba bloqueada.",
+    "schedule_window_gone": "{{name}} se omitió: su ventana no existe.",
+    "schedule_failed": "{{name}} no se pudo hacer a su hora."
   },
   "source": {
     "ui": "la interfaz",
@@ -2104,7 +2123,18 @@
       "sensitivity": "Sensibilidad",
       "sensitivity_exact": "Exacta",
       "sensitivity_small": "Ignorar cambios pequeños",
-      "series_status": "Capturas: {{count}} · siguiente: {{time}}"
+      "series_status": "Capturas: {{count}} · siguiente: {{time}}",
+      "timing_scheduled": "Programada",
+      "schedule": "Programar",
+      "unschedule": "Cancelar programación",
+      "schedule_date": "Fecha",
+      "schedule_time": "Hora",
+      "repeat": "Repetir",
+      "repeat_once": "Una vez",
+      "repeat_daily": "Cada día",
+      "repeat_weekdays": "Días laborables",
+      "repeat_weekly": "Cada semana",
+      "schedule_status": "Próxima: {{when}}"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3943,5 +3973,8 @@
   },
   "interval": {
     "name": "Intervalo"
+  },
+  "schedule": {
+    "name": "Programada"
   }
 }

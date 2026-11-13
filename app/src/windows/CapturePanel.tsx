@@ -15,6 +15,7 @@ import {
   run,
   type CommandEvent,
   type IntervalSeries,
+  type ScheduledCapture,
   type PanelSettings,
   type ShortcutRow,
 } from "../lib/commands";
@@ -42,14 +43,18 @@ export function CapturePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  // The panel's interval series, if one runs (CAP-049).
+  // The panel's interval series (CAP-049) and schedule (CAP-050), if any.
   const [series, setSeries] = useState<IntervalSeries | null>(null);
+  const [scheduled, setScheduled] = useState<ScheduledCapture | null>(null);
 
   useEffect(() => {
-    const pick = (state: { series: IntervalSeries[] }) =>
+    type Timed = { series: IntervalSeries[]; schedules: ScheduledCapture[] };
+    const pick = (state: Timed) => {
       setSeries(state.series.find((x) => x.preset === "@panel") ?? null);
-    void run<{ series: IntervalSeries[] }>("capture.interval_state").then(pick);
-    const un = listen<{ series: IntervalSeries[] }>("xs://interval", (e) => pick(e.payload));
+      setScheduled(state.schedules.find((x) => x.preset === "@panel") ?? null);
+    };
+    void run<Timed>("capture.interval_state").then(pick);
+    const un = listen<Timed>("xs://interval", (e) => pick(e.payload));
     return () => void un.then((f) => f());
   }, []);
 
@@ -120,11 +125,17 @@ export function CapturePanel() {
   const tab = settings.tab;
   // Timing = Interval: Start, and Stop while its series runs (CAP-049).
   const interval = tab === "image" && settings.image.timing === "interval";
+  // Timing = Scheduled: Schedule, and Cancel schedule while it waits (CAP-050).
+  const schedule = tab === "image" && settings.image.timing === "scheduled";
   const label = series
     ? t("ui.panel.stop")
-    : interval
-      ? t("ui.panel.start")
-      : t("ui.panel.capture");
+    : scheduled
+      ? t("ui.panel.unschedule")
+      : interval
+        ? t("ui.panel.start")
+        : schedule
+          ? t("ui.panel.schedule")
+          : t("ui.panel.capture");
 
   return (
     <div className="panel" ref={root}>
@@ -167,15 +178,32 @@ export function CapturePanel() {
           type="button"
           className="btn primary panel-capture"
           onClick={() =>
-            void (series ? run("capture.interval_stop", { id: series.id }) : capture())
+            void (series
+              ? run("capture.interval_stop", { id: series.id })
+              : scheduled
+                ? run("capture.schedule_cancel", { id: scheduled.id })
+                : capture())
           }
         >
           {label}
         </button>
         <CaptureShortcut />
       </div>
+      {scheduled && (
+        <p className="panel-status info" role="status">
+          {t("ui.panel.schedule_status", {
+            when: new Date(scheduled.at).toLocaleString([], {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })}
+        </p>
+      )}
       {series && (
-        <p className="panel-status" role="status">
+        <p className="panel-status info" role="status">
           {t("ui.panel.series_status", {
             count: series.count,
             time: new Date(series.nextAt).toLocaleTimeString([], {

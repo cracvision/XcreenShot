@@ -11,6 +11,7 @@ import {
   type RegionProps,
   type ScrollProps,
   type IntervalProps,
+  type ScheduleProps,
 } from "../lib/commands";
 import { Menu, type MenuItem } from "../components/Menu";
 import { useSetting } from "../store";
@@ -222,6 +223,7 @@ export function ImageOptions({
             <option value="none">{t("ui.panel.timing_none")}</option>
             <option value="delay">{t("ui.panel.timing_delay")}</option>
             <option value="interval">{t("ui.panel.timing_interval")}</option>
+            <option value="scheduled">{t("ui.panel.timing_scheduled")}</option>
           </select>
         </label>
         {value.timing === "delay" && (
@@ -245,6 +247,12 @@ export function ImageOptions({
           </label>
         )}
       </div>
+      {value.timing === "scheduled" && (
+        <ScheduleOptions
+          value={value.schedule}
+          onChange={(s) => onChange({ schedule: { ...value.schedule, ...s } })}
+        />
+      )}
       {value.timing === "interval" && (
         <IntervalOptions
           value={value.interval}
@@ -344,6 +352,59 @@ function ScrollOptions({
           </label>
         </>
       )}
+    </fieldset>
+  );
+}
+
+/** Timing = Scheduled (CAP-050): the day (empty is today), the minute and the repeat. */
+function ScheduleOptions({
+  value,
+  onChange,
+}: {
+  value: ScheduleProps;
+  onChange: (patch: Partial<ScheduleProps>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const todayText = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-field" htmlFor={`${id}-date`}>
+        <span>{t("ui.panel.schedule_date")}</span>
+        <input
+          id={`${id}-date`}
+          type="date"
+          min={todayText}
+          value={value.date || todayText}
+          onChange={(e) => onChange({ date: e.target.value === todayText ? "" : e.target.value })}
+        />
+      </label>
+      <label className="panel-field" htmlFor={`${id}-time`}>
+        <span>{t("ui.panel.schedule_time")}</span>
+        <input
+          id={`${id}-time`}
+          type="time"
+          value={value.time}
+          onChange={(e) => {
+            if (/^\d{2}:\d{2}$/.test(e.target.value)) onChange({ time: e.target.value });
+          }}
+        />
+      </label>
+      <label className="panel-field" htmlFor={`${id}-repeat`}>
+        <span>{t("ui.panel.repeat")}</span>
+        <select
+          id={`${id}-repeat`}
+          value={value.repeat}
+          onChange={(e) => onChange({ repeat: e.target.value as ScheduleProps["repeat"] })}
+        >
+          <option value="once">{t("ui.panel.repeat_once")}</option>
+          <option value="daily">{t("ui.panel.repeat_daily")}</option>
+          <option value="weekdays">{t("ui.panel.repeat_weekdays")}</option>
+          <option value="weekly">{t("ui.panel.repeat_weekly")}</option>
+        </select>
+      </label>
     </fieldset>
   );
 }

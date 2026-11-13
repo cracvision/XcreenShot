@@ -74,8 +74,9 @@ pub struct TrayState {
     pub scrolling: bool,
     /// Quick annotation's trial is on (CAP-057, APP-034).
     pub quick: bool,
-    /// Running interval series: their id and "Stop capture: <name>" (CAP-005, CAP-049).
-    pub series: Vec<(String, String)>,
+    /// Running interval series and pending schedules: their id, "Stop capture:
+    /// <name>" and the command that stops them (CAP-005, CAP-049, CAP-050).
+    pub stops: Vec<(String, String, &'static str)>,
 }
 
 /// The tray menu; while a scrolling capture runs it starts with Finish scrolling, for
@@ -103,14 +104,14 @@ pub fn tray_menu_with(presets: &[(String, String)], state: &TrayState) -> Vec<Me
         );
     }
     // Stop capture: <name>, one per running series, first (CAP-005, CAP-049).
-    if !state.series.is_empty() {
+    if !state.stops.is_empty() {
         let mut stops: Vec<MenuEntry> = state
-            .series
+            .stops
             .iter()
-            .map(|(id, text)| MenuEntry::Named {
-                id: format!("series.{id}"),
+            .map(|(id, text, command)| MenuEntry::Named {
+                id: format!("stop.{id}"),
                 text: text.clone(),
-                command: "capture.interval_stop",
+                command,
                 params: json!({ "id": id }),
             })
             .collect();
@@ -773,7 +774,11 @@ mod tests {
     #[test]
     fn running_series_can_be_stopped_from_the_icon() {
         let state = TrayState {
-            series: vec![("s1".into(), "Stop capture: Interval".into())],
+            stops: vec![(
+                "s1".into(),
+                "Stop capture: Interval".into(),
+                "capture.interval_stop",
+            )],
             ..TrayState::default()
         };
         let menu = tray_menu_with(&[], &state);

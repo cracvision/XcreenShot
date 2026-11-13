@@ -134,6 +134,23 @@ export interface IntervalProps {
   sensitivity: "exact" | "small";
 }
 
+/** Timing = Scheduled (CAP-050): the day (empty: today), the minute and the repeat. */
+export interface ScheduleProps {
+  date: string;
+  time: string;
+  repeat: "once" | "daily" | "weekdays" | "weekly";
+}
+
+/** A pending scheduled capture (capture.schedule_list). */
+export interface ScheduledCapture {
+  id: string;
+  name: string;
+  preset: string | null;
+  /** The next capture, RFC 3339. */
+  at: string;
+  repeat: ScheduleProps["repeat"];
+}
+
 /** A running interval series (capture.interval_state). */
 export interface IntervalSeries {
   id: string;
@@ -182,10 +199,12 @@ export interface PanelSettings {
     copy: boolean;
     cursor: boolean;
     open: "editor" | "quick" | "none";
-    timing: "none" | "delay" | "interval";
+    timing: "none" | "delay" | "interval" | "scheduled";
     delay: number;
     /** Timing = Interval (CAP-049). */
     interval: IntervalProps;
+    /** Timing = Scheduled (CAP-050). */
+    schedule: ScheduleProps;
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

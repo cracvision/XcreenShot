@@ -243,6 +243,11 @@ impl Core {
         self.registry.read().unwrap().clone().expect("registry built")
     }
 
+    /// Whether the commands can be called yet (the registry is built at start).
+    pub fn is_ready(&self) -> bool {
+        self.registry.read().unwrap().is_some()
+    }
+
     /// Remembers a small UI value across sessions (not a preference).
     pub fn remember(&self, key: &str, value: Value) {
         self.state.write().unwrap().memory.insert(key.to_string(), value);
@@ -1203,7 +1208,10 @@ mod tests {
             &menus::TrayState {
                 scrolling: true,
                 quick: true,
-                series: vec![("s1".into(), "Stop".into())],
+                stops: vec![
+                    ("s1".into(), "Stop".into(), "capture.interval_stop"),
+                    ("p1".into(), "Stop".into(), "capture.schedule_cancel"),
+                ],
             },
         );
         all.extend(menus::app_menu(Platform::Windows));

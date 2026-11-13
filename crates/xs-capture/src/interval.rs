@@ -353,7 +353,12 @@ pub fn state(core: &Core, lang: Lang) -> Value {
         .iter()
         .map(|s| s.summary(lang))
         .collect();
-    json!({ "running": !list.is_empty(), "series": list })
+    json!({
+        "running": !list.is_empty(),
+        "series": list,
+        // The schedules (CAP-050), for the panel that shows both.
+        "schedules": crate::schedule::list(core, lang)["schedules"],
+    })
 }
 
 fn emit(core: &Core) {

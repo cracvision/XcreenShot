@@ -25,6 +25,7 @@ pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
+pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
@@ -392,6 +393,8 @@ pub struct Options {
     pub keep: Option<bool>,
     /// The interval series this capture belongs to (CAP-049).
     pub series: Option<String>,
+    /// The schedule that made this capture: id, planned time, seconds late (CAP-050).
+    pub schedule: Option<Value>,
 }
 
 impl Options {
@@ -433,6 +436,7 @@ impl Options {
             quick: p.get("open").and_then(Value::as_str) == Some("quick"),
             keep: None,
             series: p.get("series").and_then(Value::as_str).map(str::to_string),
+            schedule: p.get("schedule").filter(|v| v.is_object()).cloned(),
         }
     }
 }
@@ -573,6 +577,14 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     // The series and its order, so the library can group them (CAP-049, CAP-056).
     if let (Some(s), Some(n)) = (&series, series_index) {
         meta["series"] = json!({ "id": s.group(), "index": n, "name": s.title(lang) });
+    }
+    // A scheduled capture: when it was planned and how late it was made (CAP-050).
+    if let Some(when) = &opts.schedule {
+        meta["schedule"] = json!({
+            "id": when["id"],
+            "plannedAt": when["at"],
+            "lateSeconds": when["late"],
+        });
     }
     let app = shot.app.as_ref().map(|a| a.name.as_str());
     let keep = opts
@@ -1084,14 +1096,21 @@ fn capture_with_tab(core: &Core, ctx: &Context, tab: &str, p: &Value) -> Command
         }
         return start_interval(core, ctx, &params, None, Some(PANEL_SERIES.into()));
     }
+    // Scheduled (CAP-050): Schedule; again, Cancel schedule.
+    if command == "capture.schedule" {
+        if let Some(id) = schedule::of_preset(core, PANEL_SERIES) {
+            return schedule::cancel(core, ctx.lang, Some(&id));
+        }
+        return start_schedule(core, ctx, &params, None, Some(PANEL_SERIES.into()));
+    }
     dispatch(core, ctx, command, &params, extra)
 }
 
 /// The series the capture panel started (CAP-049).
 const PANEL_SERIES: &str = "@panel";
 
-/// Keys of `capture.interval` that are not the capture's own.
-const INTERVAL_KEYS: [&str; 9] = [
+/// Keys of `capture.interval` and `capture.schedule` that are not the capture's own.
+const TIMING_KEYS: [&str; 12] = [
     "every",
     "stop",
     "count",
@@ -1101,6 +1120,9 @@ const INTERVAL_KEYS: [&str; 9] = [
     "sensitivity",
     "selection",
     "name",
+    "date",
+    "time",
+    "repeat",
 ];
 
 /// Starts an interval series (CAP-049): the area or window is chosen once, then each
@@ -1112,13 +1134,49 @@ pub(crate) fn start_interval(
     name: Option<String>,
     origin: Option<String>,
 ) -> CommandResult {
-    let lang = ctx.lang;
     let plan = interval::Plan::from_params(p, chrono::Local::now())
         .map_err(|e| CommandError::new(ErrorCode::InvalidParams, e))?;
+    let (command, params) = repeated_capture(core, ctx, p)?;
+    interval::start(core, ctx, command, params, plan, name, origin)
+}
+
+/// Schedules a capture (CAP-050): a moment already gone is refused before anything
+/// is chosen; then the area or window is chosen, as for an interval.
+pub(crate) fn start_schedule(
+    core: &Core,
+    ctx: &Context,
+    p: &Value,
+    name: Option<String>,
+    origin: Option<String>,
+) -> CommandResult {
+    let lang = ctx.lang;
+    let at = schedule::first_time(p, chrono::Local::now()).map_err(|e| {
+        if e == "past" {
+            CommandError::new(ErrorCode::InvalidParams, tr(lang, "errors.schedule_past", &[]))
+        } else {
+            CommandError::new(ErrorCode::InvalidParams, e)
+        }
+    })?;
+    let repeat = schedule::Repeat::parse(p.get("repeat").and_then(Value::as_str).unwrap_or("once"))
+        .ok_or_else(|| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                "repeat: once, daily, weekdays or weekly",
+            )
+        })?;
+    let (command, params) = repeated_capture(core, ctx, p)?;
+    schedule::add(core, ctx, command, params, at, repeat, name, origin)
+}
+
+/// The capture an interval or a schedule runs later (CAP-049, CAP-050): its command
+/// and parameters, with the region or window already chosen, without opening the
+/// editor and with only the options it was given.
+fn repeated_capture(core: &Core, ctx: &Context, p: &Value) -> Result<(&'static str, Value), CommandError> {
+    let lang = ctx.lang;
     let selection = p.get("selection").and_then(Value::as_str).unwrap_or("fullscreen");
     let mut params = p.clone();
     if let Some(o) = params.as_object_mut() {
-        for k in INTERVAL_KEYS
+        for k in TIMING_KEYS
             .iter()
             .chain(&["size", "multiple", "extract", "target"])
         {
@@ -1127,8 +1185,8 @@ pub(crate) fn start_interval(
     }
     params["open"] = json!("none");
     params["delay"] = json!(0);
-    // Each turn uses the options the series started with (from the panel, all of
-    // them): the panel's effects and destinations are not added later.
+    // Each turn uses the options it started with (from the panel, all of them): the
+    // panel's effects and destinations are not added later.
     for (k, v) in [
         ("copy", json!(true)),
         ("cursor", json!(false)),
@@ -1176,7 +1234,7 @@ pub(crate) fn start_interval(
             ))
         }
     };
-    interval::start(core, ctx, command, params, plan, name, origin)
+    Ok((command, params))
 }
 
 fn upgrade(weak: &Weak<Core>) -> Result<Arc<Core>, CommandError> {
@@ -1300,9 +1358,31 @@ pub fn extension() -> Extension {
             Ok(multi::clear(&*upgrade(&w)?))
         });
         // Interval capture (CAP-049): start a series, list them, stop one or all.
+        // Scheduled capture (CAP-050): the schedules kept from the last run wait again.
         if let Some(core) = weak.upgrade() {
             interval::install(&core);
+            schedule::install(&core);
         }
+        let w = weak.clone();
+        reg.handle("capture.schedule", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            let name = p.get("name").and_then(Value::as_str).map(str::to_string);
+            start_schedule(&core, ctx, &p, name, None)
+        });
+        let w = weak.clone();
+        reg.handle("capture.schedule_list", move |ctx, _p| {
+            Ok(schedule::list(&*upgrade(&w)?, ctx.lang))
+        });
+        let w = weak.clone();
+        reg.handle("capture.schedule_cancel", move |ctx, p| {
+            let core = upgrade(&w)?;
+            schedule::cancel(&core, ctx.lang, p.get("id").and_then(Value::as_str))
+        });
         let w = weak.clone();
         reg.handle("capture.interval", move |ctx, p| {
             let core = upgrade(&w)?;

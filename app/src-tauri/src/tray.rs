@@ -32,7 +32,15 @@ fn tray_state(core: &Core) -> xs_core::menus::TrayState {
     xs_core::menus::TrayState {
         scrolling: xs_capture::scroll::running(core),
         quick: core.settings.get_bool("experimental.quickAnnotate"),
-        series: xs_capture::interval::menu_items(core),
+        stops: xs_capture::interval::menu_items(core)
+            .into_iter()
+            .map(|(id, text)| (id, text, "capture.interval_stop"))
+            .chain(
+                xs_capture::schedule::menu_items(core)
+                    .into_iter()
+                    .map(|(id, text)| (id, text, "capture.schedule_cancel")),
+            )
+            .collect(),
     }
 }
 
@@ -388,7 +396,7 @@ pub fn current_visual(app: &AppHandle) -> Visual {
     Visual {
         paused: core.shortcuts.user_paused(),
         attention,
-        timer: xs_capture::interval::running(core),
+        timer: xs_capture::interval::running(core) || xs_capture::schedule::any(core),
         monochrome: core.settings.get_bool("general.monochromeIcon"),
     }
 }

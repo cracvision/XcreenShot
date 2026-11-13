@@ -170,10 +170,12 @@ pub struct ImageTab {
     pub copy: bool,
     pub cursor: bool,
     pub open: String,
-    /// `none`, `delay` (CAP-048) or `interval` (CAP-049).
+    /// `none`, `delay` (CAP-048), `interval` (CAP-049) or `scheduled` (CAP-050).
     pub timing: String,
     /// Timing = Interval (CAP-049).
     pub interval: crate::interval::IntervalTab,
+    /// Timing = Scheduled (CAP-050).
+    pub schedule: crate::schedule::ScheduleTab,
     /// Delay seconds, 1–60 (default 5).
     pub delay: u32,
     /// Selection = Scrolling (CAP-034, CAP-035).
@@ -202,6 +204,7 @@ impl Default for ImageTab {
             open: "editor".into(),
             timing: "none".into(),
             interval: crate::interval::IntervalTab::default(),
+            schedule: crate::schedule::ScheduleTab::default(),
             delay: 5,
             scroll: ScrollTab::default(),
             region: RegionTab::default(),
@@ -269,8 +272,13 @@ impl PanelSettings {
         )?;
         one_of("image.selection", &self.image.selection, &IMAGE_SELECTIONS)?;
         one_of("image.open", &self.image.open, &["editor", "quick", "none"])?;
-        one_of("image.timing", &self.image.timing, &["none", "delay", "interval"])?;
+        one_of(
+            "image.timing",
+            &self.image.timing,
+            &["none", "delay", "interval", "scheduled"],
+        )?;
         self.image.interval.validate()?;
+        self.image.schedule.validate()?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
         }
@@ -340,7 +348,8 @@ impl PanelSettings {
     /// With Timing = Interval, the series that runs that capture again (CAP-049).
     pub fn plan(&self, tab: &str) -> (&'static str, Value, Value) {
         let (command, params, extra) = self.plan_once(tab);
-        if tab == "universal" || self.image.timing != "interval" {
+        let timed = matches!(self.image.timing.as_str(), "interval" | "scheduled");
+        if tab == "universal" || !timed {
             return (command, params, extra);
         }
         let selection = match (command, self.image.selection.as_str()) {
@@ -352,6 +361,11 @@ impl PanelSettings {
             // Not with an interval: the start says so.
             (_, other) => other,
         };
+        if self.image.timing == "scheduled" {
+            let mut params = with_overrides(params, &self.image.schedule.params());
+            params["selection"] = json!(selection);
+            return ("capture.schedule", params, json!({}));
+        }
         let mut params = with_overrides(params, &self.image.interval.params());
         params["selection"] = json!(selection);
         ("capture.interval", params, json!({}))

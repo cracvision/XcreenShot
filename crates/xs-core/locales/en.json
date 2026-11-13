@@ -806,6 +806,18 @@
     "capture_interval_stop": {
       "title": "Stop interval capture",
       "description": "Stops one interval series, or all of them."
+    },
+    "capture_schedule": {
+      "title": "Scheduled capture",
+      "description": "Captures at a day and minute (second 0), once or every day, every weekday or every week. Kept when XcreenShot restarts."
+    },
+    "capture_schedule_list": {
+      "title": "Scheduled captures",
+      "description": "The captures waiting for their time."
+    },
+    "capture_schedule_cancel": {
+      "title": "Cancel a scheduled capture",
+      "description": "Cancels one scheduled capture, or all of them."
     }
   },
   "settings": {
@@ -1227,7 +1239,9 @@
     "clipboard_empty": "The clipboard holds no image or text.",
     "quick_annotate_off": "Quick annotation is a trial feature that is off. Turn it on in Preferences > Experimental features.",
     "interval_selection": "Interval works with Region, Window, Full screen, Menu and Clipboard.",
-    "series_not_found": "There is no interval series {{id}} running."
+    "series_not_found": "There is no interval series {{id}} running.",
+    "schedule_past": "That time has already passed: choose one still to come.",
+    "schedule_not_found": "There is no scheduled capture {{id}}."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1397,7 +1411,8 @@
     "finish_scrolling": "Finish scrolling",
     "quick_annotate": "Quick annotation",
     "stop_series": "Stop capture: {{name}}",
-    "tooltip_timer": "XcreenShot · capturing at intervals"
+    "tooltip_timer": "XcreenShot · capturing at intervals",
+    "stop_schedule": "Stop capture: {{name}} (next: {{when}})"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -1570,7 +1585,11 @@
     "clipboard_text_cut": "The copied text was too long: it was cut at 60,000 pixels.",
     "series_done": "{{name}} finished. Captures: {{count}}.",
     "series_window_gone": "{{name}} stopped: the window was closed.",
-    "series_monitor_gone": "{{name}} stopped: the monitor of its area is not connected."
+    "series_monitor_gone": "{{name}} stopped: the monitor of its area is not connected.",
+    "schedule_missed": "{{name}} was skipped: XcreenShot was not running at its time.",
+    "schedule_locked": "{{name}} was skipped: the session was locked.",
+    "schedule_window_gone": "{{name}} was skipped: its window does not exist.",
+    "schedule_failed": "{{name}} could not be made at its time."
   },
   "source": {
     "ui": "the interface",
@@ -2104,7 +2123,18 @@
       "sensitivity": "Sensitivity",
       "sensitivity_exact": "Exact",
       "sensitivity_small": "Ignore small changes",
-      "series_status": "Captures: {{count}} · next: {{time}}"
+      "series_status": "Captures: {{count}} · next: {{time}}",
+      "timing_scheduled": "Scheduled",
+      "schedule": "Schedule",
+      "unschedule": "Cancel schedule",
+      "schedule_date": "Date",
+      "schedule_time": "Time",
+      "repeat": "Repeat",
+      "repeat_once": "Once",
+      "repeat_daily": "Every day",
+      "repeat_weekdays": "Weekdays",
+      "repeat_weekly": "Every week",
+      "schedule_status": "Next: {{when}}"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3943,5 +3973,8 @@
   },
   "interval": {
     "name": "Interval"
+  },
+  "schedule": {
+    "name": "Scheduled"
   }
 }

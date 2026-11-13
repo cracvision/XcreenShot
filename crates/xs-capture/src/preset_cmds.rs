@@ -334,6 +334,14 @@ fn run(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         let name = presets::display_name(preset, lang);
         return crate::start_interval(core, ctx, &params, Some(name), Some(preset.id.clone()));
     }
+    // A preset with Scheduled is a switch too (CAP-050, CAP-062).
+    if command == "capture.schedule" {
+        if let Some(id) = crate::schedule::of_preset(core, &preset.id) {
+            return crate::schedule::cancel(core, lang, Some(&id));
+        }
+        let name = presets::display_name(preset, lang);
+        return crate::start_schedule(core, ctx, &params, Some(name), Some(preset.id.clone()));
+    }
     crate::dispatch(core, ctx, command, &params, extra)
 }
 
