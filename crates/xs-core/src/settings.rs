@@ -440,6 +440,28 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        // System captures (CAP-042): imported from the system tool while on.
+        def(
+            "capture.systemCaptures",
+            "capture",
+            boolean(),
+            json!(false),
+            "CAP-042",
+        ),
+        def(
+            "capture.systemCaptures.open",
+            "capture",
+            one_of(&["editor", "library"]),
+            json!("editor"),
+            "CAP-042",
+        ),
+        def(
+            "capture.systemCaptures.keepOriginal",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-042",
+        ),
         // Quick annotation (CAP-057): its first tool and whether Copy keeps it.
         def(
             "capture.quickAnnotate.firstTool",

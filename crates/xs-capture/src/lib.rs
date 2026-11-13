@@ -30,6 +30,7 @@ pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
 pub mod stitch;
+pub mod systemshots;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -395,6 +396,8 @@ pub struct Options {
     pub series: Option<String>,
     /// The schedule that made this capture: id, planned time, seconds late (CAP-050).
     pub schedule: Option<Value>,
+    /// More metadata for the capture (a system capture's file, CAP-042).
+    pub meta: Option<Value>,
 }
 
 impl Options {
@@ -437,6 +440,7 @@ impl Options {
             keep: None,
             series: p.get("series").and_then(Value::as_str).map(str::to_string),
             schedule: p.get("schedule").filter(|v| v.is_object()).cloned(),
+            meta: None,
         }
     }
 }
@@ -449,7 +453,12 @@ pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) 
     json!({
         "capturedAt": now.to_rfc3339(),
         "mode": shot.mode,
-        "source": if shot.mode == "clipboard" { "clipboard" } else { "screen" },
+        "source": match shot.mode {
+            "clipboard" => "clipboard",
+            // The system's capture tool (CAP-042).
+            "system" => "system",
+            _ => "screen",
+        },
         "app": shot.app,
         "window": { "title": if with_title { shot.window_title.clone() } else { None } },
         "url": null,
@@ -577,6 +586,11 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     // The series and its order, so the library can group them (CAP-049, CAP-056).
     if let (Some(s), Some(n)) = (&series, series_index) {
         meta["series"] = json!({ "id": s.group(), "index": n, "name": s.title(lang) });
+    }
+    if let Some(extra) = opts.meta.as_ref().and_then(Value::as_object) {
+        for (k, v) in extra {
+            meta[k] = v.clone();
+        }
     }
     // A scheduled capture: when it was planned and how late it was made (CAP-050).
     if let Some(when) = &opts.schedule {
@@ -1362,6 +1376,8 @@ pub fn extension() -> Extension {
         if let Some(core) = weak.upgrade() {
             interval::install(&core);
             schedule::install(&core);
+            // System captures (CAP-042): watched while the option is on.
+            systemshots::install(&core);
         }
         let w = weak.clone();
         reg.handle("capture.schedule", move |ctx, p| {

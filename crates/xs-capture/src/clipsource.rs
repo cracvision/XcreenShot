@@ -34,6 +34,8 @@ pub enum Content {
 
 /// Reads the clipboard, in the order of preference of CAP-039.
 pub fn read() -> Content {
+    // One use of the clipboard at a time in the process (see xs_core::clipboard_lock).
+    let _lock = xs_core::clipboard_lock();
     let Ok(mut cb) = arboard::Clipboard::new() else {
         return Content::Nothing;
     };

@@ -1150,6 +1150,22 @@
     "capture_quickAnnotate_saveToLibrary": {
       "label": "Anotación rápida: guardar en la biblioteca al copiar",
       "description": "Desactivada: Copiar solo deja la imagen en el portapapeles y la captura queda sin guardar en la bandeja reciente."
+    },
+    "capture_systemCaptures": {
+      "label": "Abrir en XcreenShot las capturas del sistema",
+      "description": "Cada captura nueva de la Herramienta Recortes (también Win+Mayús+S) llega a XcreenShot como una captura más. Las imágenes copiadas en otras apps, nunca."
+    },
+    "capture_systemCaptures_open": {
+      "label": "Al recibir una captura del sistema",
+      "description": "A dónde va: al editor, o solo a la biblioteca (con una notificación).",
+      "options": {
+        "editor": "Abrir en el editor",
+        "library": "Solo guardar en la biblioteca"
+      }
+    },
+    "capture_systemCaptures_keepOriginal": {
+      "label": "Conservar el archivo original",
+      "description": "Desactivada: el archivo que guardó el sistema pasa a la biblioteca y sale de su carpeta."
     }
   },
   "errors": {

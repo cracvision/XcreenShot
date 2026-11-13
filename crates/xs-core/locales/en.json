@@ -1150,6 +1150,22 @@
     "capture_quickAnnotate_saveToLibrary": {
       "label": "Quick annotation: save to the library when copying",
       "description": "Off: Copy only leaves the image on the clipboard, and the capture waits unsaved in the recent tray."
+    },
+    "capture_systemCaptures": {
+      "label": "Open system captures in XcreenShot",
+      "description": "Each new capture of the Snipping Tool (also Win+Shift+S) arrives in XcreenShot as one more capture. Images copied in other apps never do."
+    },
+    "capture_systemCaptures_open": {
+      "label": "When a system capture arrives",
+      "description": "Where it goes: the editor, or only the library (with a notification).",
+      "options": {
+        "editor": "Open in the editor",
+        "library": "Only save in the library"
+      }
+    },
+    "capture_systemCaptures_keepOriginal": {
+      "label": "Keep the original file",
+      "description": "Off: the file the system saved moves to the library and leaves its folder."
     }
   },
   "errors": {
