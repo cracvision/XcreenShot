@@ -1249,6 +1249,77 @@ pub fn first_frame(path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String
     }
 }
 
+/// What a video holds (VID-064): size, length, frames and their rate, codec, bit
+/// rate and sound.
+pub fn info(path: &std::path::Path) -> Result<crate::Info, String> {
+    let bytes = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
+    // SAFETY: Media Foundation reading calls; samples are dropped as read.
+    let (width, height, codec, times) = unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)
+            .map_err(|e| err("reading the video", e))?;
+        let stream = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
+        let native = reader
+            .GetNativeMediaType(stream, 0)
+            .map_err(|e| err("video type", e))?;
+        let size = native
+            .GetUINT64(&MF_MT_FRAME_SIZE)
+            .map_err(|e| err("video size", e))?;
+        let codec = match native.GetGUID(&MF_MT_SUBTYPE) {
+            Ok(g) if g == MFVideoFormat_H264 => "H.264".to_string(),
+            Ok(g) if g == MFVideoFormat_HEVC => "H.265".to_string(),
+            Ok(g) => format!("{g:?}"),
+            Err(_) => String::new(),
+        };
+        let mut times = Vec::new();
+        loop {
+            let mut flags = 0u32;
+            let mut time = 0i64;
+            let mut sample = None;
+            reader
+                .ReadSample(
+                    stream,
+                    0,
+                    None,
+                    Some(&mut flags),
+                    Some(&mut time),
+                    Some(&mut sample),
+                )
+                .map_err(|e| err("reading a frame", e))?;
+            if sample.is_some() {
+                times.push(time as f64 / HNS);
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                break;
+            }
+        }
+        ((size >> 32) as u32, size as u32, codec, times)
+    };
+    let audio = audio_info(path)?;
+    let last = times.last().copied().unwrap_or(0.0);
+    let duration = audio.map(|a| a.2).unwrap_or(0.0).max(last);
+    Ok(crate::Info {
+        width,
+        height,
+        duration: (duration * 100.0).round() / 100.0,
+        frames: times.len() as u64,
+        fps_average: if duration > 0.0 {
+            (times.len() as f64 / duration * 10.0).round() / 10.0
+        } else {
+            0.0
+        },
+        fps_max: crate::busiest_second(&times),
+        codec,
+        bitrate: if duration > 0.0 {
+            (bytes as f64 * 8.0 / duration) as u64
+        } else {
+            0
+        },
+        audio: audio.map(|(c, r, _)| (c, r)),
+    })
+}
+
 /// The sound of a video: channels, rate and the end of its last sample (seconds),
 /// or `None` without sound.
 pub fn audio_info(path: &std::path::Path) -> Result<Option<(u32, u32, f64)>, String> {

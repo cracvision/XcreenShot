@@ -268,7 +268,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-061 | Guardar fotograma como imagen | M4 | Must | — |
 | VID-062 | Extraer texto de un fotograma | M4 | Should | — |
 | VID-063 | Copia sin sonido | M4 | Could | — |
-| VID-064 | Información del video | M4 | Could | — |
+| VID-064 | Información del video | M4 | Could | En curso (Windows: `video.info` devuelve nombre, ubicación, tamaño del archivo, fecha, duración, tamaño en píxeles, fps medio y máximo (el segundo con más fotogramas), códec, tasa de bits y pistas de sonido. Faltan la ventana Información en el editor y los metadatos de captura) |
 | VID-065 | Sin anotaciones sobre el video | M4 | Must | — |
 | VID-066 | Guardar, exportar, copiar y arrastrar videos | M4 | Must | — |
 | VID-067 | Combinar videos | M4 | Should | — |

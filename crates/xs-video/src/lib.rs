@@ -18,7 +18,13 @@ mod audio;
 mod win;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
-pub use win::{audio_info, first_frame, probe, size};
+pub use win::{audio_info, first_frame, info, probe, size};
+
+/// What a video holds (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn info(_path: &std::path::Path) -> Result<Info, String> {
+    Err("not available on this platform yet".into())
+}
 
 /// A video's size (not available on this platform yet).
 #[cfg(not(windows))]
@@ -115,6 +121,40 @@ pub const MIN_FREE: u64 = 1 << 30;
 /// Whether `free` bytes are too few to go on recording (VID-023).
 pub fn low_disk(free: u64) -> bool {
     free < MIN_FREE
+}
+
+/// What a video file holds (VID-064).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Info {
+    pub width: u32,
+    pub height: u32,
+    /// Seconds.
+    pub duration: f64,
+    pub frames: u64,
+    /// Frames per second on average and in the busiest second.
+    pub fps_average: f64,
+    pub fps_max: u32,
+    /// `H.264`, `H.265` or another name.
+    pub codec: String,
+    /// Bits per second of the whole file.
+    pub bitrate: u64,
+    /// Channels and rate of its sound track, if it has one.
+    pub audio: Option<(u32, u32)>,
+}
+
+/// The most frames inside any one second of `times` (seconds, in order).
+pub fn busiest_second(times: &[f64]) -> u32 {
+    let mut best = 0;
+    let mut start = 0;
+    for (end, t) in times.iter().enumerate() {
+        // A frame exactly one second before is outside (with room for rounding).
+        while times[start] <= t - 1.0 + 1e-6 {
+            start += 1;
+        }
+        best = best.max(end - start + 1);
+    }
+    best as u32
 }
 
 /// The largest video the engine writes.
@@ -450,6 +490,14 @@ mod tests {
         let hd = Quality::High.bitrate(1920, 1080);
         assert!((4_000_000..6_000_000).contains(&hd), "{hd}");
         assert!(Quality::Low.bitrate(64, 64) >= 500_000);
+    }
+
+    #[test]
+    fn the_busiest_second_counts_frames() {
+        assert_eq!(busiest_second(&[]), 0);
+        assert_eq!(busiest_second(&[0.0, 0.5, 0.9, 2.0]), 3);
+        let sixty: Vec<f64> = (0..120).map(|i| i as f64 / 60.0).collect();
+        assert_eq!(busiest_second(&sixty), 60);
     }
 
     #[test]

@@ -906,6 +906,10 @@
     "record_cursor": {
       "title": "Pointer in the video",
       "description": "Shows or hides the pointer in the video from now on, also during a recording."
+    },
+    "video_info": {
+      "title": "Video information",
+      "description": "Size, length, frames per second (average and most), codec, bit rate and sound tracks of an MP4."
     }
   },
   "settings": {
@@ -1428,7 +1432,8 @@
     "not_recording": "Nothing is being recorded.",
     "record_busy": "A recording is already running.",
     "record_failed": "The recording could not be made: {{reason}}",
-    "record_too_small": "The area to record must be at least 64 × 64 pixels."
+    "record_too_small": "The area to record must be at least 64 × 64 pixels.",
+    "video_unreadable": "The video could not be read: {{reason}}"
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

@@ -98,7 +98,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &[
-    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record",
+    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video",
 ];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
@@ -894,6 +894,16 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"cursor": {"type": "boolean"}, "status": {"type": "string"}}})),
+        B::new("video.info", &["VID-064", "VID-024"])
+            .positional(&["path"])
+            .params(params(json!({"path": {"type": "string", "description": "An MP4 file"}}), &["path"]))
+            .result(json!({"type": "object", "properties": {
+                "name": {"type": "string"}, "path": {"type": "string"}, "bytes": {"type": "integer"}, "created": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"},
+                "frames": {"type": "integer"}, "fpsAverage": {"type": "number"}, "fpsMax": {"type": "integer"},
+                "codec": {"type": "string"}, "bitrate": {"type": "integer"},
+                "audio": {"type": "array", "description": "{channels, rate} of each sound track"}
+            }})),
         B::new("record.toggle", &["VID-012", "VID-075"])
             .scopes(ALL)
             .assignable()

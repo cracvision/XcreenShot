@@ -1687,6 +1687,40 @@ pub fn extension() -> Extension {
         reg.handle("record.cursor", move |ctx, p| {
             record::cursor(&*upgrade(&w)?, ctx, &p)
         });
+        // What a video holds (VID-064).
+        reg.handle("video.info", move |ctx, p| {
+            let path = p.get("path").and_then(Value::as_str).unwrap_or_default();
+            let file = std::path::Path::new(path);
+            let i = xs_video::info(file).map_err(|e| {
+                CommandError::new(
+                    ErrorCode::NotFound,
+                    tr(ctx.lang, "errors.video_unreadable", &[("reason", &e)]),
+                )
+            })?;
+            let created = std::fs::metadata(file)
+                .and_then(|m| m.created())
+                .ok()
+                .map(|t| chrono::DateTime::<chrono::Local>::from(t).to_rfc3339());
+            let audio = match i.audio {
+                Some((channels, rate)) => json!([{ "channels": channels, "rate": rate }]),
+                None => json!([]),
+            };
+            Ok(json!({
+                "name": file.file_name().map(|n| n.to_string_lossy().into_owned()),
+                "path": path,
+                "bytes": std::fs::metadata(file).map(|m| m.len()).unwrap_or(0),
+                "created": created,
+                "width": i.width,
+                "height": i.height,
+                "duration": i.duration,
+                "frames": i.frames,
+                "fpsAverage": i.fps_average,
+                "fpsMax": i.fps_max,
+                "codec": i.codec,
+                "bitrate": i.bitrate,
+                "audio": audio,
+            }))
+        });
         // The text box of Capture details (CAP-051).
         let w = weak.clone();
         reg.handle("capture.details_text", move |ctx, p| {

@@ -218,6 +218,12 @@ xcreenshot app ping --json
 | `record.resume` | `xcreenshot record resume --json` | — | Goes on after a pause. _Changes data._ |
 | `record.status` | `xcreenshot record status --json` | — | `status` (recording, paused, finalizing or idle), `elapsed` seconds, `source`, `path` and the video's size and fps. _Changes no data._ |
 
+### video
+
+| ID | Example | Parameters | What it does |
+|---|---|---|---|
+| `video.info` | `xcreenshot video info C:\Videos\demo.mp4 --json` | `path` string (required, positional) | What an MP4 holds (VID-064): `width`, `height`, `duration`, `frames`, `fpsAverage`, `fpsMax` (the busiest second), `codec`, `bitrate`, `audio` (channels and rate of each track), `bytes` and `created`. _Changes no data._ |
+
 ### document
 
 | ID | Example | Parameters | What it does |
