@@ -490,14 +490,17 @@ mod tests {
         assert!(checked_settings("camera", &json!({})).is_err());
         // Video presets (VID-009): the Video tab's settings, defaults filled in.
         let v = checked_settings("video", &json!({"selection": "window", "limit": 300})).unwrap();
-        assert_eq!(v, json!({"selection": "window", "limit": 300}));
+        assert_eq!(v, json!({"selection": "window", "limit": 300, "open": "editor"}));
         assert!(checked_settings("video", &json!({"selection": "camera"})).is_err());
+        // Open in (VID-052): editor or none.
+        assert!(checked_settings("video", &json!({"open": "quick"})).is_err());
         let mut p = preset("Grabar ventana");
         p.kind = "video".into();
         p.settings = v;
         let (command, params, _) = plan(&p).unwrap();
         assert_eq!(command, "record.video");
         assert_eq!(params["selection"], "window");
+        assert_eq!(params["open"], "editor");
         assert_eq!(summary(&p, Lang::Es), "Video · Ventana · 5 min");
     }
 

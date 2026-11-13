@@ -460,6 +460,18 @@ h3 {
   box-shadow: none;
 }
 
+/* Tools off with a video open (VID-065). */
+.tb-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.video-panel .side-subtitle {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .btn .chevron {
   transition: transform var(--dur-base) var(--ease-spring);
 }
@@ -4018,6 +4030,7 @@ html.launcher-root #root {
 .ws-side .side-panel,
 .ws-bottom .status-bar,
 .ws-bottom .strip,
+.ws-bottom .video-bar,
 .quick-bar,
 .zone-frame-bar,
 .hint-bubble,
@@ -4034,6 +4047,7 @@ html.launcher-root #root {
 .ws-side .side-panel::before,
 .ws-bottom .status-bar::before,
 .ws-bottom .strip::before,
+.ws-bottom .video-bar::before,
 .quick-bar::before,
 .zone-frame-bar::before,
 .hint-bubble::before,
@@ -7207,6 +7221,246 @@ button.lc-head:hover,
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ---------- Video in the editor (VID-056 to VID-065, ADR 0008) ---------- */
+/* The picture, fitted in the part of the workspace the floating bars leave. */
+.video-area {
+  display: block;
+}
+
+.video-stage {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  min-width: 0;
+  min-height: 0;
+}
+
+.video-picture {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+/* The playback bar: a glass bar over the status bar. */
+.ws-bottom .video-bar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+}
+
+.vb-track {
+  position: relative;
+  height: 30px;
+  margin: 0 10px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.vb-rail,
+.vb-range {
+  position: absolute;
+  top: 12px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.vb-rail {
+  left: 0;
+  right: 0;
+  background: var(--line-strong);
+}
+
+.vb-range {
+  box-sizing: border-box;
+  border: 1px solid var(--brand);
+  background: var(--brand-soft);
+}
+
+/* Where the video was cut (VID-059). */
+.vb-mark {
+  position: absolute;
+  top: 7px;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--warning);
+}
+
+.vb-playhead {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+
+.vb-playhead::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+/* Start and end of the selection: different shapes and colors (VID-058). */
+.vb-handle {
+  position: absolute;
+  top: 5px;
+  width: 10px;
+  height: 20px;
+  cursor: ew-resize;
+}
+
+.vb-handle.start {
+  margin-left: -10px;
+  border-radius: var(--radius-xs) 0 0 var(--radius-xs);
+  background: var(--brand);
+}
+
+.vb-handle.end {
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: var(--star);
+  box-shadow: inset 0 0 0 1px var(--control-line);
+}
+
+.vb-handle:focus-visible,
+.vb-playhead:focus-visible {
+  outline: 2px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
+.vb-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.vb-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.vb-controls .btn.icon-btn {
+  width: 34px;
+  padding: 0;
+}
+
+.vb-clock {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.vb-clock:hover {
+  border-color: var(--control-line);
+}
+
+.vb-goto {
+  width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vb-selection {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vb-fill {
+  flex: 1;
+}
+
+.vb-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.vb-progress progress {
+  width: 90px;
+  accent-color: var(--brand);
+}
+
+.vb-speed {
+  min-height: 34px;
+}
+
+.vb-volume {
+  width: 80px;
+  accent-color: var(--brand);
+}
+
+/* The side panel of a video (VID-064). */
+.video-info {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.video-info div {
+  display: grid;
+  grid-template-columns: minmax(0, 11em) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.video-info dt {
+  color: var(--ink-muted);
+}
+
+.video-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.video-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.video-actions .btn {
+  justify-content: flex-start;
+}
+
+.video-note {
+  margin-top: var(--space-4);
+  font-size: 12.5px;
 }
 
 /* ---------- Reduced motion (APP-045): fades of 90 ms or less, nothing moves ---------- */

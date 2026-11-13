@@ -32,6 +32,7 @@ import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
+import { VideoStage } from "./VideoStage";
 import { TemplateDialogs } from "./TemplatePicker";
 import { dropOnCanvas, dropOnZone } from "./templateActions";
 import { canvasPointAt, useDropPoint } from "./templateUi";
@@ -175,7 +176,10 @@ export function Editor() {
         // belongs to the Editor view, LIB-001) float over it.
         <Workspace>
           {(insets) =>
-            doc ? (
+            doc?.video ? (
+              // A video plays in the system's player (ADR 0008).
+              <VideoStage doc={doc} insets={insets} />
+            ) : doc ? (
               <Canvas key={doc.documentId} doc={doc} insets={insets} />
             ) : (
               <Empty dropping={dropping} />

@@ -8,6 +8,7 @@ import { StatusBar } from "./StatusBar";
 import { Strip } from "./Strip";
 import { Toolbar } from "./Toolbar";
 import { ToolbarCustomizer } from "./ToolbarCustomizer";
+import { VideoBar } from "./VideoBar";
 import { insetsFrom, type Insets } from "./insets";
 
 interface Sizes {
@@ -68,6 +69,8 @@ export function Workspace({ children }: { children: (insets: Insets) => ReactNod
         <SidePanel />
       </div>
       <div className="ws-bottom" ref={bottom}>
+        {/* A video's playback bar (VID-056), over the status bar. */}
+        <VideoBar />
         <StatusBar />
         <Strip />
       </div>

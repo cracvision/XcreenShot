@@ -1,5 +1,6 @@
 // Side panel (EDT-005) with the Properties of the selected objects, of the text being
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
+import { VideoPanel } from "./VideoPanel";
 import {
   CURSOR_HIGHLIGHTS,
   CURSOR_SHAPES,
@@ -1570,6 +1571,19 @@ export function SidePanel() {
   }
 
   if (!visible) return null;
+  // A video: its information and actions; no tool tabs (VID-064, VID-065).
+  if (doc?.video)
+    return (
+      <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
+        <ResizeEdge />
+        <div className="side-body">
+          <section aria-label={t("ui.video.panel_title")}>
+            <h2 className="side-title">{t("ui.video.panel_title")}</h2>
+            <VideoPanel doc={doc} />
+          </section>
+        </div>
+      </aside>
+    );
   return (
     <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
       <ResizeEdge />

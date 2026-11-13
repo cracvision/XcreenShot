@@ -9,7 +9,7 @@ Propuesta de Claude del 2026-11-13, **provisional hasta que Carlos la apruebe**.
 | M4.3 · Audio | Micrófono, audio del sistema, pistas, dispositivos y reducción de ruido (VID-039 a VID-043, VID-019), con su permiso (VID-077) | — |
 | M4.4 · Cursor y teclas | Capturar y resaltar el cursor, animación de clic, teclas pulsadas (VID-044 a VID-047) | Hecha en Windows (2026-11-13, tarde); falta el menú Efectos con vista previa |
 | M4.5 · Cámara | Activar, imagen en imagen, forma, pantalla completa, espejo, borde y fondo (VID-031 a VID-038) | — |
-| M4.6 · Editor de video | Reproductor, selección, cortar, guardar selección y fotograma, extraer texto de un fotograma, copia sin sonido, información, combinar (VID-056 a VID-067) | — |
+| M4.6 · Editor de video | Reproductor, selección, cortar, guardar selección y fotograma, extraer texto de un fotograma, copia sin sonido, información, combinar (VID-056 a VID-067) | En curso en Windows (2026-11-13, tarde, ADR 0008): hechos el reproductor, la selección, cortar y guardar, guardar selección y fotograma, extraer texto, copia sin sonido, información y Abrir en (VID-052). Faltan el menú Video, exportar y copiar videos (VID-066) y combinar (VID-067) |
 | M4.7 · GIF y diapositivas | GIF animado (VID-068 a VID-070) y diapositivas narradas (VID-071 a VID-074) | — |
 | M4.8 · Robustez | Dibujo en vivo (VID-048 a VID-051), escritorio limpio (VID-018), mantener despierto (VID-021), recuperar grabaciones (VID-022), grabaciones largas (VID-023), H.265 (VID-027), sincronía y rendimiento medidos (VID-030), convertir en imagen (VID-010) | — |
 

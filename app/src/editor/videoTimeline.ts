@@ -19,7 +19,7 @@ export function toSource(kept: Span[], t: number): number {
     if (left <= b - a + EPS) return Math.min(a + left, b);
     left -= b - a;
   }
-  return kept.length > 0 ? kept[kept.length - 1][1] : 0;
+  return kept.at(-1)?.[1] ?? 0;
 }
 
 /** A time of the file, in the cut video; a time that was cut goes to the cut. */
@@ -43,9 +43,15 @@ export function skipCut(kept: Span[], t: number): number | null {
   return null;
 }
 
+/** One frame back or forward, on the frames' grid: ten steps of 1/10 s are 1 s exactly. */
+export function frameStep(time: number, direction: -1 | 1, frame: number): number {
+  const at = Math.floor(time / frame + 1e-6);
+  return Math.max(0, (at + direction) * frame);
+}
+
 /** `m:ss.f`, or `h:mm:ss.f` from an hour (VID-056). */
 export function formatTime(seconds: number, long = false): string {
-  const tenths = Math.max(0, Math.floor(seconds * 10 + EPS));
+  const tenths = Math.max(0, Math.floor(seconds * 10 + 1e-3));
   const f = tenths % 10;
   const s = Math.floor(tenths / 10) % 60;
   const m = Math.floor(tenths / 600) % 60;

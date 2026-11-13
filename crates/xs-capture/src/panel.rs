@@ -292,6 +292,8 @@ pub struct VideoTab {
     pub selection: String,
     /// Seconds after which it stops by itself; 0: no limit (VID-015).
     pub limit: u32,
+    /// Open in (VID-052): `editor` or `none` (only the library and the tray).
+    pub open: String,
 }
 
 impl Default for VideoTab {
@@ -299,6 +301,7 @@ impl Default for VideoTab {
         VideoTab {
             selection: "region".into(),
             limit: 0,
+            open: "editor".into(),
         }
     }
 }
@@ -361,6 +364,7 @@ impl PanelSettings {
             &self.video.selection,
             &["region", "window", "fullscreen"],
         )?;
+        one_of("video.open", &self.video.open, &["editor", "none"])?;
         if self.video.limit > 4 * 3600 {
             return Err("video.limit: at most 4 hours".into());
         }
@@ -484,7 +488,7 @@ impl PanelSettings {
         if tab == "video" {
             return (
                 "record.video",
-                json!({ "selection": self.video.selection, "limit": self.video.limit }),
+                json!({ "selection": self.video.selection, "limit": self.video.limit, "open": self.video.open }),
                 json!({}),
             );
         }

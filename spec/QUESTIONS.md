@@ -254,6 +254,20 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M4, entrega 6: el video en el editor)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| VID-056 | ¿Cómo se reproduce el video en el editor? | Con el reproductor del sistema (la etiqueta de video de WebView2), que lee el archivo por rangos del protocolo propio; solo archivos de videos abiertos (ADR 0008) | Provisional |
+| VID-059 | ¿Cómo se guardan los cortes? | Volviendo a codificar todo el video (H.264 y AAC con el codificador por software del sistema, con más tasa de bits que la grabación): correcto pero lento en videos largos. El spec pide ≤ 5 s para 10 min: hará falta cortar sin volver a codificar (en fotogramas clave, codificando solo los bordes) o usar el codificador por hardware alimentado desde la GPU | Provisional |
+| VID-059 | Deshacer después de guardar | Guardar los cortes en el archivo borra los pasos de Deshacer de ese video: el archivo anterior ya no existe | Provisional |
+| VID-059 | ¿Se guardan solos los cortes al cambiar de documento, como las imágenes de la biblioteca? | No: guardar vuelve a codificar todo el video, así que se guarda al pulsar Guardar; al cerrar con cortes sin guardar, pregunta | Provisional |
+| VID-060, VID-063 | Nombre de los videos nuevos | "<nombre> (m.ss-m.ss).mp4" para un tramo y "<nombre> (sin sonido).mp4" para la copia sin sonido, en la carpeta del mes de la biblioteca | Provisional |
+| VID-058 | Colores y formas de los tiradores | Inicio: pestaña azul (el acento) a la izquierda del tramo; fin: pestaña amarilla a la derecha. El cabezal es una línea con un círculo | Provisional |
+| VID-056, VID-076 | Teclas del reproductor | Espacio (o K) reproduce y pausa; flechas, un fotograma; Inicio y Fin; I y O marcan la selección; Esc selecciona todo; Supr o Retroceso cortan. Solo con un video a la vista y sin un campo de texto con el foco | Provisional |
+| VID-064, VID-065 | ¿Dónde está la información del video? | En el panel lateral, que con un video sustituye a las pestañas de propiedades, estilos y efectos; también las acciones del video | Provisional |
+| VID-052 | Notificación con Abrir en = Editor | No se muestra (el editor ya enseña el video), salvo que haya un aviso (sin sonido, poco disco, ventana cerrada) | Provisional |
+
 ## Dudas del equipo de construcción (M4, entrega 4: cursor y teclas)
 
 | ID | Duda | Propuesta | Estado |

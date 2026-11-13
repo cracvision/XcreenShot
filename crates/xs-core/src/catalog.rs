@@ -540,7 +540,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "expanded": {"type": "boolean"},
                     "universal": {"type": "object"},
                     "image": {"type": "object"},
-                    "video": {"type": "object", "description": "The Video tab (VID-001): selection region|fullscreen, limit (seconds, 0: none)"}
+                    "video": {"type": "object", "description": "The Video tab (VID-001): selection region|window|fullscreen, limit (seconds, 0: none), open editor|none (VID-052)"}
                 }),
                 &[],
             ))
@@ -856,6 +856,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "width": {"type": "number", "minimum": 64}, "height": {"type": "number", "minimum": 64},
                     "quality": {"type": "string", "enum": ["very_low", "low", "medium", "high", "very_high"], "description": "Most frames per second: 5, 10, 15, 30 or 60 (default: the setting)"},
                     "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "When it stops: open it in the editor, or only the library and the tray (VID-052). Default: the Video tab's Open in; from the CLI and MCP, none"},
                     "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
                     "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
                     "window": {"type": "integer", "description": "A window's id (as capture.window takes it): its area, followed when it moves or resizes (VID-005)"},
@@ -879,7 +880,8 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "selection": {"type": "string", "enum": ["region", "window", "fullscreen"], "default": "region", "description": "region: chosen on screen; window: a window chosen on screen, followed when it moves (VID-005); fullscreen: the monitor under the pointer"},
-                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"}
+                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "When it stops: open it in the editor, or only the library and the tray (VID-052). Default: the Video tab's Open in; from the CLI and MCP, none"}
                 }),
                 &[],
             ))
@@ -1207,7 +1209,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .positional(&["path"])
             .params(params(
                 json!({
-                    "path": {"type": "string", "description": "A .xshot, PNG or JPG file"},
+                    "path": {"type": "string", "description": "A .xshot, PNG or JPG file, or a video (MP4, M4V, MOV)"},
                     "show": {"type": "boolean", "description": "Show it in the editor (default: false from the CLI and MCP)"}
                 }),
                 &["path"],

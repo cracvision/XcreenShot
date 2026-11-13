@@ -84,6 +84,18 @@ export function StatusBar() {
       </footer>
     );
 
+  // A video: what it is, without the image's size, resolution or zoom (VID-065).
+  if (doc.video)
+    return (
+      <footer className="status-bar">
+        <RecentButton />
+        <span className="status-item">
+          {doc.video.width} × {doc.video.height} px · {doc.video.codec} ·{" "}
+          {t("ui.video.fps", { fps: doc.video.fps })}
+        </span>
+      </footer>
+    );
+
   const typed = () => {
     const z = parseZoom(draft);
     if (z !== null) requestZoom("percent", z);

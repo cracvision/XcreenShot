@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clampSelection,
   formatTime,
+  frameStep,
   length,
   parseTime,
   skipCut,
@@ -43,6 +44,14 @@ describe("video timeline", () => {
     expect(parseTime("1:15,5")).toBe(75.5);
     expect(parseTime("abc")).toBeNull();
     expect(parseTime("1:2:3:4")).toBeNull();
+  });
+
+  it("steps frame by frame on the grid (VID-056)", () => {
+    let t = 0;
+    for (let i = 0; i < 30; i++) t = frameStep(t, 1, 1 / 30);
+    expect(formatTime(t)).toBe("00:01.0");
+    expect(frameStep(0.95, 1, 0.1)).toBeCloseTo(1.0);
+    expect(frameStep(0.05, -1, 0.1)).toBe(0);
   });
 
   it("snaps a handle to the playhead within 8 px (VID-058)", () => {

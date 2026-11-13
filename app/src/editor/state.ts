@@ -41,7 +41,7 @@ export interface DocSummary {
   name: string;
   path: string | null;
   kind: "library" | "external";
-  format: "xshot" | "png" | "jpg";
+  format: "xshot" | "png" | "jpg" | "mp4" | "m4v" | "mov";
   width: number;
   height: number;
   objects: number;
@@ -643,6 +643,25 @@ export interface DocDetails extends Omit<DocSummary, "objects"> {
   view: { zoom?: number; x?: number; y?: number } | null;
   /** A template's settings and sections (EDT-095 to EDT-101, ADR 0007). */
   template?: unknown;
+  /** A video (ADR 0008): its facts and its timeline after the cuts. */
+  video?: VideoInfo | null;
+}
+
+/** What the editor knows of an open video (ADR 0008). Times in seconds. */
+export interface VideoInfo {
+  width: number;
+  height: number;
+  /** Of the file. */
+  duration: number;
+  fps: number;
+  codec: string;
+  sound: boolean;
+  /** After the cuts. */
+  length: number;
+  /** The parts of the file kept: [start, end]. */
+  kept: [number, number][];
+  /** Where each cut is, after the cuts (VID-059). */
+  marks: number[];
 }
 
 export interface Pending {

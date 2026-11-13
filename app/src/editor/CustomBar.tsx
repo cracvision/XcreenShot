@@ -33,12 +33,19 @@ export function ToolButton({ id, active }: { id: Tool; active: boolean }) {
   const shortcut = useShortcut(`editor.tool_${id}`);
   // Detailed tooltips also say what the tool does (APP-014).
   const detailed = useTooltipLevel() === "detailed";
+  // Image tools do nothing on a video: off, with what to do instead (VID-065).
+  const video = useEditor((s) => !!s.doc?.video);
   return (
     <button
       type="button"
       className="tb-tool"
-      aria-pressed={active}
-      title={hint(name, shortcut, detailed ? t(`ui.editor.tool_detail.${id}`) : undefined)}
+      aria-pressed={active && !video}
+      disabled={video}
+      title={
+        video
+          ? `${name}: ${t("errors.video_no_image_tools")}`
+          : hint(name, shortcut, detailed ? t(`ui.editor.tool_detail.${id}`) : undefined)
+      }
       onClick={() => selectTool(id)}
     >
       <Icon name={id} />
@@ -52,7 +59,9 @@ function ToolRun({ ids, tool, extra }: { ids: Tool[]; tool: Tool; extra?: string
   const { t } = useTranslation();
   const labels = useSetting("editor.toolbarLabels", true);
   const ref = useRef<HTMLDivElement>(null);
-  useIndicator(ref, `${tool}:${labels}:${ids.join(",")}`);
+  // With a video no tool is chosen: the indicator goes (VID-065).
+  const video = useEditor((s) => !!s.doc?.video);
+  useIndicator(ref, `${tool}:${labels}:${ids.join(",")}:${video}`);
   return (
     <div
       className={`tb-group seg brand tb-tools${extra ? ` ${extra}` : ""}`}
@@ -78,7 +87,8 @@ function ActionButton({ action }: { action: string }) {
     <button
       type="button"
       className="btn tb-btn"
-      disabled={needsDoc && !doc}
+      // Image actions (effects, turning, sizes) do not apply to a video (VID-065).
+      disabled={needsDoc && (!doc || !!doc.video)}
       title={hint(name, shortcut)}
       onClick={() => performAction(action)}
     >

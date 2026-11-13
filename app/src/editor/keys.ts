@@ -22,6 +22,7 @@ import { inToolbar } from "../components/arrowFocus";
 import { toggleFullscreen, useFullscreen } from "./fullscreen";
 import { barTools, useToolbar } from "./toolbarLayout";
 import { useZones } from "./templateUi";
+import { playerKey } from "./videoState";
 
 const isMac = navigator.userAgent.includes("Mac");
 
@@ -283,6 +284,8 @@ export function useEditorKeys(): void {
         return;
       }
       if (typing(e.target) || inMenu(e.target) || document.querySelector(".backdrop")) return;
+      // A video's player keys are its own (VID-076).
+      if (playerKey(e)) return;
       const done = () => {
         e.preventDefault();
         // Before the app-wide shortcuts (Ctrl+W there closes the window).

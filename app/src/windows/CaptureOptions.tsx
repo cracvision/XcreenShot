@@ -254,6 +254,18 @@ export function VideoOptions({
           ))}
         </select>
       </label>
+      {/* Open in (VID-052): the editor, or only the library and the tray. */}
+      <label className="panel-field" htmlFor={`${id}-vopen`}>
+        <span>{t("ui.panel.open_in")}</span>
+        <select
+          id={`${id}-vopen`}
+          value={value.open}
+          onChange={(e) => onChange({ open: e.target.value as PanelSettings["video"]["open"] })}
+        >
+          <option value="editor">{t("ui.panel.open_editor")}</option>
+          <option value="none">{t("ui.panel.open_none")}</option>
+        </select>
+      </label>
       <p className="muted hint">{t("ui.panel.video_quality_hint")}</p>
     </>
   );

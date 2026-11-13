@@ -23,8 +23,19 @@ struct Running {
     rect: Rect,
     /// The system's sound was asked for (VID-040).
     wants_audio: bool,
+    /// Open in the editor when it stops (VID-052).
+    open: bool,
     /// What Restart goes back to (VID-014).
     again: Ready,
+}
+
+/// Open in (VID-052): `open` is `editor` or `none`; without it, the Video tab says, and
+/// automation never opens windows unless asked (APP-030).
+fn opens_editor(core: &Core, source: Source, p: &Value) -> bool {
+    match p.get("open").and_then(Value::as_str) {
+        Some(o) => o == "editor",
+        None => !source.is_automation() && crate::panel::load(core).video.open == "editor",
+    }
 }
 
 /// An area chosen and waiting for Record (the *Ready* state, VID-002).
@@ -37,6 +48,8 @@ struct Ready {
     limit: Option<Duration>,
     /// The window followed (VID-005).
     window: Option<u32>,
+    /// Open in the editor when it stops (VID-052).
+    open: bool,
 }
 
 #[derive(Default)]
@@ -231,6 +244,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             source,
             limit,
             window: Some(id),
+            open: opens_editor(core, ctx.source, p),
         };
         *svc.ready.lock().unwrap() = Some(r.clone());
         let state = ready_state(core, &r);
@@ -246,6 +260,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             source,
             limit,
             window: None,
+            open: opens_editor(core, ctx.source, p),
         };
         *svc.ready.lock().unwrap() = Some(r.clone());
         let state = ready_state(core, &r);
@@ -266,6 +281,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         source: json!({ "type": "region", "rect": rect }),
         limit,
         window: None,
+        open: opens_editor(core, ctx.source, p),
     };
     *svc.ready.lock().unwrap() = Some(r.clone());
     let state = ready_state(core, &r);
@@ -545,6 +561,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         }
     }
     let ready_limit = ready.as_ref().and_then(|r| r.limit);
+    let open = match &ready {
+        Some(r) => r.open,
+        None => opens_editor(core, ctx.source, p),
+    };
     let again_of = ready.clone();
     let asked_window = p.get("window").and_then(Value::as_u64).map(|w| w as u32);
     let window = ready.as_ref().and_then(|r| r.window).or(asked_window);
@@ -636,6 +656,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         source: source.clone(),
         limit,
         window,
+        open,
     });
     let running = Running {
         recorder,
@@ -643,6 +664,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         path,
         rect,
         wants_audio,
+        open,
         again,
     };
     let status = status_of(&running);
@@ -699,6 +721,7 @@ fn watch(core: Weak<Core>, source: Source) {
 /// Stops (or cancels) `r` and reports the file.
 fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> CommandResult {
     let wants_audio = r.wants_audio;
+    let open = r.open;
     let summary = if cancel {
         r.recorder.cancel()
     } else {
@@ -764,6 +787,19 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         encoder = result.encoder,
         "recording saved"
     );
+    // Open in (VID-052): the editor shows it on its first frame, ready to play; with
+    // None it stays in the library and the tray, and the notice opens it.
+    let opened = open
+        && core
+            .call(
+                Source::Ui,
+                "document.open",
+                json!({ "path": result.path, "show": true }),
+                Some(lang),
+            )
+            .map_err(|e| tracing::warn!(error = %e.message, "the video did not open"))
+            .is_ok();
+    value["opened"] = json!(opened);
     let mut body = tr(
         lang,
         "notify.recording_saved_body",
@@ -772,12 +808,14 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     if let Some(w) = value["warnings"][0].as_str() {
         body = format!("{body} {w}");
     }
-    core.host().notify_opening(
-        "captures",
-        &tr(lang, "notify.recording_saved_title", &[]),
-        &body,
-        json!({ "path": result.path, "folder": true }),
-    );
+    if !opened || value.get("warnings").is_some() {
+        core.host().notify_opening(
+            "captures",
+            &tr(lang, "notify.recording_saved_title", &[]),
+            &body,
+            json!({ "path": result.path, "folder": true }),
+        );
+    }
     core.events
         .publish("file.written", source, json!({ "path": result.path }));
     tell(core, source, "record.stopped", value.clone());

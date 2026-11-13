@@ -1,0 +1,50 @@
+# El video en el editor (M4.6)
+
+Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../docs/adr/0008-video-en-el-editor.md)). IDs: VID-052, VID-056 a VID-066.
+
+## Visto en la instancia de desarrollo (2026-11-13, tarde)
+
+- Pruebas automáticas:
+  - Motor (`xs-video`), con un video de prueba de 3 s (rojo, verde y azul, un segundo cada uno, con un tono):
+    - el fotograma de un instante tiene su color;
+    - cortar el segundo verde junta el rojo y el azul, dura 2 s y el sonido también;
+    - la copia sin sonido no tiene pistas;
+    - un tramo sin fotogramas propios (pantalla quieta) conserva el de antes;
+    - cancelar no deja archivo.
+  - Editor (`a_video_in_the_editor`):
+    - las herramientas de imagen se niegan explicando la alternativa;
+    - cortar, deshacer y rehacer;
+    - no se puede cortar todo;
+    - el fotograma de 1,2 s del video cortado es azul y queda en la biblioteca;
+    - el primer segundo como video nuevo;
+    - la copia sin sonido;
+    - al guardar, el archivo dura 2 s y no queda nada por deshacer.
+  - Línea de tiempo: los mismos casos en Rust y en TypeScript.
+- En la ventana (sin tocar el ratón real, por el protocolo de depuración):
+  - el video se reproduce y el tiempo avanza;
+  - diez veces → desde 0:00 deja el cabezal en 0:01.0;
+  - `I` en 1,0 s y `O` en 2,0 s marcan "Selección 00:01.0–00:02.0 (1.0 s)";
+  - `Supr` corta: queda "00:01.0 / 00:02.0", la marca del corte y el paso de Deshacer "Cortar";
+  - Guardar deja el archivo en 2,03 s con sonido y el reproductor recarga el video ya cortado;
+  - **Guardar fotograma** abre una imagen de 320 × 240 en el editor.
+- **Abrir en = Editor:** al terminar una grabación de 1 s, el video queda a la vista en el editor.
+
+## Para Carlos (en la próxima caminata)
+
+1. [ ] Graba un video de unos 20 s (Captura de video). Al detenerlo, se abre en el editor, pausado en su primer fotograma, con la barra de reproducción encima de la barra de estado. Las herramientas de imagen aparecen apagadas; pasa el ratón por la Flecha: el aviso dice que uses Guardar fotograma.
+2. [ ] **Reproducir** (o `Espacio`): se ve y se oye; la barra muestra el tiempo. Un clic sobre el video pausa. Prueba la velocidad 2× (el tono de la voz no cambia) y Silenciar.
+3. [ ] Arrastra el cabezal: el video muestra el fotograma de cada punto. Las flechas avanzan y retroceden de fotograma en fotograma; mantener pulsado el botón ⏭ avanza seguido.
+4. [ ] Haz clic en el tiempo, escribe `0:10` y `Enter`: el cabezal va al segundo 10.
+5. [ ] Selección: arrastra el tirador azul (inicio) y el amarillo (fin); se ve el fotograma de cada tirador y un rótulo con el tiempo y la duración. Cerca del cabezal, el tirador se pega a él. También con `I` y `O` en el cabezal. `Esc` vuelve a todo el video.
+6. [ ] **Cortar** (o `Supr`): el tramo desaparece, queda una marca en la línea de tiempo y el video se reproduce saltando el corte. `Ctrl+Z` lo devuelve; `Ctrl+Y` lo vuelve a quitar.
+7. [ ] Con todo el video seleccionado, **Cortar** está apagado.
+8. [ ] **Guardar fotograma**: se abre en el editor una imagen igual a lo que se veía, que puedes anotar.
+9. [ ] Menú **⋯** de la barra > **Guardar selección como video**: aparece en la bandeja un video nuevo con solo ese tramo; el original sigue igual.
+10. [ ] Menú **⋯** > **Extraer texto del fotograma** con texto a la vista: aparece la ventana con el texto; no se añade ninguna imagen a la biblioteca.
+11. [ ] Menú **⋯** > **Copia sin sonido** (con un video con sonido): aparece "<nombre> (sin sonido)" en la bandeja; al reproducirlo no suena.
+12. [ ] Panel lateral: la información del video (tamaño, duración, fps, códec, sonido, tamaño del archivo…) y **Copiar información**.
+13. [ ] Con un corte sin guardar, cierra el video: pregunta si guardar. **Guardar** tarda un poco (vuelve a codificar el video, con su progreso en la barra); después el archivo dura menos.
+14. [ ] Pestaña **Video** del panel > **Abrir en** = Nada: al detener una grabación no se abre ninguna ventana y aparece la notificación; al hacer clic en ella, el video se abre en el editor.
+15. [ ] En la Biblioteca, doble clic en un video: se abre en el editor (ya no en el reproductor de Windows).
+
+Todavía no: el menú **Video** de la barra de menús, exportar a GIF o a H.264, Copiar todo y arrastrar el video con sus cortes, y Combinar videos.

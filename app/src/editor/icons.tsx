@@ -444,6 +444,51 @@ const ICONS = {
       <path d="M3.5 7.5h13M10 7.5v9" />
     </Svg>
   ),
+  // The video player (VID-056 to VID-061).
+  play: (
+    <Svg>
+      <path d="M6.5 4.5v11l9-5.5z" />
+    </Svg>
+  ),
+  pause: (
+    <Svg>
+      <path d="M7 4.5v11M13 4.5v11" />
+    </Svg>
+  ),
+  frame_back: (
+    <Svg>
+      <path d="M5.5 5v10M15 5l-6.5 5 6.5 5z" />
+    </Svg>
+  ),
+  frame_next: (
+    <Svg>
+      <path d="M14.5 5v10M5 5l6.5 5L5 15z" />
+    </Svg>
+  ),
+  scissors: (
+    <Svg>
+      <circle cx="6" cy="14" r="2.5" />
+      <circle cx="14" cy="14" r="2.5" />
+      <path d="M7.7 12.2L14.5 3.5M12.3 12.2L5.5 3.5" />
+    </Svg>
+  ),
+  frame: (
+    <Svg>
+      <rect x="3" y="4.5" width="14" height="11" rx="1.5" />
+      <path d="M3 12.5l4-3.5 3.5 3 2.5-2 4 3" />
+      <circle cx="13" cy="8" r="1" />
+    </Svg>
+  ),
+  volume: (
+    <Svg>
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5zM13.5 7.5a3.5 3.5 0 0 1 0 5M15.5 5.5a6.5 6.5 0 0 1 0 9" />
+    </Svg>
+  ),
+  mute: (
+    <Svg>
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5zM13.5 8l4 4M17.5 8l-4 4" />
+    </Svg>
+  ),
 };
 
 export type IconName = keyof typeof ICONS;

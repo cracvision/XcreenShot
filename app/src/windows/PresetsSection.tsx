@@ -446,6 +446,7 @@ function EditDialog({ preset, kind }: { preset?: Preset; kind?: "universal" | "i
   const [video, setVideo] = useState<PanelSettings["video"]>({
     selection: "region",
     limit: 0,
+    open: "editor",
     ...(presetKind === "video" ? (preset?.settings as Partial<PanelSettings["video"]>) : {}),
   });
   const settings = presetKind === "universal" ? universal : presetKind === "video" ? video : image;

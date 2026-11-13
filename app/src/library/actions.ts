@@ -119,13 +119,9 @@ export async function openItems(items: LibraryItem[]): Promise<void> {
   const cloud = items.some((i) => i.cloud);
   const seq = cloud ? notify(t("ui.library.downloading", { count: items.length })) : undefined;
   try {
-    // Videos play in the system's player until the editor plays them (VID-056).
-    const isVideo = (i: LibraryItem) => i.format === "mp4";
-    const videos = items.filter(isVideo);
-    const docs = items.filter((i) => !isVideo(i));
-    if (videos.length > 0) await run("app.open_files", { paths: videos.map((i) => i.path) });
-    for (const item of docs) await run("document.open", { path: item.path, show: true });
-    if (docs.length > 0) showView("editor");
+    // Videos open in the editor too, to play and edit them (VID-056, ADR 0008).
+    for (const item of items) await run("document.open", { path: item.path, show: true });
+    if (items.length > 0) showView("editor");
   } catch (e) {
     fail(e);
   } finally {
