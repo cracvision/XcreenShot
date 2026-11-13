@@ -441,6 +441,22 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         let place = place_of(core, area);
         return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
     }
+    // Freehand (CAP-032): the rectangle around the shape, transparent outside it.
+    if kind == Some("shape") {
+        let points: Vec<(f64, f64)> = outcome
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(|p| Some((p.get(0)?.as_f64()?, p.get(1)?.as_f64()?)))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let area = crate::freehand::bounds(&points).ok_or_else(|| crate::cancelled(lang))?;
+        let mut shot = region_shot(&frozen, area, "freehand");
+        crate::freehand::cut_out(&mut shot.image, area, &points);
+        return finish(core, ctx, shot, opts);
+    }
     // Quick annotation (CAP-057): the area with its marks as the editor's objects;
     // Copy leaves it on the clipboard without the editor, Open in the editor opens it.
     if kind == Some("quick") {

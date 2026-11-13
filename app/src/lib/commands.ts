@@ -198,6 +198,7 @@ export interface PanelSettings {
       | "file"
       | "pdf"
       | "webpage"
+      | "freehand"
       | "text";
     copy: boolean;
     cursor: boolean;
@@ -212,6 +213,8 @@ export interface PanelSettings {
     sourceFile: string;
     /** Selection = Web page (CAP-037): view width, scale (0: the monitor's), wait, lazy. */
     web: { width: number; scale: 0 | 1 | 2; wait: number; lazy: boolean };
+    /** Selection = Freehand (CAP-032). */
+    freehand: "free" | "polygon" | "ellipse";
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

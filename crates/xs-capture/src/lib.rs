@@ -14,6 +14,7 @@ pub mod feedback;
 pub mod filedest;
 pub mod filename;
 pub mod filesource;
+pub mod freehand;
 pub mod interactive;
 pub mod interval;
 pub mod menus;
@@ -880,6 +881,11 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
         }
         "capture.region" => match p.get("rect") {
             None => {
+                // Freehand (CAP-032): a shape instead of a rectangle.
+                if let Some(shape) = p.get("freehand").and_then(Value::as_str) {
+                    let extra = panel::with_overrides(extra, &json!({ "freehand": shape }));
+                    return run_interactive(core, ctx, p, "region", extra);
+                }
                 // Multiple areas (CAP-033).
                 if let Some(multiple) = p.get("multiple") {
                     let extra = panel::with_overrides(extra, &json!({ "multiple": multiple }));

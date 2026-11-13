@@ -197,6 +197,8 @@ pub struct ImageTab {
     pub source_file: String,
     /// Selection = Web page (CAP-037).
     pub web: WebTab,
+    /// Selection = Freehand: `free`, `polygon` or `ellipse` (CAP-032).
+    pub freehand: String,
 }
 
 /// The properties of Selection = Web page (CAP-037).
@@ -267,6 +269,7 @@ impl Default for ImageTab {
             file: crate::filedest::FileDest::default(),
             source_file: String::new(),
             web: WebTab::default(),
+            freehand: "free".into(),
         }
     }
 }
@@ -295,7 +298,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 12] = [
+const IMAGE_SELECTIONS: [&str; 13] = [
     "region",
     "window",
     "fullscreen",
@@ -307,6 +310,7 @@ const IMAGE_SELECTIONS: [&str; 12] = [
     "file",
     "pdf",
     "webpage",
+    "freehand",
     "text",
 ];
 
@@ -337,6 +341,11 @@ impl PanelSettings {
         self.image.interval.validate()?;
         self.image.schedule.validate()?;
         self.image.web.validate()?;
+        one_of(
+            "image.freehand",
+            &self.image.freehand,
+            &["free", "polygon", "ellipse"],
+        )?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
         }
@@ -467,6 +476,11 @@ impl PanelSettings {
                     params["paths"] = json!([self.image.source_file.trim()]);
                 }
                 return ("capture.file", params, json!({}));
+            }
+            // Freehand (CAP-032): a shape on the frozen screens.
+            if self.image.selection == "freehand" {
+                params["freehand"] = json!(self.image.freehand);
+                return ("capture.region", params, json!({}));
             }
             // A web page (CAP-037): the address is asked in its box.
             if self.image.selection == "webpage" {

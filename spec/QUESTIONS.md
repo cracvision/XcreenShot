@@ -254,6 +254,13 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 12: mano alzada)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-032 | El borde de la forma | Sin suavizado: cada píxel queda dentro o fuera según su centro (el contorno puede verse escalonado al ampliar). Suavizarlo es un cambio pequeño si Carlos lo prefiere | Provisional |
+| CAP-032 | Forma en varios monitores | La forma se dibuja en el monitor donde empieza y se ve en todos; la imagen puede abarcar más de uno | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 11: página web)
 
 | ID | Duda | Propuesta | Estado |

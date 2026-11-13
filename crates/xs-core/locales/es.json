@@ -1998,7 +1998,10 @@
       "areas": "{{count}} áreas",
       "finish_areas": "Terminar",
       "remove_area": "Quitar el área {{n}}",
-      "hint_menu": "Haz clic o pulsa Enter para capturar el menú resaltado, o arrastra un área"
+      "hint_menu": "Haz clic o pulsa Enter para capturar el menú resaltado, o arrastra un área",
+      "freehand_free": "Arrastra alrededor de lo que quieras; al soltar se cierra la forma",
+      "freehand_polygon": "Clic en cada esquina · Enter o doble clic cierra · Retroceso quita la última",
+      "freehand_ellipse": "Arrastra una elipse · Mayús: un círculo"
     },
     "panel": {
       "title": "XcreenShot · Captura",
@@ -2221,7 +2224,12 @@
       "web_scale": "Escala",
       "web_scale_auto": "La del monitor",
       "web_wait": "Esperar tras cargar (s)",
-      "web_lazy": "Cargar el contenido que aparece al desplazar"
+      "web_lazy": "Cargar el contenido que aparece al desplazar",
+      "sel_freehand": "Mano alzada",
+      "freehand_shape": "Forma",
+      "freehand_free": "Libre",
+      "freehand_polygon": "Polígono",
+      "freehand_ellipse": "Elipse"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4086,7 +4094,8 @@
       "clipboard": "Portapapeles",
       "file": "Archivo",
       "pdf": "PDF",
-      "webpage": "Página web"
+      "webpage": "Página web",
+      "freehand": "Mano alzada"
     },
     "kind": {
       "universal": "Universal",

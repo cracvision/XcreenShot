@@ -30,6 +30,7 @@ const IMAGE_SELECTIONS = [
   "file",
   "pdf",
   "webpage",
+  "freehand",
   "text",
 ] as const;
 
@@ -178,6 +179,23 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "freehand" && (
+        <fieldset className="panel-props">
+          <label className="panel-field">
+            <span>{t("ui.panel.freehand_shape")}</span>
+            <select
+              value={value.freehand}
+              onChange={(e) =>
+                onChange({ freehand: e.target.value as PanelSettings["image"]["freehand"] })
+              }
+            >
+              <option value="free">{t("ui.panel.freehand_free")}</option>
+              <option value="polygon">{t("ui.panel.freehand_polygon")}</option>
+              <option value="ellipse">{t("ui.panel.freehand_ellipse")}</option>
+            </select>
+          </label>
+        </fieldset>
+      )}
       {value.selection === "webpage" && (
         <WebOptions value={value.web} onChange={(w) => onChange({ web: { ...value.web, ...w } })} />
       )}

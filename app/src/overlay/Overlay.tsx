@@ -8,6 +8,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuickBar } from "./QuickAnnotate";
+import { closes, ellipsePoints, extend, SCISSORS, type FreehandShape } from "./freehand";
 import {
   COLORS,
   drawMarks,
@@ -86,6 +87,8 @@ interface Start {
     menus?: Rect[];
     /** Quick annotation (CAP-057): after selecting, mark the area here and copy it. */
     quickAnnotate?: boolean;
+    /** Freehand (CAP-032): select this shape instead of a rectangle. */
+    freehand?: FreehandShape;
     /** Its first tool: Arrow, or the last one used (CAP-057). */
     quickTool?: Tool;
   };
@@ -147,6 +150,8 @@ interface Sync {
   areas: Rect[];
   /** Quick annotation's marks (CAP-057). */
   marks: Mark[];
+  /** Freehand's shape so far (CAP-032). */
+  shape: Pt[];
 }
 
 type Interaction =
@@ -226,6 +231,12 @@ export function Overlay() {
     undone: [] as Mark[],
     drawing: null as { from: Pt; to: Pt } | null,
     textAt: null as Pt | null,
+    // Freehand (CAP-032): the shape so far, a free outline being drawn, an ellipse's
+    // first corner, and the next polygon corner under the pointer.
+    shape: [] as Pt[],
+    freeDrawing: false,
+    ellipseFrom: null as Pt | null,
+    polyNext: null as Pt | null,
     typing: null as { at: Pt; text: string } | null,
     markTool: "arrow" as Tool,
     markColor: COLORS[0] as string,
@@ -382,7 +393,10 @@ export function Overlay() {
     // Dim everything except the selection or the detected window (CAP-013, CAP-016).
     // The simplified crosshair dims nothing and draws thin lines (CAP-014).
     const fixed = st.phase === "aiming" && st.pointer ? fixedRect(start, st.pointer) : null;
-    const focus = st.sel ?? fixed ?? (st.phase === "aiming" ? (st.hover?.rect ?? null) : null);
+    const focus =
+      st.sel ??
+      fixed ??
+      (st.phase === "aiming" && !start.request.freehand ? (st.hover?.rect ?? null) : null);
     if (!simple) {
       ctx.fillStyle = DIM;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -507,6 +521,36 @@ export function Overlay() {
       ctx.restore();
     }
 
+    // Freehand (CAP-032): the shape clear and outlined; a polygon shows its next side.
+    if (start.request.freehand && st.shape.length >= 2) {
+      const pts = st.shape.map((q) => ({ x: q.x - M.x, y: q.y - M.y }));
+      const next = start.request.freehand === "polygon" && st.polyNext;
+      ctx.save();
+      ctx.beginPath();
+      pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+      if (next) ctx.lineTo(next.x - M.x, next.y - M.y);
+      ctx.closePath();
+      if (!simple) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "#000";
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+      }
+      ctx.lineWidth = 2 * px;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = ACCENT;
+      ctx.stroke();
+      ctx.restore();
+    } else if (start.request.freehand === "polygon" && st.shape.length === 1 && st.polyNext) {
+      const a = st.shape[0] as Pt;
+      ctx.lineWidth = 2 * px;
+      ctx.strokeStyle = ACCENT;
+      ctx.beginPath();
+      ctx.moveTo(a.x - M.x, a.y - M.y);
+      ctx.lineTo(st.polyNext.x - M.x, st.polyNext.y - M.y);
+      ctx.stroke();
+    }
+
     // Crosshair across the monitor, with an outline for any background (CAP-013).
     const p = st.pointer;
     if (p && st.phase !== "adjusting" && contains(M, p)) {
@@ -570,6 +614,7 @@ export function Overlay() {
       multi: st.multi,
       areas: st.areas,
       marks: st.marks,
+      shape: st.shape,
     };
     void emit("xs://overlay-sync", msg);
   }, [start]);
@@ -731,6 +776,12 @@ export function Overlay() {
       st.drawing = null;
       st.textAt = null;
       st.discardAsked = false;
+      st.shape = [];
+      st.freeDrawing = false;
+      st.ellipseFrom = null;
+      st.polyNext = null;
+      // Freehand's scissors (CAP-032).
+      if (fg.current) fg.current.style.cursor = payload.request.freehand ? SCISSORS : "";
       showText(null);
       const firstTool =
         payload.request.quickTool && TOOLS.includes(payload.request.quickTool)
@@ -826,6 +877,7 @@ export function Overlay() {
       s.current.areas = m.areas;
       setAreas(m.areas);
       s.current.marks = m.marks;
+      s.current.shape = m.shape;
       setSel(m.sel);
       setPhase(m.phase);
       setHelp(m.help);
@@ -878,6 +930,22 @@ export function Overlay() {
       st.shift = e.shiftKey;
       st.alt = e.altKey;
       const it = st.interaction;
+      // Freehand (CAP-032): the outline grows, the ellipse follows, the polygon's next
+      // corner shows.
+      if (start.request.freehand) {
+        const shape = start.request.freehand;
+        if (shape === "free" && st.freeDrawing) {
+          st.shape = extend(st.shape, p, 2 * quickRef.current.markScale());
+        } else if (shape === "ellipse" && st.ellipseFrom) {
+          st.shape = ellipsePoints(st.ellipseFrom, p, e.shiftKey);
+        } else if (shape === "polygon") {
+          st.polyNext = p;
+        }
+        st.hover = null;
+        broadcast();
+        schedule();
+        return;
+      }
       if (it?.kind === "draw") {
         const moved =
           Math.abs(p.x - it.anchor.x) > DRAG_THRESHOLD ||
@@ -978,9 +1046,29 @@ export function Overlay() {
         return;
       }
       if (windowsOnly(start)) return;
+      // Freehand (CAP-032): a free outline starts, a polygon gets a corner (a double
+      // click closes it), an ellipse starts at a corner.
+      if (start.request.freehand) {
+        const shape = start.request.freehand;
+        if (shape === "free") {
+          st.shape = [p];
+          st.freeDrawing = true;
+        } else if (shape === "ellipse") {
+          st.ellipseFrom = p;
+          st.shape = [];
+        } else if (e.detail >= 2 && closes(st.shape)) {
+          finish({ kind: "shape", points: st.shape.map((q) => [q.x, q.y]) });
+          return;
+        } else {
+          st.shape = [...st.shape, p];
+        }
+        broadcast();
+        schedule();
+        return;
+      }
       st.interaction = { kind: "draw", anchor: p };
     },
-    [start, toDesktop, hitHandle, finish, chooseRect],
+    [start, toDesktop, hitHandle, finish, chooseRect, broadcast, schedule],
   );
 
   const onPointerUp = useCallback(
@@ -989,6 +1077,22 @@ export function Overlay() {
       const st = s.current;
       const it = st.interaction;
       st.interaction = null;
+      // Freehand (CAP-032): letting go closes a free outline or an ellipse.
+      if (start.request.freehand) {
+        // A polygon goes on with the next click (or Enter).
+        if (start.request.freehand === "polygon") return;
+        const shape = st.shape;
+        st.freeDrawing = false;
+        st.ellipseFrom = null;
+        if (closes(shape)) {
+          finish({ kind: "shape", points: shape.map((q) => [q.x, q.y]) });
+        } else {
+          st.shape = [];
+          broadcast();
+          schedule();
+        }
+        return;
+      }
       if (st.textAt) {
         showText({ at: st.textAt, text: "" });
         st.textAt = null;
@@ -1091,6 +1195,22 @@ export function Overlay() {
         }
         cancel();
         return;
+      }
+      // Freehand's keys (CAP-032): Enter closes the polygon, Backspace removes the
+      // last corner.
+      if (start.request.freehand === "polygon") {
+        if (e.key === "Enter" && closes(st.shape)) {
+          e.preventDefault();
+          finish({ kind: "shape", points: st.shape.map((q) => [q.x, q.y]) });
+          return;
+        }
+        if (e.key === "Backspace" && st.shape.length) {
+          e.preventDefault();
+          st.shape = st.shape.slice(0, -1);
+          broadcast();
+          schedule();
+          return;
+        }
       }
       // Quick annotation's keys (CAP-057).
       if (start.request.quickAnnotate && st.phase === "adjusting" && st.sel) {
@@ -1329,11 +1449,13 @@ export function Overlay() {
       )}
       {start && phase === "aiming" && !help && (
         <div className="overlay-hint">
-          {start.request.mode === "menu" && start.request.menus?.length
-            ? t("ui.overlay.hint_menu")
-            : windowsOnly(start)
-              ? t("ui.overlay.hint_window")
-              : t("ui.overlay.hint")}
+          {start.request.freehand
+            ? t(`ui.overlay.freehand_${start.request.freehand}`)
+            : start.request.mode === "menu" && start.request.menus?.length
+              ? t("ui.overlay.hint_menu")
+              : windowsOnly(start)
+                ? t("ui.overlay.hint_window")
+                : t("ui.overlay.hint")}
           {start.request.helpHint &&
             ` · ${t("ui.overlay.help_hint", { key: start.request.compatibility ? "F1" : "H" })}`}
         </div>

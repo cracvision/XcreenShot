@@ -733,6 +733,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "required": ["x", "y", "width", "height"],
                     "additionalProperties": false
                 },
+                "freehand": {"type": "string", "enum": ["free", "polygon", "ellipse"], "description": "Freehand (CAP-032): select a free outline, a polygon (clicks, Enter closes) or an ellipse (Shift: a circle); the image is the rectangle around it, transparent outside"},
                 "multiple": {
                     "type": "object",
                     "description": "Multiple areas (CAP-033): the user picks several areas (drag or click each) and Enter ends; they become one image",
