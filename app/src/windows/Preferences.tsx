@@ -10,6 +10,7 @@ import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
 import { SettingsTransfer } from "../prefs/SettingsTransfer";
 import { AiSection } from "../prefs/AiSection";
 import { LibraryLocation } from "../prefs/LibraryLocation";
+import { FolderSetting } from "../prefs/FolderSetting";
 import { OcrLanguages } from "../prefs/OcrLanguages";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
 import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
@@ -173,7 +174,10 @@ export function Preferences() {
         {section === "library" && <LibraryLocation />}
         {rows.map((s) =>
           // A list of up to 3 languages has its own control (SMT-004).
-          s.key === "smart.ocr.languages" ? (
+          // A folder (the receive folder, CAP-043).
+          s.key === "capture.inbox.folder" ? (
+            <FolderSetting key={s.key} setting={s} highlighted={highlight === s.key} />
+          ) : s.key === "smart.ocr.languages" ? (
             <OcrLanguages
               key={s.key}
               value={Array.isArray(s.value) ? (s.value as string[]) : ["auto"]}

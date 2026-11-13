@@ -440,6 +440,28 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        // The receive folder (CAP-043): new files in it become captures.
+        def(
+            "capture.inbox.folder",
+            "capture",
+            json!({"type": "string"}),
+            json!(""),
+            "CAP-043",
+        ),
+        def(
+            "capture.inbox.open",
+            "capture",
+            boolean(),
+            json!(false),
+            "CAP-043",
+        ),
+        def(
+            "capture.inbox.leave",
+            "capture",
+            boolean(),
+            json!(false),
+            "CAP-043",
+        ),
         // Capture interface (CAP-001, CAP-004): the panel, the edge launcher, or both.
         def(
             "capture.interface",

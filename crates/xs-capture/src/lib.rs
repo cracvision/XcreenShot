@@ -15,6 +15,7 @@ pub mod filedest;
 pub mod filename;
 pub mod filesource;
 pub mod freehand;
+pub mod inbox;
 pub mod interactive;
 pub mod interval;
 pub mod menus;
@@ -1554,6 +1555,8 @@ pub fn extension() -> Extension {
             schedule::install(&core);
             // System captures (CAP-042): watched while the option is on.
             systemshots::install(&core);
+            // The receive folder (CAP-043): watched while one is chosen.
+            inbox::install(&core);
         }
         // A file as the source (CAP-040) and Import PDF (CAP-041).
         let w = weak.clone();

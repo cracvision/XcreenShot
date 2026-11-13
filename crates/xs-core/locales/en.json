@@ -1207,6 +1207,18 @@
         "launcher": "Edge launcher",
         "both": "Both"
       }
+    },
+    "capture_inbox_folder": {
+      "label": "Receive folder",
+      "description": "Every new image or PDF that arrives in this folder becomes a capture (nearby sharing, phone photo apps, synced folders, printing to PDF). Then it moves to its Importados subfolder."
+    },
+    "capture_inbox_open": {
+      "label": "Receive folder: open in the editor",
+      "description": "Off: what arrives is only saved in the library, with a notification."
+    },
+    "capture_inbox_leave": {
+      "label": "Receive folder: leave the files where they are",
+      "description": "Off: imported files move to the Importados subfolder."
     }
   },
   "errors": {
@@ -1661,7 +1673,9 @@
     "pdf_split": "The pages did not fit in one image: they are in {{count}} images.",
     "files_skipped": "These files were not imported: {{names}}.",
     "webpage_status": "The server answered with an error page (code {{code}}): it was captured as it came.",
-    "webpage_cut": "The page was taller than the largest size: it was cut at 60,000 pixels."
+    "webpage_cut": "The page was taller than the largest size: it was cut at 60,000 pixels.",
+    "inbox_password": "“{{name}}” in the receive folder has a password: import it with Import PDF.",
+    "inbox_failed": "“{{name}}” in the receive folder could not be imported."
   },
   "source": {
     "ui": "the interface",
@@ -1844,7 +1858,10 @@
         "unassigned_one": "{{count}} shortcut had no equivalent here and was left unassigned.",
         "unassigned_other": "{{count}} shortcuts had no equivalent here and were left unassigned.",
         "group_presets": "Capture presets"
-      }
+      },
+      "folder_choose": "Choose…",
+      "folder_none": "None",
+      "folder_clear": "Use none"
     },
     "permissions": {
       "title": "Permissions",
