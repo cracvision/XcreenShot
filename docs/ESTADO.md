@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-12 (noche, 21:30), con el aspecto nuevo **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets) y M3.2 (Extraer texto) hechas. Siguiente: M3.3 (captura con desplazamiento).
+**Última actualización:** 2026-11-12 (noche), con el aspecto nuevo **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets), M3.2 (Extraer texto) y M3.3 (desplazamiento) hechas, y de M3.4 la región fija, las múltiples áreas y el menú. Siguiente: el resto de M3.4.
 
 **Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
