@@ -12,6 +12,7 @@ import {
   type ScrollProps,
 } from "../lib/commands";
 import { Menu, type MenuItem } from "../components/Menu";
+import { useSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
@@ -31,7 +32,7 @@ interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];
   copy: boolean;
   cursor: boolean;
-  open: "editor" | "none";
+  open: "editor" | "quick" | "none";
 }
 
 /** Controls shared by both tabs, in the CAP-002 order (Selection … Capture cursor).
@@ -46,6 +47,7 @@ function CommonOptions<T extends Common>({
   selections?: readonly Common["selection"][];
 }) {
   const { t } = useTranslation();
+  const quick = useSetting("experimental.quickAnnotate", false);
   const id = useId();
   const text = value.selection === "text";
   // A scrolling, menu or clipboard capture has no pointer (CAP-002).
@@ -83,6 +85,10 @@ function CommonOptions<T extends Common>({
           onChange={(e) => onChange({ open: e.target.value as Common["open"] })}
         >
           <option value="editor">{t("ui.panel.open_editor")}</option>
+          {/* Quick annotation (CAP-057), while its trial is on (APP-034). */}
+          {(quick || value.open === "quick") && (
+            <option value="quick">{t("ui.panel.open_quick")}</option>
+          )}
           <option value="none">{t("ui.panel.open_none")}</option>
         </select>
       </label>

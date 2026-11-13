@@ -106,7 +106,7 @@ fn capture_params(own: Value) -> Value {
     let mut props = json!({
         "cursor": {"type": "boolean", "description": "Include the pointer (CAP-047)"},
         "copy": {"type": "boolean", "description": "Copy to the clipboard (CAP-046)"},
-        "open": {"type": "string", "enum": ["editor", "none"], "description": "Open in (CAP-045)"},
+        "open": {"type": "string", "enum": ["editor", "quick", "none"], "description": "Open in (CAP-045); quick: mark the area on screen first (CAP-057, a trial feature)"},
         "out": {"type": "string", "description": "Also write a PNG to this path"},
         "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"},
         "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects for the capture (CAP-051), the editor's entries {type, …settings}: border, shadow, edges, corners, scale, rotate, filters, watermark…; editable in the document, applied in the clipboard and files"},
@@ -748,6 +748,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "additionalProperties": false
                 }
             })))
+            .result(capture_result()),
+        B::new("capture.quick_annotate", &["CAP-057", "CAP-065", "APP-034"])
+            .scopes(ALL)
+            .interactive()
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
             .result(capture_result()),
         B::new("capture.clipboard", &["CAP-039", "CAP-065"])
             .scopes(ALL)

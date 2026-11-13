@@ -7166,6 +7166,7 @@ version = "0.2.0"
 dependencies = [
  "arboard",
  "chrono",
+ "directories",
  "image",
  "libc",
  "serde",

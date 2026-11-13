@@ -1696,6 +1696,77 @@ html.overlay-root #root {
   color: #ffb3ab;
 }
 
+/* Quick annotation (CAP-057): the bar of tools, colors and width, and the text box. */
+.overlay-bar.quick {
+  flex-wrap: wrap;
+  max-width: calc(100vw - 16px);
+  gap: 6px;
+}
+
+.overlay-bar.quick .overlay-btn {
+  padding: 5px 9px;
+}
+
+.overlay-btn.on {
+  background: #0064fb;
+  border-color: #0c9afc;
+}
+
+.overlay-colors {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.overlay-color {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.overlay-color[aria-checked="true"] {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #0c9afc;
+}
+
+.overlay-color:focus-visible {
+  outline: 2px solid #0c9afc;
+  outline-offset: 2px;
+}
+
+.overlay-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  background: rgb(0 0 0 / 0.35);
+  color: #fff;
+  font: inherit;
+}
+
+.overlay-select option {
+  color: #111318;
+  background: #fff;
+}
+
+.overlay-text {
+  position: absolute;
+  min-width: 160px;
+  min-height: 1.6em;
+  padding: 2px 4px;
+  border: 1px dashed rgb(255 255 255 / 0.8);
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.25);
+  font:
+    600 16px "Segoe UI",
+    system-ui,
+    sans-serif;
+  resize: both;
+  outline: none;
+}
+
 /* Windows: the frozen screen is a native window underneath; keep this one see-through. */
 html.overlay-root.overlay-native,
 html.overlay-root.overlay-native body,

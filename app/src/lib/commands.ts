@@ -138,7 +138,7 @@ export interface PanelSettings {
     selection: "region" | "window" | "fullscreen";
     copy: boolean;
     cursor: boolean;
-    open: "editor" | "none";
+    open: "editor" | "quick" | "none";
     delay5: boolean;
     /** Destinations (CAP-052): `file` for now. */
     share: "file"[];
@@ -158,7 +158,7 @@ export interface PanelSettings {
       | "text";
     copy: boolean;
     cursor: boolean;
-    open: "editor" | "none";
+    open: "editor" | "quick" | "none";
     timing: "none" | "delay";
     delay: number;
     /** Selection = Scrolling (CAP-034, CAP-035). */

@@ -790,6 +790,10 @@
     "capture_clipboard": {
       "title": "Capture from the clipboard",
       "description": "What is on the clipboard (an image, image files or text) becomes a capture, with the capture options."
+    },
+    "capture_quick_annotate": {
+      "title": "Quick annotation",
+      "description": "Select an area as in Universal Capture, mark it on screen with arrows, shapes, text, highlights, blur or steps, and copy it without opening the editor. A trial feature: turn it on in Preferences > Experimental features."
     }
   },
   "settings": {
@@ -1106,6 +1110,22 @@
     "capture_scrollAskStart": {
       "label": "Ask before scrolling",
       "description": "A manual scrolling capture waits for Start before taking frames."
+    },
+    "experimental_quickAnnotate": {
+      "label": "Quick annotation",
+      "description": "After selecting an area, mark it on screen with a few tools and copy it, without the editor. Shortcut Ctrl+Alt+Shift+Q (Control+Option+Shift+Q on a Mac)."
+    },
+    "capture_quickAnnotate_firstTool": {
+      "label": "Quick annotation: first tool",
+      "description": "The tool selected when quick annotation starts.",
+      "options": {
+        "arrow": "Arrow",
+        "last": "The last one used"
+      }
+    },
+    "capture_quickAnnotate_saveToLibrary": {
+      "label": "Quick annotation: save to the library when copying",
+      "description": "Off: Copy only leaves the image on the clipboard, and the capture waits unsaved in the recent tray."
     }
   },
   "errors": {
@@ -1192,7 +1212,8 @@
     "scroll_not_running": "No scrolling capture is running.",
     "fixed_region": "The fixed region does not fit: the monitor \"{{monitor}}\" is not connected, or the region goes past its edge. Choose it again on screen, or pick the main monitor.",
     "picker_not_open": "The window picker is not open.",
-    "clipboard_empty": "The clipboard holds no image or text."
+    "clipboard_empty": "The clipboard holds no image or text.",
+    "quick_annotate_off": "Quick annotation is a trial feature that is off. Turn it on in Preferences > Experimental features."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1359,7 +1380,8 @@
     "presets": "Presets",
     "presets_empty": "No presets",
     "extract_text": "Extract text",
-    "finish_scrolling": "Finish scrolling"
+    "finish_scrolling": "Finish scrolling",
+    "quick_annotate": "Quick annotation"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -2044,7 +2066,8 @@
       "effects_remove": "Remove {{name}}",
       "effects_up": "Move {{name}} up",
       "effects_empty": "No effects: captures come as they are.",
-      "sel_clipboard": "Clipboard"
+      "sel_clipboard": "Clipboard",
+      "open_quick": "Quick annotation"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3639,6 +3662,26 @@
       "none": "No window matches",
       "cancel": "Cancel",
       "loading": "Taking the pictures…"
+    },
+    "quick": {
+      "bar": "Quick annotation",
+      "tool_arrow": "Arrow",
+      "tool_shape": "Shape",
+      "tool_text": "Text",
+      "tool_highlight": "Highlight",
+      "tool_blur": "Blur",
+      "tool_step": "Step",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "color": "Color",
+      "width": "Width",
+      "undo": "Undo",
+      "redo": "Redo",
+      "copy": "Copy",
+      "editor": "Open in the editor",
+      "cancel": "Cancel",
+      "discard": "Discard the marks? Press Esc again to discard them.",
+      "text_hint": "Type, then Enter. Shift+Enter: new line."
     }
   },
   "history": {

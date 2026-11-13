@@ -7,6 +7,16 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QuickBar } from "./QuickAnnotate";
+import {
+  COLORS,
+  drawMarks,
+  markFromDrag,
+  toObjects,
+  TOOLS,
+  type Mark,
+  type Tool,
+} from "./quickMarks";
 import { setLanguage } from "../i18n";
 import { tenStep } from "../lib/numberKeys";
 import {
@@ -74,6 +84,10 @@ interface Start {
     fixedSize?: { width: number; height: number };
     /** Menu capture (CAP-031): the open menus found, outermost first. */
     menus?: Rect[];
+    /** Quick annotation (CAP-057): after selecting, mark the area here and copy it. */
+    quickAnnotate?: boolean;
+    /** Its first tool: Arrow, or the last one used (CAP-057). */
+    quickTool?: Tool;
   };
 }
 
@@ -131,6 +145,8 @@ interface Sync {
   /** Multiple areas (CAP-033): on, and the areas so far. */
   multi: boolean;
   areas: Rect[];
+  /** Quick annotation's marks (CAP-057). */
+  marks: Mark[];
 }
 
 type Interaction =
@@ -205,9 +221,35 @@ export function Overlay() {
     multi: false,
     ctrlMulti: false,
     areas: [] as Rect[],
+    // Quick annotation (CAP-057): the marks, the ones undone, the one being drawn.
+    marks: [] as Mark[],
+    undone: [] as Mark[],
+    drawing: null as { from: Pt; to: Pt } | null,
+    textAt: null as Pt | null,
+    typing: null as { at: Pt; text: string } | null,
+    markTool: "arrow" as Tool,
+    markColor: COLORS[0] as string,
+    markWidth: 4,
+    markEllipse: false,
+    discardAsked: false,
   });
   const [help, setHelp] = useState(false);
   const [areas, setAreas] = useState<Rect[]>([]);
+  // Quick annotation (CAP-057): what the bar shows, and a text being typed.
+  const [quick, setQuick] = useState({
+    tool: "arrow" as Tool,
+    color: COLORS[0] as string,
+    width: 4,
+    ellipse: false,
+    marks: 0,
+    undone: 0,
+  });
+  const [typing, setTyping] = useState<{ at: Pt; text: string } | null>(null);
+  /** The text being typed, also where the handlers can read it at once. */
+  const showText = useCallback((v: { at: Pt; text: string } | null) => {
+    s.current.typing = v;
+    setTyping(v);
+  }, []);
 
   const monitor = start?.request.monitors[myIndex] ?? null;
   const desktop = start ? bounding(start.request.monitors.map((m) => m.rect)) : null;
@@ -444,6 +486,27 @@ export function Overlay() {
       }
     }
 
+    // Quick annotation's marks, inside the selection (CAP-057).
+    if (start.request.quickAnnotate && st.sel && (st.marks.length || st.drawing)) {
+      const scale = Math.max(1, monitor.scale);
+      const live =
+        st.drawing &&
+        markFromDrag(
+          st.markTool,
+          st.drawing.from,
+          st.drawing.to,
+          st.markColor,
+          st.markWidth * scale,
+          st.markEllipse,
+        );
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(st.sel.x - M.x, st.sel.y - M.y, st.sel.width, st.sel.height);
+      ctx.clip();
+      drawMarks(ctx, live ? [...st.marks, live] : st.marks, M);
+      ctx.restore();
+    }
+
     // Crosshair across the monitor, with an outline for any background (CAP-013).
     const p = st.pointer;
     if (p && st.phase !== "adjusting" && contains(M, p)) {
@@ -506,6 +569,7 @@ export function Overlay() {
       help: st.help,
       multi: st.multi,
       areas: st.areas,
+      marks: st.marks,
     };
     void emit("xs://overlay-sync", msg);
   }, [start]);
@@ -542,7 +606,8 @@ export function Overlay() {
     (r: Rect) => {
       if (!start || !desktop) return;
       const rect = intersect(r, desktop) ?? r;
-      if (start.request.mode === "universal") {
+      // Quick annotation (CAP-057) always stops here to mark the area.
+      if (start.request.mode === "universal" || start.request.quickAnnotate) {
         setSelBoth(rect);
         setPhaseBoth("adjusting");
         broadcast();
@@ -556,11 +621,81 @@ export function Overlay() {
 
   const chooseWindow = useCallback(
     (w: Win) => {
-      if (start?.request.mode === "window") finish({ kind: "window", id: w.id });
+      if (start?.request.mode === "window" && !start.request.quickAnnotate)
+        finish({ kind: "window", id: w.id });
       else chooseRect(w.rect);
     },
     [start, finish, chooseRect],
   );
+
+  // Quick annotation (CAP-057).
+  const syncQuick = () => {
+    const st = s.current;
+    setQuick((q) => ({ ...q, marks: st.marks.length, undone: st.undone.length }));
+  };
+  const addMark = (mark: Mark) => {
+    const st = s.current;
+    st.marks = [...st.marks, mark];
+    st.undone = [];
+    st.discardAsked = false;
+    syncQuick();
+    broadcast();
+  };
+  const undoMark = () => {
+    const st = s.current;
+    const last = st.marks[st.marks.length - 1];
+    if (!last) return;
+    st.marks = st.marks.slice(0, -1);
+    st.undone = [...st.undone, last];
+    syncQuick();
+    broadcast();
+    schedule();
+  };
+  const redoMark = () => {
+    const st = s.current;
+    const back = st.undone[st.undone.length - 1];
+    if (!back) return;
+    st.undone = st.undone.slice(0, -1);
+    st.marks = [...st.marks, back];
+    syncQuick();
+    broadcast();
+    schedule();
+  };
+  const setTool = (tool: Tool) => {
+    s.current.markTool = tool;
+    setQuick((q) => ({ ...q, tool }));
+  };
+  // Once: Enter, then the blur of the box going away, must not add it twice.
+  const commitText = () => {
+    const st = s.current;
+    const current = st.typing;
+    showText(null);
+    if (current && current.text.trim()) {
+      const size = 22 * Math.max(1, monitor?.scale ?? 1);
+      addMark({ kind: "text", at: current.at, text: current.text, color: st.markColor, size });
+      schedule();
+    }
+  };
+  const stepSize = () => 32 * Math.max(1, monitor?.scale ?? 1);
+  const markScale = () => Math.max(1, monitor?.scale ?? 1);
+  const finishQuick = (action: "copy" | "editor") => {
+    // A text still being typed is part of it.
+    commitText();
+    const st = s.current;
+    if (!st.sel || !monitor) return;
+    finish({
+      kind: "quick",
+      rect: st.sel,
+      action,
+      tool: st.markTool,
+      objects: toObjects(st.marks, st.sel, monitor.scale),
+    });
+  };
+
+  const quickRef = useRef({ addMark, undoMark, redoMark, finishQuick, stepSize, markScale });
+  useEffect(() => {
+    quickRef.current = { addMark, undoMark, redoMark, finishQuick, stepSize, markScale };
+  });
 
   const redo = useCallback(() => {
     setSelBoth(null);
@@ -591,6 +726,18 @@ export function Overlay() {
       st.ctrlMulti = false;
       st.areas = [];
       setAreas([]);
+      st.marks = [];
+      st.undone = [];
+      st.drawing = null;
+      st.textAt = null;
+      st.discardAsked = false;
+      showText(null);
+      const firstTool =
+        payload.request.quickTool && TOOLS.includes(payload.request.quickTool)
+          ? payload.request.quickTool
+          : "arrow";
+      st.markTool = firstTool;
+      setQuick((q) => ({ ...q, tool: firstTool, marks: 0, undone: 0 }));
       st.asked = 0;
       st.lag = { sum: 0, count: 0, since: 0 };
       st.slow = false;
@@ -660,7 +807,7 @@ export function Overlay() {
       void unStart.then((f) => f());
       void unEnd.then((f) => f());
     };
-  }, []);
+  }, [showText]);
 
   // Other monitors' overlays tell us where the pointer and the selection are.
   useEffect(() => {
@@ -678,6 +825,7 @@ export function Overlay() {
       s.current.multi = m.multi;
       s.current.areas = m.areas;
       setAreas(m.areas);
+      s.current.marks = m.marks;
       setSel(m.sel);
       setPhase(m.phase);
       setHelp(m.help);
@@ -763,6 +911,8 @@ export function Overlay() {
       } else if (it?.kind === "resize") {
         st.sel = resizeByHandle(it.orig, it.handle, p);
         setSel(st.sel);
+      } else if (st.drawing) {
+        st.drawing = { ...st.drawing, to: p };
       } else if (st.phase === "aiming") {
         st.hover = windowAt(start, p);
       } else if (st.phase === "adjusting" && fg.current) {
@@ -797,13 +947,32 @@ export function Overlay() {
       // A fixed-size region: a click places it and captures (CAP-026).
       const fixed = st.phase === "aiming" ? fixedRect(start, p) : null;
       if (fixed) {
-        finish({ kind: "rect", rect: fixed });
+        if (start.request.quickAnnotate) chooseRect(fixed);
+        else finish({ kind: "rect", rect: fixed });
         return;
       }
       // The pointer may not have moved since the selection appeared.
       if (st.phase === "aiming") st.hover = windowAt(start, p);
       if (st.phase === "adjusting" && st.sel) {
         const h = hitHandle(p);
+        // Quick annotation (CAP-057): inside the area the tools draw; its handles work
+        // only until the first mark.
+        if (start.request.quickAnnotate && (h === "inside" || (h && st.marks.length))) {
+          if (!contains(st.sel, p)) return;
+          if (st.markTool === "step") {
+            const n = st.marks.filter((m) => m.kind === "step").length + 1;
+            const size = quickRef.current.stepSize();
+            quickRef.current.addMark({ kind: "step", at: p, value: n, color: st.markColor, size });
+          } else if (st.markTool === "text") {
+            // The box opens when the button is let go: on press, the page would take
+            // its focus back.
+            st.textAt = p;
+          } else {
+            st.drawing = { from: p, to: p };
+          }
+          drawRef.current();
+          return;
+        }
         if (h === "inside") st.interaction = { kind: "move", start: p, orig: st.sel };
         else if (h) st.interaction = { kind: "resize", handle: h, orig: st.sel };
         return;
@@ -811,7 +980,7 @@ export function Overlay() {
       if (windowsOnly(start)) return;
       st.interaction = { kind: "draw", anchor: p };
     },
-    [start, toDesktop, hitHandle, finish],
+    [start, toDesktop, hitHandle, finish, chooseRect],
   );
 
   const onPointerUp = useCallback(
@@ -820,6 +989,26 @@ export function Overlay() {
       const st = s.current;
       const it = st.interaction;
       st.interaction = null;
+      if (st.textAt) {
+        showText({ at: st.textAt, text: "" });
+        st.textAt = null;
+        return;
+      }
+      if (st.drawing) {
+        const scale = quickRef.current.markScale();
+        const mark = markFromDrag(
+          st.markTool,
+          st.drawing.from,
+          st.drawing.to,
+          st.markColor,
+          st.markWidth * scale,
+          st.markEllipse,
+        );
+        st.drawing = null;
+        if (mark) quickRef.current.addMark(mark);
+        schedule();
+        return;
+      }
       if (st.multi) {
         // Each drag adds an area, and each click the window under it (CAP-033).
         const added =
@@ -868,6 +1057,7 @@ export function Overlay() {
     [
       start,
       desktop,
+      showText,
       chooseRect,
       chooseWindow,
       setSelBoth,
@@ -885,9 +1075,45 @@ export function Overlay() {
       const st = s.current;
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" && e.key !== "Escape") return;
+      if (target.tagName === "TEXTAREA") return;
       if (e.key === "Escape") {
         e.preventDefault();
+        if (start.request.quickAnnotate && st.drawing) {
+          st.drawing = null;
+          schedule();
+          return;
+        }
+        if (start.request.quickAnnotate && st.marks.length && !st.discardAsked) {
+          st.discardAsked = true;
+          setToast(t("ui.quick.discard"));
+          window.setTimeout(() => setToast(null), 2500);
+          return;
+        }
         cancel();
+        return;
+      }
+      // Quick annotation's keys (CAP-057).
+      if (start.request.quickAnnotate && st.phase === "adjusting" && st.sel) {
+        const ctrl = e.ctrlKey || e.metaKey;
+        const k = e.key.toLowerCase();
+        const n = Number(e.key);
+        if (!ctrl && n >= 1 && n <= TOOLS.length) {
+          setTool(TOOLS[n - 1] as Tool);
+        } else if (ctrl && k === "z" && e.shiftKey) {
+          quickRef.current.redoMark();
+        } else if (ctrl && k === "z") {
+          quickRef.current.undoMark();
+        } else if (e.key === "Enter" || (ctrl && k === "c")) {
+          quickRef.current.finishQuick("copy");
+        } else if (ctrl && k === "e") {
+          quickRef.current.finishQuick("editor");
+        } else if (e.key === "Delete" || e.key === "Backspace") {
+          quickRef.current.undoMark();
+        } else {
+          return;
+        }
+        e.preventDefault();
+        schedule();
         return;
       }
       const key = e.key.toLowerCase();
@@ -947,7 +1173,8 @@ export function Overlay() {
         };
         if (e.key === "Enter") {
           const r = fixedRect(start, p);
-          if (r) finish({ kind: "rect", rect: r });
+          if (r && start.request.quickAnnotate) chooseRect(r);
+          else if (r) finish({ kind: "rect", rect: r });
         } else {
           const step = e.shiftKey ? 10 : 1;
           st.pointer = {
@@ -1119,7 +1346,63 @@ export function Overlay() {
           monitors={start.request.monitors.length}
         />
       )}
-      {barHere && sel && monitor && desktop && (
+      {barHere && sel && monitor && start?.request.quickAnnotate && (
+        <QuickBar
+          style={quickBarStyle(sel, monitor.rect, cssPerPx)}
+          tool={quick.tool}
+          color={quick.color}
+          width={quick.width}
+          ellipse={quick.ellipse}
+          canUndo={quick.marks > 0}
+          canRedo={quick.undone > 0}
+          onTool={setTool}
+          onColor={(c) => {
+            s.current.markColor = c;
+            setQuick((q) => ({ ...q, color: c }));
+          }}
+          onWidth={(w) => {
+            s.current.markWidth = w;
+            setQuick((q) => ({ ...q, width: w }));
+          }}
+          onEllipse={(on) => {
+            s.current.markEllipse = on;
+            setQuick((q) => ({ ...q, ellipse: on }));
+          }}
+          onUndo={undoMark}
+          onRedo={redoMark}
+          onCopy={() => finishQuick("copy")}
+          onEditor={() => finishQuick("editor")}
+          onCancel={cancel}
+        />
+      )}
+      {typing && monitor && (
+        <textarea
+          className="overlay-text"
+          autoFocus
+          aria-label={t("ui.quick.tool_text")}
+          value={typing.text}
+          style={{
+            left: (typing.at.x - monitor.rect.x) * cssPerPx,
+            top: (typing.at.y - monitor.rect.y) * cssPerPx,
+            color: quick.color,
+            fontSize: 22 * Math.max(1, monitor.scale) * cssPerPx,
+          }}
+          placeholder={t("ui.quick.text_hint")}
+          onChange={(e) => showText({ ...typing, text: e.target.value })}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Escape") {
+              e.preventDefault();
+              showText(null);
+            } else if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              commitText();
+            }
+          }}
+          onBlur={commitText}
+        />
+      )}
+      {barHere && sel && monitor && desktop && !start?.request.quickAnnotate && (
         <CaptureBar
           sel={sel}
           monitor={monitor.rect}
@@ -1418,4 +1701,14 @@ function CaptureBar({
       )}
     </div>
   );
+}
+
+/** Where quick annotation's bar goes: under the area, or above it near the bottom. */
+function quickBarStyle(sel: Rect, monitor: Rect, cssPerPx: number): React.CSSProperties {
+  const left = Math.max(8, (sel.x - monitor.x) * cssPerPx);
+  const bottom = (sel.y + sel.height - monitor.y) * cssPerPx;
+  const roomBelow = window.innerHeight - bottom;
+  return roomBelow > 64
+    ? { left, top: bottom + 10 }
+    : { left, top: Math.max(8, (sel.y - monitor.y) * cssPerPx - 54) };
 }

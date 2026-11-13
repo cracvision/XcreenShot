@@ -58,13 +58,13 @@ export function AdvancedExtras() {
   );
 }
 
-/** Experimental features (APP-034): none in this version. */
-export function ExperimentalSection() {
+/** Features on trial (APP-034): the notice, then their switches (or that there are none). */
+export function ExperimentalSection({ empty }: { empty: boolean }) {
   const { t } = useTranslation();
   return (
     <>
       <p className="section-intro">{t("ui.prefs.experimental_intro")}</p>
-      <p className="empty">{t("ui.prefs.experimental_none")}</p>
+      {empty && <p className="empty">{t("ui.prefs.experimental_none")}</p>}
     </>
   );
 }

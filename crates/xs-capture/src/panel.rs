@@ -259,9 +259,13 @@ impl PanelSettings {
         };
         one_of("tab", &self.tab, &["universal", "image"])?;
         one_of("universal.selection", &self.universal.selection, &SELECTIONS)?;
-        one_of("universal.open", &self.universal.open, &["editor", "none"])?;
+        one_of(
+            "universal.open",
+            &self.universal.open,
+            &["editor", "quick", "none"],
+        )?;
         one_of("image.selection", &self.image.selection, &IMAGE_SELECTIONS)?;
-        one_of("image.open", &self.image.open, &["editor", "none"])?;
+        one_of("image.open", &self.image.open, &["editor", "quick", "none"])?;
         one_of("image.timing", &self.image.timing, &["none", "delay"])?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());

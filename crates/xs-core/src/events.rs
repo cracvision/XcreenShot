@@ -28,6 +28,7 @@ pub const CAPTURE_COMMANDS: &[&str] = &[
     "capture.menu",
     "capture.window_picker",
     "capture.clipboard",
+    "capture.quick_annotate",
 ];
 
 /// Commands whose result names a file they wrote.

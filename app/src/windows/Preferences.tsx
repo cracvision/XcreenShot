@@ -113,8 +113,15 @@ export function Preferences() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  // Quick annotation's settings appear while its trial is on (CAP-057, APP-034).
+  const quickOn = settings.some((s) => s.key === "experimental.quickAnnotate" && s.value === true);
   const inSection = (name: Section): SettingEntry[] =>
-    settings.filter((s) => s.section === name && s.key !== "shortcuts.profile");
+    settings.filter(
+      (s) =>
+        s.section === name &&
+        s.key !== "shortcuts.profile" &&
+        (quickOn || !s.key.startsWith("capture.quickAnnotate.")),
+    );
 
   const content = () => {
     if (results) {
@@ -144,7 +151,18 @@ export function Preferences() {
         </>
       );
     }
-    if (section === "experimental") return <ExperimentalSection />;
+    if (section === "experimental") {
+      const rows = inSection(section);
+      return (
+        <>
+          <ExperimentalSection empty={rows.length === 0} />
+          {rows.map((s) => (
+            <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+          ))}
+          {rows.length > 0 && <ResetSection section={section} />}
+        </>
+      );
+    }
     const rows = inSection(section);
     return (
       <>

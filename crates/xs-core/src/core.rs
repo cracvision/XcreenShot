@@ -130,6 +130,7 @@ impl Core {
         let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core.expire_verbose();
+        core.shortcuts.set_trials(|key| core.settings.get_bool(key));
         if let Some(log) = &core.log {
             log.set_verbose(core.settings.get_bool("diagnostics.verbose"));
         }
@@ -371,6 +372,10 @@ impl Core {
             }
         }
         if key == "shortcuts.profile" {
+            self.host().shortcuts_changed();
+        }
+        // A trial feature's shortcut comes and goes with it (APP-034).
+        if key.starts_with("experimental.") && self.shortcuts.set_trials(|k| self.settings.get_bool(k)) {
             self.host().shortcuts_changed();
         }
         self.host().settings_changed(key, value);
@@ -1193,7 +1198,7 @@ mod tests {
     fn menus_only_reference_registered_commands() {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
-        let mut all = menus::tray_menu_with(&[], true);
+        let mut all = menus::tray_menu_with(&[], true, true);
         all.extend(menus::app_menu(Platform::Windows));
         all.extend(menus::app_menu(Platform::Macos));
         for id in menus::commands_in(&all) {

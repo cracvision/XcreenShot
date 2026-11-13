@@ -440,6 +440,21 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        // Quick annotation (CAP-057): its first tool and whether Copy keeps it.
+        def(
+            "capture.quickAnnotate.firstTool",
+            "capture",
+            one_of(&["arrow", "last"]),
+            json!("arrow"),
+            "CAP-057",
+        ),
+        def(
+            "capture.quickAnnotate.saveToLibrary",
+            "capture",
+            boolean(),
+            json!(true),
+            "CAP-057",
+        ),
         def(
             "capture.scrollAskStart",
             "capture",
@@ -483,6 +498,14 @@ pub fn definitions() -> Vec<SettingDef> {
             boolean(),
             json!(true),
             "CAP-056",
+        ),
+        // Features on trial (APP-034): all off on a new installation.
+        def(
+            "experimental.quickAnnotate",
+            "experimental",
+            boolean(),
+            json!(false),
+            "CAP-057",
         ),
     ]
 }

@@ -277,6 +277,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
         &xs_core::menus::tray_menu_with(
             &xs_capture::presets::menu_items(core),
             xs_capture::scroll::running(core),
+            core.settings.get_bool("experimental.quickAnnotate"),
         ),
         Shortcuts::Accelerators,
         &mut actions,
@@ -367,6 +368,7 @@ pub fn refresh(app: &AppHandle) {
         &xs_core::menus::tray_menu_with(
             &xs_capture::presets::menu_items(core),
             xs_capture::scroll::running(core),
+            core.settings.get_bool("experimental.quickAnnotate"),
         ),
         Shortcuts::Accelerators,
         &mut actions,

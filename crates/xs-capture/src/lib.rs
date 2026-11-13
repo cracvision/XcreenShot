@@ -383,6 +383,12 @@ pub struct Options {
     pub effects: Vec<Value>,
     /// Objects the capture's document starts with (text from the clipboard, CAP-039).
     pub objects: Vec<Value>,
+    /// Open in = Quick annotation (CAP-057): mark the area on screen before it leaves.
+    /// Where there is no selection on screen it opens in the editor.
+    pub quick: bool,
+    /// Saved in the library (true) or kept unsaved (false), whatever the setting
+    /// (LIB-020); `None` follows the setting.
+    pub keep: Option<bool>,
 }
 
 impl Options {
@@ -392,7 +398,7 @@ impl Options {
             cursor: p.get("cursor").and_then(Value::as_bool).unwrap_or(false),
             copy: p.get("copy").and_then(Value::as_bool).unwrap_or(true),
             open_editor: match p.get("open").and_then(Value::as_str) {
-                Some("editor") => true,
+                Some("editor") | Some("quick") => true,
                 Some(_) => false,
                 None => !source.is_automation(),
             },
@@ -421,6 +427,8 @@ impl Options {
                 })
                 .unwrap_or_default(),
             objects: Vec::new(),
+            quick: p.get("open").and_then(Value::as_str) == Some("quick"),
+            keep: None,
         }
     }
 }
@@ -547,13 +555,17 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     // 1-2. Keep it safe first: a `.xshot` in the library, open for the editor (LIB-020).
     let meta = metadata(core, &shot, now);
     let app = shot.app.as_ref().map(|a| a.name.as_str());
-    let (document_id, path) = xs_editor::add_capture_with(
+    let keep = opts
+        .keep
+        .unwrap_or_else(|| core.settings.get_bool("library.autosaveImages"));
+    let (document_id, path) = xs_editor::add_capture_kept(
         core,
         &shot.image,
         meta.clone(),
         shot.scale as f64,
         app,
         pointer.as_ref(),
+        keep,
     )
     .map_err(|e| failed(lang, e))?;
     let save_ms = started.elapsed().as_millis() as u64;
@@ -848,6 +860,16 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
                 _ => return run_interactive(core, ctx, p, "window", extra),
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
+        }
+        // Quick annotation (CAP-057): select as in Universal, mark, copy.
+        "capture.quick_annotate" => {
+            let mut p = p.clone();
+            p["open"] = json!("quick");
+            // Copy is the bar's button; Open in the editor does not copy too.
+            if p.get("copy").is_none() {
+                p["copy"] = json!(false);
+            }
+            run_interactive(core, ctx, &p, "region", extra)
         }
         // The clipboard as a source (CAP-039).
         "capture.clipboard" => {
@@ -1155,6 +1177,27 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        // Quick annotation (CAP-057): only while its trial is on (APP-034). From the app
+        // it takes Capture cursor from the Image tab; effects and Share only come from a
+        // preset that has them.
+        let w = weak.clone();
+        reg.handle("capture.quick_annotate", move |ctx, p| {
+            let core = upgrade(&w)?;
+            if !core.settings.get_bool("experimental.quickAnnotate") {
+                return Err(CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(ctx.lang, "errors.quick_annotate_off", &[]),
+                )
+                .with_details(json!({ "setting": "experimental.quickAnnotate" })));
+            }
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                let tab = panel::load(&core).image_options();
+                panel::with_overrides(json!({ "cursor": tab["cursor"] }), &p)
+            };
+            dispatch(&core, ctx, "capture.quick_annotate", &p, json!({}))
         });
         let w = weak.clone();
         reg.handle("capture.clipboard", move |ctx, p| {

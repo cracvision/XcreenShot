@@ -64,13 +64,33 @@ fn cmd(id: &'static str, label: &'static str, command: &'static str) -> MenuEntr
 /// the presets, `(id, name)` in their order (CAP-058). The status block, video, quick
 /// annotation and Recent items arrive with their features.
 pub fn tray_menu(presets: &[(String, String)]) -> Vec<MenuEntry> {
-    tray_menu_with(presets, false)
+    tray_menu_with(presets, false, false)
 }
 
 /// The tray menu; while a scrolling capture runs it starts with Finish scrolling, for
 /// when its panel is covered (CAP-034).
-pub fn tray_menu_with(presets: &[(String, String)], scrolling: bool) -> Vec<MenuEntry> {
+pub fn tray_menu_with(presets: &[(String, String)], scrolling: bool, quick: bool) -> Vec<MenuEntry> {
     let mut menu = tray_entries(presets);
+    // Quick annotation (CAP-057), after Image capture, while its trial is on (APP-034).
+    if quick {
+        let at = menu
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    MenuEntry::Command {
+                        id: "capture_image",
+                        ..
+                    }
+                )
+            })
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        menu.insert(
+            at,
+            cmd("quick_annotate", "tray.quick_annotate", "capture.quick_annotate"),
+        );
+    }
     if scrolling {
         menu.splice(
             0..0,
@@ -708,6 +728,16 @@ pub fn labels_in(entries: &[MenuEntry]) -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// CAP-057, APP-034: Quick annotation follows Image capture only while it is on.
+    #[test]
+    fn quick_annotation_is_in_the_icon_menu_only_while_on() {
+        let off = commands_in(&tray_menu_with(&[], false, false));
+        assert!(!off.contains(&"capture.quick_annotate"));
+        let on = commands_in(&tray_menu_with(&[], false, true));
+        let at = on.iter().position(|c| *c == "capture.quick_annotate").unwrap();
+        assert_eq!(on[at - 1], "capture.image");
+    }
 
     #[test]
     fn the_windows_menu_bar_as_data() {

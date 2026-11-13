@@ -288,6 +288,41 @@ fn rect_from(v: &Value) -> Option<Rect> {
     })
 }
 
+/// The last tool of quick annotation (CAP-057).
+const QUICK_TOOL_KEY: &str = "capture.quickAnnotate.lastTool";
+
+/// A region cut from the frozen screens, with what is known about it.
+fn region_shot(frozen: &Frozen, area: Rect, mode: &'static str) -> Shot {
+    let image = crop_frames(&frozen.monitors, &frozen.frames, area);
+    let hit: Vec<&MonitorInfo> = frozen
+        .monitors
+        .iter()
+        .filter(|m| m.rect.intersect(&area).is_some())
+        .collect();
+    let main = hit
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
+    // "Aplicación" of a region: the window covering most of it (CAP-056).
+    let window = frozen
+        .windows
+        .iter()
+        .filter_map(|w| Some((w.rect.intersect(&area)?.area(), w)))
+        .max_by_key(|(a, _)| *a)
+        .map(|(_, w)| w);
+    Shot {
+        image,
+        rect: area,
+        mode,
+        scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
+        monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
+        app: window.map(|w| platform::app_info(w.pid, &w.app)),
+        window_title: window.map(|w| w.title.clone()),
+        window_id: None,
+        pointer: frozen.cursor.clone(),
+        warnings: Vec::new(),
+    }
+}
+
 /// Runs an interactive capture: `mode` is `region`, `window` or `universal`.
 pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value) -> CommandResult {
     let lang = ctx.lang;
@@ -317,6 +352,16 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
     });
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());
+    }
+    // Quick annotation (CAP-057): the selection stops to be marked, while its trial is
+    // on (APP-034); otherwise Open in = Quick annotation opens the editor.
+    let quick = opts.quick && core.settings.get_bool("experimental.quickAnnotate");
+    if quick {
+        request["quickAnnotate"] = json!(true);
+        let last = core
+            .recall(QUICK_TOOL_KEY)
+            .filter(|_| core.settings.get_str("capture.quickAnnotate.firstTool") == "last");
+        request["quickTool"] = last.unwrap_or(json!("arrow"));
     }
     // Menu capture (CAP-031): the menus open now, while the screens are frozen.
     let menus = if mode == "menu" {
@@ -368,6 +413,32 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         let scroll_kind = crate::scroll_kind(core, &p);
         let place = place_of(core, area);
         return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
+    }
+    // Quick annotation (CAP-057): the area with its marks as the editor's objects;
+    // Copy leaves it on the clipboard without the editor, Open in the editor opens it.
+    if kind == Some("quick") {
+        let area = outcome
+            .get("rect")
+            .and_then(rect_from)
+            .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
+        if let Some(tool) = outcome.get("tool").filter(|t| t.is_string()) {
+            core.remember(QUICK_TOOL_KEY, tool.clone());
+        }
+        let mut opts = opts.clone();
+        opts.objects = outcome
+            .get("objects")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if outcome.get("action").and_then(Value::as_str) == Some("editor") {
+            opts.open_editor = true;
+        } else {
+            opts.open_editor = false;
+            opts.copy = true;
+            opts.keep = Some(core.settings.get_bool("capture.quickAnnotate.saveToLibrary"));
+        }
+        let shot = region_shot(&frozen, area, "region");
+        return finish(core, ctx, shot, &opts);
     }
     // Menu capture (CAP-031): the menus as they were, with their shape.
     if kind == Some("menu") {
@@ -459,38 +530,15 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
                 .get("rect")
                 .and_then(rect_from)
                 .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
-            let image = crop_frames(&frozen.monitors, &frozen.frames, area);
-            let hit: Vec<&MonitorInfo> = frozen
-                .monitors
-                .iter()
-                .filter(|m| m.rect.intersect(&area).is_some())
-                .collect();
-            let main = hit
-                .iter()
-                .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
-            // "Aplicación" of a region: the window covering most of it (CAP-056).
-            let window = frozen
-                .windows
-                .iter()
-                .filter_map(|w| Some((w.rect.intersect(&area)?.area(), w)))
-                .max_by_key(|(a, _)| *a)
-                .map(|(_, w)| w);
-            let shot = Shot {
-                image,
-                rect: area,
-                mode: if mode == "universal" {
+            let shot = region_shot(
+                &frozen,
+                area,
+                if mode == "universal" {
                     "universal"
                 } else {
                     "region"
                 },
-                scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
-                monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
-                app: window.map(|w| platform::app_info(w.pid, &w.app)),
-                window_title: window.map(|w| w.title.clone()),
-                window_id: None,
-                pointer: frozen.cursor.clone(),
-                warnings: Vec::new(),
-            };
+            );
             finish(core, ctx, shot, opts)
         }
         Some("window") => {

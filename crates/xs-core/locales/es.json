@@ -790,6 +790,10 @@
     "capture_clipboard": {
       "title": "Capturar desde el portapapeles",
       "description": "Lo que hay en el portapapeles (una imagen, archivos de imagen o texto) se convierte en una captura, con las opciones de captura."
+    },
+    "capture_quick_annotate": {
+      "title": "Anotación rápida",
+      "description": "Selecciona un área como en la captura universal, márcala en la pantalla con flechas, formas, texto, resaltado, desenfoque o pasos y cópiala sin abrir el editor. Es una función en prueba: actívala en Preferencias > Funciones en prueba."
     }
   },
   "settings": {
@@ -1106,6 +1110,22 @@
     "capture_scrollAskStart": {
       "label": "Pedir Iniciar antes de desplazar",
       "description": "Una captura con desplazamiento manual espera a Iniciar antes de tomar imágenes."
+    },
+    "experimental_quickAnnotate": {
+      "label": "Anotación rápida",
+      "description": "Después de seleccionar un área, márcala en la pantalla con algunas herramientas y cópiala, sin el editor. Atajo Ctrl+Alt+Mayús+Q (Control+Opción+Mayús+Q en Mac)."
+    },
+    "capture_quickAnnotate_firstTool": {
+      "label": "Anotación rápida: herramienta inicial",
+      "description": "La herramienta elegida al empezar la anotación rápida.",
+      "options": {
+        "arrow": "Flecha",
+        "last": "La última usada"
+      }
+    },
+    "capture_quickAnnotate_saveToLibrary": {
+      "label": "Anotación rápida: guardar en la biblioteca al copiar",
+      "description": "Desactivada: Copiar solo deja la imagen en el portapapeles y la captura queda sin guardar en la bandeja reciente."
     }
   },
   "errors": {
@@ -1192,7 +1212,8 @@
     "scroll_not_running": "No hay ninguna captura con desplazamiento en curso.",
     "fixed_region": "La región fija no cabe: el monitor \"{{monitor}}\" no está conectado o la región se sale de su borde. Elígela de nuevo en pantalla o usa el monitor principal.",
     "picker_not_open": "El selector de ventanas no está abierto.",
-    "clipboard_empty": "El portapapeles no contiene una imagen ni texto."
+    "clipboard_empty": "El portapapeles no contiene una imagen ni texto.",
+    "quick_annotate_off": "La anotación rápida es una función en prueba que está desactivada. Actívala en Preferencias > Funciones en prueba."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1359,7 +1380,8 @@
     "presets": "Presets",
     "presets_empty": "Sin presets",
     "extract_text": "Extraer texto",
-    "finish_scrolling": "Terminar desplazamiento"
+    "finish_scrolling": "Terminar desplazamiento",
+    "quick_annotate": "Anotación rápida"
   },
   "menu": {
     "flatten": "A&planar",
@@ -2044,7 +2066,8 @@
       "effects_remove": "Quitar {{name}}",
       "effects_up": "Subir {{name}}",
       "effects_empty": "Sin efectos: las capturas salen tal cual.",
-      "sel_clipboard": "Portapapeles"
+      "sel_clipboard": "Portapapeles",
+      "open_quick": "Anotación rápida"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3639,6 +3662,26 @@
       "none": "Ninguna ventana coincide",
       "cancel": "Cancelar",
       "loading": "Tomando las imágenes…"
+    },
+    "quick": {
+      "bar": "Anotación rápida",
+      "tool_arrow": "Flecha",
+      "tool_shape": "Forma",
+      "tool_text": "Texto",
+      "tool_highlight": "Resaltar",
+      "tool_blur": "Desenfocar",
+      "tool_step": "Paso",
+      "rectangle": "Rectángulo",
+      "ellipse": "Elipse",
+      "color": "Color",
+      "width": "Grosor",
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "copy": "Copiar",
+      "editor": "Abrir en el editor",
+      "cancel": "Cancelar",
+      "discard": "¿Descartar las marcas? Pulsa Esc otra vez para descartarlas.",
+      "text_hint": "Escribe y pulsa Enter. Mayús+Enter: otra línea."
     }
   },
   "history": {

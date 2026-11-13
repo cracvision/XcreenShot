@@ -946,8 +946,22 @@ pub fn add_capture_with(
     app: Option<&str>,
     pointer: Option<&Pointer>,
 ) -> Result<(String, PathBuf), String> {
-    let ed = editor(core);
     let autosave = core.settings.get_bool("library.autosaveImages");
+    add_capture_kept(core, image, meta, scale, app, pointer, autosave)
+}
+
+/// [`add_capture_with`], saved in the library or kept unsaved as `autosave` says
+/// instead of the setting (quick annotation's "Save to the library", CAP-057).
+pub fn add_capture_kept(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+    pointer: Option<&Pointer>,
+    autosave: bool,
+) -> Result<(String, PathBuf), String> {
+    let ed = editor(core);
     let extra = pointer
         .map(|p| -> Result<(Picture, [f64; 2]), String> {
             let png = xs_image::encode::png(&p.image, 0.0, true)?;
@@ -957,7 +971,16 @@ pub fn add_capture_with(
             ))
         })
         .transpose()?;
-    let (path, document, png) = write_library_item(core, image, meta.clone(), scale, app, extra.as_ref())?;
+    let (path, document, png) = write_library_item_in(
+        core,
+        image,
+        meta.clone(),
+        scale,
+        app,
+        extra.as_ref(),
+        None,
+        autosave,
+    )?;
     let mut base = Base::from_image(image.clone());
     let mut images = BTreeMap::new();
     if let Some((pic, _)) = &extra {
@@ -1080,10 +1103,26 @@ fn write_library_item_with(
     picture: Option<&(Picture, [f64; 2])>,
     fill: Option<&Value>,
 ) -> Result<(PathBuf, Document, Vec<u8>), String> {
+    let autosave = core.settings.get_bool("library.autosaveImages");
+    write_library_item_in(core, image, meta, scale, app, picture, fill, autosave)
+}
+
+/// [`write_library_item_with`], in the library or not as `autosave` says.
+#[allow(clippy::too_many_arguments)]
+fn write_library_item_in(
+    core: &Core,
+    image: &image::RgbaImage,
+    meta: Value,
+    scale: f64,
+    app: Option<&str>,
+    picture: Option<&(Picture, [f64; 2])>,
+    fill: Option<&Value>,
+    autosave: bool,
+) -> Result<(PathBuf, Document, Vec<u8>), String> {
     let ed = editor(core);
     // Off (LIB-020): the capture waits in the app's data until it is saved.
     // Multi-capture saves to the library either way (CAP-067).
-    let folder = if core.settings.get_bool("library.autosaveImages") || meta["mode"] == "multi" {
+    let folder = if autosave || meta["mode"] == "multi" {
         library_target(core)
     } else {
         ed.unsaved_dir()

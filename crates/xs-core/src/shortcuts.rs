@@ -442,6 +442,8 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.window_picker", "capture.window_picker", ""),
         // The clipboard as a source (CAP-039). No default.
         capture("capture.clipboard", "capture.clipboard", ""),
+        // Quick annotation (CAP-057): only while its trial feature is on (APP-034).
+        capture("capture.quick_annotate", "capture.quick_annotate", ""),
         // The open menu, without a countdown (CAP-031). No default yet: the spec's
         // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
         capture("capture.menu", "capture.menu", ""),
@@ -785,6 +787,7 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.active_window", Global, _, _) => "Ctrl+Alt+Shift+KeyA",
         ("capture.window_picker", Global, Compatibility, Macos) => "Ctrl+Shift+KeyM",
         ("capture.window_picker", Global, _, _) => "Ctrl+Alt+Shift+KeyM",
+        ("capture.quick_annotate", Global, _, _) => "Ctrl+Alt+Shift+KeyQ",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",
@@ -1138,10 +1141,16 @@ pub struct SetOutcome {
     pub reassigned_from: Option<String>,
 }
 
+/// Rows of features on trial (APP-034): the row and the setting that turns it on.
+/// While the setting is off the row does not exist (CAP-057).
+pub const TRIAL_SLOTS: [(&str, &str); 1] = [("capture.quick_annotate", "experimental.quickAnnotate")];
+
 pub struct ShortcutStore {
     path: Option<PathBuf>,
     platform: Platform,
     slots: Vec<Slot>,
+    /// Rows of trial features that are off (APP-034).
+    hidden: RwLock<Vec<&'static str>>,
     /// Rows that come and go with the user's things, with their own title: one per
     /// capture preset (CAP-062, APP-022).
     extra: RwLock<Vec<(Slot, String)>>,
@@ -1161,6 +1170,7 @@ impl ShortcutStore {
             path: Some(path),
             platform: Platform::current(),
             slots: slots(),
+            hidden: RwLock::new(TRIAL_SLOTS.iter().map(|(id, _)| *id).collect()),
             extra: RwLock::new(Vec::new()),
             stored: RwLock::new(stored),
             statuses: RwLock::new(HashMap::new()),
@@ -1174,6 +1184,7 @@ impl ShortcutStore {
             path: None,
             platform,
             slots: slots(),
+            hidden: RwLock::new(TRIAL_SLOTS.iter().map(|(id, _)| *id).collect()),
             extra: RwLock::new(Vec::new()),
             stored: RwLock::new(Stored::default()),
             statuses: RwLock::new(HashMap::new()),
@@ -1186,9 +1197,29 @@ impl ShortcutStore {
         self.platform
     }
 
+    /// Shows or hides the rows of trial features as `on` says for each setting
+    /// (APP-034). Returns whether anything changed.
+    pub fn set_trials(&self, on: impl Fn(&str) -> bool) -> bool {
+        let hidden: Vec<&'static str> = TRIAL_SLOTS
+            .iter()
+            .filter(|(_, key)| !on(key))
+            .map(|(id, _)| *id)
+            .collect();
+        let mut current = self.hidden.write().unwrap();
+        let changed = *current != hidden;
+        *current = hidden;
+        changed
+    }
+
     /// Every row: the app's, then the presets' (CAP-062).
     pub fn slots(&self) -> Vec<Slot> {
-        let mut all = self.slots.clone();
+        let hidden = self.hidden.read().unwrap().clone();
+        let mut all: Vec<Slot> = self
+            .slots
+            .iter()
+            .filter(|s| !hidden.contains(&s.id))
+            .copied()
+            .collect();
         all.extend(self.extra.read().unwrap().iter().map(|(s, _)| *s));
         all
     }
@@ -1482,6 +1513,26 @@ mod tests {
 
     fn acc(s: &str) -> Accelerator {
         s.parse().unwrap()
+    }
+
+    /// CAP-057, APP-034: a trial feature's shortcut exists only while it is on.
+    #[test]
+    fn a_trial_feature_shortcut_comes_and_goes_with_it() {
+        let store = ShortcutStore::in_memory(Platform::Windows);
+        let has = |s: &ShortcutStore| s.slots().iter().any(|x| x.id == "capture.quick_annotate");
+        assert!(!has(&store));
+        assert!(store.set_trials(|k| k == "experimental.quickAnnotate"));
+        assert!(has(&store));
+        let slot = store
+            .find_slot("capture.quick_annotate", ShortcutScope::Global)
+            .unwrap();
+        assert_eq!(
+            default_for(&slot, Profile::Coexistence, Platform::Windows),
+            Some(acc("Ctrl+Alt+Shift+KeyQ"))
+        );
+        assert!(!store.set_trials(|k| k == "experimental.quickAnnotate"));
+        store.set_trials(|_| false);
+        assert!(!has(&store));
     }
 
     #[test]

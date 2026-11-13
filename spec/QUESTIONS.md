@@ -254,6 +254,17 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 5: anotación rápida)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-057 | Colores del "tema activo" | Por ahora seis colores fijos (rojo, ámbar, azul, verde, casi negro y blanco); los grosores son 2, 4 y 8 px a 100 %. Los colores del tema del editor (EDT-017) llegan cuando la barra los lea | Provisional |
+| CAP-057 | "Seleccionar, mover y borrar" las anotaciones durante el paso 2 | En esta entrega `Supr` (o `Retroceso`) quita la última marca, como Deshacer. Elegir y mover una marca concreta llega después; mientras tanto, Abrir en el editor (`Ctrl+E`) permite todo | Provisional |
+| CAP-057 | Abrir en = Anotación rápida con una selección que no es en pantalla (Pantalla completa, Desplazamiento, Menú, Portapapeles…) | No hay área que marcar en el sitio: la captura se abre en el editor | Provisional |
+| CAP-057 | ¿Copia también Abrir en el editor? | No: solo el botón Copiar deja la imagen en el portapapeles (salvo un preset con Copiar activado) | Provisional |
+| CAP-057 | El cuadro de texto | Un clic con Texto abre un cuadro donde se escribe; `Enter` lo fija, `Mayús+Enter` hace otra línea y `Esc` lo descarta. Copiar o Abrir en el editor con el cuadro abierto incluyen ese texto | Provisional |
+| APP-034 | La primera función en prueba | La sección Funciones en prueba muestra un interruptor por función (desactivados por defecto); el atajo, la entrada del menú del ícono, el valor de Abrir en y las preferencias de la función aparecen y desaparecen al momento, sin reiniciar. Con la función desactivada, `capture.quick_annotate` responde `invalid_params` y dice dónde activarla | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 4: más modos de selección)
 
 | ID | Duda | Propuesta | Estado |
