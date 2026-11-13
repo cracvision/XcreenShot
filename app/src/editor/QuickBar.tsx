@@ -103,10 +103,13 @@ export function QuickBar({
   object,
   rect,
   areaWidth,
+  areaTop = 0,
 }: {
   object: DocObject;
   rect: { x: number; y: number; w: number; h: number };
   areaWidth: number;
+  /** Where the visible part of the canvas starts (below the floating toolbar). */
+  areaTop?: number;
 }) {
   const { t } = useTranslation();
   const doc = useEditor((s) => s.doc);
@@ -364,7 +367,7 @@ export function QuickBar({
   // Over the object, or under it without room; inside the area left to right.
   const width = 360;
   const above = rect.y - BAR_HEIGHT - 10;
-  const top = above >= 4 ? above : rect.y + rect.h + 10;
+  const top = above >= areaTop + 4 ? above : rect.y + rect.h + 10;
   const left = Math.max(4, Math.min(areaWidth - width - 4, rect.x + rect.w / 2 - width / 2));
   return (
     <div

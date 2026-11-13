@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { ContextMenu } from "../components/Menu";
 import { isCommandError, run, type SettingEntry } from "../lib/commands";
+import { applyGlass } from "../theme";
 
 interface Props {
   setting: SettingEntry;
@@ -27,7 +28,19 @@ export function SettingRow({ setting, highlighted }: Props) {
   };
 
   let control;
-  if (setting.schema.type === "boolean") {
+  if (setting.key === "general.glassIntensity") {
+    control = <GlassSlider id={id} setting={setting} change={change} />;
+  } else if (setting.key === "general.accent" && setting.schema.enum) {
+    control = (
+      <AccentPicker
+        labelledBy={`${id}-label`}
+        describedBy={`${id}-desc`}
+        setting={setting}
+        names={(v) => t(`${optionsBase}.${v}`)}
+        change={change}
+      />
+    );
+  } else if (setting.schema.type === "boolean") {
     control = (
       <input
         id={id}
@@ -107,7 +120,7 @@ export function SettingRow({ setting, highlighted }: Props) {
         setMenu({ open: true, x: e.clientX, y: e.clientY });
       }}
     >
-      <label className="label" htmlFor={id}>
+      <label className="label" htmlFor={id} id={`${id}-label`}>
         {setting.label}
       </label>
       <div className="control">{control}</div>
@@ -141,6 +154,107 @@ export function SettingRow({ setting, highlighted }: Props) {
           },
         ]}
       />
+    </div>
+  );
+}
+
+/** The glass intensity (APP-012, Cristal): previews while it moves, saved a moment after. */
+function GlassSlider({
+  id,
+  setting,
+  change,
+}: {
+  id: string;
+  setting: SettingEntry;
+  change: (value: unknown) => Promise<void>;
+}) {
+  // While it moves, the slider shows its own value; once saved, the setting's.
+  const [moving, setMoving] = useState<number | null>(null);
+  const value = moving ?? Number(setting.value);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (
+    <div className="range-row">
+      <input
+        id={id}
+        type="range"
+        className="range"
+        min={0}
+        max={100}
+        step={5}
+        value={value}
+        style={{ "--fill": `${value}%` } as CSSProperties}
+        disabled={setting.locked}
+        aria-describedby={`${id}-desc`}
+        aria-valuetext={`${value} %`}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          setMoving(next);
+          applyGlass(next);
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => void change(next).then(() => setMoving(null)), 300);
+        }}
+      />
+      <output htmlFor={id}>{value} %</output>
+    </div>
+  );
+}
+
+/** The accent color (APP-012, Cristal): one swatch per choice, as radio buttons. */
+function AccentPicker({
+  labelledBy,
+  describedBy,
+  setting,
+  names,
+  change,
+}: {
+  labelledBy: string;
+  describedBy: string;
+  setting: SettingEntry;
+  names: (value: string) => string;
+  change: (value: unknown) => Promise<void>;
+}) {
+  const options = setting.schema.enum ?? [];
+  const current = String(setting.value);
+  const group = useRef<HTMLDivElement>(null);
+  const pick = (i: number) => {
+    const v = options[(i + options.length) % options.length];
+    if (v === undefined) return;
+    void change(v);
+    group.current?.querySelectorAll<HTMLButtonElement>("button")[options.indexOf(v)]?.focus();
+  };
+  return (
+    <div
+      ref={group}
+      className="accent-picker"
+      role="radiogroup"
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
+      onKeyDown={(e) => {
+        const i = options.indexOf(current);
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          e.preventDefault();
+          pick(i + 1);
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
+          pick(i - 1);
+        }
+      }}
+    >
+      {options.map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          className={`accent-swatch ${v}`}
+          aria-checked={v === current}
+          aria-label={names(v)}
+          title={names(v)}
+          tabIndex={v === current ? 0 : -1}
+          disabled={setting.locked}
+          onClick={() => void change(v)}
+        />
+      ))}
     </div>
   );
 }

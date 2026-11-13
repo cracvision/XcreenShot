@@ -193,7 +193,8 @@ export function Strip() {
       style={{ "--tray-h": `${height}px` } as CSSProperties}
       // The mouse wheel scrolls the tray sideways, also on Windows (TRY-013).
       onWheel={(e) => {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+        const el = list.current;
+        if (el && Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
       }}
       onContextMenu={emptyMenu}
     >

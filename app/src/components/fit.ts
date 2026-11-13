@@ -21,14 +21,24 @@ export function nextLevel(
   return level;
 }
 
-/** How wide the bar's content is, without the room its flexible gaps take. */
+/** How wide the bar's content is, without the room its flexible gaps take. It is measured
+ * from the bar's own items, so a menu open below the bar (which it does not clip) never
+ * counts. */
 export function contentWidth(bar: HTMLElement): number {
   let slack = 0;
   for (const el of bar.querySelectorAll<HTMLElement>(".tb-spacer, .tb-space")) {
     const min = parseFloat(getComputedStyle(el).minWidth) || 0;
     slack += Math.max(0, el.offsetWidth - min);
   }
-  return bar.scrollWidth - slack;
+  const box = bar.getBoundingClientRect();
+  const style = getComputedStyle(bar);
+  let right = box.left + bar.clientLeft + (parseFloat(style.paddingLeft) || 0);
+  for (const el of Array.from(bar.children)) {
+    if (getComputedStyle(el).position === "absolute") continue;
+    right = Math.max(right, el.getBoundingClientRect().right);
+  }
+  const used = right - box.left - bar.clientLeft + (parseFloat(style.paddingRight) || 0);
+  return used - slack;
 }
 
 /** The level `ref`'s bar needs now. `key` names what is on it: when it changes, the

@@ -825,6 +825,20 @@
         "dark": "Dark"
       }
     },
+    "general_glassIntensity": {
+      "label": "Glass intensity",
+      "description": "How see-through the floating bars and panels are. 0 makes them solid. With Windows transparency effects off they are always solid."
+    },
+    "general_accent": {
+      "label": "Accent color",
+      "description": "The color of the main button, the chosen tool and the switches.",
+      "options": {
+        "blue": "Blue",
+        "violet": "Violet",
+        "teal": "Teal",
+        "graphite": "Graphite"
+      }
+    },
     "general_language": {
       "label": "Language",
       "description": "Language of the interface. System uses Spanish for any Spanish system language.",

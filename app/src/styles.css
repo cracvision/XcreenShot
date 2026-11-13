@@ -1,27 +1,44 @@
-/* XcreenShot's own look, "Snap" design system, in the colors of the logo (SPEC §2.4, APP-012). Text pairs keep at
-   least 4.5:1 and control borders at least 3:1 in both themes; motion follows APP-045. */
+/* XcreenShot's own look, "Cristal" (Carlos, 2026-11-12; SPEC §2.4, APP-012): cool neutrals, one
+   accent used only where it matters, and glass panels that float over the capture. Text pairs keep
+   at least 4.5:1 and control borders at least 3:1 in both themes, also over glass at any intensity
+   (the glass never gets thinner than its floor); motion follows APP-045. */
 :root {
   color-scheme: light;
-  --surface: #f6f6fd;
+
+  /* The accent (general.accent, APP-012): a fill for the main button and the "on" state, the ink
+     for accent text and focus, a soft tint for selected items. Blue is the logo's. */
+  --acc-fill-l: #0064fb;
+  --acc-fill-d: #0064fb;
+  --acc-on-l: #ffffff;
+  --acc-on-d: #ffffff;
+  --acc-ink-l: #0058dc;
+  --acc-ink-d: #6aa5ff;
+  --acc-soft-l: rgb(0 100 251 / 0.12);
+  --acc-soft-d: rgb(106 165 255 / 0.18);
+  /* The swatches of Preferences > General > Accent color. */
+  --swatch-blue: #0064fb;
+  --swatch-violet: #6b1cf2;
+  --swatch-teal: #00807a;
+  --swatch-graphite: #2b2f38;
+
+  --surface: #f3f4f7;
   /* Paper in print previews (EDT-114): white in both themes. */
   --paper: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #ececf8;
-  --line: #dcdbf0;
-  --control-line: #76749c;
-  --ink: #161433;
-  --ink-muted: #525074;
-  --brand: #0064fb;
-  --on-brand: #ffffff;
-  --brand-press: #0a2f9d;
-  --brand-soft: #e3e7ff;
-  --brand-ink: #2e37d9;
-  /* The logo's sweep: electric blue, violet, magenta. White text keeps 4.9:1 on every stop. */
-  --brand-gradient: linear-gradient(120deg, #0064fb 0%, #6b1cf2 58%, #b524df 100%);
-  --on-gradient: #ffffff;
-  --gradient-edge: #3a128f;
-  --violet: #6b1cf2;
-  --cyan: #14b3fc;
+  --surface-sunken: #e5e7ed;
+  --line: #dfe2e8;
+  --line-strong: #b9bec8;
+  --control-line: #7a8090;
+  --ink: #111318;
+  --ink-muted: #454b58;
+  --hover: rgb(17 19 24 / 0.06);
+  --press: rgb(17 19 24 / 0.1);
+  --brand: var(--acc-fill-l);
+  --on-brand: var(--acc-on-l);
+  --brand-ink: var(--acc-ink-l);
+  --brand-soft: var(--acc-soft-l);
+  --brand-hover: color-mix(in srgb, var(--brand) 88%, #ffffff);
+  --brand-press: color-mix(in srgb, var(--brand) 84%, #000000);
   --star: #fcbd04;
   --on-star: #2b2100;
   --star-soft: #fff3c4;
@@ -32,16 +49,37 @@
   --danger-soft: #fde8ec;
   --warning: #8a4b00;
   --warning-soft: #fff0d9;
-  --focus: var(--brand);
-  --scrim: rgb(22 20 51 / 0.45);
-  --shadow-sm: 0 1px 2px rgb(22 20 51 / 0.08);
-  --shadow-card: 0 1px 2px rgb(22 20 51 / 0.06), 0 6px 20px -8px rgb(22 20 51 / 0.16);
-  --shadow-pop: 0 2px 6px rgb(22 20 51 / 0.1), 0 16px 40px -8px rgb(37 22 120 / 0.3);
-  --shadow-dialog: 0 32px 80px -16px rgb(22 20 51 / 0.45);
-  --glow: 0 8px 22px -8px rgb(107 28 242 / 0.6);
-  /* A sunken well for groups of choices, and the gloss on a filled choice. */
-  --well: inset 0 1px 2px rgb(22 20 51 / 0.1);
-  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.28);
+  --focus: var(--brand-ink);
+  --scrim: rgb(17 19 24 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(17 19 24 / 0.08);
+  --shadow-card: 0 1px 2px rgb(17 19 24 / 0.06), 0 10px 28px -14px rgb(17 19 24 / 0.22);
+  --shadow-pop: 0 14px 34px -14px rgb(17 19 24 / 0.34), 0 1px 3px rgb(17 19 24 / 0.08);
+  --shadow-dialog: 0 30px 70px -24px rgb(17 19 24 / 0.5), 0 1px 3px rgb(17 19 24 / 0.1);
+  --glow: 0 1px 2px rgb(17 19 24 / 0.2);
+  /* Groups of choices sit on a flat tint; a chosen one is a raised chip. */
+  --well: none;
+  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --seg-bg: rgb(17 19 24 / 0.06);
+  --seg-ind: #ffffff;
+  --seg-ind-shadow: 0 1px 2px rgb(17 19 24 / 0.16), 0 0 0 0.5px rgb(17 19 24 / 0.08);
+  --switch-off: #8a909c;
+  --range-off: rgb(17 19 24 / 0.18);
+
+  /* Glass (general.glassIntensity): --glass goes from 0 (solid) to 1, set by theme.ts. The tint
+     never gets thinner than 75 % (light) or 80 % (dark), so text on it keeps its contrast over
+     any capture. */
+  --glass: 0.6;
+  --glass-tint: 250 251 253;
+  --glass-edge: rgb(17 19 24 / 0.1);
+  --glass-float: var(--shadow-pop);
+  --g-alpha: calc(1 - var(--glass) * 0.25);
+  --g-blur: calc(var(--glass) * 30px);
+  --g-sat: calc(1 + var(--glass) * 0.9);
+  --g-sheen: calc(0.1 + var(--glass) * 0.45);
+  --g-spec: calc(0.35 + var(--glass) * 0.55);
+  /* Where the canvas shows between floating panels. */
+  --canvas-bg: #e5e7ed;
+  --canvas-dot: rgb(17 19 24 / 0.09);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -51,12 +89,14 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
+  /* Calm corners: 8 for buttons and tools, 10 for menus, 12 for bars, 14 for panels. */
   --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-pill: 999px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 8px;
+  --radius-round: 999px;
 
   --dur-instant: 90ms;
   --dur-fast: 140ms;
@@ -82,24 +122,53 @@
   line-height: 20px;
 }
 
+/* The other accents (general.accent): each with its light and dark values. */
+:root[data-accent="violet"] {
+  --acc-fill-l: #6b1cf2;
+  --acc-fill-d: #6b1cf2;
+  --acc-ink-l: #6b1cf2;
+  --acc-ink-d: #b18cff;
+  --acc-soft-l: rgb(107 28 242 / 0.11);
+  --acc-soft-d: rgb(177 140 255 / 0.18);
+}
+
+:root[data-accent="teal"] {
+  --acc-fill-l: #00807a;
+  --acc-fill-d: #00807a;
+  --acc-ink-l: #00756f;
+  --acc-ink-d: #3fd2c7;
+  --acc-soft-l: rgb(0 128 122 / 0.12);
+  --acc-soft-d: rgb(63 210 199 / 0.16);
+}
+
+:root[data-accent="graphite"] {
+  --acc-fill-l: #2b2f38;
+  --acc-fill-d: #e8eaef;
+  --acc-on-l: #ffffff;
+  --acc-on-d: #111318;
+  --acc-ink-l: #2b2f38;
+  --acc-ink-d: #e8eaef;
+  --acc-soft-l: rgb(43 47 56 / 0.1);
+  --acc-soft-d: rgb(232 234 239 / 0.14);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --surface: #0f0e26;
-    --surface-raised: #1a1838;
-    --surface-sunken: #0a091c;
-    --line: #2c2a55;
-    --control-line: #7471a8;
-    --ink: #eeedff;
-    --ink-muted: #aba9d6;
-    --brand: #4d7cff;
-    --on-brand: #0a091c;
-    --brand-press: #2b4fcc;
-    --brand-soft: #24275c;
-    --brand-ink: #9db6ff;
-    --gradient-edge: #2a0f6e;
-    --violet: #9a6bff;
-    --cyan: #45c6ff;
+    --surface: #0c0d10;
+    --surface-raised: #16171b;
+    --surface-sunken: #0d0e11;
+    --line: #2a2d34;
+    --line-strong: #444955;
+    --control-line: #7d8494;
+    --ink: #f3f4f7;
+    --ink-muted: #b3b9c5;
+    --hover: rgb(255 255 255 / 0.07);
+    --press: rgb(255 255 255 / 0.12);
+    --brand: var(--acc-fill-d);
+    --on-brand: var(--acc-on-d);
+    --brand-ink: var(--acc-ink-d);
+    --brand-soft: var(--acc-soft-d);
     --star: #ffcc33;
     --star-soft: #3a3000;
     --magenta: #ff6fc8;
@@ -109,36 +178,45 @@
     --danger-soft: #3a1a22;
     --warning: #f0b35a;
     --warning-soft: #3a2a10;
-    --scrim: rgb(0 0 0 / 0.62);
+    --scrim: rgb(0 0 0 / 0.6);
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.6);
-    --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 18px 44px -8px rgb(0 0 0 / 0.75);
-    --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.07), 0 32px 80px -16px rgb(0 0 0 / 0.85);
-    --glow: 0 8px 26px -8px rgb(122 76 255 / 0.7);
-    --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
-    --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
-    --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
-    --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
+    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 10px 28px -12px rgb(0 0 0 / 0.6);
+    --shadow-pop: 0 16px 40px -14px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-dialog: 0 30px 80px -20px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.06);
+    --glow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --gloss: inset 0 1px 0 rgb(255 255 255 / 0.1);
+    --seg-bg: rgb(255 255 255 / 0.07);
+    --seg-ind: rgb(255 255 255 / 0.14);
+    --seg-ind-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --switch-off: #5d6370;
+    --range-off: rgb(255 255 255 / 0.2);
+    --glass-tint: 24 26 31;
+    --glass-edge: rgb(255 255 255 / 0.1);
+    --g-alpha: calc(1 - var(--glass) * 0.2);
+    --g-sheen: 0;
+    --g-spec: calc(0.04 + var(--glass) * 0.14);
+    --canvas-bg: #0d0e11;
+    --canvas-dot: rgb(255 255 255 / 0.07);
+    --swatch-graphite: #e8eaef;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface: #0f0e26;
-  --surface-raised: #1a1838;
-  --surface-sunken: #0a091c;
-  --line: #2c2a55;
-  --control-line: #7471a8;
-  --ink: #eeedff;
-  --ink-muted: #aba9d6;
-  --brand: #4d7cff;
-  --on-brand: #0a091c;
-  --brand-press: #2b4fcc;
-  --brand-soft: #24275c;
-  --brand-ink: #9db6ff;
-  --gradient-edge: #2a0f6e;
-  --violet: #9a6bff;
-  --cyan: #45c6ff;
+  --surface: #0c0d10;
+  --surface-raised: #16171b;
+  --surface-sunken: #0d0e11;
+  --line: #2a2d34;
+  --line-strong: #444955;
+  --control-line: #7d8494;
+  --ink: #f3f4f7;
+  --ink-muted: #b3b9c5;
+  --hover: rgb(255 255 255 / 0.07);
+  --press: rgb(255 255 255 / 0.12);
+  --brand: var(--acc-fill-d);
+  --on-brand: var(--acc-on-d);
+  --brand-ink: var(--acc-ink-d);
+  --brand-soft: var(--acc-soft-d);
   --star: #ffcc33;
   --star-soft: #3a3000;
   --magenta: #ff6fc8;
@@ -148,14 +226,33 @@
   --danger-soft: #3a1a22;
   --warning: #f0b35a;
   --warning-soft: #3a2a10;
-  --scrim: rgb(0 0 0 / 0.62);
+  --scrim: rgb(0 0 0 / 0.6);
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.6);
-  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 18px 44px -8px rgb(0 0 0 / 0.75);
-  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.07), 0 32px 80px -16px rgb(0 0 0 / 0.85);
-  --glow: 0 8px 26px -8px rgb(122 76 255 / 0.7);
-  --well: inset 0 1px 3px rgb(0 0 0 / 0.55), inset 0 0 0 1px rgb(255 255 255 / 0.04);
-  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.22);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 10px 28px -12px rgb(0 0 0 / 0.6);
+  --shadow-pop: 0 16px 40px -14px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-dialog: 0 30px 80px -20px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.06);
+  --glow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.1);
+  --seg-bg: rgb(255 255 255 / 0.07);
+  --seg-ind: rgb(255 255 255 / 0.14);
+  --seg-ind-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --switch-off: #5d6370;
+  --range-off: rgb(255 255 255 / 0.2);
+  --glass-tint: 24 26 31;
+  --glass-edge: rgb(255 255 255 / 0.1);
+  --g-alpha: calc(1 - var(--glass) * 0.2);
+  --g-sheen: 0;
+  --g-spec: calc(0.04 + var(--glass) * 0.14);
+  --canvas-bg: #0d0e11;
+  --canvas-dot: rgb(255 255 255 / 0.07);
+  --swatch-graphite: #e8eaef;
+}
+
+/* Windows "Transparency effects" off, or the intensity at 0: solid panels. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: 0 !important;
+  }
 }
 
 /* System high contrast wins over the palette (APP-045). */
@@ -173,8 +270,6 @@
     --brand-press: Highlight;
     --brand-soft: Canvas;
     --brand-ink: CanvasText;
-    --brand-gradient: Highlight;
-    --on-gradient: HighlightText;
     --star: CanvasText;
     --star-soft: Canvas;
     --magenta: CanvasText;
@@ -185,6 +280,9 @@
     --warning: CanvasText;
     --warning-soft: Canvas;
     --focus: Highlight;
+    --glass: 0 !important;
+    --hover: transparent;
+    --press: transparent;
   }
 
   .btn,
@@ -294,75 +392,47 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: 34px;
   padding: 0 var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   background: var(--surface-raised);
   box-shadow: var(--shadow-sm);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    transform var(--dur-fast) var(--ease-spring),
-    box-shadow var(--dur-instant) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out),
     background-color var(--dur-instant) var(--ease-standard),
     border-color var(--dur-instant) var(--ease-standard);
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--brand);
-  transform: translateY(-1px);
+  border-color: var(--control-line);
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface-raised));
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.98);
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface-raised));
+  transform: scale(0.98);
 }
 
+/* The main action: the accent, solid, with no gradient or glow. */
 .btn.primary {
-  position: relative;
-  overflow: hidden;
-  background: var(--brand-gradient);
   border-color: transparent;
-  color: var(--on-gradient);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
-    0 2px 0 0 var(--gradient-edge);
-}
-
-/* A glossy sheen sweeps across when the pointer arrives. */
-.btn.primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 35%,
-    rgb(255 255 255 / 0.32) 50%,
-    transparent 65%
-  );
-  transform: translateX(-110%);
-  pointer-events: none;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-weight: 600;
+  box-shadow: var(--glow), var(--gloss);
 }
 
 .btn.primary:hover:not(:disabled) {
   border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
-    0 3px 0 0 var(--gradient-edge),
-    var(--glow);
-}
-
-.btn.primary:hover:not(:disabled)::after {
-  transform: translateX(110%);
-  transition: transform 0.7s var(--ease-out);
+  background: var(--brand-hover);
 }
 
 .btn.primary:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.2),
-    0 0 0 0 var(--gradient-edge);
+  background: var(--brand-press);
 }
 
 .btn.small {
@@ -563,7 +633,7 @@ kbd {
   content: "";
   width: 6px;
   height: 6px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--badge-dot);
 }
 
@@ -829,16 +899,14 @@ kbd {
   appearance: none;
   position: relative;
   flex: none;
-  width: 44px;
-  height: 26px;
+  width: 38px;
+  height: 22px;
   margin: 0;
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--switch-off);
   cursor: pointer;
-  transition:
-    background-color var(--dur-base) var(--ease-standard),
-    border-color var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-base) var(--ease-standard);
 }
 
 .switch::after {
@@ -846,10 +914,11 @@ kbd {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-pill);
-  background: var(--ink-muted);
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-round);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   transition:
     transform var(--dur-base) var(--ease-spring),
     width var(--dur-fast) var(--ease-standard),
@@ -857,21 +926,112 @@ kbd {
 }
 
 .switch:active:not(:disabled)::after {
-  width: 24px;
+  width: 20px;
 }
 
 .switch:checked {
   background: var(--brand);
-  border-color: var(--brand);
 }
 
 .switch:checked::after {
-  transform: translateX(18px);
+  transform: translateX(16px);
   background: var(--on-brand);
 }
 
 .switch:checked:active:not(:disabled)::after {
   transform: translateX(12px);
+}
+
+/* A slider with its value beside it (Preferences > General > Glass intensity). */
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.range-row output {
+  min-width: 44px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.range {
+  --fill: 50%;
+  flex: 1;
+  min-width: 140px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--brand) 0 var(--fill), var(--range-off) var(--fill) 100%);
+}
+
+.range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: var(--radius-round);
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px var(--control-line),
+    0 1px 3px rgb(0 0 0 / 0.3);
+  appearance: none;
+}
+
+.range:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The accent swatches (Preferences > General > Accent color). */
+.accent-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.accent-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  cursor: pointer;
+}
+
+.accent-swatch.blue {
+  --swatch: var(--swatch-blue);
+}
+
+.accent-swatch.violet {
+  --swatch: var(--swatch-violet);
+}
+
+.accent-swatch.teal {
+  --swatch: var(--swatch-teal);
+}
+
+.accent-swatch.graphite {
+  --swatch: var(--swatch-graphite);
+}
+
+/* The chosen one has a ring, not only its color (APP-045). */
+.accent-swatch[aria-checked="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.accent-swatch:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .switch:disabled {
@@ -899,10 +1059,18 @@ kbd {
   display: grid;
   min-width: 220px;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-pop);
+  border: 1px solid var(--glass-edge);
+  border-radius: 10px;
+  background-color: rgb(var(--glass-tint) / var(--g-alpha));
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--g-sheen)),
+    rgb(255 255 255 / 0) 30px
+  );
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / var(--g-spec)),
+    var(--shadow-pop);
   transform-origin: var(--menu-origin);
   animation: menu-in var(--dur-base) var(--ease-spring) backwards;
 }
@@ -964,10 +1132,10 @@ kbd {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 34px;
+  min-height: 32px;
   padding: 0 var(--space-3) 0 var(--space-2);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   background: transparent;
   text-align: left;
   white-space: nowrap;
@@ -1132,7 +1300,7 @@ table.shortcuts tbody tr:hover td {
 .recorder .dot {
   width: 8px;
   height: 8px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--brand);
   animation: pulse 1.1s var(--ease-standard) infinite;
 }
@@ -1940,9 +2108,12 @@ html.overlay-root.overlay-native #root {
   text-underline-offset: 3px;
 }
 
-/* A submenu opens beside its item and grows from that corner. */
+/* A submenu opens beside its item and grows from that corner. Inside a menu it can only
+   blur that menu, so it stays nearly solid. */
 .menu.sub {
   left: calc(100% - 6px);
+  background-color: rgb(var(--glass-tint) / 0.97);
+  backdrop-filter: none;
 }
 
 .menu-item[aria-expanded="true"] {
@@ -1976,31 +2147,136 @@ html.overlay-root.overlay-native #root {
   display: none;
 }
 
-.editor-main {
-  display: flex;
+/* The editor's workspace (Cristal): the canvas fills all of it, and the toolbar, the side
+   panel, the status bar and the tray float over it as glass, so the capture passes beneath
+   them. The canvas knows how much each one covers (its insets) and fits, centers and
+   scrolls the image in the part left visible. */
+.workspace {
+  position: relative;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.editor-main {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.ws-top,
+.ws-side,
+.ws-bottom {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.ws-top > *,
+.ws-side > *,
+.ws-bottom > * {
+  pointer-events: auto;
+}
+
+.ws-top {
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 8;
+}
+
+.ws-side {
+  top: calc(var(--ws-top, 0px) + 8px);
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+}
+
+.ws-side:empty {
+  display: none;
+}
+
+.ws-bottom {
+  left: 12px;
+  right: calc(var(--ws-side, 0px) + 12px);
+  bottom: 12px;
+  z-index: 7;
 }
 
 .canvas-area {
   position: relative;
   flex: 1;
   min-width: 0;
-  background: var(--surface-sunken);
+  overflow: hidden;
+  background-color: var(--canvas-bg);
+  /* A faint dot grid behind the image; it moves with the canvas when scrolling. */
+  background-image: radial-gradient(circle at 1px 1px, var(--canvas-dot) 1px, transparent 0);
+  background-size: 22px 22px;
 }
 
+/* Only the scroll position lives here: the canvas draws its own thin scroll bars. */
 .canvas-scroll {
   position: absolute;
-  inset: 0;
   overflow: auto;
-  /* A faint dot grid behind the image; it moves with the canvas when scrolling. */
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    color-mix(in srgb, var(--ink) 11%, transparent) 1px,
-    transparent 0
-  );
-  background-size: 22px 22px;
-  background-attachment: local;
+  scrollbar-width: none;
+}
+
+.canvas-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Thin scroll bars over the canvas, in the part left visible. */
+.canvas-bar {
+  position: absolute;
+  z-index: 4;
+  border-radius: var(--radius-round);
+  touch-action: none;
+}
+
+.canvas-bar.h {
+  height: 12px;
+}
+
+.canvas-bar.v {
+  width: 12px;
+}
+
+.canvas-bar > span {
+  position: absolute;
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface-raised) 60%, transparent);
+  transition:
+    background-color var(--dur-instant) var(--ease-standard),
+    height var(--dur-fast) var(--ease-out),
+    width var(--dur-fast) var(--ease-out);
+}
+
+.canvas-bar.h > span {
+  bottom: 3px;
+  height: 6px;
+}
+
+.canvas-bar.v > span {
+  right: 3px;
+  width: 6px;
+}
+
+.canvas-bar:hover > span,
+.canvas-bar.dragging > span {
+  background: color-mix(in srgb, var(--ink) 58%, transparent);
+}
+
+.canvas-bar.h:hover > span,
+.canvas-bar.h.dragging > span {
+  height: 9px;
+}
+
+.canvas-bar.v:hover > span,
+.canvas-bar.v.dragging > span {
+  width: 9px;
 }
 
 .canvas-stage {
@@ -2011,8 +2287,17 @@ html.overlay-root.overlay-native #root {
   touch-action: none;
 }
 
-.canvas-stage:focus-visible {
+.canvas-focus {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  border-radius: var(--radius-xs);
   box-shadow: inset 0 0 0 2px var(--focus);
+  pointer-events: none;
+}
+
+.canvas-stage:focus-visible + .canvas-focus {
+  display: block;
 }
 
 .editor-empty.dropping,
@@ -2166,8 +2451,8 @@ html.overlay-root.overlay-native #root {
   z-index: 5;
 }
 
-/* Bold, italic and alignment: icon buttons in a sunken well, without outlines. A pressed
-   toggle fills with the logo's gradient; alignment is a `.seg.brand` whose pill slides. */
+/* Bold, italic and alignment: icon buttons on a flat tint, without outlines. A pressed
+   toggle takes the accent's soft tint; alignment is a `.seg.brand` whose chip slides. */
 /* Simplify's palette (EDT-041). */
 .simplify-swatches {
   display: flex;
@@ -2255,9 +2540,8 @@ html.overlay-root.overlay-native #root {
   gap: 2px;
   width: fit-content;
   padding: 3px;
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-  box-shadow: var(--well);
+  border-radius: 9px;
+  background: var(--seg-bg);
 }
 
 .prop-buttons > .btn {
@@ -2265,22 +2549,22 @@ html.overlay-root.overlay-native #root {
   min-height: 30px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   background: transparent;
   box-shadow: none;
   color: var(--ink-muted);
 }
 
 .prop-buttons > .btn:hover:not(:disabled) {
-  background: var(--surface-raised);
+  background: var(--hover);
   color: var(--ink);
   transform: none;
 }
 
 .prop-buttons > .btn[aria-pressed="true"] {
-  background: var(--brand-gradient);
-  color: var(--on-gradient);
-  box-shadow: var(--gloss), var(--glow);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  box-shadow: none;
 }
 
 .prop-buttons > .btn[aria-pressed="true"] svg {
@@ -2291,7 +2575,7 @@ html.overlay-root.overlay-native #root {
 .prop-buttons.seg > .btn[aria-checked="true"],
 .prop-buttons.seg > .btn[aria-checked="true"]:hover {
   background: transparent;
-  color: var(--on-gradient);
+  color: var(--brand-ink);
 }
 
 .prop-field input[list] {
@@ -2518,7 +2802,7 @@ html.overlay-root.overlay-native #root {
   left: 4px;
   top: 2px;
   font-weight: 700;
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 
 .multi-remove {
@@ -2559,14 +2843,14 @@ html.overlay-root.overlay-native #root {
 }
 
 .ok-text {
-  color: var(--brand);
+  color: var(--brand-ink);
   font-size: 13px;
 }
 
 .btn.link {
   border-color: transparent;
   background: transparent;
-  color: var(--brand);
+  color: var(--brand-ink);
   text-decoration: underline;
   padding-left: 4px;
   padding-right: 4px;
@@ -2665,7 +2949,7 @@ html.overlay-root.overlay-native #root {
 
 /* Segmented controls: the side panel and capture panel tabs, the tools, the language
    switch and the text alignment. The choices sit in a sunken well, without outlines, and a
-   pill springs to the chosen one (useIndicator): a raised pill, or the logo's gradient in
+   chip springs to the chosen one (useIndicator): a raised chip, with the accent's ink in
    `.seg.brand`. The chosen option is marked by that pill, never by color alone (APP-045). */
 .seg {
   position: relative;
@@ -2673,25 +2957,23 @@ html.overlay-root.overlay-native #root {
   align-items: stretch;
   gap: 2px;
   padding: 3px;
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-  box-shadow: var(--well);
+  border-radius: 9px;
+  background: var(--seg-bg);
 }
 
 .seg > .seg-indicator {
   position: absolute;
   left: 0;
   top: 0;
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  box-shadow: var(--gloss), var(--shadow-sm);
+  border-radius: var(--radius-xs);
+  background: var(--seg-ind);
+  box-shadow: var(--seg-ind-shadow);
   opacity: 0;
   pointer-events: none;
 }
 
 .seg.brand > .seg-indicator {
-  background: var(--brand-gradient);
-  box-shadow: var(--gloss), var(--glow);
+  background: var(--seg-ind);
 }
 
 .seg[data-ready] > .seg-indicator {
@@ -2711,10 +2993,10 @@ html.overlay-root.overlay-native #root {
   min-height: 28px;
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--ink-muted);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--dur-instant) var(--ease-standard);
@@ -2732,7 +3014,7 @@ html.overlay-root.overlay-native #root {
 
 .seg.brand > button[aria-pressed="true"],
 .seg.brand > button[aria-checked="true"] {
-  color: var(--on-gradient);
+  color: var(--brand-ink);
 }
 
 /* Inside, so the ring does not spill onto the neighbour. */
@@ -2752,13 +3034,19 @@ html.overlay-root.overlay-native #root {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
-  padding: var(--space-2) var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) 9px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
-  /* Nothing shrinks under its content: the bar gets compact instead (useFit). */
-  overflow: hidden;
+  /* Nothing shrinks under its content: the bar gets compact instead (useFit), so its menus
+     can open below it without being cut. */
+}
+
+/* Over the canvas the bar floats, made of glass (Cristal). */
+.ws-top .editor-toolbar {
+  border-radius: var(--radius-lg);
 }
 
 .editor-toolbar > * {
@@ -2795,12 +3083,11 @@ html.overlay-root.overlay-native #root {
 
 .editor-toolbar .btn:not(.primary):hover:not(:disabled) {
   border-color: transparent;
-  background: var(--surface-sunken);
+  background: var(--hover);
 }
 
 .editor-toolbar .btn:not(.primary)[aria-expanded="true"] {
-  background: var(--brand-soft);
-  color: var(--brand-ink);
+  background: var(--press);
 }
 
 .editor-toolbar .lang-toggle {
@@ -2812,17 +3099,40 @@ html.overlay-root.overlay-native #root {
   min-height: 26px;
 }
 
-/* The tools: the active one sits in a pill of the logo's gradient that springs from tool
-   to tool (`.seg.brand`). */
-.tb-tools > .tb-tool {
-  min-height: 32px;
-  padding: 0 10px;
-  color: var(--ink);
-  font-weight: 500;
+/* The tools: the active one sits on a soft tint of the accent that springs from tool to
+   tool (`.seg.brand`); its icon takes the accent's ink. */
+.editor-toolbar .tb-tools.seg {
+  padding: 0;
+  background: transparent;
 }
 
-.tb-tools > .tb-tool[aria-pressed="true"] {
-  color: var(--on-gradient);
+.tb-tools > .seg-indicator,
+.tb-tools.seg.brand > .seg-indicator {
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  box-shadow: none;
+}
+
+.tb-tools > .tb-tool {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-weight: 500;
+  transition:
+    color var(--dur-instant) var(--ease-standard),
+    background-color var(--dur-instant) var(--ease-standard);
+}
+
+.tb-tools > .tb-tool:hover {
+  background: var(--hover);
+}
+
+.tb-tools > .tb-tool[aria-pressed="true"],
+.tb-tools > .tb-tool[aria-pressed="true"]:hover {
+  background: transparent;
+  color: var(--brand-ink);
   font-weight: 600;
 }
 
@@ -2834,7 +3144,7 @@ html.overlay-root.overlay-native #root {
 }
 
 .tb-tool:hover svg {
-  transform: translateY(-1px) rotate(-8deg) scale(1.08);
+  transform: translateY(-1px);
 }
 
 .tb-tool:active svg {
@@ -2849,18 +3159,51 @@ html.overlay-root.overlay-native #root {
   transform: rotate(40deg);
 }
 
-/* Capture: the shutter gives a little snap when the pointer arrives. */
-.tb-capture:hover svg {
-  animation: snap-wiggle var(--dur-slow) var(--ease-spring);
+/* ---------- Glass (Cristal, general.glassIntensity) ---------- */
+/* Floating panels: a tint, blur and saturation of what is behind, a sheen at the top and a
+   bright top edge. The tint and blur live on a layer behind the content (::before), so the
+   panel does not become the containing block of the popovers it opens. At intensity 0, or
+   with Windows' transparency effects off, the tint is solid. */
+.ws-top .editor-toolbar,
+.ws-top .tb-customizer,
+.ws-side .side-panel,
+.ws-bottom .status-bar,
+.ws-bottom .strip,
+.quick-bar,
+.zone-frame-bar,
+.hint-bubble {
+  border: 1px solid var(--glass-edge);
+  background: transparent;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / var(--g-spec)),
+    var(--glass-float);
 }
 
-@keyframes snap-wiggle {
-  30% {
-    transform: rotate(-14deg) scale(1.15);
-  }
-  65% {
-    transform: rotate(8deg) scale(1.05);
-  }
+.ws-top .editor-toolbar::before,
+.ws-top .tb-customizer::before,
+.ws-side .side-panel::before,
+.ws-bottom .status-bar::before,
+.ws-bottom .strip::before,
+.quick-bar::before,
+.zone-frame-bar::before,
+.hint-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: rgb(var(--glass-tint) / var(--g-alpha));
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--g-sheen)),
+    rgb(255 255 255 / 0) 30px
+  );
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  pointer-events: none;
+}
+
+.hint-bubble {
+  border-left: 4px solid var(--star);
 }
 
 /* ---------- Empty editor (EDT-001) ---------- */
@@ -2868,7 +3211,8 @@ html.overlay-root.overlay-native #root {
   flex: 1;
   display: grid;
   place-content: center;
-  margin: var(--space-4);
+  margin: calc(var(--ws-top, 0px) + 12px) calc(var(--ws-side, 0px) + 12px)
+    calc(var(--ws-bottom, 0px) + 12px) 12px;
   border: 2px dashed transparent;
   border-radius: var(--radius-xl);
   background: var(--surface-sunken);
@@ -2957,7 +3301,7 @@ html.overlay-root.overlay-native #root {
   top: 12.62%;
   width: 2.28%;
   aspect-ratio: 1;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 35% 30%, #ff8d9b 0%, #fc1b39 48%, #b80a26 100%);
   box-shadow: 0 0 6px 1px rgb(252 27 57 / 0.55);
   transform: translate(-50%, -50%);
@@ -3013,12 +3357,18 @@ html.overlay-root.overlay-native #root {
 /* ---------- Side panel (EDT-005) ---------- */
 .side-panel {
   position: relative;
-  flex: none;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--surface);
+}
+
+.ws-side .side-panel {
+  border-radius: var(--radius-xl);
 }
 
 .side-panel .panel-tabs {
@@ -3141,15 +3491,21 @@ html.overlay-root.overlay-native #root {
 
 /* ---------- Status bar (EDT-011) ---------- */
 .status-bar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  min-height: 34px;
-  padding: 2px var(--space-3);
+  min-height: 36px;
+  padding: 2px var(--space-2) 2px var(--space-3);
   border-top: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink-muted);
   font-size: 12.5px;
+}
+
+.ws-bottom .status-bar {
+  border-radius: var(--radius-md);
 }
 
 .zoom-field {
@@ -3162,16 +3518,27 @@ html.overlay-root.overlay-native #root {
 
 /* ---------- Strip of open documents (TRY-002) ---------- */
 .strip {
-  overflow-x: auto;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  overflow: hidden;
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
 
+.ws-bottom .strip {
+  border-radius: var(--radius-xl);
+}
+
+/* The list scrolls, not the tray, so the glass behind stays put. */
 .strip ul {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
   list-style: none;
 }
 
@@ -3262,7 +3629,7 @@ html.overlay-root.overlay-native #root {
   height: 22px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--surface-raised);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
@@ -3297,7 +3664,7 @@ html.overlay-root.overlay-native #root {
   height: 22px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--surface-raised);
   color: var(--ink-muted);
   box-shadow: var(--shadow-sm);
@@ -3352,7 +3719,7 @@ html.overlay-root.overlay-native #root {
   place-items: center;
   width: 18px;
   height: 18px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--brand);
   color: var(--surface);
   font-size: 11px;
@@ -3398,14 +3765,23 @@ html.overlay-root.overlay-native #root {
 .editor-toast {
   position: absolute;
   left: 50%;
-  bottom: 120px;
+  bottom: calc(var(--ws-bottom, 0px) + 28px);
   z-index: 20;
   padding: 10px var(--space-5);
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: 10px;
+  background-color: rgb(var(--glass-tint) / var(--g-alpha));
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--g-sheen)),
+    rgb(255 255 255 / 0) 30px
+  );
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  color: var(--ink);
   font-weight: 600;
-  box-shadow: var(--shadow-pop);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / var(--g-spec)),
+    var(--shadow-pop);
   pointer-events: none;
   transform: translateX(-50%);
   animation: toast-in var(--dur-slow) var(--ease-spring) backwards;
@@ -3634,10 +4010,10 @@ html.overlay-root.overlay-native #root {
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: var(--radius-pill);
-  background: var(--brand-gradient);
+  border-radius: var(--radius-round);
+  background: var(--brand);
   box-shadow: 0 0 0 2px var(--surface-raised);
-  color: var(--on-gradient);
+  color: var(--on-brand);
   font-size: 13px;
   font-weight: 800;
   animation: pop var(--dur-base) var(--ease-spring) backwards;
@@ -3748,7 +4124,7 @@ html.overlay-root.overlay-native #root {
 
 .lib-synced {
   padding: 1px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--brand-soft);
   color: var(--ink);
   font-weight: 600;
@@ -3810,13 +4186,13 @@ html.overlay-root.overlay-native #root {
 .undo-notice {
   position: absolute;
   left: 50%;
-  bottom: 120px;
+  bottom: calc(var(--ws-bottom, 0px) + 28px);
   z-index: 21;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: 6px 6px 6px var(--space-5);
-  border-radius: var(--radius-pill);
+  border-radius: 10px;
   background: var(--ink);
   color: var(--surface);
   font-weight: 600;
@@ -3949,7 +4325,7 @@ html.overlay-root.overlay-native #root {
 
 .fx-save {
   font-size: 22px;
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 
 .fx-selection {
@@ -4065,7 +4441,7 @@ html.overlay-root.overlay-native #root {
 }
 
 .grad-dial line {
-  stroke: var(--brand);
+  stroke: var(--brand-ink);
   stroke-width: 2.5;
   stroke-linecap: round;
 }
@@ -4178,11 +4554,11 @@ html.overlay-root.overlay-native #root {
 }
 
 .style-star[aria-pressed="true"] {
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 
 .style-add {
-  color: var(--brand);
+  color: var(--brand-ink);
   font-weight: 700;
 }
 
@@ -4359,8 +4735,8 @@ html.overlay-root.overlay-native #root {
 /* ---------- Hints (APP-014) ---------- */
 .hint-bubble {
   position: absolute;
-  right: var(--space-5);
-  bottom: 132px;
+  right: calc(var(--ws-side, 0px) + 24px);
+  bottom: calc(var(--ws-bottom, 0px) + 28px);
   z-index: 20;
   max-width: 340px;
   padding: var(--space-3) var(--space-4);
@@ -4947,10 +5323,13 @@ body.preparing-drag * {
 }
 
 .tb-customizer {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 10px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   background: var(--surface-raised);
   animation: fade-in var(--dur-fast) var(--ease-spring) both;
 }
@@ -5486,7 +5865,7 @@ body.preparing-drag * {
   height: 20px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: transparent;
   color: var(--ink-muted);
   font-size: 11px;
@@ -5515,7 +5894,7 @@ body.preparing-drag * {
   height: 28px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--surface-raised);
   color: var(--ink-muted);
   box-shadow: var(--shadow-sm);
@@ -5532,7 +5911,7 @@ body.preparing-drag * {
 }
 
 .lib-star.on {
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 
 .lib-star.on svg {
@@ -5600,7 +5979,7 @@ body.preparing-drag * {
 
 .lib-cloud {
   padding: 1px 8px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: var(--surface-raised);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
@@ -6057,11 +6436,12 @@ button.lc-head:hover,
   .lib-item,
   .lib-thumb,
   .multi-thumb,
-  .editor-empty {
+  .editor-empty,
+  .tb-tools > .tb-tool,
+  .canvas-bar > span {
     transition-duration: 0.01ms;
   }
 
-  .tb-capture:hover svg,
   .strip li.current::after,
   .lib-item.selected .lib-thumb::after,
   .recent-dot,

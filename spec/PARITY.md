@@ -356,7 +356,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-009 | Sección Avanzado | M1 | Should | En curso |
 | APP-010 | Restablecer ajustes y avisos | M1 | Should | En curso |
 | APP-011 | Exportar e importar ajustes | M2 | Should | En curso (Windows: Preferencias > Avanzado > Archivo de ajustes, `.xsettings` con preferencias, atajos y perfil, temas, favoritos y efectos guardados, y la barra; resumen previo por grupo; conversión de atajos Windows ↔ macOS; mismos nombres con Reemplazar, Conservar ambos u Omitir; `settings.export` y `settings.import`. Los presets de captura viajan con sus atajos desde M3.1; los destinos de compartir se añaden con M6) |
-| APP-012 | Tema de la interfaz | M0 | Must | En curso |
+| APP-012 | Tema de la interfaz | M0 | Must | En curso (Windows: Sistema, Claro u Oscuro; aspecto Cristal desde el 2026-11-12 con Intensidad del cristal, `general.glassIntensity`, y Color de acento, `general.accent`, en Preferencias > General) |
 | APP-013 | Idioma de la interfaz | M0 | Must | En curso |
 | APP-014 | Tooltips y pistas | M1 | Should | En curso |
 | APP-015 | Ayuda, Acerca de y comentarios | M1 | Should | En curso |

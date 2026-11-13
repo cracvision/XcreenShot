@@ -825,6 +825,20 @@
         "dark": "Oscuro"
       }
     },
+    "general_glassIntensity": {
+      "label": "Intensidad del cristal",
+      "description": "Cuánto se transparentan las barras y paneles flotantes. 0 los deja sólidos. Con los efectos de transparencia de Windows desactivados, siempre son sólidos."
+    },
+    "general_accent": {
+      "label": "Color de acento",
+      "description": "El color del botón principal, de la herramienta elegida y de los interruptores.",
+      "options": {
+        "blue": "Azul",
+        "violet": "Violeta",
+        "teal": "Turquesa",
+        "graphite": "Grafito"
+      }
+    },
     "general_language": {
       "label": "Idioma",
       "description": "Idioma de la interfaz. Sistema usa español si el idioma del sistema es cualquier variante de español.",

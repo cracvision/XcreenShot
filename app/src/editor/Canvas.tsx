@@ -99,6 +99,8 @@ import { expand, unitOf } from "./groups";
 import { boundsOf, normalized, transformed, type TransformOp } from "./transform";
 import { snapMove, snapPoint, type Guide, type Spacing } from "./snap";
 import { QuickBar } from "./QuickBar";
+import { CanvasBars } from "./CanvasBars";
+import type { Insets } from "./insets";
 import { QUICK_KINDS } from "./quickKinds";
 import { hasRadius, MAX_TAILS } from "./callouts";
 import { corners as polyCorners, fromPoints as polyFromPoints, refit, sideAt } from "./polygon";
@@ -456,9 +458,12 @@ const clampRect = (r: RectBox, bounds: RectBox): RectBox => {
 
 interface Props {
   doc: DocDetails;
+  /** How much of the canvas area the floating bars cover (Cristal): the image is fitted,
+   * centered and scrolled in the rest, and passes beneath them. */
+  insets: Insets;
 }
 
-export function Canvas({ doc }: Props) {
+export function Canvas({ doc, insets }: Props) {
   const { t } = useTranslation();
   const tool = useEditor((s) => s.tool);
   const styles = useEditor((s) => s.styles);
@@ -489,7 +494,20 @@ export function Canvas({ doc }: Props) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState<Size | null>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
+  // The whole canvas area, and the part of it the floating bars leave visible.
+  const [area, setArea] = useState<Size | null>(null);
+  const { top: insetTop, right: insetRight, bottom: insetBottom, left: insetLeft } = insets;
+  const viewport: Size | null = useMemo(
+    () =>
+      area
+        ? {
+            width: Math.max(1, area.width - insetLeft - insetRight),
+            height: Math.max(1, area.height - insetTop - insetBottom),
+          }
+        : null,
+    [area, insetTop, insetRight, insetBottom, insetLeft],
+  );
   const dpr = useDevicePixelRatio();
   // With flattened objects, edits of pixels or new original pixels (resized, turned,
   // flipped, cut out) the image shown changes with them (EDT-091, ADR 0005, ADR 0006).
@@ -639,9 +657,14 @@ export function Canvas({ doc }: Props) {
   const extSize: Size = { width: ext.w, height: ext.h };
 
   useLayoutEffect(() => {
-    const el = scrollRef.current;
+    const el = areaRef.current;
     if (!el) return;
-    const measure = () => setViewport({ width: el.clientWidth, height: el.clientHeight });
+    const measure = () =>
+      setArea((a) =>
+        a && a.width === el.clientWidth && a.height === el.clientHeight
+          ? a
+          : { width: el.clientWidth, height: el.clientHeight },
+      );
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -675,9 +698,26 @@ export function Canvas({ doc }: Props) {
         )
       : null;
 
+  // Until the user zooms or scrolls, the opening zoom follows the visible part: a bar that
+  // appears with the document (the tray, with the first capture) must not cover the image.
+  const opening = useRef<View | null>(null);
   useEffect(() => {
-    if (view && !storedView) setView(doc.documentId, view);
+    if (view && !storedView) {
+      opening.current = view;
+      setView(doc.documentId, view);
+    }
   }, [view, storedView, doc.documentId, setView]);
+  useEffect(() => {
+    if (!viewport || !storedView || storedView !== opening.current) return;
+    if (setting("editor.rememberView", true) && doc.view?.zoom) return;
+    if (!setting("editor.shrinkToFit", true)) return;
+    const zoom = openingZoom(canvasSize, viewport, dpr);
+    if (Math.abs(zoom - storedView.zoom) < 0.01) return;
+    const next = { zoom, cx: canvasSize.width / 2, cy: canvasSize.height / 2 };
+    opening.current = next;
+    setView(doc.documentId, next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewport?.width, viewport?.height]);
 
   const settingScroll = useRef(false);
   useLayoutEffect(() => {
@@ -709,17 +749,18 @@ export function Canvas({ doc }: Props) {
     return () => clearTimeout(timer);
   }, [view, viewport, dpr, doc.documentId]);
 
-  /** Canvas point → position in the canvas area (CSS px). */
+  /** Canvas point → position in the canvas area (CSS px). The visible part starts at the
+   * insets: the layout works inside it. */
   const toScreen = (p: Point): [number, number] =>
     lay
       ? [
-          lay.originX - lay.scrollLeft + (p[0] - ext.x) * lay.scale,
-          lay.originY - lay.scrollTop + (p[1] - ext.y) * lay.scale,
+          insetLeft + lay.originX - lay.scrollLeft + (p[0] - ext.x) * lay.scale,
+          insetTop + lay.originY - lay.scrollTop + (p[1] - ext.y) * lay.scale,
         ]
       : [0, 0];
   const toCanvas = (s: { x: number; y: number }): Point => {
     if (!lay) return [0, 0];
-    const [x, y] = imagePoint(lay, s);
+    const [x, y] = imagePoint(lay, { x: s.x - insetLeft, y: s.y - insetTop });
     return [x + ext.x, y + ext.y];
   };
   // Files dropped on a zone fill it (EDT-098): the editor asks where a window point is.
@@ -744,9 +785,13 @@ export function Canvas({ doc }: Props) {
       SNAP / (lay?.scale ?? 1),
     );
 
+  /** Zoom keeping `at` (a point in the canvas area) still; the visible part's center by
+   * default. */
   const applyZoom = (zoom: number, at?: { x: number; y: number }) => {
     if (!view || !viewport) return;
-    const p = at ?? { x: viewport.width / 2, y: viewport.height / 2 };
+    const p = at
+      ? { x: at.x - insetLeft, y: at.y - insetTop }
+      : { x: viewport.width / 2, y: viewport.height / 2 };
     const v = zoomAround(
       { zoom: view.zoom, cx: view.cx - ext.x, cy: view.cy - ext.y },
       zoom,
@@ -2618,7 +2663,17 @@ export function Canvas({ doc }: Props) {
   );
 
   return (
-    <div className="canvas-area" style={workspace ? { background: workspace } : undefined}>
+    <div
+      className="canvas-area"
+      ref={areaRef}
+      style={{
+        backgroundColor: workspace ?? undefined,
+        // The dot grid moves with the canvas when it scrolls.
+        backgroundPosition: lay
+          ? `${insetLeft - lay.scrollLeft}px ${insetTop - lay.scrollTop}px`
+          : undefined,
+      }}
+    >
       {/* Over a locked object, a small lock by the pointer (EDT-085). */}
       {stylePreview && previewAt && (
         // The current style next to the pointer (EDT-015 `editor.cursorStylePreview`).
@@ -2719,7 +2774,8 @@ export function Canvas({ doc }: Props) {
             key={o.id}
             object={o}
             rect={{ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }}
-            areaWidth={viewport.width}
+            areaWidth={insetLeft + viewport.width}
+            areaTop={insetTop}
           />
         );
       })()}
@@ -2732,14 +2788,28 @@ export function Canvas({ doc }: Props) {
           <Icon name="lock" />
         </span>
       )}
-      <div className="canvas-scroll" ref={scrollRef} onScroll={onScroll}>
+      <div
+        className="canvas-scroll"
+        ref={scrollRef}
+        onScroll={onScroll}
+        style={{ top: insetTop, right: insetRight, bottom: insetBottom, left: insetLeft }}
+      >
         {lay && <div style={{ width: lay.contentWidth, height: lay.contentHeight }} />}
       </div>
-      {lay && viewport && (
+      {lay && viewport && area && (
+        <CanvasBars
+          scroller={scrollRef}
+          content={{ width: lay.contentWidth, height: lay.contentHeight }}
+          visible={viewport}
+          scroll={{ left: lay.scrollLeft, top: lay.scrollTop }}
+          insets={insets}
+        />
+      )}
+      {lay && viewport && area && (
         <div
           className="canvas-stage"
           ref={stageRef}
-          style={{ width: viewport.width, height: viewport.height, cursor }}
+          style={{ width: area.width, height: area.height, cursor }}
           tabIndex={0}
           role="application"
           aria-label={t("ui.editor.canvas_label", { name: doc.name })}
@@ -2753,11 +2823,11 @@ export function Canvas({ doc }: Props) {
           onWheel={onWheel}
           onAuxClick={(e) => e.preventDefault()}
         >
-          <Stage width={viewport.width} height={viewport.height} listening={false}>
+          <Stage width={area.width} height={area.height} listening={false}>
             <Layer imageSmoothingEnabled={view !== null && view.zoom < 100}>
               <Group
-                x={lay.originX - lay.scrollLeft - ext.x * scale}
-                y={lay.originY - lay.scrollTop - ext.y * scale}
+                x={insetLeft + lay.originX - lay.scrollLeft - ext.x * scale}
+                y={insetTop + lay.originY - lay.scrollTop - ext.y * scale}
                 scaleX={scale}
                 scaleY={scale}
               >
@@ -2919,7 +2989,10 @@ export function Canvas({ doc }: Props) {
                   // One physical pixel between the pixels of the image, inverting what is
                   // below so it shows on any color; never part of the image (EDT-008).
                   const [x0, y0] = toCanvas({ x: 0, y: 0 });
-                  const [x1, y1] = toCanvas({ x: viewport.width, y: viewport.height });
+                  const [x1, y1] = toCanvas({
+                    x: insetLeft + viewport.width + insetRight,
+                    y: insetTop + viewport.height + insetBottom,
+                  });
                   const left = Math.max(0, Math.floor(x0));
                   const top = Math.max(0, Math.floor(y0));
                   const right = Math.min(canvasSize.width, Math.ceil(x1));
@@ -3347,6 +3420,13 @@ export function Canvas({ doc }: Props) {
           </Stage>
         </div>
       )}
+      {/* The keyboard focus ring, around the part left visible: the edges of the canvas
+          are under the floating bars. */}
+      <div
+        className="canvas-focus"
+        aria-hidden="true"
+        style={{ top: insetTop, right: insetRight, bottom: insetBottom, left: insetLeft }}
+      />
       {textEdit && lay && (
         <TextEditor edit={textEdit} toScreen={toScreen} scale={scale} dpi={doc.dpi} />
       )}

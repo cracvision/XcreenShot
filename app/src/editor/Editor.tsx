@@ -22,17 +22,13 @@ import { Dialogs } from "./Dialogs";
 import { useEditorKeys } from "./keys";
 import { closeContextMenu, useContextMenu, useMenuBar } from "./menus";
 import { useAnnouncement } from "./announce";
-import { SidePanel } from "./SidePanel";
 import { useEditor } from "./state";
-import { StatusBar } from "./StatusBar";
-import { Strip } from "./Strip";
-import { Toolbar } from "./Toolbar";
 import { HintBubble } from "../components/Hints";
 import { dragged, draggingOut } from "../library/dragOut";
 import { LibraryView } from "../library/LibraryView";
 import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
-import { ToolbarCustomizer } from "./ToolbarCustomizer";
+import { Workspace } from "./Workspace";
 import { TemplateDialogs } from "./TemplatePicker";
 import { dropOnCanvas, dropOnZone } from "./templateActions";
 import { canvasPointAt, useDropPoint } from "./templateUi";
@@ -159,17 +155,17 @@ export function Editor() {
       {view === "library" ? (
         <LibraryView />
       ) : (
-        <>
-          <Toolbar />
-          <ToolbarCustomizer />
-          <div className="editor-main">
-            {doc ? <Canvas key={doc.documentId} doc={doc} /> : <Empty dropping={dropping} />}
-            <SidePanel />
-          </div>
-          <StatusBar />
-          {/* The recent tray belongs to the Editor view (LIB-001). */}
-          <Strip />
-        </>
+        // The canvas fills the workspace; the bars, the panel and the recent tray (which
+        // belongs to the Editor view, LIB-001) float over it.
+        <Workspace>
+          {(insets) =>
+            doc ? (
+              <Canvas key={doc.documentId} doc={doc} insets={insets} />
+            ) : (
+              <Empty dropping={dropping} />
+            )
+          }
+        </Workspace>
       )}
       <UndoNotice />
       {/* One hint at a time, the first time (APP-014). */}

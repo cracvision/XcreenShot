@@ -118,6 +118,22 @@ pub fn definitions() -> Vec<SettingDef> {
             json!("system"),
             "APP-012",
         ),
+        // The "Cristal" look (Carlos, 2026-11-12): how see-through the floating panels are
+        // (0 = solid) and the accent color.
+        def(
+            "general.glassIntensity",
+            "general",
+            json!({"type": "integer", "minimum": 0, "maximum": 100}),
+            json!(60),
+            "APP-012",
+        ),
+        def(
+            "general.accent",
+            "general",
+            one_of(&["blue", "violet", "teal", "graphite"]),
+            json!("blue"),
+            "APP-012",
+        ),
         def(
             "general.language",
             "general",
@@ -682,6 +698,8 @@ mod tests {
     fn defaults_match_spec_tables() {
         let s = SettingsStore::in_memory();
         assert_eq!(s.get("general.theme"), Some(json!("system")));
+        assert_eq!(s.get("general.glassIntensity"), Some(json!(60)));
+        assert_eq!(s.get("general.accent"), Some(json!("blue")));
         assert_eq!(s.get("general.language"), Some(json!("system")));
         assert_eq!(s.get("general.keepRunning"), Some(json!(true)));
         assert_eq!(s.get("general.monochromeIcon"), Some(json!(false)));

@@ -106,19 +106,22 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ---
 
-## Diseño: Snap con los colores del logo
+## Diseño: Cristal
 
-La interfaz usa el sistema de diseño **Snap** con la paleta del logo de Carlos (2026-11-05). Todo vive en `app/src/styles.css`; el logo original está en `docs/brand/`.
+La interfaz usa el sistema **Cristal** (aprobado por Carlos el 2026-11-12; sustituye a Snap): neutros fríos, un solo color de acento usado solo donde importa, y paneles de cristal que flotan sobre la captura. Todo vive en `app/src/styles.css`; el logo original está en `docs/brand/`.
 
 - **Colores:** solo tokens con nombre de función.
-  - Superficies y texto: `--surface*`, `--ink*`, `--line`, `--control-line`.
-  - `--brand*`: el azul del logo, para selección, foco e interruptores. `--brand-gradient`: el botón principal.
+  - Superficies y texto: `--surface*`, `--ink*`, `--line`, `--line-strong`, `--control-line`, `--hover`, `--press`.
+  - `--brand*`: el **acento** (preferencia `general.accent`: azul del logo, violeta, turquesa o grafito). `--brand` rellena el botón principal y los interruptores encendidos; `--brand-ink` es el acento para texto y foco; `--brand-soft`, el tinte de lo elegido. Nada de degradados ni brillos.
   - `--star`: amarillo decorativo, nunca para texto. `--magenta`: lo experimental. `--rec`, `--danger`, `--warning`: estados.
   - Nada de colores sueltos, salvo en las capas de la selección en pantalla.
-  - Texto ≥ 4,5:1 y bordes de control ≥ 3:1, en claro y en oscuro.
+  - Texto ≥ 4,5:1 y bordes de control ≥ 3:1, en claro y en oscuro, también sobre el cristal.
+- **Cristal:** barra de herramientas, panel lateral, barra de estado, bandeja, menús y avisos flotan sobre el lienzo con el material de cristal (tinte, desenfoque y brillo; reglas "Glass" de `styles.css`). La intensidad es la preferencia `general.glassIntensity` (0–100): `theme.ts` la pone en `--glass` y el CSS deriva el resto. El tinte nunca baja del 75 % (claro) u 80 % (oscuro); con 0 o con los efectos de transparencia de Windows desactivados, es sólido. En los paneles grandes el desenfoque va en `::before`, para que no se vuelvan el bloque contenedor de los elementos `fixed` que abren.
+- **Lienzo:** ocupa todo el área de trabajo (`editor/Workspace.tsx`); las barras flotantes le pasan cuánto tapan (`editor/insets.ts`) y el zoom, el centrado y el desplazamiento trabajan en la parte visible. Las barras de desplazamiento del lienzo las dibuja la app (`editor/CanvasBars.tsx`).
+- **Formas:** esquinas de 8 px en botones y herramientas, 10 en menús, 12 en barras y 14 en paneles. Los botones no son píldoras.
 - **Letra:** `--font-display` (Outfit, empaquetada con la app) para títulos; `--font-sans` (la del sistema) para lo demás. La app no carga fuentes de internet.
 - **Movimiento:**
-  - Duraciones `--dur-*` y curvas `--ease-*`: se entra con `--ease-spring` y se sale con `--ease-in`.
+  - Duraciones `--dur-*` y curvas `--ease-*`: se entra con `--ease-spring` y se sale con `--ease-in`. Movimiento sobrio: nada de giros ni bamboleos.
   - Toda animación nueva tiene su versión en el bloque "Reduced motion" del final de `styles.css`: un fundido de 100 ms como mucho.
 - **Componentes:**
   - Cualquier menú dentro de una ventana usa `Menu`, `ContextMenu` o `MenuList` (`app/src/components/Menu.tsx`), no menús nativos. Los nativos quedan solo para la bandeja y la barra de menús de macOS.

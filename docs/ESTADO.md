@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-12 (noche, 18:50), con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets) y M3.2 (Extraer texto) hechas. Siguiente: M3.3 (captura con desplazamiento).
+**Última actualización:** 2026-11-12 (noche, 22:30), con el aspecto nuevo **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets) y M3.2 (Extraer texto) hechas. Siguiente: M3.3 (captura con desplazamiento).
 
 **Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
@@ -40,6 +40,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 | Multicaptura (función propia, CAP-067) | Pedida por Carlos el 2026-11-01: cada clic captura la ventana bajo el puntero y llega a la app; arrastrar captura un rectángulo; `Esc` termina; panel con las capturas de la sesión para insertarlas en un documento. Adelanta lo básico de las imágenes flotantes (EDT-078) | Hecha; faltan las pruebas de Carlos (dos tandas) |
 | Reabrir los documentos al iniciar (función propia, EDT-120) | Pedida por Carlos el 2026-11-01: al volver a abrir XcreenShot, el editor tiene los documentos que había en la tira, en su orden y con el que estaba a la vista. Preferencia en Preferencias > Editor | Hecha; falta la tanda de Carlos |
 | Aspecto nuevo: Snap con los colores del logo (APP-012, EDT-001, EDT-002) | Pedido por Carlos el 2026-11-05: interfaz moderna y divertida, con animaciones en menús y botones. Sistema Snap (de Claude Design) llevado a todo el editor, con la paleta, la letra (Outfit) y el logo de Carlos. El logo aparece en el editor vacío con el REC parpadeando, hay ícono nuevo y la barra de menús de Windows y los clics derechos están dibujados por la app | Hecho en la rama `snap-ui` y unido a `m1-editor`; falta la tanda de Carlos |
+| Aspecto nuevo: Cristal (APP-012, EDT-001, EDT-005, EDT-011, TRY-002) | Pedido por Carlos el 2026-11-12 (maqueta aprobada ese día): sustituye a Snap. Neutros fríos, un solo acento sólido, esquinas de 8 a 14 px, sin degradados. En el editor, barra, panel lateral, barra de estado y bandeja flotan como cristal sobre el lienzo y la captura pasa por debajo. Preferencias > General: Intensidad del cristal y Color de acento | Hecho; falta la caminata de Carlos ([`tests/manual/APP-012-cristal.md`](../tests/manual/APP-012-cristal.md)) |
 | 5 · Biblioteca | Vista Biblioteca, índice, bandeja reciente completa y persistente, copia editable al guardar en otro formato, arrastrar a otras apps | Hecha (2026-11-11); entra en la caminata de Carlos |
 | 6 · Lo que falta de captura y app | Cursor, aviso de capturas en negro, sonido y destello, notificaciones con clic, restablecer ajustes, Avanzado, Funciones en prueba, Ayuda y Acerca de, bienvenida, ayuda en pantalla, guías de tamaño, cruceta simplificada, teclas del perfil de compatibilidad, eventos (`events watch`), tooltips y pistas | Hecha en Windows (2026-11-11). APP-025 es solo de macOS |
 | 7 · Calidad | Teclado, lector de pantalla, contraste y movimiento, y rendimiento en todo M1 | Hecha (2026-11-11). Medidas y lo que no cumple en [`tests/manual/APP-rendimiento-M1.md`](../tests/manual/APP-rendimiento-M1.md) |
@@ -50,6 +51,13 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **Aspecto nuevo: Cristal (2026-11-12, noche).** Carlos pidió dejar el aspecto violeta con degradados y botones de píldora por algo limpio, con cristal de intensidad ajustable; aprobó la maqueta y pidió llevarla a la app con instalador.
+  - Paleta nueva en `app/src/styles.css` (claro y oscuro), botón principal sólido, esquinas de 8 a 14 px, menús y avisos de cristal, movimiento más sobrio.
+  - El editor ahora tiene un área de trabajo (`editor/Workspace.tsx`): el lienzo la ocupa entera y la barra, el panel lateral, la barra de estado y la bandeja flotan encima. El lienzo recibe cuánto tapan (`editor/insets.ts`), encaja y centra la imagen en la parte visible y dibuja sus propias barras de desplazamiento finas (`editor/CanvasBars.tsx`). Comprobado que el puntero, el zoom y el dibujo caen en el píxel correcto.
+  - Preferencias > General: **Intensidad del cristal** (`general.glassIntensity`, 0–100, por defecto 60) y **Color de acento** (`general.accent`: azul, violeta, turquesa, grafito).
+  - Arreglado de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús (Más, Compartir, ⋯).
+  - Propuesta pendiente de Carlos: la ventana translúcida (Mica). Tauri 2 ya la trae; ver `spec/QUESTIONS.md`, sección "Aspecto nuevo: Cristal".
+  - Reglas de diseño actualizadas en `CLAUDE.md` (sección "Diseño: Cristal").
 - **Caminata de Carlos (2026-11-12, tarde), con el instalador `7f50273`.** Lo único que encontró: con tantos íconos, al estrechar la ventana se montaban unos sobre otros.
   - Arreglado (`2f8ca52`): la barra del editor y la de la Biblioteca miden su ancho y se compactan por pasos, sin montar ni cortar nada, y todo vuelve al agrandar la ventana. Detalle del orden en `spec/QUESTIONS.md` (sección "Arreglos tras la caminata del 2026-11-12") y prueba en [`tests/manual/EDT-001-barra-estrecha.md`](../tests/manual/EDT-001-barra-estrecha.md).
   - Para probar la app de desarrollo con la app instalada de Carlos abierta, la instancia aislada necesita también su propia carpeta de WebView2 (`WEBVIEW2_USER_DATA_FOLDER`); sin ella, WebView2 no arranca (`0x8007139F`).
@@ -329,6 +337,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 El detalle y el motivo de cada una están en `spec/QUESTIONS.md`.
 
 - **Windows primero.** macOS compila pero no bloquea.
+- **Aspecto: Cristal** (Carlos, 2026-11-12). Sustituye a Snap. Reglas en `CLAUDE.md`; el lienzo del editor ocupa toda el área de trabajo y las barras flotan encima.
 - **Versión:** un número menor por hito (0.1 = M0, 0.2 = M1) más el commit de la compilación.
 - **Atajo de prueba:** Carlos cambió el de `app.ping` a `Ctrl+P` a propósito. No tocarlo.
 - **Barra de captura:** el botón se llama **Capturar** (`Enter`; `I` también funciona). El selector rápido **EN | ES** está en la ventana principal y en Preferencias.

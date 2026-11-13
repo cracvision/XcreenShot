@@ -11,7 +11,7 @@ import {
 } from "./lib/commands";
 import { loadLayoutMap, type LayoutMap } from "./lib/accelerator";
 import { resolveLanguage, setLanguage } from "./i18n";
-import { applyTheme } from "./theme";
+import { applyAccent, applyGlass, applyTheme } from "./theme";
 
 interface State {
   ready: boolean;
@@ -67,6 +67,8 @@ export const useApp = create<State>((set, get) => ({
     set({ ping, settings, systemLang });
     setLanguage(resolveLanguage(languageSetting, systemLang));
     applyTheme(settingValue(settings, "general.theme"));
+    applyGlass(settingValue(settings, "general.glassIntensity"));
+    applyAccent(settingValue(settings, "general.accent"));
     const [layout] = await Promise.all([
       loadLayoutMap(),
       get().refreshShortcuts(),
@@ -80,6 +82,8 @@ export const useApp = create<State>((set, get) => ({
         settings: s.settings.map((x) => (x.key === key ? { ...x, value } : x)),
       }));
       if (key === "general.theme") applyTheme(value);
+      if (key === "general.glassIntensity") applyGlass(value);
+      if (key === "general.accent") applyAccent(value);
       if (key === "general.language") {
         setLanguage(resolveLanguage(value, get().systemLang));
         // Labels and descriptions come translated from the core.
