@@ -1912,6 +1912,23 @@ html.overlay-root.overlay-native #root {
   color: var(--ink);
 }
 
+/* Several presets chosen (CAP-058, CAP-060): a bar with what to do with them. */
+.presets-picked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: 12.5px;
+}
+
+.presets-picked span {
+  flex: 1;
+}
+
+.preset-row.picked {
+  background: var(--brand-soft);
+}
+
 /* A preset whose interval runs or whose schedule waits (CAP-058). */
 .preset-running {
   color: var(--brand-ink);

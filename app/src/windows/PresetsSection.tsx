@@ -46,6 +46,7 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
   const confirm = useSetting("capture.confirmPresetDelete", true);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
   const [drag, setDrag] = useState<{ from: number; over: number; after: boolean } | null>(null);
   const rows = useRef<Record<string, HTMLLIElement | null>>({});
 
@@ -68,6 +69,26 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
   const shown = filterPresets(presets, presets.length >= FILTER_FROM ? filter : "");
   const filtering = shown.length !== presets.length || filter.trim() !== "";
   const current = shown.find((p) => p.id === selected) ?? shown[0] ?? null;
+  // Several chosen with Ctrl or Shift + click, to export or delete together (CAP-058,
+  // CAP-060). Only those still shown count.
+  const chosen = shown.filter((p) => picked.includes(p.id));
+  const several = chosen.length > 1;
+  const pick = (e: React.MouseEvent, p: Preset, index: number) => {
+    if (e.ctrlKey || e.metaKey) {
+      setPicked((list) =>
+        list.includes(p.id) ? list.filter((id) => id !== p.id) : [...list, p.id],
+      );
+    } else if (e.shiftKey && current) {
+      const from = shown.findIndex((x) => x.id === current.id);
+      const [a, b] = from < index ? [from, index] : [index, from];
+      setPicked(shown.slice(a, b + 1).map((x) => x.id));
+    } else {
+      setPicked([p.id]);
+    }
+    setSelected(p.id);
+  };
+  // What a row's Export and Delete act on: the chosen ones, if it is one of them.
+  const targets = (p: Preset) => (several && picked.includes(p.id) ? chosen : [p]);
 
   const focusRow = (id: string) => {
     setSelected(id);
@@ -105,7 +126,7 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
       usePresetUi.setState({ renaming: p.id });
     } else if (e.key === "Delete") {
       e.preventDefault();
-      askDelete([p]);
+      askDelete(targets(p));
     }
   };
 
@@ -140,13 +161,17 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
       label: t("ui.panel.presets.shortcut"),
       onSelect: () => usePresetUi.setState({ dialog: { kind: "shortcut", preset: p } }),
     },
-    { id: "export", label: t("ui.panel.presets.export"), onSelect: () => void exportPresets([p]) },
+    {
+      id: "export",
+      label: t("ui.panel.presets.export"),
+      onSelect: () => void exportPresets(targets(p)),
+    },
     {
       id: "delete",
       label: t("ui.panel.presets.delete"),
       shortcut: t("ui.panel.presets.delete_key"),
       separator: true,
-      onSelect: () => askDelete([p]),
+      onSelect: () => askDelete(targets(p)),
     },
   ];
 
@@ -196,108 +221,135 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
       {presets.length === 0 ? (
         <p className="muted presets-empty">{t("ui.panel.presets.empty")}</p>
       ) : (
-        <ul className="presets-list" role="listbox" aria-labelledby="presets-title">
-          {shown.map((p, index) => {
-            const isCurrent = current?.id === p.id;
-            const dropping =
-              drag && drag.over === index && drag.from !== index
-                ? drag.after
-                  ? " drop-after"
-                  : " drop-before"
-                : "";
-            return (
-              <li
-                key={p.id}
-                ref={(el) => {
-                  rows.current[p.id] = el;
-                }}
-                role="option"
-                aria-selected={isCurrent}
-                tabIndex={isCurrent ? 0 : -1}
-                className={`preset-row${isCurrent ? " current" : ""}${dropping}`}
-                draggable={!filtering && renaming !== p.id}
-                title={filtering ? t("ui.panel.presets.no_drag_filter") : undefined}
-                onFocus={() => setSelected(p.id)}
-                onClick={() => setSelected(p.id)}
-                onDoubleClick={() => void runPreset(p)}
-                onKeyDown={(e) => onKey(e, p, index)}
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = "move";
-                  e.dataTransfer.setData("text/plain", p.id);
-                  setDrag({ from: index, over: index, after: false });
-                }}
-                onDragOver={(e) => {
-                  if (!drag) return;
-                  e.preventDefault();
-                  const box = e.currentTarget.getBoundingClientRect();
-                  const after = e.clientY > box.top + box.height / 2;
-                  if (drag.over !== index || drag.after !== after)
-                    setDrag({ ...drag, over: index, after });
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (!drag) return;
-                  const moving = presets[drag.from];
-                  const to = dropIndex(drag.from, drag.over, drag.after);
-                  setDrag(null);
-                  if (moving && to !== drag.from) void movePreset(moving, to);
-                }}
-                onDragEnd={() => setDrag(null)}
+        <>
+          {several && (
+            <div className="presets-picked" role="status">
+              <span>{t("ui.panel.presets.picked", { count: chosen.length })}</span>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => void exportPresets(chosen)}
               >
-                <span className="preset-grip" aria-hidden="true">
-                  ⋮⋮
-                </span>
-                <span className={`preset-kind kind-${p.kind}`} aria-hidden="true">
-                  {p.kind === "universal" ? "U" : "I"}
-                </span>
-                <span className="preset-text">
-                  {renaming === p.id ? (
-                    <RenameField preset={p} />
-                  ) : (
-                    <span className="preset-name">{p.name}</span>
-                  )}
-                  <span className="preset-summary">
-                    {t(`ui.panel.presets.kind_${p.kind}`)} · {p.summary}
-                    {p.running && (
-                      <span className="preset-running"> · {t("ui.panel.presets.running")}</span>
-                    )}
-                  </span>
-                </span>
-                {p.warnings.length > 0 && (
-                  <span
-                    className="preset-warning"
-                    role="img"
-                    aria-label={p.warnings[0]?.message}
-                    title={p.warnings[0]?.message}
-                  >
-                    !
-                  </span>
-                )}
-                {p.shortcutDisplay && <kbd className="preset-keys">{p.shortcutDisplay}</kbd>}
-                <button
-                  type="button"
-                  className="btn small preset-run"
-                  tabIndex={-1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void runPreset(p);
+                {t("ui.panel.presets.export")}
+              </button>
+              <button type="button" className="btn small" onClick={() => askDelete(chosen)}>
+                {t("ui.panel.presets.delete")}
+              </button>
+              <button type="button" className="btn small" onClick={() => setPicked([])}>
+                {t("ui.panel.presets.unpick")}
+              </button>
+            </div>
+          )}
+          <ul
+            className="presets-list"
+            role="listbox"
+            aria-multiselectable="true"
+            aria-labelledby="presets-title"
+          >
+            {shown.map((p, index) => {
+              const isCurrent = current?.id === p.id;
+              const dropping =
+                drag && drag.over === index && drag.from !== index
+                  ? drag.after
+                    ? " drop-after"
+                    : " drop-before"
+                  : "";
+              return (
+                <li
+                  key={p.id}
+                  ref={(el) => {
+                    rows.current[p.id] = el;
                   }}
+                  role="option"
+                  aria-selected={isCurrent || (several && picked.includes(p.id))}
+                  tabIndex={isCurrent ? 0 : -1}
+                  className={`preset-row${isCurrent ? " current" : ""}${
+                    several && picked.includes(p.id) ? " picked" : ""
+                  }${dropping}`}
+                  draggable={!filtering && renaming !== p.id}
+                  title={filtering ? t("ui.panel.presets.no_drag_filter") : undefined}
+                  onFocus={() => setSelected(p.id)}
+                  onClick={(e) => pick(e, p, index)}
+                  onDoubleClick={() => void runPreset(p)}
+                  onKeyDown={(e) => onKey(e, p, index)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", p.id);
+                    setDrag({ from: index, over: index, after: false });
+                  }}
+                  onDragOver={(e) => {
+                    if (!drag) return;
+                    e.preventDefault();
+                    const box = e.currentTarget.getBoundingClientRect();
+                    const after = e.clientY > box.top + box.height / 2;
+                    if (drag.over !== index || drag.after !== after)
+                      setDrag({ ...drag, over: index, after });
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!drag) return;
+                    const moving = presets[drag.from];
+                    const to = dropIndex(drag.from, drag.over, drag.after);
+                    setDrag(null);
+                    if (moving && to !== drag.from) void movePreset(moving, to);
+                  }}
+                  onDragEnd={() => setDrag(null)}
                 >
-                  {t("ui.panel.capture")}
-                </button>
-                <Menu
-                  triggerClass="btn icon small preset-more"
-                  align="end"
-                  chevron={false}
-                  ariaLabel={t("ui.panel.presets.more", { name: p.name })}
-                  title={t("ui.panel.presets.more", { name: p.name })}
-                  label={<span aria-hidden="true">⋯</span>}
-                  items={itemsFor(p)}
-                />
-              </li>
-            );
-          })}
-        </ul>
+                  <span className="preset-grip" aria-hidden="true">
+                    ⋮⋮
+                  </span>
+                  <span className={`preset-kind kind-${p.kind}`} aria-hidden="true">
+                    {p.kind === "universal" ? "U" : "I"}
+                  </span>
+                  <span className="preset-text">
+                    {renaming === p.id ? (
+                      <RenameField preset={p} />
+                    ) : (
+                      <span className="preset-name">{p.name}</span>
+                    )}
+                    <span className="preset-summary">
+                      {t(`ui.panel.presets.kind_${p.kind}`)} · {p.summary}
+                      {p.running && (
+                        <span className="preset-running"> · {t("ui.panel.presets.running")}</span>
+                      )}
+                    </span>
+                  </span>
+                  {p.warnings.length > 0 && (
+                    <span
+                      className="preset-warning"
+                      role="img"
+                      aria-label={p.warnings[0]?.message}
+                      title={p.warnings[0]?.message}
+                    >
+                      !
+                    </span>
+                  )}
+                  {p.shortcutDisplay && <kbd className="preset-keys">{p.shortcutDisplay}</kbd>}
+                  <button
+                    type="button"
+                    className="btn small preset-run"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void runPreset(p);
+                    }}
+                  >
+                    {t("ui.panel.capture")}
+                  </button>
+                  <Menu
+                    triggerClass="btn icon small preset-more"
+                    align="end"
+                    chevron={false}
+                    ariaLabel={t("ui.panel.presets.more", { name: p.name })}
+                    title={t("ui.panel.presets.more", { name: p.name })}
+                    label={<span aria-hidden="true">⋯</span>}
+                    items={itemsFor(p)}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       {undo && (
         <div className="presets-undo" role="status">
