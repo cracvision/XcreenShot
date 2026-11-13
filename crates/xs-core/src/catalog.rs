@@ -109,6 +109,7 @@ fn capture_params(own: Value) -> Value {
         "open": {"type": "string", "enum": ["editor", "none"], "description": "Open in (CAP-045)"},
         "out": {"type": "string", "description": "Also write a PNG to this path"},
         "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"},
+        "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects for the capture (CAP-051), the editor's entries {type, …settings}: border, shadow, edges, corners, scale, rotate, filters, watermark…; editable in the document, applied in the clipboard and files"},
         "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the capture also goes to (CAP-052): file"},
         "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"}
     });

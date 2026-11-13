@@ -182,6 +182,9 @@ pub struct ImageTab {
     pub areas: AreasTab,
     /// Selection = Menu (CAP-031).
     pub menu: MenuTab,
+    /// Effects applied to every capture, in order (CAP-051): the editor's effect
+    /// entries (EDT-053), `{type, …settings}`.
+    pub effects: Vec<Value>,
     /// Destinations (CAP-052): `file` for now.
     pub share: Vec<String>,
     /// The File destination's options (CAP-053).
@@ -201,6 +204,7 @@ impl Default for ImageTab {
             region: RegionTab::default(),
             areas: AreasTab::default(),
             menu: MenuTab::default(),
+            effects: Vec::new(),
             share: Vec::new(),
             file: crate::filedest::FileDest::default(),
         }
@@ -280,6 +284,9 @@ impl PanelSettings {
         if self.image.areas.gap > 500 {
             return Err("image.areas.gap: must be between 0 and 500".into());
         }
+        for e in &self.image.effects {
+            xs_image::fx::check(e).map_err(|r| format!("image.effects: {r}"))?;
+        }
         for (tab, share, file) in [
             ("universal", &self.universal.share, &self.universal.file),
             ("image", &self.image.share, &self.image.file),
@@ -314,6 +321,7 @@ impl PanelSettings {
             "cursor": i.cursor,
             "open": i.open,
             "delay": if i.timing == "delay" { i.delay } else { 0 },
+            "effects": i.effects,
             "share": i.share,
             "file": i.file,
         })

@@ -161,6 +161,8 @@ export interface PanelSettings {
     areas: { composition: "original" | "stacked" | "row"; gap: number };
     /** Selection = Menu (CAP-031). */
     menu: { submenus: boolean; menubar: boolean };
+    /** Effects for every capture (CAP-051): the editor's entries, `{type, …settings}`. */
+    effects: ({ type: string } & Record<string, unknown>)[];
     /** Destinations (CAP-052): `file` for now. */
     share: "file"[];
     file: FileDest;

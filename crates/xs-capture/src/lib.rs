@@ -378,6 +378,8 @@ pub struct Options {
     pub show: Option<bool>,
     /// The File destination, when Share includes it (CAP-052, CAP-053).
     pub file: Option<filedest::FileDest>,
+    /// Effects for every capture (CAP-051), the editor's entries.
+    pub effects: Vec<Value>,
 }
 
 impl Options {
@@ -405,6 +407,16 @@ impl Options {
                         .filter(|f| f.validate().is_ok())
                         .unwrap_or_default()
                 }),
+            effects: p
+                .get("effects")
+                .and_then(Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter(|e| xs_image::fx::check(e).is_ok())
+                        .cloned()
+                        .collect()
+                })
+                .unwrap_or_default(),
         }
     }
 }
@@ -543,6 +555,15 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let save_ms = started.elapsed().as_millis() as u64;
     let mut files = vec![path.to_string_lossy().into_owned()];
 
+    // Effects on capture (CAP-051): editable in the document, already applied in what
+    // leaves for the clipboard and files.
+    let with_effects = if opts.effects.is_empty() {
+        None
+    } else {
+        apply_effects(core, &document_id, &opts.effects)
+    };
+    let outgoing = with_effects.as_ref().unwrap_or(outgoing);
+
     // 3. Clipboard.
     let mut copied = false;
     if opts.copy {
@@ -623,8 +644,8 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
         "documentId": document_id,
         "path": files.last(),
         "files": files,
-        "width": shot.image.width(),
-        "height": shot.image.height(),
+        "width": outgoing.width(),
+        "height": outgoing.height(),
         "rect": shot.rect,
         "copied": copied,
         "metadata": meta,
@@ -893,6 +914,35 @@ fn fixed_region_problem(lang: Lang, monitor: &str) -> CommandError {
         tr(lang, "errors.fixed_region", &[("monitor", monitor)]),
     )
     .with_details(json!({ "status": "failed", "monitor": monitor }))
+}
+
+/// Puts the effects on the new capture's document and saves it; returns the image as
+/// it leaves the editor (CAP-051). None if something failed: the capture goes on as it
+/// is.
+fn apply_effects(core: &Core, document_id: &str, effects: &[Value]) -> Option<RgbaImage> {
+    let set = core.call(
+        Source::Ui,
+        "document.effects",
+        json!({ "documentId": document_id, "action": "set", "effects": effects }),
+        None,
+    );
+    if let Err(e) = set {
+        tracing::warn!(error = %e.message, "effects on capture: not applied");
+        return None;
+    }
+    if let Err(e) = core.call(
+        Source::Ui,
+        "document.save",
+        json!({ "documentId": document_id }),
+        None,
+    ) {
+        tracing::warn!(error = %e.message, "effects on capture: not saved");
+    }
+    xs_editor::editor(core)
+        .store
+        .snapshot(document_id)
+        .ok()
+        .map(|snap| snap.render())
 }
 
 /// Manual or automatic, from `capture.scrolling`'s parameters (CAP-034, CAP-035).

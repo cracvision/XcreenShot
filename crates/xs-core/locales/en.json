@@ -2030,7 +2030,14 @@
       "marker_height": "Height in pixels",
       "marker_user": "Your user name",
       "marker_counter": "A counter, 4 digits",
-      "marker_counter:4": "A counter with N digits (1 to 9)"
+      "marker_counter:4": "A counter with N digits (1 to 9)",
+      "effects": "Effects",
+      "effects_none": "None",
+      "effects_add": "Add effect",
+      "effects_saved": "Saved effects",
+      "effects_remove": "Remove {{name}}",
+      "effects_up": "Move {{name}} up",
+      "effects_empty": "No effects: captures come as they are."
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",

@@ -2030,7 +2030,14 @@
       "marker_height": "Alto en píxeles",
       "marker_user": "Tu usuario",
       "marker_counter": "Un contador de 4 cifras",
-      "marker_counter:4": "Un contador de N cifras (1 a 9)"
+      "marker_counter:4": "Un contador de N cifras (1 a 9)",
+      "effects": "Efectos",
+      "effects_none": "Ninguno",
+      "effects_add": "Añadir efecto",
+      "effects_saved": "Efectos guardados",
+      "effects_remove": "Quitar {{name}}",
+      "effects_up": "Subir {{name}}",
+      "effects_empty": "Sin efectos: las capturas salen tal cual."
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

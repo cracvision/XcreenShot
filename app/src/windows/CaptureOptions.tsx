@@ -11,7 +11,7 @@ import {
   type RegionProps,
   type ScrollProps,
 } from "../lib/commands";
-import { Menu } from "../components/Menu";
+import { Menu, type MenuItem } from "../components/Menu";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
@@ -224,7 +224,10 @@ export function ImageOptions({
         )}
       </div>
       {value.selection !== "text" && (
-        <ShareOptions share={value.share} file={value.file} onChange={onChange} />
+        <>
+          <EffectsOptions value={value.effects} onChange={(effects) => onChange({ effects })} />
+          <ShareOptions share={value.share} file={value.file} onChange={onChange} />
+        </>
       )}
     </>
   );
@@ -723,6 +726,117 @@ function ShareOptions({
           )}
         </>
       )}
+    </fieldset>
+  );
+}
+
+/** Effects that need nothing from the user, for every capture (CAP-051). */
+const CAPTURE_EFFECTS = [
+  "border",
+  "shadow",
+  "edges",
+  "corners",
+  "perspective",
+  "pageCurl",
+  "reflection",
+  "fade",
+  "scale",
+  "rotate",
+  "filters",
+  "color",
+  "trim",
+  "watermark",
+  "details",
+] as const;
+
+type Effect = PanelSettings["image"]["effects"][number];
+
+/** Effects on capture (CAP-051): applied to every capture in this order, editable in the
+ * editor. Add a type (its defaults) or a saved effect; reorder; remove; None. */
+function EffectsOptions({
+  value,
+  onChange,
+}: {
+  value: Effect[];
+  onChange: (effects: Effect[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [saved, setSaved] = useState<{ id: string; name: string; stack: Effect[] }[]>([]);
+  useEffect(() => {
+    void run<{ effects: { id: string; name: string; stack: Effect[] }[] }>("editor.saved_effects")
+      .then((r) => setSaved(r.effects))
+      .catch(() => setSaved([]));
+  }, []);
+  const name = (e: Effect) => t(`ui.editor.fx.${e.type}.name`);
+  const move = (i: number) => {
+    if (i <= 0) return;
+    const next = [...value];
+    [next[i - 1], next[i]] = [next[i] as Effect, next[i - 1] as Effect];
+    onChange(next);
+  };
+  const items: MenuItem[] = [
+    ...CAPTURE_EFFECTS.map((type) => ({
+      id: type,
+      label: t(`ui.editor.fx.${type}.name`),
+      onSelect: () => onChange([...value, { type }]),
+    })),
+    ...(saved.length
+      ? [
+          {
+            id: "saved",
+            label: t("ui.panel.effects_saved"),
+            separator: true,
+            onSelect: () => undefined,
+            submenu: saved.map((s) => ({
+              id: `saved-${s.id}`,
+              label: s.name,
+              onSelect: () => onChange([...value, ...s.stack]),
+            })),
+          },
+        ]
+      : []),
+  ];
+  return (
+    <fieldset className="panel-props">
+      <legend className="panel-legend">{t("ui.panel.effects")}</legend>
+      {value.length === 0 ? (
+        <p className="panel-preview muted">{t("ui.panel.effects_empty")}</p>
+      ) : (
+        <ol className="panel-effects">
+          {value.map((e, i) => (
+            <li key={`${i}-${e.type}`}>
+              <span>{name(e)}</span>
+              <button
+                type="button"
+                className="btn icon small"
+                disabled={i === 0}
+                aria-label={t("ui.panel.effects_up", { name: name(e) })}
+                title={t("ui.panel.effects_up", { name: name(e) })}
+                onClick={() => move(i)}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="btn icon small"
+                aria-label={t("ui.panel.effects_remove", { name: name(e) })}
+                title={t("ui.panel.effects_remove", { name: name(e) })}
+                onClick={() => onChange(value.filter((_, k) => k !== i))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="panel-row">
+        <Menu label={t("ui.panel.effects_add")} triggerClass="btn small" items={items} />
+        {value.length > 0 && (
+          <button type="button" className="btn small" onClick={() => onChange([])}>
+            {t("ui.panel.effects_none")}
+          </button>
+        )}
+      </div>
     </fieldset>
   );
 }
