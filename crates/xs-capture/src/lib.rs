@@ -36,6 +36,7 @@ pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
 pub mod stitch;
+pub mod svgsource;
 pub mod systemshots;
 pub mod wallpaper;
 pub mod webcap;

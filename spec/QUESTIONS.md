@@ -254,6 +254,13 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 19: SVG como fuente)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-040 | ¿Con qué se dibujan los SVG, sin añadir dependencias? | Con el motor web del sistema (WebView2), en la misma vista privada y fuera de pantalla de Página web: dibuja todo lo que dibuja un navegador, textos incluidos | Provisional |
+| CAP-040 | ¿A qué tamaño? | Al que dice el archivo (width/height, o el viewBox, o 300 × 150 si no dice nada), al doble si el lado mayor cabe dos veces en 3840 px; los más grandes se reducen a 3840 px de lado | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 18: escritorio sin ventanas)
 
 | ID | Duda | Propuesta | Estado |

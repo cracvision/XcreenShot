@@ -13,14 +13,16 @@ use xs_core::{CommandError, CommandResult, Context, Core, ErrorCode, Source};
 use crate::{finish, Options, Rect, Shot};
 
 /// Image files offered in the file picker.
-pub const IMAGE_FILES: [&str; 11] = [
-    "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif", "ico",
+pub const IMAGE_FILES: [&str; 12] = [
+    "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif", "ico", "svg",
 ];
 
 /// What a file is, for the file source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Image,
+    /// A drawing, drawn by the web engine (CAP-040).
+    Svg,
     Pdf,
     Document,
     /// An Internet shortcut (`.url`): its web page (CAP-037).
@@ -37,6 +39,7 @@ pub fn kind_of(path: &Path) -> Kind {
         "pdf" => Kind::Pdf,
         "xshot" => Kind::Document,
         "url" => Kind::Shortcut,
+        "svg" => Kind::Svg,
         e if IMAGE_FILES.contains(&e) => Kind::Image,
         _ => Kind::Other,
     }
@@ -94,6 +97,15 @@ mod imp {
     }
 }
 
+/// The pixels of an image or a drawing, and their scale (2 for small drawings).
+fn load(core: &Core, kind: Kind, path: &Path) -> Result<(RgbaImage, f32), String> {
+    if kind == Kind::Svg {
+        crate::svgsource::render(core, path)
+    } else {
+        decode_file(path).map(|i| (i, 1.0))
+    }
+}
+
 /// `capture.file` (CAP-040): each file in order; PDFs to Import PDF, `.xshot` to the
 /// editor; what cannot be read is skipped and listed in a notification.
 pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> CommandResult {
@@ -146,8 +158,8 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
                     skipped.push(json!({ "path": path, "reason": e.message }));
                 }
             }
-            Kind::Image | Kind::Other => match decode_file(path) {
-                Ok(image) => {
+            kind @ (Kind::Image | Kind::Svg | Kind::Other) => match load(core, kind, path) {
+                Ok((image, scale)) => {
                     let modified = std::fs::metadata(path)
                         .and_then(|m| m.modified())
                         .ok()
@@ -174,7 +186,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
                         },
                         image,
                         mode: "file",
-                        scale: 1.0,
+                        scale,
                         monitor: String::new(),
                         app: None,
                         window_title: Some(name.clone()),
@@ -267,6 +279,7 @@ URL=file:///C:/x"
         assert_eq!(kind_of(Path::new("c.pdf")), Kind::Pdf);
         assert_eq!(kind_of(Path::new("d.xshot")), Kind::Document);
         assert_eq!(kind_of(Path::new("e.txt")), Kind::Other);
+        assert_eq!(kind_of(Path::new("f.SVG")), Kind::Svg);
     }
 
     /// CAP-040: the original is read, never changed.

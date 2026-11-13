@@ -190,6 +190,16 @@ pub fn capture(app: &AppHandle, p: &Value) -> Result<Value, String> {
             json!({ "width": width, "height": VIEW_HEIGHT, "deviceScaleFactor": scale, "mobile": width < 768 }),
             wait,
         )?;
+        // Over nothing: a drawing keeps its transparency (CAP-040).
+        if p["transparent"].as_bool() == Some(true) {
+            cdp(
+                app,
+                &label,
+                "Emulation.setDefaultBackgroundColorOverride",
+                json!({ "color": { "r": 0, "g": 0, "b": 0, "a": 0 } }),
+                wait,
+            )?;
+        }
         std::thread::sleep(settle);
         if CANCEL.load(Ordering::Relaxed) {
             return Err("cancelled".to_string());
