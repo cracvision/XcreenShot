@@ -215,6 +215,17 @@ pub trait Host: Send + Sync {
     }
     /// How a PDF import goes: `{id, done, total}` (CAP-041).
     fn pdf_event(&self, state: Value) {}
+    /// Loads a web page privately and takes it whole (CAP-037): `{png (base64), url,
+    /// title, status, cut}`, or why not (`cancelled`, `timeout`, `unreachable`, …).
+    fn load_webpage(&self, request: &Value) -> Result<Value, String> {
+        Err("not available here".into())
+    }
+    /// Stops the page being loaded (CAP-037).
+    fn cancel_webpage(&self) {}
+    /// The window that asks for a web address (CAP-037).
+    fn webpage_prompt(&self) -> Result<(), CommandError> {
+        Err(unsupported())
+    }
     /// Shows or closes the window picker (CAP-030): over the monitor under the pointer,
     /// never part of a capture.
     fn picker_window(&self, show: bool) {}

@@ -17,6 +17,7 @@ pub const SCROLL_PANEL: &str = "scroll";
 pub const PICKER: &str = "picker";
 pub const HELP: &str = "help";
 pub const WELCOME: &str = "welcome";
+pub const WEBPAGE: &str = "webpage";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -189,6 +190,28 @@ pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
         let y = (p.y as i32 + 16).clamp(area.position.y, max_y.max(area.position.y));
         let _ = w.set_position(tauri::PhysicalPosition::new(x, y));
     }
+    focus(&w);
+    Ok(())
+}
+
+/// The web address box (CAP-037): small, centered, in front; it shows the loading and
+/// Cancel too.
+pub fn open_webpage_prompt(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window(WEBPAGE) {
+        focus(&w);
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.webpage.title", &[]);
+    let w = WebviewWindowBuilder::new(app, WEBPAGE, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(520.0, 190.0)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .always_on_top(true)
+        .center()
+        .theme(theme(app))
+        .build()?;
     focus(&w);
     Ok(())
 }

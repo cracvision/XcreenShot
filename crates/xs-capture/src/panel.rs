@@ -195,6 +195,56 @@ pub struct ImageTab {
     pub file: crate::filedest::FileDest,
     /// Selection = File: a fixed file, used without asking (CAP-040); empty asks.
     pub source_file: String,
+    /// Selection = Web page (CAP-037).
+    pub web: WebTab,
+}
+
+/// The properties of Selection = Web page (CAP-037).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WebTab {
+    /// Width of the page's view, 320 to 3840 CSS pixels.
+    pub width: u32,
+    /// 1 or 2; 0 is the main monitor's.
+    pub scale: u32,
+    /// Seconds to wait after loading, 0 to 10.
+    pub wait: f64,
+    /// Scroll to the bottom first so late content loads.
+    pub lazy: bool,
+}
+
+impl Default for WebTab {
+    fn default() -> Self {
+        WebTab {
+            width: 1280,
+            scale: 0,
+            wait: 1.0,
+            lazy: true,
+        }
+    }
+}
+
+impl WebTab {
+    pub fn validate(&self) -> Result<(), String> {
+        if !(320..=3840).contains(&self.width) {
+            return Err("image.web.width: between 320 and 3840".into());
+        }
+        if self.scale > 2 {
+            return Err("image.web.scale: 0 (the monitor's), 1 or 2".into());
+        }
+        if !(0.0..=10.0).contains(&self.wait) {
+            return Err("image.web.wait: between 0 and 10 seconds".into());
+        }
+        Ok(())
+    }
+
+    fn params(&self) -> Value {
+        let mut p = json!({ "width": self.width, "wait": self.wait, "lazy": self.lazy });
+        if self.scale > 0 {
+            p["scale"] = json!(self.scale);
+        }
+        p
+    }
 }
 
 impl Default for ImageTab {
@@ -216,6 +266,7 @@ impl Default for ImageTab {
             share: Vec::new(),
             file: crate::filedest::FileDest::default(),
             source_file: String::new(),
+            web: WebTab::default(),
         }
     }
 }
@@ -244,7 +295,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 11] = [
+const IMAGE_SELECTIONS: [&str; 12] = [
     "region",
     "window",
     "fullscreen",
@@ -255,6 +306,7 @@ const IMAGE_SELECTIONS: [&str; 11] = [
     "clipboard",
     "file",
     "pdf",
+    "webpage",
     "text",
 ];
 
@@ -284,6 +336,7 @@ impl PanelSettings {
         )?;
         self.image.interval.validate()?;
         self.image.schedule.validate()?;
+        self.image.web.validate()?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
         }
@@ -364,6 +417,7 @@ impl PanelSettings {
             ("capture.menu", _) => "menu",
             ("capture.clipboard", _) => "clipboard",
             ("capture.file", _) => "file",
+            ("capture.webpage", _) => "webpage",
             // Not with an interval: the start says so.
             (_, other) => other,
         };
@@ -413,6 +467,15 @@ impl PanelSettings {
                     params["paths"] = json!([self.image.source_file.trim()]);
                 }
                 return ("capture.file", params, json!({}));
+            }
+            // A web page (CAP-037): the address is asked in its box.
+            if self.image.selection == "webpage" {
+                params["cursor"] = json!(false);
+                return (
+                    "capture.webpage",
+                    with_overrides(params, &self.image.web.params()),
+                    json!({}),
+                );
             }
             // Import PDF (CAP-041): the file is chosen, then its window.
             if self.image.selection == "pdf" {
@@ -532,7 +595,7 @@ mod tests {
         let p = s.patched(&json!({"image": {"selection": "window"}})).unwrap();
         assert_eq!(p.image.selection, "window");
         assert_eq!(p.image.delay, 5, "untouched fields stay");
-        assert!(s.patched(&json!({"image": {"selection": "webpage"}})).is_err());
+        assert!(s.patched(&json!({"image": {"selection": "camera"}})).is_err());
         let p = s
             .patched(&json!({"image": {"selection": "scrolling", "scroll": {"type": "auto"}}}))
             .unwrap();

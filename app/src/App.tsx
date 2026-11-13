@@ -11,6 +11,7 @@ import { WindowPicker } from "./windows/WindowPicker";
 import { TextResult } from "./windows/TextResult";
 import { PdfImport } from "./windows/PdfImport";
 import { Launcher } from "./windows/Launcher";
+import { WebpagePrompt } from "./windows/WebpagePrompt";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
 
@@ -38,6 +39,8 @@ export function App() {
       return <WindowPicker />;
     case "launcher":
       return <Launcher />;
+    case "webpage":
+      return <WebpagePrompt />;
     case "help":
       return <Help />;
     case "welcome":

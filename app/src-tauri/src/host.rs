@@ -352,6 +352,25 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://pdf", state);
     }
 
+    fn load_webpage(&self, request: &Value) -> Result<Value, String> {
+        crate::webpage::capture(&self.app, request)
+    }
+
+    fn cancel_webpage(&self) {
+        crate::webpage::cancel();
+    }
+
+    fn webpage_prompt(&self) -> Result<(), CommandError> {
+        let app = self.app.clone();
+        self.app
+            .run_on_main_thread(move || {
+                if let Err(e) = windows::open_webpage_prompt(&app) {
+                    tracing::warn!(error = %e, "web address window not opened");
+                }
+            })
+            .map_err(internal)
+    }
+
     fn interval_event(&self, state: Value) {
         let _ = self.app.emit("xs://interval", state);
         // The clock on the icon and its Stop capture entries (APP-002, CAP-005).

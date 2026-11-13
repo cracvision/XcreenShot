@@ -12,6 +12,7 @@ mod launcher;
 mod overlay;
 mod permissions;
 mod tray;
+mod webpage;
 mod windows;
 
 use std::collections::HashMap;

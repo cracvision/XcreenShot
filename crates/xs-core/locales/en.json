@@ -838,6 +838,18 @@
     "capture_pdf_cancel": {
       "title": "Cancel PDF import",
       "description": "Stops a PDF import between pages."
+    },
+    "capture_webpage": {
+      "title": "Capture a web page",
+      "description": "Loads a web page by its address, privately and without showing it, and captures it whole from top to bottom."
+    },
+    "capture_webpage_cancel": {
+      "title": "Cancel the web page",
+      "description": "Stops loading the web page being captured."
+    },
+    "capture_webpage_suggest": {
+      "title": "Suggested web address",
+      "description": "The web address on the clipboard, or the last one captured."
     }
   },
   "settings": {
@@ -1293,7 +1305,11 @@
     "pdf_unsupported": "Importing PDF is not available on this system yet.",
     "pdf_pages": "Pages {{pages}} do not exist in this PDF.",
     "pdf_too_many": "At most {{most}} pages per import.",
-    "file_unreadable": "The file could not be read as an image."
+    "file_unreadable": "The file could not be read as an image.",
+    "webpage_url": "Write a web address that starts with http or https (or just the site, like example.com).",
+    "webpage_timeout": "{{url}} did not finish loading in 30 seconds. No capture was made.",
+    "webpage_unreachable": "{{url}} could not be opened: check the address and the connection. No capture was made.",
+    "webpage_failed": "{{url}} could not be captured ({{reason}})."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1643,7 +1659,9 @@
     "schedule_window_gone": "{{name}} was skipped: its window does not exist.",
     "schedule_failed": "{{name}} could not be made at its time.",
     "pdf_split": "The pages did not fit in one image: they are in {{count}} images.",
-    "files_skipped": "These files were not imported: {{names}}."
+    "files_skipped": "These files were not imported: {{names}}.",
+    "webpage_status": "The server answered with an error page (code {{code}}): it was captured as it came.",
+    "webpage_cut": "The page was taller than the largest size: it was cut at 60,000 pixels."
   },
   "source": {
     "ui": "the interface",
@@ -2197,7 +2215,13 @@
       "source_file_choose": "Choose…",
       "source_file_clear": "Ask each time",
       "show_launcher": "Show the edge launcher",
-      "hide_launcher": "Hide the edge launcher"
+      "hide_launcher": "Hide the edge launcher",
+      "sel_webpage": "Web page",
+      "web_width": "View width (px)",
+      "web_scale": "Scale",
+      "web_scale_auto": "The monitor’s",
+      "web_wait": "Wait after loading (s)",
+      "web_lazy": "Load content that appears on scrolling"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3849,6 +3873,14 @@
       "none": "No presets yet",
       "new": "New preset: {{name}}",
       "tab": "XcreenShot launcher"
+    },
+    "webpage": {
+      "title": "Capture a web page",
+      "url": "Web address",
+      "capture": "Capture",
+      "cancel": "Cancel",
+      "loading": "Loading {{url}}…",
+      "private": "Loaded privately: without your browser’s sessions or cookies."
     }
   },
   "history": {
@@ -4053,7 +4085,8 @@
       "picker": "Window picker",
       "clipboard": "Clipboard",
       "file": "File",
-      "pdf": "PDF"
+      "pdf": "PDF",
+      "webpage": "Web page"
     },
     "kind": {
       "universal": "Universal",

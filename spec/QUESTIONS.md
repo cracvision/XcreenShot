@@ -254,6 +254,14 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 11: página web)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-037 | ¿Con qué se carga la página? | Con el WebView2 que la app ya usa, en una ventana propia en modo InPrivate, fuera de la pantalla, y se toma con su protocolo DevTools (`Page.captureScreenshot` de toda la página). No entra ningún paquete nuevo; la sesión privada desaparece al cerrarla | Provisional |
+| CAP-037 | Intervalo o Programada con Página web desde el panel | La caja de la dirección no se abre al iniciar una serie: por ahora la serie necesita la dirección dada (CLI, agente o preset). Se completa cuando el panel guarde la última dirección como propiedad | Abierta |
+| CAP-037 | La caja de la dirección | Una ventana pequeña siempre al frente, con "Se carga en privado: sin las sesiones ni las cookies de tu navegador" debajo del campo | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 10: lanzador de borde)
 
 | ID | Duda | Propuesta | Estado |

@@ -758,11 +758,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .interactive()
             .mutates()
             .params(capture_params(json!({
-                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file", "webpage"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
                 "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen once"},
                 "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
                 "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen once"},
                 "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file read again each turn; a capture only when it changed"},
+                "url": {"type": "string", "description": "Web page: its address, loaded again each turn (with width, scale, wait, lazy as capture.webpage)"},
+                "width": {"type": "integer"}, "scale": {"type": "number"}, "wait": {"type": "number"}, "lazy": {"type": "boolean"},
                 "every": {"type": "number", "minimum": 1, "maximum": 86400, "default": 60, "description": "Seconds between captures; fewer than 3 become 3"},
                 "stop": {"type": "string", "enum": ["manual", "count", "duration", "time"], "default": "manual", "description": "manual (capture.interval_stop), after `count` captures, after `minutes`, or at `until`"},
                 "count": {"type": "integer", "minimum": 1, "maximum": 100000, "default": 10},
@@ -810,6 +812,24 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "documents": {"type": "array", "items": {"type": "string"}},
                 "id": {"type": "string"}
             }})),
+        B::new("capture.webpage", &["CAP-037", "APP-054"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "url": {"type": "string", "description": "http or https (https:// is added when there is no scheme). From the app without it, a box asks for it"},
+                "width": {"type": "integer", "minimum": 320, "maximum": 3840, "default": 1280, "description": "Width of the page's view, in CSS pixels (375, 768, 1280, 1440, 1920…)"},
+                "scale": {"type": "number", "minimum": 1, "maximum": 2, "description": "1 or 2 (default: the main monitor's)"},
+                "wait": {"type": "number", "minimum": 0, "maximum": 10, "default": 1, "description": "Seconds after loading, for animations and late content"},
+                "lazy": {"type": "boolean", "default": true, "description": "Scroll to the bottom first so content that loads on scrolling appears"}
+            })))
+            .result(capture_result()),
+        B::new("capture.webpage_cancel", &["CAP-037"])
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("capture.webpage_suggest", &["CAP-037"]).result(json!({"type": "object", "properties": {
+            "url": {"type": "string"}, "from": {"type": "string", "enum": ["clipboard", "last", "none"]}
+        }})),
         B::new("capture.pdf_info", &["CAP-041"])
             .params(params(
                 json!({
@@ -845,11 +865,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .interactive()
             .mutates()
             .params(capture_params(json!({
-                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file", "webpage"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
                 "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen now"},
                 "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
                 "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen now"},
                 "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file to read at that time"},
+                "url": {"type": "string", "description": "Web page: its address (with width, scale, wait, lazy as capture.webpage)"},
+                "width": {"type": "integer"}, "scale": {"type": "number"}, "wait": {"type": "number"}, "lazy": {"type": "boolean"},
                 "date": {"type": "string", "description": "YYYY-MM-DD, local; omit for today"},
                 "time": {"type": "string", "description": "HH:MM, local; the capture is made at second 0 of that minute. A moment already gone is refused"},
                 "repeat": {"type": "string", "enum": ["once", "daily", "weekdays", "weekly"], "default": "once"},

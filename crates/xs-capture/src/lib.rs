@@ -33,6 +33,7 @@ pub mod scroll;
 mod scroll_win;
 pub mod stitch;
 pub mod systemshots;
+pub mod webcap;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -462,6 +463,8 @@ pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) 
             // A file (CAP-040) or a PDF's page (CAP-041).
             "file" => "file",
             "pdf" => "pdf",
+            // A web page by its address (CAP-037).
+            "webpage" => "webpage",
             _ => "screen",
         },
         "app": shot.app,
@@ -940,6 +943,11 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             }
             filesource::run(core, ctx, &opts, &paths)
         }
+        // A web page by its address (CAP-037).
+        "capture.webpage" => {
+            let opts = Options::from_params(p, ctx.source);
+            webcap::run(core, ctx, &opts, p)
+        }
         // Quick annotation (CAP-057): select as in Universal, mark, copy.
         "capture.quick_annotate" => {
             let mut p = p.clone();
@@ -1273,6 +1281,21 @@ fn repeated_capture(core: &Core, ctx: &Context, p: &Value) -> Result<(&'static s
             params["cursor"] = json!(false);
             "capture.clipboard"
         }
+        // A web page (CAP-037): its address, given at the start; each turn loads it again.
+        "webpage" => {
+            if params
+                .get("url")
+                .and_then(Value::as_str)
+                .is_none_or(|u| u.trim().is_empty())
+            {
+                return Err(CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(lang, "errors.webpage_url", &[]),
+                ));
+            }
+            params["cursor"] = json!(false);
+            "capture.webpage"
+        }
         // A file (CAP-040): the fixed one, or one chosen once; each turn reads it again
         // and keeps it only if it changed.
         "file" => {
@@ -1483,6 +1506,35 @@ pub fn extension() -> Extension {
             }
             let opts = Options::from_params(&p, ctx.source);
             pdf::import(&core, ctx, &opts, &p)
+        });
+        // A web page by its address (CAP-037): from the app without an address, the box
+        // that asks for it.
+        let w = weak.clone();
+        reg.handle("capture.webpage", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            let has_url = p
+                .get("url")
+                .and_then(Value::as_str)
+                .is_some_and(|u| !u.trim().is_empty());
+            if !has_url && !ctx.source.is_automation() {
+                core.host().webpage_prompt()?;
+                return Ok(json!({ "status": "dialog" }));
+            }
+            dispatch(&core, ctx, "capture.webpage", &p, json!({}))
+        });
+        let w = weak.clone();
+        reg.handle("capture.webpage_cancel", move |_ctx, _p| {
+            upgrade(&w)?.host().cancel_webpage();
+            Ok(json!({}))
+        });
+        let w = weak.clone();
+        reg.handle("capture.webpage_suggest", move |_ctx, _p| {
+            Ok(webcap::suggest(&*upgrade(&w)?))
         });
         let w = weak.clone();
         reg.handle("capture.pdf_info", move |ctx, p| {

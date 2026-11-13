@@ -838,6 +838,18 @@
     "capture_pdf_cancel": {
       "title": "Cancelar la importación de PDF",
       "description": "Detiene una importación de PDF entre páginas."
+    },
+    "capture_webpage": {
+      "title": "Capturar una página web",
+      "description": "Carga una página web por su dirección, en privado y sin mostrarla, y la captura entera de arriba abajo."
+    },
+    "capture_webpage_cancel": {
+      "title": "Cancelar la página web",
+      "description": "Detiene la carga de la página web que se está capturando."
+    },
+    "capture_webpage_suggest": {
+      "title": "Dirección web sugerida",
+      "description": "La dirección web del portapapeles, o la última capturada."
     }
   },
   "settings": {
@@ -1293,7 +1305,11 @@
     "pdf_unsupported": "Importar PDF todavía no está disponible en este sistema.",
     "pdf_pages": "Las páginas {{pages}} no existen en este PDF.",
     "pdf_too_many": "Como mucho {{most}} páginas por importación.",
-    "file_unreadable": "El archivo no se pudo leer como imagen."
+    "file_unreadable": "El archivo no se pudo leer como imagen.",
+    "webpage_url": "Escribe una dirección web que empiece por http o https (o solo el sitio, como example.com).",
+    "webpage_timeout": "{{url}} no terminó de cargar en 30 segundos. No se creó ninguna captura.",
+    "webpage_unreachable": "{{url}} no se pudo abrir: revisa la dirección y la conexión. No se creó ninguna captura.",
+    "webpage_failed": "{{url}} no se pudo capturar ({{reason}})."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1643,7 +1659,9 @@
     "schedule_window_gone": "{{name}} se omitió: su ventana no existe.",
     "schedule_failed": "{{name}} no se pudo hacer a su hora.",
     "pdf_split": "Las páginas no cabían en una imagen: quedaron en {{count}} imágenes.",
-    "files_skipped": "Estos archivos no se importaron: {{names}}."
+    "files_skipped": "Estos archivos no se importaron: {{names}}.",
+    "webpage_status": "El servidor respondió con una página de error (código {{code}}): se capturó tal cual.",
+    "webpage_cut": "La página era más alta que el tamaño máximo: se cortó a 60.000 píxeles."
   },
   "source": {
     "ui": "la interfaz",
@@ -2197,7 +2215,13 @@
       "source_file_choose": "Elegir…",
       "source_file_clear": "Preguntar cada vez",
       "show_launcher": "Mostrar el lanzador de borde",
-      "hide_launcher": "Ocultar el lanzador de borde"
+      "hide_launcher": "Ocultar el lanzador de borde",
+      "sel_webpage": "Página web",
+      "web_width": "Ancho de la vista (px)",
+      "web_scale": "Escala",
+      "web_scale_auto": "La del monitor",
+      "web_wait": "Esperar tras cargar (s)",
+      "web_lazy": "Cargar el contenido que aparece al desplazar"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3849,6 +3873,14 @@
       "none": "Todavía no hay presets",
       "new": "Preset nuevo: {{name}}",
       "tab": "Lanzador de XcreenShot"
+    },
+    "webpage": {
+      "title": "Capturar una página web",
+      "url": "Dirección web",
+      "capture": "Capturar",
+      "cancel": "Cancelar",
+      "loading": "Cargando {{url}}…",
+      "private": "Se carga en privado: sin las sesiones ni las cookies de tu navegador."
     }
   },
   "history": {
@@ -4053,7 +4085,8 @@
       "picker": "Selector de ventanas",
       "clipboard": "Portapapeles",
       "file": "Archivo",
-      "pdf": "PDF"
+      "pdf": "PDF",
+      "webpage": "Página web"
     },
     "kind": {
       "universal": "Universal",

@@ -31,6 +31,7 @@ pub const CAPTURE_COMMANDS: &[&str] = &[
     "capture.quick_annotate",
     "capture.file",
     "capture.pdf",
+    "capture.webpage",
 ];
 
 /// Commands whose result names a file they wrote.

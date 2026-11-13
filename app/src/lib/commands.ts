@@ -197,6 +197,7 @@ export interface PanelSettings {
       | "clipboard"
       | "file"
       | "pdf"
+      | "webpage"
       | "text";
     copy: boolean;
     cursor: boolean;
@@ -209,6 +210,8 @@ export interface PanelSettings {
     schedule: ScheduleProps;
     /** Selection = File: a fixed file (CAP-040); empty asks each time. */
     sourceFile: string;
+    /** Selection = Web page (CAP-037): view width, scale (0: the monitor's), wait, lazy. */
+    web: { width: number; scale: 0 | 1 | 2; wait: number; lazy: boolean };
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

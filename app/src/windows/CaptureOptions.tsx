@@ -29,6 +29,7 @@ const IMAGE_SELECTIONS = [
   "clipboard",
   "file",
   "pdf",
+  "webpage",
   "text",
 ] as const;
 
@@ -61,7 +62,8 @@ function CommonOptions<T extends Common>({
     value.selection === "menu" ||
     value.selection === "clipboard" ||
     value.selection === "file" ||
-    value.selection === "pdf";
+    value.selection === "pdf" ||
+    value.selection === "webpage";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>
@@ -176,6 +178,9 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "webpage" && (
+        <WebOptions value={value.web} onChange={(w) => onChange({ web: { ...value.web, ...w } })} />
+      )}
       {value.selection === "file" && (
         <SourceFileOptions
           path={value.sourceFile}
@@ -362,6 +367,92 @@ function ScrollOptions({
           </label>
         </>
       )}
+    </fieldset>
+  );
+}
+
+/** Selection = Web page (CAP-037): the view's width, the scale, the wait after loading
+ * and whether content that loads on scrolling is loaded first. */
+function WebOptions({
+  value,
+  onChange,
+}: {
+  value: PanelSettings["image"]["web"];
+  onChange: (patch: Partial<PanelSettings["image"]["web"]>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [width, setWidth] = useState<string | null>(null);
+  const [wait, setWait] = useState<string | null>(null);
+  const commitWidth = () => {
+    const n = Math.round(Number(width));
+    if (width !== null && Number.isFinite(n)) onChange({ width: Math.min(3840, Math.max(320, n)) });
+    setWidth(null);
+  };
+  const commitWait = () => {
+    const n = Math.round(Number(wait) * 10) / 10;
+    if (wait !== null && Number.isFinite(n)) onChange({ wait: Math.min(10, Math.max(0, n)) });
+    setWait(null);
+  };
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-field" htmlFor={`${id}-w`}>
+        <span>{t("ui.panel.web_width")}</span>
+        <input
+          id={`${id}-w`}
+          type="number"
+          min={320}
+          max={3840}
+          list={`${id}-widths`}
+          value={width ?? String(value.width)}
+          onChange={(e) => setWidth(e.target.value)}
+          onBlur={commitWidth}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitWidth();
+          }}
+        />
+        <datalist id={`${id}-widths`}>
+          {[375, 768, 1280, 1440, 1920].map((w) => (
+            <option key={w} value={w} />
+          ))}
+        </datalist>
+      </label>
+      <label className="panel-field" htmlFor={`${id}-s`}>
+        <span>{t("ui.panel.web_scale")}</span>
+        <select
+          id={`${id}-s`}
+          value={value.scale}
+          onChange={(e) => onChange({ scale: Number(e.target.value) as 0 | 1 | 2 })}
+        >
+          <option value={0}>{t("ui.panel.web_scale_auto")}</option>
+          <option value={1}>1×</option>
+          <option value={2}>2×</option>
+        </select>
+      </label>
+      <label className="panel-field narrow" htmlFor={`${id}-wait`}>
+        <span>{t("ui.panel.web_wait")}</span>
+        <input
+          id={`${id}-wait`}
+          type="number"
+          min={0}
+          max={10}
+          step={0.5}
+          value={wait ?? String(value.wait)}
+          onChange={(e) => setWait(e.target.value)}
+          onBlur={commitWait}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitWait();
+          }}
+        />
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={value.lazy}
+          onChange={(e) => onChange({ lazy: e.target.checked })}
+        />
+        {t("ui.panel.web_lazy")}
+      </label>
     </fieldset>
   );
 }
