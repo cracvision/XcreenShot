@@ -296,6 +296,8 @@ impl Host for TauriHost {
             if let Err(e) = windows::scroll_panel(&app, place) {
                 tracing::error!(error = %e, "scrolling capture panel");
             }
+            // The icon menu offers Finish scrolling meanwhile (CAP-034).
+            crate::tray::refresh(&app);
             let _ = tx.send(());
         });
         // Wait until it is shown or gone: the first frame must not race with it.

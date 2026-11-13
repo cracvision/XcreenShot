@@ -559,13 +559,13 @@ pub fn run(
         }
     };
     drop(hooks);
-    core.host().scroll_panel(None);
     {
         let s = service(core);
         let mut shared = s.shared.lock().unwrap();
         shared.actions = None;
         shared.preview = None;
     }
+    core.host().scroll_panel(None);
     core.host().scroll_event(json!({ "running": false }));
 
     let Ok(stitcher) = outcome else {

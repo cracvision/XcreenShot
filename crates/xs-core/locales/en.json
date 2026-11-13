@@ -1327,7 +1327,8 @@
     "open_library": "Open library",
     "presets": "Presets",
     "presets_empty": "No presets",
-    "extract_text": "Extract text"
+    "extract_text": "Extract text",
+    "finish_scrolling": "Finish scrolling"
   },
   "menu": {
     "flatten": "Fla&tten",

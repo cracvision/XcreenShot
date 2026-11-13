@@ -1327,7 +1327,8 @@
     "open_library": "Abrir biblioteca",
     "presets": "Presets",
     "presets_empty": "Sin presets",
-    "extract_text": "Extraer texto"
+    "extract_text": "Extraer texto",
+    "finish_scrolling": "Terminar desplazamiento"
   },
   "menu": {
     "flatten": "A&planar",

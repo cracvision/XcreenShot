@@ -64,6 +64,32 @@ fn cmd(id: &'static str, label: &'static str, command: &'static str) -> MenuEntr
 /// the presets, `(id, name)` in their order (CAP-058). The status block, video, quick
 /// annotation and Recent items arrive with their features.
 pub fn tray_menu(presets: &[(String, String)]) -> Vec<MenuEntry> {
+    tray_menu_with(presets, false)
+}
+
+/// The tray menu; while a scrolling capture runs it starts with Finish scrolling, for
+/// when its panel is covered (CAP-034).
+pub fn tray_menu_with(presets: &[(String, String)], scrolling: bool) -> Vec<MenuEntry> {
+    let mut menu = tray_entries(presets);
+    if scrolling {
+        menu.splice(
+            0..0,
+            [
+                MenuEntry::Command {
+                    id: "finish_scrolling",
+                    label: "tray.finish_scrolling",
+                    command: "capture.scroll_action",
+                    params: json!({ "action": "done" }),
+                    checked: None,
+                },
+                MenuEntry::Separator,
+            ],
+        );
+    }
+    menu
+}
+
+fn tray_entries(presets: &[(String, String)]) -> Vec<MenuEntry> {
     let preset_items = if presets.is_empty() {
         vec![MenuEntry::Placeholder {
             label: "tray.presets_empty",
