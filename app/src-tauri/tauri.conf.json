@@ -34,7 +34,7 @@
         "ext": [
           "xshot"
         ],
-        "name": "XcreenShot capture",
+        "name": "XcreenShot.Capture",
         "description": "XcreenShot capture",
         "role": "Editor",
         "mimeType": "application/x-xcreenshot"
@@ -43,7 +43,7 @@
         "ext": [
           "xpreset"
         ],
-        "name": "XcreenShot presets",
+        "name": "XcreenShot.Presets",
         "description": "XcreenShot capture presets",
         "role": "Viewer"
       },
@@ -51,7 +51,7 @@
         "ext": [
           "xtheme"
         ],
-        "name": "XcreenShot theme",
+        "name": "XcreenShot.Theme",
         "description": "XcreenShot theme",
         "role": "Viewer"
       },
@@ -59,7 +59,7 @@
         "ext": [
           "xtemplate"
         ],
-        "name": "XcreenShot template",
+        "name": "XcreenShot.Template",
         "description": "XcreenShot template",
         "role": "Viewer"
       }
