@@ -334,11 +334,26 @@ pub fn ask_text(app: &AppHandle, open: bool) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Where XcreenShot put the recording bar, and where the user dragged it: the next
+/// recording of the session uses the user's place (VID-016).
+/// A place on the virtual screen, physical pixels.
+type Place = Option<(i32, i32)>;
+static BAR_PLACE: std::sync::Mutex<(Place, Place)> = std::sync::Mutex::new((None, None));
+
 /// The recording bar and the border around the recorded area (VID-011, VID-020):
 /// both stay out of the video (content protection) and the border lets clicks
 /// through. `None` closes them.
 pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
     let Some(state) = state else {
+        // Moved by the user: remembered for the session (VID-016).
+        if let Some(bar) = app.get_webview_window(RECBAR) {
+            if let Ok(p) = bar.outer_position() {
+                let mut place = BAR_PLACE.lock().unwrap();
+                if place.0 != Some((p.x, p.y)) {
+                    place.1 = Some((p.x, p.y));
+                }
+            }
+        }
         for label in [RECBAR, RECFRAME] {
             if let Some(w) = app.get_webview_window(label) {
                 w.destroy()?;
@@ -400,7 +415,42 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
                     py = y + h - gap - bh * scale;
                 }
             }
+            // The whole monitor and another one there: the bar goes to the other,
+            // at the bottom of its middle (VID-016).
+            let whole = {
+                let (mx, my) = (m.position().x as f64, m.position().y as f64);
+                let (mw, mh) = (m.size().width as f64, m.size().height as f64);
+                x <= mx + 2.0 && y <= my + 2.0 && x + w >= mx + mw - 2.0 && y + h >= my + mh - 2.0
+            };
+            if whole {
+                let other = app
+                    .available_monitors()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .find(|o| o.position() != m.position());
+                if let Some(o) = other {
+                    let a = o.work_area();
+                    let s = o.scale_factor();
+                    px = a.position.x as f64 + (a.size.width as f64 - bw * s) / 2.0;
+                    py = a.position.y as f64 + a.size.height as f64 - (bh + 24.0) * s;
+                }
+            }
         }
+        // Where the user dragged it before, if that place is still on a monitor.
+        let mut place = BAR_PLACE.lock().unwrap();
+        if let Some((ux, uy)) = place.1 {
+            if app
+                .monitor_from_point(ux as f64 + 20.0, uy as f64 + 20.0)
+                .ok()
+                .flatten()
+                .is_some()
+            {
+                px = ux as f64;
+                py = uy as f64;
+            }
+        }
+        place.0 = Some((px as i32, py as i32));
+        drop(place);
         let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.recbar.title", &[]);
         let bar = WebviewWindowBuilder::new(app, RECBAR, WebviewUrl::App("index.html".into()))
             .title(title)
