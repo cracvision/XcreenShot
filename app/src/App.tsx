@@ -9,6 +9,7 @@ import { Preferences } from "./windows/Preferences";
 import { ScrollPanel } from "./windows/ScrollPanel";
 import { WindowPicker } from "./windows/WindowPicker";
 import { TextResult } from "./windows/TextResult";
+import { PdfImport } from "./windows/PdfImport";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
 
@@ -19,6 +20,8 @@ export function App() {
   if (isOverlay) return <Overlay />;
   // Extract text: one window per result (SMT-006).
   if (windowLabel.startsWith("text-")) return <TextResult id={windowLabel.slice(5)} />;
+  // Import PDF: one window per file (CAP-041).
+  if (windowLabel.startsWith("pdf-")) return <PdfImport id={windowLabel.slice(4)} />;
   switch (windowLabel) {
     case "preferences":
       return <Preferences />;

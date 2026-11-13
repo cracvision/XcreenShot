@@ -7165,6 +7165,7 @@ name = "xs-capture"
 version = "0.2.0"
 dependencies = [
  "arboard",
+ "base64 0.22.1",
  "chrono",
  "directories",
  "image",
@@ -7174,6 +7175,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tracing",
+ "windows 0.62.2",
  "windows-sys 0.59.0",
  "xcap",
  "xs-core",

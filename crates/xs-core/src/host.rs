@@ -200,6 +200,21 @@ pub trait Host: Send + Sync {
     fn scroll_event(&self, state: Value) {}
     /// The interval series changed (CAP-049): started, a capture, stopped.
     fn interval_event(&self, state: Value) {}
+    /// The system's Open dialog: the files chosen, or none if cancelled. `filters`
+    /// are (name, extensions) (CAP-040, CAP-041).
+    fn pick_files(
+        &self,
+        multiple: bool,
+        filters: &[(String, Vec<String>)],
+    ) -> Option<Vec<std::path::PathBuf>> {
+        None
+    }
+    /// The Import PDF window for an import id (CAP-041).
+    fn pdf_window(&self, id: &str) -> Result<(), CommandError> {
+        Err(unsupported())
+    }
+    /// How a PDF import goes: `{id, done, total}` (CAP-041).
+    fn pdf_event(&self, state: Value) {}
     /// Shows or closes the window picker (CAP-030): over the monitor under the pointer,
     /// never part of a capture.
     fn picker_window(&self, show: bool) {}

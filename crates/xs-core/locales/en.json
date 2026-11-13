@@ -818,6 +818,26 @@
     "capture_schedule_cancel": {
       "title": "Cancel a scheduled capture",
       "description": "Cancels one scheduled capture, or all of them."
+    },
+    "capture_file": {
+      "title": "Capture from a file",
+      "description": "Image files that already exist become captures, with the capture options (effects, destinations); the originals are not changed."
+    },
+    "capture_pdf": {
+      "title": "Import PDF",
+      "description": "The pages of a PDF become captures: one per page or all in one image, at the resolution chosen."
+    },
+    "capture_pdf_info": {
+      "title": "PDF information",
+      "description": "How many pages a PDF has and their sizes, or that it needs a password."
+    },
+    "capture_pdf_page": {
+      "title": "PDF page thumbnail",
+      "description": "One page of a PDF as a small image."
+    },
+    "capture_pdf_cancel": {
+      "title": "Cancel PDF import",
+      "description": "Stops a PDF import between pages."
     }
   },
   "settings": {
@@ -1257,7 +1277,14 @@
     "interval_selection": "Interval works with Region, Window, Full screen, Menu and Clipboard.",
     "series_not_found": "There is no interval series {{id}} running.",
     "schedule_past": "That time has already passed: choose one still to come.",
-    "schedule_not_found": "There is no scheduled capture {{id}}."
+    "schedule_not_found": "There is no scheduled capture {{id}}.",
+    "pdf_not_found": "That PDF import is no longer open.",
+    "pdf_password": "“{{name}}” needs a password, or the one given is not right.",
+    "pdf_unreadable": "“{{name}}” could not be read as a PDF.",
+    "pdf_unsupported": "Importing PDF is not available on this system yet.",
+    "pdf_pages": "Pages {{pages}} do not exist in this PDF.",
+    "pdf_too_many": "At most {{most}} pages per import.",
+    "file_unreadable": "The file could not be read as an image."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1605,7 +1632,9 @@
     "schedule_missed": "{{name}} was skipped: XcreenShot was not running at its time.",
     "schedule_locked": "{{name}} was skipped: the session was locked.",
     "schedule_window_gone": "{{name}} was skipped: its window does not exist.",
-    "schedule_failed": "{{name}} could not be made at its time."
+    "schedule_failed": "{{name}} could not be made at its time.",
+    "pdf_split": "The pages did not fit in one image: they are in {{count}} images.",
+    "files_skipped": "These files were not imported: {{names}}."
   },
   "source": {
     "ui": "the interface",
@@ -2150,7 +2179,14 @@
       "repeat_daily": "Every day",
       "repeat_weekdays": "Weekdays",
       "repeat_weekly": "Every week",
-      "schedule_status": "Next: {{when}}"
+      "schedule_status": "Next: {{when}}",
+      "sel_file": "File",
+      "sel_pdf": "PDF",
+      "file_filter": "Images, PDF and XcreenShot documents",
+      "source_file": "Fixed file",
+      "source_file_none": "Ask each time",
+      "source_file_choose": "Choose…",
+      "source_file_clear": "Ask each time"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3768,6 +3804,32 @@
       "cancel": "Cancel",
       "discard": "Discard the marks? Press Esc again to discard them.",
       "text_hint": "Type, then Enter. Shift+Enter: new line."
+    },
+    "pdf": {
+      "title": "Import PDF",
+      "password": "Password",
+      "password_needed": "This PDF has a password.",
+      "password_wrong": "That password is not right. Try again.",
+      "open": "Open",
+      "pages": "Pages",
+      "range": "Range",
+      "range_hint": "e.g. 1-3, 7",
+      "all": "All",
+      "none": "None",
+      "resolution": "Resolution",
+      "result": "Result",
+      "one_per_page": "One capture per page",
+      "one_image": "All pages in one image",
+      "background": "Page background",
+      "white": "White",
+      "transparent": "Transparent",
+      "import": "Import",
+      "cancel": "Cancel",
+      "importing": "Importing page {{done}} of {{total}}…",
+      "page": "Page {{n}}",
+      "selected": "{{count}} of {{total}} pages",
+      "too_many": "At most 200 pages per import.",
+      "loading": "Opening…"
     }
   },
   "history": {
@@ -3970,7 +4032,9 @@
       "multi": "Multiple areas",
       "menu": "Menu",
       "picker": "Window picker",
-      "clipboard": "Clipboard"
+      "clipboard": "Clipboard",
+      "file": "File",
+      "pdf": "PDF"
     },
     "kind": {
       "universal": "Universal",

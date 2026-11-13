@@ -193,6 +193,27 @@ pub fn open_text_result(app: &AppHandle, id: &str) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Import PDF (CAP-041): one window per file, centered, resizable. Its label carries
+/// the import's id.
+pub fn open_pdf(app: &AppHandle, id: &str) -> tauri::Result<()> {
+    let label = format!("pdf-{id}");
+    if let Some(w) = app.get_webview_window(&label) {
+        focus(&w);
+        return Ok(());
+    }
+    let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.pdf.title", &[]);
+    let w = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .inner_size(760.0, 640.0)
+        .min_inner_size(520.0, 420.0)
+        .minimizable(false)
+        .center()
+        .theme(theme(app))
+        .build()?;
+    focus(&w);
+    Ok(())
+}
+
 /// The Help window (APP-015) at a topic: the page goes in the address, and an open
 /// window is told with an event.
 pub fn open_help(app: &AppHandle, topic: Option<&str>) -> tauri::Result<()> {

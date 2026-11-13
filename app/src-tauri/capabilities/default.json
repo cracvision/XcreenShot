@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "XcreenShot windows only call the command registry, listen to app events, close themselves (the welcome, the extracted text), go full screen (the editor, EDT-009) and show the system Open and Save dialogs.",
-  "windows": ["main", "preferences", "capture-panel", "countdown", "multicapture", "scroll", "picker", "help", "welcome", "overlay-*", "text-*"],
+  "windows": ["main", "preferences", "capture-panel", "countdown", "multicapture", "scroll", "picker", "help", "welcome", "overlay-*", "text-*", "pdf-*"],
   "permissions": ["core:default", "core:window:allow-close", "core:window:allow-set-fullscreen", "dialog:allow-open", "dialog:allow-save"]
 }

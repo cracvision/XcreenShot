@@ -27,6 +27,8 @@ const IMAGE_SELECTIONS = [
   "menu",
   "multi",
   "clipboard",
+  "file",
+  "pdf",
   "text",
 ] as const;
 
@@ -57,7 +59,9 @@ function CommonOptions<T extends Common>({
     text ||
     value.selection === "scrolling" ||
     value.selection === "menu" ||
-    value.selection === "clipboard";
+    value.selection === "clipboard" ||
+    value.selection === "file" ||
+    value.selection === "pdf";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>
@@ -172,6 +176,12 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "file" && (
+        <SourceFileOptions
+          path={value.sourceFile}
+          onChange={(sourceFile) => onChange({ sourceFile })}
+        />
+      )}
       {value.selection === "region" && (
         <RegionOptions
           value={value.region}
@@ -352,6 +362,51 @@ function ScrollOptions({
           </label>
         </>
       )}
+    </fieldset>
+  );
+}
+
+/** Selection = File (CAP-040): a fixed file used without asking, or ask each time. */
+function SourceFileOptions({ path, onChange }: { path: string; onChange: (path: string) => void }) {
+  const { t } = useTranslation();
+  const choose = async () => {
+    const picked = await openDialog({
+      multiple: false,
+      filters: [
+        {
+          name: t("ui.panel.file_filter"),
+          extensions: [
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "bmp",
+            "tif",
+            "tiff",
+            "webp",
+            "heic",
+            "heif",
+            "ico",
+          ],
+        },
+      ],
+    });
+    if (typeof picked === "string") onChange(picked);
+  };
+  return (
+    <fieldset className="panel-props">
+      <legend className="panel-legend">{t("ui.panel.source_file")}</legend>
+      <span className="panel-path">{path || t("ui.panel.source_file_none")}</span>
+      <div className="panel-row">
+        <button type="button" className="btn small" onClick={() => void choose()}>
+          {t("ui.panel.source_file_choose")}
+        </button>
+        {path && (
+          <button type="button" className="btn small" onClick={() => onChange("")}>
+            {t("ui.panel.source_file_clear")}
+          </button>
+        )}
+      </div>
     </fieldset>
   );
 }

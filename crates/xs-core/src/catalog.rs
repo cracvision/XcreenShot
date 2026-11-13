@@ -756,10 +756,11 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .interactive()
             .mutates()
             .params(capture_params(json!({
-                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
                 "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen once"},
                 "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
                 "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen once"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file read again each turn; a capture only when it changed"},
                 "every": {"type": "number", "minimum": 1, "maximum": 86400, "default": 60, "description": "Seconds between captures; fewer than 3 become 3"},
                 "stop": {"type": "string", "enum": ["manual", "count", "duration", "time"], "default": "manual", "description": "manual (capture.interval_stop), after `count` captures, after `minutes`, or at `until`"},
                 "count": {"type": "integer", "minimum": 1, "maximum": 100000, "default": 10},
@@ -773,15 +774,80 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "enum": ["started"]},
                 "series": {"type": "object", "description": "id, name, count, every, startedAt, nextAt, endsAt, stopAfter"}
             }})),
+        B::new("capture.file", &["CAP-040", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "Image files, in order; one capture each (PNG, JPG, GIF, BMP, TIFF, WebP, HEIC if the system has it, ICO). A PDF goes to Import PDF and an .xshot opens in the editor. Omit to choose them in the Open dialog"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string"},
+                "count": {"type": "integer"},
+                "documents": {"type": "array", "items": {"type": "string"}},
+                "pdfWindows": {"type": "array", "items": {"type": "string"}},
+                "skipped": {"type": "array", "items": {"type": "object"}, "description": "{path, reason} of the files that could not be read"}
+            }})),
+        B::new("capture.pdf", &["CAP-041"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "path": {"type": "string", "description": "The PDF; omit to choose it in the Open dialog"},
+                "id": {"type": "string", "description": "Internal: the Import PDF window's import"},
+                "password": {"type": "string", "description": "For a PDF with a password"},
+                "pages": {"type": "string", "description": "Pages, as 1-3, 7 (default: all, at most 200)"},
+                "dpi": {"type": "integer", "minimum": 72, "maximum": 300, "default": 150, "description": "72, 96, 150, 200 or 300 (another value is 150)"},
+                "combine": {"type": "boolean", "default": false, "description": "All pages in one image, one under the other (several images past 60,000 px)"},
+                "background": {"type": "string", "enum": ["white", "transparent"], "default": "white"},
+                "dialog": {"type": "boolean", "description": "Open the Import PDF window instead of importing (default: yes from the app, no from automation)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["completed", "dialog"]},
+                "count": {"type": "integer"},
+                "documents": {"type": "array", "items": {"type": "string"}},
+                "id": {"type": "string"}
+            }})),
+        B::new("capture.pdf_info", &["CAP-041"])
+            .params(params(
+                json!({
+                    "path": {"type": "string"},
+                    "id": {"type": "string", "description": "An Import PDF window's import"},
+                    "password": {"type": "string"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"}, "name": {"type": "string"}, "pages": {"type": "integer"},
+                "sizes": {"type": "array", "description": "[width, height] of each page, in 1/96 inch"},
+                "needsPassword": {"type": "boolean"}, "wrongPassword": {"type": "boolean"}
+            }})),
+        B::new("capture.pdf_page", &["CAP-041"])
+            .params(params(
+                json!({
+                    "path": {"type": "string"},
+                    "id": {"type": "string"},
+                    "password": {"type": "string"},
+                    "page": {"type": "integer", "minimum": 1},
+                    "width": {"type": "integer", "minimum": 16, "maximum": 1600, "default": 160}
+                }),
+                &["page"],
+            ))
+            .result(json!({"type": "object", "properties": {"png": {"type": "string", "description": "Base64 PNG"}}})),
+        B::new("capture.pdf_cancel", &["CAP-041"])
+            .mutates()
+            .params(params(json!({"id": {"type": "string"}}), &[]))
+            .result(json!({"type": "object"})),
         B::new("capture.schedule", &["CAP-050", "CAP-045", "CAP-056"])
             .scopes(ALL)
             .interactive()
             .mutates()
             .params(capture_params(json!({
-                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
                 "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen now"},
                 "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
                 "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen now"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file to read at that time"},
                 "date": {"type": "string", "description": "YYYY-MM-DD, local; omit for today"},
                 "time": {"type": "string", "description": "HH:MM, local; the capture is made at second 0 of that minute. A moment already gone is refused"},
                 "repeat": {"type": "string", "enum": ["once", "daily", "weekdays", "weekly"], "default": "once"},

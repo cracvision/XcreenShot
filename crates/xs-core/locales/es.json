@@ -818,6 +818,26 @@
     "capture_schedule_cancel": {
       "title": "Cancelar una captura programada",
       "description": "Cancela una captura programada, o todas."
+    },
+    "capture_file": {
+      "title": "Capturar desde un archivo",
+      "description": "Archivos de imagen que ya existen se convierten en capturas, con las opciones de captura (efectos, destinos); los originales no cambian."
+    },
+    "capture_pdf": {
+      "title": "Importar PDF",
+      "description": "Las páginas de un PDF se convierten en capturas: una por página o todas en una imagen, con la resolución elegida."
+    },
+    "capture_pdf_info": {
+      "title": "Información de un PDF",
+      "description": "Cuántas páginas tiene un PDF y su tamaño, o que necesita contraseña."
+    },
+    "capture_pdf_page": {
+      "title": "Miniatura de una página de PDF",
+      "description": "Una página de un PDF como imagen pequeña."
+    },
+    "capture_pdf_cancel": {
+      "title": "Cancelar la importación de PDF",
+      "description": "Detiene una importación de PDF entre páginas."
     }
   },
   "settings": {
@@ -1257,7 +1277,14 @@
     "interval_selection": "El intervalo funciona con Región, Ventana, Pantalla completa, Menú y Portapapeles.",
     "series_not_found": "No hay ninguna serie por intervalo {{id}} activa.",
     "schedule_past": "Esa hora ya pasó: elige una que todavía no haya llegado.",
-    "schedule_not_found": "No hay ninguna captura programada {{id}}."
+    "schedule_not_found": "No hay ninguna captura programada {{id}}.",
+    "pdf_not_found": "Esa importación de PDF ya no está abierta.",
+    "pdf_password": "«{{name}}» necesita contraseña, o la que se dio no es correcta.",
+    "pdf_unreadable": "«{{name}}» no se pudo leer como PDF.",
+    "pdf_unsupported": "Importar PDF todavía no está disponible en este sistema.",
+    "pdf_pages": "Las páginas {{pages}} no existen en este PDF.",
+    "pdf_too_many": "Como mucho {{most}} páginas por importación.",
+    "file_unreadable": "El archivo no se pudo leer como imagen."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1605,7 +1632,9 @@
     "schedule_missed": "{{name}} se omitió: XcreenShot no estaba abierto a esa hora.",
     "schedule_locked": "{{name}} se omitió: la sesión estaba bloqueada.",
     "schedule_window_gone": "{{name}} se omitió: su ventana no existe.",
-    "schedule_failed": "{{name}} no se pudo hacer a su hora."
+    "schedule_failed": "{{name}} no se pudo hacer a su hora.",
+    "pdf_split": "Las páginas no cabían en una imagen: quedaron en {{count}} imágenes.",
+    "files_skipped": "Estos archivos no se importaron: {{names}}."
   },
   "source": {
     "ui": "la interfaz",
@@ -2150,7 +2179,14 @@
       "repeat_daily": "Cada día",
       "repeat_weekdays": "Días laborables",
       "repeat_weekly": "Cada semana",
-      "schedule_status": "Próxima: {{when}}"
+      "schedule_status": "Próxima: {{when}}",
+      "sel_file": "Archivo",
+      "sel_pdf": "PDF",
+      "file_filter": "Imágenes, PDF y documentos de XcreenShot",
+      "source_file": "Archivo fijo",
+      "source_file_none": "Preguntar cada vez",
+      "source_file_choose": "Elegir…",
+      "source_file_clear": "Preguntar cada vez"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3768,6 +3804,32 @@
       "cancel": "Cancelar",
       "discard": "¿Descartar las marcas? Pulsa Esc otra vez para descartarlas.",
       "text_hint": "Escribe y pulsa Enter. Mayús+Enter: otra línea."
+    },
+    "pdf": {
+      "title": "Importar PDF",
+      "password": "Contraseña",
+      "password_needed": "Este PDF tiene contraseña.",
+      "password_wrong": "Esa contraseña no es correcta. Inténtalo otra vez.",
+      "open": "Abrir",
+      "pages": "Páginas",
+      "range": "Rango",
+      "range_hint": "p. ej. 1-3, 7",
+      "all": "Todas",
+      "none": "Ninguna",
+      "resolution": "Resolución",
+      "result": "Resultado",
+      "one_per_page": "Una captura por página",
+      "one_image": "Todas las páginas en una imagen",
+      "background": "Fondo de las páginas",
+      "white": "Blanco",
+      "transparent": "Transparente",
+      "import": "Importar",
+      "cancel": "Cancelar",
+      "importing": "Importando la página {{done}} de {{total}}…",
+      "page": "Página {{n}}",
+      "selected": "{{count}} de {{total}} páginas",
+      "too_many": "Como mucho 200 páginas por importación.",
+      "loading": "Abriendo…"
     }
   },
   "history": {
@@ -3970,7 +4032,9 @@
       "multi": "Múltiples áreas",
       "menu": "Menú",
       "picker": "Selector de ventanas",
-      "clipboard": "Portapapeles"
+      "clipboard": "Portapapeles",
+      "file": "Archivo",
+      "pdf": "PDF"
     },
     "kind": {
       "universal": "Universal",

@@ -1895,6 +1895,114 @@ html.overlay-root.overlay-native #root {
   word-break: break-all;
 }
 
+/* Import PDF (CAP-041): thumbnails on the left, options on the right. */
+.pdf-import {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto auto;
+  gap: var(--space-3);
+  height: 100vh;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.pdf-import h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.pdf-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
+.pdf-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+  align-content: start;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow: auto;
+}
+
+.pdf-page {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.pdf-page.on {
+  border-color: var(--brand-ink);
+  background: var(--brand-soft);
+}
+
+.pdf-page input {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.pdf-page img,
+.pdf-thumb-wait {
+  width: 100%;
+  max-width: 110px;
+  aspect-ratio: 210 / 297;
+  object-fit: contain;
+  background: var(--surface-raised);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+
+.pdf-options {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.pdf-options .panel-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.pdf-options input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.pdf-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 12.5px;
+}
+
+.pdf-progress progress {
+  flex: 1;
+}
+
+.pdf-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.pdf-password {
+  grid-template-rows: auto auto auto 1fr;
+  max-width: 420px;
+}
+
 /* A box with nothing in it yet (no effects, CAP-051). */
 .panel-empty {
   margin: 0;

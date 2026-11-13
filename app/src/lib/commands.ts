@@ -195,6 +195,8 @@ export interface PanelSettings {
       | "menu"
       | "multi"
       | "clipboard"
+      | "file"
+      | "pdf"
       | "text";
     copy: boolean;
     cursor: boolean;
@@ -205,6 +207,8 @@ export interface PanelSettings {
     interval: IntervalProps;
     /** Timing = Scheduled (CAP-050). */
     schedule: ScheduleProps;
+    /** Selection = File: a fixed file (CAP-040); empty asks each time. */
+    sourceFile: string;
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

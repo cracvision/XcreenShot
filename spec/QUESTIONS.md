@@ -254,6 +254,16 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 9: archivo y PDF)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-041 | ¿Con qué se dibujan las páginas del PDF? | Con el motor PDF de Windows (`Windows.Data.Pdf`), a través del paquete `windows` que la app ya tenía para el OCR: no entra ningún paquete nuevo y se ven como al imprimirlas | Provisional |
+| CAP-041 | El texto de cada página en los metadatos | El motor de Windows no da el texto. Propuesta: pasar cada página por Extraer texto (OCR local) al importar, como opción, o dejarlo para cuando haya un lector de PDF propio | Abierta |
+| CAP-040 | SVG | Convertirlo a píxeles pide un motor de SVG (un paquete nuevo). Por ahora se omite con el aviso de "no se pudo leer" | Abierta |
+| CAP-040 | GIF, WebP y HEIC | Los lee el decodificador del sistema (WIC), sin paquetes nuevos; HEIC solo si Windows tiene su extensión instalada | Provisional |
+| CAP-040 | Abrir en = Editor con varios archivos | Se abre el primero; los demás quedan en la bandeja reciente, como con PDF | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 8: capturas del sistema)
 
 | ID | Duda | Propuesta | Estado |

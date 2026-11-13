@@ -193,6 +193,8 @@ pub struct ImageTab {
     pub share: Vec<String>,
     /// The File destination's options (CAP-053).
     pub file: crate::filedest::FileDest,
+    /// Selection = File: a fixed file, used without asking (CAP-040); empty asks.
+    pub source_file: String,
 }
 
 impl Default for ImageTab {
@@ -213,6 +215,7 @@ impl Default for ImageTab {
             effects: Vec::new(),
             share: Vec::new(),
             file: crate::filedest::FileDest::default(),
+            source_file: String::new(),
         }
     }
 }
@@ -241,7 +244,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 9] = [
+const IMAGE_SELECTIONS: [&str; 11] = [
     "region",
     "window",
     "fullscreen",
@@ -250,6 +253,8 @@ const IMAGE_SELECTIONS: [&str; 9] = [
     "menu",
     "multi",
     "clipboard",
+    "file",
+    "pdf",
     "text",
 ];
 
@@ -358,6 +363,7 @@ impl PanelSettings {
             ("capture.fullscreen", _) => "fullscreen",
             ("capture.menu", _) => "menu",
             ("capture.clipboard", _) => "clipboard",
+            ("capture.file", _) => "file",
             // Not with an interval: the start says so.
             (_, other) => other,
         };
@@ -399,6 +405,19 @@ impl PanelSettings {
             if self.image.selection == "clipboard" {
                 params["cursor"] = json!(false);
                 return ("capture.clipboard", params, json!({}));
+            }
+            // A file (CAP-040): the fixed one, or chosen when capturing.
+            if self.image.selection == "file" {
+                params["cursor"] = json!(false);
+                if !self.image.source_file.trim().is_empty() {
+                    params["paths"] = json!([self.image.source_file.trim()]);
+                }
+                return ("capture.file", params, json!({}));
+            }
+            // Import PDF (CAP-041): the file is chosen, then its window.
+            if self.image.selection == "pdf" {
+                params["cursor"] = json!(false);
+                return ("capture.pdf", params, json!({}));
             }
             if self.image.selection == "picker" {
                 return ("capture.window_picker", params, json!({}));

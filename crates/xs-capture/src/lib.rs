@@ -13,6 +13,7 @@ pub mod extract;
 pub mod feedback;
 pub mod filedest;
 pub mod filename;
+pub mod filesource;
 pub mod interactive;
 pub mod interval;
 pub mod menus;
@@ -20,6 +21,7 @@ pub mod multi;
 #[cfg(windows)]
 mod multi_win;
 pub mod panel;
+pub mod pdf;
 pub mod picker;
 pub mod platform;
 pub mod pointer;
@@ -457,6 +459,9 @@ pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) 
             "clipboard" => "clipboard",
             // The system's capture tool (CAP-042).
             "system" => "system",
+            // A file (CAP-040) or a PDF's page (CAP-041).
+            "file" => "file",
+            "pdf" => "pdf",
             _ => "screen",
         },
         "app": shot.app,
@@ -908,6 +913,33 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
         }
+        // A file as the source (CAP-040): the files given, the fixed one, or chosen now.
+        "capture.file" => {
+            let opts = Options::from_params(p, ctx.source);
+            let mut paths: Vec<std::path::PathBuf> = p
+                .get("paths")
+                .and_then(Value::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .map(std::path::PathBuf::from)
+                        .collect()
+                })
+                .unwrap_or_default();
+            if paths.is_empty() {
+                let mut all = filesource::IMAGE_FILES
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>();
+                all.extend(["pdf".to_string(), "xshot".to_string()]);
+                paths = core
+                    .host()
+                    .pick_files(true, &[(tr(ctx.lang, "ui.panel.file_filter", &[]), all)])
+                    .filter(|f| !f.is_empty())
+                    .ok_or_else(|| cancelled(ctx.lang))?;
+            }
+            filesource::run(core, ctx, &opts, &paths)
+        }
         // Quick annotation (CAP-057): select as in Universal, mark, copy.
         "capture.quick_annotate" => {
             let mut p = p.clone();
@@ -1241,6 +1273,30 @@ fn repeated_capture(core: &Core, ctx: &Context, p: &Value) -> Result<(&'static s
             params["cursor"] = json!(false);
             "capture.clipboard"
         }
+        // A file (CAP-040): the fixed one, or one chosen once; each turn reads it again
+        // and keeps it only if it changed.
+        "file" => {
+            if params
+                .get("paths")
+                .and_then(Value::as_array)
+                .is_none_or(|a| a.is_empty())
+            {
+                let chosen = core
+                    .host()
+                    .pick_files(
+                        false,
+                        &[(
+                            tr(lang, "ui.panel.file_filter", &[]),
+                            filesource::IMAGE_FILES.iter().map(|e| e.to_string()).collect(),
+                        )],
+                    )
+                    .and_then(|f| f.into_iter().next())
+                    .ok_or_else(|| cancelled(lang))?;
+                params["paths"] = json!([chosen]);
+            }
+            params["cursor"] = json!(false);
+            "capture.file"
+        }
         _ => {
             return Err(CommandError::new(
                 ErrorCode::InvalidParams,
@@ -1379,6 +1435,60 @@ pub fn extension() -> Extension {
             // System captures (CAP-042): watched while the option is on.
             systemshots::install(&core);
         }
+        // A file as the source (CAP-040) and Import PDF (CAP-041).
+        let w = weak.clone();
+        reg.handle("capture.file", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            dispatch(&core, ctx, "capture.file", &p, json!({}))
+        });
+        let w = weak.clone();
+        reg.handle("capture.pdf", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let lang = ctx.lang;
+            let dialog = p
+                .get("dialog")
+                .and_then(Value::as_bool)
+                .unwrap_or(!ctx.source.is_automation());
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            if dialog {
+                // The Import PDF window, for a file given or chosen now.
+                let path = match p.get("path").and_then(Value::as_str) {
+                    Some(path) => std::path::PathBuf::from(path),
+                    None => core
+                        .host()
+                        .pick_files(false, &[("PDF".into(), vec!["pdf".into()])])
+                        .and_then(|f| f.into_iter().next())
+                        .ok_or_else(|| cancelled(lang))?,
+                };
+                let id = pdf::new_window(&core, &path);
+                core.host().pdf_window(&id)?;
+                return Ok(json!({ "status": "dialog", "id": id }));
+            }
+            let opts = Options::from_params(&p, ctx.source);
+            pdf::import(&core, ctx, &opts, &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.pdf_info", move |ctx, p| {
+            pdf::info(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.pdf_page", move |ctx, p| {
+            pdf::page_png(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("capture.pdf_cancel", move |_ctx, p| {
+            let core = upgrade(&w)?;
+            Ok(pdf::cancel(&core, p.get("id").and_then(Value::as_str)))
+        });
         let w = weak.clone();
         reg.handle("capture.schedule", move |ctx, p| {
             let core = upgrade(&w)?;

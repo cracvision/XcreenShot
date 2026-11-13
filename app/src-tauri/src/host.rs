@@ -310,6 +310,43 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://scroll", state);
     }
 
+    fn pick_files(
+        &self,
+        multiple: bool,
+        filters: &[(String, Vec<String>)],
+    ) -> Option<Vec<std::path::PathBuf>> {
+        use tauri_plugin_dialog::DialogExt;
+        let mut dialog = self.app.dialog().file();
+        for (name, extensions) in filters {
+            let exts: Vec<&str> = extensions.iter().map(String::as_str).collect();
+            dialog = dialog.add_filter(name, &exts);
+        }
+        let to_paths = |f: tauri_plugin_dialog::FilePath| f.into_path().ok();
+        if multiple {
+            dialog
+                .blocking_pick_files()
+                .map(|files| files.into_iter().filter_map(to_paths).collect())
+        } else {
+            dialog.blocking_pick_file().and_then(to_paths).map(|p| vec![p])
+        }
+    }
+
+    fn pdf_window(&self, id: &str) -> Result<(), CommandError> {
+        let app = self.app.clone();
+        let id = id.to_string();
+        self.app
+            .run_on_main_thread(move || {
+                if let Err(e) = windows::open_pdf(&app, &id) {
+                    tracing::warn!(error = %e, "Import PDF window not opened");
+                }
+            })
+            .map_err(internal)
+    }
+
+    fn pdf_event(&self, state: Value) {
+        let _ = self.app.emit("xs://pdf", state);
+    }
+
     fn interval_event(&self, state: Value) {
         let _ = self.app.emit("xs://interval", state);
         // The clock on the icon and its Stop capture entries (APP-002, CAP-005).

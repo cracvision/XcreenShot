@@ -20,9 +20,21 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 arboard = { version = "3", default-features = false, features = ["image-data"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 directories = "6"
+base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_Security", "Win32_Media_Audio", "Win32_UI_Shell", "Win32_System_StationsAndDesktops", "Win32_System_DataExchange", "Win32_System_Com"] }
+
+# PDF pages (CAP-041) and the images the app's decoders do not read (CAP-040): the
+# system's own engines, through the bindings the app already has (as xs-ocr).
+windows = { version = "0.62", features = [
+  "Data_Pdf",
+  "Foundation",
+  "Graphics_Imaging",
+  "Storage",
+  "Storage_Streams",
+  "UI",
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
