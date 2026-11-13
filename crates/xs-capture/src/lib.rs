@@ -18,6 +18,7 @@ pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
+pub mod stitch;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
