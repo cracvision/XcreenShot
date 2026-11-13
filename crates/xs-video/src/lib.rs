@@ -16,7 +16,19 @@ use serde::Serialize;
 mod win;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
-pub use win::{first_frame, probe};
+pub use win::{first_frame, probe, size};
+
+/// A video's size (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn size(_path: &std::path::Path) -> Result<(u32, u32), String> {
+    Err("not available on this platform yet".into())
+}
+
+/// The first frame of a video (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn first_frame(_path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String> {
+    Err("not available on this platform yet".into())
+}
 
 /// Rectangle in physical pixels of the virtual screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

@@ -20,8 +20,8 @@ export interface LibraryItem {
   id: string;
   name: string;
   path: string;
-  kind: "image";
-  format: "xshot" | "png" | "jpg" | "jpeg";
+  kind: "image" | "video" | "gif" | "guide";
+  format: "xshot" | "png" | "jpg" | "jpeg" | "mp4";
   size: number;
   modified: string;
   captured: string;

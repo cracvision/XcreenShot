@@ -554,6 +554,15 @@ impl Library {
         let abs = self.abs(&item.path);
         let png = if item.format == "xshot" {
             Some(Xshot::read_summary(&abs).ok()?.thumb_png).filter(|b| !b.is_empty())?
+        } else if item.format == "mp4" {
+            // A video: its first frame (VID-054).
+            let (w, h, mut px) = xs_video::first_frame(&abs).ok()?;
+            for p in px.as_chunks_mut::<4>().0 {
+                p.swap(0, 2);
+                p[3] = 255;
+            }
+            let image = image::RgbaImage::from_raw(w, h, px)?;
+            xs_image::encode::png(&xs_image::encode::thumbnail(&image, THUMB), 0.0, true).ok()?
         } else {
             let image = image::open(&abs).ok()?.to_rgba8();
             xs_image::encode::png(&xs_image::encode::thumbnail(&image, THUMB), 0.0, true).ok()?

@@ -7268,6 +7268,7 @@ dependencies = [
  "trash",
  "xs-core",
  "xs-image",
+ "xs-video",
 ]
 
 [[package]]

@@ -5,8 +5,9 @@ use std::path::{Path, PathBuf};
 
 use xs_core::document::Xshot;
 
-/// Formats the editor opens (M1). Videos, GIF and the rest arrive with their features.
-pub const FORMATS: [&str; 4] = ["xshot", "png", "jpg", "jpeg"];
+/// Formats the library lists: what the editor opens, and the videos XcreenShot
+/// records (VID-054). GIF and the rest arrive with their features.
+pub const FORMATS: [&str; 5] = ["xshot", "png", "jpg", "jpeg", "mp4"];
 
 /// A file found in the library folder.
 #[derive(Debug, Clone, PartialEq)]
@@ -178,6 +179,12 @@ pub fn info(found: &Found) -> Info {
             if let Some(t) = text("capturedAt").and_then(|t| chrono::DateTime::parse_from_rfc3339(&t).ok()) {
                 info.captured = t.timestamp_millis();
             }
+        }
+    } else if format == "mp4" {
+        // Only its header: the size (VID-054).
+        if let Ok((w, h)) = xs_video::size(&found.abs) {
+            info.width = Some(w);
+            info.height = Some(h);
         }
     } else if let Ok((w, h)) = image::ImageReader::open(&found.abs)
         .and_then(|r| r.with_guessed_format())

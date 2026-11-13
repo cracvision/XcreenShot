@@ -9,6 +9,7 @@ description = "The library (LIB-): location, naming, its own index, thumbnails a
 [dependencies]
 xs-core.workspace = true
 xs-image = { path = "../xs-image" }
+xs-video = { path = "../xs-video" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

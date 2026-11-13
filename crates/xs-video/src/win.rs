@@ -813,6 +813,22 @@ pub fn probe(path: &std::path::Path) -> Result<(u32, u32, u64, f64), String> {
     }
 }
 
+/// A video's size in pixels, reading only its header (the library's index, VID-054).
+pub fn size(path: &std::path::Path) -> Result<(u32, u32), String> {
+    // SAFETY: Media Foundation reading calls.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)
+            .map_err(|e| err("reading the video", e))?;
+        let t = reader
+            .GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)
+            .map_err(|e| err("video type", e))?;
+        let size = t.GetUINT64(&MF_MT_FRAME_SIZE).map_err(|e| err("video size", e))?;
+        Ok(((size >> 32) as u32, size as u32))
+    }
+}
+
 /// The first frame of a video as BGRA pixels (width, height, pixels): for
 /// thumbnails, "Save frame" (VID-061) and spotting all-black recordings (VID-029).
 pub fn first_frame(path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String> {

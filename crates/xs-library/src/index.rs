@@ -92,7 +92,7 @@ impl Item {
             "id": self.id,
             "name": self.name,
             "path": abs,
-            "kind": "image",
+            "kind": crate::query::kind(self),
             "format": self.format,
             "size": self.size,
             "modified": time(self.modified),

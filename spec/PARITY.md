@@ -258,7 +258,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-051 | Disponibilidad de Dibujo en vivo | M4 | Could | — |
 | VID-052 | Abrir en | M4 | Must | — |
 | VID-053 | Compartir al terminar | M4 | Should | — |
-| VID-054 | Guardado en la biblioteca y metadatos | M4 | Must | — |
+| VID-054 | Guardado en la biblioteca y metadatos | M4 | Must | En curso (Windows: el MP4 va a la carpeta del mes de la biblioteca ("Video AAAA-MM-DD HH.MM.SS"), que lo lista como video con su tamaño y la miniatura de su primer fotograma; abrirlo usa el reproductor del sistema hasta que llegue el del editor (VID-056); doble clic en un `.mp4` también. Faltan los metadatos de captura del video y el filtro Tipo = Video en la interfaz) |
 | VID-055 | Importar videos | M4 | Should | — |
 | VID-056 | Reproductor de video | M4 | Must | — |
 | VID-057 | Velocidad de reproducción y clic para reproducir | M4 | Could | — |

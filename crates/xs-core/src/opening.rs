@@ -22,6 +22,8 @@ pub enum Kind {
     EditorImport,
     /// Its import starts in the capture panel.
     Presets,
+    /// A video: the system's player, until the editor plays videos (VID-056).
+    Video,
 }
 
 /// The kind of `path`, by its extension; `None`: XcreenShot does not open it.
@@ -34,6 +36,7 @@ pub fn kind(path: &str) -> Option<Kind> {
         "xshot" | "png" | "jpg" | "jpeg" => Some(Kind::Document),
         "xtheme" | "xtemplate" => Some(Kind::EditorImport),
         "xpreset" => Some(Kind::Presets),
+        "mp4" => Some(Kind::Video),
         _ => None,
     }
 }
@@ -83,6 +86,10 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             }
             Some(Kind::EditorImport) => editor.push(path),
             Some(Kind::Presets) => presets.push(path),
+            Some(Kind::Video) => match with_system(&path) {
+                Ok(()) => opened.push(json!(path)),
+                Err(e) => skipped.push(json!({ "path": path, "reason": e.to_string() })),
+            },
             None => skipped.push(json!({
                 "path": path,
                 "reason": tr(ctx.lang, "errors.cannot_open_file", &[]),
@@ -109,6 +116,17 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     Ok(json!({ "opened": opened, "imports": imports, "skipped": skipped }))
 }
 
+/// Opens a file with the system's app for its type.
+fn with_system(path: &str) -> std::io::Result<()> {
+    #[cfg(windows)]
+    let program = "explorer.exe";
+    #[cfg(target_os = "macos")]
+    let program = "open";
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let program = "xdg-open";
+    std::process::Command::new(program).arg(path).spawn().map(|_| ())
+}
+
 /// `app.take_opening`: the files waiting for `kind`'s window (`editor` or `presets`),
 /// once.
 pub fn take(core: &Core, p: &Value) -> CommandResult {
@@ -133,6 +151,7 @@ mod tests {
         assert_eq!(kind("dark.xtheme"), Some(Kind::EditorImport));
         assert_eq!(kind("steps.xtemplate"), Some(Kind::EditorImport));
         assert_eq!(kind("mine.XPRESET"), Some(Kind::Presets));
+        assert_eq!(kind("demo.MP4"), Some(Kind::Video));
         assert_eq!(kind("notes.txt"), None);
         assert_eq!(kind("no_extension"), None);
     }
