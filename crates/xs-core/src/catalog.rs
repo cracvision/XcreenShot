@@ -868,6 +868,10 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             }})),
         B::new("record.stop", &["VID-024", "VID-013"])
             .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The recording (there is only one; the icon's Stop recording passes it)"}}),
+                &[],
+            ))
             .result(json!({"type": "object", "properties": {
                 "status": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
