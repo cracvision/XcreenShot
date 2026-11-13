@@ -1321,7 +1321,8 @@
     "webpage_url": "Escribe una dirección web que empiece por http o https (o solo el sitio, como example.com).",
     "webpage_timeout": "{{url}} no terminó de cargar en 30 segundos. No se creó ninguna captura.",
     "webpage_unreachable": "{{url}} no se pudo abrir: revisa la dirección y la conexión. No se creó ninguna captura.",
-    "webpage_failed": "{{url}} no se pudo capturar ({{reason}})."
+    "webpage_failed": "{{url}} no se pudo capturar ({{reason}}).",
+    "webpage_series_url": "Captura antes la página una vez (Selección = Página web, Capturar): la serie usa esa dirección."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

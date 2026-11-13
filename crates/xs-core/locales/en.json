@@ -1321,7 +1321,8 @@
     "webpage_url": "Write a web address that starts with http or https (or just the site, like example.com).",
     "webpage_timeout": "{{url}} did not finish loading in 30 seconds. No capture was made.",
     "webpage_unreachable": "{{url}} could not be opened: check the address and the connection. No capture was made.",
-    "webpage_failed": "{{url}} could not be captured ({{reason}})."
+    "webpage_failed": "{{url}} could not be captured ({{reason}}).",
+    "webpage_series_url": "Capture the page once first (Selection = Web page, Capture): the series uses that address."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

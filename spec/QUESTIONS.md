@@ -287,7 +287,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | ID | Duda | Propuesta | Estado |
 |---|---|---|---|
 | CAP-037 | ¿Con qué se carga la página? | Con el WebView2 que la app ya usa, en una ventana propia en modo InPrivate, fuera de la pantalla, y se toma con su protocolo DevTools (`Page.captureScreenshot` de toda la página). No entra ningún paquete nuevo; la sesión privada desaparece al cerrarla | Provisional |
-| CAP-037 | Intervalo o Programada con Página web desde el panel | La caja de la dirección no se abre al iniciar una serie: por ahora la serie necesita la dirección dada (CLI, agente o preset). Se completa cuando el panel guarde la última dirección como propiedad | Abierta |
+| CAP-037 | Intervalo o Programada con Página web desde el panel | La serie usa la última dirección capturada (la de la caja); si todavía no hay ninguna, Iniciar lo explica. Desde el CLI o un agente se da con `url` | Provisional |
 | CAP-037 | La caja de la dirección | Una ventana pequeña siempre al frente, con "Se carga en privado: sin las sesiones ni las cookies de tu navegador" debajo del campo | Provisional |
 
 ## Dudas del equipo de construcción (M3, entrega 10: lanzador de borde)

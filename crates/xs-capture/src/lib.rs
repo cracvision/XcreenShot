@@ -1371,17 +1371,24 @@ fn repeated_capture(core: &Core, ctx: &Context, p: &Value) -> Result<(&'static s
             params["cursor"] = json!(false);
             "capture.clipboard"
         }
-        // A web page (CAP-037): its address, given at the start; each turn loads it again.
+        // A web page (CAP-037): its address, given at the start or the last one
+        // captured; each turn loads it again.
         "webpage" => {
             if params
                 .get("url")
                 .and_then(Value::as_str)
                 .is_none_or(|u| u.trim().is_empty())
             {
-                return Err(CommandError::new(
-                    ErrorCode::InvalidParams,
-                    tr(lang, "errors.webpage_url", &[]),
-                ));
+                let last = core
+                    .recall(webcap::LAST_URL_KEY)
+                    .and_then(|v| v.as_str().map(str::to_string))
+                    .ok_or_else(|| {
+                        CommandError::new(
+                            ErrorCode::InvalidParams,
+                            tr(lang, "errors.webpage_series_url", &[]),
+                        )
+                    })?;
+                params["url"] = json!(last);
             }
             params["cursor"] = json!(false);
             "capture.webpage"
