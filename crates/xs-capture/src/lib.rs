@@ -1670,6 +1670,8 @@ pub fn extension() -> Extension {
             record::restart(&*upgrade(&w)?, ctx)
         });
         let w = weak.clone();
+        reg.handle("record.image", move |ctx, _p| record::image(&*upgrade(&w)?, ctx));
+        let w = weak.clone();
         reg.handle("record.pause", move |ctx, _p| {
             record::pause(&*upgrade(&w)?, ctx, true)
         });

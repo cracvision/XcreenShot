@@ -687,6 +687,39 @@ pub fn restart(core: &Core, ctx: &Context) -> CommandResult {
     Ok(state)
 }
 
+/// `record.image` (VID-010): an image of the area instead of a video. When Ready it
+/// closes the recording; while recording it drops what was recorded first. The image
+/// goes the normal way of a capture (CAP-054).
+pub fn image(core: &Core, ctx: &Context) -> CommandResult {
+    let svc = service(core);
+    let ready = svc.ready.lock().unwrap().take();
+    let rect = match ready {
+        Some(r) => r.rect,
+        None => {
+            let r = take(core, ctx.lang)?;
+            let rect = r.rect;
+            let _ = r.recorder.cancel();
+            if core.settings.get_bool("capture.hideOnCapture") {
+                core.host().hide_for_capture(false);
+            }
+            rect
+        }
+    };
+    bar(core, None);
+    tell(
+        core,
+        ctx.source,
+        "record.cancelled",
+        json!({ "status": "cancelled" }),
+    );
+    core.call(
+        ctx.source,
+        "capture.region",
+        json!({ "rect": rect, "open": "editor" }),
+        Some(ctx.lang),
+    )
+}
+
 /// `record.pause` and `record.resume` (VID-012).
 pub fn pause(core: &Core, ctx: &Context, pause: bool) -> CommandResult {
     let svc = service(core);

@@ -26,7 +26,7 @@ export function RecordBar() {
   const { t } = useTranslation();
   const [state, setState] = useState<RecState>({ status: "ready" });
   // Restart or Cancel waiting for a yes, after 10 s recorded (VID-014).
-  const [asking, setAsking] = useState<"cancel" | "restart" | null>(null);
+  const [asking, setAsking] = useState<"cancel" | "restart" | "image" | null>(null);
   // When the last state arrived, and now: the time moves on between updates.
   const [since, setSince] = useState(0);
   const [now, setNow] = useState(0);
@@ -60,7 +60,7 @@ export function RecordBar() {
   const paused = state.status === "paused";
   const ready = state.status === "ready";
   // Losing up to 10 s needs no question (VID-014).
-  const drop = (what: "cancel" | "restart") => {
+  const drop = (what: "cancel" | "restart" | "image") => {
     if (elapsed > 10) setAsking(what);
     else act(`record.${what}`);
   };
@@ -68,10 +68,12 @@ export function RecordBar() {
 
   if (asking) {
     const question = t(
-      asking === "cancel" ? "ui.recbar.cancel_lost" : "ui.recbar.restart_confirm",
-      {
-        time: clock(elapsed),
-      },
+      asking === "cancel"
+        ? "ui.recbar.cancel_lost"
+        : asking === "image"
+          ? "ui.recbar.image_confirm"
+          : "ui.recbar.restart_confirm",
+      { time: clock(elapsed) },
     );
     return (
       <div
@@ -89,7 +91,7 @@ export function RecordBar() {
             act(`record.${asking}`);
           }}
         >
-          {t(asking === "cancel" ? "ui.recbar.cancel" : "ui.recbar.restart")}
+          {t(`ui.recbar.${asking}`)}
         </button>
         <button type="button" className="btn small" autoFocus onClick={() => setAsking(null)}>
           {t("ui.recbar.keep")}
@@ -106,6 +108,13 @@ export function RecordBar() {
       onKeyDown={(e) => {
         // Esc on the bar: cancels when Ready, asks while recording (VID-014). Esc in
         // the app being recorded never reaches here.
+        // I: an image of the area instead (VID-010).
+        if ((e.key === "i" || e.key === "I") && (ready || recording || paused)) {
+          e.preventDefault();
+          if (ready) act("record.image");
+          else drop("image");
+          return;
+        }
         if (e.key !== "Escape") return;
         e.preventDefault();
         if (ready) act("record.cancel");
@@ -216,6 +225,16 @@ export function RecordBar() {
             ↺
           </button>
         </>
+      )}
+      {(ready || recording || paused) && (
+        <button
+          type="button"
+          className="btn small"
+          title={`${t("ui.recbar.image")} (I)`}
+          onClick={() => (ready ? act("record.image") : drop("image"))}
+        >
+          {t("ui.recbar.image")}
+        </button>
       )}
       <button
         type="button"

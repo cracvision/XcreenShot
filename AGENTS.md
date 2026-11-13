@@ -214,6 +214,7 @@ xcreenshot app ping --json
 | `record.toggle` | `xcreenshot record toggle --json` | — | Record when Ready, Pause while recording, Resume when paused (VID-012); with nothing going on, Video capture. Shortcut Ctrl+Shift+F9. _Changes data._ |
 | `record.stop` | `xcreenshot record stop --json` | `id` string | Stops and waits for the file: `path`, `duration`, `width`, `height`, `fps`, `frames`, `bytes`, `encoder` (hardware or software). `not_found` when nothing is recording. _Changes data._ |
 | `record.restart` | `xcreenshot record restart --json` | — | Drops what was recorded and goes back to Ready with the same area and settings (VID-014); Record counts down again. _Changes data._ |
+| `record.image` | `xcreenshot record image --json` | — | An image of the recording's area instead of a video (VID-010): when Ready it ends the recording; while recording it drops what was recorded. The image goes the normal way of a capture. _Changes data._ |
 | `record.cancel` | `xcreenshot record cancel --json` | — | Stops without keeping a file. _Changes data._ |
 | `record.pause` | `xcreenshot record pause --json` | — | Pauses; the pause is left out of the video. _Changes data._ |
 | `record.resume` | `xcreenshot record resume --json` | — | Goes on after a pause. _Changes data._ |

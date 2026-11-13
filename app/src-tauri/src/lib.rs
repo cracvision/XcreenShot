@@ -360,10 +360,24 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
         // windows and the countdown are left out: the plugin shows any window it has no
-        // saved state for, which made a hidden selection window appear at startup.
+        // saved state for, which made a hidden selection window appear at startup. So are
+        // the windows XcreenShot places itself every time: the recording bar and border
+        // (VID-011, VID-020), the working sign, the text box of Capture details and the
+        // off-screen web page views; restored, they came back at an old size and place.
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_filter(|label| !label.starts_with(overlay::LABEL_PREFIX) && label != countdown::LABEL)
+                .with_filter(|label| {
+                    !label.starts_with(overlay::LABEL_PREFIX)
+                        && !label.starts_with("webcap-")
+                        && ![
+                            countdown::LABEL,
+                            windows::RECBAR,
+                            windows::RECFRAME,
+                            windows::WORKING,
+                            windows::ASK_TEXT,
+                        ]
+                        .contains(&label)
+                })
                 .build(),
         )
         .manage(AppState {

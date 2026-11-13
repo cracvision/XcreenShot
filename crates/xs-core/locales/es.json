@@ -914,6 +914,10 @@
     "record_restart": {
       "title": "Reiniciar la grabación",
       "description": "Descarta lo grabado y vuelve a Lista con la misma área; Grabar vuelve a tener cuenta atrás."
+    },
+    "record_image": {
+      "title": "Imagen en lugar de video",
+      "description": "Toma una imagen del área de la grabación y la termina sin video (lo grabado se descarta)."
     }
   },
   "settings": {
@@ -4085,7 +4089,9 @@
       "cancel_lost": "¿Cancelar? Se perderán {{time}} de grabación.",
       "summary": "{{fps}} fps · {{codec}}",
       "fits": "caben unas {{time}} en el disco",
-      "little_space": "Poco espacio: caben unos {{minutes}} min"
+      "little_space": "Poco espacio: caben unos {{minutes}} min",
+      "image": "Imagen",
+      "image_confirm": "¿Imagen en su lugar? Se perderán {{time}} de grabación."
     }
   },
   "history": {

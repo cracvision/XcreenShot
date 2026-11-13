@@ -928,6 +928,9 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .assignable()
             .mutates()
             .result(json!({"type": "object", "properties": {"status": {"type": "string", "description": "ready: the same area, waiting for Record"}}})),
+        B::new("record.image", &["VID-010"])
+            .mutates()
+            .result(capture_result()),
         B::new("record.cancel", &["VID-024", "VID-014"])
             .scopes(ALL)
             .assignable()

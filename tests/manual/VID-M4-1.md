@@ -22,6 +22,8 @@ Motor de grabación, comandos `record.*`, Captura de video con la barra de graba
 8. [ ] Con algo sonando (un video en el navegador), en la barra *Lista* activa **Sonido** y graba 10 s: el MP4 tiene el sonido, a la vez que la imagen. Sin altavoces ni auriculares conectados, el aviso de "Video guardado" dice que no se grabó el audio del sistema.
 9. [ ] Panel de captura > pestaña **Video**: Selección = Pantalla completa y **Capturar**: la barra aparece sin pedir un área (el monitor donde está el ratón). Con Temporizador = 1 min, la grabación se detiene sola al minuto.
 10. [ ] Pestaña **Video** > Selección = **Ventana**, **Capturar** y elige una ventana. Graba y mueve la ventana o cámbiale el tamaño: el video la sigue. Ciérrala: la grabación se detiene y se guarda sola.
-11. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
+11. [ ] En *Lista*, **Imagen** (o `I`) toma una captura del área en lugar de grabar. Grabando, **↺** (Reiniciar) vuelve a *Lista* con la misma área; pasados 10 s pregunta antes.
+12. [ ] Haz dos grabaciones seguidas de áreas distintas: la barra y el borde salen bien colocados y del tamaño correcto las dos veces.
+13. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
 
 Todavía no hay micrófono, cámara, efectos del cursor, "Solo la ventana" ni reproductor en el editor: llegan en las siguientes partes de M4.

@@ -914,6 +914,10 @@
     "record_restart": {
       "title": "Restart recording",
       "description": "Drops what was recorded and goes back to Ready with the same area; Record counts down again."
+    },
+    "record_image": {
+      "title": "Image instead of video",
+      "description": "Takes an image of the recording’s area and ends the recording without a video (what was recorded is dropped)."
     }
   },
   "settings": {
@@ -4085,7 +4089,9 @@
       "cancel_lost": "Cancel? {{time}} of recording will be lost.",
       "summary": "{{fps}} fps · {{codec}}",
       "fits": "about {{time}} fit on the disk",
-      "little_space": "Little space: about {{minutes}} min fit"
+      "little_space": "Little space: about {{minutes}} min fit",
+      "image": "Image",
+      "image_confirm": "Image instead? {{time}} of recording will be lost."
     }
   },
   "history": {
