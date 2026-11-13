@@ -12,7 +12,10 @@ import { closes, ellipsePoints, extend, SCISSORS, type FreehandShape } from "./f
 import {
   COLORS,
   drawMarks,
+  hitMark,
+  markBounds,
   markFromDrag,
+  moveMark,
   toObjects,
   TOOLS,
   type Mark,
@@ -231,6 +234,9 @@ export function Overlay() {
     undone: [] as Mark[],
     drawing: null as { from: Pt; to: Pt } | null,
     textAt: null as Pt | null,
+    // The mark chosen, and where its drag is (CAP-057).
+    picked: -1,
+    pickedFrom: null as Pt | null,
     // Freehand (CAP-032): the shape so far, a free outline being drawn, an ellipse's
     // first corner, and the next polygon corner under the pointer.
     shape: [] as Pt[],
@@ -518,6 +524,17 @@ export function Overlay() {
       ctx.rect(st.sel.x - M.x, st.sel.y - M.y, st.sel.width, st.sel.height);
       ctx.clip();
       drawMarks(ctx, live ? [...st.marks, live] : st.marks, M);
+      // The chosen mark: a dashed box around it.
+      const chosen = st.marks[st.picked];
+      if (chosen) {
+        const b = markBounds(chosen);
+        const pad = 4 * scale;
+        ctx.lineWidth = 1.5 * scale;
+        ctx.setLineDash([6 * scale, 4 * scale]);
+        ctx.strokeStyle = ACCENT;
+        ctx.strokeRect(b.x - M.x - pad, b.y - M.y - pad, b.width + 2 * pad, b.height + 2 * pad);
+        ctx.setLineDash([]);
+      }
       ctx.restore();
     }
 
@@ -737,9 +754,25 @@ export function Overlay() {
     });
   };
 
-  const quickRef = useRef({ addMark, undoMark, redoMark, finishQuick, stepSize, markScale });
+  const quickRef = useRef({
+    addMark,
+    undoMark,
+    redoMark,
+    finishQuick,
+    stepSize,
+    markScale,
+    syncQuick,
+  });
   useEffect(() => {
-    quickRef.current = { addMark, undoMark, redoMark, finishQuick, stepSize, markScale };
+    quickRef.current = {
+      addMark,
+      undoMark,
+      redoMark,
+      finishQuick,
+      stepSize,
+      markScale,
+      syncQuick,
+    };
   });
 
   const redo = useCallback(() => {
@@ -776,6 +809,8 @@ export function Overlay() {
       st.drawing = null;
       st.textAt = null;
       st.discardAsked = false;
+      st.picked = -1;
+      st.pickedFrom = null;
       st.shape = [];
       st.freeDrawing = false;
       st.ellipseFrom = null;
@@ -979,6 +1014,13 @@ export function Overlay() {
       } else if (it?.kind === "resize") {
         st.sel = resizeByHandle(it.orig, it.handle, p);
         setSel(st.sel);
+      } else if (st.pickedFrom && st.marks[st.picked]) {
+        // Moving the chosen mark (CAP-057).
+        const from = st.pickedFrom;
+        st.marks = st.marks.map((m, i) =>
+          i === st.picked ? moveMark(m, p.x - from.x, p.y - from.y) : m,
+        );
+        st.pickedFrom = p;
       } else if (st.drawing) {
         st.drawing = { ...st.drawing, to: p };
       } else if (st.phase === "aiming") {
@@ -1027,6 +1069,16 @@ export function Overlay() {
         // only until the first mark.
         if (start.request.quickAnnotate && (h === "inside" || (h && st.marks.length))) {
           if (!contains(st.sel, p)) return;
+          // A mark under the pointer is chosen and can be dragged; elsewhere the tool
+          // draws (CAP-057).
+          const hit = hitMark(st.marks, p, 8 * quickRef.current.markScale());
+          if (hit >= 0) {
+            st.picked = hit;
+            st.pickedFrom = p;
+            drawRef.current();
+            return;
+          }
+          st.picked = -1;
           if (st.markTool === "step") {
             const n = st.marks.filter((m) => m.kind === "step").length + 1;
             const size = quickRef.current.stepSize();
@@ -1091,6 +1143,11 @@ export function Overlay() {
           broadcast();
           schedule();
         }
+        return;
+      }
+      if (st.pickedFrom) {
+        st.pickedFrom = null;
+        broadcast();
         return;
       }
       if (st.textAt) {
@@ -1187,6 +1244,11 @@ export function Overlay() {
           schedule();
           return;
         }
+        if (start.request.quickAnnotate && st.picked >= 0) {
+          st.picked = -1;
+          schedule();
+          return;
+        }
         if (start.request.quickAnnotate && st.marks.length && !st.discardAsked) {
           st.discardAsked = true;
           setToast(t("ui.quick.discard"));
@@ -1227,6 +1289,12 @@ export function Overlay() {
           quickRef.current.finishQuick("copy");
         } else if (ctrl && k === "e") {
           quickRef.current.finishQuick("editor");
+        } else if ((e.key === "Delete" || e.key === "Backspace") && st.marks[st.picked]) {
+          // The chosen mark goes (CAP-057).
+          st.marks = st.marks.filter((_, i) => i !== st.picked);
+          st.picked = -1;
+          quickRef.current.syncQuick();
+          broadcast();
         } else if (e.key === "Delete" || e.key === "Backspace") {
           quickRef.current.undoMark();
         } else {

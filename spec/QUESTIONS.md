@@ -342,7 +342,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | ID | Duda | Propuesta | Estado |
 |---|---|---|---|
 | CAP-057 | Colores del "tema activo" | Por ahora seis colores fijos (rojo, ámbar, azul, verde, casi negro y blanco); los grosores son 2, 4 y 8 px a 100 %. Los colores del tema del editor (EDT-017) llegan cuando la barra los lea | Provisional |
-| CAP-057 | "Seleccionar, mover y borrar" las anotaciones durante el paso 2 | En esta entrega `Supr` (o `Retroceso`) quita la última marca, como Deshacer. Elegir y mover una marca concreta llega después; mientras tanto, Abrir en el editor (`Ctrl+E`) permite todo | Provisional |
+| CAP-057 | "Seleccionar, mover y borrar" las anotaciones durante el paso 2 | Un clic sobre una marca la elige (recuadro discontinuo) y arrastrarla la mueve; fuera de las marcas, la herramienta dibuja. `Supr` borra la elegida; sin ninguna elegida, quita la última. Mover una marca no se deshace con `Ctrl+Z` (Deshacer quita marcas) | Provisional |
 | CAP-057 | Abrir en = Anotación rápida con una selección que no es en pantalla (Pantalla completa, Desplazamiento, Menú, Portapapeles…) | No hay área que marcar en el sitio: la captura se abre en el editor | Provisional |
 | CAP-057 | ¿Copia también Abrir en el editor? | No: solo el botón Copiar deja la imagen en el portapapeles (salvo un preset con Copiar activado) | Provisional |
 | CAP-057 | El cuadro de texto | Un clic con Texto abre un cuadro donde se escribe; `Enter` lo fija, `Mayús+Enter` hace otra línea y `Esc` lo descarta. Copiar o Abrir en el editor con el cuadro abierto incluyen ese texto | Provisional |

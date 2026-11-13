@@ -201,3 +201,78 @@ export function drawMarks(ctx: CanvasRenderingContext2D, marks: Mark[], M: Rect)
     ctx.restore();
   }
 }
+
+/** The box a mark takes, in desktop pixels (text: an estimate of its lines). */
+export function markBounds(m: Mark): Rect {
+  switch (m.kind) {
+    case "arrow":
+      return normal(m.from, m.to);
+    case "shape":
+    case "highlight":
+    case "blur":
+      return m.rect;
+    case "step":
+      return { x: m.at.x - m.size / 2, y: m.at.y - m.size / 2, width: m.size, height: m.size };
+    case "text": {
+      const lines = m.text.split("\n");
+      const longest = Math.max(...lines.map((l) => l.length));
+      return {
+        x: m.at.x,
+        y: m.at.y,
+        width: longest * m.size * 0.6,
+        height: lines.length * m.size * 1.3,
+      };
+    }
+  }
+}
+
+const distanceToSegment = (p: Pt, a: Pt, b: Pt) => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const t = Math.max(
+    0,
+    Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)),
+  );
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+};
+
+/** The topmost mark under `p` (within `slack` pixels), or -1 (CAP-057). */
+export function hitMark(marks: Mark[], p: Pt, slack: number): number {
+  for (let i = marks.length - 1; i >= 0; i--) {
+    const m = marks[i] as Mark;
+    if (m.kind === "arrow") {
+      if (distanceToSegment(p, m.from, m.to) <= Math.max(slack, m.width)) return i;
+      continue;
+    }
+    if (m.kind === "step") {
+      if (Math.hypot(p.x - m.at.x, p.y - m.at.y) <= m.size / 2 + slack / 2) return i;
+      continue;
+    }
+    const r = markBounds(m);
+    if (
+      p.x >= r.x - slack / 2 &&
+      p.x <= r.x + r.width + slack / 2 &&
+      p.y >= r.y - slack / 2 &&
+      p.y <= r.y + r.height + slack / 2
+    )
+      return i;
+  }
+  return -1;
+}
+
+/** A mark moved by (`dx`, `dy`). */
+export function moveMark(m: Mark, dx: number, dy: number): Mark {
+  const pt = (q: Pt) => ({ x: q.x + dx, y: q.y + dy });
+  const box = (r: Rect) => ({ ...r, x: r.x + dx, y: r.y + dy });
+  switch (m.kind) {
+    case "arrow":
+      return { ...m, from: pt(m.from), to: pt(m.to) };
+    case "shape":
+    case "highlight":
+    case "blur":
+      return { ...m, rect: box(m.rect) };
+    case "step":
+    case "text":
+      return { ...m, at: pt(m.at) };
+  }
+}

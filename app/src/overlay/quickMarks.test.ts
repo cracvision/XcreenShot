@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inkOn, markFromDrag, toObjects, type Mark } from "./quickMarks";
+import { hitMark, inkOn, markFromDrag, moveMark, toObjects, type Mark } from "./quickMarks";
 
 const sel = { x: 100, y: 200, width: 400, height: 300 };
 
@@ -70,5 +70,23 @@ describe("quick annotation marks (CAP-057)", () => {
   it("the number of a step is light on dark colors", () => {
     expect(inkOn("#2563EB")).toBe("#FFFFFF");
     expect(inkOn("#FFFFFF")).toBe("#111318");
+  });
+
+  it("a mark is found under the pointer and moves", () => {
+    const marks: Mark[] = [
+      {
+        kind: "shape",
+        rect: { x: 100, y: 100, width: 200, height: 100 },
+        ellipse: false,
+        color: "#000",
+        width: 4,
+      },
+      { kind: "arrow", from: { x: 0, y: 0 }, to: { x: 100, y: 100 }, color: "#000", width: 4 },
+    ];
+    expect(hitMark(marks, { x: 50, y: 52 }, 8)).toBe(1);
+    expect(hitMark(marks, { x: 200, y: 150 }, 8)).toBe(0);
+    expect(hitMark(marks, { x: 500, y: 500 }, 8)).toBe(-1);
+    const moved = moveMark(marks[0] as Mark, 10, -5);
+    expect(moved).toMatchObject({ rect: { x: 110, y: 95, width: 200, height: 100 } });
   });
 });
