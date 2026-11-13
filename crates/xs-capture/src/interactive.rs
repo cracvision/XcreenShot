@@ -148,6 +148,52 @@ pub fn crop_frames(monitors: &[MonitorInfo], frames: &[Frame], area: Rect) -> Rg
     out
 }
 
+/// Lets the user select an area and returns it from the top left of the monitor it is
+/// mostly on, without capturing (Choose on screen, CAP-026).
+pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
+    let lang = ctx.lang;
+    let frozen = freeze(lang)?;
+    let request = json!({
+        "mode": "region",
+        "monitors": frozen.monitors,
+        "windows": frozen.windows,
+        "pointer": frozen.pointer,
+        "autoDetect": core.settings.get_bool("capture.autoDetect"),
+        "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        "helpHint": false,
+        "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+    });
+    let outcome = core.host().select_on_screen(request, frozen.frames.clone())?;
+    let area = match outcome.get("kind").and_then(Value::as_str) {
+        Some("rect") => outcome.get("rect").and_then(rect_from),
+        Some("window") => {
+            let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
+            frozen.windows.iter().find(|w| w.id == id).map(|w| w.rect)
+        }
+        _ => None,
+    }
+    .ok_or_else(|| {
+        CommandError::new(ErrorCode::Cancelled, tr(lang, "errors.capture_cancelled", &[]))
+            .with_details(json!({ "status": "cancelled" }))
+    })?;
+    let monitor = frozen
+        .monitors
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0))
+        .ok_or_else(|| CommandError::internal("no monitor"))?;
+    // Inside that monitor, so the capture never comes out partial.
+    let inside = monitor.rect.intersect(&area).unwrap_or(area);
+    Ok(json!({
+        "monitor": monitor.name,
+        "x": inside.x - monitor.rect.x,
+        "y": inside.y - monitor.rect.y,
+        "width": inside.width,
+        "height": inside.height,
+    }))
+}
+
 /// A rectangle given as `{x, y, width, height}`.
 pub fn rect_of(v: &Value) -> Option<Rect> {
     rect_from(v)

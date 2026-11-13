@@ -1746,6 +1746,12 @@ html.overlay-root.overlay-native #root {
   background: var(--surface-raised);
 }
 
+.panel-note {
+  margin: 0;
+  color: var(--warning);
+  font-size: 12.5px;
+}
+
 .panel-field.narrow {
   grid-template-columns: auto 64px;
 }

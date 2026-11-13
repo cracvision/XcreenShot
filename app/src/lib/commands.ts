@@ -97,6 +97,19 @@ export interface CommandEvent {
 }
 
 /** Capture panel settings (CAP-001, CAP-002, CAP-010), as `capture.settings` returns them. */
+/** The properties of Selection = Region (CAP-026). */
+export interface RegionProps {
+  fixed: boolean;
+  width: number;
+  height: number;
+  /** Also a fixed place: captured at once, without selecting. */
+  positioned: boolean;
+  /** The monitor's name; x and y from its top left, physical pixels. */
+  monitor: string;
+  x: number;
+  y: number;
+}
+
 /** The properties of Selection = Scrolling (CAP-034, CAP-035). */
 export interface ScrollProps {
   type: "manual" | "auto";
@@ -127,5 +140,7 @@ export interface PanelSettings {
     delay: number;
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
+    /** Selection = Region (CAP-026). */
+    region: RegionProps;
   };
 }

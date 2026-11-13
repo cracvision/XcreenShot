@@ -762,6 +762,10 @@
     "capture_scroll_state": {
       "title": "Estado de la captura con desplazamiento",
       "description": "Si hay una captura con desplazamiento en curso y el tamaño de lo unido hasta ahora."
+    },
+    "capture_pick_area": {
+      "title": "Elegir un área en pantalla",
+      "description": "Deja seleccionar un área y la devuelve desde la esquina de su monitor, sin capturar (para una región fija)."
     }
   },
   "settings": {
@@ -1161,7 +1165,8 @@
     "ocr_no_language": "Este equipo no tiene un idioma de reconocimiento para eso. Añade uno en la configuración del sistema (Hora e idioma > Idioma).",
     "text_result_gone": "Ese texto extraído ya no está abierto ({{id}}).",
     "scroll_too_small": "El área es demasiado pequeña para desplazarla: debe medir al menos {{min}} × {{min}} píxeles.",
-    "scroll_not_running": "No hay ninguna captura con desplazamiento en curso."
+    "scroll_not_running": "No hay ninguna captura con desplazamiento en curso.",
+    "fixed_region": "La región fija no cabe: el monitor \"{{monitor}}\" no está conectado o la región se sale de su borde. Elígela de nuevo en pantalla o usa el monitor principal."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1944,7 +1949,17 @@
       "scroll_wait": "Espera entre pasos",
       "scroll_restore": "Volver a la posición inicial al terminar",
       "scroll_no_cursor": "Una captura con desplazamiento no lleva el puntero",
-      "scroll_wait_range": "De 0 a 5 segundos"
+      "scroll_wait_range": "De 0 a 5 segundos",
+      "region_fixed": "Región fija",
+      "region_width": "Ancho",
+      "region_height": "Alto",
+      "region_positioned": "Posición fija",
+      "region_monitor": "Monitor",
+      "region_x": "X",
+      "region_y": "Y",
+      "region_pick": "Elegir en pantalla",
+      "region_limited": "Limitado al monitor ({{width}} × {{height}} px)",
+      "region_any_monitor": "Cualquiera"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

@@ -33,7 +33,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-023 | Ocultar XcreenShot al capturar | M1 | Must | En curso |
 | CAP-024 | Permisos que faltan al capturar | M1 | Must | En curso |
 | CAP-025 | Región | M1 | Must | En curso |
-| CAP-026 | Región fija y posición | M3 | Should | — |
+| CAP-026 | Región fija y posición | M3 | Should | En curso (Windows: Imagen > Selección = Región > Región fija con Ancho y Alto (un rectángulo de ese tamaño sigue al puntero; clic o `Enter` captura, flechas lo mueven) y Posición fija con Monitor, X e Y (captura al momento, sin selección), **Elegir en pantalla**, límite al tamaño del monitor con aviso; `capture.region` con `rect.monitor` o `size`, y `capture.pick_area`. Si el monitor no está o la región no cabe, no se captura y avisa; faltan los botones Elegir de nuevo y Usar el monitor principal en el aviso) |
 | CAP-027 | Ventana | M1 | Must | En curso |
 | CAP-028 | Pantalla completa | M1 | Must | En curso |
 | CAP-029 | Ventanas como objetos | M3 | Could | — |

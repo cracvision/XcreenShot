@@ -33,6 +33,50 @@ impl Default for UniversalTab {
     }
 }
 
+/// The properties of Selection = Region (CAP-026): a fixed size, and a fixed place.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RegionTab {
+    pub fixed: bool,
+    pub width: u32,
+    pub height: u32,
+    /// Also a fixed place: the capture is taken at once, without selecting.
+    pub positioned: bool,
+    /// The monitor's name (CAP-026); x and y from its top left, physical pixels.
+    pub monitor: String,
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Default for RegionTab {
+    fn default() -> Self {
+        RegionTab {
+            fixed: false,
+            width: 800,
+            height: 600,
+            positioned: false,
+            monitor: String::new(),
+            x: 0,
+            y: 0,
+        }
+    }
+}
+
+impl RegionTab {
+    /// What `capture.region` takes for these properties: a `rect` on a monitor, a
+    /// `size` to place, or nothing (a free selection).
+    pub fn params(&self) -> Value {
+        if !self.fixed {
+            return json!({});
+        }
+        if self.positioned {
+            json!({ "rect": { "monitor": self.monitor, "x": self.x, "y": self.y, "width": self.width, "height": self.height } })
+        } else {
+            json!({ "size": { "width": self.width, "height": self.height } })
+        }
+    }
+}
+
 /// The properties of Selection = Scrolling (CAP-034, CAP-035).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -90,6 +134,8 @@ pub struct ImageTab {
     pub delay: u32,
     /// Selection = Scrolling (CAP-034, CAP-035).
     pub scroll: ScrollTab,
+    /// Selection = Region (CAP-026).
+    pub region: RegionTab,
 }
 
 impl Default for ImageTab {
@@ -102,6 +148,7 @@ impl Default for ImageTab {
             timing: "none".into(),
             delay: 5,
             scroll: ScrollTab::default(),
+            region: RegionTab::default(),
         }
     }
 }
@@ -161,6 +208,10 @@ impl PanelSettings {
         one_of("image.scroll.startFrom", &s.start_from, &["start", "current"])?;
         if !(0.0..=5.0).contains(&s.wait) {
             return Err("image.scroll.wait: must be between 0 and 5".into());
+        }
+        let r = &self.image.region;
+        if r.width == 0 || r.height == 0 || r.width > 100_000 || r.height > 100_000 {
+            return Err("image.region: width and height must be between 1 and 100000".into());
         }
         Ok(())
     }
@@ -225,7 +276,11 @@ impl PanelSettings {
                     "capture.window"
                 }
                 "fullscreen" => "capture.fullscreen",
-                _ => "capture.region",
+                _ => {
+                    // A fixed region (CAP-026).
+                    params = with_overrides(params, &self.image.region.params());
+                    "capture.region"
+                }
             };
             (command, params, json!({}))
         }
@@ -347,5 +402,33 @@ mod tests {
     fn overrides_win() {
         let merged = with_overrides(json!({"copy": true, "open": "editor"}), &json!({"open": "none"}));
         assert_eq!(merged, json!({"copy": true, "open": "none"}));
+    }
+
+    /// CAP-026: a fixed region is a size to place, or a rectangle on a monitor.
+    #[test]
+    fn a_fixed_region_plans_its_size_or_place() {
+        let s = PanelSettings::default();
+        let p = s
+            .patched(&json!({"image": {"region": {"fixed": true, "width": 1080, "height": 1080}}}))
+            .unwrap();
+        let (command, params, _) = p.plan("image");
+        assert_eq!(command, "capture.region");
+        assert_eq!(params["size"], json!({"width": 1080, "height": 1080}));
+        assert!(params.get("rect").is_none());
+        let p = p
+            .patched(&json!({"image": {"region": {"positioned": true, "monitor": "M2", "x": 100, "y": 50, "width": 800, "height": 600}}}))
+            .unwrap();
+        let (_, params, _) = p.plan("image");
+        assert_eq!(
+            params["rect"],
+            json!({"monitor": "M2", "x": 100, "y": 50, "width": 800, "height": 600})
+        );
+        assert!(p.patched(&json!({"image": {"region": {"width": 0}}})).is_err());
+        // Off, a free selection again.
+        let p = p
+            .patched(&json!({"image": {"region": {"fixed": false}}}))
+            .unwrap();
+        let (_, params, _) = p.plan("image");
+        assert!(params.get("rect").is_none() && params.get("size").is_none());
     }
 }

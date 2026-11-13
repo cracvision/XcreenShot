@@ -737,14 +737,16 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))
         }
         "capture.region" => match p.get("rect") {
-            None => run_interactive(core, ctx, p, "region", extra),
-            Some(r) => {
-                let area = Rect {
-                    x: r["x"].as_i64().unwrap_or(0) as i32,
-                    y: r["y"].as_i64().unwrap_or(0) as i32,
-                    width: r["width"].as_u64().unwrap_or(1) as u32,
-                    height: r["height"].as_u64().unwrap_or(1) as u32,
+            None => {
+                // A fixed size follows the pointer (CAP-026).
+                let extra = match p.get("size") {
+                    Some(size) => panel::with_overrides(extra, &json!({ "fixedSize": size })),
+                    None => extra,
                 };
+                run_interactive(core, ctx, p, "region", extra)
+            }
+            Some(r) => {
+                let area = desktop_rect(r, ctx.lang)?;
                 run_capture(core, ctx, p, |lang| capture_region(area, lang))
             }
         },
@@ -784,6 +786,40 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
         }
         other => Err(CommandError::internal(format!("not a capture command: {other}"))),
     }
+}
+
+/// A rectangle of the desktop from `{x, y, width, height}`, or from the top left of
+/// `monitor` when it names one (CAP-026, CAP-008). A missing monitor, or a rectangle that
+/// does not fit in it, is an error: never a partial capture.
+pub(crate) fn desktop_rect(r: &Value, lang: Lang) -> Result<Rect, CommandError> {
+    let mut area = Rect {
+        x: r["x"].as_i64().unwrap_or(0) as i32,
+        y: r["y"].as_i64().unwrap_or(0) as i32,
+        width: r["width"].as_u64().unwrap_or(1).max(1) as u32,
+        height: r["height"].as_u64().unwrap_or(1).max(1) as u32,
+    };
+    let Some(name) = r.get("monitor").and_then(Value::as_str).filter(|n| !n.is_empty()) else {
+        return Ok(area);
+    };
+    let list = monitors().map_err(|e| failed(lang, e))?;
+    let infos: Vec<MonitorInfo> = list.into_iter().map(|(_, i)| i).collect();
+    let Some(m) = infos.iter().find(|m| m.name == name) else {
+        return Err(fixed_region_problem(lang, name));
+    };
+    area.x += m.rect.x;
+    area.y += m.rect.y;
+    if area.intersect(&m.rect) != Some(area) {
+        return Err(fixed_region_problem(lang, name));
+    }
+    Ok(area)
+}
+
+fn fixed_region_problem(lang: Lang, monitor: &str) -> CommandError {
+    CommandError::new(
+        ErrorCode::InvalidParams,
+        tr(lang, "errors.fixed_region", &[("monitor", monitor)]),
+    )
+    .with_details(json!({ "status": "failed", "monitor": monitor }))
 }
 
 /// Manual or automatic, from `capture.scrolling`'s parameters (CAP-034, CAP-035).
@@ -969,6 +1005,16 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        // Choose on screen (CAP-026): an area for the fixed region, nothing captured.
+        let w = weak.clone();
+        reg.handle("capture.pick_area", move |ctx, _p| {
+            let core = upgrade(&w)?;
+            let _busy = Busy::take(ctx.lang)?;
+            core.host().capture_session(true);
+            let picked = interactive::pick(&core, ctx);
+            core.host().capture_session(false);
+            picked
         });
         // Scrolling capture (CAP-034 to CAP-036).
         let w = weak.clone();

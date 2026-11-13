@@ -717,16 +717,33 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(capture_params(json!({
                 "rect": {
                     "type": "object",
-                    "description": "Physical pixels on the virtual desktop. Omit for an interactive selection.",
+                    "description": "Physical pixels on the virtual desktop, or from the top left of `monitor` (CAP-026). Omit for an interactive selection.",
                     "properties": {
                         "x": {"type": "integer"}, "y": {"type": "integer"},
-                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}
+                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1},
+                        "monitor": {"type": "string", "description": "A monitor's name (capture.monitors): x and y are measured from its top left"}
                     },
                     "required": ["x", "y", "width", "height"],
+                    "additionalProperties": false
+                },
+                "size": {
+                    "type": "object",
+                    "description": "Fixed region (CAP-026): a rectangle of this size follows the pointer; a click places it and captures",
+                    "properties": {
+                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}
+                    },
+                    "required": ["width", "height"],
                     "additionalProperties": false
                 }
             })))
             .result(capture_result()),
+        B::new("capture.pick_area", &["CAP-026"])
+            .scopes(UI_CLI)
+            .interactive()
+            .result(json!({"type": "object", "properties": {
+                "monitor": {"type": "string"}, "x": {"type": "integer"}, "y": {"type": "integer"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
         B::new("capture.window", &["CAP-027", "CAP-008"])
             .scopes(ALL)
             .assignable()

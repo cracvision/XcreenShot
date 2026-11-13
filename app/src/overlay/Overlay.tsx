@@ -70,6 +70,8 @@ interface Start {
     compatibility?: boolean;
     /** Show "H: help" in the hint, the first times (CAP-020). */
     helpHint?: boolean;
+    /** Region with a fixed size (CAP-026): a rectangle of this size follows the pointer. */
+    fixedSize?: { width: number; height: number };
   };
 }
 
@@ -82,6 +84,31 @@ const scrollable = (start: Start, sel: Rect | null) =>
   sel !== null &&
   sel.width >= SCROLL_MIN &&
   sel.height >= SCROLL_MIN;
+
+/** The fixed-size rectangle around `p` (CAP-026), inside the monitor under it. */
+function fixedRect(start: Start, p: Pt): Rect | null {
+  const size = start.request.fixedSize;
+  if (!size) return null;
+  const m =
+    start.request.monitors.find(
+      (mon) =>
+        p.x >= mon.rect.x &&
+        p.x < mon.rect.x + mon.rect.width &&
+        p.y >= mon.rect.y &&
+        p.y < mon.rect.y + mon.rect.height,
+    ) ?? start.request.monitors[0];
+  if (!m) return null;
+  const width = Math.min(size.width, m.rect.width);
+  const height = Math.min(size.height, m.rect.height);
+  const x = Math.round(p.x - width / 2);
+  const y = Math.round(p.y - height / 2);
+  return {
+    x: Math.min(Math.max(x, m.rect.x), m.rect.x + m.rect.width - width),
+    y: Math.min(Math.max(y, m.rect.y), m.rect.y + m.rect.height - height),
+    width,
+    height,
+  };
+}
 
 /** Only windows can be picked: window capture, or Universal set to Window. */
 const windowsOnly = (start: Start) =>
@@ -301,7 +328,8 @@ export function Overlay() {
 
     // Dim everything except the selection or the detected window (CAP-013, CAP-016).
     // The simplified crosshair dims nothing and draws thin lines (CAP-014).
-    const focus = st.sel ?? (st.phase === "aiming" ? (st.hover?.rect ?? null) : null);
+    const fixed = st.phase === "aiming" && st.pointer ? fixedRect(start, st.pointer) : null;
+    const focus = st.sel ?? fixed ?? (st.phase === "aiming" ? (st.hover?.rect ?? null) : null);
     if (!simple) {
       ctx.fillStyle = DIM;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -698,6 +726,12 @@ export function Overlay() {
       const st = s.current;
       const p = toDesktop(e);
       st.pointer = p;
+      // A fixed-size region: a click places it and captures (CAP-026).
+      const fixed = st.phase === "aiming" ? fixedRect(start, p) : null;
+      if (fixed) {
+        finish({ kind: "rect", rect: fixed });
+        return;
+      }
       // The pointer may not have moved since the selection appeared.
       if (st.phase === "aiming") st.hover = windowAt(start, p);
       if (st.phase === "adjusting" && st.sel) {
@@ -709,7 +743,7 @@ export function Overlay() {
       if (windowsOnly(start)) return;
       st.interaction = { kind: "draw", anchor: p };
     },
-    [start, toDesktop, hitHandle],
+    [start, toDesktop, hitHandle, finish],
   );
 
   const onPointerUp = useCallback(
@@ -782,6 +816,27 @@ export function Overlay() {
         chooseRect(monitor.rect);
       } else if (key === "a" && st.phase === "aiming" && !windowsOnly(start)) {
         chooseRect(desktop);
+      } else if (
+        start.request.fixedSize &&
+        st.phase === "aiming" &&
+        (e.key === "Enter" || e.key.startsWith("Arrow"))
+      ) {
+        // The fixed-size region (CAP-026): arrows move it 1 px (Shift: 10), Enter captures.
+        const p = st.pointer ?? {
+          x: monitor.rect.x + monitor.rect.width / 2,
+          y: monitor.rect.y + monitor.rect.height / 2,
+        };
+        if (e.key === "Enter") {
+          const r = fixedRect(start, p);
+          if (r) finish({ kind: "rect", rect: r });
+        } else {
+          const step = e.shiftKey ? 10 : 1;
+          st.pointer = {
+            x: p.x + (e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0),
+            y: p.y + (e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0),
+          };
+          broadcast();
+        }
       } else if (e.key === "Enter" && st.phase === "aiming" && st.hover) {
         chooseWindow(st.hover);
       } else if ((e.key === "Enter" || key === "i") && st.phase === "adjusting" && st.sel) {

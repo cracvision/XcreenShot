@@ -1,8 +1,14 @@
 // The options of the capture panel's tabs (CAP-002, CAP-010), shared by the panel and
 // the preset editor (CAP-060).
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { PanelSettings, ScrollProps } from "../lib/commands";
+import {
+  isCommandError,
+  run,
+  type PanelSettings,
+  type RegionProps,
+  type ScrollProps,
+} from "../lib/commands";
 import { tenStep } from "../lib/numberKeys";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
@@ -141,6 +147,12 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "region" && (
+        <RegionOptions
+          value={value.region}
+          onChange={(r) => onChange({ region: { ...value.region, ...r } })}
+        />
+      )}
       {value.selection === "scrolling" && (
         <ScrollOptions
           value={value.scroll}
@@ -266,6 +278,162 @@ function ScrollOptions({
             {t("ui.panel.scroll_restore")}
           </label>
         </>
+      )}
+    </fieldset>
+  );
+}
+
+interface MonitorInfo {
+  name: string;
+  rect: { x: number; y: number; width: number; height: number };
+  primary: boolean;
+}
+
+/** The properties of Selection = Region (CAP-026): a fixed size, and maybe a fixed place
+ * (monitor, X and Y in physical pixels from its top left), or chosen on screen. */
+function RegionOptions({
+  value,
+  onChange,
+}: {
+  value: RegionProps;
+  onChange: (patch: Partial<RegionProps>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
+  const [drafts, setDrafts] = useState<Partial<Record<"width" | "height" | "x" | "y", string>>>({});
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    void run<MonitorInfo[]>("capture.monitors").then(setMonitors);
+  }, []);
+  // The largest the region can be: the chosen monitor, or the biggest one.
+  const chosen = monitors.find((m) => m.name === value.monitor);
+  const limit =
+    value.positioned && chosen
+      ? chosen.rect
+      : monitors.reduce(
+          (a, m) => ({
+            ...a,
+            width: Math.max(a.width, m.rect.width),
+            height: Math.max(a.height, m.rect.height),
+          }),
+          { x: 0, y: 0, width: 100000, height: 100000 },
+        );
+  const maxW = monitors.length ? limit.width : 100000;
+  const maxH = monitors.length ? limit.height : 100000;
+  const commit = (field: "width" | "height" | "x" | "y") => {
+    const text = drafts[field];
+    setDrafts((d) => ({ ...d, [field]: undefined }));
+    if (text === undefined) return;
+    let n = Math.round(Number(text));
+    if (!Number.isFinite(n)) return;
+    if (field === "width" || field === "height") {
+      const max = field === "width" ? maxW : maxH;
+      n = Math.max(1, n);
+      if (n > max) {
+        n = max;
+        setNote(t("ui.panel.region_limited", { width: maxW, height: maxH }));
+      } else {
+        setNote(null);
+      }
+    }
+    onChange({ [field]: n });
+  };
+  const number = (field: "width" | "height" | "x" | "y", label: string) => (
+    <label className="panel-field narrow" htmlFor={`${id}-${field}`}>
+      <span>{label}</span>
+      <input
+        id={`${id}-${field}`}
+        type="number"
+        min={field === "width" || field === "height" ? 1 : 0}
+        step={1}
+        value={drafts[field] ?? String(value[field])}
+        onChange={(e) => setDrafts((d) => ({ ...d, [field]: e.target.value }))}
+        onBlur={() => commit(field)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit(field);
+        }}
+      />
+    </label>
+  );
+  const pick = () => {
+    setNote(null);
+    run<{ monitor: string; x: number; y: number; width: number; height: number }>(
+      "capture.pick_area",
+    )
+      .then((a) => onChange({ fixed: true, positioned: true, ...a }))
+      .catch((e: unknown) => {
+        if (isCommandError(e) && e.code === "cancelled") return;
+        setNote(isCommandError(e) ? e.message : String(e));
+      });
+  };
+  return (
+    <fieldset className="panel-props">
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={value.fixed}
+          onChange={(e) => onChange({ fixed: e.target.checked })}
+        />
+        {t("ui.panel.region_fixed")}
+      </label>
+      {value.fixed && (
+        <>
+          <div className="panel-row">
+            {number("width", t("ui.panel.region_width"))}
+            {number("height", t("ui.panel.region_height"))}
+          </div>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={value.positioned}
+              onChange={(e) =>
+                onChange({
+                  positioned: e.target.checked,
+                  monitor:
+                    value.monitor ||
+                    monitors.find((m) => m.primary)?.name ||
+                    monitors[0]?.name ||
+                    "",
+                })
+              }
+            />
+            {t("ui.panel.region_positioned")}
+          </label>
+          {value.positioned && (
+            <>
+              <label className="panel-field" htmlFor={`${id}-mon`}>
+                <span>{t("ui.panel.region_monitor")}</span>
+                <select
+                  id={`${id}-mon`}
+                  value={value.monitor}
+                  onChange={(e) => onChange({ monitor: e.target.value })}
+                >
+                  {!monitors.some((m) => m.name === value.monitor) && (
+                    <option value={value.monitor}>{value.monitor || "—"}</option>
+                  )}
+                  {monitors.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name} ({m.rect.width} × {m.rect.height})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="panel-row">
+                {number("x", t("ui.panel.region_x"))}
+                {number("y", t("ui.panel.region_y"))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+      <button type="button" className="btn small" onClick={pick}>
+        {t("ui.panel.region_pick")}
+      </button>
+      {note && (
+        <p className="panel-note" role="status">
+          {note}
+        </p>
       )}
     </fieldset>
   );
