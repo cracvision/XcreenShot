@@ -40,6 +40,21 @@ export function SettingRow({ setting, highlighted }: Props) {
         change={change}
       />
     );
+  } else if (setting.schema.format === "color") {
+    // A colour as #RRGGBB, with the system's colour picker.
+    control = (
+      <input
+        id={id}
+        type="color"
+        value={String(setting.value ?? "#000000").toLowerCase()}
+        disabled={setting.locked}
+        aria-describedby={`${id}-desc`}
+        onChange={(e) => {
+          const v = e.target.value.toUpperCase();
+          if (v !== setting.value) void change(v);
+        }}
+      />
+    );
   } else if (setting.schema.type === "boolean") {
     control = (
       <input

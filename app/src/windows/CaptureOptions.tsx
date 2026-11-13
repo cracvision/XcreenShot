@@ -177,8 +177,15 @@ export function VideoOptions({
   const id = useId();
   const cursor = useSetting("video.cursor", true);
   const sound = useSetting("video.systemAudio", false);
+  // Cursor and keyboard effects (VID-045 to VID-047): colours and sizes in Preferences.
+  const highlight = useSetting("video.highlight", false);
+  const clicks = useSetting("video.clicks", false);
+  const keys = useSetting("video.keys", false);
   const set = (key: string, v: boolean) =>
     void run("settings.set", { key, value: v }).catch(() => undefined);
+  // A pointer effect switches the pointer on (VID-044): the command does it.
+  const effect = (name: "highlight" | "clicks" | "keys", v: boolean) =>
+    void run("record.effects", { [name]: v }).catch(() => undefined);
   const minutes = [1, 5, 10, 30, 60];
   return (
     <>
@@ -211,6 +218,26 @@ export function VideoOptions({
           onChange={(e) => set("video.systemAudio", e.target.checked)}
         />
         {t("ui.panel.video_sound")}
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={highlight && cursor}
+          onChange={(e) => effect("highlight", e.target.checked)}
+        />
+        {t("ui.panel.video_highlight")}
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={clicks && cursor}
+          onChange={(e) => effect("clicks", e.target.checked)}
+        />
+        {t("ui.panel.video_clicks")}
+      </label>
+      <label className="panel-check">
+        <input type="checkbox" checked={keys} onChange={(e) => effect("keys", e.target.checked)} />
+        {t("ui.panel.video_keys")}
       </label>
       <label className="panel-field" htmlFor={`${id}-vlim`}>
         <span>{t("ui.panel.video_limit")}</span>

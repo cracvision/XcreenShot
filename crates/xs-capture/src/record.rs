@@ -67,6 +67,132 @@ fn bar(core: &Core, state: Option<Value>) {
     core.host().recording_bar(state);
 }
 
+/// The cursor and keyboard effects as the settings say (VID-045 to VID-047).
+pub fn effects(core: &Core) -> xs_video::effects::Effects {
+    use xs_video::effects::*;
+    let s = &core.settings;
+    let text = |k: &str| {
+        s.get(k)
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default()
+    };
+    let number = |k: &str, d: f64| s.get(k).and_then(|v| v.as_f64()).unwrap_or(d);
+    let color = |k: &str, d: Rgb| parse_color(&text(k)).unwrap_or(d);
+    let highlight = s.get_bool("video.highlight").then(|| Highlight {
+        color: color("video.highlightColor", [255, 208, 0]),
+        diameter: number("video.highlightSize", 48.0) as f32,
+        opacity: number("video.highlightOpacity", 40.0) as f32 / 100.0,
+        ring: text("video.highlightShape") == "ring",
+    });
+    let clicks = s.get_bool("video.clicks").then(|| {
+        let primary = color("video.clickColor", [47, 111, 222]);
+        Clicks {
+            primary,
+            secondary: if s.get_bool("video.clickSameColor") {
+                primary
+            } else {
+                color("video.clickColorSecondary", [242, 140, 40])
+            },
+            diameter: match text("video.clickSize").as_str() {
+                "small" => 40.0,
+                "large" => 96.0,
+                _ => 64.0,
+            },
+        }
+    });
+    let keys = s.get_bool("video.keys").then(|| Keys {
+        all: text("video.keysWhich") == "all",
+        place: match text("video.keysPlace").as_str() {
+            "left" => KeyPlace::Left,
+            "right" => KeyPlace::Right,
+            _ => KeyPlace::Center,
+        },
+        size: match text("video.keysSize").as_str() {
+            "small" => 14.0,
+            "large" => 26.0,
+            _ => 18.0,
+        },
+        hidden: own_shortcuts(core),
+    });
+    Effects {
+        highlight,
+        clicks,
+        keys,
+    }
+}
+
+/// The recording's own shortcuts, never shown as keys pressed (VID-047).
+fn own_shortcuts(core: &Core) -> Vec<String> {
+    let platform = core.shortcuts.platform();
+    core.shortcuts
+        .bindings(core.profile())
+        .into_iter()
+        .filter(|(slot, _)| slot.command.starts_with("record."))
+        .map(|(_, acc)| xs_video::effects::normalize(&acc.display(platform)))
+        .collect()
+}
+
+/// Stores a setting and, when it changes, tells the windows (the panel's Video tab
+/// shows the same switches).
+fn store(core: &Core, ctx: &Context, key: &str, value: Value) -> Result<(), CommandError> {
+    if core.settings.set(key, value.clone(), ctx.source, ctx.lang)? {
+        core.setting_changed(key, &value);
+    }
+    Ok(())
+}
+
+/// `record.effects` (VID-045 to VID-047): switches the cursor and keyboard effects,
+/// also while recording; they stay as the settings for the next recordings. A colour
+/// switches its effect on (VID-045), and the pointer's effects switch the pointer on
+/// (VID-044).
+pub fn set_effects(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let put = |key: &str, value: Value| store(core, ctx, key, value);
+    for (param, key, effect) in [
+        ("highlightColor", "video.highlightColor", "video.highlight"),
+        ("clickColor", "video.clickColor", "video.clicks"),
+    ] {
+        if let Some(color) = p.get(param).filter(|v| v.is_string()) {
+            put(key, color.clone())?;
+            put(effect, json!(true))?;
+        }
+    }
+    for (param, key) in [
+        ("highlight", "video.highlight"),
+        ("clicks", "video.clicks"),
+        ("keys", "video.keys"),
+    ] {
+        if let Some(v) = p.get(param).and_then(Value::as_bool) {
+            put(key, json!(v))?;
+        }
+    }
+    let pointer_fx = ["highlight", "clicks", "highlightColor", "clickColor"]
+        .iter()
+        .any(|k| p.get(*k).is_some_and(|v| v != &json!(false)));
+    let fx = effects(core);
+    let svc = service(core);
+    let current = svc.current.lock().unwrap();
+    if pointer_fx {
+        put("video.cursor", json!(true))?;
+        if let Some(r) = current.as_ref() {
+            r.recorder.set_cursor(true);
+        }
+    }
+    if let Some(r) = current.as_ref() {
+        r.recorder.set_effects(fx.clone());
+    }
+    drop(current);
+    let state = status(core);
+    if state["status"] != "idle" {
+        bar(core, Some(state.clone()));
+    }
+    Ok(json!({
+        "highlight": fx.highlight.is_some(),
+        "clicks": fx.clicks.is_some(),
+        "keys": fx.keys.is_some(),
+        "cursor": core.settings.get_bool("video.cursor"),
+    }))
+}
+
 /// The video size an area gives, as the settings say (VID-028).
 fn planned(core: &Core, rect: Rect, scale: f64) -> (u32, u32) {
     let max = core
@@ -172,6 +298,7 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "codec": "H.264",
         "minutesFree": minutes,
         "cursor": core.settings.get_bool("video.cursor"),
+        "clicks": core.settings.get_bool("video.clicks"),
         "systemAudio": core.settings.get_bool("video.systemAudio"),
     })
 }
@@ -338,6 +465,7 @@ fn status_of(r: &Running) -> Value {
         "height": r.recorder.height,
         "fps": r.recorder.fps,
         "cursor": r.recorder.cursor(),
+        "clicks": r.recorder.effects().clicks.is_some(),
     })
 }
 
@@ -355,7 +483,7 @@ pub fn cursor(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         r.recorder.set_cursor(on);
     }
     drop(current);
-    let _ = core.settings.set("video.cursor", json!(on), ctx.source, ctx.lang);
+    let _ = store(core, ctx, "video.cursor", json!(on));
     let state = status(core);
     if state["status"] != "idle" {
         bar(core, Some(state.clone()));
@@ -482,6 +610,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .and_then(Value::as_bool)
             .unwrap_or_else(|| core.settings.get_bool("video.systemAudio")),
         window: window.map(|w| w as isize),
+        effects: effects(core),
         path: path.clone(),
     })
     .map_err(|e| {

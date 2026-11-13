@@ -254,6 +254,18 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M4, entrega 4: cursor y teclas)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| VID-001, VID-045 a VID-047 | ¿Dónde se activan y se ajustan los efectos? | Tres casillas en la pestaña Video (Resaltar cursor, Animación de clic, Mostrar teclas pulsadas) y sus opciones (colores, tamaños, forma, posición) en Preferencias > Video. El spec pide un menú **Efectos** con vista previa: llega más adelante | Provisional |
+| VID-045, VID-046 | ¿Con qué se eligen los colores? | Con el selector de color del sistema, en Preferencias > Video. El selector de la app (el del editor) llegará con el menú Efectos | Provisional |
+| VID-046 | Interruptor en la barra | **Clics**, junto a **Puntero**. Las otras dos se cambian durante la grabación desde la pestaña Video o con `record.effects` | Provisional |
+| VID-047 | Aspecto de las etiquetas | Rectángulo oscuro redondeado (82 % de opacidad) con texto blanco en Segoe UI Semibold, 14, 18 o 26 px según el tamaño, a 16 px del borde inferior del área | Provisional |
+| VID-047 | ¿Cómo se sabe que el foco está en una contraseña? | UI Automation (`IsPassword` del elemento con el foco), en cada tecla. Si UI Automation no responde, no se muestra la tecla | Provisional |
+| VID-047 | ¿Qué atajos de la grabación no se muestran? | Los de todos los comandos `record.*` del perfil de atajos activo (Pausar, Detener, Reiniciar, Cancelar, Captura de video). Dibujo en vivo se añadirá cuando exista | Provisional |
+| VID-045 a VID-047 | ¿Cómo se ven los clics y las teclas de otras apps? | Ganchos de bajo nivel de Windows (ratón y teclado) en un hilo propio, solo mientras el efecto está activo y se graba; solo observan y pasan cada evento al momento | Provisional |
+
 ## Dudas del equipo de construcción (M4, entrega 1: motor de grabación y barra)
 
 | ID | Duda | Propuesta | Estado |

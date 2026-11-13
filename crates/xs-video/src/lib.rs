@@ -14,8 +14,11 @@ use serde::Serialize;
 
 #[cfg(windows)]
 mod audio;
+pub mod effects;
 #[cfg(windows)]
 mod win;
+#[cfg(windows)]
+mod win_fx;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
 pub use win::{audio_info, first_frame, free_space, info, probe, size};
@@ -219,6 +222,9 @@ pub struct Options {
     pub cursor: bool,
     /// What the computer plays (VID-040).
     pub system_audio: bool,
+    /// Cursor and keyboard effects (VID-045 to VID-047); they can change while it
+    /// records.
+    pub effects: effects::Effects,
     /// A window to follow (its handle): the area moves and resizes with it
     /// (VID-005, Window area mode).
     pub window: Option<isize>,
@@ -263,6 +269,8 @@ pub struct Summary {
 /// What the recording thread and its owner share.
 pub(crate) struct Shared {
     pub paused: AtomicBool,
+    /// The cursor and keyboard effects now (VID-045 to VID-047).
+    pub effects: Mutex<effects::Effects>,
     /// The pointer is drawn (VID-044); it can change while recording.
     pub cursor: AtomicBool,
     pub stop: AtomicBool,
@@ -337,6 +345,7 @@ impl Recorder {
         let fps = options.quality.fps();
         let shared = Arc::new(Shared {
             paused: AtomicBool::new(false),
+            effects: Mutex::new(options.effects.clone()),
             cursor: AtomicBool::new(options.cursor),
             stop: AtomicBool::new(false),
             cancel: AtomicBool::new(false),
@@ -397,6 +406,16 @@ impl Recorder {
 
     pub fn cursor(&self) -> bool {
         self.shared.cursor.load(Ordering::Relaxed)
+    }
+
+    /// The cursor and keyboard effects from now on (VID-045 to VID-047).
+    pub fn set_effects(&self, effects: effects::Effects) {
+        *self.shared.effects.lock().unwrap() = effects;
+    }
+
+    /// The cursor and keyboard effects now.
+    pub fn effects(&self) -> effects::Effects {
+        self.shared.effects.lock().unwrap().clone()
     }
 
     /// Time recorded so far, pauses left out.

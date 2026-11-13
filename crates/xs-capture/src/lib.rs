@@ -1690,6 +1690,10 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("record.toggle", move |ctx, _p| record::toggle(&upgrade(&w)?, ctx));
         let w = weak.clone();
+        reg.handle("record.effects", move |ctx, p| {
+            record::set_effects(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
         reg.handle("record.cursor", move |ctx, p| {
             record::cursor(&*upgrade(&w)?, ctx, &p)
         });
@@ -2068,6 +2072,35 @@ mod tests {
             .call(Source::Ui, "capture.repeat_last", json!({}), None)
             .unwrap();
         assert_eq!(r, json!({"status": "none", "panel": true}));
+    }
+
+    /// VID-044 to VID-047: a pointer effect switches the pointer on, a colour switches
+    /// its effect on, bad colours are refused, and the recording's own shortcuts are
+    /// never shown as keys pressed.
+    #[test]
+    fn record_effects_switch_and_hide_own_shortcuts() {
+        let core = Core::for_tests_with(Platform::Windows, vec![extension()]);
+        let call = |id: &str, p: Value| core.call(Source::Ui, id, p, None);
+        call("settings.set", json!({"key": "video.cursor", "value": false})).unwrap();
+        let r = call("record.effects", json!({"highlight": true})).unwrap();
+        assert_eq!(
+            (r["highlight"].clone(), r["cursor"].clone()),
+            (json!(true), json!(true))
+        );
+        let r = call("record.effects", json!({"clickColor": "#FF0000"})).unwrap();
+        assert_eq!(r["clicks"], true);
+        let r = call("record.effects", json!({"keys": true, "highlight": false})).unwrap();
+        assert_eq!(
+            r,
+            json!({"highlight": false, "clicks": true, "keys": true, "cursor": true})
+        );
+        assert!(call("record.effects", json!({"clickColor": "red"})).is_err());
+        let fx = record::effects(&core);
+        assert_eq!(fx.clicks.unwrap().primary, [255, 0, 0]);
+        let hidden = fx.keys.unwrap().hidden;
+        for combo in ["ctrl+shift+f9", "ctrl+shift+f10", "ctrl+alt+shift+v"] {
+            assert!(hidden.contains(&combo.to_string()), "{combo} not in {hidden:?}");
+        }
     }
 
     /// CAP-007: Repeat last area without history opens the panel too.

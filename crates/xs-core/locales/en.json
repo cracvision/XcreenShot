@@ -918,6 +918,10 @@
     "record_image": {
       "title": "Image instead of video",
       "description": "Takes an image of the recording’s area and ends the recording without a video (what was recorded is dropped)."
+    },
+    "record_effects": {
+      "title": "Cursor and keys effects",
+      "description": "Switches Highlight cursor, Click animation and Show keys pressed, also while recording."
     }
   },
   "settings": {
@@ -1329,6 +1333,85 @@
     "video_systemAudio": {
       "label": "Record the system sound",
       "description": "What the computer plays (apps, browser, notifications) goes into the video. Off by default."
+    },
+    "video_highlight": {
+      "label": "Highlight cursor",
+      "description": "A colored circle under the pointer, in the video."
+    },
+    "video_highlightColor": {
+      "label": "Highlight color",
+      "description": "The circle’s color."
+    },
+    "video_highlightSize": {
+      "label": "Highlight size",
+      "description": "Diameter in pixels, 20 to 120."
+    },
+    "video_highlightOpacity": {
+      "label": "Highlight opacity",
+      "description": "In percent, 10 to 90."
+    },
+    "video_highlightShape": {
+      "label": "Highlight shape",
+      "description": "A full circle or only its outline.",
+      "options": {
+        "circle": "Circle",
+        "ring": "Ring"
+      }
+    },
+    "video_clicks": {
+      "label": "Click animation",
+      "description": "A wave in the video at each click."
+    },
+    "video_clickColor": {
+      "label": "Click color",
+      "description": "The wave of the main button."
+    },
+    "video_clickColorSecondary": {
+      "label": "Right click color",
+      "description": "The wave of the secondary button."
+    },
+    "video_clickSameColor": {
+      "label": "Same color for both clicks",
+      "description": "The right click uses the main click’s color."
+    },
+    "video_clickSize": {
+      "label": "Click wave size",
+      "description": "How big the wave grows.",
+      "options": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      }
+    },
+    "video_keys": {
+      "label": "Show keys pressed",
+      "description": "The keys you press appear in the video. Never in password fields; they are not kept anywhere else."
+    },
+    "video_keysWhich": {
+      "label": "Keys to show",
+      "description": "Only combinations (with Ctrl, Alt or Win, and Enter, Esc, Tab, arrows, function keys), or every key.",
+      "options": {
+        "combos": "Only combinations",
+        "all": "Every key"
+      }
+    },
+    "video_keysPlace": {
+      "label": "Keys position",
+      "description": "At the bottom of the recorded area.",
+      "options": {
+        "center": "Bottom center",
+        "left": "Bottom left",
+        "right": "Bottom right"
+      }
+    },
+    "video_keysSize": {
+      "label": "Keys size",
+      "description": "How big the labels are.",
+      "options": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      }
     }
   },
   "errors": {
@@ -2396,7 +2479,10 @@
       "video_limit_none": "No limit",
       "video_limit_min": "{{n}} min",
       "video_quality_hint": "Quality and size: Preferences > Video.",
-      "video_selection_window": "Window"
+      "video_selection_window": "Window",
+      "video_highlight": "Highlight cursor",
+      "video_clicks": "Click animation",
+      "video_keys": "Show keys pressed"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4093,7 +4179,8 @@
       "fits": "about {{time}} fit on the disk",
       "little_space": "Little space: about {{minutes}} min fit",
       "image": "Image",
-      "image_confirm": "Image instead? {{time}} of recording will be lost."
+      "image_confirm": "Image instead? {{time}} of recording will be lost.",
+      "clicks": "Clicks"
     }
   },
   "history": {

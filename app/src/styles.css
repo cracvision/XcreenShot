@@ -841,6 +841,26 @@ kbd {
   grid-column: 2;
 }
 
+/* A color as #RRGGBB (video effects): the system picker behind a swatch. */
+.setting .control input[type="color"] {
+  width: 48px;
+  height: 32px;
+  padding: 3px;
+  border: 1px solid var(--control-line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.setting .control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.setting .control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
 /* Long paths wrap instead of pushing the buttons out of the window (LIB-027, APP-009). */
 .setting .path {
   display: block;

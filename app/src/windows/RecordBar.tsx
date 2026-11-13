@@ -14,6 +14,8 @@ interface RecState {
   height?: number;
   /** The pointer is in the video (VID-044). */
   cursor?: boolean;
+  /** A wave at each click (VID-046). */
+  clicks?: boolean;
   /** The system's sound, chosen while Ready (VID-040). */
   systemAudio?: boolean;
   /** The Ready summary (VID-006): frames, codec and minutes that fit (VID-023). */
@@ -164,6 +166,20 @@ export function RecordBar() {
         }
       >
         {t("ui.recbar.cursor")}
+      </button>
+      <button
+        type="button"
+        className="btn small recbar-toggle"
+        aria-pressed={state.clicks === true && state.cursor !== false}
+        title={t("ui.recbar.clicks")}
+        onClick={() => {
+          const on = !(state.clicks === true && state.cursor !== false);
+          void run<{ clicks: boolean; cursor: boolean }>("record.effects", { clicks: on })
+            .then((r) => setState((s) => ({ ...s, clicks: r.clicks, cursor: r.cursor })))
+            .catch(() => undefined);
+        }}
+      >
+        {t("ui.recbar.clicks")}
       </button>
       {ready && (
         <button

@@ -918,6 +918,10 @@
     "record_image": {
       "title": "Imagen en lugar de video",
       "description": "Toma una imagen del área de la grabación y la termina sin video (lo grabado se descarta)."
+    },
+    "record_effects": {
+      "title": "Efectos del cursor y las teclas",
+      "description": "Activa o desactiva Resaltar cursor, Animación de clic y Mostrar teclas pulsadas, también durante la grabación."
     }
   },
   "settings": {
@@ -1329,6 +1333,85 @@
     "video_systemAudio": {
       "label": "Grabar el audio del sistema",
       "description": "Lo que suena en el equipo (apps, navegador, avisos) entra en el video. Desactivado por defecto."
+    },
+    "video_highlight": {
+      "label": "Resaltar cursor",
+      "description": "Un círculo de color bajo el puntero, en el video."
+    },
+    "video_highlightColor": {
+      "label": "Color del resaltado",
+      "description": "El color del círculo."
+    },
+    "video_highlightSize": {
+      "label": "Tamaño del resaltado",
+      "description": "Diámetro en píxeles, de 20 a 120."
+    },
+    "video_highlightOpacity": {
+      "label": "Opacidad del resaltado",
+      "description": "En porcentaje, de 10 a 90."
+    },
+    "video_highlightShape": {
+      "label": "Forma del resaltado",
+      "description": "Un círculo lleno o solo su contorno.",
+      "options": {
+        "circle": "Círculo",
+        "ring": "Anillo"
+      }
+    },
+    "video_clicks": {
+      "label": "Animación de clic",
+      "description": "Una onda en el video en cada clic."
+    },
+    "video_clickColor": {
+      "label": "Color del clic",
+      "description": "La onda del botón principal."
+    },
+    "video_clickColorSecondary": {
+      "label": "Color del clic derecho",
+      "description": "La onda del botón secundario."
+    },
+    "video_clickSameColor": {
+      "label": "Usar el mismo color",
+      "description": "El clic derecho usa el color del clic principal."
+    },
+    "video_clickSize": {
+      "label": "Tamaño de la onda",
+      "description": "Hasta dónde crece la onda.",
+      "options": {
+        "small": "Pequeña",
+        "medium": "Mediana",
+        "large": "Grande"
+      }
+    },
+    "video_keys": {
+      "label": "Mostrar teclas pulsadas",
+      "description": "Las teclas que pulsas aparecen en el video. Nunca en campos de contraseña; no se guardan en ningún otro sitio."
+    },
+    "video_keysWhich": {
+      "label": "Qué teclas mostrar",
+      "description": "Solo combinaciones (con Ctrl, Alt o Win, y Enter, Esc, Tab, flechas y teclas de función) o todas las teclas.",
+      "options": {
+        "combos": "Solo combinaciones",
+        "all": "Todas las teclas"
+      }
+    },
+    "video_keysPlace": {
+      "label": "Posición de las teclas",
+      "description": "Abajo, dentro del área grabada.",
+      "options": {
+        "center": "Abajo en el centro",
+        "left": "Abajo a la izquierda",
+        "right": "Abajo a la derecha"
+      }
+    },
+    "video_keysSize": {
+      "label": "Tamaño de las teclas",
+      "description": "Lo grandes que son las etiquetas.",
+      "options": {
+        "small": "Pequeño",
+        "medium": "Mediano",
+        "large": "Grande"
+      }
     }
   },
   "errors": {
@@ -2396,7 +2479,10 @@
       "video_limit_none": "Sin límite",
       "video_limit_min": "{{n}} min",
       "video_quality_hint": "Calidad y tamaño: Preferencias > Video.",
-      "video_selection_window": "Ventana"
+      "video_selection_window": "Ventana",
+      "video_highlight": "Resaltar cursor",
+      "video_clicks": "Animación de clic",
+      "video_keys": "Mostrar teclas pulsadas"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4093,7 +4179,8 @@
       "fits": "caben unas {{time}} en el disco",
       "little_space": "Poco espacio: caben unos {{minutes}} min",
       "image": "Imagen",
-      "image_confirm": "¿Imagen en su lugar? Se perderán {{time}} de grabación."
+      "image_confirm": "¿Imagen en su lugar? Se perderán {{time}} de grabación.",
+      "clicks": "Clics"
     }
   },
   "history": {

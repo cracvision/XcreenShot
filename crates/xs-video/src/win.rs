@@ -25,6 +25,7 @@ use windows::Win32::Media::MediaFoundation::*;
 use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
 use windows::Win32::UI::HiDpi::{SetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2};
 
+use crate::effects::{Effects, Live};
 use crate::{Area, Options, Shared, State, Summary};
 
 /// 100-nanosecond units in a second (Media Foundation's clock).
@@ -157,6 +158,12 @@ struct Converter {
     /// The monitor's top left on the virtual screen, and its size.
     origin: (i32, i32),
     monitor: (u32, u32),
+    /// The part of the monitor recorded, for the key labels (VID-047).
+    area: std::cell::Cell<RECT>,
+    /// The monitor's scale, for the effects' sizes.
+    scale: f32,
+    /// Draws the cursor and keyboard effects (VID-045 to VID-047).
+    painter: Option<crate::win_fx::Painter>,
     width: u32,
     height: u32,
 }
@@ -168,6 +175,7 @@ fn converter(
     source: RECT,
     size: (u32, u32),
     fps: u32,
+    scale: f32,
 ) -> Result<Converter, String> {
     let frame = texture(
         gpu,
@@ -268,6 +276,13 @@ fn converter(
                 DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P601
             },
         );
+        let painter = match crate::win_fx::Painter::new(&composite) {
+            Ok(p) => Some(p),
+            Err(e) => {
+                tracing::warn!(error = %e, "video: no cursor effects");
+                None
+            }
+        };
         Ok(Converter {
             venum,
             vp,
@@ -276,6 +291,9 @@ fn converter(
             composite,
             origin,
             monitor,
+            area: std::cell::Cell::new(source),
+            scale,
+            painter,
             width: size.0,
             height: size.1,
         })
@@ -307,6 +325,7 @@ impl Converter {
             right: ((w + dw) / 2.0).round() as i32,
             bottom: ((h + dh) / 2.0).round() as i32,
         };
+        self.area.set(src);
         // SAFETY: state of the video processor, set on the immediate context.
         unsafe {
             gpu.vctx
@@ -317,22 +336,51 @@ impl Converter {
         true
     }
 
-    /// The last picture, with the pointer on it when `cursor` (VID-044).
-    fn compose(&self, gpu: &Gpu, cursor: bool) {
+    /// The last picture, with the effects (VID-045 to VID-047) and the pointer on it
+    /// when `cursor` (VID-044). Without the pointer only the keys are shown.
+    fn compose(&self, gpu: &Gpu, cursor: bool, fx: &Effects, live: &Live, now: Instant) {
         use windows::Win32::UI::WindowsAndMessaging::*;
-        // SAFETY: GPU copy, then GDI drawing on the texture's DC, released at once; the
-        // icon's bitmaps from GetIconInfo are deleted.
+        // SAFETY: GPU copy, then Direct2D and GDI drawing on the texture, the DC
+        // released at once; the icon's bitmaps from GetIconInfo are deleted.
         unsafe {
             gpu.context.CopyResource(&self.composite, &self.frame);
-            if !cursor {
-                return;
-            }
             let mut info = CURSORINFO {
                 cbSize: std::mem::size_of::<CURSORINFO>() as u32,
                 ..Default::default()
             };
-            if GetCursorInfo(&mut info).is_err() || info.flags != CURSOR_SHOWING || info.hCursor.is_invalid()
-            {
+            let visible = cursor
+                && GetCursorInfo(&mut info).is_ok()
+                && info.flags == CURSOR_SHOWING
+                && !info.hCursor.is_invalid();
+            let mut shown = fx.clone();
+            if !cursor {
+                shown.highlight = None;
+                shown.clicks = None;
+            }
+            if let (Some(p), true) = (&self.painter, shown.any()) {
+                let a = self.area.get();
+                let pointer = visible.then(|| {
+                    (
+                        (info.ptScreenPos.x - self.origin.0) as f32,
+                        (info.ptScreenPos.y - self.origin.1) as f32,
+                    )
+                });
+                p.draw(
+                    &shown,
+                    live,
+                    pointer,
+                    (
+                        a.left as f32,
+                        a.top as f32,
+                        (a.right - a.left) as f32,
+                        (a.bottom - a.top) as f32,
+                    ),
+                    (self.origin.0 as f32, self.origin.1 as f32),
+                    self.scale,
+                    now,
+                );
+            }
+            if !visible {
                 return;
             }
             let mut icon = ICONINFO::default();
@@ -370,8 +418,8 @@ impl Converter {
     }
 
     /// A new NV12 frame from the last picture.
-    fn nv12(&self, gpu: &Gpu, cursor: bool) -> Result<ID3D11Texture2D, String> {
-        self.compose(gpu, cursor);
+    fn nv12(&self, gpu: &Gpu, cursor: bool, fx: &Effects, live: &Live) -> Result<ID3D11Texture2D, String> {
+        self.compose(gpu, cursor, fx, live, Instant::now());
         let out = texture(
             gpu,
             self.width,
@@ -820,7 +868,15 @@ pub(crate) fn record(
         if source.right - source.left < 2 || source.bottom - source.top < 2 {
             return Err("the area is outside the monitor".to_string());
         }
-        let conv = converter(&gpu, monitor, (mr.left, mr.top), source, size, fps)?;
+        let conv = converter(
+            &gpu,
+            monitor,
+            (mr.left, mr.top),
+            source,
+            size,
+            fps,
+            options.scale as f32,
+        )?;
         let bitrate = options.quality.bitrate(size.0, size.1);
         // The system's sound, when asked; without it the video goes on silent.
         let loopback = if options.system_audio {
@@ -876,6 +932,12 @@ pub(crate) fn record(
     // Sound frames written so far, and when a lost output was last looked for.
     let mut audio_frames = 0u64;
     let mut last_reopen = Instant::now();
+    // Cursor and keyboard effects (VID-045 to VID-047): what shows, the hooks that
+    // feed it while clicks or keys are wanted, and the password check.
+    let mut live = Live::default();
+    let mut hooks: Option<crate::win_fx::Hooks> = None;
+    let focus = crate::win_fx::Focus::new();
+    let mut fx = shared.effects.lock().unwrap().clone();
     // The disk is looked at every two seconds (VID-023).
     let mut last_disk = Instant::now();
     let mut low_disk = false;
@@ -898,9 +960,11 @@ pub(crate) fn record(
     let write_frame = |w: &Writer,
                        last_frame: &mut Option<ID3D11Texture2D>,
                        last_time: &mut f64,
-                       frames: &mut u64|
+                       frames: &mut u64,
+                       fx: &Effects,
+                       live: &Live|
      -> Result<(), String> {
-        let frame = conv.nv12(&gpu, shared.cursor.load(Ordering::Relaxed))?;
+        let frame = conv.nv12(&gpu, shared.cursor.load(Ordering::Relaxed), fx, live)?;
         let t = now_recorded().max(*last_time + 0.001);
         w.write(&gpu, &frame, t, interval)?;
         *last_time = t;
@@ -1018,6 +1082,42 @@ pub(crate) fn record(
                 .ok()
                 .filter(|n| Some(n.rate) == audio_rate);
         }
+        fx = shared.effects.lock().unwrap().clone();
+        let cursor_on = shared.cursor.load(Ordering::Relaxed);
+        let wants_clicks = cursor_on && fx.clicks.is_some();
+        let wants_keys = fx.keys.is_some();
+        if wants_clicks || wants_keys {
+            if hooks.as_ref().is_none_or(|h| h.keys != wants_keys) {
+                // The old ones go first: they clear where the new ones send.
+                drop(hooks.take());
+                hooks = crate::win_fx::Hooks::start(wants_keys);
+            }
+        } else {
+            hooks = None;
+        }
+        if let Some(h) = &hooks {
+            while let Ok(input) = h.events.try_recv() {
+                match input {
+                    crate::win_fx::Input::Button {
+                        down,
+                        secondary,
+                        x,
+                        y,
+                        at,
+                    } if wants_clicks => live.button(down, secondary, x, y, at),
+                    crate::win_fx::Input::Key { vk, down, at } => {
+                        if let Some(k) = &fx.keys {
+                            live.key(vk, down, k, at, &|| focus.shows_keys());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Waves, a drag or labels showing: frames keep coming.
+        if live.tick(Instant::now()) {
+            dirty = true;
+        }
         if shared.paused.load(Ordering::Relaxed) {
             was_paused = true;
             continue;
@@ -1029,7 +1129,7 @@ pub(crate) fn record(
         }
         let due = last_write.is_none_or(|t| t.elapsed().as_secs_f64() >= interval);
         if dirty && due && !hold {
-            match write_frame(&w, &mut last_frame, &mut last_time, &mut frames) {
+            match write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live) {
                 Ok(()) => {
                     last_write = Some(Instant::now());
                     dirty = false;
@@ -1088,7 +1188,7 @@ pub(crate) fn record(
     if failure.is_none() {
         // The last change, and the last picture held until the end.
         if dirty {
-            let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames);
+            let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live);
         }
         if let Some(f) = &last_frame {
             if duration - last_time > interval {
@@ -1462,6 +1562,7 @@ mod tests {
                 cursor: false,
                 system_audio: false,
                 window: None,
+                effects: Default::default(),
                 path: path.clone(),
             })
             .unwrap();
@@ -1539,6 +1640,126 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    /// The effects drawn on a grey picture in memory (no screen, no input): the
+    /// highlight's colour under the pointer, a wave, and a dark key label.
+    #[test]
+    fn effects_are_drawn() {
+        use crate::effects::*;
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return;
+        };
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let (w, h) = (400u32, 300u32);
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: w,
+            Height: h,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: D3D11_USAGE_DEFAULT,
+            BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+            CPUAccessFlags: 0,
+            MiscFlags: D3D11_RESOURCE_MISC_GDI_COMPATIBLE.0 as u32,
+        };
+        let grey = vec![128u8; (w * h * 4) as usize];
+        let data = D3D11_SUBRESOURCE_DATA {
+            pSysMem: grey.as_ptr() as *const _,
+            SysMemPitch: w * 4,
+            SysMemSlicePitch: 0,
+        };
+        let mut tex = None;
+        unsafe { gpu.device.CreateTexture2D(&desc, Some(&data), Some(&mut tex)) }.unwrap();
+        let tex = tex.unwrap();
+        let Ok(painter) = crate::win_fx::Painter::new(&tex) else {
+            return;
+        };
+        let fx = Effects {
+            highlight: Some(Highlight {
+                color: [255, 0, 0],
+                diameter: 60.0,
+                opacity: 0.5,
+                ring: false,
+            }),
+            clicks: Some(Clicks {
+                primary: [0, 0, 255],
+                secondary: [255, 128, 0],
+                diameter: 64.0,
+            }),
+            keys: Some(Keys {
+                all: true,
+                place: KeyPlace::Center,
+                size: 18.0,
+                hidden: Vec::new(),
+            }),
+        };
+        let now = std::time::Instant::now();
+        let mut live = Live::default();
+        live.button(true, false, 300, 80, now - Duration::from_millis(100));
+        live.labels.push_back(("Ctrl + C".into(), now + LABEL));
+        painter.draw(
+            &fx,
+            &live,
+            Some((100.0, 100.0)),
+            (0.0, 0.0, w as f32, h as f32),
+            (0.0, 0.0),
+            1.0,
+            now,
+        );
+        // Read it back.
+        let staging = texture(&gpu, w, h, DXGI_FORMAT_B8G8R8A8_UNORM, 0, true).unwrap();
+        let px = unsafe {
+            gpu.context.CopyResource(&staging, &tex);
+            let mut m = D3D11_MAPPED_SUBRESOURCE::default();
+            gpu.context
+                .Map(&staging, 0, D3D11_MAP_READ, 0, Some(&mut m))
+                .unwrap();
+            let pitch = m.RowPitch as usize;
+            let src = std::slice::from_raw_parts(m.pData as *const u8, pitch * h as usize).to_vec();
+            gpu.context.Unmap(&staging, 0);
+            move |x: usize, y: usize| {
+                let i = y * pitch + x * 4;
+                [src[i + 2], src[i + 1], src[i]]
+            }
+        };
+        // To look at it: XS_FX_RAW=<file> keeps the picture (RGB, 400 × 300).
+        if let Some(out) = std::env::var_os("XS_FX_RAW") {
+            let mut rgb = Vec::with_capacity((w * h * 3) as usize);
+            for y in 0..h as usize {
+                for x in 0..w as usize {
+                    rgb.extend_from_slice(&px(x, y));
+                }
+            }
+            let _ = std::fs::write(out, rgb);
+        }
+        let centre = px(100, 100);
+        println!(
+            "highlight {centre:?}, outside {:?}, label {:?}",
+            px(100, 140),
+            px(200, 260)
+        );
+        assert!(centre[0] > 180 && centre[1] < 90, "red over grey: {centre:?}");
+        assert_eq!(px(100, 140), [128, 128, 128], "outside the circle");
+        let label = px(200, 262);
+        assert!(label[0] < 60 && label[1] < 60, "the label's dark box: {label:?}");
+        // The wave: some blue around (300, 80).
+        let blue = (60..100).any(|y| {
+            (270..330).any(|x| {
+                let p = px(x, y);
+                p[2] > p[0] + 40
+            })
+        });
+        assert!(blue, "the click's wave");
+    }
+
     fn tempfile_dir() -> std::path::PathBuf {
         let d = std::env::temp_dir().join(format!("xs-video-unit-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&d);
@@ -1574,6 +1795,7 @@ mod tests {
             cursor: false,
             system_audio: false,
             window: Some(hwnd.0 as isize),
+            effects: Default::default(),
             path: path.clone(),
         })
         .unwrap();
@@ -1640,6 +1862,7 @@ mod tests {
             cursor: false,
             system_audio: true,
             window: None,
+            effects: Default::default(),
             path: path.clone(),
         })
         .unwrap();
@@ -1697,6 +1920,7 @@ mod tests {
             cursor: true,
             system_audio: false,
             window: None,
+            effects: Default::default(),
             path: path.clone(),
         })
         .unwrap();
@@ -1725,6 +1949,80 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    /// VID-045 in the real engine: a red highlight around the pointer wherever it is
+    /// (the mouse is not moved). It records the real screen: run it by hand.
+    #[test]
+    #[ignore]
+    fn highlight_is_recorded() {
+        use crate::effects::{Effects, Highlight};
+        use windows::Win32::Foundation::POINT;
+        use windows::Win32::Graphics::Gdi::{
+            GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST,
+        };
+        use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+        unsafe {
+            let _ = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        let mut at = POINT::default();
+        let mut info = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        unsafe {
+            let _ = GetCursorPos(&mut at);
+            let _ = GetMonitorInfoW(MonitorFromPoint(at, MONITOR_DEFAULTTONEAREST), &mut info);
+        }
+        let m = info.rcMonitor;
+        let (w, h) = (400, 300);
+        let x = (at.x - w / 2).clamp(m.left, m.right - w);
+        let y = (at.y - h / 2).clamp(m.top, m.bottom - h);
+        let dir = std::env::temp_dir().join("xs-video-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("highlight.mp4");
+        let r = Recorder::start(Options {
+            area: Area {
+                x,
+                y,
+                width: w as u32,
+                height: h as u32,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: true,
+            system_audio: false,
+            window: None,
+            effects: Effects {
+                highlight: Some(Highlight {
+                    color: [255, 0, 0],
+                    diameter: 80.0,
+                    opacity: 0.9,
+                    ring: false,
+                }),
+                ..Default::default()
+            },
+            path: path.clone(),
+        })
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(600));
+        let _ = r.stop().unwrap();
+        let (fw, _fh, px) = first_frame(&path).unwrap();
+        let pixel = |dx: i32, dy: i32| {
+            let (px_x, px_y) = ((at.x - x + dx) as u32, (at.y - y + dy) as u32);
+            let i = ((px_y * fw + px_x) * 4) as usize;
+            [px[i + 2], px[i + 1], px[i]]
+        };
+        // Left of and above the tip: inside the circle, outside the arrow.
+        let around = [pixel(-30, 0), pixel(0, -30), pixel(-20, -20)];
+        println!("pointer at {at:?}, around the tip: {around:?}");
+        for p in around {
+            assert!(p[0] > 150 && p[1] < 100 && p[2] < 100, "red highlight: {p:?}");
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// Records two seconds of the primary monitor's top-left corner and reads the file
     /// back. It records the real screen: run it by hand (`--ignored`).
     #[test]
@@ -1749,6 +2047,7 @@ mod tests {
                 cursor: false,
                 system_audio: false,
                 window: None,
+                effects: Default::default(),
                 path: path.clone(),
             })
             .unwrap();

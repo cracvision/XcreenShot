@@ -904,6 +904,22 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "codec": {"type": "string"}, "bitrate": {"type": "integer"},
                 "audio": {"type": "array", "description": "{channels, rate} of each sound track"}
             }})),
+        B::new("record.effects", &["VID-045", "VID-046", "VID-047", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({
+                    "highlight": {"type": "boolean", "description": "Highlight cursor (VID-045)"},
+                    "clicks": {"type": "boolean", "description": "Click animation (VID-046)"},
+                    "keys": {"type": "boolean", "description": "Show keys pressed (VID-047)"},
+                    "highlightColor": {"type": "string", "format": "color", "description": "Highlight colour as #RRGGBB; switches the highlight on"},
+                    "clickColor": {"type": "string", "format": "color", "description": "Main click colour as #RRGGBB; switches the clicks on"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "highlight": {"type": "boolean"}, "clicks": {"type": "boolean"}, "keys": {"type": "boolean"},
+                "cursor": {"type": "boolean"}
+            }})),
         B::new("record.toggle", &["VID-012", "VID-075"])
             .scopes(ALL)
             .assignable()

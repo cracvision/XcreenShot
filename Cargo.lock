@@ -7296,6 +7296,7 @@ dependencies = [
  "serde",
  "tracing",
  "windows 0.62.2",
+ "windows-numerics",
 ]
 
 [[package]]
