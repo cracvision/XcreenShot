@@ -254,6 +254,14 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 10: lanzador de borde)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-004 | ¿Por dónde se arrastra? | Por un asa (⋮) a la izquierda de Capturar, para que un clic en los botones nunca lo mueva. Al soltar se pega al borde (superior, izquierdo o derecho) más cercano al puntero | Provisional |
+| CAP-004 | ¿Qué es "una app a pantalla completa"? | La ventana al frente cubre su monitor entero (no el escritorio ni la barra de tareas). Se comprueba cada 1,5 s; el editor de XcreenShot a pantalla completa también lo oculta | Provisional |
+| CAP-004 | Copiar al portapapeles con Capturar del lanzador | El spec fija Abrir en, cursor, retardo, efectos y destinos, pero no el portapapeles: se copia, como en la pestaña Universal por defecto | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 9: archivo y PDF)
 
 | ID | Duda | Propuesta | Estado |

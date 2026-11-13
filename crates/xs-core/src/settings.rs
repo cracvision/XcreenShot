@@ -440,6 +440,14 @@ pub fn definitions() -> Vec<SettingDef> {
             "CAP-015",
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
+        // Capture interface (CAP-001, CAP-004): the panel, the edge launcher, or both.
+        def(
+            "capture.interface",
+            "capture",
+            one_of(&["panel", "launcher", "both"]),
+            json!("panel"),
+            "CAP-004",
+        ),
         // System captures (CAP-042): imported from the system tool while on.
         def(
             "capture.systemCaptures",

@@ -8,6 +8,7 @@ mod drag_out;
 mod freeze_win;
 mod global;
 mod host;
+mod launcher;
 mod overlay;
 mod permissions;
 mod tray;
@@ -365,6 +366,10 @@ pub fn run() {
             xs_countdown_cancel,
             xs_countdown_current,
             xs_panel_fit,
+            launcher::xs_launcher,
+            launcher::xs_launcher_grab,
+            launcher::xs_launcher_drag,
+            launcher::xs_launcher_drop,
             xs_editor_menus,
             xs_drag_prepare,
             xs_drag_start,
@@ -421,6 +426,8 @@ pub fn run() {
             // Shortcuts and icon first; the window (if any) after (APP-003, APP-051).
             global::apply(&handle);
             tray::create(&handle)?;
+            // The edge launcher, if it is on (CAP-004).
+            launcher::start(&handle);
             global::startup_notice(&handle);
             // Time from process start to "icon and shortcuts work" (APP-003, APP-051).
             tracing::info!(

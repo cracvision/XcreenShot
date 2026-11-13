@@ -393,6 +393,9 @@ function CaptureShortcut() {
 /** "More" menu (CAP-001): only the entries whose features exist. */
 function MoreMenu({ onReset }: { onReset: () => void }) {
   const { t } = useTranslation();
+  // The edge launcher (CAP-004): shown with the panel, or not.
+  const iface = useApp((s) => s.settings.find((x) => x.key === "capture.interface")?.value);
+  const launcherOn = iface === "launcher" || iface === "both";
   return (
     <div className="panel-more">
       <Menu
@@ -409,6 +412,15 @@ function MoreMenu({ onReset }: { onReset: () => void }) {
             onSelect: () => void run("settings.open", { section: "capture" }),
           },
           { id: "reset", label: t("ui.panel.reset"), onSelect: onReset },
+          {
+            id: "launcher",
+            label: launcherOn ? t("ui.panel.hide_launcher") : t("ui.panel.show_launcher"),
+            onSelect: () =>
+              void run("settings.set", {
+                key: "capture.interface",
+                value: launcherOn ? "panel" : "both",
+              }),
+          },
           // CAP-063, CAP-064.
           {
             id: "import_presets",

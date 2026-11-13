@@ -1895,6 +1895,115 @@ html.overlay-root.overlay-native #root {
   word-break: break-all;
 }
 
+/* The edge launcher (CAP-004): a see-through window with a tab, or the unfolded
+   launcher with Capture, Presets and its list. */
+html.launcher-root,
+html.launcher-root body,
+html.launcher-root #root {
+  background: transparent;
+  overflow: hidden;
+}
+
+.launcher-tab {
+  position: fixed;
+  inset: 0;
+  background: var(--brand);
+  cursor: pointer;
+  outline: none;
+}
+
+.launcher-tab.top {
+  border-radius: 0 0 8px 8px;
+}
+
+.launcher-tab.left {
+  border-radius: 0 8px 8px 0;
+}
+
+.launcher-tab.right {
+  border-radius: 8px 0 0 8px;
+}
+
+.launcher-box {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--ink);
+}
+
+.launcher-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.launcher-row .btn {
+  flex: 1;
+}
+
+.launcher-grip {
+  cursor: grab;
+  padding: 4px 2px;
+  color: var(--ink-muted);
+  letter-spacing: -3px;
+  user-select: none;
+  touch-action: none;
+}
+
+.launcher-grip:active {
+  cursor: grabbing;
+}
+
+.launcher-balloon {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.launcher-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+}
+
+.launcher-list button {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.launcher-list button:hover,
+.launcher-list button:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
 /* Import PDF (CAP-041): thumbnails on the left, options on the right. */
 .pdf-import {
   display: grid;

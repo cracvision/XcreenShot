@@ -1338,7 +1338,15 @@ pub fn extension() -> Extension {
         }
         let w = weak.clone();
         reg.handle("capture.universal", move |ctx, p| {
-            capture_with_tab(&*upgrade(&w)?, ctx, "universal", &p)
+            let core = upgrade(&w)?;
+            // The edge launcher's Capture (CAP-004): always Universal into the editor
+            // with the pointer, without delay, effects or destinations.
+            if p.get("fixed").and_then(Value::as_bool) == Some(true) {
+                let fixed =
+                    json!({ "open": "editor", "cursor": true, "copy": true, "delay": 0, "share": [] });
+                return dispatch(&core, ctx, "capture.universal", &fixed, json!({}));
+            }
+            capture_with_tab(&core, ctx, "universal", &p)
         });
         let w = weak.clone();
         reg.handle("capture.image", move |ctx, p| {

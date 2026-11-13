@@ -1186,6 +1186,15 @@
     "capture_systemCaptures_keepOriginal": {
       "label": "Keep the original file",
       "description": "Off: the file the system saved moves to the library and leaves its folder."
+    },
+    "capture_interface": {
+      "label": "Capture interface",
+      "description": "The capture panel, the edge launcher (a thin tab on a screen edge with Capture and Presets), or both.",
+      "options": {
+        "panel": "Capture panel",
+        "launcher": "Edge launcher",
+        "both": "Both"
+      }
     }
   },
   "errors": {
@@ -2186,7 +2195,9 @@
       "source_file": "Fixed file",
       "source_file_none": "Ask each time",
       "source_file_choose": "Choose…",
-      "source_file_clear": "Ask each time"
+      "source_file_clear": "Ask each time",
+      "show_launcher": "Show the edge launcher",
+      "hide_launcher": "Hide the edge launcher"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3830,6 +3841,14 @@
       "selected": "{{count}} of {{total}} pages",
       "too_many": "At most 200 pages per import.",
       "loading": "Opening…"
+    },
+    "launcher": {
+      "capture": "Capture",
+      "presets": "Presets",
+      "move": "Move the launcher",
+      "none": "No presets yet",
+      "new": "New preset: {{name}}",
+      "tab": "XcreenShot launcher"
     }
   },
   "history": {

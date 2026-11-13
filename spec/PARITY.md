@@ -11,7 +11,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-001 | Panel de captura | M1 | Must | En curso |
 | CAP-002 | Pestaña Imagen y lista Selección | M1 | Must | En curso |
 | CAP-003 | Restablecer ajustes de captura | M1 | Should | En curso |
-| CAP-004 | Lanzador de borde | M3 | Should | — |
+| CAP-004 | Lanzador de borde | M3 | Should | En curso (Windows: Preferencias > Captura > **Interfaz de captura** (panel, lanzador o ambos) y **Mostrar el lanzador de borde** en el menú Más del panel; pestaña en el borde superior, izquierdo o derecho que al pasar el puntero muestra **Capturar** (siempre Universal al editor con el cursor, sin retardo, efectos ni destinos) y **Presets** (la lista; un clic lo ejecuta); se arrastra por su asa y se pega al borde más cercano del monitor bajo el puntero, y lo recuerda; si su monitor no está, vuelve al borde superior del principal; globo con el nombre de un preset nuevo; se oculta mientras una app llena su monitor; nunca sale en las capturas. Falta: soltar archivos sobre él (CAP-040, CAP-041) y macOS) |
 | CAP-005 | Menú de captura del ícono de bandeja o barra de menús | M1 | Must | En curso |
 | CAP-006 | Atajo global Capturar | M1 | Must | En curso |
 | CAP-007 | Repetir última captura | M1 | Should | En curso |

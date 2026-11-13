@@ -1186,6 +1186,15 @@
     "capture_systemCaptures_keepOriginal": {
       "label": "Conservar el archivo original",
       "description": "Desactivada: el archivo que guardó el sistema pasa a la biblioteca y sale de su carpeta."
+    },
+    "capture_interface": {
+      "label": "Interfaz de captura",
+      "description": "El panel de captura, el lanzador de borde (una pestaña fina en un borde de la pantalla con Capturar y Presets), o ambos.",
+      "options": {
+        "panel": "Panel de captura",
+        "launcher": "Lanzador de borde",
+        "both": "Ambos"
+      }
     }
   },
   "errors": {
@@ -2186,7 +2195,9 @@
       "source_file": "Archivo fijo",
       "source_file_none": "Preguntar cada vez",
       "source_file_choose": "Elegir…",
-      "source_file_clear": "Preguntar cada vez"
+      "source_file_clear": "Preguntar cada vez",
+      "show_launcher": "Mostrar el lanzador de borde",
+      "hide_launcher": "Ocultar el lanzador de borde"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -3830,6 +3841,14 @@
       "selected": "{{count}} de {{total}} páginas",
       "too_many": "Como mucho 200 páginas por importación.",
       "loading": "Abriendo…"
+    },
+    "launcher": {
+      "capture": "Capturar",
+      "presets": "Presets",
+      "move": "Mover el lanzador",
+      "none": "Todavía no hay presets",
+      "new": "Preset nuevo: {{name}}",
+      "tab": "Lanzador de XcreenShot"
     }
   },
   "history": {

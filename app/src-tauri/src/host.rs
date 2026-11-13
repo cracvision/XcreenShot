@@ -167,6 +167,11 @@ impl Host for TauriHost {
                 tray::refresh(&self.app);
             }
             "general.showIcon" | "general.monochromeIcon" => tray::refresh(&self.app),
+            // Capture interface: the edge launcher comes or goes (CAP-004).
+            "capture.interface" => {
+                let app = self.app.clone();
+                let _ = self.app.run_on_main_thread(move || crate::launcher::sync(&app));
+            }
             "shortcuts.takeOver" => self.shortcuts_changed(),
             // A test copy never changes how the installed app starts.
             "general.launchAtLogin" if xs_core::paths::isolated() => {

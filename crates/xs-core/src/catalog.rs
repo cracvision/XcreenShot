@@ -713,7 +713,9 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .interactive()
             .assignable()
             .mutates()
-            .params(capture_params(json!({})))
+            .params(capture_params(json!({
+                "fixed": {"type": "boolean", "description": "The edge launcher's settings (CAP-004): editor, pointer, no delay, effects or destinations, whatever the panel says"}
+            })))
             .result(capture_result()),
         B::new("capture.region", &["CAP-025", "CAP-008"])
             .scopes(ALL)
