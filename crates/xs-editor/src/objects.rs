@@ -411,7 +411,9 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "arrow" | "line" => Some(&["from", "to"]),
         "text" => Some(&["at", "width", "text", "rotation"]),
         "shape" => Some(&["rect", "rotation", "points"]),
-        "blur" | "image" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
+        "blur" | "highlight" | "spotlight" => Some(&["rect", "rotation"]),
+        // An image can carry a name: a window's app (CAP-029).
+        "image" => Some(&["rect", "rotation", "name"]),
         "step" => Some(&["rect", "rotation", "value"]),
         "pen" => Some(&["points"]),
         "stamp" => Some(&["rect", "rotation", "stamp", "art", "ink"]),
@@ -526,7 +528,15 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
         }
         "image" => {
             let i = ImageObject::from_props(props)?;
-            json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style})
+            let mut v = json!({"image": i.image, "rect": i.rect, "rotation": i.rotation, "style": i.style});
+            if let Some(name) = props
+                .get("name")
+                .and_then(Value::as_str)
+                .filter(|n| !n.is_empty())
+            {
+                v["name"] = json!(name);
+            }
+            v
         }
         "zone" => {
             let z = xs_image::shapes::ZoneObject::from_props(props)?;

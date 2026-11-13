@@ -758,6 +758,77 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     Ok(result)
 }
 
+/// Windows as objects (CAP-029): each visible window over `area` (not minimized, not
+/// on another virtual desktop), taken whole even where another covers it, becomes an
+/// image object named after its app, in its place and stacking order. The base stays
+/// the screen as it looked, so the flattened image is the same as without it.
+fn windows_as_objects(core: &Core, lang: Lang, document_id: &str, area: Rect) {
+    let windows: Vec<(u32, String)> = app_windows()
+        .into_iter()
+        .filter_map(|w| {
+            let id = w.id().ok()?;
+            let r = Rect {
+                x: w.x().ok()?,
+                y: w.y().ok()?,
+                width: w.width().ok()?,
+                height: w.height().ok()?,
+            };
+            (r.intersect(&area).is_some() && !platform::is_cloaked(id) && platform::is_app_window(id))
+                .then(|| (id, window_app(&w).name))
+        })
+        .collect();
+    let tmp = core.paths.local_dir.join("tmp");
+    let _ = std::fs::create_dir_all(&tmp);
+    let mut placed = 0;
+    // The topmost comes first: insert from the bottom up.
+    for (id, app) in windows.into_iter().rev() {
+        let Ok(shot) = capture_window(&WindowTarget::Id(id), lang) else {
+            continue;
+        };
+        let file = tmp.join(format!("window-{id}.png"));
+        let Ok(png) = xs_image::encode::png(&shot.image, 0.0, false) else {
+            continue;
+        };
+        if std::fs::write(&file, png).is_err() {
+            continue;
+        }
+        let x = (shot.rect.x - area.x) as f64;
+        let y = (shot.rect.y - area.y) as f64;
+        let center = [
+            x + shot.image.width() as f64 / 2.0,
+            y + shot.image.height() as f64 / 2.0,
+        ];
+        let inserted = core.call(
+            Source::Ui,
+            "document.insert_images",
+            json!({ "documentId": document_id, "paths": [file], "center": center }),
+            None,
+        );
+        let _ = std::fs::remove_file(&file);
+        match inserted {
+            Ok(r) => {
+                placed += 1;
+                if let Some(object) = r["ids"].get(0).and_then(Value::as_str) {
+                    let _ = core.call(
+                        Source::Ui,
+                        "document.update_object",
+                        json!({ "documentId": document_id, "objectId": object, "set": { "name": app } }),
+                        None,
+                    );
+                }
+            }
+            Err(e) => tracing::warn!(error = %e.message, "windows as objects: a window was left out"),
+        }
+    }
+    let _ = core.call(
+        Source::Ui,
+        "document.save",
+        json!({ "documentId": document_id }),
+        None,
+    );
+    tracing::info!(windows = placed, "windows as objects");
+}
+
 fn source_key(s: Source) -> &'static str {
     match s {
         Source::Ui => "ui",
@@ -877,7 +948,19 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
                 .and_then(Value::as_str)
                 .unwrap_or("pointer")
                 .to_string();
-            run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))
+            let result = run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))?;
+            // Windows as objects (CAP-029): each visible window, whole, as its own image.
+            if p.get("windows").and_then(Value::as_bool) == Some(true) {
+                if let (Some(id), Some(rect)) = (
+                    result.get("documentId").and_then(Value::as_str),
+                    result
+                        .get("rect")
+                        .and_then(|r| serde_json::from_value::<Rect>(r.clone()).ok()),
+                ) {
+                    windows_as_objects(core, ctx.lang, id, rect);
+                }
+            }
+            Ok(result)
         }
         "capture.region" => match p.get("rect") {
             None => {

@@ -2229,7 +2229,8 @@
       "freehand_shape": "Shape",
       "freehand_free": "Free",
       "freehand_polygon": "Polygon",
-      "freehand_ellipse": "Ellipse"
+      "freehand_ellipse": "Ellipse",
+      "windows_as_objects": "Each window as its own object"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",

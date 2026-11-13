@@ -215,6 +215,8 @@ export interface PanelSettings {
     web: { width: number; scale: 0 | 1 | 2; wait: number; lazy: boolean };
     /** Selection = Freehand (CAP-032). */
     freehand: "free" | "polygon" | "ellipse";
+    /** Selection = Full screen: each window as its own object (CAP-029). */
+    windowsAsObjects: boolean;
     /** Selection = Scrolling (CAP-034, CAP-035). */
     scroll: ScrollProps;
     /** Selection = Region (CAP-026). */

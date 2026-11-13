@@ -179,6 +179,16 @@ export function ImageOptions({
   return (
     <>
       <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      {value.selection === "fullscreen" && (
+        <label className="panel-check">
+          <input
+            type="checkbox"
+            checked={value.windowsAsObjects}
+            onChange={(e) => onChange({ windowsAsObjects: e.target.checked })}
+          />
+          {t("ui.panel.windows_as_objects")}
+        </label>
+      )}
       {value.selection === "freehand" && (
         <fieldset className="panel-props">
           <label className="panel-field">

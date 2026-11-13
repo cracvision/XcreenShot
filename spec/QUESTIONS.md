@@ -254,6 +254,13 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M3, entrega 14: ventanas como objetos)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| CAP-029 | La base sin ventanas | Windows no ofrece una forma sencilla de capturar el escritorio sin las ventanas encima, así que la base es la pantalla como se veía (lo que el spec admite): al mover una ventana, su hueco muestra lo que había | Provisional |
+| CAP-029 | El nombre de cada objeto | Se guarda en el objeto (`name`, el nombre de la app). El editor todavía no muestra nombres de objetos en ningún panel | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 13: soltar sobre el panel)
 
 | ID | Duda | Propuesta | Estado |

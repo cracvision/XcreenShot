@@ -199,6 +199,8 @@ pub struct ImageTab {
     pub web: WebTab,
     /// Selection = Freehand: `free`, `polygon` or `ellipse` (CAP-032).
     pub freehand: String,
+    /// Selection = Full screen: each window as its own object (CAP-029).
+    pub windows_as_objects: bool,
 }
 
 /// The properties of Selection = Web page (CAP-037).
@@ -270,6 +272,7 @@ impl Default for ImageTab {
             source_file: String::new(),
             web: WebTab::default(),
             freehand: "free".into(),
+            windows_as_objects: false,
         }
     }
 }
@@ -531,7 +534,12 @@ impl PanelSettings {
                     params["target"] = json!("interactive");
                     "capture.window"
                 }
-                "fullscreen" => "capture.fullscreen",
+                "fullscreen" => {
+                    if self.image.windows_as_objects {
+                        params["windows"] = json!(true);
+                    }
+                    "capture.fullscreen"
+                }
                 _ => {
                     // A fixed region (CAP-026).
                     params = with_overrides(params, &self.image.region.params());

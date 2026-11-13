@@ -61,6 +61,7 @@ export const DEFAULTS: { universal: PanelSettings["universal"]; image: PanelSett
     sourceFile: "",
     web: { width: 1280, scale: 0, wait: 1, lazy: true },
     freehand: "free",
+    windowsAsObjects: false,
     scroll: { type: "manual", direction: "vertical", startFrom: "start", wait: 0.3, restore: true },
     region: { fixed: false, width: 800, height: 600, positioned: false, monitor: "", x: 0, y: 0 },
     areas: { composition: "original", gap: 10 },

@@ -428,7 +428,8 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .assignable()
             .mutates()
             .params(capture_params(json!({
-                "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"}
+                "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"},
+                "windows": {"type": "boolean", "description": "Windows as objects (CAP-029): in the document, each visible window whole as its own image object named after its app; the clipboard and files get the flat screen"}
             })))
             .result(capture_result()),
         B::new("capture.capture", &["CAP-006", "CAP-001"])
