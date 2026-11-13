@@ -7183,6 +7183,7 @@ dependencies = [
  "xs-image",
  "xs-library",
  "xs-ocr",
+ "xs-video",
 ]
 
 [[package]]

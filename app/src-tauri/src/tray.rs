@@ -40,6 +40,11 @@ fn tray_state(core: &Core) -> xs_core::menus::TrayState {
                     .into_iter()
                     .map(|(id, text)| (id, text, "capture.schedule_cancel")),
             )
+            .chain(
+                xs_capture::record::menu_items(core)
+                    .into_iter()
+                    .map(|(id, text)| (id, text, "record.stop")),
+            )
             .collect(),
     }
 }
@@ -396,7 +401,9 @@ pub fn current_visual(app: &AppHandle) -> Visual {
     Visual {
         paused: core.shortcuts.user_paused(),
         attention,
-        timer: xs_capture::interval::running(core) || xs_capture::schedule::any(core),
+        timer: xs_capture::interval::running(core)
+            || xs_capture::schedule::any(core)
+            || xs_capture::record::running(core),
         monochrome: core.settings.get_bool("general.monochromeIcon"),
     }
 }

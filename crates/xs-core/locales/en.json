@@ -870,6 +870,30 @@
     "app_take_opening": {
       "title": "Files waiting for a window",
       "description": "The files opened with XcreenShot whose import waits for the editor or the capture panel (once)."
+    },
+    "record_start": {
+      "title": "Start recording",
+      "description": "Records the screen or an area to an MP4 video, until record.stop (or its time limit)."
+    },
+    "record_stop": {
+      "title": "Stop recording",
+      "description": "Stops the recording and waits for the video file."
+    },
+    "record_cancel": {
+      "title": "Cancel recording",
+      "description": "Stops the recording without keeping a file."
+    },
+    "record_pause": {
+      "title": "Pause recording",
+      "description": "Pauses the recording; nothing is recorded until it resumes."
+    },
+    "record_resume": {
+      "title": "Resume recording",
+      "description": "Goes on recording after a pause."
+    },
+    "record_status": {
+      "title": "Recording status",
+      "description": "Whether a recording runs, how long it has recorded and what."
     }
   },
   "settings": {
@@ -1239,6 +1263,30 @@
     "capture_inbox_leave": {
       "label": "Receive folder: leave the files where they are",
       "description": "Off: imported files move to the Importados subfolder."
+    },
+    "video_quality": {
+      "label": "Video quality",
+      "description": "The most frames per second: Very low 5, Low 10, Medium 15, High 30, Very high 60. Only what changes on screen is recorded, so a still screen takes very little.",
+      "options": {
+        "very_low": "Very low",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "very_high": "Very high"
+      }
+    },
+    "video_maxSize": {
+      "label": "Largest video size",
+      "description": "Reducing gives smaller files; Original keeps text sharper. Videos are at most 3840 × 2160.",
+      "options": {
+        "original": "Original",
+        "reduce_high_density": "Reduce high-density screens",
+        "fit_1080": "Reduce to 1080p"
+      }
+    },
+    "video_softwareEncoding": {
+      "label": "Always use software encoding",
+      "description": "Only needed if a graphics driver gives trouble. It uses more processor and may lower the frames per second."
     }
   },
   "errors": {
@@ -1346,7 +1394,11 @@
     "nothing_pending": "This document has nothing waiting to be sent.",
     "nothing_asked": "No capture is asking for text.",
     "file_not_found": "The file does not exist.",
-    "cannot_open_file": "XcreenShot does not open this kind of file."
+    "cannot_open_file": "XcreenShot does not open this kind of file.",
+    "not_recording": "Nothing is being recorded.",
+    "record_busy": "A recording is already running.",
+    "record_failed": "The recording could not be made: {{reason}}",
+    "record_too_small": "The area to record must be at least 64 × 64 pixels."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1517,7 +1569,8 @@
     "quick_annotate": "Quick annotation",
     "stop_series": "Stop capture: {{name}}",
     "tooltip_timer": "XcreenShot · capturing at intervals",
-    "stop_schedule": "Stop capture: {{name}} (next: {{when}})"
+    "stop_schedule": "Stop capture: {{name}} (next: {{when}})",
+    "stop_recording": "Stop recording"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -1700,7 +1753,11 @@
     "webpage_status": "The server answered with an error page (code {{code}}): it was captured as it came.",
     "webpage_cut": "The page was taller than the largest size: it was cut at 60,000 pixels.",
     "inbox_password": "“{{name}}” in the receive folder has a password: import it with Import PDF.",
-    "inbox_failed": "“{{name}}” in the receive folder could not be imported."
+    "inbox_failed": "“{{name}}” in the receive folder could not be imported.",
+    "recording_title": "XcreenShot is recording the screen",
+    "recording_automation": "An automation started a video recording. Stop it from the icon’s menu.",
+    "recording_saved_title": "Video saved",
+    "recording_saved_body": "{{seconds}} s recorded, in the library."
   },
   "source": {
     "ui": "the interface",
@@ -4182,5 +4239,8 @@
   },
   "schedule": {
     "name": "Scheduled"
+  },
+  "record": {
+    "file_name": "Video"
   }
 }

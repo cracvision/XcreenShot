@@ -200,6 +200,8 @@ pub trait Host: Send + Sync {
     fn scroll_event(&self, state: Value) {}
     /// The interval series changed (CAP-049): started, a capture, stopped.
     fn interval_event(&self, state: Value) {}
+    /// A video recording started, paused, resumed or stopped (VID-020, VID-024).
+    fn recording_event(&self, state: Value) {}
     /// The system's Open dialog: the files chosen, or none if cancelled. `filters`
     /// are (name, extensions) (CAP-040, CAP-041).
     fn pick_files(

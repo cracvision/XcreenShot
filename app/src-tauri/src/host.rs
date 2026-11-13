@@ -407,6 +407,13 @@ impl Host for TauriHost {
             .map_err(internal)
     }
 
+    fn recording_event(&self, state: Value) {
+        let _ = self.app.emit("xs://record", state);
+        // Stop recording in the icon's menu, and its clock (VID-020).
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || crate::tray::refresh(&app));
+    }
+
     fn interval_event(&self, state: Value) {
         let _ = self.app.emit("xs://interval", state);
         // The clock on the icon and its Stop capture entries (APP-002, CAP-005).

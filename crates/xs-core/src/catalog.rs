@@ -98,7 +98,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &[
-    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart",
+    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record",
 ];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
@@ -845,6 +845,56 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "lazy": {"type": "boolean", "default": true, "description": "Scroll to the bottom first so content that loads on scrolling appears"}
             })))
             .result(capture_result()),
+        B::new("record.start", &["VID-024", "VID-002", "VID-025", "VID-028"])
+            .mutates()
+            .params(params(
+                json!({
+                    "source": {"type": "string", "enum": ["screen", "region"], "default": "screen"},
+                    "monitor": {"description": "screen: primary (default), pointer or a monitor's number (capture.monitors)"},
+                    "x": {"type": "number"}, "y": {"type": "number"},
+                    "width": {"type": "number", "minimum": 64}, "height": {"type": "number", "minimum": 64},
+                    "quality": {"type": "string", "enum": ["very_low", "low", "medium", "high", "very_high"], "description": "Most frames per second: 5, 10, 15, 30 or 60 (default: the setting)"},
+                    "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
+                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
+                    "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.stop", &["VID-024", "VID-013"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
+                "frames": {"type": "integer"}, "bytes": {"type": "integer"},
+                "encoder": {"type": "string", "enum": ["hardware", "software"]}
+            }})),
+        B::new("record.cancel", &["VID-024", "VID-014"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
+        B::new("record.pause", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.resume", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.status", &["VID-024"]).result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
         B::new("capture.details_text", &["CAP-051"])
             .mutates()
             .params(params(

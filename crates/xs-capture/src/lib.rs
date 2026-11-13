@@ -31,6 +31,7 @@ pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
+pub mod record;
 pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
@@ -1648,6 +1649,29 @@ pub fn extension() -> Extension {
             // The receive folder (CAP-043): watched while one is chosen.
             inbox::install(&core);
         }
+        // Video recording (VID-024).
+        let w = weak.clone();
+        reg.handle("record.start", move |ctx, p| {
+            record::start(&upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("record.stop", move |ctx, _p| record::stop(&*upgrade(&w)?, ctx));
+        let w = weak.clone();
+        reg.handle("record.cancel", move |ctx, _p| {
+            record::cancel(&*upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
+        reg.handle("record.pause", move |ctx, _p| {
+            record::pause(&*upgrade(&w)?, ctx, true)
+        });
+        let w = weak.clone();
+        reg.handle("record.resume", move |ctx, _p| {
+            record::pause(&*upgrade(&w)?, ctx, false)
+        });
+        let w = weak.clone();
+        reg.handle("record.status", move |_ctx, _p| {
+            Ok(record::status(&*upgrade(&w)?))
+        });
         // The text box of Capture details (CAP-051).
         let w = weak.clone();
         reg.handle("capture.details_text", move |ctx, p| {

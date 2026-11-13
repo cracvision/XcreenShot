@@ -204,6 +204,17 @@ xcreenshot app ping --json
 | `preset.export` | `xcreenshot preset export --out D:/mios.xpreset` · `p1a2… p3b4…` | `ids` array (positional); `out` string | An `.xpreset` file (CAP-063): readable JSON with `format`, `formatVersion`, the app version, the platform and the presets with their settings, order and shortcut (by physical key). Never a password or token. _Changes no data._ |
 | `preset.import` | `xcreenshot preset import D:/mios.xpreset --dry-run true` · `--on-conflict replace --yes` · `--only "Uno"` | `paths` array (required, positional); `dryRun` boolean; `only` array; `onConflict` `keepBoth` \| `replace` \| `skip`; `convertShortcuts` boolean | Adds the presets of `.xpreset` files (CAP-063). A name that exists: `keepBoth` (default, " (2)"), `replace` or `skip`. Shortcuts from the other platform are converted (`convertShortcuts`); one already in use is left off and listed in `withoutShortcut`. A damaged file, or one from a newer XcreenShot, imports nothing. _Destructive: the CLI needs `--yes`._ |
 
+### record
+
+| ID | Example | Parameters | What it does |
+|---|---|---|---|
+| `record.start` | `xcreenshot record start --source screen --monitor primary --limit 10 --json` | `source` `screen` \| `region`; `monitor`; `x` number; `y` number; `width` number; `height` number; `quality` `very_low` \| `low` \| `medium` \| `high` \| `very_high`; `maxSize` `original` \| `reduce_high_density` \| `fit_1080`; `limit` number; `path` string | Records the screen (`source: screen`, `monitor`: primary, pointer or its number) or an area (`source: region`, `x`, `y`, `width`, `height` in physical pixels, at least 64 × 64, on one monitor) to an MP4 (H.264) in the library's month folder, or `path`. Returns as soon as it records; `busy` if one is already running. `quality` (very_low 5 fps … very_high 60 fps; only changes are recorded) and `maxSize` default to the settings; `limit` stops it by itself. Started from automation, a notification tells the user. _Changes data._ |
+| `record.stop` | `xcreenshot record stop --json` | — | Stops and waits for the file: `path`, `duration`, `width`, `height`, `fps`, `frames`, `bytes`, `encoder` (hardware or software). `not_found` when nothing is recording. _Changes data._ |
+| `record.cancel` | `xcreenshot record cancel --json` | — | Stops without keeping a file. _Changes data._ |
+| `record.pause` | `xcreenshot record pause --json` | — | Pauses; the pause is left out of the video. _Changes data._ |
+| `record.resume` | `xcreenshot record resume --json` | — | Goes on after a pause. _Changes data._ |
+| `record.status` | `xcreenshot record status --json` | — | `status` (recording, paused, finalizing or idle), `elapsed` seconds, `source`, `path` and the video's size and fps. _Changes no data._ |
+
 ### document
 
 | ID | Example | Parameters | What it does |

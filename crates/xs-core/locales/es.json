@@ -870,6 +870,30 @@
     "app_take_opening": {
       "title": "Archivos que esperan a una ventana",
       "description": "Los archivos abiertos con XcreenShot cuya importación espera al editor o al panel de captura (una vez)."
+    },
+    "record_start": {
+      "title": "Empezar a grabar",
+      "description": "Graba la pantalla o un área en un video MP4, hasta record.stop (o su límite de tiempo)."
+    },
+    "record_stop": {
+      "title": "Detener la grabación",
+      "description": "Detiene la grabación y espera al archivo de video."
+    },
+    "record_cancel": {
+      "title": "Cancelar la grabación",
+      "description": "Detiene la grabación sin guardar ningún archivo."
+    },
+    "record_pause": {
+      "title": "Pausar la grabación",
+      "description": "Pausa la grabación; no se graba nada hasta reanudarla."
+    },
+    "record_resume": {
+      "title": "Reanudar la grabación",
+      "description": "Sigue grabando después de una pausa."
+    },
+    "record_status": {
+      "title": "Estado de la grabación",
+      "description": "Si hay una grabación en curso, cuánto lleva grabado y qué graba."
     }
   },
   "settings": {
@@ -1239,6 +1263,30 @@
     "capture_inbox_leave": {
       "label": "Carpeta de recepción: dejar los archivos donde están",
       "description": "Desactivada: los archivos importados pasan a la subcarpeta Importados."
+    },
+    "video_quality": {
+      "label": "Calidad de video",
+      "description": "Fotogramas por segundo máximos: Muy baja 5, Baja 10, Media 15, Alta 30, Muy alta 60. Solo se graba lo que cambia en la pantalla, así que una pantalla quieta ocupa muy poco.",
+      "options": {
+        "very_low": "Muy baja",
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta",
+        "very_high": "Muy alta"
+      }
+    },
+    "video_maxSize": {
+      "label": "Tamaño máximo del video",
+      "description": "Reducir da archivos más pequeños; Original mantiene más nítido el texto. Los videos miden como mucho 3840 × 2160.",
+      "options": {
+        "original": "Original",
+        "reduce_high_density": "Reducir pantallas de alta densidad",
+        "fit_1080": "Reducir a 1080p"
+      }
+    },
+    "video_softwareEncoding": {
+      "label": "Usar siempre codificación por software",
+      "description": "Solo hace falta si un controlador de video da problemas. Usa más procesador y puede bajar los fotogramas por segundo."
     }
   },
   "errors": {
@@ -1346,7 +1394,11 @@
     "nothing_pending": "Este documento no tiene nada pendiente de enviar.",
     "nothing_asked": "Ninguna captura está pidiendo texto.",
     "file_not_found": "El archivo no existe.",
-    "cannot_open_file": "XcreenShot no abre este tipo de archivo."
+    "cannot_open_file": "XcreenShot no abre este tipo de archivo.",
+    "not_recording": "No se está grabando nada.",
+    "record_busy": "Ya hay una grabación en curso.",
+    "record_failed": "No se pudo grabar: {{reason}}",
+    "record_too_small": "El área que se graba debe medir al menos 64 × 64 píxeles."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1517,7 +1569,8 @@
     "quick_annotate": "Anotación rápida",
     "stop_series": "Detener captura: {{name}}",
     "tooltip_timer": "XcreenShot · capturando por intervalo",
-    "stop_schedule": "Detener captura: {{name}} (próxima: {{when}})"
+    "stop_schedule": "Detener captura: {{name}} (próxima: {{when}})",
+    "stop_recording": "Detener grabación"
   },
   "menu": {
     "flatten": "A&planar",
@@ -1700,7 +1753,11 @@
     "webpage_status": "El servidor respondió con una página de error (código {{code}}): se capturó tal cual.",
     "webpage_cut": "La página era más alta que el tamaño máximo: se cortó a 60.000 píxeles.",
     "inbox_password": "«{{name}}», en la carpeta de recepción, tiene contraseña: impórtalo con Importar PDF.",
-    "inbox_failed": "«{{name}}», en la carpeta de recepción, no se pudo importar."
+    "inbox_failed": "«{{name}}», en la carpeta de recepción, no se pudo importar.",
+    "recording_title": "XcreenShot está grabando la pantalla",
+    "recording_automation": "Una automatización empezó a grabar un video. Detenla desde el menú del ícono.",
+    "recording_saved_title": "Video guardado",
+    "recording_saved_body": "{{seconds}} s grabados, en la biblioteca."
   },
   "source": {
     "ui": "la interfaz",
@@ -4182,5 +4239,8 @@
   },
   "schedule": {
     "name": "Programada"
+  },
+  "record": {
+    "file_name": "Video"
   }
 }

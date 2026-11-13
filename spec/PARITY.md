@@ -216,10 +216,10 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-009 | Presets de video | M4 | Should | — |
 | VID-010 | Convertir una grabación en imagen | M4 | Could | — |
 | VID-011 | Barra de grabación | M4 | Must | — |
-| VID-012 | Grabar, pausar y reanudar | M4 | Must | — |
-| VID-013 | Detener | M4 | Must | — |
-| VID-014 | Reiniciar y cancelar | M4 | Should | — |
-| VID-015 | Temporizador de parada automática | M4 | Should | — |
+| VID-012 | Grabar, pausar y reanudar | M4 | Must | En curso (Windows: el motor y `record.pause` / `record.resume`; la pausa queda fuera del video. Falta la barra de grabación, VID-011) |
+| VID-013 | Detener | M4 | Must | En curso (Windows: `record.stop` espera al archivo y devuelve ruta, duración, tamaño, fps y codificador; aviso "Video guardado". Falta el botón de la barra, Abrir en y la bandeja) |
+| VID-014 | Reiniciar y cancelar | M4 | Should | En curso (Windows: `record.cancel` termina sin archivo. Falta Reiniciar y la barra) |
+| VID-015 | Temporizador de parada automática | M4 | Should | En curso (Windows: `limit` en `record.start` detiene la grabación sola y guarda el archivo. Falta el control en la barra) |
 | VID-016 | Posición de la barra y controles minimizados | M4 | Must | — |
 | VID-017 | XcreenShot fuera del video | M4 | Must | — |
 | VID-018 | Escritorio limpio | M4 | Could | — |
@@ -228,12 +228,12 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-021 | Mantener el equipo despierto | M4 | Should | — |
 | VID-022 | Recuperar grabaciones interrumpidas | M4 | Must | — |
 | VID-023 | Grabaciones largas y espacio en disco | M4 | Should | — |
-| VID-024 | Comandos de video (CLI y MCP) | M4 | Should | — |
-| VID-025 | Calidad y fotogramas por segundo | M4 | Must | — |
-| VID-026 | Formato del archivo | M4 | Must | — |
+| VID-024 | Comandos de video (CLI y MCP) | M4 | Should | En curso (Windows: `record.start` (pantalla de un monitor o región), `record.pause`, `record.resume`, `record.stop`, `record.cancel` y `record.status`, con `busy` y `not_found` ("not_recording"); eventos `record.*` y `file.written`; desde automatización, aviso del sistema; "Detener grabación" y el reloj en el ícono. Faltan ventana y cámara como origen, `record.restart`, preset, cámara, micrófono, audio, cursor y `video.*`) |
+| VID-025 | Calidad y fotogramas por segundo | M4 | Must | En curso (Windows: Preferencia `video.quality` de Muy baja (5 fps) a Muy alta (60 fps), Alta por defecto, con la tasa de bits proporcional; frecuencia variable: solo se escribe un fotograma cuando la pantalla cambia (2 s de pantalla quieta a 1280 × 720: unos 90 KB). Faltan las medidas de los criterios y la UI de Preferencias > Video) |
+| VID-026 | Formato del archivo | M4 | Must | En curso (Windows: MP4 con H.264 (perfil High) de los codificadores del sistema (Media Foundation); BT.709 desde 720p y BT.601 por debajo, comprobado con colores conocidos (±2 niveles). Faltan el audio (AAC), el título y la fecha en el MP4 y la conversión HDR) |
 | VID-027 | Códec H.265 | M4 | Could | — |
-| VID-028 | Tamaño del video y límites | M4 | Must | — |
-| VID-029 | Codificación por hardware o por software | M4 | Should | — |
+| VID-028 | Tamaño del video y límites | M4 | Must | En curso (Windows: preferencia `video.maxSize` (Original, Reducir pantallas de alta densidad por defecto, Reducir a 1080p), máximo 3840 × 2160 y tamaño siempre par; el recorte y el escalado los hace la GPU. Falta avisarlo en el resumen, VID-006) |
+| VID-029 | Codificación por hardware o por software | M4 | Should | En curso (Windows: el codificador por hardware con los fotogramas en la GPU y, si no hay o falla al empezar, el de software; preferencia `video.softwareEncoding`. Faltan seguir en software si el de hardware falla a mitad, el método de captura alternativo y el aviso de grabación en negro) |
 | VID-030 | Sincronía y rendimiento | M4 | Must | — |
 | VID-031 | Activar la cámara y elegir dispositivo | M4 | Must | — |
 | VID-032 | Imagen en imagen: posición y tamaño | M4 | Must | — |

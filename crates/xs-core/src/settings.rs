@@ -441,6 +441,28 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         def("capture.autoDetect", "capture", boolean(), json!(true), "CAP-016"),
         // The receive folder (CAP-043): new files in it become captures.
+        // Video (VID-025, VID-028, VID-029).
+        def(
+            "video.quality",
+            "video",
+            one_of(&["very_low", "low", "medium", "high", "very_high"]),
+            json!("high"),
+            "VID-025",
+        ),
+        def(
+            "video.maxSize",
+            "video",
+            one_of(&["original", "reduce_high_density", "fit_1080"]),
+            json!("reduce_high_density"),
+            "VID-028",
+        ),
+        def(
+            "video.softwareEncoding",
+            "video",
+            boolean(),
+            json!(false),
+            "VID-029",
+        ),
         def(
             "capture.inbox.folder",
             "capture",
