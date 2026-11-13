@@ -384,6 +384,12 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .map(Duration::from_secs_f64)
         .or(ready_limit);
     let path = file_path(core, p, lang);
+    // The panel and the editor stay out of the video, still on screen (VID-017),
+    // from its first picture.
+    let hide = core.settings.get_bool("capture.hideOnCapture");
+    if hide {
+        core.host().hide_for_capture(true);
+    }
     let recorder = Recorder::start(xs_video::Options {
         area: Area {
             x: rect.x,
@@ -407,6 +413,9 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         path: path.clone(),
     })
     .map_err(|e| {
+        if hide {
+            core.host().hide_for_capture(false);
+        }
         CommandError::new(
             ErrorCode::Internal,
             tr(lang, "errors.record_failed", &[("reason", &e)]),
@@ -475,6 +484,9 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         r.recorder.stop()
     };
     bar(core, None);
+    if core.settings.get_bool("capture.hideOnCapture") {
+        core.host().hide_for_capture(false);
+    }
     let result = match summary {
         Ok(s) if s.cancelled => {
             tell(core, source, "record.cancelled", json!({ "status": "cancelled" }));

@@ -747,8 +747,11 @@ pub fn restore_capture_panel(app: &AppHandle) {
 /// still shows XcreenShot.
 pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
     for w in app.webview_windows().values() {
-        // Selection windows and the countdown are always excluded.
-        if w.label().starts_with(crate::overlay::LABEL_PREFIX) || w.label() == crate::countdown::LABEL {
+        // Selection windows, the countdown, the recording bar and its border, and the
+        // working sign are always excluded.
+        if w.label().starts_with(crate::overlay::LABEL_PREFIX)
+            || [crate::countdown::LABEL, RECBAR, RECFRAME, WORKING].contains(&w.label())
+        {
             continue;
         }
         let _ = w.set_content_protected(exclude);

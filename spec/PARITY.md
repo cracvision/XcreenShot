@@ -221,7 +221,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-014 | Reiniciar y cancelar | M4 | Should | En curso (Windows: `record.cancel` termina sin archivo. Falta Reiniciar y la barra) |
 | VID-015 | Temporizador de parada automática | M4 | Should | En curso (Windows: `limit` en `record.start` y el Temporizador de la pestaña Video (1 a 60 min) detienen la grabación sola y guardan el archivo. Falta el control en la barra) |
 | VID-016 | Posición de la barra y controles minimizados | M4 | Must | — |
-| VID-017 | XcreenShot fuera del video | M4 | Must | — |
+| VID-017 | XcreenShot fuera del video | M4 | Must | En curso (Windows: la barra, su borde, la cuenta atrás y el aviso "Trabajando" nunca salen; con **Ocultar XcreenShot al capturar** (CAP-023) el panel, el editor y las demás ventanas de XcreenShot tampoco, aunque siguen en pantalla, desde el primer fotograma (comprobado grabando el área del panel: con la opción sale lo de detrás, sin ella el panel); una captura de imagen durante la grabación no los vuelve a mostrar. Faltan las ventanas que se abren durante la grabación y los marcos de videollamada) |
 | VID-018 | Escritorio limpio | M4 | Could | — |
 | VID-019 | Aviso de micrófono silenciado | M4 | Should | — |
 | VID-020 | Indicadores de grabación | M4 | Must | En curso (Windows: borde alrededor del área, fuera del video (azul en *Lista*, rojo grabando, discontinuo en pausa); reloj en el ícono y **Detener grabación** en su menú; aviso del sistema si la empezó una automatización. Falta lo demás del ID) |

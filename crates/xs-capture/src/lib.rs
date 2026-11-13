@@ -989,7 +989,8 @@ fn run_capture(
     let shot = take(ctx.lang);
     // Without a selection, the pointer of the moment the image is taken (CAP-047).
     let pointer = opts.cursor.then(pointer::grab).flatten();
-    if hide {
+    // While a video records, XcreenShot stays out of it (VID-017).
+    if hide && !record::running(core) {
         core.host().hide_for_capture(false);
     }
     let mut shot = shot?;

@@ -366,7 +366,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         host.hide_for_capture(true);
     }
     let frozen = freeze(lang);
-    if hide {
+    if hide && !crate::record::running(core) {
         host.hide_for_capture(false);
     }
     let frozen = frozen?;
