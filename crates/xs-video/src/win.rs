@@ -636,6 +636,48 @@ fn snapshot(gpu: &Gpu, conv: &Converter, monitor: RECT) -> Result<(), String> {
     }
 }
 
+/// Free bytes on the disk that holds `path` (VID-023).
+fn free_space(path: &std::path::Path) -> Option<u64> {
+    let dir = path.parent()?;
+    let mut free = 0u64;
+    // SAFETY: a plain query with an out-parameter.
+    unsafe {
+        windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW(
+            &HSTRING::from(dir.as_os_str()),
+            Some(&mut free),
+            None,
+            None,
+        )
+    }
+    .ok()?;
+    Some(free)
+}
+
+/// While it lives, Windows neither sleeps nor turns the screen off for being idle
+/// (VID-021); what the user asks for (the lid, the power menu) still works.
+struct Awake;
+
+impl Awake {
+    fn hold() -> Awake {
+        use windows::Win32::System::Power::*;
+        // SAFETY: a plain call for this thread.
+        unsafe {
+            SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+        }
+        Awake
+    }
+}
+
+impl Drop for Awake {
+    fn drop(&mut self) {
+        use windows::Win32::System::Power::*;
+        // SAFETY: a plain call for this thread.
+        unsafe {
+            SetThreadExecutionState(ES_CONTINUOUS);
+        }
+    }
+}
+
 /// Grabs the next picture into `conv.frame`: true when the screen changed.
 fn grab(
     gpu: &Gpu,
@@ -744,6 +786,7 @@ pub(crate) fn record(
     };
     shared.clock.lock().unwrap().started = Some(Instant::now());
     shared.set_state(State::Recording);
+    let _awake = Awake::hold();
     let _ = ready.send(Ok(()));
 
     let interval = 1.0 / fps as f64;
@@ -758,6 +801,9 @@ pub(crate) fn record(
     // Sound frames written so far, and when a lost output was last looked for.
     let mut audio_frames = 0u64;
     let mut last_reopen = Instant::now();
+    // The disk is looked at every two seconds (VID-023).
+    let mut last_disk = Instant::now();
+    let mut low_disk = false;
     let now_recorded = || {
         shared
             .clock
@@ -790,6 +836,14 @@ pub(crate) fn record(
         }
         if options.limit.is_some_and(|l| now_recorded() >= l.as_secs_f64()) {
             break;
+        }
+        if last_disk.elapsed() > Duration::from_secs(2) {
+            last_disk = Instant::now();
+            if free_space(&options.path).is_some_and(crate::low_disk) {
+                tracing::warn!("video: the disk is almost full, stopping");
+                low_disk = true;
+                break;
+            }
         }
         let due_in = match last_write {
             Some(t) if dirty => (interval - t.elapsed().as_secs_f64()).max(0.0),
@@ -927,6 +981,7 @@ pub(crate) fn record(
             encoder: "none",
             all_black: false,
             audio: false,
+            low_disk: false,
             cancelled: true,
         });
     }
@@ -978,6 +1033,7 @@ pub(crate) fn record(
         encoder,
         all_black: false,
         audio: audio_rate.is_some(),
+        low_disk,
         cancelled: false,
     })
 }

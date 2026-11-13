@@ -1789,7 +1789,8 @@
     "recording_automation": "Una automatización empezó a grabar un video. Detenla desde el menú del ícono.",
     "recording_saved_title": "Video guardado",
     "recording_saved_body": "{{seconds}} s grabados, en la biblioteca.",
-    "recording_no_audio": "No se grabó el audio del sistema: no había ninguna salida de sonido activa."
+    "recording_no_audio": "No se grabó el audio del sistema: no había ninguna salida de sonido activa.",
+    "recording_low_disk": "Se detuvo sola porque quedaba menos de 1 GB libre en el disco."
   },
   "source": {
     "ui": "la interfaz",

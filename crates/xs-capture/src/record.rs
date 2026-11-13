@@ -484,9 +484,17 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         "audio": result.audio,
     });
     let mut value = value;
+    let mut warnings = Vec::new();
+    if result.low_disk {
+        // It stopped by itself: less than 1 GB was left (VID-023).
+        warnings.push(tr(lang, "notify.recording_low_disk", &[]));
+    }
     if wants_audio && !result.audio {
         // Asked for and missing: no sound output was on (VID-040, VID-043).
-        value["warnings"] = json!([tr(lang, "notify.recording_no_audio", &[])]);
+        warnings.push(tr(lang, "notify.recording_no_audio", &[]));
+    }
+    if !warnings.is_empty() {
+        value["warnings"] = json!(warnings);
     }
     tracing::info!(
         frames = result.frames,

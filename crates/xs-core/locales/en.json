@@ -1789,7 +1789,8 @@
     "recording_automation": "An automation started a video recording. Stop it from the icon’s menu.",
     "recording_saved_title": "Video saved",
     "recording_saved_body": "{{seconds}} s recorded, in the library.",
-    "recording_no_audio": "No system sound was recorded: no sound output was on."
+    "recording_no_audio": "No system sound was recorded: no sound output was on.",
+    "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk."
   },
   "source": {
     "ui": "the interface",

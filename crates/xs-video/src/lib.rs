@@ -109,6 +109,14 @@ impl MaxSize {
     }
 }
 
+/// Free space under which a recording stops and saves itself (VID-023).
+pub const MIN_FREE: u64 = 1 << 30;
+
+/// Whether `free` bytes are too few to go on recording (VID-023).
+pub fn low_disk(free: u64) -> bool {
+    free < MIN_FREE
+}
+
 /// The largest video the engine writes.
 pub const MAX_VIDEO: (u32, u32) = (3840, 2160);
 /// The smallest area (VID-003).
@@ -196,6 +204,8 @@ pub struct Summary {
     pub all_black: bool,
     /// The video has the system's sound (VID-040).
     pub audio: bool,
+    /// It stopped by itself because the disk was almost full (VID-023).
+    pub low_disk: bool,
     pub cancelled: bool,
 }
 
@@ -435,6 +445,12 @@ mod tests {
         let hd = Quality::High.bitrate(1920, 1080);
         assert!((4_000_000..6_000_000).contains(&hd), "{hd}");
         assert!(Quality::Low.bitrate(64, 64) >= 500_000);
+    }
+
+    #[test]
+    fn it_stops_under_a_gigabyte() {
+        assert!(low_disk(500 << 20));
+        assert!(!low_disk(3 << 30));
     }
 
     #[test]
