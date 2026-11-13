@@ -15,13 +15,57 @@ use serde::Serialize;
 #[cfg(windows)]
 mod audio;
 pub mod effects;
+pub mod timeline;
 #[cfg(windows)]
 mod win;
+#[cfg(windows)]
+mod win_edit;
 #[cfg(windows)]
 mod win_fx;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
 pub use win::{audio_info, first_frame, free_space, info, probe, size};
+/// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
+#[cfg(windows)]
+pub use win_edit::{export, facts, frame_at};
+
+/// What the editor needs to open a video (ADR 0008).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Facts {
+    pub width: u32,
+    pub height: u32,
+    /// Seconds.
+    pub duration: f64,
+    /// The frame rate the file says it has.
+    pub fps: u32,
+    pub codec: String,
+    pub sound: bool,
+}
+
+/// What a video holds, quickly (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn facts(_path: &std::path::Path) -> Result<Facts, String> {
+    Err("not available on this platform yet".into())
+}
+
+/// The frame at a moment of a video (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn frame_at(_path: &std::path::Path, _seconds: f64) -> Result<(u32, u32, Vec<u8>), String> {
+    Err("not available on this platform yet".into())
+}
+
+/// A new video from parts of a file (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn export(
+    _src: &std::path::Path,
+    _dst: &std::path::Path,
+    _keep: &[timeline::Span],
+    _sound: bool,
+    _progress: &mut dyn FnMut(f64),
+    _cancel: &AtomicBool,
+) -> Result<(), String> {
+    Err("not available on this platform yet".into())
+}
 
 /// Free bytes on the disk of `path` (not available on this platform yet).
 #[cfg(not(windows))]

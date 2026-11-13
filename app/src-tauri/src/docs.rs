@@ -17,6 +17,8 @@
 //! - `/picker/<windowId>` returns a window's thumbnail in the window picker (CAP-030).
 //! - `/library/<itemId>/thumb` returns the thumbnail of a library item (LIB-001); the
 //!   URL carries the item's modified time, so a changed file gets a new one.
+//! - `/<documentId>/video` returns the file of a video open in the editor, by ranges,
+//!   for its player (ADR 0008). Only open videos: never any other path.
 
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, Manager};
@@ -35,6 +37,19 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let parts: Vec<&str> = request.uri().path().trim_matches('/').split('/').collect();
     let core = app.state::<AppState>().core.clone();
     let editor = xs_editor::editor(&core);
+    if let [id, "video"] = parts.as_slice() {
+        let path = editor
+            .store
+            .with(id, |d| d.path.clone().filter(|_| d.is_video()))
+            .flatten();
+        return match path {
+            Some(p) => video(&p, request),
+            None => Response::builder()
+                .status(404)
+                .body(Vec::new())
+                .unwrap_or_default(),
+        };
+    }
     let body = match parts.as_slice() {
         ["library", item, "thumb"] => xs_library::library(&core)
             .thumbnail(item)
@@ -178,4 +193,86 @@ fn unescape(s: &str) -> String {
         }
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+/// The most a video answer carries: the player asks again for the rest.
+const VIDEO_CHUNK: u64 = 4 << 20;
+
+/// `bytes=start-end` (the end optional) within a file of `len` bytes.
+fn byte_range(header: &str, len: u64) -> Option<(u64, u64)> {
+    let (start, end) = header.trim().strip_prefix("bytes=")?.split_once('-')?;
+    let start: u64 = start.trim().parse().ok()?;
+    let end: u64 = match end.trim() {
+        "" => len.checked_sub(1)?,
+        e => e.parse::<u64>().ok()?.min(len.checked_sub(1)?),
+    };
+    (start <= end).then_some((start, end))
+}
+
+/// A video file by ranges (ADR 0008): the player jumps anywhere without the whole
+/// file in memory.
+fn video(path: &std::path::Path, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let not_found = || {
+        Response::builder()
+            .status(404)
+            .body(Vec::new())
+            .unwrap_or_default()
+    };
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return not_found();
+    };
+    let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let mime = match path
+        .extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("mov") => "video/quicktime",
+        _ => "video/mp4",
+    };
+    let asked = request
+        .headers()
+        .get("range")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|r| byte_range(r, len));
+    let (start, end) = match asked {
+        Some(r) => r,
+        None if len == 0 => (0, 0),
+        None => (0, len - 1),
+    };
+    let end = end.min(start + VIDEO_CHUNK - 1);
+    let mut body = vec![0u8; if len == 0 { 0 } else { (end - start + 1) as usize }];
+    if file.seek(SeekFrom::Start(start)).is_err() || file.read_exact(&mut body).is_err() {
+        return not_found();
+    }
+    let partial = asked.is_some() || end + 1 < len;
+    let builder = Response::builder()
+        .status(if partial { 206 } else { 200 })
+        .header("Content-Type", mime)
+        .header("Accept-Ranges", "bytes")
+        .header("Content-Length", body.len().to_string())
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Cache-Control", "no-store");
+    let builder = if partial {
+        builder.header("Content-Range", format!("bytes {start}-{end}/{len}"))
+    } else {
+        builder
+    };
+    builder.body(body).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::byte_range;
+
+    #[test]
+    fn ranges_of_a_video() {
+        assert_eq!(byte_range("bytes=0-", 1000), Some((0, 999)));
+        assert_eq!(byte_range("bytes=100-199", 1000), Some((100, 199)));
+        assert_eq!(byte_range("bytes=900-5000", 1000), Some((900, 999)));
+        assert_eq!(byte_range("bytes=1200-", 1000), None);
+        assert_eq!(byte_range("items=0-1", 1000), None);
+        assert_eq!(byte_range("bytes=0-", 0), None);
+    }
 }

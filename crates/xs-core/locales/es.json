@@ -922,6 +922,26 @@
     "record_effects": {
       "title": "Efectos del cursor y las teclas",
       "description": "Activa o desactiva Resaltar cursor, Animación de clic y Mostrar teclas pulsadas, también durante la grabación."
+    },
+    "video_cut": {
+      "title": "Cortar selección",
+      "description": "Quita un tramo de un video abierto en el editor; las dos partes quedan unidas. Cada corte es un paso de Deshacer."
+    },
+    "video_save_selection": {
+      "title": "Guardar selección como video",
+      "description": "Un tramo de un video como un video nuevo en la biblioteca; el original no cambia."
+    },
+    "video_save_frame": {
+      "title": "Guardar fotograma como imagen",
+      "description": "El fotograma de un instante de un video como imagen nueva en la biblioteca, abierta en el editor."
+    },
+    "video_extract_text": {
+      "title": "Extraer texto del fotograma",
+      "description": "Lee el texto del fotograma de un instante de un video, sin añadir ninguna imagen a la biblioteca."
+    },
+    "video_silent_copy": {
+      "title": "Copia sin sonido",
+      "description": "El video, con sus cortes, como un video nuevo sin ningún sonido."
     }
   },
   "settings": {
@@ -1524,7 +1544,11 @@
     "record_busy": "Ya hay una grabación en curso.",
     "record_failed": "No se pudo grabar: {{reason}}",
     "record_too_small": "El área que se graba debe medir al menos 64 × 64 píxeles.",
-    "video_unreadable": "No se pudo leer el video: {{reason}}"
+    "video_unreadable": "No se pudo leer el video: {{reason}}",
+    "video_no_image_tools": "Las herramientas de imagen no funcionan sobre un video. Para anotar un instante, usa Guardar fotograma y anota la imagen; para señalar cosas en un video, usa Dibujo en vivo al grabar.",
+    "not_a_video": "Ese documento no es un video.",
+    "video_cut_all": "No se puede cortar todo el video: deja al menos un fotograma.",
+    "video_no_sound": "Este video no tiene sonido."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4181,6 +4205,9 @@
       "image": "Imagen",
       "image_confirm": "¿Imagen en su lugar? Se perderán {{time}} de grabación.",
       "clicks": "Clics"
+    },
+    "video": {
+      "silent_suffix": "sin sonido"
     }
   },
   "history": {
@@ -4317,7 +4344,8 @@
     "frame_zone": "Encuadrar imagen",
     "remove_caption": "Quitar leyenda",
     "convert_zone": "Convertir en zona de imagen",
-    "apply_theme": "Aplicar tema"
+    "apply_theme": "Aplicar tema",
+    "cut_video": "Cortar"
   },
   "editor": {
     "edited": "{{name}} — Editado",

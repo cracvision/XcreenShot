@@ -29,9 +29,9 @@ use crate::effects::{Effects, Live};
 use crate::{Area, Options, Shared, State, Summary};
 
 /// 100-nanosecond units in a second (Media Foundation's clock).
-const HNS: f64 = 10_000_000.0;
+pub(crate) const HNS: f64 = 10_000_000.0;
 
-fn err(context: &str, e: windows::core::Error) -> String {
+pub(crate) fn err(context: &str, e: windows::core::Error) -> String {
     format!("{context}: {} (0x{:08X})", e.message(), e.code().0 as u32)
 }
 
@@ -469,7 +469,21 @@ struct Writer {
     height: u32,
 }
 
-fn media_type(
+/// What the H.264 encoder is told: no B-frames. With them, Windows' encoders delay
+/// every time by one frame, and with a variable frame rate one frame can be seconds
+/// (the MP4 gets no edit list to undo it).
+pub(crate) fn encoder_settings() -> Option<IMFAttributes> {
+    // SAFETY: a new attribute store with one value.
+    unsafe {
+        let mut attrs = None;
+        MFCreateAttributes(&mut attrs, 1).ok()?;
+        let attrs: IMFAttributes = attrs?;
+        attrs.SetUINT32(&CODECAPI_AVEncMPVDefaultBPictureCount, 0).ok()?;
+        Some(attrs)
+    }
+}
+
+pub(crate) fn media_type(
     subtype: &windows::core::GUID,
     size: (u32, u32),
     fps: u32,
@@ -544,7 +558,7 @@ fn writer(
             }
         };
         let input = media_type(&MFVideoFormat_NV12, size, fps, None)?;
-        sink.SetInputMediaType(stream, &input, None)
+        sink.SetInputMediaType(stream, &input, encoder_settings().as_ref())
             .map_err(|e| err("video input type", e))?;
         // The sound: 16-bit stereo PCM in, AAC at 128 kbps out (VID-026).
         let audio = match audio_rate {
@@ -1354,7 +1368,7 @@ pub fn first_frame(path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String
 pub fn info(path: &std::path::Path) -> Result<crate::Info, String> {
     let bytes = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
     // SAFETY: Media Foundation reading calls; samples are dropped as read.
-    let (width, height, codec, times) = unsafe {
+    let (width, height, codec, times, end) = unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
         let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)
@@ -1373,6 +1387,7 @@ pub fn info(path: &std::path::Path) -> Result<crate::Info, String> {
             Err(_) => String::new(),
         };
         let mut times = Vec::new();
+        let mut end = 0i64;
         loop {
             let mut flags = 0u32;
             let mut time = 0i64;
@@ -1387,17 +1402,19 @@ pub fn info(path: &std::path::Path) -> Result<crate::Info, String> {
                     Some(&mut sample),
                 )
                 .map_err(|e| err("reading a frame", e))?;
-            if sample.is_some() {
+            if let Some(s) = sample {
                 times.push(time as f64 / HNS);
+                end = end.max(time + s.GetSampleDuration().unwrap_or(0));
             }
             if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
                 break;
             }
         }
-        ((size >> 32) as u32, size as u32, codec, times)
+        ((size >> 32) as u32, size as u32, codec, times, end as f64 / HNS)
     };
     let audio = audio_info(path)?;
-    let last = times.last().copied().unwrap_or(0.0);
+    // Until the last frame ends (a still screen can be seconds of one frame).
+    let last = end.max(times.last().copied().unwrap_or(0.0));
     let duration = audio.map(|a| a.2).unwrap_or(0.0).max(last);
     Ok(crate::Info {
         width,

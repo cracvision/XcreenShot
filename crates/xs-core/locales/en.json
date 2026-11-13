@@ -922,6 +922,26 @@
     "record_effects": {
       "title": "Cursor and keys effects",
       "description": "Switches Highlight cursor, Click animation and Show keys pressed, also while recording."
+    },
+    "video_cut": {
+      "title": "Cut selection",
+      "description": "Removes a stretch of a video open in the editor; the two sides join. Each cut is one undo step."
+    },
+    "video_save_selection": {
+      "title": "Save selection as video",
+      "description": "A stretch of a video as a new video in the library; the original does not change."
+    },
+    "video_save_frame": {
+      "title": "Save frame as image",
+      "description": "The frame at a moment of a video as a new image in the library, opened in the editor."
+    },
+    "video_extract_text": {
+      "title": "Extract text from frame",
+      "description": "Reads the text of the frame at a moment of a video, without adding an image to the library."
+    },
+    "video_silent_copy": {
+      "title": "Make a silent copy",
+      "description": "The video, with its cuts, as a new video without any sound."
     }
   },
   "settings": {
@@ -1524,7 +1544,11 @@
     "record_busy": "A recording is already running.",
     "record_failed": "The recording could not be made: {{reason}}",
     "record_too_small": "The area to record must be at least 64 × 64 pixels.",
-    "video_unreadable": "The video could not be read: {{reason}}"
+    "video_unreadable": "The video could not be read: {{reason}}",
+    "video_no_image_tools": "Image tools do not work on a video. To mark a moment, use Save frame and annotate the image; to point things out in a video, use Live drawing while recording.",
+    "not_a_video": "That document is not a video.",
+    "video_cut_all": "The whole video cannot be cut: leave at least one frame.",
+    "video_no_sound": "This video has no sound."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4181,6 +4205,9 @@
       "image": "Image",
       "image_confirm": "Image instead? {{time}} of recording will be lost.",
       "clicks": "Clicks"
+    },
+    "video": {
+      "silent_suffix": "silent"
     }
   },
   "history": {
@@ -4317,7 +4344,8 @@
     "frame_zone": "Frame image",
     "remove_caption": "Remove caption",
     "convert_zone": "Convert to image zone",
-    "apply_theme": "Apply theme"
+    "apply_theme": "Apply theme",
+    "cut_video": "Cut"
   },
   "editor": {
     "edited": "{{name}} — Edited",

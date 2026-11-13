@@ -226,6 +226,11 @@ xcreenshot app ping --json
 | ID | Example | Parameters | What it does |
 |---|---|---|---|
 | `video.info` | `xcreenshot video info C:\Videos\demo.mp4 --json` | `path` string (required, positional) | What an MP4 holds (VID-064): `width`, `height`, `duration`, `frames`, `fpsAverage`, `fpsMax` (the busiest second), `codec`, `bitrate`, `audio` (channels and rate of each track), `bytes` and `created`. _Changes no data._ |
+| `video.cut` | `xcreenshot video cut --start 10 --end 20 --json` | `documentId` string; `start` number (required); `end` number (required) | Cuts a stretch of the video shown in the editor (VID-059); times are seconds of the video as it is now, after earlier cuts. One undo step each; `document.save` writes the cut video to its file. Cutting everything fails. _Changes data._ |
+| `video.save_selection` | `xcreenshot video save-selection --start 30 --end 45 --json` | `documentId` string; `start` number (required); `end` number (required) | A stretch of an open video as a new MP4 in the library and the tray (VID-060); the original does not change. _Changes data._ |
+| `video.save_frame` | `xcreenshot video save-frame --time 12 --json` | `documentId` string; `time` number (required) | The frame at `time` of an open video as a new image in the library, shown in the editor (VID-061). _Changes data._ |
+| `video.extract_text` | `xcreenshot video extract-text --time 12 --json` | `documentId` string; `time` number (required); `copy` boolean; `show` boolean | Extract text (SMT-005) from the frame at `time`, without adding an image to the library (VID-062). _Changes no data._ |
+| `video.silent_copy` | `xcreenshot video silent-copy --json` | `documentId` string | The open video, with its cuts, as a new MP4 without any sound (VID-063). _Changes data._ |
 
 ### document
 

@@ -5344,3 +5344,92 @@ fn a_capture_waits_while_the_library_is_out_of_reach() {
         .clone();
     assert_eq!(item["kind"], "library", "{item}");
 }
+
+/// A video open in the editor (ADR 0008): image tools refused (VID-065), cuts with
+/// undo (VID-059), a frame as an image (VID-061), a part as a new video (VID-060),
+/// saving the cuts and a silent copy (VID-063). The test video is red, green and blue
+/// for one second each, with a tone.
+#[cfg(windows)]
+#[test]
+fn a_video_in_the_editor() {
+    let e = env();
+    let near = |v: &Value, want: f64| (v.as_f64().unwrap_or(-1.0) - want).abs() < 0.1;
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+    let path = e.library.path().join("clip.mp4");
+    std::fs::copy(&src, &path).unwrap();
+    let doc = cli(&e.core, "document.open", json!({"path": path, "show": true}));
+    let id = doc["documentId"].as_str().unwrap().to_string();
+    assert_eq!(doc["format"], "mp4");
+    let info = |core: &Core| cli(core, "document.info", json!({"documentId": id}));
+    let i = info(&e.core);
+    assert!(near(&i["video"]["length"], 3.0), "{}", i["video"]);
+    assert_eq!(i["video"]["sound"], true);
+
+    // VID-065: image tools say what to do instead.
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "document.annotate",
+        json!({"documentId": id, "objects": [arrow([10, 10], [50, 50])]}),
+    )
+    .unwrap_err();
+    assert!(err.message.contains("Save frame"), "{}", err.message);
+
+    // VID-059: the green second goes; cutting what is left fails; undo and redo.
+    let t = cli(
+        &e.core,
+        "video.cut",
+        json!({"documentId": id, "start": 1.0, "end": 2.0}),
+    );
+    assert!(near(&t["length"], 2.0), "{t}");
+    assert_eq!(t["marks"], json!([1.0]));
+    assert!(call(
+        &e.core,
+        Source::Cli,
+        "video.cut",
+        json!({"documentId": id, "start": 0.0, "end": 2.0})
+    )
+    .is_err());
+    cli(&e.core, "document.undo", json!({"documentId": id}));
+    assert!(near(&info(&e.core)["video"]["length"], 3.0));
+    cli(&e.core, "document.redo", json!({"documentId": id}));
+    let i = info(&e.core);
+    assert!(near(&i["video"]["length"], 2.0));
+    assert_eq!(i["dirty"], true);
+
+    // VID-061: 1.2 s of the cut video is blue, as an image in the library.
+    let f = cli(
+        &e.core,
+        "video.save_frame",
+        json!({"documentId": id, "time": 1.2}),
+    );
+    let fid = f["documentId"].as_str().unwrap();
+    let image = final_image(&e.core, fid).unwrap();
+    let px = image.get_pixel(image.width() / 2, image.height() / 2).0;
+    assert!(px[2] > 150 && px[0] < 80, "blue frame: {px:?}");
+    assert!(PathBuf::from(f["path"].as_str().unwrap()).starts_with(e.library.path()));
+
+    // VID-060: the first second as a new video; the original keeps its cuts.
+    let s = cli(
+        &e.core,
+        "video.save_selection",
+        json!({"documentId": id, "start": 0.0, "end": 1.0}),
+    );
+    let part = xs_video::info(Path::new(s["path"].as_str().unwrap())).unwrap();
+    assert!((part.duration - 1.0).abs() < 0.15, "part of {}", part.duration);
+    assert!(near(&info(&e.core)["video"]["length"], 2.0));
+
+    // VID-063: no sound, as long as the cut video.
+    let c = cli(&e.core, "video.silent_copy", json!({"documentId": id}));
+    let silent = Path::new(c["path"].as_str().unwrap());
+    assert_eq!(xs_video::audio_info(silent).unwrap(), None);
+    assert!(silent.file_name().unwrap().to_string_lossy().contains("(silent)"));
+
+    // Saving writes the cut video to its file: 2 s, no cuts, nothing to undo.
+    cli(&e.core, "document.save", json!({"documentId": id}));
+    let i = info(&e.core);
+    assert!(near(&i["video"]["duration"], 2.0), "{}", i["video"]);
+    assert_eq!(i["dirty"], false);
+    assert_eq!(i["canUndo"], false);
+    assert!((xs_video::info(&path).unwrap().duration - 2.0).abs() < 0.15);
+}

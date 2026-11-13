@@ -19,6 +19,13 @@ describe("content security policy of the installed app", () => {
     expect(img).toContain("xsdoc:");
   });
 
+  // The editor plays videos from the same protocol (ADR 0008, VID-056).
+  it("lets the editor play videos on Windows and macOS", () => {
+    const media = directive(conf.app.security.csp, "media-src");
+    expect(media).toContain("http://xsdoc.localhost");
+    expect(media).toContain("xsdoc:");
+  });
+
   it("lets the on-screen selection load frozen frames", () => {
     const connect = directive(conf.app.security.csp, "connect-src");
     expect(connect).toContain("http://xsframe.localhost");

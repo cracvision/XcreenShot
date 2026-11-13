@@ -189,6 +189,10 @@ pub struct Document {
     /// Document effects (EDT-053, M2).
     #[serde(default)]
     pub effects: Vec<Value>,
+    /// A video's parts cut out, in seconds of its file (VID-059, ADR 0008). Only for a
+    /// video open in the editor: never written to a `.xshot`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cuts: Vec<[f64; 2]>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -228,6 +232,7 @@ impl Document {
             template: None,
             simplify: None,
             effects: Vec::new(),
+            cuts: Vec::new(),
             extra: Map::new(),
         }
     }

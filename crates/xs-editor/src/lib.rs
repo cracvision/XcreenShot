@@ -25,6 +25,7 @@ pub use template_cmds::template_thumbnail;
 pub mod themes;
 pub mod transform;
 pub mod tray;
+pub mod video;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -461,6 +462,7 @@ fn encode(snap: &Snapshot, format: Format, quality: u8) -> Result<Vec<u8>, Strin
             quality,
             xs_image::color::Rgba::WHITE,
         ),
+        Format::Video => Err("a video is not an image".into()),
         Format::Xshot => {
             let mut buf = std::io::Cursor::new(Vec::new());
             snap.to_xshot(false)?
@@ -572,7 +574,9 @@ fn autosave(core: &Core, id: &str) {
     let ed = editor(core);
     let due = ed
         .store
-        .with(id, |d| d.kind == Kind::Library && d.dirty())
+        // A video's cuts are saved when the user says (ADR 0008): saving one encodes
+        // it all again.
+        .with(id, |d| d.kind == Kind::Library && d.dirty() && !d.is_video())
         .unwrap_or(false);
     if due {
         match save_own(core, id) {
@@ -611,7 +615,10 @@ pub fn write_recovery_copies(core: &Core) {
     for id in ed.store.ids() {
         let due = ed
             .store
-            .with(&id, |d| d.dirty() && d.version != d.recovery_version)
+            // A video's cuts live only while it is open (ADR 0008).
+            .with(&id, |d| {
+                d.dirty() && d.version != d.recovery_version && !d.is_video()
+            })
             .unwrap_or(false);
         if !due {
             continue;
@@ -1388,7 +1395,7 @@ fn needing_decision(core: &Core, ids: &[String]) -> Vec<String> {
     ids.iter()
         .filter(|id| {
             ed.store
-                .with(id, |d| d.kind == Kind::External && d.dirty())
+                .with(id, |d| (d.kind == Kind::External || d.is_video()) && d.dirty())
                 .unwrap_or(false)
         })
         .cloned()
@@ -1462,11 +1469,13 @@ fn close(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         return Ok(json!({ "status": "needs_decision", "closed": [], "pending": pending }));
     }
     for id in &targets {
-        let (kind, dirty) = ed
+        let (kind, dirty, video) = ed
             .store
-            .with(id, |d| (d.kind, d.dirty()))
-            .unwrap_or((Kind::Library, false));
-        if dirty && (kind == Kind::Library || save.contains(id)) {
+            .with(id, |d| (d.kind, d.dirty(), d.is_video()))
+            .unwrap_or((Kind::Library, false, false));
+        if dirty && video && save.contains(id) {
+            video::save(core, ctx, id, None)?;
+        } else if dirty && ((kind == Kind::Library && !video) || save.contains(id)) {
             save_own(core, id).map_err(|e| {
                 let name = ed.store.with(id, |d| d.name()).unwrap_or_default();
                 internal(lang, &name, e)
@@ -3556,6 +3565,10 @@ pub fn extension() -> Extension {
                     let $core = upgrade(&weak)?;
                     // The documents reopened at startup come first (EDT-120).
                     editor(&$core).wait_reopened();
+                    // Image tools say why not with a video (VID-065).
+                    if crate::video::IMAGE_ONLY.contains(&$id) {
+                        crate::video::refuse_for_video(&$core, $ctx.lang, &$p)?;
+                    }
                     #[allow(unused_variables)]
                     let $ctx = $ctx;
                     $body
@@ -3579,6 +3592,20 @@ pub fn extension() -> Extension {
             Ok(out)
         });
         on!("document.list", |core, ctx, _p| Ok(list(&core)));
+        // Videos in the editor (ADR 0008, VID-059 to VID-063).
+        on!("video.cut", |core, ctx, p| video::cut(&core, ctx, &p));
+        on!("video.save_selection", |core, ctx, p| video::save_selection(
+            &core, ctx, &p
+        ));
+        on!("video.save_frame", |core, ctx, p| video::save_frame(
+            &core, ctx, &p
+        ));
+        on!("video.extract_text", |core, ctx, p| video::extract_text(
+            &core, ctx, &p
+        ));
+        on!("video.silent_copy", |core, ctx, p| video::silent_copy(
+            &core, ctx, &p
+        ));
         on!("document.info", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
             info(&core, &id, ctx.lang).ok_or_else(|| CommandError::internal("document closed"))
@@ -4362,6 +4389,11 @@ pub fn extension() -> Extension {
         on!("document.save", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
             let ed = editor(&core);
+            // A video: its cuts, in its file or in another (VID-059, VID-066).
+            if ed.store.with(&id, |d| d.is_video()).unwrap_or(false) {
+                let target = p.get("path").and_then(Value::as_str).map(PathBuf::from);
+                return video::save(&core, ctx, &id, target.as_deref());
+            }
             let name = ed.store.with(&id, |d| d.name()).unwrap_or_default();
             let Some(target) = p.get("path").and_then(Value::as_str).map(PathBuf::from) else {
                 // EDT-107: the first time a flat file gets its objects flattened, explain it.

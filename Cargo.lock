@@ -7232,6 +7232,7 @@ dependencies = [
  "xs-core",
  "xs-image",
  "xs-library",
+ "xs-video",
 ]
 
 [[package]]

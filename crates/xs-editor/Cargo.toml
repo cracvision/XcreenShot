@@ -10,6 +10,7 @@ description = "Open documents, undo history, saving and the document.* and edito
 xs-core.workspace = true
 xs-image = { path = "../xs-image" }
 xs-library = { path = "../xs-library" }
+xs-video = { path = "../xs-video" }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

@@ -25,6 +25,8 @@ pub enum Format {
     Xshot,
     Png,
     Jpg,
+    /// A video (`.mp4`, `.m4v`, `.mov`) open in the editor (ADR 0008).
+    Video,
 }
 
 impl Format {
@@ -38,6 +40,7 @@ impl Format {
             "xshot" => Some(Format::Xshot),
             "png" => Some(Format::Png),
             "jpg" | "jpeg" => Some(Format::Jpg),
+            "mp4" | "m4v" | "mov" => Some(Format::Video),
             _ => None,
         }
     }
@@ -47,6 +50,7 @@ impl Format {
             Format::Xshot => "xshot",
             Format::Png => "png",
             Format::Jpg => "jpg",
+            Format::Video => "mp4",
         }
     }
 }
@@ -124,6 +128,8 @@ pub struct Doc {
     pub step_next: BTreeMap<String, u64>,
     /// The pixel selection (EDT-043): not in the file, not an undo step.
     pub pixel_selection: Option<crate::pixels::PixelSelection>,
+    /// A video's facts (ADR 0008): size, length, frame rate, codec and sound.
+    pub video: Option<xs_video::Facts>,
     last_used: u64,
 }
 
@@ -172,6 +178,7 @@ impl Doc {
             editable_copy: None,
             step_next: BTreeMap::new(),
             pixel_selection: None,
+            video: None,
             last_used: 0,
         }
     }
@@ -212,6 +219,21 @@ impl Doc {
         self.redo.last().map(|s| s.label.as_str())
     }
 
+    /// The format's name for lists: a video's own extension (`mp4`, `mov`…).
+    pub fn format_name(&self) -> String {
+        match (self.format, &self.path) {
+            (Format::Video, Some(p)) => p
+                .extension()
+                .map(|e| e.to_string_lossy().to_ascii_lowercase())
+                .unwrap_or_else(|| "mp4".into()),
+            (f, _) => f.ext().to_string(),
+        }
+    }
+
+    pub fn is_video(&self) -> bool {
+        self.format == Format::Video
+    }
+
     /// Short description for lists (`document.list`).
     pub fn summary(&self) -> Value {
         json!({
@@ -219,7 +241,7 @@ impl Doc {
             "name": self.name(),
             "path": self.path,
             "kind": self.kind.as_str(),
-            "format": self.format.ext(),
+            "format": self.format_name(),
             "width": self.document.canvas.width,
             "height": self.document.canvas.height,
             "objects": self.document.objects.len(),
@@ -480,6 +502,39 @@ impl DocStore {
                 );
                 doc.manifest_extra = x.manifest.extra;
                 doc.images = Arc::new(x.images);
+                Ok(doc)
+            }
+            // A video (ADR 0008): its first frame is the picture of the tray and the
+            // strip; the canvas plays the file.
+            Format::Video => {
+                let facts = xs_video::facts(path).map_err(|e| unreadable(&e))?;
+                let (w, h, bgra) = xs_video::frame_at(path, 0.0).map_err(|e| unreadable(&e))?;
+                let mut rgba = bgra;
+                for px in rgba.as_chunks_mut::<4>().0 {
+                    px.swap(0, 2);
+                }
+                let first = image::RgbaImage::from_raw(w, h, rgba).ok_or_else(|| unreadable(&"frame"))?;
+                let png = xs_image::encode::png(&first, 0.0, false).map_err(|e| unreadable(&e))?;
+                let mut document = Document::new(w, h, 96.0);
+                document.kind = "video".into();
+                let kind = if xs_library::contains(library, path) {
+                    Kind::Library
+                } else {
+                    Kind::External
+                };
+                let mut doc = Doc::new(
+                    Some(path.to_path_buf()),
+                    kind,
+                    format,
+                    document,
+                    json!({}),
+                    BaseSource {
+                        bytes: Arc::new(png),
+                        mime: "image/png",
+                    },
+                );
+                doc.base_size = (w, h);
+                doc.video = Some(facts);
                 Ok(doc)
             }
             Format::Png | Format::Jpg => {
@@ -931,6 +986,27 @@ impl DocStore {
         });
     }
 
+    /// A video saved with its cuts (ADR 0008): it takes the new file's facts and first
+    /// frame, without cuts or undo steps, saved as of now.
+    pub fn replace_video(&self, id: &str, fresh: Doc, _saved: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.clock += 1;
+        let clock = inner.clock;
+        if let Some(d) = inner.get_mut(id) {
+            d.video = fresh.video;
+            d.base_source = fresh.base_source;
+            d.base_size = fresh.base_size;
+            d.base = None;
+            d.document.cuts.clear();
+            d.document.canvas = fresh.document.canvas;
+            d.document.crop = fresh.document.crop;
+            d.undo.clear();
+            d.redo.clear();
+            d.version = clock;
+            d.saved_version = clock;
+        }
+    }
+
     /// Removes documents from the store. Returns the ones that were there.
     pub fn remove(&self, ids: &[String]) -> Vec<Doc> {
         let mut inner = self.inner.lock().unwrap();
@@ -981,7 +1057,7 @@ impl DocStore {
             "name": d.name(),
             "path": d.path,
             "kind": d.kind.as_str(),
-            "format": d.format.ext(),
+            "format": d.format_name(),
             "width": d.document.canvas.width,
             "height": d.document.canvas.height,
             "base": {"width": bw, "height": bh, "mime": d.base_source.mime},
@@ -990,6 +1066,8 @@ impl DocStore {
             "baseView": xs_image::render::flattened_view_rect(&d.document, bw, bh),
             "metadata": d.meta,
             "dirty": d.dirty(),
+            // A video (ADR 0008): its facts and its timeline after the cuts.
+            "video": d.video.as_ref().map(|f| crate::video::timeline_json(f, &d.document.cuts)),
             "canUndo": !d.undo.is_empty(),
             "canRedo": !d.redo.is_empty(),
             "undoLabel": d.undo_label(),

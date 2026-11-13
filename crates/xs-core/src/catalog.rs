@@ -904,6 +904,64 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "codec": {"type": "string"}, "bitrate": {"type": "integer"},
                 "audio": {"type": "array", "description": "{channels, rate} of each sound track"}
             }})),
+        // Videos open in the editor (ADR 0008). Times are seconds of the video as it
+        // is now, after its cuts.
+        B::new("video.cut", &["VID-059"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "Seconds"},
+                    "end": {"type": "number", "minimum": 0, "description": "Seconds"}
+                }),
+                &["start", "end"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "duration": {"type": "number", "description": "Seconds of the file"},
+                "length": {"type": "number", "description": "Seconds after the cuts"},
+                "kept": {"type": "array", "description": "[start, end] of the file kept"},
+                "marks": {"type": "array", "description": "Where each cut is, in seconds after the cuts"}
+            }})),
+        B::new("video.save_selection", &["VID-060"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0},
+                    "end": {"type": "number", "minimum": 0}
+                }),
+                &["start", "end"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"}
+            }})),
+        B::new("video.save_frame", &["VID-061"])
+            .mutates()
+            .params(params(
+                json!({"documentId": document_id(), "time": {"type": "number", "minimum": 0}}),
+                &["time"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
+        B::new("video.extract_text", &["VID-062", "SMT-005"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "time": {"type": "number", "minimum": 0},
+                    "copy": {"type": "boolean", "description": "Copy the text (default: true)"},
+                    "show": {"type": "boolean", "description": "Show the results window"}
+                }),
+                &["time"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.extract_text"})),
+        B::new("video.silent_copy", &["VID-063"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"}
+            }})),
         B::new("record.effects", &["VID-045", "VID-046", "VID-047", "VID-011"])
             .mutates()
             .params(params(
