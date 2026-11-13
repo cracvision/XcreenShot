@@ -377,7 +377,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         return Err(busy());
     }
     // Without an area in `p`, the one chosen on screen (Ready).
-    let asks_area = p.get("source").is_some() || p.get("x").is_some() || p.get("monitor").is_some();
+    let asks_area = p.get("source").is_some()
+        || p.get("x").is_some()
+        || p.get("monitor").is_some()
+        || p.get("window").is_some();
     let ready = if asks_area {
         None
     } else {
@@ -422,8 +425,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         (None, Some(id)) => window_area(id, lang)?,
         (None, None) => area(p, lang)?,
     };
-    let mut current = svc.current.lock().unwrap();
-    if current.is_some() {
+    // Not held while the engine starts: the icon's menu asks whether one runs.
+    if running(core) {
         return Err(busy());
     }
     let setting = |key: &str| {
@@ -485,6 +488,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         if hide {
             core.host().hide_for_capture(false);
         }
+        // From the bar: it stays Ready, to try again or cancel.
+        if let Some(r) = &again_of {
+            *svc.ready.lock().unwrap() = Some(r.clone());
+        }
         CommandError::new(
             ErrorCode::Internal,
             tr(lang, "errors.record_failed", &[("reason", &e)]),
@@ -510,8 +517,16 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         again,
     };
     let status = status_of(&running);
-    *current = Some(running);
-    drop(current);
+    {
+        let mut current = svc.current.lock().unwrap();
+        if current.is_some() {
+            // Another one started meanwhile: this one goes.
+            drop(current);
+            let _ = running.recorder.cancel();
+            return Err(busy());
+        }
+        *current = Some(running);
+    }
     bar(core, Some(status.clone()));
     tracing::info!(
         width = status["width"].as_u64(),
