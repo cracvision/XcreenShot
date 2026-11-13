@@ -37,6 +37,7 @@ pub mod scroll;
 mod scroll_win;
 pub mod stitch;
 pub mod systemshots;
+pub mod wallpaper;
 pub mod webcap;
 
 use std::path::PathBuf;
@@ -405,6 +406,8 @@ pub struct Options {
     pub schedule: Option<Value>,
     /// More metadata for the capture (a system capture's file, CAP-042).
     pub meta: Option<Value>,
+    /// Each visible window as its own object over the desktop (CAP-029).
+    pub windows_objects: bool,
 }
 
 impl Options {
@@ -448,6 +451,7 @@ impl Options {
             series: p.get("series").and_then(Value::as_str).map(str::to_string),
             schedule: p.get("schedule").filter(|v| v.is_object()).cloned(),
             meta: None,
+            windows_objects: p.get("windows").and_then(Value::as_bool) == Some(true),
         }
     }
 }
@@ -616,9 +620,22 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let keep = opts
         .keep
         .unwrap_or_else(|| core.settings.get_bool("library.autosaveImages"));
+    // Windows as objects (CAP-029): the document's base is the desktop without the app
+    // windows, which become objects; what leaves (clipboard, files) is the screen as
+    // it was seen.
+    let as_objects = if opts.windows_objects {
+        object_windows(shot.rect)
+    } else {
+        Vec::new()
+    };
+    let desktop = if opts.windows_objects {
+        desktop_base(&shot.image, shot.rect, &as_objects)
+    } else {
+        None
+    };
     let (document_id, path) = xs_editor::add_capture_kept(
         core,
-        &shot.image,
+        desktop.as_ref().unwrap_or(&shot.image),
         meta.clone(),
         shot.scale as f64,
         app,
@@ -628,6 +645,10 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     .map_err(|e| failed(lang, e))?;
     let save_ms = started.elapsed().as_millis() as u64;
     let mut files = vec![path.to_string_lossy().into_owned()];
+
+    if opts.windows_objects {
+        windows_as_objects(core, lang, &document_id, shot.rect, as_objects);
+    }
 
     // Objects the document starts with (CAP-039) and effects on capture (CAP-051):
     // editable in the document, already applied in what leaves for the clipboard and
@@ -792,8 +813,10 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
 /// on another virtual desktop), taken whole even where another covers it, becomes an
 /// image object named after its app, in its place and stacking order. The base stays
 /// the screen as it looked, so the flattened image is the same as without it.
-fn windows_as_objects(core: &Core, lang: Lang, document_id: &str, area: Rect) {
-    let windows: Vec<(u32, String)> = app_windows()
+/// The windows that become objects (CAP-029): visible app windows over `area`, from
+/// the topmost down, with their place and app name.
+fn object_windows(area: Rect) -> Vec<(u32, Rect, String)> {
+    app_windows()
         .into_iter()
         .filter_map(|w| {
             let id = w.id().ok()?;
@@ -804,14 +827,54 @@ fn windows_as_objects(core: &Core, lang: Lang, document_id: &str, area: Rect) {
                 height: w.height().ok()?,
             };
             (r.intersect(&area).is_some() && !platform::is_cloaked(id) && platform::is_app_window(id))
-                .then(|| (id, window_app(&w).name))
+                .then(|| (id, r, window_app(&w).name))
         })
-        .collect();
+        .collect()
+}
+
+/// The screen as seen with the desktop's background where the app windows were
+/// (CAP-029): taskbar, icons left uncovered and other non-window things stay. `None`
+/// when the background cannot be known: the base is then the screen as seen.
+fn desktop_base(screen: &RgbaImage, area: Rect, windows: &[(u32, Rect, String)]) -> Option<RgbaImage> {
+    if windows.is_empty() {
+        return None;
+    }
+    let background = wallpaper::desktop(area)?;
+    let mut base = screen.clone();
+    for (_, r, _) in windows {
+        let Some(part) = r.intersect(&area) else {
+            continue;
+        };
+        let piece = image::imageops::crop_imm(
+            &background,
+            (part.x - area.x) as u32,
+            (part.y - area.y) as u32,
+            part.width,
+            part.height,
+        )
+        .to_image();
+        image::imageops::replace(
+            &mut base,
+            &piece,
+            (part.x - area.x) as i64,
+            (part.y - area.y) as i64,
+        );
+    }
+    Some(base)
+}
+
+fn windows_as_objects(
+    core: &Core,
+    lang: Lang,
+    document_id: &str,
+    area: Rect,
+    windows: Vec<(u32, Rect, String)>,
+) {
     let tmp = core.paths.local_dir.join("tmp");
     let _ = std::fs::create_dir_all(&tmp);
     let mut placed = 0;
     // The topmost comes first: insert from the bottom up.
-    for (id, app) in windows.into_iter().rev() {
+    for (id, _, app) in windows.into_iter().rev() {
         let Ok(shot) = capture_window(&WindowTarget::Id(id), lang) else {
             continue;
         };
@@ -978,19 +1041,8 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
                 .and_then(Value::as_str)
                 .unwrap_or("pointer")
                 .to_string();
-            let result = run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))?;
-            // Windows as objects (CAP-029): each visible window, whole, as its own image.
-            if p.get("windows").and_then(Value::as_bool) == Some(true) {
-                if let (Some(id), Some(rect)) = (
-                    result.get("documentId").and_then(Value::as_str),
-                    result
-                        .get("rect")
-                        .and_then(|r| serde_json::from_value::<Rect>(r.clone()).ok()),
-                ) {
-                    windows_as_objects(core, ctx.lang, id, rect);
-                }
-            }
-            Ok(result)
+            // Windows as objects (CAP-029) is done while finishing: `windows` in `p`.
+            run_capture(core, ctx, p, |lang| capture_fullscreen(&which, lang))
         }
         "capture.region" => match p.get("rect") {
             None => {
