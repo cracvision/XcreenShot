@@ -364,6 +364,8 @@ impl Converter {
 struct Writer {
     sink: IMFSinkWriter,
     stream: u32,
+    /// The sound's stream and its rate (VID-040).
+    audio: Option<(u32, u32)>,
     hardware: bool,
     /// For the software encoder: frames go through memory.
     staging: Option<ID3D11Texture2D>,
@@ -410,6 +412,7 @@ fn writer(
     fps: u32,
     bitrate: u32,
     hardware: bool,
+    audio_rate: Option<u32>,
 ) -> Result<Writer, String> {
     // SAFETY: Media Foundation calls with arguments that live through each call.
     unsafe {
@@ -447,6 +450,30 @@ fn writer(
         let input = media_type(&MFVideoFormat_NV12, size, fps, None)?;
         sink.SetInputMediaType(stream, &input, None)
             .map_err(|e| err("video input type", e))?;
+        // The sound: 16-bit stereo PCM in, AAC at 128 kbps out (VID-026).
+        let audio = match audio_rate {
+            Some(rate) => {
+                let t = |subtype: &windows::core::GUID| -> windows::core::Result<IMFMediaType> {
+                    let t = MFCreateMediaType()?;
+                    t.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Audio)?;
+                    t.SetGUID(&MF_MT_SUBTYPE, subtype)?;
+                    t.SetUINT32(&MF_MT_AUDIO_BITS_PER_SAMPLE, 16)?;
+                    t.SetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND, rate)?;
+                    t.SetUINT32(&MF_MT_AUDIO_NUM_CHANNELS, 2)?;
+                    Ok(t)
+                };
+                let out = t(&MFAudioFormat_AAC).map_err(|e| err("audio type", e))?;
+                let _ = out.SetUINT32(&MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 16_000);
+                let index = sink.AddStream(&out).map_err(|e| err("audio stream", e))?;
+                let input = t(&MFAudioFormat_PCM).map_err(|e| err("audio type", e))?;
+                let _ = input.SetUINT32(&MF_MT_AUDIO_BLOCK_ALIGNMENT, 4);
+                let _ = input.SetUINT32(&MF_MT_AUDIO_AVG_BYTES_PER_SECOND, rate * 4);
+                sink.SetInputMediaType(index, &input, None)
+                    .map_err(|e| err("audio input type", e))?;
+                Some((index, rate))
+            }
+            None => None,
+        };
         sink.BeginWriting().map_err(|e| err("video writing", e))?;
         let staging = if hardware {
             None
@@ -456,6 +483,7 @@ fn writer(
         Ok(Writer {
             sink,
             stream,
+            audio,
             hardware,
             staging,
             width: size.0,
@@ -516,6 +544,34 @@ impl Writer {
             self.sink
                 .WriteSample(self.stream, &sample)
                 .map_err(|e| err("encoding", e))
+        }
+    }
+
+    /// Writes stereo 16-bit `samples` starting at `time` (seconds).
+    fn write_audio(&self, samples: &[i16], time: f64) -> Result<(), String> {
+        let Some((stream, rate)) = self.audio else {
+            return Ok(());
+        };
+        if samples.is_empty() {
+            return Ok(());
+        }
+        let bytes = samples.len() * 2;
+        // SAFETY: the buffer is locked, filled within its size and unlocked.
+        unsafe {
+            let b = MFCreateMemoryBuffer(bytes as u32).map_err(|e| err("audio buffer", e))?;
+            let mut dst = std::ptr::null_mut();
+            b.Lock(&mut dst, None, None).map_err(|e| err("audio buffer", e))?;
+            std::ptr::copy_nonoverlapping(samples.as_ptr() as *const u8, dst, bytes);
+            let _ = b.Unlock();
+            let _ = b.SetCurrentLength(bytes as u32);
+            let sample = MFCreateSample().map_err(|e| err("sample", e))?;
+            sample.AddBuffer(&b).map_err(|e| err("sample", e))?;
+            let frames = (samples.len() / 2) as f64;
+            let _ = sample.SetSampleTime((time * HNS) as i64);
+            let _ = sample.SetSampleDuration((frames / rate as f64 * HNS) as i64);
+            self.sink
+                .WriteSample(stream, &sample)
+                .map_err(|e| err("sound", e))
         }
     }
 
@@ -649,24 +705,37 @@ pub(crate) fn record(
         }
         let conv = converter(&gpu, monitor, (mr.left, mr.top), source, size, fps)?;
         let bitrate = options.quality.bitrate(size.0, size.1);
+        // The system's sound, when asked; without it the video goes on silent.
+        let loopback = if options.system_audio {
+            match crate::audio::Loopback::open() {
+                Ok(l) => Some(l),
+                Err(e) => {
+                    tracing::warn!(error = %e, "video: no system sound");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        let audio_rate = loopback.as_ref().map(|l| l.rate);
         let _ = std::fs::remove_file(&options.path);
         let w = if options.software_only {
-            writer(&gpu, &options.path, size, fps, bitrate, false)?
+            writer(&gpu, &options.path, size, fps, bitrate, false, audio_rate)?
         } else {
-            match writer(&gpu, &options.path, size, fps, bitrate, true) {
+            match writer(&gpu, &options.path, size, fps, bitrate, true, audio_rate) {
                 Ok(w) => w,
                 Err(e) => {
                     tracing::info!(error = %e, "video: no hardware encoder, software instead");
                     let _ = std::fs::remove_file(&options.path);
-                    writer(&gpu, &options.path, size, fps, bitrate, false)?
+                    writer(&gpu, &options.path, size, fps, bitrate, false, audio_rate)?
                 }
             }
         };
         // The first picture, whatever Desktop Duplication does.
         snapshot(&gpu, &conv, mr)?;
-        Ok((gpu, output, dup, conv, w))
+        Ok((gpu, output, dup, conv, w, loopback, audio_rate))
     })();
-    let (gpu, output, mut dup, conv, mut w) = match setup {
+    let (gpu, output, mut dup, conv, mut w, mut loopback, audio_rate) = match setup {
         Ok(s) => s,
         Err(e) => {
             let _ = ready.send(Err(e.clone()));
@@ -686,6 +755,9 @@ pub(crate) fn record(
     let mut dirty = true;
     let mut was_paused = false;
     let mut failure: Option<String> = None;
+    // Sound frames written so far, and when a lost output was last looked for.
+    let mut audio_frames = 0u64;
+    let mut last_reopen = Instant::now();
     let now_recorded = || {
         shared
             .clock
@@ -749,6 +821,50 @@ pub(crate) fn record(
                 break;
             }
         }
+        // The sound (VID-040): what played, placed at the moment it was heard, with
+        // silence before it for the time nothing played.
+        if let Some(l) = &loopback {
+            match l.read() {
+                Ok(samples) if shared.paused.load(Ordering::Relaxed) => drop(samples),
+                Ok(samples) => {
+                    let rate = l.rate as f64;
+                    let now = now_recorded();
+                    let length = samples.len() as f64 / 2.0 / rate;
+                    // Without sound for a while, silence up to a moment ago.
+                    let target = if samples.is_empty() {
+                        now - 0.3
+                    } else {
+                        now - length
+                    };
+                    let written = audio_frames as f64 / rate;
+                    if target - written > 0.02 {
+                        let gap = ((target - written) * rate) as usize;
+                        let silence = vec![0i16; gap * 2];
+                        if w.write_audio(&silence, written).is_ok() {
+                            audio_frames += gap as u64;
+                        }
+                    }
+                    if !samples.is_empty() {
+                        let at = audio_frames as f64 / rate;
+                        if w.write_audio(&samples, at).is_ok() {
+                            audio_frames += (samples.len() / 2) as u64;
+                        }
+                    }
+                }
+                Err(e) if crate::audio::device_gone(&e) => {
+                    // Another output was chosen: listen to the new one, at the same rate.
+                    loopback = crate::audio::Loopback::open()
+                        .ok()
+                        .filter(|n| Some(n.rate) == audio_rate);
+                }
+                Err(_) => {}
+            }
+        } else if audio_rate.is_some() && last_reopen.elapsed() > Duration::from_secs(1) {
+            last_reopen = Instant::now();
+            loopback = crate::audio::Loopback::open()
+                .ok()
+                .filter(|n| Some(n.rate) == audio_rate);
+        }
         if shared.paused.load(Ordering::Relaxed) {
             was_paused = true;
             continue;
@@ -776,6 +892,7 @@ pub(crate) fn record(
                         fps,
                         options.quality.bitrate(size.0, size.1),
                         false,
+                        audio_rate,
                     ) {
                         Ok(sw) => w = sw,
                         Err(e) => {
@@ -809,6 +926,7 @@ pub(crate) fn record(
             bytes: 0,
             encoder: "none",
             all_black: false,
+            audio: false,
             cancelled: true,
         });
     }
@@ -822,6 +940,14 @@ pub(crate) fn record(
                 let t = (duration - interval).max(last_time + 0.001);
                 let _ = w.write(&gpu, f, t, interval);
             }
+        }
+    }
+    if let (Some(rate), None) = (audio_rate, &failure) {
+        let rate = rate as f64;
+        let written = audio_frames as f64 / rate;
+        if duration > written {
+            let gap = ((duration - written) * rate) as usize;
+            let _ = w.write_audio(&vec![0i16; gap * 2], written);
         }
     }
     let encoder = if w.hardware { "hardware" } else { "software" };
@@ -851,6 +977,7 @@ pub(crate) fn record(
         bytes,
         encoder,
         all_black: false,
+        audio: audio_rate.is_some(),
         cancelled: false,
     })
 }
@@ -965,6 +1092,47 @@ pub fn first_frame(path: &std::path::Path) -> Result<(u32, u32, Vec<u8>), String
     }
 }
 
+/// The sound of a video: channels, rate and the end of its last sample (seconds),
+/// or `None` without sound.
+pub fn audio_info(path: &std::path::Path) -> Result<Option<(u32, u32, f64)>, String> {
+    // SAFETY: Media Foundation reading calls; samples are dropped as read.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None)
+            .map_err(|e| err("reading the video", e))?;
+        let stream = MF_SOURCE_READER_FIRST_AUDIO_STREAM.0 as u32;
+        let Ok(t) = reader.GetCurrentMediaType(stream) else {
+            return Ok(None);
+        };
+        let channels = t.GetUINT32(&MF_MT_AUDIO_NUM_CHANNELS).unwrap_or(0);
+        let rate = t.GetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND).unwrap_or(0);
+        let mut end = 0i64;
+        loop {
+            let mut flags = 0u32;
+            let mut time = 0i64;
+            let mut sample = None;
+            reader
+                .ReadSample(
+                    stream,
+                    0,
+                    None,
+                    Some(&mut flags),
+                    Some(&mut time),
+                    Some(&mut sample),
+                )
+                .map_err(|e| err("reading sound", e))?;
+            if let Some(s) = sample {
+                end = end.max(time + s.GetSampleDuration().unwrap_or(0));
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                break;
+            }
+        }
+        Ok(Some((channels, rate, end as f64 / HNS)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1064,6 +1232,7 @@ mod tests {
                 limit: None,
                 software_only: software,
                 cursor: false,
+                system_audio: false,
                 path: path.clone(),
             })
             .unwrap();
@@ -1089,6 +1258,108 @@ mod tests {
             }
             let _ = std::fs::remove_file(&path);
         }
+    }
+
+    /// The sound's way into the file (VID-026), without a sound device: a 440 Hz
+    /// tone written next to a few frames comes back as a 2 s stereo AAC track.
+    #[test]
+    fn a_tone_becomes_an_aac_track() {
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return; // no monitor (a headless runner)
+        };
+        // A runner without video hardware or encoders skips it.
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let dir = tempfile_dir();
+        let path = dir.join("tone.mp4");
+        let Ok(w) = writer(&gpu, &path, (320, 240), 30, 1_000_000, false, Some(48_000)) else {
+            return;
+        };
+        let frame = texture(
+            &gpu,
+            320,
+            240,
+            DXGI_FORMAT_NV12,
+            D3D11_BIND_RENDER_TARGET.0 as u32,
+            false,
+        )
+        .unwrap();
+        for i in 0..4 {
+            w.write(&gpu, &frame, i as f64 * 0.5, 0.5).unwrap();
+        }
+        let tone: Vec<i16> = (0..96_000)
+            .flat_map(|n| {
+                let v = ((n as f64 / 48_000.0 * 440.0 * std::f64::consts::TAU).sin() * 8000.0) as i16;
+                [v, v]
+            })
+            .collect();
+        w.write_audio(&tone, 0.0).unwrap();
+        w.finish().unwrap();
+        drop(w);
+        let (channels, rate, end) = audio_info(&path).unwrap().expect("a sound track");
+        assert_eq!((channels, rate), (2, 48_000));
+        assert!((end - 2.0).abs() < 0.1, "{end}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    fn tempfile_dir() -> std::path::PathBuf {
+        let d = std::env::temp_dir().join(format!("xs-video-unit-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&d);
+        d
+    }
+
+    /// With the system's sound on, the video has a stereo AAC track as long as the
+    /// picture (silence when nothing plays).
+    #[test]
+    #[ignore]
+    fn system_audio_track() {
+        let dir = std::env::temp_dir().join("xs-video-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("audio.mp4");
+        let r = Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 360,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: true,
+            path: path.clone(),
+        })
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(2000));
+        let s = r.stop().unwrap();
+        let audio = audio_info(&path).unwrap();
+        println!("{} s, audio {:?}", s.duration, audio);
+        if crate::audio::Loopback::open().is_err() {
+            // No sound output on this computer now: the video is silent, as it should.
+            assert!(!s.audio && audio.is_none());
+            return;
+        }
+        assert!(s.audio);
+        let (channels, rate, end) = audio.expect("a sound track");
+        assert_eq!(channels, 2);
+        assert!(rate == 48_000 || rate == 44_100);
+        assert!(
+            (end - s.duration).abs() < 0.3,
+            "sound {end} s, picture {} s",
+            s.duration
+        );
+        let _ = std::fs::remove_file(&path);
     }
 
     /// The pointer is drawn on the frames: put over the test window of
@@ -1122,6 +1393,7 @@ mod tests {
             limit: None,
             software_only: false,
             cursor: true,
+            system_audio: false,
             path: path.clone(),
         })
         .unwrap();
@@ -1172,6 +1444,7 @@ mod tests {
                 limit: Some(Duration::from_secs(2)),
                 software_only: software,
                 cursor: false,
+                system_audio: false,
                 path: path.clone(),
             })
             .unwrap();

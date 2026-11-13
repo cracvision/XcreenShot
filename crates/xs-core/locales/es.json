@@ -1313,6 +1313,10 @@
         "5": "5 segundos",
         "10": "10 segundos"
       }
+    },
+    "video_systemAudio": {
+      "label": "Grabar el audio del sistema",
+      "description": "Lo que suena en el equipo (apps, navegador, avisos) entra en el video. Desactivado por defecto."
     }
   },
   "errors": {
@@ -1784,7 +1788,8 @@
     "recording_title": "XcreenShot está grabando la pantalla",
     "recording_automation": "Una automatización empezó a grabar un video. Detenla desde el menú del ícono.",
     "recording_saved_title": "Video guardado",
-    "recording_saved_body": "{{seconds}} s grabados, en la biblioteca."
+    "recording_saved_body": "{{seconds}} s grabados, en la biblioteca.",
+    "recording_no_audio": "No se grabó el audio del sistema: no había ninguna salida de sonido activa."
   },
   "source": {
     "ui": "la interfaz",
@@ -4052,7 +4057,8 @@
       "cancel_confirm": "¿Cancelar la grabación? No se guardará nada.",
       "keep": "Seguir grabando",
       "cursor": "Puntero",
-      "countdown": "Empezando…"
+      "countdown": "Empezando…",
+      "sound": "Sonido"
     }
   },
   "history": {

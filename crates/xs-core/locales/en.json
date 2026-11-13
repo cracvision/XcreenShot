@@ -1313,6 +1313,10 @@
         "5": "5 seconds",
         "10": "10 seconds"
       }
+    },
+    "video_systemAudio": {
+      "label": "Record the system sound",
+      "description": "What the computer plays (apps, browser, notifications) goes into the video. Off by default."
     }
   },
   "errors": {
@@ -1784,7 +1788,8 @@
     "recording_title": "XcreenShot is recording the screen",
     "recording_automation": "An automation started a video recording. Stop it from the icon’s menu.",
     "recording_saved_title": "Video saved",
-    "recording_saved_body": "{{seconds}} s recorded, in the library."
+    "recording_saved_body": "{{seconds}} s recorded, in the library.",
+    "recording_no_audio": "No system sound was recorded: no sound output was on."
   },
   "source": {
     "ui": "the interface",
@@ -4052,7 +4057,8 @@
       "cancel_confirm": "Cancel the recording? Nothing will be kept.",
       "keep": "Keep recording",
       "cursor": "Pointer",
-      "countdown": "Starting…"
+      "countdown": "Starting…",
+      "sound": "Sound"
     }
   },
   "history": {

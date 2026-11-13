@@ -244,7 +244,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-037 | Fondo de la cámara | M4 | Should | — |
 | VID-038 | Cámara ocupada, tapada o sin permiso | M4 | Should | — |
 | VID-039 | Micrófono | M4 | Must | — |
-| VID-040 | Audio del sistema | M4 | Must | — |
+| VID-040 | Audio del sistema | M4 | Must | En curso (Windows: preferencia **Grabar el audio del sistema** (desactivada), interruptor **Sonido** en la barra en *Lista* y `systemAudio` en `record.start`; WASAPI en bucle invertido de la salida por defecto, estéreo de 16 bits a 44,1 o 48 kHz, AAC de 128 kbps en el mismo MP4, con silencio donde no suena nada para no perder la sincronía; si se cambia de salida durante la grabación, sigue con la nueva; sin salida de sonido activa, el video se guarda sin pista y lo avisa. Comprobado con un tono sintético (pista AAC estéreo de 2 s); esta noche el equipo no tenía ninguna salida activa. Faltan el medidor de nivel, cambiarlo durante la grabación y no grabar los sonidos de XcreenShot) |
 | VID-041 | Reducción de ruido | M4 | Should | — |
 | VID-042 | Pistas de audio | M4 | Could | — |
 | VID-043 | Conectar y desconectar dispositivos | M4 | Must | — |

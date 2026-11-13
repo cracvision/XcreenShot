@@ -19,6 +19,7 @@ Motor de grabación, comandos `record.*`, Captura de video con la barra de graba
 5. [ ] Empieza otra y, mientras graba, abre el menú del ícono: arriba aparece **Detener grabación**.
 6. [ ] La **×** de la barra durante una grabación pregunta antes de cancelar; **Cancelar** no deja ningún archivo.
 7. [ ] Graba moviendo el ratón: el puntero se ve en el video, con su forma (flecha, mano sobre un enlace, I sobre un texto). Pulsa **Puntero** en la barra a mitad: desde ahí ya no sale.
-8. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
+8. [ ] Con algo sonando (un video en el navegador), en la barra *Lista* activa **Sonido** y graba 10 s: el MP4 tiene el sonido, a la vez que la imagen. Sin altavoces ni auriculares conectados, el aviso de "Video guardado" dice que no se grabó el audio del sistema.
+9. [ ] Preferencias > Video: **Calidad de video** en Muy alta (60 fps) y graba algo que se mueva rápido.
 
-Todavía no hay sonido, cámara, efectos del cursor, pestaña Video en el panel ni reproductor en el editor: llegan en las siguientes partes de M4.
+Todavía no hay micrófono, cámara, efectos del cursor, pestaña Video en el panel ni reproductor en el editor: llegan en las siguientes partes de M4.

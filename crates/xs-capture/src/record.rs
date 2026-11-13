@@ -21,6 +21,8 @@ struct Running {
     path: PathBuf,
     /// The area recorded (virtual-screen pixels), for its border and bar.
     rect: Rect,
+    /// The system's sound was asked for (VID-040).
+    wants_audio: bool,
 }
 
 /// An area chosen and waiting for Record (the *Ready* state, VID-002).
@@ -110,6 +112,7 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "width": width,
         "height": height,
         "cursor": core.settings.get_bool("video.cursor"),
+        "systemAudio": core.settings.get_bool("video.systemAudio"),
     })
 }
 
@@ -372,6 +375,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .get("cursor")
             .and_then(Value::as_bool)
             .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
+        system_audio: p
+            .get("systemAudio")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| core.settings.get_bool("video.systemAudio")),
         path: path.clone(),
     })
     .map_err(|e| {
@@ -380,11 +387,16 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             tr(lang, "errors.record_failed", &[("reason", &e)]),
         )
     })?;
+    let wants_audio = p
+        .get("systemAudio")
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| core.settings.get_bool("video.systemAudio"));
     let running = Running {
         recorder,
         source,
         path,
         rect,
+        wants_audio,
     };
     let status = status_of(&running);
     *current = Some(running);
@@ -431,6 +443,7 @@ fn watch(core: Weak<Core>, source: Source) {
 
 /// Stops (or cancels) `r` and reports the file.
 fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> CommandResult {
+    let wants_audio = r.wants_audio;
     let summary = if cancel {
         r.recorder.cancel()
     } else {
@@ -468,21 +481,31 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         "frames": result.frames,
         "bytes": result.bytes,
         "encoder": result.encoder,
+        "audio": result.audio,
     });
+    let mut value = value;
+    if wants_audio && !result.audio {
+        // Asked for and missing: no sound output was on (VID-040, VID-043).
+        value["warnings"] = json!([tr(lang, "notify.recording_no_audio", &[])]);
+    }
     tracing::info!(
         frames = result.frames,
         bytes = result.bytes,
         encoder = result.encoder,
         "recording saved"
     );
+    let mut body = tr(
+        lang,
+        "notify.recording_saved_body",
+        &[("seconds", &format!("{:.0}", result.duration.round()))],
+    );
+    if let Some(w) = value["warnings"][0].as_str() {
+        body = format!("{body} {w}");
+    }
     core.host().notify_opening(
         "captures",
         &tr(lang, "notify.recording_saved_title", &[]),
-        &tr(
-            lang,
-            "notify.recording_saved_body",
-            &[("seconds", &format!("{:.0}", result.duration.round()))],
-        ),
+        &body,
         json!({ "path": result.path, "folder": true }),
     );
     core.events

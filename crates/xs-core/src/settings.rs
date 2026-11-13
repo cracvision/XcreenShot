@@ -457,6 +457,7 @@ pub fn definitions() -> Vec<SettingDef> {
             "VID-028",
         ),
         def("video.cursor", "video", boolean(), json!(true), "VID-044"),
+        def("video.systemAudio", "video", boolean(), json!(false), "VID-040"),
         def(
             "video.countdown",
             "video",

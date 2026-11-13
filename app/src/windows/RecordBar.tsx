@@ -14,6 +14,8 @@ interface RecState {
   height?: number;
   /** The pointer is in the video (VID-044). */
   cursor?: boolean;
+  /** The system's sound, chosen while Ready (VID-040). */
+  systemAudio?: boolean;
 }
 
 export function RecordBar() {
@@ -99,6 +101,22 @@ export function RecordBar() {
       >
         {t("ui.recbar.cursor")}
       </button>
+      {ready && (
+        <button
+          type="button"
+          className="btn small recbar-toggle"
+          aria-pressed={state.systemAudio === true}
+          title={t("ui.recbar.sound")}
+          onClick={() => {
+            const on = state.systemAudio !== true;
+            void run("settings.set", { key: "video.systemAudio", value: on })
+              .then(() => setState((s) => ({ ...s, systemAudio: on })))
+              .catch(() => undefined);
+          }}
+        >
+          {t("ui.recbar.sound")}
+        </button>
+      )}
       {state.status === "countdown" && (
         <span className="recbar-size" role="status">
           {t("ui.recbar.countdown")}

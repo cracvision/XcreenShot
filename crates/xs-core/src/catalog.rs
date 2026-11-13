@@ -857,6 +857,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
                     "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
                     "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
+                    "systemAudio": {"type": "boolean", "description": "What the computer plays, as an AAC track (default: the setting video.systemAudio, off)"},
                     "countdown": {"type": "number", "minimum": 0, "maximum": 10, "description": "Seconds of countdown first (VID-008); from automation none unless asked, from the bar the setting"},
                     "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
                 }),

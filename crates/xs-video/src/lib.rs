@@ -13,10 +13,12 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 
 #[cfg(windows)]
+mod audio;
+#[cfg(windows)]
 mod win;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
-pub use win::{first_frame, probe, size};
+pub use win::{audio_info, first_frame, probe, size};
 
 /// A video's size (not available on this platform yet).
 #[cfg(not(windows))]
@@ -161,6 +163,8 @@ pub struct Options {
     pub software_only: bool,
     /// The pointer, with its shape at each moment (VID-044).
     pub cursor: bool,
+    /// What the computer plays (VID-040).
+    pub system_audio: bool,
     pub path: PathBuf,
 }
 
@@ -190,6 +194,8 @@ pub struct Summary {
     pub encoder: &'static str,
     /// Every frame was black (VID-029): the screen could not be read.
     pub all_black: bool,
+    /// The video has the system's sound (VID-040).
+    pub audio: bool,
     pub cancelled: bool,
 }
 
