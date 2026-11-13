@@ -46,7 +46,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-036 | Unión y procesamiento del desplazamiento | M3 | Must | En curso (Windows: unión por la parte común de tramos seguidos, cabeceras y pies fijos una sola vez, barras laterales a lo largo del resultado, botones flotantes en su posición de la última vista; aviso de uniones dudosas; tope de 60 000 px o 250 megapíxeles con aviso; metadatos con `mode` = `scrolling`. La unión se hace mientras se captura, así que al pulsar Listo el resultado sale al momento: no hace falta barra de progreso de procesamiento. Falta la casilla Detectar elementos fijos: siempre activa) |
 | CAP-037 | Página web por URL | M3 | Should | — |
 | CAP-038 | Cámara web como imagen | M3 | Could | — |
-| CAP-039 | Portapapeles como fuente | M3 | Should | — |
+| CAP-039 | Portapapeles como fuente | M3 | Should | En curso (Windows: Imagen > Selección = Portapapeles y `capture.clipboard` (atajo asignable): una imagen (con su transparencia), archivos de imagen copiados en el Explorador (una captura cada uno) o texto (un objeto Texto editable con todo el texto, ajustado a 1000 px, márgenes de 20 px, lienzo blanco; cortado a 60 000 px con aviso); vacío u otra cosa avisa y no crea nada; origen "clipboard" en los metadatos. Falta con Intervalo (CAP-049) y la app que copió el contenido) |
 | CAP-040 | Archivo como fuente | M3 | Could | — |
 | CAP-041 | Importar PDF multipágina | M3 | Should | — |
 | CAP-042 | Capturas del sistema | M3 | Should | — |

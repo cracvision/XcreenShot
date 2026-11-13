@@ -786,6 +786,10 @@
     "capture_file_name": {
       "title": "File destination name",
       "description": "The name the File destination gives a capture now, its folder and its counter; can set the next number."
+    },
+    "capture_clipboard": {
+      "title": "Capture from the clipboard",
+      "description": "What is on the clipboard (an image, image files or text) becomes a capture, with the capture options."
     }
   },
   "settings": {
@@ -1187,7 +1191,8 @@
     "scroll_too_small": "The area is too small to scroll: it must be at least {{min}} × {{min}} pixels.",
     "scroll_not_running": "No scrolling capture is running.",
     "fixed_region": "The fixed region does not fit: the monitor \"{{monitor}}\" is not connected, or the region goes past its edge. Choose it again on screen, or pick the main monitor.",
-    "picker_not_open": "The window picker is not open."
+    "picker_not_open": "The window picker is not open.",
+    "clipboard_empty": "The clipboard holds no image or text."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1523,7 +1528,8 @@
     "scroll_still": "The content did not move: only the visible area was captured. Try a manual scrolling capture, scrolling it yourself.",
     "scroll_doubtful": "{{count}} joins of the scrolling capture may show a cut (moving or animated content).",
     "no_menu": "No open menu was found (some apps draw their own). Select the area instead.",
-    "file_destination_failed": "The capture could not be saved in {{folder}} (the folder is not available or cannot be written). It is in the library."
+    "file_destination_failed": "The capture could not be saved in {{folder}} (the folder is not available or cannot be written). It is in the library.",
+    "clipboard_text_cut": "The copied text was too long: it was cut at 60,000 pixels."
   },
   "source": {
     "ui": "the interface",
@@ -2037,7 +2043,8 @@
       "effects_saved": "Saved effects",
       "effects_remove": "Remove {{name}}",
       "effects_up": "Move {{name}} up",
-      "effects_empty": "No effects: captures come as they are."
+      "effects_empty": "No effects: captures come as they are.",
+      "sel_clipboard": "Clipboard"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -3833,7 +3840,8 @@
       "scrolling": "Scrolling",
       "multi": "Multiple areas",
       "menu": "Menu",
-      "picker": "Window picker"
+      "picker": "Window picker",
+      "clipboard": "Clipboard"
     },
     "kind": {
       "universal": "Universal",

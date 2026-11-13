@@ -440,6 +440,8 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.multi_start", "capture.multi_start", ""),
         // The window picker (CAP-030).
         capture("capture.window_picker", "capture.window_picker", ""),
+        // The clipboard as a source (CAP-039). No default.
+        capture("capture.clipboard", "capture.clipboard", ""),
         // The open menu, without a countdown (CAP-031). No default yet: the spec's
         // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
         capture("capture.menu", "capture.menu", ""),

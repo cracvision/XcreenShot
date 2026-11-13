@@ -17,7 +17,15 @@ import { tenStep } from "../lib/numberKeys";
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
 /** The Image tab also scrolls (CAP-034, CAP-035), takes several areas (CAP-033) and
  * extracts text (SMT-005). */
-const IMAGE_SELECTIONS = [...SELECTIONS, "picker", "scrolling", "menu", "multi", "text"] as const;
+const IMAGE_SELECTIONS = [
+  ...SELECTIONS,
+  "picker",
+  "scrolling",
+  "menu",
+  "multi",
+  "clipboard",
+  "text",
+] as const;
 
 interface Common {
   selection: (typeof IMAGE_SELECTIONS)[number];
@@ -40,8 +48,12 @@ function CommonOptions<T extends Common>({
   const { t } = useTranslation();
   const id = useId();
   const text = value.selection === "text";
-  // A scrolling or menu capture has no pointer (CAP-002).
-  const noCursor = text || value.selection === "scrolling" || value.selection === "menu";
+  // A scrolling, menu or clipboard capture has no pointer (CAP-002).
+  const noCursor =
+    text ||
+    value.selection === "scrolling" ||
+    value.selection === "menu" ||
+    value.selection === "clipboard";
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-sel`}>

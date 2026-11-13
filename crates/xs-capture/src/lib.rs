@@ -7,6 +7,7 @@
 //! on-screen selection arrives in build 2.
 
 pub mod areas;
+pub mod clipsource;
 pub mod compose;
 pub mod extract;
 pub mod feedback;
@@ -380,6 +381,8 @@ pub struct Options {
     pub file: Option<filedest::FileDest>,
     /// Effects for every capture (CAP-051), the editor's entries.
     pub effects: Vec<Value>,
+    /// Objects the capture's document starts with (text from the clipboard, CAP-039).
+    pub objects: Vec<Value>,
 }
 
 impl Options {
@@ -417,6 +420,7 @@ impl Options {
                         .collect()
                 })
                 .unwrap_or_default(),
+            objects: Vec::new(),
         }
     }
 }
@@ -429,7 +433,7 @@ pub fn metadata(core: &Core, shot: &Shot, now: chrono::DateTime<chrono::Local>) 
     json!({
         "capturedAt": now.to_rfc3339(),
         "mode": shot.mode,
-        "source": "screen",
+        "source": if shot.mode == "clipboard" { "clipboard" } else { "screen" },
         "app": shot.app,
         "window": { "title": if with_title { shot.window_title.clone() } else { None } },
         "url": null,
@@ -555,12 +559,13 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let save_ms = started.elapsed().as_millis() as u64;
     let mut files = vec![path.to_string_lossy().into_owned()];
 
-    // Effects on capture (CAP-051): editable in the document, already applied in what
-    // leaves for the clipboard and files.
-    let with_effects = if opts.effects.is_empty() {
+    // Objects the document starts with (CAP-039) and effects on capture (CAP-051):
+    // editable in the document, already applied in what leaves for the clipboard and
+    // files.
+    let with_effects = if opts.effects.is_empty() && opts.objects.is_empty() {
         None
     } else {
-        apply_effects(core, &document_id, &opts.effects)
+        apply_effects(core, &document_id, &opts.objects, &opts.effects)
     };
     let outgoing = with_effects.as_ref().unwrap_or(outgoing);
 
@@ -844,6 +849,12 @@ fn run_command(core: &Core, ctx: &Context, command: &str, p: &Value, extra: Valu
             };
             run_capture(core, ctx, p, |lang| capture_window(&target, lang))
         }
+        // The clipboard as a source (CAP-039).
+        "capture.clipboard" => {
+            let opts = Options::from_params(p, ctx.source);
+            wait_delay(core, &opts, ctx.lang)?;
+            clipsource::run(core, ctx, &opts)
+        }
         "capture.window_picker" => {
             let opts = Options::from_params(p, ctx.source);
             wait_delay(core, &opts, ctx.lang)?;
@@ -919,13 +930,29 @@ fn fixed_region_problem(lang: Lang, monitor: &str) -> CommandError {
 /// Puts the effects on the new capture's document and saves it; returns the image as
 /// it leaves the editor (CAP-051). None if something failed: the capture goes on as it
 /// is.
-fn apply_effects(core: &Core, document_id: &str, effects: &[Value]) -> Option<RgbaImage> {
-    let set = core.call(
-        Source::Ui,
-        "document.effects",
-        json!({ "documentId": document_id, "action": "set", "effects": effects }),
-        None,
-    );
+fn apply_effects(core: &Core, document_id: &str, objects: &[Value], effects: &[Value]) -> Option<RgbaImage> {
+    if !objects.is_empty() {
+        let added = core.call(
+            Source::Ui,
+            "document.annotate",
+            json!({ "documentId": document_id, "objects": objects }),
+            None,
+        );
+        if let Err(e) = added {
+            tracing::warn!(error = %e.message, "capture: its objects were not added");
+            return None;
+        }
+    }
+    let set = if effects.is_empty() {
+        Ok(json!({}))
+    } else {
+        core.call(
+            Source::Ui,
+            "document.effects",
+            json!({ "documentId": document_id, "action": "set", "effects": effects }),
+            None,
+        )
+    };
     if let Err(e) = set {
         tracing::warn!(error = %e.message, "effects on capture: not applied");
         return None;
@@ -1128,6 +1155,16 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("capture.multi_clear", move |_ctx, _p| {
             Ok(multi::clear(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("capture.clipboard", move |ctx, p| {
+            let core = upgrade(&w)?;
+            let p = if ctx.source.is_automation() {
+                p
+            } else {
+                panel::with_overrides(panel::load(&core).image_options(), &p)
+            };
+            dispatch(&core, ctx, "capture.clipboard", &p, json!({}))
         });
         // Window picker (CAP-030).
         let w = weak.clone();

@@ -749,6 +749,12 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 }
             })))
             .result(capture_result()),
+        B::new("capture.clipboard", &["CAP-039", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
         B::new("capture.window_picker", &["CAP-030", "CAP-065"])
             .scopes(ALL)
             .assignable()

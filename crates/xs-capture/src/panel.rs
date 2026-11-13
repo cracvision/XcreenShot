@@ -235,7 +235,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 8] = [
+const IMAGE_SELECTIONS: [&str; 9] = [
     "region",
     "window",
     "fullscreen",
@@ -243,6 +243,7 @@ const IMAGE_SELECTIONS: [&str; 8] = [
     "scrolling",
     "menu",
     "multi",
+    "clipboard",
     "text",
 ];
 
@@ -352,6 +353,10 @@ impl PanelSettings {
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
                 return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "clipboard" {
+                params["cursor"] = json!(false);
+                return ("capture.clipboard", params, json!({}));
             }
             if self.image.selection == "picker" {
                 return ("capture.window_picker", params, json!({}));

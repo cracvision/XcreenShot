@@ -27,6 +27,7 @@ pub const CAPTURE_COMMANDS: &[&str] = &[
     "capture.scrolling",
     "capture.menu",
     "capture.window_picker",
+    "capture.clipboard",
 ];
 
 /// Commands whose result names a file they wrote.
