@@ -336,6 +336,22 @@ impl Host for TauriHost {
         }
     }
 
+    fn pick_save(&self, suggested: &std::path::Path) -> Option<std::path::PathBuf> {
+        use tauri_plugin_dialog::DialogExt;
+        let mut dialog = self.app.dialog().file();
+        if let Some(dir) = suggested.parent() {
+            dialog = dialog.set_directory(dir);
+        }
+        if let Some(name) = suggested.file_name() {
+            dialog = dialog.set_file_name(name.to_string_lossy());
+        }
+        dialog = dialog
+            .add_filter("PNG", &["png"])
+            .add_filter("JPG", &["jpg", "jpeg"])
+            .add_filter("XcreenShot", &["xshot"]);
+        dialog.blocking_save_file().and_then(|f| f.into_path().ok())
+    }
+
     fn pdf_window(&self, id: &str) -> Result<(), CommandError> {
         let app = self.app.clone();
         let id = id.to_string();

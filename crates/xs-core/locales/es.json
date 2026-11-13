@@ -2250,7 +2250,10 @@
       "freehand_polygon": "Polígono",
       "freehand_ellipse": "Elipse",
       "windows_as_objects": "Cada ventana como un objeto",
-      "scroll_fixed": "Detectar elementos fijos (cabeceras, pies, barras)"
+      "scroll_fixed": "Detectar elementos fijos (cabeceras, pies, barras)",
+      "file_ask_exists": "Preguntar",
+      "file_ask": "Preguntar nombre y carpeta en cada captura",
+      "file_metadata": "Incluir los metadatos de captura en el archivo (PNG)"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

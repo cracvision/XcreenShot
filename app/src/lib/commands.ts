@@ -105,7 +105,11 @@ export interface FileDest {
   pattern: string;
   format: "png" | "jpg" | "xshot";
   quality: number;
-  onExists: "number" | "overwrite";
+  onExists: "number" | "overwrite" | "ask";
+  /** Ask for the name and folder at each capture (CAP-053). */
+  ask: boolean;
+  /** Write the capture's metadata in the file (CAP-053). */
+  metadata: boolean;
 }
 
 /** The properties of Selection = Region (CAP-026). */

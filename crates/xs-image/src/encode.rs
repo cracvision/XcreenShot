@@ -47,6 +47,17 @@ pub fn png_dpi(bytes: &[u8]) -> Option<f64> {
 /// PNG with transparency, the resolution (pHYs) and the sRGB mark (EDT-110).
 /// `fast` trades size for speed (the `base.png` of a new capture).
 pub fn png(image: &RgbaImage, dpi: f64, fast: bool) -> Result<Vec<u8>, String> {
+    png_with_text(image, dpi, fast, &[])
+}
+
+/// [`png`] with text fields (`Title`, `Creation Time`, `Software`…), in UTF-8 (iTXt):
+/// the capture's metadata in the file (CAP-053).
+pub fn png_with_text(
+    image: &RgbaImage,
+    dpi: f64,
+    fast: bool,
+    texts: &[(&str, String)],
+) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
     {
         let mut enc = png::Encoder::new(&mut out, image.width(), image.height());
@@ -66,6 +77,10 @@ pub fn png(image: &RgbaImage, dpi: f64, fast: bool) -> Result<Vec<u8>, String> {
             }));
         }
         enc.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+        for (key, text) in texts.iter().filter(|(_, t)| !t.is_empty()) {
+            enc.add_itxt_chunk((*key).to_string(), text.clone())
+                .map_err(|e| e.to_string())?;
+        }
         let mut writer = enc.write_header().map_err(|e| e.to_string())?;
         writer
             .write_image_data(image.as_raw())

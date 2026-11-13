@@ -225,6 +225,11 @@ pub trait Host: Send + Sync {
     /// "Working" next to a zone of the screen (`{x, y, width, height}`, physical), or
     /// gone with `None` (SMT-005).
     fn working(&self, zone: Option<Value>) {}
+    /// The system's Save dialog at `suggested` (folder and name): the path chosen, or
+    /// none if cancelled (CAP-053).
+    fn pick_save(&self, suggested: &std::path::Path) -> Option<std::path::PathBuf> {
+        None
+    }
     /// The window that asks for a web address (CAP-037).
     fn webpage_prompt(&self) -> Result<(), CommandError> {
         Err(unsupported())

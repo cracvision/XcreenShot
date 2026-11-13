@@ -2250,7 +2250,10 @@
       "freehand_polygon": "Polygon",
       "freehand_ellipse": "Ellipse",
       "windows_as_objects": "Each window as its own object",
-      "scroll_fixed": "Detect fixed parts (headers, footers, bars)"
+      "scroll_fixed": "Detect fixed parts (headers, footers, bars)",
+      "file_ask_exists": "Ask",
+      "file_ask": "Ask for the name and folder at each capture",
+      "file_metadata": "Include the capture details in the file (PNG)"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",

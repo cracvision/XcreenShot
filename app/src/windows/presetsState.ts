@@ -28,6 +28,8 @@ const FILE_DEFAULTS: PanelSettings["image"]["file"] = {
   format: "png",
   quality: 90,
   onExists: "number",
+  ask: false,
+  metadata: false,
 };
 
 /** CAP-003 defaults of each kind, for "New preset". */

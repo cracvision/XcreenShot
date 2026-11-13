@@ -1112,7 +1112,24 @@ function ShareOptions({
             >
               <option value="number">{t("ui.panel.file_number")}</option>
               <option value="overwrite">{t("ui.panel.file_overwrite")}</option>
+              <option value="ask">{t("ui.panel.file_ask_exists")}</option>
             </select>
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={file.ask}
+              onChange={(e) => patch({ ask: e.target.checked })}
+            />
+            {t("ui.panel.file_ask")}
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={file.metadata}
+              onChange={(e) => patch({ metadata: e.target.checked })}
+            />
+            {t("ui.panel.file_metadata")}
           </label>
           {info?.counter && (
             <label className="panel-field narrow" htmlFor={`${id}-next`}>

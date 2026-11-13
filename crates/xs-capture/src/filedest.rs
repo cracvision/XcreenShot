@@ -32,8 +32,12 @@ pub struct FileDest {
     pub format: String,
     /// JPG quality, 1 to 100.
     pub quality: u8,
-    /// `number` (add " (2)") or `overwrite`.
+    /// `number` (add " (2)"), `overwrite` or `ask` (the system's Save dialog).
     pub on_exists: String,
+    /// Ask for the name and folder at each capture, in the system's Save dialog.
+    pub ask: bool,
+    /// Write the capture's metadata (CAP-056) in the file's own fields (PNG).
+    pub metadata: bool,
 }
 
 impl Default for FileDest {
@@ -45,6 +49,8 @@ impl Default for FileDest {
             format: "png".into(),
             quality: 90,
             on_exists: "number".into(),
+            ask: false,
+            metadata: false,
         }
     }
 }
@@ -57,8 +63,8 @@ impl FileDest {
         if !(1..=100).contains(&self.quality) {
             return Err("file.quality: must be between 1 and 100".into());
         }
-        if !["number", "overwrite"].contains(&self.on_exists.as_str()) {
-            return Err("file.onExists: expected number or overwrite".into());
+        if !["number", "overwrite", "ask"].contains(&self.on_exists.as_str()) {
+            return Err("file.onExists: expected number, overwrite or ask".into());
         }
         Ok(())
     }
@@ -121,6 +127,22 @@ pub fn preview(core: &Core, dest: &FileDest, values: &Values) -> String {
 }
 
 /// Writes the capture to the destination and returns the file written.
+/// The capture's metadata (CAP-056) as PNG text fields.
+pub fn png_fields(meta: &serde_json::Value) -> Vec<(&'static str, String)> {
+    let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
+    vec![
+        ("Title", text(&meta["window"]["title"])),
+        ("Source", text(&meta["app"]["name"])),
+        ("Creation Time", text(&meta["capturedAt"])),
+        ("Comment", text(&meta["url"])),
+        ("Software", "XcreenShot".to_string()),
+    ]
+}
+
+/// Writes the capture to the File destination. `choose` asks for the path in the
+/// system's Save dialog (Ask for name and folder, or Ask when the file exists); a
+/// cancel there writes nothing (`Err("cancelled")`).
+#[allow(clippy::too_many_arguments)]
 pub fn write(
     core: &Core,
     dest: &FileDest,
@@ -128,6 +150,8 @@ pub fn write(
     xshot: &Path,
     values: &Values,
     dpi: f64,
+    meta: Option<&serde_json::Value>,
+    choose: &dyn Fn(&Path) -> Option<PathBuf>,
 ) -> Result<PathBuf, String> {
     let now = chrono::Local::now();
     let root = dest.folder();
@@ -146,7 +170,7 @@ pub fn write(
             }
             break first;
         }
-        if dest.on_exists == "overwrite" || !first.exists() {
+        if dest.on_exists != "number" || !first.exists() {
             break first;
         }
         break (2..)
@@ -154,13 +178,38 @@ pub fn write(
             .find(|p| !p.exists())
             .unwrap_or(first);
     };
+    // Ask: always, or when the name is taken (CAP-053).
+    let asked = dest.ask || (dest.on_exists == "ask" && path.exists());
+    let path = if asked {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        choose(&path).ok_or_else(|| "cancelled".to_string())?
+    } else {
+        path
+    };
+    // The format of the name chosen, if it was changed in the dialog.
+    let chosen_ext = path
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let ext = match chosen_ext.as_str() {
+        "jpg" | "jpeg" => "jpg",
+        "xshot" => "xshot",
+        "png" => "png",
+        _ => ext,
+    };
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
     }
+    let fields = match (dest.metadata, meta) {
+        (true, Some(m)) => png_fields(m),
+        _ => Vec::new(),
+    };
     let bytes = match ext {
         "jpg" => xs_image::encode::jpg(image, dpi, dest.quality, xs_image::color::Rgba::WHITE)?,
         "xshot" => std::fs::read(xshot).map_err(|e| e.to_string())?,
-        _ => xs_image::encode::png(image, dpi, false)?,
+        _ => xs_image::encode::png_with_text(image, dpi, false, &fields)?,
     };
     std::fs::write(&path, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
     if numbered {
@@ -172,6 +221,10 @@ pub fn write(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn no_dialog(_: &Path) -> Option<PathBuf> {
+        None
+    }
     use xs_core::platform::Platform;
 
     fn values() -> Values {
@@ -195,12 +248,42 @@ mod tests {
             ..FileDest::default()
         };
         let img = RgbaImage::new(4, 3);
-        let a = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
-        let b = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
+        let a = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
+        let b = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
         assert!(a.ends_with("Informe_001.png") && b.ends_with("Informe_002.png"));
         // A file already there: the next free number.
         std::fs::write(dir.path().join("Informe_003.png"), b"x").unwrap();
-        let c = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
+        let c = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
         assert!(c.ends_with("Informe_004.png"));
         // Next number, set by hand.
         set_counter(&core, &dest, 1);
@@ -218,14 +301,44 @@ mod tests {
             ..FileDest::default()
         };
         let img = RgbaImage::new(4, 3);
-        let a = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
-        let b = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
+        let a = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
+        let b = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
         assert!(a.ends_with("Informe.png") && b.ends_with("Informe (2).png"));
         let over = FileDest {
             on_exists: "overwrite".into(),
             ..dest
         };
-        let c = write(&core, &over, &img, Path::new("x"), &values(), 96.0).unwrap();
+        let c = write(
+            &core,
+            &over,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
         assert_eq!(c, a);
     }
 
@@ -241,7 +354,17 @@ mod tests {
             ..FileDest::default()
         };
         let img = RgbaImage::new(4, 3);
-        let p = write(&core, &dest, &img, Path::new("x"), &values(), 96.0).unwrap();
+        let p = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            None,
+            &no_dialog,
+        )
+        .unwrap();
         assert_eq!(p.parent().unwrap().parent().unwrap(), dir.path());
         let bytes = std::fs::read(&p).unwrap();
         assert_eq!(&bytes[..2], &[0xFF, 0xD8]);
@@ -263,8 +386,51 @@ mod tests {
             &RgbaImage::new(2, 2),
             Path::new("x"),
             &values(),
-            96.0
+            96.0,
+            None,
+            &no_dialog
         )
         .is_err());
+    }
+
+    /// CAP-053: Ask for the name and folder uses the path chosen; a cancel writes nothing.
+    #[test]
+    fn asking_writes_where_the_user_chose_or_nothing() {
+        let core = Core::for_tests(Platform::Windows);
+        let dir = tempfile::tempdir().unwrap();
+        let dest = FileDest {
+            folder: dir.path().to_string_lossy().into_owned(),
+            ask: true,
+            metadata: true,
+            ..FileDest::default()
+        };
+        let img = RgbaImage::from_pixel(4, 4, image::Rgba([1, 2, 3, 255]));
+        let chosen = dir.path().join("elegido.png");
+        let pick = |_: &Path| Some(chosen.clone());
+        let meta =
+            serde_json::json!({ "window": { "title": "Informe" }, "capturedAt": "2026-11-13T01:00:00" });
+        let p = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            Some(&meta),
+            &pick,
+        )
+        .unwrap();
+        assert_eq!(p, chosen);
+        let bytes = std::fs::read(&p).unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(
+            text.contains("Informe") && text.contains("XcreenShot"),
+            "the details are in the file"
+        );
+        let cancel = |_: &Path| None;
+        assert_eq!(
+            write(&core, &dest, &img, Path::new("x"), &values(), 96.0, None, &cancel).unwrap_err(),
+            "cancelled"
+        );
     }
 }

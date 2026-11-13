@@ -678,8 +678,12 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
             user: platform::user_and_machine().0,
         };
         let dpi = (96.0 * shot.scale as f64).round();
-        match filedest::write(core, dest, outgoing, &path, &values, dpi) {
+        let host_for_dialog = core.host();
+        let choose = move |p: &std::path::Path| host_for_dialog.pick_save(p);
+        match filedest::write(core, dest, outgoing, &path, &values, dpi, Some(&meta), &choose) {
             Ok(written) => files.push(written.to_string_lossy().into_owned()),
+            // Cancelled in the Save dialog: the capture stays in the library only.
+            Err(e) if e == "cancelled" => {}
             Err(e) => {
                 tracing::warn!(error = %e, "file destination: not written");
                 warnings.push(format!("file: {e}"));
