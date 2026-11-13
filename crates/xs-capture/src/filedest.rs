@@ -126,7 +126,6 @@ pub fn preview(core: &Core, dest: &FileDest, values: &Values) -> String {
     parts.join("/")
 }
 
-/// Writes the capture to the destination and returns the file written.
 /// The capture's metadata (CAP-056) as PNG text fields.
 pub fn png_fields(meta: &serde_json::Value) -> Vec<(&'static str, String)> {
     let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
@@ -137,6 +136,30 @@ pub fn png_fields(meta: &serde_json::Value) -> Vec<(&'static str, String)> {
         ("Comment", text(&meta["url"])),
         ("Software", "XcreenShot".to_string()),
     ]
+}
+
+/// The capture's metadata (CAP-056) as a JPG's EXIF fields: title, app, address and
+/// the moment it was taken, in local time with its offset.
+pub fn jpg_details(meta: &serde_json::Value) -> xs_image::exif::Details {
+    let text = |v: &serde_json::Value| v.as_str().unwrap_or_default().to_string();
+    let at = meta["capturedAt"].as_str().unwrap_or_default();
+    let (taken, offset) = match chrono::DateTime::parse_from_rfc3339(at) {
+        Ok(t) => (
+            t.format("%Y:%m:%d %H:%M:%S").to_string(),
+            t.format("%:z").to_string(),
+        ),
+        Err(_) => match chrono::NaiveDateTime::parse_from_str(at, "%Y-%m-%dT%H:%M:%S%.f") {
+            Ok(t) => (t.format("%Y:%m:%d %H:%M:%S").to_string(), String::new()),
+            Err(_) => (String::new(), String::new()),
+        },
+    };
+    xs_image::exif::Details {
+        title: text(&meta["window"]["title"]),
+        app: text(&meta["app"]["name"]),
+        url: text(&meta["url"]),
+        taken,
+        offset,
+    }
 }
 
 /// Writes the capture to the File destination. `choose` asks for the path in the
@@ -207,7 +230,13 @@ pub fn write(
         _ => Vec::new(),
     };
     let bytes = match ext {
-        "jpg" => xs_image::encode::jpg(image, dpi, dest.quality, xs_image::color::Rgba::WHITE)?,
+        "jpg" => {
+            let jpg = xs_image::encode::jpg(image, dpi, dest.quality, xs_image::color::Rgba::WHITE)?;
+            match (dest.metadata, meta) {
+                (true, Some(m)) => xs_image::exif::add_to_jpeg(&jpg, &jpg_details(m)),
+                _ => jpg,
+            }
+        }
         "xshot" => std::fs::read(xshot).map_err(|e| e.to_string())?,
         _ => xs_image::encode::png_with_text(image, dpi, false, &fields)?,
     };
@@ -432,5 +461,59 @@ mod tests {
             write(&core, &dest, &img, Path::new("x"), &values(), 96.0, None, &cancel).unwrap_err(),
             "cancelled"
         );
+    }
+
+    /// CAP-053: a JPG with the details keeps them in EXIF, and photo tools read its date.
+    #[test]
+    fn jpg_details_go_in_exif() {
+        let core = Core::for_tests(Platform::Windows);
+        let dir = tempfile::tempdir().unwrap();
+        let dest = FileDest {
+            folder: dir.path().to_string_lossy().into_owned(),
+            format: "jpg".into(),
+            metadata: true,
+            ..FileDest::default()
+        };
+        let img = RgbaImage::from_pixel(8, 8, image::Rgba([10, 20, 30, 255]));
+        let meta = serde_json::json!({
+            "window": { "title": "Informe" },
+            "app": { "name": "Notepad" },
+            "capturedAt": "2026-11-13T01:52:50.5-04:00"
+        });
+        let p = write(
+            &core,
+            &dest,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            Some(&meta),
+            &no_dialog,
+        )
+        .unwrap();
+        let bytes = std::fs::read(&p).unwrap();
+        assert!(bytes.windows(6).any(|w| w == b"Exif  "));
+        assert!(String::from_utf8_lossy(&bytes).contains("Informe"));
+        assert!(xs_library::exif::taken(&p).is_some(), "the date is readable");
+        // Still a valid JPG of the same size.
+        let back = image::load_from_memory(&bytes).unwrap();
+        assert_eq!((back.width(), back.height()), (8, 8));
+        // Without the option, no details.
+        let plain = FileDest {
+            metadata: false,
+            ..dest
+        };
+        let p = write(
+            &core,
+            &plain,
+            &img,
+            Path::new("x"),
+            &values(),
+            96.0,
+            Some(&meta),
+            &no_dialog,
+        )
+        .unwrap();
+        assert!(!std::fs::read(&p).unwrap().windows(4).any(|w| w == b"Exif"));
     }
 }

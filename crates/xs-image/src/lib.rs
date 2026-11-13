@@ -10,6 +10,7 @@ pub mod cursor;
 pub mod cutout;
 pub mod effects;
 pub mod encode;
+pub mod exif;
 pub mod export;
 pub mod fx;
 pub mod fx_marks;
