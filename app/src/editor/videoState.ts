@@ -6,7 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import i18next from "i18next";
 import { create } from "zustand";
 import { run } from "../lib/commands";
-import { useEditor, type DocDetails } from "./state";
+import { useEditor, usePanel, type DocDetails } from "./state";
 import {
   clampSelection,
   frameStep,
@@ -36,6 +36,8 @@ interface VideoState {
   busy: string | null;
   /** A selection handle being dragged shows its frame; the playhead stays (VID-058). */
   previewing: boolean;
+  /** Go to… is open: the time can be typed (VID-056). */
+  goTo: boolean;
 }
 
 export const useVideo = create<VideoState>(() => ({
@@ -51,6 +53,7 @@ export const useVideo = create<VideoState>(() => ({
   progress: null,
   busy: null,
   previewing: false,
+  goTo: false,
 }));
 
 function video(): DocDetails["video"] {
@@ -278,6 +281,56 @@ export function setPlayback(change: { muted?: boolean; volume?: number; speed?: 
   element.muted = muted;
   element.volume = volume;
   element.playbackRate = speed;
+}
+
+/** The Video menu (VID-056 to VID-064): with a video shown. */
+export function videoAction(action: string): boolean {
+  const v = video();
+  if (!v) return false;
+  switch (action) {
+    case "video_play":
+      playPause();
+      break;
+    case "video_prev_frame":
+      stepFrame(-1);
+      break;
+    case "video_next_frame":
+      stepFrame(1);
+      break;
+    case "video_start":
+      seek(0);
+      break;
+    case "video_end":
+      seek(v.length);
+      break;
+    case "video_go_to":
+      useVideo.getState().element?.pause();
+      useVideo.setState({ goTo: true, playing: false });
+      break;
+    case "video_cut":
+      void cutSelection();
+      break;
+    case "video_save_selection":
+      void saveSelection();
+      break;
+    case "video_save_frame":
+      void saveFrame();
+      break;
+    case "video_extract_text":
+      void extractText();
+      break;
+    case "video_silent_copy":
+      if (!v.sound) return false;
+      void silentCopy();
+      break;
+    case "video_info":
+      // The side panel shows it (VID-064).
+      usePanel.getState().set({ visible: true });
+      break;
+    default:
+      return false;
+  }
+  return true;
 }
 
 /** Saving a video with cuts encodes it again: its progress shows on the bar. */

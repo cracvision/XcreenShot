@@ -2570,7 +2570,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 106] = [
+pub const EDITOR_ACTIONS: [&str; 118] = [
     "open",
     "save",
     "save_as",
@@ -2688,6 +2688,19 @@ pub const EDITOR_ACTIONS: [&str; 106] = [
     "effect_corners",
     "effect_scale",
     "effect_rotate",
+    // The Video menu (VID-056 to VID-064, ADR 0008): only with a video shown.
+    "video_play",
+    "video_prev_frame",
+    "video_next_frame",
+    "video_start",
+    "video_end",
+    "video_go_to",
+    "video_cut",
+    "video_save_selection",
+    "video_save_frame",
+    "video_extract_text",
+    "video_silent_copy",
+    "video_info",
 ];
 
 fn library_item() -> Value {

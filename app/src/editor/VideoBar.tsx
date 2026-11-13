@@ -185,42 +185,47 @@ function Timeline() {
 }
 
 /** Elapsed and total time; a click turns it into Go to… (VID-056). */
+/** Go to… (VID-056): a time typed as 01:15, 75 or 1:02:03. */
+function GoTo({ initial }: { initial: string }) {
+  const { t } = useTranslation();
+  const [text, setText] = useState(initial);
+  const close = () => useVideo.setState({ goTo: false });
+  return (
+    <input
+      className="vb-goto"
+      autoFocus
+      value={text}
+      aria-label={t("ui.video.go_to")}
+      placeholder="01:15"
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={close}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          const at = parseTime(text);
+          if (at !== null) seek(at);
+          close();
+        } else if (e.key === "Escape") close();
+      }}
+    />
+  );
+}
+
+/** Elapsed and total time; a click (or Video > Go to…) types a time (VID-056). */
 function Clock() {
   const { t } = useTranslation();
   const v = useEditor((s) => s.doc?.video);
   const time = useVideo((s) => s.time);
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
+  const editing = useVideo((s) => s.goTo);
   if (!v) return null;
   const long = v.length >= 3600;
-  if (editing)
-    return (
-      <input
-        className="vb-goto"
-        autoFocus
-        value={text}
-        aria-label={t("ui.video.go_to")}
-        placeholder="01:15"
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => setEditing(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            const at = parseTime(text);
-            if (at !== null) seek(at);
-            setEditing(false);
-          } else if (e.key === "Escape") setEditing(false);
-        }}
-      />
-    );
+  if (editing) return <GoTo initial={formatTime(time, long)} />;
   return (
     <button
       type="button"
       className="vb-clock"
       title={t("ui.video.go_to")}
-      onClick={() => {
-        setText(formatTime(time, long));
-        setEditing(true);
-      }}
+      onClick={() => useVideo.setState({ goTo: true })}
     >
       {formatTime(time, long)} <span className="muted">/ {formatTime(v.length, long)}</span>
     </button>

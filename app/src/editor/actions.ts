@@ -46,6 +46,7 @@ import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
 import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
 import { useZones } from "./templateUi";
+import { videoAction } from "./videoState";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -887,6 +888,20 @@ export function performAction(action: string): boolean {
       if (!doc) return false;
       void openAi("ask");
       return true;
+    // The Video menu (VID-056 to VID-064, ADR 0008).
+    case "video_play":
+    case "video_prev_frame":
+    case "video_next_frame":
+    case "video_start":
+    case "video_end":
+    case "video_go_to":
+    case "video_cut":
+    case "video_save_selection":
+    case "video_save_frame":
+    case "video_extract_text":
+    case "video_silent_copy":
+    case "video_info":
+      return videoAction(action);
     case "ai_name":
       if (!doc) return false;
       void openAi("name");

@@ -27,6 +27,7 @@ import { useClipboard, type ClipboardInfo } from "./imageMenu";
 import { useFullscreen } from "./fullscreen";
 import { captureIntoZone, replaceZoneImage, templateCommand } from "./templateActions";
 import { useZones } from "./templateUi";
+import { useVideo } from "./videoState";
 
 interface Point {
   x: number;
@@ -339,6 +340,22 @@ export function toolbarMenu(at: Point): void {
 }
 
 /** Entries of the Image menu that apply to any document shown. */
+/** The Video menu (VID-056 to VID-064). */
+const VIDEO_ACTIONS = [
+  "video_play",
+  "video_prev_frame",
+  "video_next_frame",
+  "video_start",
+  "video_end",
+  "video_go_to",
+  "video_cut",
+  "video_save_selection",
+  "video_save_frame",
+  "video_extract_text",
+  "video_silent_copy",
+  "video_info",
+];
+
 const IMAGE_ACTIONS = [
   "resize_image",
   "canvas_size",
@@ -398,6 +415,13 @@ export function useMenuBar(): void {
   const hasPixels = pixelSel !== null;
   const pixelsOnImage = hasPixels && !pixelSel?.target;
   const canUndo = (doc?.canUndo ?? false) && !inLibrary;
+  // A video shown (ADR 0008): its menu on, the image's off.
+  const isVideo = !!doc?.video && !inLibrary;
+  const videoSound = doc?.video?.sound ?? false;
+  const videoCuttable = useVideo((s) => {
+    const length = doc?.video?.length ?? 0;
+    return s.end - s.start < length - 1e-6;
+  });
   const canRedo = (doc?.canRedo ?? false) && !inLibrary;
 
   useEffect(() => {
@@ -467,8 +491,9 @@ export function useMenuBar(): void {
     enabled["editor.unflatten_all"] = canUnflatten;
     for (const a of ["cut", "copy", "delete", "deselect"])
       enabled[`editor.${a}`] = (enabled[`editor.${a}`] ?? false) || hasPixels;
-    // The Image menu (EDT-069 to EDT-077) and Image > Effects (EDT-053).
-    for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc;
+    // The Image menu (EDT-069 to EDT-077) and Image > Effects (EDT-053); not for a
+    // video (VID-065).
+    for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc && !isVideo;
     enabled["editor.snap"] = !inLibrary;
     enabled["editor.new_image"] = true;
     enabled["editor.batch_export"] = true;
@@ -488,6 +513,21 @@ export function useMenuBar(): void {
     enabled["editor.invert_selection"] = hasPixels;
     enabled["editor.float_selection"] = pixelsOnImage;
     enabled["editor.crop_selection"] = pixelsOnImage;
+    // The Video menu (VID-056 to VID-064): with a video shown.
+    for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;
+    enabled["editor.video_cut"] = hasDoc && isVideo && videoCuttable;
+    enabled["editor.video_silent_copy"] = hasDoc && isVideo && videoSound;
+    // Image things a video does not have (VID-065).
+    if (isVideo)
+      for (const a of [
+        "print",
+        "apply_template",
+        "save_as_template",
+        "pixel_grid",
+        "ai_ask",
+        "ai_name",
+      ])
+        enabled[`editor.${a}`] = false;
     const checked = {
       "editor.side_panel": panel,
       "editor.toolbar_labels": labels,
@@ -501,6 +541,9 @@ export function useMenuBar(): void {
     run("editor.menu_state", { enabled, checked }).catch(() => undefined);
   }, [
     hasDoc,
+    isVideo,
+    videoSound,
+    videoCuttable,
     libraryDoc,
     objectCount,
     selectedCount,

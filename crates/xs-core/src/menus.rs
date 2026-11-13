@@ -583,6 +583,50 @@ fn editor_menus() -> Vec<MenuEntry> {
                 },
             ],
         },
+        // A video shown in the editor (VID-056 to VID-064, ADR 0008).
+        Submenu {
+            label: "menu.video",
+            items: vec![
+                action("editor.video_play", "menu.video_play", "video_play"),
+                action(
+                    "editor.video_prev_frame",
+                    "menu.video_prev_frame",
+                    "video_prev_frame",
+                ),
+                action(
+                    "editor.video_next_frame",
+                    "menu.video_next_frame",
+                    "video_next_frame",
+                ),
+                action("editor.video_start", "menu.video_start", "video_start"),
+                action("editor.video_end", "menu.video_end", "video_end"),
+                action("editor.video_go_to", "menu.video_go_to", "video_go_to"),
+                Separator,
+                action("editor.video_cut", "menu.video_cut", "video_cut"),
+                action(
+                    "editor.video_save_selection",
+                    "menu.video_save_selection",
+                    "video_save_selection",
+                ),
+                action(
+                    "editor.video_save_frame",
+                    "menu.video_save_frame",
+                    "video_save_frame",
+                ),
+                action(
+                    "editor.video_extract_text",
+                    "menu.video_extract_text",
+                    "video_extract_text",
+                ),
+                Separator,
+                action(
+                    "editor.video_silent_copy",
+                    "menu.video_silent_copy",
+                    "video_silent_copy",
+                ),
+                action("editor.video_info", "menu.video_info", "video_info"),
+            ],
+        },
         // Cloud AI (SMT-040, SMT-041): always listed; without it set up they explain
         // what is missing.
         Submenu {
@@ -815,6 +859,7 @@ mod tests {
                 "menu.image",
                 "menu.view",
                 "menu.object",
+                "menu.video",
                 "menu.ai",
                 "menu.help"
             ]

@@ -1864,7 +1864,20 @@
     "details_tray": "Details",
     "create": "Create",
     "shortcut_sheet": "Keyboard shortcuts",
-    "move_computer": "Move XcreenShot to another computer…"
+    "move_computer": "Move XcreenShot to another computer…",
+    "video": "Vi&deo",
+    "video_play": "Play / Pause",
+    "video_prev_frame": "Previous frame",
+    "video_next_frame": "Next frame",
+    "video_start": "Go to start",
+    "video_end": "Go to end",
+    "video_go_to": "Go to…",
+    "video_cut": "Cut selection",
+    "video_save_selection": "Save selection as video",
+    "video_save_frame": "Save frame",
+    "video_extract_text": "Extract text from frame",
+    "video_silent_copy": "Make a silent copy",
+    "video_info": "Information"
   },
   "notify": {
     "ping_title": "XcreenShot is working",

@@ -1864,7 +1864,20 @@
     "details_tray": "Detalles",
     "create": "Crear",
     "shortcut_sheet": "Atajos de teclado",
-    "move_computer": "Mover XcreenShot a otro equipo…"
+    "move_computer": "Mover XcreenShot a otro equipo…",
+    "video": "Vi&deo",
+    "video_play": "Reproducir / Pausar",
+    "video_prev_frame": "Fotograma anterior",
+    "video_next_frame": "Fotograma siguiente",
+    "video_start": "Ir al inicio",
+    "video_end": "Ir al final",
+    "video_go_to": "Ir a…",
+    "video_cut": "Cortar selección",
+    "video_save_selection": "Guardar selección como video",
+    "video_save_frame": "Guardar fotograma",
+    "video_extract_text": "Extraer texto del fotograma",
+    "video_silent_copy": "Copia sin sonido",
+    "video_info": "Información"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",

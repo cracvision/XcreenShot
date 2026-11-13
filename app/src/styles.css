@@ -2735,7 +2735,9 @@ html.launcher-root #root {
 /* The menu bar the editor draws on Windows (EDT-002). */
 .menubar {
   position: relative;
-  z-index: 3;
+  /* Above the floating bars of the workspace (7 and 8), so its menus open over the
+     toolbar; below toasts (20) and dialogs (30). */
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 2px;
