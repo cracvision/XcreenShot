@@ -2152,6 +2152,13 @@ html.launcher-root #root {
   font-weight: 600;
 }
 
+/* The bar's switches (VID-011): pressed shows the brand's tint. */
+.recbar-toggle[aria-pressed="true"] {
+  background: var(--brand-soft);
+  border-color: var(--brand-ink);
+  color: var(--brand-ink);
+}
+
 .recbar-size {
   color: var(--ink-muted);
   font-size: 12px;

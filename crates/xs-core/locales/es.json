@@ -902,6 +902,10 @@
     "record_toggle": {
       "title": "Grabar / Pausar / Reanudar",
       "description": "Graba cuando el área está lista, pausa mientras graba y reanuda en pausa."
+    },
+    "record_cursor": {
+      "title": "Puntero en el video",
+      "description": "Muestra u oculta el puntero en el video desde ahora, también durante una grabación."
     }
   },
   "settings": {
@@ -1295,6 +1299,10 @@
     "video_softwareEncoding": {
       "label": "Usar siempre codificación por software",
       "description": "Solo hace falta si un controlador de video da problemas. Usa más procesador y puede bajar los fotogramas por segundo."
+    },
+    "video_cursor": {
+      "label": "Capturar cursor",
+      "description": "El puntero aparece en el video con su forma de cada momento."
     }
   },
   "errors": {
@@ -4032,7 +4040,8 @@
       "paused": "En pausa",
       "size": "{{width}} × {{height}}",
       "cancel_confirm": "¿Cancelar la grabación? No se guardará nada.",
-      "keep": "Seguir grabando"
+      "keep": "Seguir grabando",
+      "cursor": "Puntero"
     }
   },
   "history": {

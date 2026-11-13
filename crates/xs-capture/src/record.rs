@@ -107,6 +107,7 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "area": r.rect,
         "width": width,
         "height": height,
+        "cursor": core.settings.get_bool("video.cursor"),
     })
 }
 
@@ -244,7 +245,30 @@ fn status_of(r: &Running) -> Value {
         "width": r.recorder.width,
         "height": r.recorder.height,
         "fps": r.recorder.fps,
+        "cursor": r.recorder.cursor(),
     })
+}
+
+/// `record.cursor` (VID-044): shows or hides the pointer from now on; without `on`,
+/// switches it. It also becomes the setting for the next recordings.
+pub fn cursor(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let svc = service(core);
+    let current = svc.current.lock().unwrap();
+    let now = current
+        .as_ref()
+        .map(|r| r.recorder.cursor())
+        .unwrap_or_else(|| core.settings.get_bool("video.cursor"));
+    let on = p.get("on").and_then(Value::as_bool).unwrap_or(!now);
+    if let Some(r) = current.as_ref() {
+        r.recorder.set_cursor(on);
+    }
+    drop(current);
+    let _ = core.settings.set("video.cursor", json!(on), ctx.source, ctx.lang);
+    let state = status(core);
+    if state["status"] != "idle" {
+        bar(core, Some(state.clone()));
+    }
+    Ok(json!({ "cursor": on, "status": state["status"] }))
 }
 
 fn tell(core: &Core, source: Source, event: &str, data: Value) {
@@ -311,6 +335,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         max_size,
         limit,
         software_only: core.settings.get_bool("video.softwareEncoding"),
+        cursor: p
+            .get("cursor")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
         path: path.clone(),
     })
     .map_err(|e| {

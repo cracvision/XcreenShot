@@ -12,6 +12,8 @@ interface RecState {
   elapsed?: number;
   width?: number;
   height?: number;
+  /** The pointer is in the video (VID-044). */
+  cursor?: boolean;
 }
 
 export function RecordBar() {
@@ -84,6 +86,19 @@ export function RecordBar() {
         </span>
       )}
       <span className="recbar-fill" data-tauri-drag-region />
+      <button
+        type="button"
+        className="btn small recbar-toggle"
+        aria-pressed={state.cursor !== false}
+        title={t("ui.recbar.cursor")}
+        onClick={() =>
+          void run<{ cursor: boolean }>("record.cursor")
+            .then((r) => setState((s) => ({ ...s, cursor: r.cursor })))
+            .catch(() => undefined)
+        }
+      >
+        {t("ui.recbar.cursor")}
+      </button>
       {ready && (
         <button
           type="button"

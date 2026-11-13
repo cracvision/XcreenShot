@@ -159,6 +159,8 @@ pub struct Options {
     pub limit: Option<Duration>,
     /// Never use the hardware encoder (VID-029).
     pub software_only: bool,
+    /// The pointer, with its shape at each moment (VID-044).
+    pub cursor: bool,
     pub path: PathBuf,
 }
 
@@ -194,6 +196,8 @@ pub struct Summary {
 /// What the recording thread and its owner share.
 pub(crate) struct Shared {
     pub paused: AtomicBool,
+    /// The pointer is drawn (VID-044); it can change while recording.
+    pub cursor: AtomicBool,
     pub stop: AtomicBool,
     pub cancel: AtomicBool,
     pub state: AtomicU8,
@@ -266,6 +270,7 @@ impl Recorder {
         let fps = options.quality.fps();
         let shared = Arc::new(Shared {
             paused: AtomicBool::new(false),
+            cursor: AtomicBool::new(options.cursor),
             stop: AtomicBool::new(false),
             cancel: AtomicBool::new(false),
             state: AtomicU8::new(0),
@@ -316,6 +321,15 @@ impl Recorder {
 
     pub fn state(&self) -> State {
         self.shared.state()
+    }
+
+    /// Shows or hides the pointer from now on (VID-044).
+    pub fn set_cursor(&self, on: bool) {
+        self.shared.cursor.store(on, Ordering::Relaxed);
+    }
+
+    pub fn cursor(&self) -> bool {
+        self.shared.cursor.load(Ordering::Relaxed)
     }
 
     /// Time recorded so far, pauses left out.

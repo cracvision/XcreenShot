@@ -456,6 +456,7 @@ pub fn definitions() -> Vec<SettingDef> {
             json!("reduce_high_density"),
             "VID-028",
         ),
+        def("video.cursor", "video", boolean(), json!(true), "VID-044"),
         def(
             "video.softwareEncoding",
             "video",

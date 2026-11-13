@@ -856,6 +856,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "quality": {"type": "string", "enum": ["very_low", "low", "medium", "high", "very_high"], "description": "Most frames per second: 5, 10, 15, 30 or 60 (default: the setting)"},
                     "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
                     "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
+                    "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
                     "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
                 }),
                 &[],
@@ -875,6 +876,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
                 "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}
             }})),
+        B::new("record.cursor", &["VID-044", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({"on": {"type": "boolean", "description": "Without it, switches"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cursor": {"type": "boolean"}, "status": {"type": "string"}}})),
         B::new("record.toggle", &["VID-012", "VID-075"])
             .scopes(ALL)
             .assignable()

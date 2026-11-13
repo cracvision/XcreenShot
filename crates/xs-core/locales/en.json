@@ -902,6 +902,10 @@
     "record_toggle": {
       "title": "Record / Pause / Resume",
       "description": "Records when the area is ready, pauses while recording and resumes when paused."
+    },
+    "record_cursor": {
+      "title": "Pointer in the video",
+      "description": "Shows or hides the pointer in the video from now on, also during a recording."
     }
   },
   "settings": {
@@ -1295,6 +1299,10 @@
     "video_softwareEncoding": {
       "label": "Always use software encoding",
       "description": "Only needed if a graphics driver gives trouble. It uses more processor and may lower the frames per second."
+    },
+    "video_cursor": {
+      "label": "Capture cursor",
+      "description": "The pointer appears in the video with its shape at each moment."
     }
   },
   "errors": {
@@ -4032,7 +4040,8 @@
       "paused": "Paused",
       "size": "{{width}} × {{height}}",
       "cancel_confirm": "Cancel the recording? Nothing will be kept.",
-      "keep": "Keep recording"
+      "keep": "Keep recording",
+      "cursor": "Pointer"
     }
   },
   "history": {

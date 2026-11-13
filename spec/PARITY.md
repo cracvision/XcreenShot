@@ -248,7 +248,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-041 | Reducción de ruido | M4 | Should | — |
 | VID-042 | Pistas de audio | M4 | Could | — |
 | VID-043 | Conectar y desconectar dispositivos | M4 | Must | — |
-| VID-044 | Capturar cursor | M4 | Must | — |
+| VID-044 | Capturar cursor | M4 | Must | En curso (Windows: el puntero se dibuja en cada fotograma con su forma real (la duplicación del escritorio no lo trae) y moverlo cuenta como cambio; preferencia `video.cursor` (activada), parámetro `cursor` de `record.start`, interruptor **Puntero** en la barra y `record.cursor`, también durante la grabación. Faltan los efectos (VID-045, VID-046) y el interruptor en la pestaña Video) |
 | VID-045 | Resaltar cursor | M4 | Should | — |
 | VID-046 | Animación de clic | M4 | Should | — |
 | VID-047 | Mostrar teclas pulsadas | M4 | Should | — |

@@ -152,6 +152,10 @@ struct Converter {
     input: ID3D11VideoProcessorInputView,
     /// The last picture of the monitor (BGRA).
     frame: ID3D11Texture2D,
+    /// What is converted: the picture with the pointer drawn on it (GDI-compatible).
+    composite: ID3D11Texture2D,
+    /// The monitor's top left on the virtual screen.
+    origin: (i32, i32),
     width: u32,
     height: u32,
 }
@@ -159,6 +163,7 @@ struct Converter {
 fn converter(
     gpu: &Gpu,
     monitor: (u32, u32),
+    origin: (i32, i32),
     source: RECT,
     size: (u32, u32),
     fps: u32,
@@ -171,6 +176,24 @@ fn converter(
         (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
         false,
     )?;
+    let composite = {
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: monitor.0,
+            Height: monitor.1,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: D3D11_USAGE_DEFAULT,
+            BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+            CPUAccessFlags: 0,
+            MiscFlags: D3D11_RESOURCE_MISC_GDI_COMPATIBLE.0 as u32,
+        };
+        let mut t = None;
+        // SAFETY: the description and out-parameter live through the call.
+        unsafe { gpu.device.CreateTexture2D(&desc, None, Some(&mut t)) }.map_err(|e| err("texture", e))?;
+        t.ok_or("no texture")?
+    };
     let rate = DXGI_RATIONAL {
         Numerator: fps,
         Denominator: 1,
@@ -207,7 +230,7 @@ fn converter(
         };
         let mut input = None;
         gpu.video
-            .CreateVideoProcessorInputView(&frame, &venum, &desc, Some(&mut input))
+            .CreateVideoProcessorInputView(&composite, &venum, &desc, Some(&mut input))
             .map_err(|e| err("video input", e))?;
         let input = input.ok_or("no video input")?;
         let ctx = &gpu.vctx;
@@ -237,6 +260,8 @@ fn converter(
             vp,
             input,
             frame,
+            composite,
+            origin,
             width: size.0,
             height: size.1,
         })
@@ -244,8 +269,61 @@ fn converter(
 }
 
 impl Converter {
+    /// The last picture, with the pointer on it when `cursor` (VID-044).
+    fn compose(&self, gpu: &Gpu, cursor: bool) {
+        use windows::Win32::UI::WindowsAndMessaging::*;
+        // SAFETY: GPU copy, then GDI drawing on the texture's DC, released at once; the
+        // icon's bitmaps from GetIconInfo are deleted.
+        unsafe {
+            gpu.context.CopyResource(&self.composite, &self.frame);
+            if !cursor {
+                return;
+            }
+            let mut info = CURSORINFO {
+                cbSize: std::mem::size_of::<CURSORINFO>() as u32,
+                ..Default::default()
+            };
+            if GetCursorInfo(&mut info).is_err() || info.flags != CURSOR_SHOWING || info.hCursor.is_invalid()
+            {
+                return;
+            }
+            let mut icon = ICONINFO::default();
+            let hotspot = if GetIconInfo(HICON(info.hCursor.0), &mut icon).is_ok() {
+                let hs = (icon.xHotspot as i32, icon.yHotspot as i32);
+                use windows::Win32::Graphics::Gdi::DeleteObject;
+                if !icon.hbmMask.is_invalid() {
+                    let _ = DeleteObject(icon.hbmMask.into());
+                }
+                if !icon.hbmColor.is_invalid() {
+                    let _ = DeleteObject(icon.hbmColor.into());
+                }
+                hs
+            } else {
+                (0, 0)
+            };
+            let Ok(surface) = self.composite.cast::<IDXGISurface1>() else {
+                return;
+            };
+            if let Ok(dc) = surface.GetDC(false) {
+                let _ = DrawIconEx(
+                    dc,
+                    info.ptScreenPos.x - self.origin.0 - hotspot.0,
+                    info.ptScreenPos.y - self.origin.1 - hotspot.1,
+                    HICON(info.hCursor.0),
+                    0,
+                    0,
+                    0,
+                    None,
+                    DI_NORMAL,
+                );
+                let _ = surface.ReleaseDC(None);
+            }
+        }
+    }
+
     /// A new NV12 frame from the last picture.
-    fn nv12(&self, gpu: &Gpu) -> Result<ID3D11Texture2D, String> {
+    fn nv12(&self, gpu: &Gpu, cursor: bool) -> Result<ID3D11Texture2D, String> {
+        self.compose(gpu, cursor);
         let out = texture(
             gpu,
             self.width,
@@ -508,6 +586,7 @@ fn grab(
     dup: &IDXGIOutputDuplication,
     conv: &Converter,
     wait_ms: u32,
+    cursor: bool,
 ) -> Result<bool, windows::core::Error> {
     // SAFETY: the frame is released before returning; the copy is a GPU command.
     unsafe {
@@ -525,7 +604,7 @@ fn grab(
             }
         }
         let _ = dup.ReleaseFrame();
-        Ok(changed)
+        Ok(changed || (cursor && info.LastMouseUpdateTime != 0))
     }
 }
 
@@ -568,7 +647,7 @@ pub(crate) fn record(
         if source.right - source.left < 2 || source.bottom - source.top < 2 {
             return Err("the area is outside the monitor".to_string());
         }
-        let conv = converter(&gpu, monitor, source, size, fps)?;
+        let conv = converter(&gpu, monitor, (mr.left, mr.top), source, size, fps)?;
         let bitrate = options.quality.bitrate(size.0, size.1);
         let _ = std::fs::remove_file(&options.path);
         let w = if options.software_only {
@@ -624,7 +703,7 @@ pub(crate) fn record(
                        last_time: &mut f64,
                        frames: &mut u64|
      -> Result<(), String> {
-        let frame = conv.nv12(&gpu)?;
+        let frame = conv.nv12(&gpu, shared.cursor.load(Ordering::Relaxed))?;
         let t = now_recorded().max(*last_time + 0.001);
         w.write(&gpu, &frame, t, interval)?;
         *last_time = t;
@@ -644,7 +723,13 @@ pub(crate) fn record(
             Some(t) if dirty => (interval - t.elapsed().as_secs_f64()).max(0.0),
             _ => 0.1,
         };
-        match grab(&gpu, &dup, &conv, (due_in * 1000.0) as u32) {
+        match grab(
+            &gpu,
+            &dup,
+            &conv,
+            (due_in * 1000.0) as u32,
+            shared.cursor.load(Ordering::Relaxed),
+        ) {
             Ok(true) => dirty = true,
             Ok(false) => {}
             Err(e) if e.code() == DXGI_ERROR_ACCESS_LOST => {
@@ -978,6 +1063,7 @@ mod tests {
                 max_size: MaxSize::Original,
                 limit: None,
                 software_only: software,
+                cursor: false,
                 path: path.clone(),
             })
             .unwrap();
@@ -1005,6 +1091,65 @@ mod tests {
         }
     }
 
+    /// The pointer is drawn on the frames: put over the test window of
+    /// `colors_survive` (red), it leaves dark or white pixels where it is.
+    #[test]
+    #[ignore]
+    fn cursor_is_drawn() {
+        use windows::Win32::Foundation::POINT;
+        use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, SetCursorPos};
+        unsafe {
+            let _ = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        let mut before = POINT::default();
+        unsafe {
+            let _ = GetCursorPos(&mut before);
+            let _ = SetCursorPos(400, 400);
+        }
+        let dir = std::env::temp_dir().join("xs-video-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("cursor.mp4");
+        let r = Recorder::start(Options {
+            area: Area {
+                x: 150,
+                y: 150,
+                width: 1280,
+                height: 720,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: true,
+            path: path.clone(),
+        })
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(600));
+        let _ = r.stop().unwrap();
+        unsafe {
+            let _ = SetCursorPos(before.x, before.y);
+        }
+        let (w, _h, px) = first_frame(&path).unwrap();
+        let at = |x: u32, y: u32| {
+            let i = ((y * w + x) * 4) as usize;
+            [px[i + 2], px[i + 1], px[i]]
+        };
+        // The arrow's tip is at (250, 250) of the area; look just below and right.
+        let marked = (0..20)
+            .flat_map(|dy| (0..12).map(move |dx| (250 + dx, 250 + dy)))
+            .filter(|&(x, y)| {
+                let p = at(x, y);
+                let dark = p.iter().all(|c| *c < 60);
+                let white = p.iter().all(|c| *c > 200);
+                dark || white
+            })
+            .count();
+        println!("pointer pixels: {marked}, far away: {:?}", at(100, 600));
+        assert!(marked > 10, "the pointer is in the frame");
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// Records two seconds of the primary monitor's top-left corner and reads the file
     /// back. It records the real screen: run it by hand (`--ignored`).
     #[test]
@@ -1026,6 +1171,7 @@ mod tests {
                 max_size: MaxSize::Original,
                 limit: Some(Duration::from_secs(2)),
                 software_only: software,
+                cursor: false,
                 path: path.clone(),
             })
             .unwrap();

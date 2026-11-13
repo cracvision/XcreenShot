@@ -383,7 +383,7 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         frame.show()?;
     }
     if app.get_webview_window(RECBAR).is_none() {
-        let (bw, bh) = (420.0, 52.0);
+        let (bw, bh) = (500.0, 52.0);
         let gap = 10.0 * scale;
         let mut px = x + w / 2.0 - bw * scale / 2.0;
         // Under the area; above it when there is no room; inside it at the bottom when
