@@ -206,8 +206,8 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
 | VID-001 | Pestaña Video del panel de captura | M4 | Must | — |
-| VID-002 | Iniciar una captura de video | M4 | Must | — |
-| VID-003 | Área de grabación | M4 | Must | — |
+| VID-002 | Iniciar una captura de video | M4 | Must | En curso (Windows: menú del ícono > Captura de video y su atajo `Ctrl+Alt+Mayús+V` (`record.video`): elegir el área en pantalla y queda *Lista* con la barra; durante una grabación, la detiene; `record.start`. Faltan la pestaña Video, el botón `V` de la captura universal, presets de video, Repetir última captura y que la pantalla no se congele al elegir) |
+| VID-003 | Área de grabación | M4 | Must | En curso (Windows: el área se elige como una región de imagen (tiradores, teclado, guías), mínimo 64 × 64, tamaño par, dentro de un monitor; la barra muestra el tamaño final del video. Faltan Ancho y Alto editables y mover el área en *Lista*, y cruzar monitores) |
 | VID-004 | Pantalla completa de un monitor | M4 | Must | — |
 | VID-005 | Grabar una ventana | M4 | Should | — |
 | VID-006 | Resumen Listo para grabar | M4 | Should | — |
@@ -215,7 +215,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-008 | Cuenta atrás | M4 | Should | — |
 | VID-009 | Presets de video | M4 | Should | — |
 | VID-010 | Convertir una grabación en imagen | M4 | Could | — |
-| VID-011 | Barra de grabación | M4 | Must | — |
+| VID-011 | Barra de grabación | M4 | Must | En curso (Windows: ventana flotante bajo el área (encima si no cabe), fuera del video, que se arrastra por su asa: tiempo `hh:mm:ss`, tamaño del video, **Grabar** en *Lista*, **Pausar**/**Reanudar** y **Detener** con sus atajos en el tooltip, **×** que pregunta antes de cancelar. Faltan cursor, audio, cámara, micrófono, Dibujo en vivo, temporizador y el menú Más) |
 | VID-012 | Grabar, pausar y reanudar | M4 | Must | En curso (Windows: el motor y `record.pause` / `record.resume`; la pausa queda fuera del video. Falta la barra de grabación, VID-011) |
 | VID-013 | Detener | M4 | Must | En curso (Windows: `record.stop` espera al archivo y devuelve ruta, duración, tamaño, fps y codificador; aviso "Video guardado". Falta el botón de la barra, Abrir en y la bandeja) |
 | VID-014 | Reiniciar y cancelar | M4 | Should | En curso (Windows: `record.cancel` termina sin archivo. Falta Reiniciar y la barra) |
@@ -224,7 +224,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-017 | XcreenShot fuera del video | M4 | Must | — |
 | VID-018 | Escritorio limpio | M4 | Could | — |
 | VID-019 | Aviso de micrófono silenciado | M4 | Should | — |
-| VID-020 | Indicadores de grabación | M4 | Must | — |
+| VID-020 | Indicadores de grabación | M4 | Must | En curso (Windows: borde alrededor del área, fuera del video (azul en *Lista*, rojo grabando, discontinuo en pausa); reloj en el ícono y **Detener grabación** en su menú; aviso del sistema si la empezó una automatización. Falta lo demás del ID) |
 | VID-021 | Mantener el equipo despierto | M4 | Should | — |
 | VID-022 | Recuperar grabaciones interrumpidas | M4 | Must | — |
 | VID-023 | Grabaciones largas y espacio en disco | M4 | Should | — |
@@ -279,7 +279,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-072 | Barra y navegación de las diapositivas | M4 | Should | — |
 | VID-073 | Anotar las diapositivas en vivo | M4 | Could | — |
 | VID-074 | Tamaño y fondo del video de diapositivas | M4 | Should | — |
-| VID-075 | Atajos globales de video | M4 | Must | — |
+| VID-075 | Atajos globales de video | M4 | Must | En curso (Windows: Captura de video `Ctrl+Alt+Mayús+V`, Grabar/Pausar/Reanudar `Ctrl+Mayús+F9` y Detener `Ctrl+Mayús+F10`; con Compatibilidad, `Mayús+F9` y `Mayús+F10`. Faltan Dibujo en vivo, Cambiar vista de cámara, Barra de grabación y Diapositivas, que llegan con su función) |
 | VID-076 | Teclas contextuales de video | M4 | Should | — |
 | VID-077 | Permisos que necesita el video | M4 | Must | — |
 

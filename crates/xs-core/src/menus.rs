@@ -155,6 +155,7 @@ fn tray_entries(presets: &[(String, String)]) -> Vec<MenuEntry> {
     vec![
         cmd("capture_universal", "tray.capture_universal", "capture.universal"),
         cmd("capture_image", "tray.capture_image", "capture.image"),
+        cmd("video_capture", "tray.video_capture", "record.video"),
         MenuEntry::Command {
             id: "smart.extract_text",
             label: "tray.extract_text",

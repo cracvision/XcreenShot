@@ -894,6 +894,14 @@
     "record_status": {
       "title": "Estado de la grabación",
       "description": "Si hay una grabación en curso, cuánto lleva grabado y qué graba."
+    },
+    "record_video": {
+      "title": "Captura de video",
+      "description": "Elige un área en la pantalla y grábala: la barra de grabación espera a Grabar. Durante una grabación, la detiene."
+    },
+    "record_toggle": {
+      "title": "Grabar / Pausar / Reanudar",
+      "description": "Graba cuando el área está lista, pausa mientras graba y reanuda en pausa."
     }
   },
   "settings": {
@@ -1570,7 +1578,8 @@
     "stop_series": "Detener captura: {{name}}",
     "tooltip_timer": "XcreenShot · capturando por intervalo",
     "stop_schedule": "Detener captura: {{name}} (próxima: {{when}})",
-    "stop_recording": "Detener grabación"
+    "stop_recording": "Detener grabación",
+    "video_capture": "Captura de video"
   },
   "menu": {
     "flatten": "A&planar",
@@ -4010,6 +4019,20 @@
       "hint": "Aparece junto a los detalles de la captura. Esc: sin texto.",
       "add": "Añadir",
       "skip": "Sin texto"
+    },
+    "recbar": {
+      "title": "Grabación",
+      "record": "Grabar",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "stop": "Detener",
+      "cancel": "Cancelar",
+      "ready": "Lista",
+      "recording": "Grabando",
+      "paused": "En pausa",
+      "size": "{{width}} × {{height}}",
+      "cancel_confirm": "¿Cancelar la grabación? No se guardará nada.",
+      "keep": "Seguir grabando"
     }
   },
   "history": {

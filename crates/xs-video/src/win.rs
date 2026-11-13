@@ -869,6 +869,27 @@ mod tests {
     use super::*;
     use crate::{MaxSize, Quality, Recorder};
 
+    /// Prints what a video holds (`XS_VIDEO_PROBE=<path>`), for checks by hand.
+    #[test]
+    #[ignore]
+    fn probe_a_file() {
+        let Some(path) = std::env::var_os("XS_VIDEO_PROBE") else {
+            return;
+        };
+        let path = std::path::PathBuf::from(path);
+        println!("{:?}", probe(&path));
+        let (w, h, px) = first_frame(&path).unwrap();
+        let at = |x: u32, y: u32| {
+            let i = ((y * w + x) * 4) as usize;
+            [px[i + 2], px[i + 1], px[i]]
+        };
+        println!(
+            "first frame {w}x{h}: center {:?}, corner {:?}",
+            at(w / 2, h / 2),
+            at(5, 5)
+        );
+    }
+
     #[test]
     #[ignore]
     fn duplication_diagnostics() {

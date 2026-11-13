@@ -1372,14 +1372,25 @@ mod tests {
         )
         .unwrap();
         // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X, which
-        // Trim edges gives up (EDT-051).
+        // Trim edges gives up (EDT-051); video capture has none there, and Record and
+        // Stop move to Shift+F9 and Shift+F10 (VID-075).
         let changed: Vec<&str> = preview["changes"]
             .as_array()
             .unwrap()
             .iter()
             .filter_map(|c| c["command"].as_str())
             .collect();
-        assert_eq!(changed, ["capture.capture", "app.quit", "editor.trim"]);
+        assert_eq!(
+            changed,
+            [
+                "capture.capture",
+                "record.video",
+                "record.toggle",
+                "record.stop",
+                "app.quit",
+                "editor.trim"
+            ]
+        );
         assert_eq!(core.profile(), Profile::Coexistence);
         call(
             &core,

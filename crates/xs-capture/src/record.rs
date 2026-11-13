@@ -19,11 +19,22 @@ struct Running {
     recorder: Recorder,
     source: Value,
     path: PathBuf,
+    /// The area recorded (virtual-screen pixels), for its border and bar.
+    rect: Rect,
+}
+
+/// An area chosen and waiting for Record (the *Ready* state, VID-002).
+#[derive(Clone)]
+struct Ready {
+    rect: Rect,
+    scale: f64,
+    source: Value,
 }
 
 #[derive(Default)]
 pub struct Recording {
     current: Mutex<Option<Running>>,
+    ready: Mutex<Option<Ready>>,
 }
 
 fn service(core: &Core) -> Arc<Recording> {
@@ -38,6 +49,83 @@ fn not_recording(lang: Lang) -> CommandError {
 /// Whether a recording runs (for the icon's clock and menu).
 pub fn running(core: &Core) -> bool {
     service(core).current.lock().unwrap().is_some()
+}
+
+/// The recording bar and the area's border: shown with `Some(state)`, gone with
+/// `None` (VID-011, VID-020).
+fn bar(core: &Core, state: Option<Value>) {
+    core.host().recording_bar(state);
+}
+
+/// The video size an area gives, as the settings say (VID-028).
+fn planned(core: &Core, rect: Rect, scale: f64) -> (u32, u32) {
+    let max = core
+        .settings
+        .get("video.maxSize")
+        .and_then(|v| v.as_str().and_then(MaxSize::parse))
+        .unwrap_or(MaxSize::ReduceHighDensity);
+    xs_video::video_size(rect.width, rect.height, scale, max)
+}
+
+/// `record.video` (VID-002): during a recording it stops it; otherwise the area is
+/// chosen on screen and the recording waits, Ready, for Record on its bar.
+pub fn video(core: &Arc<Core>, ctx: &Context) -> CommandResult {
+    if running(core) {
+        return stop(core, ctx);
+    }
+    let svc = service(core);
+    if let Some(r) = svc.ready.lock().unwrap().clone() {
+        // Already Ready: show its bar again.
+        bar(core, Some(ready_state(core, &r)));
+        return Ok(ready_state(core, &r));
+    }
+    let (monitor, rect) = crate::interactive::pick_area(core, ctx)?;
+    if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(ctx.lang, "errors.record_too_small", &[]),
+        ));
+    }
+    let r = Ready {
+        rect,
+        scale: monitor.scale as f64,
+        source: json!({ "type": "region", "rect": rect }),
+    };
+    *svc.ready.lock().unwrap() = Some(r.clone());
+    let state = ready_state(core, &r);
+    bar(core, Some(state.clone()));
+    tell(core, ctx.source, "record.ready", state.clone());
+    Ok(state)
+}
+
+fn ready_state(core: &Core, r: &Ready) -> Value {
+    let (width, height) = planned(core, r.rect, r.scale);
+    json!({
+        "status": "ready",
+        "elapsed": 0.0,
+        "source": r.source,
+        "area": r.rect,
+        "width": width,
+        "height": height,
+    })
+}
+
+/// `record.toggle` (VID-012, VID-075): Record when Ready, Pause while recording,
+/// Resume when paused; with nothing going on, Video capture.
+pub fn toggle(core: &Arc<Core>, ctx: &Context) -> CommandResult {
+    let state = service(core)
+        .current
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|r| r.recorder.state());
+    match state {
+        Some(State::Recording) => pause(core, ctx, true),
+        Some(State::Paused) => pause(core, ctx, false),
+        Some(_) => Ok(status(core)),
+        None if service(core).ready.lock().unwrap().is_some() => start(core, ctx, &json!({})),
+        None => video(core, ctx),
+    }
 }
 
 /// The icon menu's entry while recording: (id, "Stop recording").
@@ -151,6 +239,7 @@ fn status_of(r: &Running) -> Value {
         },
         "elapsed": (r.recorder.recorded().as_secs_f64() * 10.0).round() / 10.0,
         "source": r.source,
+        "area": r.rect,
         "path": r.path,
         "width": r.recorder.width,
         "height": r.recorder.height,
@@ -174,7 +263,17 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             tr(lang, "errors.record_busy", &[]),
         ));
     }
-    let (rect, scale, source) = area(p, lang)?;
+    // Without an area in `p`, the one chosen on screen (Ready).
+    let asks_area = p.get("source").is_some() || p.get("x").is_some() || p.get("monitor").is_some();
+    let ready = if asks_area {
+        None
+    } else {
+        svc.ready.lock().unwrap().take()
+    };
+    let (rect, scale, source) = match ready {
+        Some(r) => (r.rect, r.scale, r.source),
+        None => area(p, lang)?,
+    };
     let setting = |key: &str| {
         core.settings
             .get(key)
@@ -224,10 +323,12 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         recorder,
         source,
         path,
+        rect,
     };
     let status = status_of(&running);
     *current = Some(running);
     drop(current);
+    bar(core, Some(status.clone()));
     tracing::info!(
         width = status["width"].as_u64(),
         height = status["height"].as_u64(),
@@ -274,6 +375,7 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     } else {
         r.recorder.stop()
     };
+    bar(core, None);
     let result = match summary {
         Ok(s) if s.cancelled => {
             tell(core, source, "record.cancelled", json!({ "status": "cancelled" }));
@@ -343,8 +445,18 @@ pub fn stop(core: &Core, ctx: &Context) -> CommandResult {
     finish(core, ctx.source, r, false, ctx.lang)
 }
 
-/// `record.cancel`: ends without a file (VID-014).
+/// `record.cancel`: ends without a file (VID-014); when Ready, nothing is recorded.
 pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
+    if service(core).ready.lock().unwrap().take().is_some() {
+        bar(core, None);
+        tell(
+            core,
+            ctx.source,
+            "record.cancelled",
+            json!({ "status": "cancelled" }),
+        );
+        return Ok(json!({ "status": "cancelled" }));
+    }
     let r = take(core, ctx.lang)?;
     finish(core, ctx.source, r, true, ctx.lang)
 }
@@ -361,6 +473,7 @@ pub fn pause(core: &Core, ctx: &Context, pause: bool) -> CommandResult {
     }
     let status = status_of(r);
     drop(current);
+    bar(core, Some(status.clone()));
     tell(
         core,
         ctx.source,
@@ -372,8 +485,13 @@ pub fn pause(core: &Core, ctx: &Context, pause: bool) -> CommandResult {
 
 /// `record.status`.
 pub fn status(core: &Core) -> Value {
-    match service(core).current.lock().unwrap().as_ref() {
-        Some(r) => status_of(r),
+    let svc = service(core);
+    if let Some(r) = svc.current.lock().unwrap().as_ref() {
+        return status_of(r);
+    }
+    let ready = svc.ready.lock().unwrap().clone();
+    match ready {
+        Some(r) => ready_state(core, &r),
         None => json!({ "status": "idle" }),
     }
 }

@@ -894,6 +894,14 @@
     "record_status": {
       "title": "Recording status",
       "description": "Whether a recording runs, how long it has recorded and what."
+    },
+    "record_video": {
+      "title": "Video capture",
+      "description": "Choose an area on screen and record it: the recording bar waits for Record. During a recording, it stops it."
+    },
+    "record_toggle": {
+      "title": "Record / Pause / Resume",
+      "description": "Records when the area is ready, pauses while recording and resumes when paused."
     }
   },
   "settings": {
@@ -1570,7 +1578,8 @@
     "stop_series": "Stop capture: {{name}}",
     "tooltip_timer": "XcreenShot · capturing at intervals",
     "stop_schedule": "Stop capture: {{name}} (next: {{when}})",
-    "stop_recording": "Stop recording"
+    "stop_recording": "Stop recording",
+    "video_capture": "Video capture"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -4010,6 +4019,20 @@
       "hint": "It appears with the capture’s details. Esc: no text.",
       "add": "Add",
       "skip": "No text"
+    },
+    "recbar": {
+      "title": "Recording",
+      "record": "Record",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "cancel": "Cancel",
+      "ready": "Ready",
+      "recording": "Recording",
+      "paused": "Paused",
+      "size": "{{width}} × {{height}}",
+      "cancel_confirm": "Cancel the recording? Nothing will be kept.",
+      "keep": "Keep recording"
     }
   },
   "history": {

@@ -440,6 +440,11 @@ pub fn slots() -> Vec<Slot> {
         capture("capture.multi_start", "capture.multi_start", ""),
         // The window picker (CAP-030).
         capture("capture.window_picker", "capture.window_picker", ""),
+        // Video (VID-075): Video capture (stops during a recording), Record / Pause /
+        // Resume and Stop recording.
+        capture("record.video", "record.video", ""),
+        capture("record.toggle", "record.toggle", ""),
+        capture("record.stop", "record.stop", ""),
         // The clipboard as a source (CAP-039). No default.
         capture("capture.clipboard", "capture.clipboard", ""),
         // Quick annotation (CAP-057): only while its trial feature is on (APP-034).
@@ -788,6 +793,16 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.window_picker", Global, Compatibility, Macos) => "Ctrl+Shift+KeyM",
         ("capture.window_picker", Global, _, _) => "Ctrl+Alt+Shift+KeyM",
         ("capture.quick_annotate", Global, _, _) => "Ctrl+Alt+Shift+KeyQ",
+        // VID-075.
+        ("record.video", Global, Compatibility, Windows) => return None,
+        ("record.video", Global, Compatibility, Macos) => "Ctrl+Shift+KeyV",
+        ("record.video", Global, _, _) => "Ctrl+Alt+Shift+KeyV",
+        ("record.toggle", Global, Coexistence, Windows) => "Ctrl+Shift+F9",
+        ("record.toggle", Global, Compatibility, Windows) => "Shift+F9",
+        ("record.toggle", Global, Coexistence, Macos) => "Ctrl+Alt+Shift+Space",
+        ("record.toggle", Global, Compatibility, Macos) => "Ctrl+Shift+Space",
+        ("record.stop", Global, Coexistence, Windows) => "Ctrl+Shift+F10",
+        ("record.stop", Global, Compatibility, Windows) => "Shift+F10",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",
@@ -1767,9 +1782,9 @@ mod tests {
             Some(acc("Ctrl+Alt+Shift+J"))
         );
         let preview = store.preview_profile(Profile::Coexistence, Profile::Compatibility, false);
-        // Only the defaults that differ (Capture, Quit, and Trim edges, which gives
-        // Ctrl+Shift+X to Quit); the custom one stays.
-        assert_eq!(preview["changes"].as_array().unwrap().len(), 3);
+        // Only the defaults that differ (Capture, the three of video, Quit, and Trim
+        // edges, which gives Ctrl+Shift+X to Quit); the custom one stays.
+        assert_eq!(preview["changes"].as_array().unwrap().len(), 6);
         store.reset(None);
         assert_eq!(
             store.binding(&ping, Profile::Compatibility),

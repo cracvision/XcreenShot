@@ -13,6 +13,7 @@ import { PdfImport } from "./windows/PdfImport";
 import { Launcher } from "./windows/Launcher";
 import { WebpagePrompt } from "./windows/WebpagePrompt";
 import { AskText } from "./windows/AskText";
+import { RecordBar, RecordFrame } from "./windows/RecordBar";
 import { Working } from "./windows/Working";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
@@ -45,6 +46,10 @@ export function App() {
       return <WebpagePrompt />;
     case "ask-text":
       return <AskText />;
+    case "recbar":
+      return <RecordBar />;
+    case "recframe":
+      return <RecordFrame />;
     case "working":
       return <Working />;
     case "help":

@@ -866,7 +866,23 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
             }})),
+        B::new("record.video", &["VID-002", "VID-003", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
+                "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
+        B::new("record.toggle", &["VID-012", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
         B::new("record.stop", &["VID-024", "VID-013"])
+            .scopes(ALL)
+            .assignable()
             .mutates()
             .params(params(
                 json!({"id": {"type": "string", "description": "The recording (there is only one; the icon's Stop recording passes it)"}}),

@@ -2119,6 +2119,88 @@ html.launcher-root #root {
   }
 }
 
+/* The recording bar (VID-011) and the border of the recorded area (VID-020). */
+.recbar {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 4px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.recbar-grip {
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: -2px;
+  cursor: grab;
+  padding: 0 2px;
+}
+
+.recbar-fill {
+  flex: 1;
+  align-self: stretch;
+}
+
+.recbar-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.recbar-size {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.recbar-ask {
+  flex: 1;
+  padding-left: 8px;
+}
+
+.recbar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+}
+
+.recbar-dot.on {
+  background: var(--rec);
+  animation: working-pulse 0.8s var(--ease-in) infinite alternate;
+}
+
+.btn.rec::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rec-frame {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  border: 3px solid var(--brand);
+  pointer-events: none;
+}
+
+.rec-frame.recording {
+  border-color: var(--rec);
+}
+
+.rec-frame.paused {
+  border-style: dashed;
+  border-color: var(--rec);
+}
+
 /* The web address box (CAP-037). */
 .webpage-prompt {
   display: grid;
@@ -7114,6 +7196,10 @@ button.lc-head:hover,
   .menu-item,
   .menu-check .icon,
   .recorder .dot,
+  .recbar-dot.on {
+    animation: none;
+  }
+
   .working-dot {
     animation: none;
   }

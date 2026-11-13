@@ -254,6 +254,19 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M4, entrega 1: motor de grabación y barra)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| VID-026, VID-029 | ¿Con qué se graba y se codifica en Windows? | Imagen con la duplicación del escritorio de DXGI (solo entrega un fotograma cuando la pantalla cambia: frecuencia variable sin trabajo extra), recorte, escalado y paso a NV12 en la GPU (procesador de video de D3D11) y H.264 en MP4 con Media Foundation (codificador por hardware con los fotogramas en la GPU; si no hay, el de software). Todo del sistema, sin FFmpeg | Provisional |
+| VID-026 | La primera imagen | Se toma con GDI, porque la duplicación del escritorio no entrega nada mientras la pantalla no cambia (o el monitor está en reposo) y el video saldría negro | Provisional |
+| VID-026 | Espacio de color | BT.709 desde 720p y BT.601 por debajo, porque es lo que suponen los reproductores cuando el archivo no lo dice | Provisional |
+| VID-025 | Tasa de bits | Proporcional a píxeles × fps (0,08 bits por píxel y fotograma en Alta: unos 5 Mbps a 1080p30 si todo cambia); con la frecuencia variable, una pantalla quieta ocupa casi nada | Provisional |
+| VID-002 | La pantalla se congela al elegir el área | Por ahora sí: se usa la misma selección que las imágenes. El spec pide que no se congele; queda para la entrega de la pestaña Video | Provisional |
+| VID-003 | Áreas que cruzan monitores | Por ahora la grabación se queda en el monitor que tiene más área; cruzar monitores necesita juntar dos duplicaciones | Provisional |
+| VID-011 | La barra de esta entrega | Solo tiempo, tamaño, Grabar, Pausar/Reanudar, Detener y Cancelar (con confirmación al grabar). Lo demás llega con su función | Provisional |
+| VID-054 | ¿Dónde va el video? | A la carpeta del mes de la biblioteca, "Video AAAA-MM-DD HH.MM.SS.mp4". La biblioteca todavía no lista videos (llega con el reproductor, VID-056) | Provisional |
+
 ## Dudas del equipo de construcción (M3, entrega 19: SVG como fuente)
 
 | ID | Duda | Propuesta | Estado |

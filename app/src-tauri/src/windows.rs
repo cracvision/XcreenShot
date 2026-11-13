@@ -20,6 +20,8 @@ pub const WELCOME: &str = "welcome";
 pub const WEBPAGE: &str = "webpage";
 pub const WORKING: &str = "working";
 pub const ASK_TEXT: &str = "ask-text";
+pub const RECBAR: &str = "recbar";
+pub const RECFRAME: &str = "recframe";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
 
@@ -329,6 +331,93 @@ pub fn ask_text(app: &AppHandle, open: bool) -> tauri::Result<()> {
         .theme(theme(app))
         .build()?;
     focus(&w);
+    Ok(())
+}
+
+/// The recording bar and the border around the recorded area (VID-011, VID-020):
+/// both stay out of the video (content protection) and the border lets clicks
+/// through. `None` closes them.
+pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
+    let Some(state) = state else {
+        for label in [RECBAR, RECFRAME] {
+            if let Some(w) = app.get_webview_window(label) {
+                w.destroy()?;
+            }
+        }
+        return Ok(());
+    };
+    let n = |k: &str| state["area"][k].as_f64().unwrap_or(0.0);
+    let (x, y, w, h) = (n("x"), n("y"), n("width"), n("height"));
+    // The bar tells its window what changed.
+    let _ = app.emit_to(RECBAR, "xs://recbar", state.clone());
+    let _ = app.emit_to(RECFRAME, "xs://recbar", state.clone());
+    let monitor = app
+        .monitor_from_point(x + w / 2.0, y + h / 2.0)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let scale = monitor.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    // The border: 3 px around the area, outside it.
+    let edge = (3.0 * scale).round();
+    if app.get_webview_window(RECFRAME).is_none() && w > 0.0 {
+        let frame = WebviewWindowBuilder::new(app, RECFRAME, WebviewUrl::App("index.html".into()))
+            .title("XcreenShot")
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .focused(false)
+            .focusable(false)
+            .visible(false)
+            .content_protected(true)
+            .theme(theme(app))
+            .build()?;
+        frame.set_position(tauri::PhysicalPosition::new((x - edge) as i32, (y - edge) as i32))?;
+        frame.set_size(tauri::PhysicalSize::new(
+            (w + 2.0 * edge) as u32,
+            (h + 2.0 * edge) as u32,
+        ))?;
+        let _ = frame.set_ignore_cursor_events(true);
+        frame.show()?;
+    }
+    if app.get_webview_window(RECBAR).is_none() {
+        let (bw, bh) = (420.0, 52.0);
+        let gap = 10.0 * scale;
+        let mut px = x + w / 2.0 - bw * scale / 2.0;
+        // Under the area; above it when there is no room; inside it at the bottom when
+        // neither fits (it stays out of the video anyway).
+        let mut py = y + h + edge + gap;
+        if let Some(m) = &monitor {
+            let area = m.work_area();
+            let (ax, ay) = (area.position.x as f64, area.position.y as f64);
+            let (aw, ah) = (area.size.width as f64, area.size.height as f64);
+            px = px.clamp(ax, (ax + aw - bw * scale).max(ax));
+            if py + bh * scale > ay + ah {
+                py = y - edge - gap - bh * scale;
+                if py < ay {
+                    py = y + h - gap - bh * scale;
+                }
+            }
+        }
+        let title = xs_core::i18n::tr(app.state::<AppState>().core.lang(), "ui.recbar.title", &[]);
+        let bar = WebviewWindowBuilder::new(app, RECBAR, WebviewUrl::App("index.html".into()))
+            .title(title)
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .content_protected(true)
+            .inner_size(bw, bh)
+            .theme(theme(app))
+            .build()?;
+        bar.set_position(tauri::PhysicalPosition::new(px as i32, py as i32))?;
+        bar.show()?;
+    }
     Ok(())
 }
 

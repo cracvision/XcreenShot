@@ -1672,6 +1672,10 @@ pub fn extension() -> Extension {
         reg.handle("record.status", move |_ctx, _p| {
             Ok(record::status(&*upgrade(&w)?))
         });
+        let w = weak.clone();
+        reg.handle("record.video", move |ctx, _p| record::video(&upgrade(&w)?, ctx));
+        let w = weak.clone();
+        reg.handle("record.toggle", move |ctx, _p| record::toggle(&upgrade(&w)?, ctx));
         // The text box of Capture details (CAP-051).
         let w = weak.clone();
         reg.handle("capture.details_text", move |ctx, p| {

@@ -191,6 +191,19 @@ fn areas_as_objects(core: &Core, id: &str, places: &[Rect]) {
 /// Lets the user select an area and returns it from the top left of the monitor it is
 /// mostly on, without capturing (Choose on screen, CAP-026).
 pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
+    let (monitor, inside) = pick_area(core, ctx)?;
+    Ok(json!({
+        "monitor": monitor.name,
+        "x": inside.x - monitor.rect.x,
+        "y": inside.y - monitor.rect.y,
+        "width": inside.width,
+        "height": inside.height,
+    }))
+}
+
+/// Lets the user select an area on screen: the monitor it is mostly on, and the area
+/// inside it (virtual-screen pixels). The area to record a video (VID-002, VID-003).
+pub fn pick_area(core: &Core, ctx: &Context) -> Result<(MonitorInfo, Rect), CommandError> {
     let lang = ctx.lang;
     let frozen = freeze(lang)?;
     let request = json!({
@@ -225,13 +238,7 @@ pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
         .ok_or_else(|| CommandError::internal("no monitor"))?;
     // Inside that monitor, so the capture never comes out partial.
     let inside = monitor.rect.intersect(&area).unwrap_or(area);
-    Ok(json!({
-        "monitor": monitor.name,
-        "x": inside.x - monitor.rect.x,
-        "y": inside.y - monitor.rect.y,
-        "width": inside.width,
-        "height": inside.height,
-    }))
+    Ok((monitor.clone(), inside))
 }
 
 /// A rectangle given as `{x, y, width, height}`.

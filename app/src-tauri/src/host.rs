@@ -407,6 +407,15 @@ impl Host for TauriHost {
             .map_err(internal)
     }
 
+    fn recording_bar(&self, state: Option<Value>) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::recording_bar(&app, state) {
+                tracing::warn!(error = %e, "recording bar");
+            }
+        });
+    }
+
     fn recording_event(&self, state: Value) {
         let _ = self.app.emit("xs://record", state);
         // Stop recording in the icon's menu, and its clock (VID-020).
