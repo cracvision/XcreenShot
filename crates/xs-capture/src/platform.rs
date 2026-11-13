@@ -21,6 +21,50 @@ pub struct OsInfo {
     pub build: String,
 }
 
+/// The name to show for an app: its description, unless it is a file name or a path
+/// (packaged apps such as Notepad say "Notepad.exe" or give their full path), then the
+/// name without folder or ".exe".
+pub fn app_name(description: Option<&str>, fallback: &str, path: Option<&str>) -> String {
+    let file_like = |s: &str| s.contains(['\\', '/']) || s.to_ascii_lowercase().ends_with(".exe");
+    let stem = |s: &str| {
+        let base = s.rsplit(['\\', '/']).next().unwrap_or(s);
+        match base.len().checked_sub(4) {
+            Some(cut) if base.to_ascii_lowercase().ends_with(".exe") => base[..cut].to_string(),
+            _ => base.to_string(),
+        }
+    };
+    for candidate in [description.unwrap_or(""), fallback] {
+        let candidate = candidate.trim();
+        if candidate.is_empty() {
+            continue;
+        }
+        return if file_like(candidate) {
+            stem(candidate)
+        } else {
+            candidate.to_string()
+        };
+    }
+    path.map(stem).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::app_name;
+
+    #[test]
+    fn packaged_apps_get_a_clean_name() {
+        let path = r"C:\Program Files\WindowsApps\Microsoft.WindowsNotepad_11.2609.11.0_x64__8wekyb3d8bbwe\Notepad\Notepad.exe";
+        // Notepad describes itself as its file name.
+        assert_eq!(app_name(Some("Notepad.exe"), "", Some(path)), "Notepad");
+        // Or gives its full path as the window's app name.
+        assert_eq!(app_name(None, path, Some(path)), "Notepad");
+        assert_eq!(app_name(Some("Google Chrome"), "chrome", None), "Google Chrome");
+        assert_eq!(app_name(Some("  "), "Paint", None), "Paint");
+        assert_eq!(app_name(None, "", Some(r"C:\Tools\thing.EXE")), "thing");
+        assert_eq!(app_name(None, "", None), "");
+    }
+}
+
 #[cfg(windows)]
 mod imp {
     use super::*;
@@ -205,22 +249,7 @@ mod imp {
     pub fn app_info(pid: u32, fallback_name: &str) -> AppInfo {
         let path = exe_path(pid);
         let (version, description) = path.as_deref().map(version_info).unwrap_or((None, None));
-        let stem = |p: &str| {
-            std::path::Path::new(p)
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-        };
-        // Packaged apps (Notepad, Calculator…) do not let their version info be read and
-        // give their full path as a name: their file name then.
-        let name = description.unwrap_or_else(|| {
-            if fallback_name.is_empty() {
-                path.as_deref().and_then(stem).unwrap_or_default()
-            } else if fallback_name.contains(['\\', '/']) {
-                stem(fallback_name).unwrap_or_else(|| fallback_name.to_string())
-            } else {
-                fallback_name.to_string()
-            }
-        });
+        let name = super::app_name(description.as_deref(), fallback_name, path.as_deref());
         AppInfo {
             name,
             version,
