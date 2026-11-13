@@ -857,12 +857,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
                     "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
                     "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
+                    "countdown": {"type": "number", "minimum": 0, "maximum": 10, "description": "Seconds of countdown first (VID-008); from automation none unless asked, from the bar the setting"},
                     "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
                 }),
                 &[],
             ))
             .result(json!({"type": "object", "properties": {
-                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
                 "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
@@ -906,19 +907,19 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .mutates()
             .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
         B::new("record.pause", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
-                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
                 "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
             }})),
         B::new("record.resume", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
-                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
                 "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
             }})),
         B::new("record.status", &["VID-024"]).result(json!({"type": "object", "properties": {
-                "status": {"type": "string", "enum": ["recording", "paused", "finalizing", "idle"]},
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
                 "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}

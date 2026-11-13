@@ -8,7 +8,7 @@ import { run } from "../lib/commands";
 import { clock } from "./recClock";
 
 interface RecState {
-  status: "ready" | "recording" | "paused" | "finalizing" | "idle";
+  status: "ready" | "countdown" | "recording" | "paused" | "finalizing" | "idle";
   elapsed?: number;
   width?: number;
   height?: number;
@@ -99,6 +99,11 @@ export function RecordBar() {
       >
         {t("ui.recbar.cursor")}
       </button>
+      {state.status === "countdown" && (
+        <span className="recbar-size" role="status">
+          {t("ui.recbar.countdown")}
+        </span>
+      )}
       {ready && (
         <button
           type="button"

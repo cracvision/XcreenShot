@@ -13,9 +13,9 @@ Motor de grabación, comandos `record.*`, Captura de video con la barra de graba
 ## Para Carlos (en la próxima caminata)
 
 1. [ ] Menú del ícono > **Captura de video** (o `Ctrl+Alt+Mayús+V`): arrastra un área. Aparece un borde azul alrededor y, debajo, la barra con `00:00:00`, el tamaño del video y **Grabar**.
-2. [ ] Pulsa **Grabar**: el borde se vuelve rojo y el tiempo avanza. Mueve una ventana dentro del área.
+2. [ ] Pulsa **Grabar**: hay una cuenta atrás de 3 s (en Preferencias > Video puedes elegir Ninguna, 5 o 10; `Esc` la cancela y vuelves a *Lista*). Después el borde se vuelve rojo y el tiempo avanza. Mueve una ventana dentro del área.
 3. [ ] **Pausar** (o `Ctrl+Mayús+F9`): el tiempo se para y el borde queda discontinuo. **Reanudar**.
-4. [ ] **Detener** (o `Ctrl+Mayús+F10`): aparece el aviso "Video guardado". Abre la carpeta del mes de tu biblioteca y reproduce el MP4 con el reproductor de Windows: se ve lo que hiciste, sin el borde ni la barra, y sin el tiempo de la pausa.
+4. [ ] **Detener** (o `Ctrl+Mayús+F10`): aparece el aviso "Video guardado". En la biblioteca aparece el video con la miniatura de su primer fotograma; ábrelo (se abre con el reproductor de Windows): se ve lo que hiciste, sin el borde ni la barra, y sin el tiempo de la pausa.
 5. [ ] Empieza otra y, mientras graba, abre el menú del ícono: arriba aparece **Detener grabación**.
 6. [ ] La **×** de la barra durante una grabación pregunta antes de cancelar; **Cancelar** no deja ningún archivo.
 7. [ ] Graba moviendo el ratón: el puntero se ve en el video, con su forma (flecha, mano sobre un enlace, I sobre un texto). Pulsa **Puntero** en la barra a mitad: desde ahí ya no sale.

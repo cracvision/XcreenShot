@@ -212,7 +212,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-005 | Grabar una ventana | M4 | Should | — |
 | VID-006 | Resumen Listo para grabar | M4 | Should | — |
 | VID-007 | Empezar a grabar sin esperar | M4 | Could | — |
-| VID-008 | Cuenta atrás | M4 | Should | — |
+| VID-008 | Cuenta atrás | M4 | Should | En curso (Windows: preferencia **Cuenta atrás antes de grabar** (Ninguna, 3 s por defecto, 5 s o 10 s) al pulsar **Grabar** en la barra, con la cuenta atrás de las capturas con retardo; `Esc` vuelve a *Lista*; `record.status` dice `countdown`; desde automatización solo con `countdown`. Faltan los números en el centro del área, saltarla pulsando **Grabar** otra vez y preparar cámara y micrófono durante ella) |
 | VID-009 | Presets de video | M4 | Should | — |
 | VID-010 | Convertir una grabación en imagen | M4 | Could | — |
 | VID-011 | Barra de grabación | M4 | Must | En curso (Windows: ventana flotante bajo el área (encima si no cabe), fuera del video, que se arrastra por su asa: tiempo `hh:mm:ss`, tamaño del video, **Grabar** en *Lista*, **Pausar**/**Reanudar** y **Detener** con sus atajos en el tooltip, **×** que pregunta antes de cancelar. Faltan cursor, audio, cámara, micrófono, Dibujo en vivo, temporizador y el menú Más) |

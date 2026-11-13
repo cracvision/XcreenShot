@@ -1303,6 +1303,16 @@
     "video_cursor": {
       "label": "Capturar cursor",
       "description": "El puntero aparece en el video con su forma de cada momento."
+    },
+    "video_countdown": {
+      "label": "Cuenta atrás antes de grabar",
+      "description": "Números grandes antes de que empiece la grabación; Esc vuelve a Lista.",
+      "options": {
+        "none": "Ninguna",
+        "3": "3 segundos",
+        "5": "5 segundos",
+        "10": "10 segundos"
+      }
     }
   },
   "errors": {
@@ -4041,7 +4051,8 @@
       "size": "{{width}} × {{height}}",
       "cancel_confirm": "¿Cancelar la grabación? No se guardará nada.",
       "keep": "Seguir grabando",
-      "cursor": "Puntero"
+      "cursor": "Puntero",
+      "countdown": "Empezando…"
     }
   },
   "history": {

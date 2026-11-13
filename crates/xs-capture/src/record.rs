@@ -35,6 +35,8 @@ struct Ready {
 pub struct Recording {
     current: Mutex<Option<Running>>,
     ready: Mutex<Option<Ready>>,
+    /// The countdown runs (VID-008).
+    counting: std::sync::atomic::AtomicBool,
 }
 
 fn service(core: &Core) -> Arc<Recording> {
@@ -280,12 +282,9 @@ fn tell(core: &Core, source: Source, event: &str, data: Value) {
 pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
     let svc = service(core);
-    let mut current = svc.current.lock().unwrap();
-    if current.is_some() {
-        return Err(CommandError::new(
-            ErrorCode::Busy,
-            tr(lang, "errors.record_busy", &[]),
-        ));
+    let busy = || CommandError::new(ErrorCode::Busy, tr(lang, "errors.record_busy", &[]));
+    if running(core) {
+        return Err(busy());
     }
     // Without an area in `p`, the one chosen on screen (Ready).
     let asks_area = p.get("source").is_some() || p.get("x").is_some() || p.get("monitor").is_some();
@@ -294,10 +293,44 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     } else {
         svc.ready.lock().unwrap().take()
     };
+    // The countdown (VID-008): from the bar, the setting's; from automation only when
+    // asked (VID-024). Esc goes back to Ready.
+    let countdown = p.get("countdown").and_then(Value::as_f64).unwrap_or_else(|| {
+        if ready.is_some() && !ctx.source.is_automation() {
+            core.settings
+                .get("video.countdown")
+                .and_then(|v| v.as_str().and_then(|s| s.parse::<f64>().ok()))
+                .unwrap_or(0.0)
+        } else {
+            0.0
+        }
+    });
+    if countdown > 0.0 {
+        if let Some(r) = &ready {
+            let mut shown = ready_state(core, r);
+            shown["status"] = json!("countdown");
+            bar(core, Some(shown));
+        }
+        use std::sync::atomic::Ordering;
+        svc.counting.store(true, Ordering::Relaxed);
+        let done = core.host().countdown(countdown);
+        svc.counting.store(false, Ordering::Relaxed);
+        if !done {
+            if let Some(r) = ready {
+                bar(core, Some(ready_state(core, &r)));
+                *svc.ready.lock().unwrap() = Some(r);
+            }
+            return Err(crate::cancelled(lang));
+        }
+    }
     let (rect, scale, source) = match ready {
         Some(r) => (r.rect, r.scale, r.source),
         None => area(p, lang)?,
     };
+    let mut current = svc.current.lock().unwrap();
+    if current.is_some() {
+        return Err(busy());
+    }
     let setting = |key: &str| {
         core.settings
             .get(key)
@@ -516,6 +549,9 @@ pub fn status(core: &Core) -> Value {
     let svc = service(core);
     if let Some(r) = svc.current.lock().unwrap().as_ref() {
         return status_of(r);
+    }
+    if svc.counting.load(std::sync::atomic::Ordering::Relaxed) {
+        return json!({ "status": "countdown" });
     }
     let ready = svc.ready.lock().unwrap().clone();
     match ready {
