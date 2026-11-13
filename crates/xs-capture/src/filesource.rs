@@ -157,8 +157,14 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, paths: &[PathBuf]) -> Com
                     // recent tray), and the clipboard gets the last one.
                     file_opts.open_editor = opts.open_editor && documents.is_empty();
                     file_opts.cursor = false;
-                    file_opts.meta =
-                        Some(json!({ "file": { "name": name, "path": path, "modified": modified } }));
+                    // When the photo was taken, from its EXIF (CAP-040, CAP-056).
+                    let taken = xs_library::exif::taken(path).and_then(|ms| {
+                        chrono::DateTime::from_timestamp_millis(ms)
+                            .map(|t| t.with_timezone(&chrono::Local).to_rfc3339())
+                    });
+                    file_opts.meta = Some(json!({
+                        "file": { "name": name, "path": path, "modified": modified, "taken": taken }
+                    }));
                     let shot = Shot {
                         rect: Rect {
                             x: 0,
