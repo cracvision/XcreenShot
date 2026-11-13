@@ -2,7 +2,7 @@
 
 Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo lee al empezar (lo pide `CLAUDE.md`). Se actualiza al cerrar una entrega o un bloque de trabajo, y siempre antes de pasar a una sesión nueva. Es un resumen: el detalle está en las fuentes de abajo.
 
-**Última actualización:** 2026-11-12 (noche), con el aspecto nuevo **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: M3.1 (presets), M3.2 (Extraer texto) y M3.3 (desplazamiento) hechas, y de M3.4 la región fija, las múltiples áreas y el menú. Siguiente: el resto de M3.4.
+**Última actualización:** 2026-11-12 (noche, hasta medianoche), con el aspecto nuevo **Cristal**, con M1 y **M2 terminados en Windows** (salvo EDT-032, EDT-033 y EDT-034, que esperan a Carlos) y **M3 en curso**: presets, Extraer texto, desplazamiento, región fija, múltiples áreas, menú, selector de ventanas, destino Archivo, efectos al capturar, portapapeles como fuente, anotación rápida, intervalo y programada. Siguiente: capturas del sistema (CAP-042) y el resto de M3 (ver "Cambios de la última sesión").
 
 **Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
@@ -51,6 +51,16 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **M3, más modos y tiempos (2026-11-12, noche, mientras Carlos dormía).** Hechos en Windows, probados en la instancia de desarrollo aislada y subidos; todavía no están en ningún instalador.
+  - **Selector de ventanas** (CAP-030, `Ctrl+Alt+Mayús+M`): todas las ventanas del escritorio, también tapadas y minimizadas, con miniatura, filtro y teclado. `tests/manual/CAP-030.md`.
+  - **Destino Archivo** (CAP-052, CAP-053): Compartir > Guardar en un archivo, con carpeta, patrón de nombre (`{prefix}_{date}_{time}`, contador…), formato y qué hacer si existe. `tests/manual/CAP-052-053.md`.
+  - **Efectos al capturar** (CAP-051): borde, sombra, escala, etc. desde el panel; quedan editables en el documento. `tests/manual/CAP-051.md`.
+  - **Portapapeles como fuente** (CAP-039): imagen, archivos de imagen o texto (un objeto Texto editable). `tests/manual/CAP-039.md`.
+  - **Anotación rápida** (CAP-057), primera **función en prueba** (APP-034): se activa en Preferencias > Funciones en prueba; `Ctrl+Alt+Mayús+Q`, arrastrar un área, marcarla (flecha, forma, texto, resaltar, desenfocar, paso) y `Enter` para copiar sin abrir el editor. `tests/manual/CAP-057.md`.
+  - **Intervalo** (CAP-049): Tiempo = Intervalo, cada 3 s a 24 h, con parada manual, por número, por tiempo o a una hora y descarte de capturas iguales; reloj en el ícono y **Detener captura** en su menú. `tests/manual/CAP-049.md`.
+  - **Programada** (CAP-050): Tiempo = Programada, con fecha, hora y repetición; sobrevive a reinicios y hace tarde (hasta 5 min) la que se perdió. `tests/manual/CAP-050.md`.
+  - Decisiones provisionales nuevas en `spec/QUESTIONS.md` (secciones "M3, entrega 5", "6" y "7").
+  - De paso: durante las pruebas, una anotación rápida dejó una imagen de prueba en el portapapeles de Carlos (no se pudo restaurar lo que había). Y las capturas de prueba de pantalla completa llevan en el nombre el de la app que estaba al frente.
 - **M3.3 y parte de M3.4 (2026-11-12, noche, después del instalador Cristal).** Hechos en Windows y probados en la instancia de desarrollo; todavía no están en ningún instalador.
   - **Captura con desplazamiento** (CAP-034 a CAP-036): manual (botón **Desplazamiento** `S` de la barra de captura) con panel de vista previa al lado del área, **Listo** `Enter` y **Cancelar** `Esc` sin quitar el foco a la app; automática (flechas ↓ → ↘ y teclas `D` `R` `X`), que gira la rueda sola hasta el final y deja el contenido donde estaba; unión con cabeceras y pies fijos una sola vez; tope de 60 000 px; Selección = Desplazamiento con sus propiedades; preset incorporado **Desplazamiento**; **Terminar desplazamiento** en el menú del ícono; `capture.scrolling`, `capture.scroll_action`, `capture.scroll_state`. Probado con una página web de 60 secciones (cabecera y pie fijos) y con el Bloc de notas. Prueba: [`tests/manual/CAP-034-036.md`](../tests/manual/CAP-034-036.md).
   - **Región fija y posición** (CAP-026), **Múltiples áreas** (CAP-033) y **Captura de menú** (CAP-031). Pruebas: `tests/manual/CAP-026.md`, `CAP-033.md`, `CAP-031.md`.
