@@ -4174,7 +4174,8 @@
       "delay": "{{seconds}} s"
     },
     "copy_name": "{{name}} (copy)",
-    "warning_settings": "Some of its settings do not exist in this version. Edit it."
+    "warning_settings": "Some of its settings do not exist in this version. Edit it.",
+    "warning_path": "“{{path}}” does not exist on this computer. Check it."
   },
   "interval": {
     "name": "Interval"

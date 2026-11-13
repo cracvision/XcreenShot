@@ -338,6 +338,27 @@ pub fn menu_items(core: &Core) -> Vec<(String, String)> {
         .collect()
 }
 
+/// Paths a preset uses that do not exist on this computer (CAP-063): the File
+/// destination's folder (it is created when capturing, but may be another computer's)
+/// and the fixed file of Selection = File.
+pub fn missing_paths(p: &Preset) -> Vec<String> {
+    let s = &p.settings;
+    let text = |v: &Value| v.as_str().map(str::trim).unwrap_or_default().to_string();
+    let mut out = Vec::new();
+    let sends_file = s["share"]
+        .as_array()
+        .is_some_and(|a| a.iter().any(|d| d == "file"));
+    let folder = text(&s["file"]["folder"]);
+    if sends_file && !folder.is_empty() && !std::path::Path::new(&folder).is_dir() {
+        out.push(folder);
+    }
+    let fixed = text(&s["sourceFile"]);
+    if s["selection"] == "file" && !fixed.is_empty() && !std::path::Path::new(&fixed).is_file() {
+        out.push(fixed);
+    }
+    out
+}
+
 /// A preset as `preset.list` shows it.
 pub fn to_json(core: &Core, p: &Preset, lang: Lang) -> Value {
     let platform = core.shortcuts.platform();
@@ -345,6 +366,13 @@ pub fn to_json(core: &Core, p: &Preset, lang: Lang) -> Value {
     let mut warnings = Vec::new();
     if plan(p).is_err() {
         warnings.push(json!({ "code": "settings", "message": tr(lang, "presets.warning_settings", &[]) }));
+    }
+    for path in missing_paths(p) {
+        warnings.push(json!({
+            "code": "path",
+            "path": path,
+            "message": tr(lang, "presets.warning_path", &[("path", &path)]),
+        }));
     }
     json!({
         "id": p.id,
@@ -394,6 +422,28 @@ mod tests {
             renamed: false,
             extra: Map::new(),
         }
+    }
+
+    /// CAP-063: paths of another computer are marked to be checked.
+    #[test]
+    fn paths_that_do_not_exist_are_marked() {
+        let dir = tempfile::tempdir().unwrap();
+        let here = dir.path().to_string_lossy().into_owned();
+        let mut p = preset("Archivo");
+        p.settings = json!({"share": ["file"], "file": {"folder": here}});
+        assert!(missing_paths(&p).is_empty());
+        let gone = dir.path().join("no-such").to_string_lossy().into_owned();
+        p.settings = json!({"share": ["file"], "file": {"folder": gone}});
+        assert_eq!(missing_paths(&p), vec![gone.clone()]);
+        // Not sent to File: the folder does not matter.
+        p.settings = json!({"share": [], "file": {"folder": gone}});
+        assert!(missing_paths(&p).is_empty());
+        // The default folder (empty) is never marked.
+        p.settings = json!({"share": ["file"], "file": {"folder": ""}});
+        assert!(missing_paths(&p).is_empty());
+        let file = dir.path().join("gone.png").to_string_lossy().into_owned();
+        p.settings = json!({"selection": "file", "sourceFile": file});
+        assert_eq!(missing_paths(&p), vec![file]);
     }
 
     #[test]

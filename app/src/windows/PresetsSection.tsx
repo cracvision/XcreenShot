@@ -326,8 +326,8 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
                     <span
                       className="preset-warning"
                       role="img"
-                      aria-label={p.warnings[0]?.message}
-                      title={p.warnings[0]?.message}
+                      aria-label={p.warnings.map((w) => w.message).join(" ")}
+                      title={p.warnings.map((w) => w.message).join("\n")}
                     >
                       !
                     </span>
