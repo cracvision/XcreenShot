@@ -21,13 +21,13 @@ import {
 } from "../lib/commands";
 import { ShortcutRecorder } from "../prefs/ShortcutRecorder";
 import { useApp } from "../store";
-import { ImageOptions, UniversalOptions } from "./CaptureOptions";
+import { ImageOptions, UniversalOptions, VideoOptions } from "./CaptureOptions";
 import { askImport, exportPresets, restoreBuiltins } from "./presetActions";
 import { PresetsSection } from "./PresetsSection";
 import { useFileDrop } from "./fileDrop";
 
 type Tab = PanelSettings["tab"];
-const TABS: Tab[] = ["universal", "image"];
+const TABS: Tab[] = ["universal", "image", "video"];
 
 /** Deep partial for `capture.configure` patches. */
 type Patch = {
@@ -35,6 +35,7 @@ type Patch = {
   expanded?: boolean;
   universal?: Partial<PanelSettings["universal"]>;
   image?: Partial<PanelSettings["image"]>;
+  video?: Partial<PanelSettings["video"]>;
 };
 
 export function CapturePanel() {
@@ -111,7 +112,13 @@ export function CapturePanel() {
     if (!settings) return;
     setStatus(null);
     try {
-      await run(settings.tab === "universal" ? "capture.universal" : "capture.image");
+      await run(
+        settings.tab === "universal"
+          ? "capture.universal"
+          : settings.tab === "video"
+            ? "capture.capture"
+            : "capture.image",
+      );
     } catch (e) {
       // Cancelling is not an error worth showing.
       if (isCommandError(e) && e.code === "cancelled") return;
@@ -165,7 +172,9 @@ export function CapturePanel() {
           role="tabpanel"
           aria-labelledby={`tab-${tab}`}
         >
-          {tab === "universal" ? (
+          {tab === "video" ? (
+            <VideoOptions value={settings.video} onChange={(v) => void change({ video: v })} />
+          ) : tab === "universal" ? (
             <UniversalOptions
               value={settings.universal}
               onChange={(u) => void change({ universal: u })}

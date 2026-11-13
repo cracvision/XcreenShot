@@ -536,10 +536,11 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .mutates()
             .params(params(
                 json!({
-                    "tab": {"type": "string", "enum": ["universal", "image"]},
+                    "tab": {"type": "string", "enum": ["universal", "image", "video"]},
                     "expanded": {"type": "boolean"},
                     "universal": {"type": "object"},
-                    "image": {"type": "object"}
+                    "image": {"type": "object"},
+                    "video": {"type": "object", "description": "The Video tab (VID-001): selection region|fullscreen, limit (seconds, 0: none)"}
                 }),
                 &[],
             ))
@@ -869,11 +870,18 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "source": {"type": "object"}, "path": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
             }})),
-        B::new("record.video", &["VID-002", "VID-003", "VID-075"])
+        B::new("record.video", &["VID-002", "VID-003", "VID-004", "VID-075"])
             .scopes(ALL)
             .assignable()
             .mutates()
             .interactive()
+            .params(params(
+                json!({
+                    "selection": {"type": "string", "enum": ["region", "fullscreen"], "default": "region", "description": "region: chosen on screen; fullscreen: the monitor under the pointer"},
+                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"}
+                }),
+                &[],
+            ))
             .result(json!({"type": "object", "properties": {
                 "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
                 "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}

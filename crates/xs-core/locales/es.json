@@ -2370,7 +2370,16 @@
       "file_ask_exists": "Preguntar",
       "file_ask": "Preguntar nombre y carpeta en cada captura",
       "file_metadata": "Incluir los metadatos de captura en el archivo (PNG)",
-      "effects_options": "Opciones de {{name}}"
+      "effects_options": "Opciones de {{name}}",
+      "tab_video": "Video",
+      "video_selection_region": "Región",
+      "video_selection_fullscreen": "Pantalla completa",
+      "video_cursor": "Capturar cursor",
+      "video_sound": "Grabar el audio del sistema",
+      "video_limit": "Temporizador",
+      "video_limit_none": "Sin límite",
+      "video_limit_min": "{{n}} min",
+      "video_quality_hint": "Calidad y tamaño: Preferencias > Video."
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",

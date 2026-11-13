@@ -281,15 +281,37 @@ impl Default for ImageTab {
     }
 }
 
+/// The Video tab (VID-001): what to record and for how long. The pointer and the
+/// system's sound are the settings `video.cursor` and `video.systemAudio`, the same the
+/// recording bar switches: one place for them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct VideoTab {
+    /// `region` (chosen on screen) or `fullscreen` (the monitor under the pointer).
+    pub selection: String,
+    /// Seconds after which it stops by itself; 0: no limit (VID-015).
+    pub limit: u32,
+}
+
+impl Default for VideoTab {
+    fn default() -> Self {
+        VideoTab {
+            selection: "region".into(),
+            limit: 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PanelSettings {
-    /// Active tab: `universal` or `image` (`video` arrives in M4).
+    /// Active tab: `universal`, `image` or `video`.
     pub tab: String,
     /// Options shown (expanded) or only the Capture button (compact).
     pub expanded: bool,
     pub universal: UniversalTab,
     pub image: ImageTab,
+    pub video: VideoTab,
 }
 
 impl Default for PanelSettings {
@@ -299,6 +321,7 @@ impl Default for PanelSettings {
             expanded: true,
             universal: UniversalTab::default(),
             image: ImageTab::default(),
+            video: VideoTab::default(),
         }
     }
 }
@@ -331,7 +354,15 @@ impl PanelSettings {
                 Err(format!("{field}: expected one of {options:?}"))
             }
         };
-        one_of("tab", &self.tab, &["universal", "image"])?;
+        one_of("tab", &self.tab, &["universal", "image", "video"])?;
+        one_of(
+            "video.selection",
+            &self.video.selection,
+            &["region", "fullscreen"],
+        )?;
+        if self.video.limit > 4 * 3600 {
+            return Err("video.limit: at most 4 hours".into());
+        }
         one_of("universal.selection", &self.universal.selection, &SELECTIONS)?;
         one_of(
             "universal.open",
@@ -423,7 +454,7 @@ impl PanelSettings {
     pub fn plan(&self, tab: &str) -> (&'static str, Value, Value) {
         let (command, params, extra) = self.plan_once(tab);
         let timed = matches!(self.image.timing.as_str(), "interval" | "scheduled");
-        if tab == "universal" || !timed {
+        if tab != "image" || !timed {
             return (command, params, extra);
         }
         let selection = match (command, self.image.selection.as_str()) {
@@ -448,6 +479,14 @@ impl PanelSettings {
     }
 
     fn plan_once(&self, tab: &str) -> (&'static str, Value, Value) {
+        // Video capture (VID-001, VID-002): the area, then the bar waits Ready.
+        if tab == "video" {
+            return (
+                "record.video",
+                json!({ "selection": self.video.selection, "limit": self.video.limit }),
+                json!({}),
+            );
+        }
         if tab == "universal" {
             let u = &self.universal;
             let params = json!({
@@ -632,7 +671,16 @@ mod tests {
         assert_eq!(params["startFrom"], "start");
         assert!(s.patched(&json!({"image": {"scroll": {"wait": 9}}})).is_err());
         assert!(s.patched(&json!({"image": {"delay": 0}})).is_err());
-        assert!(s.patched(&json!({"tab": "video"})).is_err());
+        assert!(s.patched(&json!({"tab": "camera"})).is_err());
+        // The Video tab (VID-001): its selection and timer go to Video capture.
+        let p = s
+            .patched(&json!({"tab": "video", "video": {"selection": "fullscreen", "limit": 600}}))
+            .unwrap();
+        let (command, params, _) = p.plan("video");
+        assert_eq!(command, "record.video");
+        assert_eq!(params["selection"], "fullscreen");
+        assert_eq!(params["limit"], 600);
+        assert!(s.patched(&json!({"video": {"selection": "window"}})).is_err());
     }
 
     /// CAP-006, CAP-001: Capture follows the tab's settings.

@@ -31,6 +31,8 @@ struct Ready {
     rect: Rect,
     scale: f64,
     source: Value,
+    /// Stops by itself after this long (the Video tab's timer, VID-015).
+    limit: Option<Duration>,
 }
 
 #[derive(Default)]
@@ -72,8 +74,9 @@ fn planned(core: &Core, rect: Rect, scale: f64) -> (u32, u32) {
 }
 
 /// `record.video` (VID-002): during a recording it stops it; otherwise the area is
-/// chosen on screen and the recording waits, Ready, for Record on its bar.
-pub fn video(core: &Arc<Core>, ctx: &Context) -> CommandResult {
+/// chosen on screen (or, with `selection: fullscreen`, the monitor under the pointer,
+/// VID-004) and the recording waits, Ready, for Record on its bar.
+pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     if running(core) {
         return stop(core, ctx);
     }
@@ -82,6 +85,25 @@ pub fn video(core: &Arc<Core>, ctx: &Context) -> CommandResult {
         // Already Ready: show its bar again.
         bar(core, Some(ready_state(core, &r)));
         return Ok(ready_state(core, &r));
+    }
+    let limit = p
+        .get("limit")
+        .and_then(Value::as_f64)
+        .filter(|s| *s > 0.0)
+        .map(Duration::from_secs_f64);
+    if p.get("selection").and_then(Value::as_str) == Some("fullscreen") {
+        let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": "pointer" }), ctx.lang)?;
+        let r = Ready {
+            rect,
+            scale,
+            source,
+            limit,
+        };
+        *svc.ready.lock().unwrap() = Some(r.clone());
+        let state = ready_state(core, &r);
+        bar(core, Some(state.clone()));
+        tell(core, ctx.source, "record.ready", state.clone());
+        return Ok(state);
     }
     let (monitor, rect) = crate::interactive::pick_area(core, ctx)?;
     if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
@@ -94,6 +116,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context) -> CommandResult {
         rect,
         scale: monitor.scale as f64,
         source: json!({ "type": "region", "rect": rect }),
+        limit,
     };
     *svc.ready.lock().unwrap() = Some(r.clone());
     let state = ready_state(core, &r);
@@ -130,7 +153,7 @@ pub fn toggle(core: &Arc<Core>, ctx: &Context) -> CommandResult {
         Some(State::Paused) => pause(core, ctx, false),
         Some(_) => Ok(status(core)),
         None if service(core).ready.lock().unwrap().is_some() => start(core, ctx, &json!({})),
-        None => video(core, ctx),
+        None => video(core, ctx, &json!({})),
     }
 }
 
@@ -326,6 +349,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             return Err(crate::cancelled(lang));
         }
     }
+    let ready_limit = ready.as_ref().and_then(|r| r.limit);
     let (rect, scale, source) = match ready {
         Some(r) => (r.rect, r.scale, r.source),
         None => area(p, lang)?,
@@ -357,7 +381,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .get("limit")
         .and_then(Value::as_f64)
         .filter(|s| *s > 0.0)
-        .map(Duration::from_secs_f64);
+        .map(Duration::from_secs_f64)
+        .or(ready_limit);
     let path = file_path(core, p, lang);
     let recorder = Recorder::start(xs_video::Options {
         area: Area {

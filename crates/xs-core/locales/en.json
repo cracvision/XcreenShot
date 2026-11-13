@@ -2370,7 +2370,16 @@
       "file_ask_exists": "Ask",
       "file_ask": "Ask for the name and folder at each capture",
       "file_metadata": "Include the capture details in the file (PNG)",
-      "effects_options": "Options of {{name}}"
+      "effects_options": "Options of {{name}}",
+      "tab_video": "Video",
+      "video_selection_region": "Region",
+      "video_selection_fullscreen": "Full screen",
+      "video_cursor": "Capture cursor",
+      "video_sound": "Record the system sound",
+      "video_limit": "Timer",
+      "video_limit_none": "No limit",
+      "video_limit_min": "{{n}} min",
+      "video_quality_hint": "Quality and size: Preferences > Video."
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",

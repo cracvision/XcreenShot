@@ -1324,6 +1324,10 @@ fn capture_with_tab(core: &Core, ctx: &Context, tab: &str, p: &Value) -> Command
         }
         return start_interval(core, ctx, &params, None, Some(PANEL_SERIES.into()));
     }
+    // The Video tab (VID-001): a recording, not a capture.
+    if command.starts_with("record.") {
+        return core.call(ctx.source, command, params, Some(ctx.lang));
+    }
     // Scheduled (CAP-050): Schedule; again, Cancel schedule.
     if command == "capture.schedule" {
         if let Some(id) = schedule::of_preset(core, PANEL_SERIES) {
@@ -1673,7 +1677,9 @@ pub fn extension() -> Extension {
             Ok(record::status(&*upgrade(&w)?))
         });
         let w = weak.clone();
-        reg.handle("record.video", move |ctx, _p| record::video(&upgrade(&w)?, ctx));
+        reg.handle("record.video", move |ctx, p| {
+            record::video(&upgrade(&w)?, ctx, &p)
+        });
         let w = weak.clone();
         reg.handle("record.toggle", move |ctx, _p| record::toggle(&upgrade(&w)?, ctx));
         let w = weak.clone();

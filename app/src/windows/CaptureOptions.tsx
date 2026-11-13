@@ -164,6 +164,73 @@ export function UniversalOptions({
   );
 }
 
+/** The Video tab (VID-001): Selection, the pointer and the system's sound (the same
+ * settings as the recording bar and Preferences > Video) and the timer (VID-015). */
+export function VideoOptions({
+  value,
+  onChange,
+}: {
+  value: PanelSettings["video"];
+  onChange: (patch: Partial<PanelSettings["video"]>) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const cursor = useSetting("video.cursor", true);
+  const sound = useSetting("video.systemAudio", false);
+  const set = (key: string, v: boolean) =>
+    void run("settings.set", { key, value: v }).catch(() => undefined);
+  const minutes = [1, 5, 10, 30, 60];
+  return (
+    <>
+      <label className="panel-field" htmlFor={`${id}-vsel`}>
+        <span>{t("ui.panel.selection")}</span>
+        <select
+          id={`${id}-vsel`}
+          value={value.selection}
+          onChange={(e) =>
+            onChange({ selection: e.target.value as PanelSettings["video"]["selection"] })
+          }
+        >
+          <option value="region">{t("ui.panel.video_selection_region")}</option>
+          <option value="fullscreen">{t("ui.panel.video_selection_fullscreen")}</option>
+        </select>
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={cursor}
+          onChange={(e) => set("video.cursor", e.target.checked)}
+        />
+        {t("ui.panel.video_cursor")}
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={sound}
+          onChange={(e) => set("video.systemAudio", e.target.checked)}
+        />
+        {t("ui.panel.video_sound")}
+      </label>
+      <label className="panel-field" htmlFor={`${id}-vlim`}>
+        <span>{t("ui.panel.video_limit")}</span>
+        <select
+          id={`${id}-vlim`}
+          value={String(value.limit)}
+          onChange={(e) => onChange({ limit: Number(e.target.value) })}
+        >
+          <option value="0">{t("ui.panel.video_limit_none")}</option>
+          {minutes.map((m) => (
+            <option key={m} value={String(m * 60)}>
+              {t("ui.panel.video_limit_min", { n: m })}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted hint">{t("ui.panel.video_quality_hint")}</p>
+    </>
+  );
+}
+
 export function ImageOptions({
   value,
   onChange,

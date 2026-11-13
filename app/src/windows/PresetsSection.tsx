@@ -198,6 +198,8 @@ export function PresetsSection({ tab }: { tab: PanelSettings["tab"] }) {
             {
               id: "current",
               label: t("ui.panel.presets.from_current"),
+              // Video presets arrive with VID-009.
+              disabled: tab === "video",
               onSelect: () => void createPreset({ fromCurrent: true }),
             },
             {

@@ -205,10 +205,10 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| VID-001 | Pestaña Video del panel de captura | M4 | Must | — |
+| VID-001 | Pestaña Video del panel de captura | M4 | Must | En curso (Windows: tercera pestaña del panel con Selección (Región o Pantalla completa), Capturar cursor y Grabar el audio del sistema (los mismos ajustes que la barra y Preferencias > Video) y Temporizador (sin límite o 1 a 60 min); **Capturar** con ella abre la selección o deja la barra en *Lista*. Faltan Ventana y Solo cámara, Propiedades, Compartir, Abrir en, cámara, micrófono, efectos del cursor, Dibujo en vivo y los presets de video) |
 | VID-002 | Iniciar una captura de video | M4 | Must | En curso (Windows: menú del ícono > Captura de video y su atajo `Ctrl+Alt+Mayús+V` (`record.video`): elegir el área en pantalla y queda *Lista* con la barra; durante una grabación, la detiene; `record.start`. Faltan la pestaña Video, el botón `V` de la captura universal, presets de video, Repetir última captura y que la pantalla no se congele al elegir) |
 | VID-003 | Área de grabación | M4 | Must | En curso (Windows: el área se elige como una región de imagen (tiradores, teclado, guías), mínimo 64 × 64, tamaño par, dentro de un monitor; la barra muestra el tamaño final del video. Faltan Ancho y Alto editables y mover el área en *Lista*, y cruzar monitores) |
-| VID-004 | Pantalla completa de un monitor | M4 | Must | — |
+| VID-004 | Pantalla completa de un monitor | M4 | Must | En curso (Windows: Selección = Pantalla completa graba el monitor bajo el puntero, sin selección; `record.start --source screen` con `monitor` primary, pointer o su número. Falta elegir el monitor en Propiedades) |
 | VID-005 | Grabar una ventana | M4 | Should | — |
 | VID-006 | Resumen Listo para grabar | M4 | Should | — |
 | VID-007 | Empezar a grabar sin esperar | M4 | Could | — |
@@ -219,7 +219,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-012 | Grabar, pausar y reanudar | M4 | Must | En curso (Windows: el motor y `record.pause` / `record.resume`; la pausa queda fuera del video. Falta la barra de grabación, VID-011) |
 | VID-013 | Detener | M4 | Must | En curso (Windows: `record.stop` espera al archivo y devuelve ruta, duración, tamaño, fps y codificador; aviso "Video guardado". Falta el botón de la barra, Abrir en y la bandeja) |
 | VID-014 | Reiniciar y cancelar | M4 | Should | En curso (Windows: `record.cancel` termina sin archivo. Falta Reiniciar y la barra) |
-| VID-015 | Temporizador de parada automática | M4 | Should | En curso (Windows: `limit` en `record.start` detiene la grabación sola y guarda el archivo. Falta el control en la barra) |
+| VID-015 | Temporizador de parada automática | M4 | Should | En curso (Windows: `limit` en `record.start` y el Temporizador de la pestaña Video (1 a 60 min) detienen la grabación sola y guardan el archivo. Falta el control en la barra) |
 | VID-016 | Posición de la barra y controles minimizados | M4 | Must | — |
 | VID-017 | XcreenShot fuera del video | M4 | Must | — |
 | VID-018 | Escritorio limpio | M4 | Could | — |
