@@ -209,7 +209,7 @@ fn overlaps(a: [f64; 4], b: [f64; 4]) -> bool {
     a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3]
 }
 
-fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
+pub(crate) fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
     let lang = ctx.lang;
     let internal = CommandError::internal;
     if p.get("clear").and_then(Value::as_bool) == Some(true) {
@@ -349,8 +349,17 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
                 });
             }
         }
-        // Every place where a text appears (SMT-015), or none of them.
-        if let (Some(m), Some(rec)) = (p.get("matches"), reading.text.as_ref()) {
+        // Every place where a text appears (SMT-015), or none of them; several texts at
+        // once (SMT-016).
+        let asked_matches: Vec<&Value> = match p.get("matches") {
+            Some(Value::Array(list)) => list.iter().collect(),
+            Some(m) => vec![m],
+            None => Vec::new(),
+        };
+        for (m, rec) in asked_matches
+            .into_iter()
+            .filter_map(|m| reading.text.as_ref().map(|rec| (m, rec)))
+        {
             let text = m.get("text").and_then(Value::as_str).unwrap_or("").trim();
             let term = Term {
                 name: "match".into(),
@@ -377,7 +386,9 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
             } else {
                 for pl in places {
                     // A place already covered whole needs nothing more.
-                    if !existing.iter().any(|e| contains(e.source, pl)) {
+                    if !existing.iter().any(|e| contains(e.source, pl))
+                        && !add.iter().any(|a| contains(a.source, pl))
+                    {
                         let s = pl.map(|v| (v * 10.0).round() / 10.0);
                         add.push(Wanted {
                             category: auto_redact::MANUAL.into(),
@@ -388,6 +399,18 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
                 }
             }
         }
+        // Of two texts asked at once, the longer place covers the shorter.
+        let all = add.clone();
+        add = all
+            .iter()
+            .enumerate()
+            .filter(|(i, a)| {
+                !all.iter().enumerate().any(|(j, b)| {
+                    j != *i && contains(b.source, a.source) && (!contains(a.source, b.source) || j < *i)
+                })
+            })
+            .map(|(_, a)| a.clone())
+            .collect();
         added_by_hand = add.len();
         // One by hand that covers others by hand takes their place (a word, then Shift+click).
         for e in existing.iter().filter(|e| e.category == auto_redact::MANUAL) {
@@ -464,7 +487,7 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
     Ok(result)
 }
 
-const VIDEO_EXTENSIONS: [&str; 8] = ["mp4", "m4v", "mov", "avi", "wmv", "mkv", "webm", "gif"];
+pub(crate) const VIDEO_EXTENSIONS: [&str; 8] = ["mp4", "m4v", "mov", "avi", "wmv", "mkv", "webm", "gif"];
 
 /// `smart.redact` on an image file (SMT-010): opened apart, redacted and written, flat,
 /// to `output` (default: next to it, "<name> (redacted).<ext>"). The file itself never
@@ -536,6 +559,50 @@ fn on_file(core: &Arc<Core>, ctx: &Context, p: &Value, path: PathBuf) -> Command
     done
 }
 
+/// The texts redacted by hand in an open document (SMT-016): the words under each
+/// redaction of the Manual category, in reading order. Kept nowhere.
+pub fn manual_texts(core: &Core, ctx: &Context, id: &str) -> Result<Vec<String>, CommandError> {
+    let manual: Vec<[f64; 4]> = auto_redact::managed(core, id)
+        .map_err(CommandError::internal)?
+        .into_iter()
+        .filter(|m| m.category == auto_redact::MANUAL)
+        .map(|m| m.source)
+        .collect();
+    if manual.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (image, origin) = auto_redact::image_without(core, id).map_err(CommandError::internal)?;
+    let languages = crate::extract::wanted(core, None);
+    let reading = read(&image, &languages, ctx.lang)?;
+    let (ox, oy) = (origin[0] as f64, origin[1] as f64);
+    let words: Vec<(&str, f64, f64)> = reading
+        .text
+        .iter()
+        .flat_map(|r| r.blocks.iter().flat_map(|b| &b.lines))
+        .flat_map(|l| &l.words)
+        .map(|w| {
+            (
+                w.text.as_str(),
+                w.rect[0] - ox + w.rect[2] / 2.0,
+                w.rect[1] - oy + w.rect[3] / 2.0,
+            )
+        })
+        .collect();
+    let mut texts: Vec<String> = Vec::new();
+    for s in manual {
+        let under: Vec<&str> = words
+            .iter()
+            .filter(|(_, cx, cy)| *cx >= s[0] && *cx <= s[0] + s[2] && *cy >= s[1] && *cy <= s[1] + s[3])
+            .map(|(t, _, _)| *t)
+            .collect();
+        let text = under.join(" ");
+        if !text.trim().is_empty() && !texts.contains(&text) {
+            texts.push(text);
+        }
+    }
+    Ok(texts)
+}
+
 /// `smart.redact_words` (SMT-014): the words recognized in an open document, by line,
 /// in canvas pixels, so that the panel can highlight them and redact one with a click.
 /// The text goes back to the panel only; it is never kept.
@@ -581,7 +648,7 @@ pub fn register(reg: &mut xs_core::command::Registry, weak: &std::sync::Weak<Cor
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use xs_core::Source;
 
@@ -612,7 +679,7 @@ mod tests {
     }
 
     /// A white form with a label and a value on each line, as an image.
-    fn form(lines: &[&str]) -> image::RgbaImage {
+    pub(crate) fn form(lines: &[&str]) -> image::RgbaImage {
         use xs_core::document::{Document, Object};
         let (w, h) = (900u32, 60 + 60 * lines.len() as u32);
         let mut doc = Document::new(w, h, 96.0);

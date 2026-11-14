@@ -9,6 +9,7 @@ import { useIndicator } from "../components/useIndicator";
 import { selectTool } from "./actions";
 import { ColorPicker } from "./ColorPicker";
 import { Icon } from "./icons";
+import { pickOthers } from "./redactBatchState";
 import { NumberField } from "./Fields";
 import {
   acknowledgeReminder,
@@ -374,6 +375,14 @@ export function RedactPanel() {
           {t("ui.redact.remove")}
         </button>
       </div>
+      <button
+        type="button"
+        className="btn small redact-others"
+        disabled={busy || !result}
+        onClick={() => result && pickOthers(result.documentId)}
+      >
+        {t("ui.redact_batch.search_others")}
+      </button>
       <div className="redact-actions">
         <button
           type="button"

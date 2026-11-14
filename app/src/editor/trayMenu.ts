@@ -22,6 +22,7 @@ import {
   togglePin,
 } from "./actions";
 import { shortcutOf } from "./menus";
+import { startBatch } from "./redactBatchState";
 import { docUrl, xsdocUrl, type DocSummary } from "./state";
 import {
   copyAllOf,
@@ -117,6 +118,17 @@ export function trayMenu(
         shortcut: shortcutOf("editor.new_from_template"),
         separator: true,
         onSelect: () => openPicker(docs.map((d) => ({ documentId: d.documentId }))),
+      },
+      // SMT-016: auto redact over the selected captures.
+      {
+        id: "redact",
+        label: t("ui.redact_batch.open"),
+        onSelect: () =>
+          void startBatch({
+            documentIds: items
+              .filter((d) => ids.includes(d.documentId) && !d.missing)
+              .map((d) => d.documentId),
+          }),
       },
       {
         id: "close",

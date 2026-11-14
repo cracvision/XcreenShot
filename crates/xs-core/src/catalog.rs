@@ -688,6 +688,58 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(UI_CLI)
             .params(params(json!({"documentId": {"type": "string"}}), &[]))
             .result(json!({"type": "object", "properties": {"lines": {"type": "array", "description": "{words: [{text, rect: [x, y, w, h]}]} in canvas pixels"}}})),
+        B::new("smart.redact_batch", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Captures by file (library items); videos are left out"},
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Open documents (the recent tray); they stay open"},
+                    "documentId": {"type": "string", "description": "The document it starts from: its texts redacted by hand are looked for in the others"},
+                    "texts": {"type": "array", "items": {"type": "string"}, "description": "More texts to redact wherever they appear"},
+                    "categories": {"type": "array", "items": {"type": "string"}, "description": "Default: the panel's"},
+                    "terms": {"type": "array", "description": "Default: My terms"},
+                    "style": {"type": "object", "description": "Default: the panel's"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "jobId": {"type": "integer"},
+                "running": {"type": "boolean"},
+                "done": {"type": "integer"},
+                "total": {"type": "integer"},
+                "texts": {"type": "integer", "description": "How many texts by hand are looked for"},
+                "items": {"type": "array", "description": "{index, name, path, documentId, state, redactions, counts, error?, output?}; state: waiting, working, ready, nothing, accepted, skipped, review, video, failed, cancelled, undone"}
+            }})),
+        B::new("smart.redact_batch_status", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_decide", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "jobId": {"type": "integer"},
+                    "decision": {"type": "string", "enum": ["accept", "skip", "review"], "default": "accept"},
+                    "items": {"type": "array", "items": {"type": "integer"}, "description": "Indexes; default: every capture ready"}
+                }),
+                &["jobId"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.redact_batch; with review, shown: the document shown in the editor"})),
+        B::new("smart.redact_batch_undo", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"jobId": {"type": "integer"}, "items": {"type": "array", "items": {"type": "integer"}}}),
+                &["jobId"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_cancel", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_close", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch, with closed: true"})),
         B::new("smart.ocr_languages", &["SMT-004"])
             .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
         B::new("smart.language_settings", &["SMT-004"])

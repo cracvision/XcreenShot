@@ -12,6 +12,7 @@ import { exportItems } from "./exportState";
 import { duplicateItems } from "../editor/trayActions";
 import { exportGuideFile, GUIDE_FORMATS } from "../editor/guideExport";
 import { useLibrary } from "./state";
+import { startBatch } from "../editor/redactBatchState";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -36,6 +37,20 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       shortcut: shortcutOf("editor.new_from_template"),
       onSelect: () => openPicker(items.map((i) => i.path)),
     },
+    // Several captures at once (SMT-016); videos are left out.
+    ...(items.length > 1
+      ? [
+          {
+            id: "redact",
+            label: t("ui.redact_batch.open"),
+            disabled: items.every((i) => i.kind === "video"),
+            onSelect: () =>
+              void startBatch({
+                paths: items.filter((i) => i.kind !== "video").map((i) => i.path),
+              }),
+          },
+        ]
+      : []),
     // A guide of steps: in another format, without the editor (SMT-035).
     ...(one?.kind === "guide"
       ? [

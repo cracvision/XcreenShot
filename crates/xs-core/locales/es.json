@@ -727,6 +727,30 @@
       "title": "Palabras reconocidas",
       "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
     },
+    "smart_redact_batch": {
+      "title": "Redactar varias capturas",
+      "description": "Analiza varias capturas en segundo plano con las categorías, términos y estilo del panel, y los textos redactados a mano en el documento de partida; nada cambia hasta decidir."
+    },
+    "smart_redact_batch_status": {
+      "title": "Varias capturas: progreso",
+      "description": "Cómo va la redacción de varias capturas: el estado de cada una y sus redacciones por categoría."
+    },
+    "smart_redact_batch_decide": {
+      "title": "Varias capturas: decidir",
+      "description": "Acepta, omite o abre en el editor las capturas listas para revisar."
+    },
+    "smart_redact_batch_undo": {
+      "title": "Varias capturas: deshacer todo",
+      "description": "Deja cada captura aceptada como estaba, mientras la revisión siga abierta."
+    },
+    "smart_redact_batch_cancel": {
+      "title": "Varias capturas: cancelar",
+      "description": "Detiene el análisis; las capturas no aceptadas quedan como estaban."
+    },
+    "smart_redact_batch_close": {
+      "title": "Varias capturas: cerrar",
+      "description": "Termina la revisión: las capturas que esperaban decisión quedan como estaban."
+    },
     "smart_steps_start": {
       "title": "Grabar pasos",
       "description": "Convierte tus clics en una guía paso a paso: una imagen y una frase por clic, en este equipo."
@@ -1719,7 +1743,9 @@
     "steps_busy": "Ya hay una grabación de video o de pasos en curso.",
     "steps_not_recording": "No se están grabando pasos.",
     "steps_not_supported": "El grabador de pasos aún no está disponible en este sistema.",
-    "not_a_guide": "Este documento no es una guía de pasos."
+    "not_a_guide": "Este documento no es una guía de pasos.",
+    "redact_batch_not_found": "No hay una redacción de varias capturas con id {{id}}: terminó o se cerró.",
+    "redact_batch_empty": "No hay capturas que redactar: elige imágenes o documentos (los videos no se incluyen)."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4606,6 +4632,45 @@
       "to_terms": "Añadir a Mis términos",
       "dismiss": "Cerrar el mensaje",
       "remove_current": "Quitar la redacción mostrada"
+    },
+    "redact_batch": {
+      "open": "Redacción automática…",
+      "title": "Redacción automática de varias capturas",
+      "progress": "Analizando {{done}} de {{total}}…",
+      "finished_one": "{{count}} captura analizada. Revisa cada una o acéptalas todas.",
+      "finished_other": "{{count}} capturas analizadas. Revisa cada una o acéptalas todas.",
+      "texts_one": "Se busca también {{count}} texto redactado a mano.",
+      "texts_other": "Se buscan también {{count}} textos redactados a mano.",
+      "accept": "Aceptar",
+      "review": "Revisar en el editor",
+      "skip": "Omitir",
+      "accept_all": "Aceptar todas",
+      "undo_all": "Deshacer todo",
+      "waiting_one": "Revisión de redacciones: {{count}} captura pendiente",
+      "waiting_other": "Revisión de redacciones: {{count}} capturas pendientes",
+      "back": "Volver a la revisión",
+      "search_others": "Buscar en otras capturas…",
+      "pick_title": "Buscar en otras capturas",
+      "pick_hint": "En las capturas que elijas se buscan las mismas categorías, términos, estilo y textos redactados a mano. Nada cambia hasta que aceptes.",
+      "recent": "Recientes",
+      "library": "Biblioteca",
+      "library_search": "Buscar en la biblioteca",
+      "none_here": "No hay capturas aquí.",
+      "search_one": "Buscar en {{count}} captura",
+      "search_other": "Buscar en {{count}} capturas",
+      "state": {
+        "waiting": "En espera",
+        "working": "Analizando…",
+        "nothing": "Nada que redactar",
+        "accepted": "Aceptada",
+        "skipped": "Omitida",
+        "review": "Abierta en el editor",
+        "video": "Video: no se incluye",
+        "failed": "No se pudo analizar: {{error}}",
+        "cancelled": "Cancelada: queda como estaba",
+        "undone": "Deshecha",
+        "copy": "Aceptada: copia redactada \"{{name}}\""
+      }
     },
     "stepsbar": {
       "title": "Grabador de pasos",

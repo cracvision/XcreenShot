@@ -1,5 +1,6 @@
 // Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
 // the top; the menu bar, dialogs and notices are shared by both.
+import { RedactBatch } from "./RedactBatch";
 import { ShortcutSheet } from "./ShortcutSheet";
 import { MoveComputer } from "../library/MoveComputer";
 import { TagDialogs } from "../library/TagDialogs";
@@ -205,6 +206,7 @@ export function Editor() {
         <div className="drop-hint">{t("ui.library.import.drop_hint")}</div>
       )}
       <Dialogs />
+      <RedactBatch />
       <GifDialog />
       <CombineDialog />
       <TemplateDialogs />

@@ -727,6 +727,30 @@
       "title": "Recognized words",
       "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
     },
+    "smart_redact_batch": {
+      "title": "Auto redact several captures",
+      "description": "Analyzes several captures in the background with the panel's categories, terms and style, and the texts redacted by hand where it starts; nothing changes until a decision."
+    },
+    "smart_redact_batch_status": {
+      "title": "Several captures: progress",
+      "description": "How the auto redact of several captures goes: each capture's state and its redactions by category."
+    },
+    "smart_redact_batch_decide": {
+      "title": "Several captures: decide",
+      "description": "Accepts, skips or opens in the editor the captures ready for review."
+    },
+    "smart_redact_batch_undo": {
+      "title": "Several captures: undo all",
+      "description": "Puts every accepted capture back as it was, while the review is open."
+    },
+    "smart_redact_batch_cancel": {
+      "title": "Several captures: cancel",
+      "description": "Stops the analysis; the captures not accepted are left as they were."
+    },
+    "smart_redact_batch_close": {
+      "title": "Several captures: close",
+      "description": "Ends the review: the captures still waiting are left as they were."
+    },
     "smart_steps_start": {
       "title": "Record steps",
       "description": "Turns your clicks into a step-by-step guide: a picture and a sentence for each click, on this computer."
@@ -1719,7 +1743,9 @@
     "steps_busy": "A video or step recording is already going on.",
     "steps_not_recording": "No steps are being recorded.",
     "steps_not_supported": "The step recorder is not available on this system yet.",
-    "not_a_guide": "This document is not a guide of steps."
+    "not_a_guide": "This document is not a guide of steps.",
+    "redact_batch_not_found": "There is no auto redact of several captures with id {{id}}: it ended or was closed.",
+    "redact_batch_empty": "No capture to redact: choose images or documents (videos are left out)."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4606,6 +4632,45 @@
       "to_terms": "Add to My terms",
       "dismiss": "Close message",
       "remove_current": "Remove the redaction shown"
+    },
+    "redact_batch": {
+      "open": "Auto redact…",
+      "title": "Auto redact several captures",
+      "progress": "Analyzing {{done}} of {{total}}…",
+      "finished_one": "{{count}} capture analyzed. Review each one or accept them all.",
+      "finished_other": "{{count}} captures analyzed. Review each one or accept them all.",
+      "texts_one": "Also looking for {{count}} text redacted by hand.",
+      "texts_other": "Also looking for {{count}} texts redacted by hand.",
+      "accept": "Accept",
+      "review": "Review in editor",
+      "skip": "Skip",
+      "accept_all": "Accept all",
+      "undo_all": "Undo all",
+      "waiting_one": "Redaction review: {{count}} capture waiting",
+      "waiting_other": "Redaction review: {{count}} captures waiting",
+      "back": "Back to review",
+      "search_others": "Search other captures…",
+      "pick_title": "Search other captures",
+      "pick_hint": "The same categories, terms, style and texts redacted by hand are looked for in the captures you choose. Nothing changes until you accept.",
+      "recent": "Recent",
+      "library": "Library",
+      "library_search": "Search the library",
+      "none_here": "No captures here.",
+      "search_one": "Search {{count}} capture",
+      "search_other": "Search {{count}} captures",
+      "state": {
+        "waiting": "Waiting",
+        "working": "Analyzing…",
+        "nothing": "Nothing to redact",
+        "accepted": "Accepted",
+        "skipped": "Skipped",
+        "review": "Opened in the editor",
+        "video": "Video: left out",
+        "failed": "Could not be analyzed: {{error}}",
+        "cancelled": "Cancelled: left as it was",
+        "undone": "Undone",
+        "copy": "Accepted: redacted copy \"{{name}}\""
+      }
     },
     "stepsbar": {
       "title": "Step recorder",

@@ -563,6 +563,164 @@ h3 {
   margin: -4px -6px 0 0;
 }
 
+/* Auto redact over several captures (SMT-016): the review, its bar and the choice. */
+.backdrop .dialog:has(.redact-batch) {
+  width: min(680px, 100%);
+}
+
+.redact-batch {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.redact-batch-progress {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.redact-batch-progress progress {
+  width: 100%;
+}
+
+.redact-batch .redact-batch-list {
+  display: grid;
+  gap: var(--space-2);
+  max-height: min(52vh, 480px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.redact-batch-list li {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.redact-batch-list img,
+.redact-batch-thumb {
+  width: 72px;
+  height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-sunken);
+  object-fit: contain;
+}
+
+.redact-batch-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.redact-batch-info strong,
+.redact-batch-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.redact-batch-info span {
+  font-size: 12px;
+}
+
+.redact-batch-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.redact-batch-list li.state-accepted {
+  border-color: var(--brand-ink);
+  background: var(--brand-soft);
+}
+
+.redact-batch-list li.state-skipped,
+.redact-batch-list li.state-cancelled,
+.redact-batch-list li.state-undone,
+.redact-batch-list li.state-video,
+.redact-batch-list li.state-nothing {
+  opacity: 0.72;
+}
+
+.redact-batch-bar {
+  position: fixed;
+  /* Under the toolbar: the tray's height changes with its size. */
+  top: 100px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-dialog);
+  transform: translateX(-50%);
+  animation: fade-in var(--dur-base) var(--ease-spring) backwards;
+}
+
+.redact-others {
+  justify-self: start;
+}
+
+.redact-batch .redact-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-2);
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.redact-pick label {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.redact-pick label.chosen {
+  border-color: var(--brand-ink);
+  background: var(--brand-soft);
+}
+
+.redact-pick input {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
+.redact-pick img {
+  width: 100%;
+  height: 64px;
+  object-fit: contain;
+}
+
+.redact-pick span {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.redact-pick-search {
+  width: 100%;
+}
+
 /* Redacting by hand on the canvas (SMT-014): the words read light up under the pointer. */
 .redact-overlay {
   position: absolute;
@@ -7958,7 +8116,8 @@ button.lc-head:hover,
     animation: none;
   }
 
-  .stepsbar-count.flash {
+  .stepsbar-count.flash,
+  .redact-batch-bar {
     animation: fade-in var(--dur-instant) linear both;
   }
 
