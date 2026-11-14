@@ -4,3 +4,8 @@ export function clock(seconds: number): string {
   const two = (n: number) => String(n).padStart(2, "0");
   return `${two(Math.floor(s / 3600))}:${two(Math.floor((s % 3600) / 60))}:${two(s % 60)}`;
 }
+
+/** An hour recorded: a suggestion, shown once for half a minute (VID-023). */
+export function longHint(elapsed: number, recording: boolean): boolean {
+  return recording && elapsed >= 3600 && elapsed < 3630;
+}

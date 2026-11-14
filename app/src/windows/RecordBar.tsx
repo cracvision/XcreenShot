@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
-import { clock } from "./recClock";
+import { clock, longHint } from "./recClock";
 
 interface RecState {
   status: "ready" | "countdown" | "recording" | "paused" | "finalizing" | "idle";
@@ -25,6 +25,12 @@ interface RecState {
   fps?: number;
   codec?: string;
   minutesFree?: number | null;
+  /** The video is smaller than the area (VID-028), whose size this is. */
+  reduced?: boolean;
+  areaWidth?: number;
+  areaHeight?: number;
+  /** Open in (VID-052): the editor, or only the library. */
+  open?: "editor" | "none";
 }
 
 export function RecordBar() {
@@ -144,10 +150,31 @@ export function RecordBar() {
       <span className="recbar-time" aria-live="off">
         {clock(elapsed)}
       </span>
-      {state.width && state.height && (
-        <span className="recbar-size">
-          {t("ui.recbar.size", { width: state.width, height: state.height })}
+      {longHint(elapsed, recording || paused) ? (
+        // An hour: stop and go on in another clip, they combine later (VID-023).
+        <span className="recbar-size recbar-hint" role="status">
+          {t("ui.recbar.long")}
         </span>
+      ) : (
+        state.width &&
+        state.height && (
+          <span
+            className="recbar-size"
+            title={
+              ready && state.reduced
+                ? t("ui.recbar.reduced_help", {
+                    width: state.areaWidth ?? 0,
+                    height: state.areaHeight ?? 0,
+                  })
+                : undefined
+            }
+          >
+            {t(ready && state.reduced ? "ui.recbar.size_reduced" : "ui.recbar.size", {
+              width: state.width,
+              height: state.height,
+            })}
+          </span>
+        )
       )}
       {ready && state.fps && (
         <span
@@ -160,7 +187,10 @@ export function RecordBar() {
         >
           {state.minutesFree != null && state.minutesFree < 10
             ? t("ui.recbar.little_space", { minutes: state.minutesFree })
-            : t("ui.recbar.summary", { fps: state.fps, codec: state.codec ?? "H.264" })}
+            : t(state.open === "none" ? "ui.recbar.summary_library" : "ui.recbar.summary_editor", {
+                fps: state.fps,
+                codec: state.codec ?? "H.264",
+              })}
         </span>
       )}
       <span className="recbar-fill" data-tauri-drag-region />

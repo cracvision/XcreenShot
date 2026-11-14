@@ -4573,7 +4573,12 @@
       "little_space": "Poco espacio: caben unos {{minutes}} min",
       "image": "Imagen",
       "image_confirm": "¿Imagen en su lugar? Se perderán {{time}} de grabación.",
-      "clicks": "Clics"
+      "clicks": "Clics",
+      "size_reduced": "{{width}} × {{height}}, reducido",
+      "reduced_help": "El área mide {{width}} × {{height}}: el video se reduce (Preferencias > Video > Tamaño máximo del video)",
+      "summary_editor": "{{fps}} fps · {{codec}} · se abre en el editor",
+      "summary_library": "{{fps}} fps · {{codec}} · va a la biblioteca",
+      "long": "Una hora grabada: puedes detener y seguir en otro clip, y combinarlos después"
     },
     "video": {
       "silent_suffix": "sin sonido",

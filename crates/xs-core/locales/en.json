@@ -4573,7 +4573,12 @@
       "little_space": "Little space: about {{minutes}} min fit",
       "image": "Image",
       "image_confirm": "Image instead? {{time}} of recording will be lost.",
-      "clicks": "Clicks"
+      "clicks": "Clicks",
+      "size_reduced": "{{width}} × {{height}}, smaller",
+      "reduced_help": "The area is {{width}} × {{height}}: the video is made smaller (Preferences > Video > Largest video size)",
+      "summary_editor": "{{fps}} fps · {{codec}} · opens in the editor",
+      "summary_library": "{{fps}} fps · {{codec}} · goes to the library",
+      "long": "An hour recorded: you can stop and go on in another clip, and combine them later"
     },
     "video": {
       "silent_suffix": "silent",

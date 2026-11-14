@@ -489,6 +489,11 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "fps": quality.fps(),
         "codec": "H.264",
         "minutesFree": minutes,
+        // Smaller than the area's pixels (VID-028), and where it goes after (VID-052).
+        "reduced": width < r.rect.width || height < r.rect.height,
+        "areaWidth": r.rect.width,
+        "areaHeight": r.rect.height,
+        "open": if r.open { "editor" } else { "none" },
         "cursor": core.settings.get_bool("video.cursor"),
         "clicks": core.settings.get_bool("video.clicks"),
         "systemAudio": core.settings.get_bool("video.systemAudio"),
