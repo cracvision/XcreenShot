@@ -25,6 +25,7 @@ pub mod paint;
 pub mod pens;
 pub mod pictures;
 pub mod pixels;
+pub mod qr;
 pub mod render;
 pub mod selection;
 pub mod shadows;

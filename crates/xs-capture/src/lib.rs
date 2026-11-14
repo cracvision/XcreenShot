@@ -35,6 +35,7 @@ pub mod platform;
 pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
+pub mod qr_cmds;
 pub mod record;
 pub mod redact;
 pub mod redact_batch;
@@ -2087,6 +2088,7 @@ pub fn extension() -> Extension {
         simplify_auto::register(reg, &weak);
         edit_text::register(reg, &weak);
         separate::register(reg, &weak);
+        qr_cmds::register(reg, &weak);
         steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();

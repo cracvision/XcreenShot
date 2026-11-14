@@ -563,6 +563,111 @@ h3 {
   margin: -4px -6px 0 0;
 }
 
+/* QR codes (SMT-036, SMT-038). */
+.backdrop .dialog:has(.qr-panel) {
+  width: min(620px, 100%);
+}
+
+.qr-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--space-4);
+}
+
+.qr-fields {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.qr-fields .field {
+  display: grid;
+  gap: 4px;
+}
+
+.qr-fields textarea,
+.qr-fields input[type="text"] {
+  width: 100%;
+}
+
+.qr-preview {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  margin: 0;
+}
+
+.qr-preview img,
+.qr-empty {
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  image-rendering: pixelated;
+}
+
+.qr-warn {
+  color: var(--warning);
+  font-size: 12px;
+}
+
+.qr-codes {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.qr-code {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.qr-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.qr-url {
+  overflow-wrap: anywhere;
+}
+
+.qr-pill {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  z-index: 40;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-dialog);
+  color: var(--ink);
+  font: inherit;
+  transform: translateX(-50%);
+  cursor: pointer;
+  animation: fade-in var(--dur-base) var(--ease-spring) backwards;
+}
+
+@media (max-width: 560px) {
+  .qr-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Separate elements (SMT-018). */
 .separate-panel {
   display: grid;
@@ -8127,7 +8232,8 @@ button.lc-head:hover,
   }
 
   .stepsbar-count.flash,
-  .redact-batch-bar {
+  .redact-batch-bar,
+  .qr-pill {
     animation: fade-in var(--dur-instant) linear both;
   }
 

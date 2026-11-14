@@ -418,6 +418,8 @@ fn geometry_keys(kind: &str) -> Option<&'static [&'static str]> {
         "pen" => Some(&["points"]),
         "stamp" => Some(&["rect", "rotation", "stamp", "art", "ink"]),
         "simplify" => Some(&["rect", "rotation"]),
+        // A QR code (SMT-036): its content too.
+        "qr" => Some(&["rect", "rotation", "content"]),
         "magnify" => Some(&["source", "at"]),
         "callout" => Some(&["rect", "rotation", "text", "tails"]),
         // A template's image zone (EDT-098): its frame, picture and framing.
@@ -509,6 +511,10 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
         "spotlight" => {
             let s = SpotlightObject::from_props(props)?;
             json!({"rect": s.rect, "rotation": s.rotation, "style": s.style})
+        }
+        "qr" => {
+            let q = xs_image::qr::QrObject::from_props(props)?;
+            json!({"rect": q.rect, "rotation": q.rotation, "content": q.content, "style": q.style})
         }
         "magnify" => {
             let m = MagnifyObject::from_props(props)?;

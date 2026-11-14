@@ -727,6 +727,18 @@
       "title": "Recognized words",
       "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
     },
+    "smart_qr_create": {
+      "title": "Create a QR code",
+      "description": "A QR code of a link or a text, as a file or as a sharp QR object of a document."
+    },
+    "smart_qr_read": {
+      "title": "Read QR codes",
+      "description": "The QR codes of a document, a part of it or an image file."
+    },
+    "smart_qr_open": {
+      "title": "Open a QR code's link",
+      "description": "Opens an http or https link read from a QR code, after the user confirms."
+    },
     "smart_separate": {
       "title": "Separate elements",
       "description": "Turns the elements and pieces of text of the image into objects to move, resize or delete."
@@ -1666,6 +1678,14 @@
     "smart_separate_enabled": {
       "label": "Separate elements",
       "description": "The Move tool can turn the elements of the image into objects."
+    },
+    "smart_qr_enabled": {
+      "label": "QR codes",
+      "description": "Create QR codes and read the ones in captures."
+    },
+    "smart_qr_detectOnCapture": {
+      "label": "Detect QR codes when capturing",
+      "description": "A capture opened in the editor with QR codes says so and lets you read them."
     }
   },
   "errors": {
@@ -1803,7 +1823,8 @@
     "edit_text_select": "Select the text to edit first, with the Selection tool.",
     "edit_text_none": "No text to edit was found.",
     "separate_nothing": "Nothing useful to separate was found. It works best with screenshots of interfaces.",
-    "separate_not_text": "That is not a separated piece of text."
+    "separate_not_text": "That is not a separated piece of text.",
+    "qr_too_long": "Too long for a QR code: {{bytes}} bytes, at most {{max}} with this error correction."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1949,7 +1970,8 @@
       "editor_move_computer": "Move XcreenShot to another computer",
       "smart_extract_text": "Extract text",
       "editor_extract_text": "Extract text",
-      "editor_auto_redact": "Auto redact"
+      "editor_auto_redact": "Auto redact",
+      "editor_insert_qr": "Insert QR code"
     }
   },
   "tray": {
@@ -2146,7 +2168,10 @@
     "extract_text_image": "Extract text from the image",
     "extract_text_selection": "Extract text from the selection",
     "extract_text_object": "Extract text",
-    "edit_text": "Edit text"
+    "edit_text": "Edit text",
+    "insert_qr": "Insert QR code…",
+    "read_qr": "Read QR codes",
+    "read_qr_selection": "Read QR codes of the selection"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -4807,7 +4832,8 @@
       "textOnly": "Apply only to text",
       "autoSimplify": "Auto simplify",
       "editText": "Edit text",
-      "separate": "Separate elements"
+      "separate": "Separate elements",
+      "qr": "QR codes"
     },
     "edit_text": {
       "title": "Edit text",
@@ -4831,6 +4857,44 @@
       "confirm_body_one": "The changes made to {{count}} element will be lost.",
       "confirm_body_other": "The changes made to {{count}} elements will be lost.",
       "again": "Separate again"
+    },
+    "qr": {
+      "title": "QR code",
+      "edit_title": "Change QR code",
+      "content": "Content",
+      "link": "Link",
+      "text": "Text",
+      "link_placeholder": "example.com",
+      "text_placeholder": "Any text",
+      "ecc": "Error correction",
+      "ecc_help": "More correction resists damage better, but the code is denser.",
+      "ecc_L": "Low",
+      "ecc_M": "Medium",
+      "ecc_Q": "High",
+      "ecc_H": "Maximum",
+      "color": "Code color",
+      "background": "Background",
+      "margin": "Margin (modules)",
+      "too_long": "Too long: {{bytes}} bytes, at most {{max}} with this correction.",
+      "hard": "Some readers may not read it: little contrast, or the code is lighter than its background.",
+      "unreadable": "Our own reader could not read this code. Try more contrast or more correction.",
+      "insert": "Insert",
+      "save": "Save",
+      "preview": "Preview",
+      "codes_title": "QR codes",
+      "none": "No QR codes were found.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "open": "Open link",
+      "redact": "Redact the code",
+      "show": "Show",
+      "network": "Network: {{ssid}}",
+      "password": "Password",
+      "open_title": "Open this link?",
+      "open_body": "It opens in your browser. Check the address:",
+      "open_yes": "Open",
+      "detected_one": "QR code detected",
+      "detected_other": "{{count}} QR codes detected"
     }
   },
   "history": {

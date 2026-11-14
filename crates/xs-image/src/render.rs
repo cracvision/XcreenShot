@@ -690,6 +690,12 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &crate::pictu
                 callouts::draw(pm, &c, dpi);
             }
         }
+        // A QR code, its modules at its size (SMT-036).
+        "qr" => {
+            if let Ok(q) = crate::qr::QrObject::from_props(&object.props) {
+                crate::qr::draw(pm, &q);
+            }
+        }
         "highlight" => {
             if let Ok(h) = HighlightObject::from_props(&object.props) {
                 // Only the text: a band per line, upright (SMT-021).
@@ -956,6 +962,9 @@ pub fn object_bounds(object: &Object, dpi: f64) -> Option<[f64; 4]> {
         "stamp" => StampObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
+        "qr" => crate::qr::QrObject::from_props(&object.props)
+            .ok()
+            .map(|q| (q.rect, q.rotation)),
         "simplify" => SimpleObject::from_props(&object.props)
             .ok()
             .map(|s| (s.rect, s.rotation)),
@@ -1442,7 +1451,7 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
         // A step, a callout or a stroke as it shows, in a picture centered on the
         // center of its body (of its points for a stroke): `(x, y)` is where its top-left
         // corner goes. The editor places it by that center.
-        "step" | "callout" | "pen" | "stamp" | "simplify" => {
+        "step" | "callout" | "pen" | "stamp" | "simplify" | "qr" => {
             let b = object_bounds(object, doc.dpi)?;
             let (cx, cy, reach) = match object.kind.as_str() {
                 "step" => {
@@ -1459,6 +1468,10 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
                 }
                 "simplify" => {
                     let r = SimpleObject::from_props(&object.props).ok()?.rect;
+                    (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
+                }
+                "qr" => {
+                    let r = crate::qr::QrObject::from_props(&object.props).ok()?.rect;
                     (r.x + r.w / 2.0, r.y + r.h / 2.0, r.w.hypot(r.h) / 2.0)
                 }
                 _ => ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0, 0.0),

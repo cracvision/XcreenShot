@@ -31,6 +31,7 @@ import { useZones } from "./templateUi";
 import { useVideo } from "./videoState";
 import { isOn } from "../features";
 import { startSeparate } from "./separateState";
+import { readQr } from "./qrState";
 
 interface Point {
   x: number;
@@ -169,6 +170,19 @@ export function selectionMenu(at: Point, onImage: boolean): void {
     ...(onImage ? [entry("float_selection"), entry("crop_selection")] : []),
     // The text in the selection becomes a Text object (SMT-009).
     ...(onImage && isOn("editText") ? [entry("edit_text", true)] : []),
+    // The QR codes of the selection (SMT-038).
+    ...(onImage && isOn("qr")
+      ? [
+          {
+            id: "read_qr",
+            label: i18next.t("menu.read_qr_selection"),
+            onSelect: () => {
+              const b = useEditor.getState().doc?.pixelSelection?.bounds;
+              void readQr(b ? [b.x, b.y, b.w, b.h] : undefined);
+            },
+          },
+        ]
+      : []),
     entry("deselect", true),
   ];
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });
@@ -224,6 +238,15 @@ export function canvasMenu(
     );
     const first = items[2];
     if (first) items[2] = { ...first, separator: true };
+  }
+  // The QR codes of the image (SMT-038).
+  if (!onObject && isOn("qr")) {
+    items.push({
+      id: "read_qr",
+      label: i18next.t("menu.read_qr"),
+      separator: true,
+      onSelect: () => void readQr(),
+    });
   }
   // Separate elements of a floating image (SMT-018).
   {

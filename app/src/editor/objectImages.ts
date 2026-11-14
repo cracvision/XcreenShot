@@ -29,6 +29,7 @@ export function useObjectImages(
       o.type !== "magnify" &&
       o.type !== "spotlight" &&
       o.type !== "stamp" &&
+      o.type !== "qr" &&
       o.type !== "simplify" &&
       !(o.type === "blur" && o.style.blurType !== "solid")
     )

@@ -19,6 +19,9 @@ png = "0.17"
 tiny-skia = "0.12.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 cosmic-text = "0.19.0"
+# QR codes (SMT-036, SMT-038): pure Rust, MIT or Apache-2.0, the same on both systems.
+qrcode = { version = "0.14", default-features = false }
+rqrr = "0.9"
 
 [lints]
 workspace = true

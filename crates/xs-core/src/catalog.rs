@@ -759,6 +759,53 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "cut": {"type": "boolean", "description": "Nothing changed: the place cuts letters or lines; fitRect is the place that would not"},
                 "fitRect": {"type": "array"}
             }})),
+        B::new("smart.qr_create", &["SMT-036"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "content": {"type": "string", "description": "A link (https:// is added when there is no scheme) or text"},
+                    "kind": {"type": "string", "enum": ["link", "text"], "default": "link"},
+                    "ecc": {"type": "string", "enum": ["L", "M", "Q", "H"], "default": "M", "description": "Error correction: more resists damage better, with a denser code"},
+                    "color": {"type": "string", "default": "#000000"},
+                    "background": {"type": ["string", "null"], "default": "#FFFFFF", "description": "null: transparent"},
+                    "margin": {"type": "integer", "minimum": 0, "maximum": 8, "default": 4, "description": "Around the code, in modules"},
+                    "preview": {"type": "boolean", "default": false, "description": "Return the code as SVG"},
+                    "path": {"type": "string", "description": "Write a file: PNG or SVG by the extension"},
+                    "size": {"type": "integer", "minimum": 16, "maximum": 8192, "default": 512, "description": "PNG side in pixels"},
+                    "documentId": {"type": "string", "description": "Insert as a QR object in this document"},
+                    "objectId": {"type": "string", "description": "With documentId: change this QR object instead"},
+                    "rect": {"type": "object", "description": "With documentId: where it goes (default: the middle)"}
+                }),
+                &["content"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "content": {"type": "string"},
+                "modules": {"type": "integer"},
+                "bytes": {"type": "integer"},
+                "max": {"type": "integer", "description": "The most bytes with this correction"},
+                "readable": {"type": "boolean", "description": "Our own reader reads it"},
+                "hardToRead": {"type": "boolean", "description": "Low contrast or lighter than its background"},
+                "svg": {"type": "string"},
+                "path": {"type": "string"},
+                "objectId": {"type": "string"}
+            }})),
+        B::new("smart.qr_read", &["SMT-038"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "An image file instead of a document"},
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h]: only this part"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "codes": {"type": "array", "description": "{text, rect: [x, y, w, h], kind: url (host) | wifi (ssid, security, password) | text}"}
+            }})),
+        B::new("smart.qr_open", &["SMT-038"])
+            .scopes(UI_CLI)
+            .params(params(json!({"url": {"type": "string", "description": "An http or https link, after the user said yes"}}), &["url"]))
+            .result(json!({"type": "object", "properties": {"opened": {"type": "boolean"}}})),
         B::new("smart.separate", &["SMT-018"])
             .scopes(UI_CLI)
             .mutates()
@@ -2923,7 +2970,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 122] = [
+pub const EDITOR_ACTIONS: [&str; 123] = [
     "open",
     "save",
     "save_as",
@@ -3060,6 +3107,8 @@ pub const EDITOR_ACTIONS: [&str; 122] = [
     "extract_text",
     // Auto redact's panel (SMT-010).
     "auto_redact",
+    // Insert a QR code (SMT-036).
+    "insert_qr",
 ];
 
 fn library_item() -> Value {

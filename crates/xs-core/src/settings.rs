@@ -266,6 +266,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "SMT-028",
         ),
         def(
+            "smart.qr.detectOnCapture",
+            "capture",
+            boolean(),
+            json!(true),
+            "SMT-038",
+        ),
+        def(
             "smart.extractText.showResults",
             "capture",
             boolean(),
@@ -338,6 +345,7 @@ pub fn definitions() -> Vec<SettingDef> {
             "SMT-002",
         ),
         def("smart.steps.enabled", "editor", boolean(), json!(true), "SMT-002"),
+        def("smart.qr.enabled", "editor", boolean(), json!(true), "SMT-002"),
         def(
             "smart.separate.enabled",
             "editor",

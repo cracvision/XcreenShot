@@ -349,6 +349,8 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.extract_text", "menu.extract_text", "extract_text"),
                 // Auto redact (SMT-010).
                 action("editor.auto_redact", "menu.auto_redact", "auto_redact"),
+                // A QR code (SMT-036).
+                action("editor.insert_qr", "menu.insert_qr", "insert_qr"),
                 action("editor.canvas_color", "menu.canvas_color", "canvas_color"),
                 Separator,
                 Submenu {

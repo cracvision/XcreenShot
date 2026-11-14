@@ -50,6 +50,7 @@ import { videoAction } from "./videoState";
 import { openRedact } from "./redactState";
 import { actionOff } from "../features";
 import { editText } from "./editText";
+import { openQr } from "./qrState";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -814,6 +815,11 @@ export function performAction(action: string): boolean {
     case "crop_selection":
       if (!pixels || pixels.target) return false;
       void selectionAction("crop");
+      return true;
+    // A QR code (SMT-036): its panel.
+    case "insert_qr":
+      if (!doc || doc.video || actionOff(action)) return false;
+      openQr();
       return true;
     // Edit text (SMT-009): of the selection on the image.
     case "edit_text":

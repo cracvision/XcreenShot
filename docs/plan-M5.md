@@ -9,7 +9,7 @@ Propuesta de Claude del 2026-11-13 (noche), **provisional hasta que Carlos la ap
 | M5.3 · Retoques automáticos | Aplicar solo al texto (SMT-021), Simplificar automático (SMT-019), Quitar fondo (SMT-020), Separar elementos (SMT-018) | En curso (2026-11-14): SMT-021, SMT-019 y SMT-018 hechos en Windows; Quitar fondo (SMT-020) espera la decisión de Carlos (ver `QUESTIONS.md`) |
 | M5.4 · Editar texto de la imagen | Reconocer, borrar el original y poner un texto editable igual (SMT-009) | Hecho en Windows (2026-11-14). Falta: la familia de letra detectada y sobre imágenes flotantes |
 | M5.5 · Grabador de pasos ([ADR 0009](adr/0009-guias-de-pasos.md), propuesta) | En cuatro partes. **a)** El grabador: iniciarlo, su barra, qué crea un paso, su texto y su imagen, límites y recuperación, y una guía básica al terminar (SMT-022 a SMT-028). **b)** Editar la guía: panel de pasos, negritas, candado, escala, capturar en una sección vacía, grabar más pasos (SMT-029). **c)** Exportar a Word, PowerPoint, Markdown, HTML, PDF, imágenes y portapapeles (SMT-030, SMT-032 a SMT-034). **d)** Guías en la biblioteca (SMT-035) | Hecho en Windows (2026-11-14): las cuatro partes. Falta: unir y dividir pasos, los destinos Word y PowerPoint de `SHR-` y SMT-031 (solo macOS) |
-| M5.6 · Códigos QR | Crear un QR (SMT-036, SMT-037) y leerlos (SMT-038) | — |
+| M5.6 · Códigos QR | Crear un QR (SMT-036, SMT-037) y leerlos (SMT-038) | Hecho en Windows (2026-11-14): crear (SMT-036) y leer (SMT-038). Falta: el botón QR durante la captura, los códigos en Extraer texto y la herramienta en Más; SMT-037 espera a M6 |
 
 ## Para decidir con Carlos
 

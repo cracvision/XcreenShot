@@ -118,6 +118,8 @@ import {
   type View,
 } from "./view";
 import { separatedText } from "./separateState";
+import { openQr } from "./qrState";
+import { isOn } from "../features";
 
 /** Movement below this (CSS px) is a click, not a drag: a click draws nothing (EDT-024). */
 const DRAG_THRESHOLD = 3;
@@ -388,7 +390,8 @@ function handlesOf(o: DocObject): Handle[] {
     o.type === "highlight" ||
     o.type === "spotlight" ||
     o.type === "stamp" ||
-    o.type === "simplify"
+    o.type === "simplify" ||
+    o.type === "qr"
   )
     return [...RESIZE_HANDLES, "rotate"];
   return [];
@@ -2178,6 +2181,11 @@ export function Canvas({ doc, insets }: Props) {
       return;
     }
     const hit = hitObject(p);
+    // A QR code: its panel, to change it (SMT-036).
+    if (hit?.type === "qr" && isOn("qr")) {
+      openQr(hit);
+      return;
+    }
     if (hit?.type === "image" && hit.separated?.text) {
       void separatedText(hit.id);
       return;
@@ -2458,6 +2466,18 @@ export function Canvas({ doc, insets }: Props) {
             key={o.id}
             o={o}
             committed={c?.type === "stamp" ? c : o}
+            image={objectImages.get(o.id)}
+          />
+        );
+      }
+      // A QR code as Rust draws it, at its size (SMT-036).
+      case "qr": {
+        const c = committed.get(o.id);
+        return (
+          <StampShape
+            key={o.id}
+            o={o}
+            committed={c?.type === "qr" ? c : o}
             image={objectImages.get(o.id)}
           />
         );

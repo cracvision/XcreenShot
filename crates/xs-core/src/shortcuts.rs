@@ -712,6 +712,8 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"auto_redact"}"#,
         ),
+        // Insert a QR code (SMT-036): assignable, none by default.
+        editor("editor.insert_qr", "editor.action", r#"{"action":"insert_qr"}"#),
         editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
         editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
         editor(

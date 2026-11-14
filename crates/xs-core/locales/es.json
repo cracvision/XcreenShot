@@ -727,6 +727,18 @@
       "title": "Palabras reconocidas",
       "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
     },
+    "smart_qr_create": {
+      "title": "Crear un código QR",
+      "description": "Un código QR de un enlace o un texto, como archivo o como objeto QR nítido de un documento."
+    },
+    "smart_qr_read": {
+      "title": "Leer códigos QR",
+      "description": "Los códigos QR de un documento, de una parte de él o de un archivo de imagen."
+    },
+    "smart_qr_open": {
+      "title": "Abrir el enlace de un código QR",
+      "description": "Abre un enlace http o https leído de un código QR, tras la confirmación del usuario."
+    },
     "smart_separate": {
       "title": "Separar elementos",
       "description": "Convierte los elementos y los trozos de texto de la imagen en objetos que se pueden mover, cambiar de tamaño o borrar."
@@ -1666,6 +1678,14 @@
     "smart_separate_enabled": {
       "label": "Separar elementos",
       "description": "La herramienta Mover puede convertir los elementos de la imagen en objetos."
+    },
+    "smart_qr_enabled": {
+      "label": "Códigos QR",
+      "description": "Crear códigos QR y leer los de las capturas."
+    },
+    "smart_qr_detectOnCapture": {
+      "label": "Detectar códigos QR al capturar",
+      "description": "Una captura que se abre en el editor con códigos QR lo dice y deja leerlos."
     }
   },
   "errors": {
@@ -1803,7 +1823,8 @@
     "edit_text_select": "Primero selecciona el texto que quieres editar, con la herramienta Selección.",
     "edit_text_none": "No se encontró texto para editar.",
     "separate_nothing": "No se encontró nada útil que separar. Funciona mejor con capturas de interfaces.",
-    "separate_not_text": "Eso no es un trozo de texto separado."
+    "separate_not_text": "Eso no es un trozo de texto separado.",
+    "qr_too_long": "Demasiado largo para un código QR: {{bytes}} bytes, como mucho {{max}} con esta corrección de errores."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1949,7 +1970,8 @@
       "editor_move_computer": "Mover XcreenShot a otro equipo",
       "smart_extract_text": "Extraer texto",
       "editor_extract_text": "Extraer texto",
-      "editor_auto_redact": "Redacción automática"
+      "editor_auto_redact": "Redacción automática",
+      "editor_insert_qr": "Insertar código QR"
     }
   },
   "tray": {
@@ -2146,7 +2168,10 @@
     "extract_text_image": "Extraer texto de la imagen",
     "extract_text_selection": "Extraer texto de la selección",
     "extract_text_object": "Extraer texto",
-    "edit_text": "Editar texto"
+    "edit_text": "Editar texto",
+    "insert_qr": "Insertar código QR…",
+    "read_qr": "Leer códigos QR",
+    "read_qr_selection": "Leer códigos QR de la selección"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -4807,7 +4832,8 @@
       "textOnly": "Aplicar solo al texto",
       "autoSimplify": "Simplificar automático",
       "editText": "Editar texto",
-      "separate": "Separar elementos"
+      "separate": "Separar elementos",
+      "qr": "Códigos QR"
     },
     "edit_text": {
       "title": "Editar texto",
@@ -4831,6 +4857,44 @@
       "confirm_body_one": "Se perderán los cambios hechos a {{count}} elemento.",
       "confirm_body_other": "Se perderán los cambios hechos a {{count}} elementos.",
       "again": "Separar de nuevo"
+    },
+    "qr": {
+      "title": "Código QR",
+      "edit_title": "Cambiar código QR",
+      "content": "Contenido",
+      "link": "Enlace",
+      "text": "Texto",
+      "link_placeholder": "ejemplo.com",
+      "text_placeholder": "Cualquier texto",
+      "ecc": "Corrección de errores",
+      "ecc_help": "Más corrección resiste mejor los daños, pero el código es más denso.",
+      "ecc_L": "Baja",
+      "ecc_M": "Media",
+      "ecc_Q": "Alta",
+      "ecc_H": "Máxima",
+      "color": "Color del código",
+      "background": "Fondo",
+      "margin": "Margen (módulos)",
+      "too_long": "Demasiado largo: {{bytes}} bytes, como mucho {{max}} con esta corrección.",
+      "hard": "Puede que algunos lectores no lo lean: poco contraste, o el código es más claro que el fondo.",
+      "unreadable": "Nuestro propio lector no pudo leer este código. Prueba con más contraste o más corrección.",
+      "insert": "Insertar",
+      "save": "Guardar",
+      "preview": "Vista previa",
+      "codes_title": "Códigos QR",
+      "none": "No se encontraron códigos QR.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "open": "Abrir enlace",
+      "redact": "Redactar el código",
+      "show": "Mostrar",
+      "network": "Red: {{ssid}}",
+      "password": "Contraseña",
+      "open_title": "¿Abrir este enlace?",
+      "open_body": "Se abre en el navegador. Revisa la dirección:",
+      "open_yes": "Abrir",
+      "detected_one": "Código QR detectado",
+      "detected_other": "{{count}} códigos QR detectados"
     }
   },
   "history": {

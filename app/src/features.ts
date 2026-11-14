@@ -5,7 +5,14 @@ import type { SettingEntry } from "./lib/commands";
 import { settingValue, useApp } from "./store";
 
 export type FeatureName =
-  "extractText" | "autoRedact" | "steps" | "textOnly" | "autoSimplify" | "editText" | "separate";
+  | "extractText"
+  | "autoRedact"
+  | "steps"
+  | "textOnly"
+  | "autoSimplify"
+  | "editText"
+  | "separate"
+  | "qr";
 
 export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   extractText: "smart.extractText.enabled",
@@ -15,6 +22,7 @@ export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   autoSimplify: "smart.autoSimplify.enabled",
   editText: "smart.editText.enabled",
   separate: "smart.separate.enabled",
+  qr: "smart.qr.enabled",
 };
 
 /** The editor actions of each feature. */
@@ -23,6 +31,7 @@ const ACTIONS: Record<string, FeatureName> = {
   video_extract_text: "extractText",
   auto_redact: "autoRedact",
   edit_text: "editText",
+  insert_qr: "qr",
 };
 
 /** On unless switched off; on too before the settings arrive. */

@@ -489,6 +489,26 @@ export interface ImageStyle {
 }
 
 /** A picture of the document's `images/` folder in a rectangle (EDT-078). */
+/** A QR code (SMT-036): its content and how it shows; Rust draws it at its size. */
+export type QrEcc = "L" | "M" | "Q" | "H";
+
+export interface QrStyle {
+  kind: "link" | "text";
+  ecc: QrEcc;
+  color: string;
+  background: string | null;
+  margin: number;
+}
+
+export interface QrObject {
+  id: string;
+  type: "qr";
+  rect: Rect;
+  rotation: number;
+  content: string;
+  style: QrStyle;
+}
+
 export interface ImageObject {
   id: string;
   type: "image";
@@ -542,6 +562,7 @@ export type DocObject = (
   | SpotlightObject
   | StampObject
   | SimplifyObject
+  | QrObject
   | ZoneObject
   | { id: string; type: "other" }
 ) & {
