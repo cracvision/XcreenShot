@@ -10,6 +10,7 @@ Una guía de pasos se edita como una plantilla, con un panel de pasos propio. ID
   - duplicar un paso copia su imagen, su texto y su flecha; añadir un texto y una imagen (la vacía no sale en la imagen final);
   - las imágenes al 50 %: la mitad de anchas y la flecha a la mitad, en el mismo sitio;
   - borrar dos pasos a la vez; Grabar más pasos aquí pone los nuevos detrás del elegido y un Deshacer los quita;
+  - unir dos pasos deja los dos textos en el primero y la segunda imagen, con su anillo, como imagen detrás; dividir un paso lo copia con su imagen y reparte el texto (tras la primera frase, o donde se pida); un Deshacer cada uno;
   - 60 imágenes de 2000×2000 no pasan de 512 MB descodificados.
 - En la app: una guía de prueba muestra la pestaña **Pasos** con cada paso en miniatura y numerado, y Diseño con el tamaño de las imágenes, el autor y el tema; al 50 % las imágenes se ven a la mitad con sus anillos en su sitio.
 
@@ -22,4 +23,5 @@ Una guía de pasos se edita como una plantilla, con un panel de pasos propio. ID
 5. [ ] Doble clic en el texto de un paso, escribe un párrafo largo: al terminar, la imagen baja para dejarle sitio. `**así**` sale en negrita.
 6. [ ] **Tamaño de las imágenes** al 50 %: todas las imágenes a la mitad, con sus anillos y flechas en su sitio.
 7. [ ] **+ > Grabar más pasos aquí**: graba dos clics y pulsa Terminar; aparecen detrás de ese paso, numerados con los demás.
-8. [ ] Abre una guía de muchos pasos (por ejemplo, 50): se abre sin que la memoria de XcreenShot se dispare (Administrador de tareas).
+8. [ ] **+ > Unir con el siguiente** en un paso: los dos textos quedan en él, uno debajo del otro, y la imagen del siguiente sigue detrás, sin número, con sus anotaciones. **+ > Dividir en dos** en un paso de dos frases: queda una copia con la misma imagen y la segunda frase. `Ctrl+Z` deshace cada uno.
+9. [ ] Abre una guía de muchos pasos (por ejemplo, 50): se abre sin que la memoria de XcreenShot se dispare (Administrador de tareas).

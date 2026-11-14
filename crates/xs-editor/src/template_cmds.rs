@@ -721,6 +721,72 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
                 lang,
             );
         }
+        // A guide's two steps or texts in one (SMT-029): the texts together in the
+        // first; the second's picture stays, as a picture section after it.
+        "merge_sections" => {
+            let t = template
+                .as_mut()
+                .filter(|t| t.is_guide())
+                .ok_or_else(not_template)?;
+            let i = section_of(t)?;
+            let texty = |k: &str| k == "guideStep" || k == "guideText";
+            if !texty(&t.sections[i].kind) || t.sections.get(i + 1).is_none_or(|s| !texty(&s.kind)) {
+                return Err(bad(lang, "sectionId", "a step or text with another after it"));
+            }
+            let (a, b) = (
+                guide_text_slot(&t.sections[i]),
+                guide_text_slot(&t.sections[i + 1]),
+            );
+            let joined = join_texts(&text_at(&next, &a), &text_at(&next, &b));
+            set_text_at(&mut next, &a, &joined);
+            let second = t.sections[i + 1].id.clone();
+            let pictured = slot_index(&next, &format!("zone:{second}:0"))
+                .and_then(|z| next.objects[z].props.get("image"))
+                .is_some_and(|v| v.as_str().is_some_and(|s| !s.is_empty()));
+            if t.sections[i + 1].kind == "guideStep" && pictured {
+                t.sections[i + 1].kind = "guideImage".into();
+            } else {
+                t.sections.remove(i + 1);
+            }
+            // Its text is in the first now.
+            if let Some(k) = slot_index(&next, &b) {
+                next.objects.remove(k);
+            }
+            "history.merge_sections"
+        }
+        // A guide's step or text in two (SMT-029): a copy after it, with its picture
+        // and annotations; the text shared between them at `at` (characters), else
+        // after its first line or sentence.
+        "split_section" => {
+            let t = template
+                .as_mut()
+                .filter(|t| t.is_guide())
+                .ok_or_else(not_template)?;
+            let i = section_of(t)?;
+            if !["guideStep", "guideText"].contains(&t.sections[i].kind.as_str()) {
+                return Err(bad(lang, "sectionId", "a step or text"));
+            }
+            let at = p.get("at").and_then(Value::as_u64).map(|v| v as usize);
+            let slot = guide_text_slot(&t.sections[i]);
+            let (first, rest) = split_text(&text_at(&next, &slot), at);
+            duplicate_section(core, lang, &mut next, t, i)?;
+            let copy = guide_text_slot(&t.sections[i + 1]);
+            set_text_at(&mut next, &slot, &first);
+            set_text_at(&mut next, &copy, &rest);
+            // Each as tall as its text now.
+            relayout(core, lang, &mut next, t, false);
+            return finish(
+                core,
+                ctx,
+                &id,
+                &mut next,
+                None,
+                false,
+                "history.split_section",
+                Vec::new(),
+                lang,
+            );
+        }
         "resize_section" => {
             let t = template.as_mut().ok_or_else(not_template)?;
             let i = section_of(t)?;
@@ -933,6 +999,56 @@ fn grow_custom_steps(template: &mut Option<Template>, doc: &Document) {
             .map_or(0, |i| i + 1);
         t.sections.insert(end, s);
     }
+}
+
+/// The place of a guide's step or text section's text.
+fn guide_text_slot(s: &templates::Section) -> String {
+    if s.kind == "guideStep" {
+        format!("caption:{}:0", s.id)
+    } else {
+        format!("text:{}", s.id)
+    }
+}
+
+fn text_at(doc: &Document, slot: &str) -> String {
+    slot_index(doc, slot)
+        .and_then(|i| doc.objects[i].props.get("text")?.as_str().map(str::to_string))
+        .unwrap_or_default()
+}
+
+fn set_text_at(doc: &mut Document, slot: &str, text: &str) {
+    if let Some(i) = slot_index(doc, slot) {
+        doc.objects[i].props.insert("text".into(), json!(text));
+    }
+}
+
+/// Two texts of a guide in one, on separate lines.
+fn join_texts(a: &str, b: &str) -> String {
+    match (a.trim_end(), b.trim_start()) {
+        ("", b) => b.to_string(),
+        (a, "") => a.to_string(),
+        (a, b) => format!("{a}\n{b}"),
+    }
+}
+
+/// A guide's text in two (SMT-029): at `at` characters, or after its first line, or
+/// after its first sentence; else all of it stays and the second is empty.
+fn split_text(text: &str, at: Option<usize>) -> (String, String) {
+    let cut = match at {
+        Some(n) => text.char_indices().nth(n).map_or(text.len(), |(i, _)| i),
+        None => match text.find('\n') {
+            Some(i) => i,
+            None => text
+                .match_indices(". ")
+                .map(|(i, _)| i + 1)
+                .find(|i| !text[*i..].trim().is_empty())
+                .unwrap_or(text.len()),
+        },
+    };
+    (
+        text[..cut].trim_end().to_string(),
+        text[cut..].trim_start().to_string(),
+    )
 }
 
 /// Duplicates a guide's section `i` (SMT-029): its picture, framing and text, and the

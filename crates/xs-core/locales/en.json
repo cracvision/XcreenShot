@@ -5150,7 +5150,9 @@
         "html1": "HTML in a single file",
         "images": "Pictures apart",
         "clipboard": "Copy to the clipboard"
-      }
+      },
+      "merge": "Merge with the next",
+      "split": "Split in two"
     },
     "features": {
       "title": "Smart features",
@@ -5413,7 +5415,9 @@
     "add_steps": "Add steps",
     "auto_simplify": "Auto simplify",
     "edit_text": "Edit text",
-    "separate": "Separate elements"
+    "separate": "Separate elements",
+    "merge_sections": "Merge steps",
+    "split_section": "Split step"
   },
   "editor": {
     "edited": "{{name}} — Edited",

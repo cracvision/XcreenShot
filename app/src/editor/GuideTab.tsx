@@ -187,6 +187,27 @@ export function GuideTab({ themes }: { themes: { id: string; name: string }[] })
                       onSelect: () =>
                         void templateCommand("add_section", { kind: k, index: index(section) + 1 }),
                     })),
+                    // Merge with the next, split in two (SMT-029): steps and texts.
+                    ...(kind === "guideStep" || kind === "guideText"
+                      ? [
+                          {
+                            id: "merge",
+                            label: t("ui.guide.merge"),
+                            separator: true,
+                            disabled: !["guideStep", "guideText"].includes(
+                              rows[i + 1]?.section.kind ?? "",
+                            ),
+                            onSelect: () =>
+                              void templateCommand("merge_sections", { sectionId: section.id }),
+                          },
+                          {
+                            id: "split",
+                            label: t("ui.guide.split"),
+                            onSelect: () =>
+                              void templateCommand("split_section", { sectionId: section.id }),
+                          },
+                        ]
+                      : []),
                     // The recorder again; its steps come in after this one (SMT-029).
                     ...(stepsOn
                       ? [

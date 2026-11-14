@@ -2535,12 +2535,13 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "duplicate_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
+                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "duplicate_section", "merge_sections", "split_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
                     "settings": {"type": "object", "description": "settings: the settings to change (EDT-097)"},
                     "kind": {"type": "string", "enum": ["step", "imageText", "text", "twoImages", "title", "footer", "guideStep", "guideText", "guideImage"], "description": "add_section: its kind (a guide of steps: guideStep, guideText or guideImage, SMT-029)"},
                     "sectionIds": {"type": "array", "items": {"type": "string"}, "description": "remove_section: several at once"},
                     "index": {"type": "integer", "minimum": 0, "description": "add_section, move_section: its place among the sections"},
-                    "sectionId": {"type": "string"},
+                    "sectionId": {"type": "string", "description": "merge_sections: the first of the two (SMT-029)"},
+                    "at": {"type": "integer", "minimum": 0, "description": "split_section: characters of the text that stay; without it, its first line or sentence"},
                     "height": {"type": "number", "minimum": 40, "maximum": 5000, "description": "resize_section"},
                     "zone": {"type": "string", "description": "A zone: its object id or slot (zone:<section>:<n>)"},
                     "with": {"type": "string", "description": "swap_zones: the other zone"},

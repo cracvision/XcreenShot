@@ -573,6 +573,122 @@ mod tests {
         assert_eq!(numbers(&doc()), ["1", "2", "3"]);
     }
 
+    /// SMT-029: two steps merged (the texts in the first, the second's picture kept as a
+    /// picture after it) and a step split in two (a copy with its picture, the text
+    /// shared), each in one undo step.
+    #[test]
+    fn steps_merged_and_split() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let step = |text: &str| GuideStep {
+            text: text.into(),
+            png: png(600, 400),
+            size: [600, 400],
+            frame: [0.0, 0.0, 600.0, 400.0],
+            at: [50.0, 50.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, _) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Guía".into(),
+                steps: vec![
+                    step("Abre **Ajustes**"),
+                    step("Pulsa **Guardar**"),
+                    step("Cierra. Listo"),
+                ],
+                meta: json!({}),
+            },
+        )
+        .unwrap();
+        let ed = editor(&core);
+        let doc = || ed.store.with(&id, |d| d.document.clone()).unwrap();
+        let sections = |d: &Document| -> Vec<(String, String, String)> {
+            Template::of(d)
+                .unwrap()
+                .sections
+                .iter()
+                .filter(|s| s.kind.starts_with("guide") && s.kind != "guideHeader")
+                .map(|s| {
+                    let text = d
+                        .objects
+                        .iter()
+                        .find(|o| slot_of(o) == Some(&format!("caption:{}:0", s.id)))
+                        .and_then(|o| o.props.get("text")?.as_str().map(str::to_string))
+                        .unwrap_or_default();
+                    (s.id.clone(), s.kind.clone(), text)
+                })
+                .collect()
+        };
+        let call = |p: Value| {
+            core.call(xs_core::Source::Cli, "document.template", p, None)
+                .unwrap()
+        };
+        let first = sections(&doc())[0].0.clone();
+        let rings = |d: &Document| d.objects.iter().filter(|o| o.kind == "shape").count();
+        assert_eq!(rings(&doc()), 3);
+        call(json!({"documentId": id, "action": "merge_sections", "sectionId": first}));
+        let s = sections(&doc());
+        assert_eq!(
+            s.iter().map(|x| (x.1.as_str(), x.2.as_str())).collect::<Vec<_>>(),
+            [
+                (
+                    "guideStep",
+                    "Abre **Ajustes**
+Pulsa **Guardar**"
+                ),
+                ("guideImage", ""),
+                ("guideStep", "Cierra. Listo"),
+            ]
+        );
+        // Nothing lost: the second picture and its ring stay.
+        assert_eq!(rings(&doc()), 3);
+        let numbers = |d: &Document| d.objects.iter().filter(|o| o.kind == "step").count();
+        assert_eq!(numbers(&doc()), 2);
+        // The last one split after its first sentence: a copy with its picture.
+        let last = s[2].0.clone();
+        call(json!({"documentId": id, "action": "split_section", "sectionId": last}));
+        let s = sections(&doc());
+        assert_eq!(s.len(), 4);
+        assert_eq!((s[2].2.as_str(), s[3].2.as_str()), ("Cierra.", "Listo"));
+        assert_eq!(rings(&doc()), 4);
+        assert_eq!(numbers(&doc()), 3);
+        // At a place: the first 4 characters.
+        call(json!({"documentId": id, "action": "split_section", "sectionId": s[0].0, "at": 4}));
+        let s = sections(&doc());
+        assert_eq!(
+            (s[0].2.as_str(), s[1].2.as_str()),
+            (
+                "Abre",
+                "**Ajustes**
+Pulsa **Guardar**"
+            )
+        );
+        // One undo each.
+        core.call(
+            xs_core::Source::Cli,
+            "document.undo",
+            json!({"documentId": id}),
+            None,
+        )
+        .unwrap();
+        assert_eq!(sections(&doc()).len(), 4);
+        // Not a picture section.
+        assert!(core
+            .call(
+                xs_core::Source::Cli,
+                "document.template",
+                json!({"documentId": id, "action": "merge_sections", "sectionId": s[2].0}),
+                None
+            )
+            .is_err());
+    }
+
     /// SMT-029: "Record more steps here" puts the new steps after the chosen one, with
     /// pictures of their own names, numbered with the rest, in one undo step.
     #[test]

@@ -5150,7 +5150,9 @@
         "html1": "HTML en un solo archivo",
         "images": "Imágenes por separado",
         "clipboard": "Copiar al portapapeles"
-      }
+      },
+      "merge": "Unir con el siguiente",
+      "split": "Dividir en dos"
     },
     "features": {
       "title": "Funciones inteligentes",
@@ -5413,7 +5415,9 @@
     "add_steps": "Añadir pasos",
     "auto_simplify": "Simplificar automático",
     "edit_text": "Editar texto",
-    "separate": "Separar elementos"
+    "separate": "Separar elementos",
+    "merge_sections": "Unir pasos",
+    "split_section": "Dividir paso"
   },
   "editor": {
     "edited": "{{name}} — Editado",
