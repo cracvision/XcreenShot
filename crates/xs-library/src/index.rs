@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS items (
     steps INTEGER
 );
 CREATE INDEX IF NOT EXISTS items_captured ON items (captured DESC);
+CREATE TABLE IF NOT EXISTS seen (
+    id TEXT PRIMARY KEY,
+    modified INTEGER NOT NULL,
+    text TEXT NOT NULL
+);
 ";
 
 /// An indexed item. `path` is relative to the library folder, with `/` separators.
@@ -204,6 +209,60 @@ impl Index {
                 favorite as i64
             ],
         )?;
+        Ok(())
+    }
+
+    /// The text read in an item's image, for the version of the file it was read from
+    /// (LIB-008).
+    pub fn set_seen(&self, id: &str, modified: i64, text: &str) -> rusqlite::Result<()> {
+        self.db.execute(
+            "INSERT INTO seen (id, modified, text) VALUES (?1, ?2, ?3)
+             ON CONFLICT(id) DO UPDATE SET modified = ?2, text = ?3",
+            params![id, modified, text],
+        )?;
+        Ok(())
+    }
+
+    /// The text read of each item whose file has not changed since (LIB-008).
+    pub fn seen_map(&self) -> rusqlite::Result<std::collections::HashMap<String, String>> {
+        let mut q = self.db.prepare(
+            "SELECT seen.id, seen.text FROM seen JOIN items ON items.id = seen.id AND items.modified = seen.modified",
+        )?;
+        let rows = q.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        rows.collect()
+    }
+
+    /// Images still to read, newest first: pictures and documents, not videos, not
+    /// only in the cloud (LIB-008).
+    pub fn unseen(&self, limit: usize) -> rusqlite::Result<Vec<Item>> {
+        let mut q = self.db.prepare(
+            "SELECT * FROM items WHERE cloud = 0 AND format IN ('xshot', 'png', 'jpg', 'jpeg')
+             AND NOT EXISTS (SELECT 1 FROM seen WHERE seen.id = items.id AND seen.modified = items.modified)
+             ORDER BY captured DESC LIMIT ?1",
+        )?;
+        let rows = q.query_map([limit as i64], Item::from_row)?;
+        rows.collect()
+    }
+
+    /// How many images are read and how many wait (LIB-008).
+    pub fn seen_counts(&self) -> rusqlite::Result<(u64, u64)> {
+        let done: i64 = self.db.query_row(
+            "SELECT COUNT(*) FROM seen JOIN items ON items.id = seen.id AND items.modified = seen.modified",
+            [],
+            |r| r.get(0),
+        )?;
+        let waiting: i64 = self.db.query_row(
+            "SELECT COUNT(*) FROM items WHERE cloud = 0 AND format IN ('xshot', 'png', 'jpg', 'jpeg')
+             AND NOT EXISTS (SELECT 1 FROM seen WHERE seen.id = items.id AND seen.modified = items.modified)",
+            [],
+            |r| r.get(0),
+        )?;
+        Ok((done.max(0) as u64, waiting.max(0) as u64))
+    }
+
+    /// Forgets every text read (LIB-008 switched off).
+    pub fn clear_seen(&self) -> rusqlite::Result<()> {
+        self.db.execute("DELETE FROM seen", [])?;
         Ok(())
     }
 

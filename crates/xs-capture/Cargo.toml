@@ -25,7 +25,7 @@ directories = "6"
 base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_Security", "Win32_Media_Audio", "Win32_UI_Shell", "Win32_System_StationsAndDesktops", "Win32_System_DataExchange", "Win32_System_Com"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_System_Power", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_Security", "Win32_Media_Audio", "Win32_UI_Shell", "Win32_System_StationsAndDesktops", "Win32_System_DataExchange", "Win32_System_Com"] }
 
 # PDF pages (CAP-041) and the images the app's decoders do not read (CAP-040): the
 # system's own engines, through the bindings the app already has (as xs-ocr).

@@ -509,6 +509,8 @@ impl Library {
                 },
             };
             let current = xmeta::read(&f.abs);
+            // A rebuild keeps the text read in the image (LIB-008, LIB-022).
+            let seen_side = current.as_ref().and_then(|m| seen_of(m, f.modified));
             let same = current
                 .as_ref()
                 .is_some_and(|m| m.id == item.id && m.tags == item.tags);
@@ -525,6 +527,9 @@ impl Library {
             }
             used.insert(item.id.clone());
             let _ = index.upsert(&item);
+            if let Some(t) = &seen_side {
+                let _ = index.set_seen(&item.id, f.modified, t);
+            }
             changed = true;
         }
         for g in gone {
@@ -753,6 +758,51 @@ impl Library {
             Err(e) => tracing::warn!(error = %e, "cannot watch the library folder"),
         }
     }
+}
+
+impl Library {
+    /// Images whose text is still to read, newest first (LIB-008).
+    pub fn unseen(&self, limit: usize) -> Vec<Item> {
+        self.index.lock().unwrap().unseen(limit).unwrap_or_default()
+    }
+
+    /// Keeps the text read in `item`'s image: in the index and in its sidecar, so a
+    /// rebuild does not read it again (LIB-022).
+    pub fn set_seen(&self, item: &Item, text: &str) {
+        let index = self.index.lock().unwrap();
+        let _ = index.set_seen(&item.id, item.modified, text);
+        let abs = self
+            .root
+            .join(item.path.replace('/', std::path::MAIN_SEPARATOR_STR));
+        if let Some(mut meta) = xmeta::read(&abs) {
+            meta.extra.insert("seen".into(), serde_json::json!(text));
+            meta.extra
+                .insert("seenFor".into(), serde_json::json!(item.modified));
+            let _ = xmeta::write(&abs, &meta);
+        }
+    }
+
+    /// What was read of each image whose file has not changed since (LIB-008).
+    pub fn seen_map(&self) -> HashMap<String, String> {
+        self.index.lock().unwrap().seen_map().unwrap_or_default()
+    }
+
+    /// How many images are read and how many wait (LIB-008).
+    pub fn seen_counts(&self) -> (u64, u64) {
+        self.index.lock().unwrap().seen_counts().unwrap_or((0, 0))
+    }
+
+    /// Switched off: the index forgets the text read; the sidecars keep it for when it
+    /// is switched on again (LIB-008).
+    pub fn clear_seen(&self) {
+        let _ = self.index.lock().unwrap().clear_seen();
+    }
+}
+
+/// A sidecar's text read for this very file, if any (LIB-008).
+fn seen_of(meta: &Xmeta, modified: i64) -> Option<String> {
+    let text = meta.extra.get("seen")?.as_str()?;
+    (meta.extra.get("seenFor")?.as_i64()? == modified).then(|| text.to_string())
 }
 
 fn build(f: &Found, id: String, favorite: bool, tags: Vec<String>) -> Item {

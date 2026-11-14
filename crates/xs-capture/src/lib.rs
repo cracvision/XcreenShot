@@ -43,6 +43,7 @@ pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
+pub mod seen_text;
 pub mod separate;
 pub mod simplify_auto;
 pub mod steps;
@@ -955,6 +956,11 @@ fn source_key(s: Source) -> &'static str {
 
 /// One capture at a time: others answer `busy` at once (CAP-008).
 static CAPTURING: AtomicBool = AtomicBool::new(false);
+
+/// A capture is under way (the library text reader steps aside, LIB-008).
+pub fn capturing() -> bool {
+    CAPTURING.load(Ordering::SeqCst)
+}
 
 struct Busy;
 
@@ -2089,6 +2095,8 @@ pub fn extension() -> Extension {
         edit_text::register(reg, &weak);
         separate::register(reg, &weak);
         qr_cmds::register(reg, &weak);
+        // The text of library images, for the search (LIB-008).
+        seen_text::start(weak.clone());
         steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();

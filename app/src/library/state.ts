@@ -35,6 +35,8 @@ export interface LibraryItem {
   cloud?: boolean;
   /** A guide of steps: how many (SMT-035). */
   steps?: number | null;
+  /** Found only by the text read in its image (LIB-008). */
+  inImage?: boolean;
   /** A copy a sync service made beside its original (LIB-029). */
   conflict?: boolean;
   conflictOf?: string;

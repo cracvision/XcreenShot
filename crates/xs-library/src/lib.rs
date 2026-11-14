@@ -308,7 +308,13 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
         Some(v) => serde_json::from_value(v.clone()).map_err(|e| bad("filters", &e.to_string()))?,
     };
     let search = p.get("query").and_then(Value::as_str).unwrap_or("");
-    let found = query::run(&all, &filters, search, sort, descending, query::today());
+    // The text read in the images, while that is on (LIB-008).
+    let seen = if core.settings.get_bool("library.ocrIndex") && !search.trim().is_empty() {
+        lib.seen_map()
+    } else {
+        std::collections::HashMap::new()
+    };
+    let found = query::run_with(&all, &seen, &filters, search, sort, descending, query::today());
     let offset = p["offset"].as_u64().unwrap_or(0) as usize;
     let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
     let conflicts = conflicts_of(&all);
@@ -317,7 +323,13 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
         .iter()
         .skip(offset)
         .take(limit)
-        .map(|i| with_conflict(i.to_json(lib.root()), &conflicts, &i.id))
+        .map(|i| {
+            let mut v = with_conflict(i.to_json(lib.root()), &conflicts, &i.id);
+            if found.in_image.contains(&i.id) {
+                v["inImage"] = json!(true);
+            }
+            v
+        })
         .collect();
     let (place, service) = place_of(lib.root());
     Ok(json!({
@@ -1256,6 +1268,15 @@ pub fn extension_with(root: Option<PathBuf>) -> Extension {
                 p["action"] = json!("retry");
             }
             location_command(&core, ctx, &p)
+        });
+        on!("library.seen_status", |core, _ctx, _p| {
+            // How the reading of the images' text goes (LIB-008).
+            let (done, waiting) = library(&core).seen_counts();
+            Ok(json!({
+                "enabled": core.settings.get_bool("library.ocrIndex"),
+                "done": done,
+                "waiting": waiting,
+            }))
         });
         on!("library.rebuild", |core, ctx, _p| {
             let lib = library(&core);

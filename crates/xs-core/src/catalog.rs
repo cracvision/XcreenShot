@@ -759,6 +759,13 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "cut": {"type": "boolean", "description": "Nothing changed: the place cuts letters or lines; fitRect is the place that would not"},
                 "fitRect": {"type": "array"}
             }})),
+        B::new("library.seen_status", &["LIB-008"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "enabled": {"type": "boolean", "description": "library.ocrIndex"},
+                "done": {"type": "integer", "description": "Images whose text is read"},
+                "waiting": {"type": "integer", "description": "Images still to read"}
+            }})),
         B::new("smart.qr_create", &["SMT-036"])
             .scopes(UI_CLI)
             .params(params(

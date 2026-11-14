@@ -7,7 +7,7 @@
 //! items the other sections and the search let through.
 
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{Datelike, Duration, Local, NaiveDate, TimeZone};
 use serde::Deserialize;
@@ -188,11 +188,14 @@ struct Fields {
     app: String,
     site: String,
     text: String,
+    /// The text read in its image (LIB-008).
+    seen: String,
 }
 
 impl Fields {
-    fn of(item: &Item) -> Fields {
+    fn of(item: &Item, seen: &HashMap<String, String>) -> Fields {
         Fields {
+            seen: seen.get(&item.id).map(|s| fold(s)).unwrap_or_default(),
             name: fold(&item.name),
             tags: item.tags.iter().map(|t| fold(t)).collect(),
             app: fold(item.app.as_deref().unwrap_or("")),
@@ -229,8 +232,8 @@ fn word_starts(field: &str, prefix: &str) -> bool {
 
 fn matches(item: &Item, f: &Fields, term: &Term) -> bool {
     match term {
-        Term::Word(w) => f.all().any(|field| word_starts(field, w)),
-        Term::Phrase(p) => f.all().any(|field| field.contains(p.as_str())),
+        Term::Word(w) => f.all().any(|field| word_starts(field, w)) || word_starts(&f.seen, w),
+        Term::Phrase(p) => f.all().any(|field| field.contains(p.as_str())) || f.seen.contains(p.as_str()),
         Term::Tag(t) => f.tags.iter().any(|tag| tag == t || word_starts(tag, t)),
         Term::App(a) => word_starts(&f.app, a),
         Term::Site(s) => f.site.contains(s.as_str()),
@@ -383,6 +386,8 @@ type Year = (u64, BTreeMap<String, Month>);
 pub struct Found<'a> {
     pub items: Vec<&'a Item>,
     pub facets: Value,
+    /// Found only by the text read in their image (LIB-008): "in the image".
+    pub in_image: HashSet<String>,
 }
 
 /// The items of `all` that pass `filters` and `query`, sorted; with `today` for the
@@ -395,13 +400,26 @@ pub fn run<'a>(
     descending: bool,
     today: NaiveDate,
 ) -> Found<'a> {
+    run_with(all, &HashMap::new(), filters, query, sort, descending, today)
+}
+
+/// [`run`], with the text read in the images (`seen`, by item ID) searched too.
+pub fn run_with<'a>(
+    all: &'a [Item],
+    seen: &HashMap<String, String>,
+    filters: &Filters,
+    query: &str,
+    sort: Sort,
+    descending: bool,
+    today: NaiveDate,
+) -> Found<'a> {
     let checked = Checked {
         filters,
         terms: parse(query),
         today,
         tags: filters.tags.iter().map(|t| t.to_lowercase()).collect(),
     };
-    let fields: Vec<Fields> = all.iter().map(Fields::of).collect();
+    let fields: Vec<Fields> = all.iter().map(|i| Fields::of(i, seen)).collect();
     let mut items: Vec<&Item> = all
         .iter()
         .zip(&fields)
@@ -492,7 +510,22 @@ pub fn run<'a>(
         }
     }
     let favorites = over(Section::Favorites).filter(|i| i.favorite).count();
+    // Those the words find only in the image (LIB-008).
+    let in_image: HashSet<String> = if checked.terms.is_empty() || seen.is_empty() {
+        HashSet::new()
+    } else {
+        let empty = HashMap::new();
+        items
+            .iter()
+            .filter(|i| {
+                let without = Fields::of(i, &empty);
+                !checked.terms.iter().all(|t| matches(i, &without, t))
+            })
+            .map(|i| i.id.clone())
+            .collect()
+    };
     Found {
+        in_image,
         items,
         facets: json!({
             "types": types.into_iter().map(|(k, n)| json!({"value": k, "count": n})).collect::<Vec<_>>(),

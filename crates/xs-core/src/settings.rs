@@ -194,6 +194,7 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "LIB-020",
         ),
+        def("library.ocrIndex", "library", boolean(), json!(true), "LIB-008"),
         def(
             "library.keepEditableCopy",
             "library",

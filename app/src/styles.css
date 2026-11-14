@@ -5409,6 +5409,27 @@ html.launcher-root #root {
   right: auto;
 }
 
+/* Found by the words inside the image (LIB-008). */
+.lib-badge.in-image {
+  top: 6px;
+  bottom: auto;
+  left: 6px;
+  right: auto;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.lib-in-image {
+  margin-left: var(--space-2);
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 12px;
+}
+
 /* LIB-026: the Library's status bar, one line or with its tasks. */
 .library-status {
   flex-direction: column;

@@ -519,6 +519,8 @@ function Item({
           <span className="lc lc-name">
             <Star item={item} />
             {item.name}
+            {/* Found by the words inside it (LIB-008). */}
+            {item.inImage && <span className="lib-in-image">{t("ui.library.in_image")}</span>}
             {item.cloud && <CloudBadge />}
             {item.conflict && <ConflictBadge />}
           </span>
@@ -544,6 +546,8 @@ function Item({
                 {item.format === "jpeg" ? "JPG" : item.format.toUpperCase()}
               </span>
             )}
+            {/* Found by the words inside it (LIB-008). */}
+            {item.inImage && <span className="lib-badge in-image">{t("ui.library.in_image")}</span>}
             {/* A guide of steps: how many (SMT-035). */}
             {item.kind === "guide" && item.steps != null && (
               <span className="lib-badge guide">
@@ -1123,6 +1127,21 @@ function LibraryStatus() {
   const tasks = useLibraryTasks((s) => s.tasks);
   const said = useLibraryTasks((s) => s.said);
   const [expanded, setExpanded] = useState(statusExpanded);
+  // The text of the images being read for the search (LIB-008).
+  const [reading, setReading] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const look = () =>
+      void run<{ enabled: boolean; waiting: number }>("library.seen_status")
+        .then((r) => alive && setReading(r.enabled ? r.waiting : 0))
+        .catch(() => undefined);
+    look();
+    const timer = setInterval(look, 5000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
   // Exports report their progress (LIB-018, LIB-033).
   useEffect(() => {
     const off = listen<{ kind: string; payload: Record<string, unknown> }>("xs://editor", (e) => {
@@ -1177,6 +1196,11 @@ function LibraryStatus() {
         )}
         {tasks.length > 0 && !expanded && (
           <span className="status-item lib-task-short">{t(tasks[0]?.label ?? "")}</span>
+        )}
+        {reading > 0 && (
+          <span className="status-item muted" role="status">
+            {t("ui.library.reading", { count: reading })}
+          </span>
         )}
         <span className="grow" />
         <span

@@ -1078,6 +1078,10 @@
     "record_draw_shape": {
       "title": "Draw a shape",
       "description": "Draws an arrow, rectangle, oval, pen stroke or step with live drawing, as if with the mouse."
+    },
+    "library_seen_status": {
+      "title": "Text of the images: progress",
+      "description": "How many library images have their text read, and how many wait."
     }
   },
   "settings": {
@@ -1686,6 +1690,10 @@
     "smart_qr_detectOnCapture": {
       "label": "Detect QR codes when capturing",
       "description": "A capture opened in the editor with QR codes says so and lets you read them."
+    },
+    "library_ocrIndex": {
+      "label": "Recognize the text of images for the search",
+      "description": "In the background, on this computer: the search also finds the words that show inside captures. Off, the text read leaves the index."
     }
   },
   "errors": {
@@ -4329,7 +4337,10 @@
       "merging": "Merging the other library: {{done}} of {{total}} items",
       "type_guide": "Guide of steps",
       "steps_badge_one": "{{count}} step",
-      "steps_badge_other": "{{count}} steps"
+      "steps_badge_other": "{{count}} steps",
+      "in_image": "in the image",
+      "reading_one": "Reading the text of {{count}} image for the search…",
+      "reading_other": "Reading the text of {{count}} images for the search…"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

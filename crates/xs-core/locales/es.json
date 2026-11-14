@@ -1078,6 +1078,10 @@
     "record_draw_shape": {
       "title": "Dibujar una forma",
       "description": "Dibuja una flecha, un rectángulo, un óvalo, un trazo de lápiz o un paso con Dibujo en vivo, como con el ratón."
+    },
+    "library_seen_status": {
+      "title": "Texto de las imágenes: progreso",
+      "description": "Cuántas imágenes de la biblioteca tienen su texto leído y cuántas esperan."
     }
   },
   "settings": {
@@ -1686,6 +1690,10 @@
     "smart_qr_detectOnCapture": {
       "label": "Detectar códigos QR al capturar",
       "description": "Una captura que se abre en el editor con códigos QR lo dice y deja leerlos."
+    },
+    "library_ocrIndex": {
+      "label": "Reconocer el texto de las imágenes para la búsqueda",
+      "description": "En segundo plano y en este equipo: la búsqueda encuentra también las palabras que se ven dentro de las capturas. Desactivado, el texto leído sale del índice."
     }
   },
   "errors": {
@@ -4329,7 +4337,10 @@
       "merging": "Fusionando la otra biblioteca: {{done}} de {{total}} elementos",
       "type_guide": "Guía de pasos",
       "steps_badge_one": "{{count}} paso",
-      "steps_badge_other": "{{count}} pasos"
+      "steps_badge_other": "{{count}} pasos",
+      "in_image": "en la imagen",
+      "reading_one": "Leyendo el texto de {{count}} imagen para la búsqueda…",
+      "reading_other": "Leyendo el texto de {{count}} imágenes para la búsqueda…"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",
