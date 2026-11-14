@@ -727,6 +727,10 @@
       "title": "Palabras reconocidas",
       "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
     },
+    "smart_simplify_auto": {
+      "title": "Simplificar automáticamente",
+      "description": "Convierte las líneas de texto en barras y los botones, campos e íconos en formas sencillas de la paleta de Simplificar."
+    },
     "smart_redact_batch": {
       "title": "Redactar varias capturas",
       "description": "Analiza varias capturas en segundo plano con las categorías, términos y estilo del panel, y los textos redactados a mano en el documento de partida; nada cambia hasta decidir."
@@ -1630,6 +1634,10 @@
     "smart_textOnly_enabled": {
       "label": "Aplicar solo al texto",
       "description": "Resaltador, Desenfocar y Foco pueden cubrir solo las líneas de texto de su área."
+    },
+    "smart_autoSimplify_enabled": {
+      "label": "Simplificar automático",
+      "description": "La herramienta Simplificar puede tapar por sí sola el texto y los elementos de la interfaz."
     }
   },
   "errors": {
@@ -1762,7 +1770,8 @@
     "not_a_guide": "Este documento no es una guía de pasos.",
     "redact_batch_not_found": "No hay una redacción de varias capturas con id {{id}}: terminó o se cerró.",
     "redact_batch_empty": "No hay capturas que redactar: elige imágenes o documentos (los videos no se incluyen).",
-    "feature_disabled": "La función «{{feature}}» está desactivada. Actívala en Preferencias > Editor > Funciones inteligentes ({{setting}})."
+    "feature_disabled": "La función «{{feature}}» está desactivada. Actívala en Preferencias > Editor > Funciones inteligentes ({{setting}}).",
+    "simplify_nothing": "No se encontró nada que simplificar: ni texto ni elementos de interfaz. Funciona mejor con capturas de pantalla."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -3117,7 +3126,17 @@
         "save_palette": "Guardar como paleta nueva",
         "show_original": "Mostrar original",
         "original_opacity": "Opacidad del original",
-        "lock_on_exit": "Bloquear al salir"
+        "lock_on_exit": "Bloquear al salir",
+        "auto": "Simplificar automáticamente",
+        "auto_help": "Tapa cada línea de texto con una barra y cada botón, campo e ícono con una forma de la paleta.",
+        "detail": "Detalle",
+        "detail_help": "Poco: bloques grandes. Mucho: cada elemento y cada línea.",
+        "confirm_title": "¿Generar de nuevo?",
+        "confirm_body_one": "Se perderán los cambios hechos a {{count}} objeto simplificado.",
+        "confirm_body_other": "Se perderán los cambios hechos a {{count}} objetos simplificados.",
+        "regenerate": "Regenerar",
+        "kept_one": "Se conservó {{count}} objeto modificado.",
+        "kept_other": "Se conservaron {{count}} objetos modificados."
       },
       "unflatten_edited": "Encima se rellenó o se borró, así que ya forma parte de la imagen.",
       "pixel": {
@@ -4752,7 +4771,8 @@
       "extractText": "Extraer texto",
       "autoRedact": "Redacción automática",
       "steps": "Grabador de pasos",
-      "textOnly": "Aplicar solo al texto"
+      "textOnly": "Aplicar solo al texto",
+      "autoSimplify": "Simplificar automático"
     }
   },
   "history": {
@@ -4893,7 +4913,8 @@
     "cut_video": "Cortar",
     "auto_redact": "Redacción automática",
     "duplicate_section": "Duplicar paso",
-    "add_steps": "Añadir pasos"
+    "add_steps": "Añadir pasos",
+    "auto_simplify": "Simplificar automático"
   },
   "editor": {
     "edited": "{{name}} — Editado",

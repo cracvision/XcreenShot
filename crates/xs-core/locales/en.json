@@ -727,6 +727,10 @@
       "title": "Recognized words",
       "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
     },
+    "smart_simplify_auto": {
+      "title": "Simplify automatically",
+      "description": "Turns text lines into bars and buttons, fields and icons into simple shapes of the Simplify palette."
+    },
     "smart_redact_batch": {
       "title": "Auto redact several captures",
       "description": "Analyzes several captures in the background with the panel's categories, terms and style, and the texts redacted by hand where it starts; nothing changes until a decision."
@@ -1630,6 +1634,10 @@
     "smart_textOnly_enabled": {
       "label": "Apply only to text",
       "description": "Highlighter, Blur and Spotlight can cover just the lines of text in their area."
+    },
+    "smart_autoSimplify_enabled": {
+      "label": "Auto simplify",
+      "description": "The Simplify tool can cover text and interface elements by itself."
     }
   },
   "errors": {
@@ -1762,7 +1770,8 @@
     "not_a_guide": "This document is not a guide of steps.",
     "redact_batch_not_found": "There is no auto redact of several captures with id {{id}}: it ended or was closed.",
     "redact_batch_empty": "No capture to redact: choose images or documents (videos are left out).",
-    "feature_disabled": "The “{{feature}}” feature is switched off. Switch it on in Preferences > Editor > Smart features ({{setting}})."
+    "feature_disabled": "The “{{feature}}” feature is switched off. Switch it on in Preferences > Editor > Smart features ({{setting}}).",
+    "simplify_nothing": "Nothing to simplify was found: no text and no interface elements. It works best with screenshots."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -3117,7 +3126,17 @@
         "save_palette": "Save as new palette",
         "show_original": "Show original",
         "original_opacity": "Original opacity",
-        "lock_on_exit": "Lock on exit"
+        "lock_on_exit": "Lock on exit",
+        "auto": "Simplify automatically",
+        "auto_help": "Covers each line of text with a bar and each button, field and icon with a shape of the palette.",
+        "detail": "Detail",
+        "detail_help": "Little: big blocks. A lot: each element and each line.",
+        "confirm_title": "Generate again?",
+        "confirm_body_one": "The changes made to {{count}} simplified object will be lost.",
+        "confirm_body_other": "The changes made to {{count}} simplified objects will be lost.",
+        "regenerate": "Generate again",
+        "kept_one": "{{count}} changed object was kept.",
+        "kept_other": "{{count}} changed objects were kept."
       },
       "unflatten_edited": "It was filled or erased over, so it is now part of the image.",
       "pixel": {
@@ -4752,7 +4771,8 @@
       "extractText": "Extract text",
       "autoRedact": "Auto redact",
       "steps": "Step recorder",
-      "textOnly": "Apply only to text"
+      "textOnly": "Apply only to text",
+      "autoSimplify": "Auto simplify"
     }
   },
   "history": {
@@ -4893,7 +4913,8 @@
     "cut_video": "Cut",
     "auto_redact": "Auto redact",
     "duplicate_section": "Duplicate step",
-    "add_steps": "Add steps"
+    "add_steps": "Add steps",
+    "auto_simplify": "Auto simplify"
   },
   "editor": {
     "edited": "{{name}} — Edited",

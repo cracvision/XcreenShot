@@ -35,6 +35,7 @@ pub mod stamps;
 pub mod steps;
 pub mod text;
 pub mod text_bands;
+pub mod ui_detect;
 
 pub use render::{object_bounds, render, Base};
 pub use tiny_skia::Transform;

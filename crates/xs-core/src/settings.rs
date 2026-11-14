@@ -339,6 +339,13 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         def("smart.steps.enabled", "editor", boolean(), json!(true), "SMT-002"),
         def(
+            "smart.autoSimplify.enabled",
+            "editor",
+            boolean(),
+            json!(true),
+            "SMT-002",
+        ),
+        def(
             "smart.textOnly.enabled",
             "editor",
             boolean(),

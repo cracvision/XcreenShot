@@ -549,8 +549,8 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
 }
 
 /// `props` of an object of `kind` checked and in canonical form; unknown properties
-/// are dropped (auto redact, SMT-010).
-pub(crate) fn checked(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value>, String> {
+/// are dropped (auto redact, SMT-010; auto simplify, SMT-019).
+pub fn checked(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value>, String> {
     canonical(kind, props)
 }
 

@@ -4663,7 +4663,11 @@ html.launcher-root #root {
 /* EDT-023: under the panel's title. */
 .select-kind {
   justify-self: start;
+  /* A long name ("Select all simplified shapes") wraps instead of widening the panel. */
+  max-width: 100%;
   margin: -2px 0 var(--space-2);
+  white-space: normal;
+  text-align: left;
 }
 
 .side-title {

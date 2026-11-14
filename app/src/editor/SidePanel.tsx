@@ -1,6 +1,7 @@
 // Side panel (EDT-005) with the Properties of the selected objects, of the text being
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
 import { VideoPanel } from "./VideoPanel";
+import { Dialog } from "../components/Dialog";
 import { RedactPanel } from "./RedactPanel";
 import { openRedact, useRedact } from "./redactState";
 import {
@@ -65,6 +66,14 @@ import { TemplateTab } from "./TemplateTab";
 import { templateOf } from "./templateUi";
 import { useFeature } from "../features";
 import { noTextIn } from "./textBands";
+import {
+  autoSimplify,
+  autoSimplifyOff,
+  autoState,
+  cancelRegenerate,
+  confirmRegenerate,
+  useAutoSimplify,
+} from "./simplifyAuto";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -1187,6 +1196,12 @@ function SimplifyProperties(props: {
   const setTool = (style: Record<string, unknown>) =>
     void run("editor.set_style", { tool: "simplify", style }).catch(() => undefined);
   const view = doc?.simplify ?? { showOriginal: true, opacity: 100 };
+  // Simplify automatically (SMT-019).
+  const autoOn = useFeature("autoSimplify");
+  const auto = autoState(doc?.objects ?? []);
+  const autoBusy = useAutoSimplify((s) => s.busy);
+  const kept = useAutoSimplify((s) => s.kept);
+  const confirm = useAutoSimplify((s) => s.confirm);
   const setView = (change: Record<string, unknown>) =>
     doc &&
     void run("document.simplify_view", { documentId: doc.documentId, ...change }).catch(
@@ -1204,6 +1219,60 @@ function SimplifyProperties(props: {
   };
   return (
     <>
+      {autoOn && doc && !doc.video && (
+        <>
+          <label className="panel-check" title={t("ui.editor.simplify.auto_help")}>
+            <input
+              type="checkbox"
+              checked={auto.on}
+              disabled={autoBusy}
+              onChange={(e) =>
+                void (e.target.checked
+                  ? autoSimplify(doc.documentId, auto.detail)
+                  : autoSimplifyOff(doc.documentId))
+              }
+            />
+            {t("ui.editor.simplify.auto")}
+          </label>
+          {auto.on && (
+            <NumberField
+              label={t("ui.editor.simplify.detail")}
+              value={auto.detail}
+              min={1}
+              max={10}
+              step={1}
+              unit=""
+              onCommit={(detail) => void autoSimplify(doc.documentId, detail)}
+            />
+          )}
+          {auto.on && <p className="muted hint">{t("ui.editor.simplify.detail_help")}</p>}
+          {!auto.on && kept > 0 && (
+            <p className="muted hint">{t("ui.editor.simplify.kept", { count: kept })}</p>
+          )}
+          {confirm && (
+            <Dialog
+              title={t("ui.editor.simplify.confirm_title")}
+              onCancel={cancelRegenerate}
+              actions={
+                <>
+                  <button type="button" className="btn" onClick={cancelRegenerate}>
+                    {t("ui.common.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => void confirmRegenerate()}
+                  >
+                    {t("ui.editor.simplify.regenerate")}
+                  </button>
+                </>
+              }
+            >
+              <p>{t("ui.editor.simplify.confirm_body", { count: confirm.edited })}</p>
+            </Dialog>
+          )}
+        </>
+      )}
       <SelectField
         label={t("ui.editor.prop.simple_kind")}
         value={kind}

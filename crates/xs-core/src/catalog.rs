@@ -740,6 +740,28 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(UI_CLI)
             .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
             .result(json!({"type": "object", "description": "As smart.redact_batch, with closed: true"})),
+        B::new("smart.simplify_auto", &["SMT-019"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "detail": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5, "description": "Little: big blocks; a lot: each element and each line"},
+                    "palette": {"type": "string", "description": "A palette of the Simplify tool, by name; default: the one in use"},
+                    "force": {"type": "boolean", "default": false, "description": "Generate again although the user changed generated objects (they are lost)"},
+                    "remove": {"type": "boolean", "default": false, "description": "Switched off: remove the generated objects the user did not change"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "added": {"type": "integer"},
+                "removed": {"type": "integer"},
+                "text": {"type": "integer", "description": "Text bars and paragraphs"},
+                "elements": {"type": "integer", "description": "Buttons, fields and icons"},
+                "needsConfirm": {"type": "boolean", "description": "Nothing changed: edited objects would be lost; call again with force"},
+                "edited": {"type": "integer"},
+                "kept": {"type": "integer", "description": "remove: generated objects kept because the user changed them"}
+            }})),
         B::new("smart.ocr_languages", &["SMT-004"])
             .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
         B::new("smart.language_settings", &["SMT-004"])
