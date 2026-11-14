@@ -49,6 +49,7 @@ mod scroll_win;
 pub mod seen_text;
 pub mod separate;
 pub mod simplify_auto;
+pub mod slides_mode;
 pub mod steps;
 pub mod steps_rec;
 #[cfg(windows)]
@@ -1742,6 +1743,43 @@ pub fn extension() -> Extension {
         let w = weak.clone();
         reg.handle("record.camera_swap", move |ctx, _p| {
             rec_camera::swap(&*upgrade(&w)?, ctx)
+        });
+        // Narrated slides (VID-071 to VID-074).
+        let w = weak.clone();
+        reg.handle("slides.start", move |ctx, p| {
+            slides_mode::start(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.state", move |_ctx, _p| {
+            Ok(slides_mode::state(&*upgrade(&w)?))
+        });
+        let w = weak.clone();
+        reg.handle("slides.go", move |ctx, p| {
+            slides_mode::go(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.move", move |ctx, p| {
+            slides_mode::reorder(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.add", move |ctx, p| {
+            slides_mode::add(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.remove", move |ctx, p| {
+            slides_mode::remove(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.set", move |ctx, p| {
+            slides_mode::set(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.view", move |ctx, p| {
+            slides_mode::view(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.exit", move |ctx, _p| {
+            slides_mode::exit(&*upgrade(&w)?, ctx)
         });
         let w = weak.clone();
         reg.handle("record.sound", move |ctx, p| {

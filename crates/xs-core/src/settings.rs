@@ -714,6 +714,23 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "VID-039",
         ),
+        // Narrated slides (VID-074): the video's size, its background and whether small
+        // images are enlarged.
+        def(
+            "video.slidesSize",
+            "video",
+            json!({"type": "string", "pattern": "^[0-9]{3,4}x[0-9]{3,4}$"}),
+            json!("1920x1080"),
+            "VID-074",
+        ),
+        def(
+            "video.slidesBackground",
+            "video",
+            json!({"type": "string", "format": "color"}),
+            json!("#000000"),
+            "VID-074",
+        ),
+        def("video.slidesEnlarge", "video", boolean(), json!(false), "VID-074"),
         // Background noise filtered out of the microphone, on the computer (VID-041).
         def(
             "video.noiseReduction",

@@ -212,12 +212,17 @@ fn sync_win(core: &Core, state: Option<&Value>) {
             Ok(camera) => {
                 let camera = Arc::new(camera);
                 let w = Arc::downgrade(&core);
-                let preview =
+                // With slides the video is not on the screen: no preview over it.
+                let slides = state["source"]["type"] == "slides";
+                let preview = if slides {
+                    None
+                } else {
                     xs_video::campreview::Preview::show(camera.feed(), area, look.clone(), move |change| {
                         if let Some(core) = w.upgrade() {
                             moved(&core, change);
                         }
-                    });
+                    })
+                };
                 *svc.trouble.lock().unwrap() = None;
                 *svc.session.lock().unwrap() = Some(Session {
                     camera,

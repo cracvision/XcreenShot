@@ -98,7 +98,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &[
-    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video",
+    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video", "slides",
 ];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
@@ -1150,7 +1150,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .mutates()
             .params(params(
                 json!({
-                    "source": {"type": "string", "enum": ["screen", "region"], "default": "screen"},
+                    "source": {"type": "string", "enum": ["screen", "region", "slides"], "default": "screen", "description": "slides: the narrated slides open in the editor (slides.start), not the screen (VID-071)"},
                     "monitor": {"description": "screen: primary (default), pointer or a monitor's number (capture.monitors)"},
                     "x": {"type": "number"}, "y": {"type": "number"},
                     "width": {"type": "number", "minimum": 64}, "height": {"type": "number", "minimum": 64},
@@ -1481,6 +1481,74 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"},
                 "noiseReduction": {"type": "boolean"}
             }})),
+        B::new("slides.start", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"documentIds": {"type": "array", "items": {"type": "string"}, "description": "Open images, in order; default: the one in the editor. Videos and guides are left out"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The mode: active, index, count, size, background, enlarge and the slides"})),
+        B::new("slides.state", &["VID-071"])
+            .scopes(ALL)
+            .result(json!({"type": "object"})),
+        B::new("slides.go", &["VID-072"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"to": {"description": "A slide's number from 0, or next (default), prev, first or last"}}),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.move", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"from": {"type": "integer", "minimum": 0}, "to": {"type": "integer", "minimum": 0}}),
+                &["from", "to"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.add", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &["documentIds"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.remove", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(json!({"index": {"type": "integer", "minimum": 0}}), &["index"]))
+            .result(json!({"type": "object"})),
+        B::new("slides.set", &["VID-074"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "size": {"description": "\"1920x1080\" or [width, height]: even, 320 to 3840. Not while recording"},
+                    "background": {"type": "string", "format": "color"},
+                    "enlarge": {"type": "boolean", "description": "Small images enlarged to fill"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.view", &["VID-074"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "zoom": {"type": "number", "minimum": 1, "maximum": 8},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "[x, y] of the image, 0 to 1, put in the middle"},
+                    "reset": {"type": "boolean"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.exit", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .result(json!({"type": "object"})),
         B::new("record.cameras", &["VID-031", "VID-043"])
             .scopes(ALL)
             .result(json!({"type": "object", "properties": {

@@ -1114,6 +1114,42 @@
     "record_camera_swap": {
       "title": "Cambiar vista de cámara",
       "description": "Imagen en imagen o cámara a pantalla completa, también durante la grabación."
+    },
+    "slides_start": {
+      "title": "Diapositivas narradas",
+      "description": "Las imágenes se convierten en diapositivas para narrar, grabadas en lugar de la pantalla."
+    },
+    "slides_state": {
+      "title": "Estado de las diapositivas",
+      "description": "El modo diapositivas: cuáles, cuál se ve, el tamaño y el fondo del video."
+    },
+    "slides_go": {
+      "title": "Ir a una diapositiva",
+      "description": "Siguiente, anterior, primera, última o una por su número."
+    },
+    "slides_move": {
+      "title": "Reordenar diapositivas",
+      "description": "Mueve una diapositiva a otro lugar."
+    },
+    "slides_add": {
+      "title": "Añadir diapositivas",
+      "description": "Añade imágenes abiertas al final."
+    },
+    "slides_remove": {
+      "title": "Quitar una diapositiva",
+      "description": "Saca una diapositiva de la lista."
+    },
+    "slides_set": {
+      "title": "Tamaño y fondo del video de diapositivas",
+      "description": "El tamaño del video, su fondo y si se amplían las imágenes pequeñas."
+    },
+    "slides_view": {
+      "title": "Acercar una diapositiva",
+      "description": "Acerca y desplaza la diapositiva que se ve."
+    },
+    "slides_exit": {
+      "title": "Salir de las diapositivas narradas",
+      "description": "Cierra el modo diapositivas sin cambiar ninguna imagen."
     }
   },
   "settings": {
@@ -1828,6 +1864,18 @@
     "video_noiseReduction": {
       "label": "Reducir ruido de fondo",
       "description": "Ventiladores, aire acondicionado, tecleo y voces lejanas se filtran del micrófono mientras se graba, en este equipo. La voz queda clara."
+    },
+    "video_slidesSize": {
+      "label": "Tamaño del video de diapositivas",
+      "description": "El tamaño de los videos de diapositivas narradas, en píxeles, sea cual sea la pantalla."
+    },
+    "video_slidesBackground": {
+      "label": "Fondo de las diapositivas",
+      "description": "El color alrededor de cada diapositiva."
+    },
+    "video_slidesEnlarge": {
+      "label": "Ampliar las diapositivas pequeñas",
+      "description": "Las imágenes más pequeñas que el video se amplían hasta llenarlo; desactivado, se ven a su tamaño para que no pierdan nitidez."
     }
   },
   "errors": {
@@ -1971,7 +2019,14 @@
     "mic_device_recording": "El micrófono se cambia en Lista o en pausa, para no cortar la voz.",
     "no_sound_track": "Esta grabación empezó sin sonido: activa el micrófono o el audio del sistema antes de grabar.",
     "camera_device_recording": "La cámara se cambia en Lista o en pausa, para no cortar el video.",
-    "camera_off": "La cámara está desactivada."
+    "camera_off": "La cámara está desactivada.",
+    "slides_none": "Elige una o más imágenes: los videos y las guías no pueden ser diapositivas.",
+    "slides_off": "Las diapositivas narradas no están abiertas.",
+    "slides_move": "Indica qué diapositiva se mueve (from) y adónde (to).",
+    "slides_size_recording": "El tamaño del video se elige antes de grabar.",
+    "slides_size": "El tamaño es ancho x alto, par, de 320 a 3840.",
+    "slides_color": "El color es #RRGGBB.",
+    "slides_recording": "Detén o cancela antes la grabación."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

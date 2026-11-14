@@ -528,7 +528,8 @@ pub fn level(core: &Core) -> Value {
         v["status"] = json!(if paused { "paused" } else { "recording" });
         return v;
     }
-    let ready = svc.ready.lock().unwrap().is_some();
+    // Ready, or the slides mode waiting to record (VID-072).
+    let ready = svc.ready.lock().unwrap().is_some() || crate::slides_mode::active(core);
     let mut meter = svc.meter.lock().unwrap();
     if !ready {
         *meter = None;
@@ -1115,10 +1116,28 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let again_of = ready.clone();
     let asked_window = p.get("window").and_then(Value::as_u64).map(|w| w as u32);
     let window = ready.as_ref().and_then(|r| r.window).or(asked_window);
-    let (rect, scale, source) = match (ready, asked_window) {
-        (Some(r), _) => (r.rect, r.scale, r.source),
-        (None, Some(id)) => window_area(id, lang)?,
-        (None, None) => area(p, lang)?,
+    // Narrated slides (VID-071): their pictures at the video's size, not the screen.
+    let slides = (p.get("source").and_then(Value::as_str) == Some("slides"))
+        .then(|| {
+            crate::slides_mode::feed(core)
+                .zip(crate::slides_mode::size(core))
+                .ok_or_else(|| CommandError::new(ErrorCode::NotFound, tr(lang, "errors.slides_off", &[])))
+        })
+        .transpose()?;
+    let (rect, scale, source) = match (ready, asked_window, &slides) {
+        (_, _, Some((_, (w, h)))) => (
+            Rect {
+                x: 0,
+                y: 0,
+                width: *w,
+                height: *h,
+            },
+            1.0,
+            json!({ "type": "slides" }),
+        ),
+        (Some(r), _, None) => (r.rect, r.scale, r.source),
+        (None, Some(id), None) => window_area(id, lang)?,
+        (None, None, None) => area(p, lang)?,
     };
     // Not held while the engine starts: the icon's menu asks whether one runs.
     if running(core) {
@@ -1143,6 +1162,12 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .or_else(|| setting("video.maxSize"))
         .and_then(|m| MaxSize::parse(&m))
         .unwrap_or(MaxSize::ReduceHighDensity);
+    // Slides are made at the size chosen, whatever the screen (VID-074).
+    let max_size = if slides.is_some() {
+        MaxSize::Original
+    } else {
+        max_size
+    };
     let limit = p
         .get("limit")
         .and_then(Value::as_f64)
@@ -1168,7 +1193,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     );
     // The panel and the editor stay out of the video, still on screen (VID-017),
     // from its first picture.
-    let hide = core.settings.get_bool("capture.hideOnCapture");
+    // Not with slides: the editor is where they show.
+    let hide = slides.is_none() && core.settings.get_bool("capture.hideOnCapture");
     if hide {
         core.host().hide_for_capture(true);
     }
@@ -1184,20 +1210,24 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         max_size,
         limit,
         software_only: core.settings.get_bool("video.softwareEncoding"),
-        cursor: p
-            .get("cursor")
-            .and_then(Value::as_bool)
-            .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
+        cursor: slides.is_none()
+            && p.get("cursor")
+                .and_then(Value::as_bool)
+                .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
         system_audio: p
             .get("systemAudio")
             .and_then(Value::as_bool)
             .unwrap_or_else(|| core.settings.get_bool("video.systemAudio")),
         window: window.map(|w| w as isize),
-        effects: effects(core),
+        effects: if slides.is_some() {
+            Default::default()
+        } else {
+            effects(core)
+        },
         path: path.clone(),
         recovery: Some(recovery_file.clone()),
         microphone: microphone_of(core, p),
-        slides: None,
+        slides: slides.map(|(feed, _)| xs_video::slides::Source(feed)),
     })
     .map_err(|e| {
         if hide {
@@ -1297,12 +1327,18 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     let open = r.open;
     let pressed = r.pressed;
     let rid = r.rid.clone();
+    let was_slides = r.source["type"] == "slides";
     let summary = if cancel {
         r.recorder.cancel()
     } else {
         r.recorder.stop()
     };
     bar(core, None);
+    // Narrated slides saved: the mode closes and the video shows (VID-071);
+    // cancelled, the slides stay to try again.
+    if was_slides && !cancel {
+        crate::slides_mode::close(core);
+    }
     if core.settings.get_bool("capture.hideOnCapture") {
         core.host().hide_for_capture(false);
     }

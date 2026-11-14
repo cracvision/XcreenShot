@@ -1114,6 +1114,42 @@
     "record_camera_swap": {
       "title": "Switch the camera view",
       "description": "Picture in picture or full screen camera, also while recording."
+    },
+    "slides_start": {
+      "title": "Narrated slides",
+      "description": "Images become slides to narrate, recorded instead of the screen."
+    },
+    "slides_state": {
+      "title": "Slides state",
+      "description": "The slides mode: which slides, which one shows, the video size and background."
+    },
+    "slides_go": {
+      "title": "Go to a slide",
+      "description": "Next, previous, first, last or a slide by number."
+    },
+    "slides_move": {
+      "title": "Reorder slides",
+      "description": "Moves a slide to another place."
+    },
+    "slides_add": {
+      "title": "Add slides",
+      "description": "Adds open images at the end."
+    },
+    "slides_remove": {
+      "title": "Remove a slide",
+      "description": "Takes a slide out of the list."
+    },
+    "slides_set": {
+      "title": "Slides video size and background",
+      "description": "The video size, its background and whether small images are enlarged."
+    },
+    "slides_view": {
+      "title": "Zoom a slide",
+      "description": "Zooms and moves the slide showing."
+    },
+    "slides_exit": {
+      "title": "Exit narrated slides",
+      "description": "Closes the slides mode without changing any image."
     }
   },
   "settings": {
@@ -1828,6 +1864,18 @@
     "video_noiseReduction": {
       "label": "Reduce background noise",
       "description": "Fans, air conditioning, typing and distant voices filtered out of the microphone while recording, on this computer. The voice stays clear."
+    },
+    "video_slidesSize": {
+      "label": "Slides video size",
+      "description": "The size of narrated slides videos, in pixels, whatever the screen."
+    },
+    "video_slidesBackground": {
+      "label": "Slides background",
+      "description": "The colour around each slide."
+    },
+    "video_slidesEnlarge": {
+      "label": "Enlarge small slides",
+      "description": "Images smaller than the video are enlarged to fill it; off, they show at their size so they stay sharp."
     }
   },
   "errors": {
@@ -1971,7 +2019,14 @@
     "mic_device_recording": "The microphone can be changed while ready or paused, so the voice isn't cut.",
     "no_sound_track": "This recording started without sound: turn on the microphone or the system sound before recording.",
     "camera_device_recording": "The camera can be changed while ready or paused, so the video isn't cut.",
-    "camera_off": "The camera is off."
+    "camera_off": "The camera is off.",
+    "slides_none": "Choose one or more images: videos and guides cannot be slides.",
+    "slides_off": "Narrated slides are not open.",
+    "slides_move": "Say which slide moves (from) and where (to).",
+    "slides_size_recording": "The video size is chosen before recording.",
+    "slides_size": "The size is width x height, even, from 320 to 3840.",
+    "slides_color": "The colour is #RRGGBB.",
+    "slides_recording": "Stop or cancel the recording first."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

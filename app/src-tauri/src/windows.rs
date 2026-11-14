@@ -474,6 +474,11 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         }
         return Ok(());
     };
+    // Narrated slides (VID-072): their own bar is in the editor; it hears the state.
+    if state["source"]["type"] == "slides" {
+        let _ = app.emit("xs://slides-record", state);
+        return Ok(());
+    }
     let n = |k: &str| state["area"][k].as_f64().unwrap_or(0.0);
     let (x, y, w, h) = (n("x"), n("y"), n("width"), n("height"));
     // The bar tells its window what changed.

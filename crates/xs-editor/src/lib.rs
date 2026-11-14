@@ -247,6 +247,23 @@ pub fn final_image(core: &Core, id: &str) -> Result<image::RgbaImage, String> {
     Ok(editor(core).store.snapshot(id)?.render())
 }
 
+/// The document shown in the editor, if any.
+pub fn active_document(core: &Core) -> Option<String> {
+    editor(core).store.active()
+}
+
+/// The name of an open document that can be a narrated slide (VID-071): an image, not
+/// a video or a guide of steps.
+pub fn slide_name(core: &Core, id: &str) -> Option<String> {
+    editor(core)
+        .store
+        .with(id, |d| {
+            let guide = templates::Template::of(&d.document).is_some_and(|t| t.is_guide());
+            (!d.is_video() && !guide).then(|| d.name())
+        })
+        .flatten()
+}
+
 /// The files to hand to another app when items are dragged out of XcreenShot
 /// (TRY-015): open documents by ID and files by path. A PNG or JPG without unsaved
 /// changes goes as it is; a `.xshot`, or a document with unsaved changes, is
