@@ -12,6 +12,7 @@ import { imageUrl, useEditor, type DocDetails } from "./state";
 import { setTemplate, templateCommand } from "./templateActions";
 import { exportGuide, GUIDE_FORMATS } from "./guideExport";
 import { bands, plainText, templateOf, type TemplateSection } from "./templateUi";
+import { useFeature } from "../features";
 
 const ADD_KINDS = ["guideStep", "guideText", "guideImage"] as const;
 
@@ -51,6 +52,7 @@ function show(doc: DocDetails, top: number, height: number) {
 
 export function GuideTab({ themes }: { themes: { id: string; name: string }[] }) {
   const { t } = useTranslation();
+  const stepsOn = useFeature("steps");
   const doc = useEditor((s) => s.doc);
   const [chosen, setChosen] = useState<string[]>([]);
   const template = templateOf(doc);
@@ -186,15 +188,19 @@ export function GuideTab({ themes }: { themes: { id: string; name: string }[] })
                         void templateCommand("add_section", { kind: k, index: index(section) + 1 }),
                     })),
                     // The recorder again; its steps come in after this one (SMT-029).
-                    {
-                      id: "record",
-                      label: t("ui.guide.record_here"),
-                      separator: true,
-                      onSelect: () =>
-                        void run("smart.steps_start", {
-                          into: { documentId: doc.documentId, after: section.id },
-                        }).catch((e: unknown) => useEditor.getState().showError(e)),
-                    },
+                    ...(stepsOn
+                      ? [
+                          {
+                            id: "record",
+                            label: t("ui.guide.record_here"),
+                            separator: true,
+                            onSelect: () =>
+                              void run("smart.steps_start", {
+                                into: { documentId: doc.documentId, after: section.id },
+                              }).catch((e: unknown) => useEditor.getState().showError(e)),
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               </span>

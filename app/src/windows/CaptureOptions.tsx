@@ -20,6 +20,8 @@ import { FIELDS } from "../editor/effectOptions";
 import { DEFAULTS as FX_DEFAULTS } from "../editor/effects";
 import { useSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
+import { captureModes } from "../features";
+import { useApp } from "../store";
 
 const SELECTIONS = ["region", "window", "fullscreen"] as const;
 /** The Image tab also scrolls (CAP-034, CAP-035), takes several areas (CAP-033) and
@@ -291,6 +293,7 @@ export function ImageOptions({
 }) {
   const { t } = useTranslation();
   const id = useId();
+  const settings = useApp((s) => s.settings);
   // What is being typed; the saved value shows otherwise.
   const [draft, setDraft] = useState<string | null>(null);
   const commitSeconds = () => {
@@ -300,7 +303,11 @@ export function ImageOptions({
   };
   return (
     <>
-      <CommonOptions value={value} onChange={onChange} selections={IMAGE_SELECTIONS} />
+      <CommonOptions
+        value={value}
+        onChange={onChange}
+        selections={captureModes(IMAGE_SELECTIONS, settings, value.selection)}
+      />
       {value.selection === "fullscreen" && (
         <label className="panel-check">
           <input

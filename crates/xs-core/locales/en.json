@@ -1614,6 +1614,18 @@
     "video_hideDesktopIcons": {
       "label": "Hide the desktop icons while recording",
       "description": "They come back where they were when the recording ends."
+    },
+    "smart_extractText_enabled": {
+      "label": "Extract text",
+      "description": "Text from a zone of the screen, an image or a video frame."
+    },
+    "smart_autoRedact_enabled": {
+      "label": "Auto redact",
+      "description": "Finds and covers personal data in a capture."
+    },
+    "smart_steps_enabled": {
+      "label": "Step recorder",
+      "description": "Records each click as a step of a guide."
     }
   },
   "errors": {
@@ -1745,7 +1757,8 @@
     "steps_not_supported": "The step recorder is not available on this system yet.",
     "not_a_guide": "This document is not a guide of steps.",
     "redact_batch_not_found": "There is no auto redact of several captures with id {{id}}: it ended or was closed.",
-    "redact_batch_empty": "No capture to redact: choose images or documents (videos are left out)."
+    "redact_batch_empty": "No capture to redact: choose images or documents (videos are left out).",
+    "feature_disabled": "The “{{feature}}” feature is switched off. Switch it on in Preferences > Editor > Smart features ({{setting}})."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4725,6 +4738,13 @@
         "images": "Pictures apart",
         "clipboard": "Copy to the clipboard"
       }
+    },
+    "features": {
+      "title": "Smart features",
+      "hint": "A feature switched off leaves its buttons, menus and shortcuts. Documents that already have its results still open and edit as usual.",
+      "extractText": "Extract text",
+      "autoRedact": "Auto redact",
+      "steps": "Step recorder"
     }
   },
   "history": {

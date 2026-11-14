@@ -173,6 +173,8 @@ impl Host for TauriHost {
                 let _ = self.app.run_on_main_thread(move || crate::launcher::sync(&app));
             }
             "shortcuts.takeOver" => self.shortcuts_changed(),
+            // A smart feature on or off: its menus and shortcuts come or go (SMT-002).
+            k if xs_core::features::is_setting(k) => self.shortcuts_changed(),
             // A test copy never changes how the installed app starts.
             "general.launchAtLogin" if xs_core::paths::isolated() => {
                 tracing::info!("isolated instance: login item left alone");

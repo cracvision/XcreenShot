@@ -185,6 +185,11 @@ pub fn command(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
 /// not put them back while the app runs (SMT-014, provisional).
 static IGNORED: Mutex<Vec<(String, String, [f64; 4])>> = Mutex::new(Vec::new());
 
+/// A document of this core: document IDs repeat from one core to another (tests).
+fn doc_key(core: &Core, id: &str) -> String {
+    format!("{:p}/{id}", core)
+}
+
 fn ignored(id: &str, w: &Wanted) -> bool {
     IGNORED.lock().unwrap().iter().any(|(doc, c, s)| {
         doc == id && *c == w.category && s.iter().zip(w.source).all(|(a, b)| (a - b).abs() < 0.5)
@@ -212,9 +217,10 @@ fn overlaps(a: [f64; 4], b: [f64; 4]) -> bool {
 pub(crate) fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
     let lang = ctx.lang;
     let internal = CommandError::internal;
+    let key = doc_key(core, id);
     if p.get("clear").and_then(Value::as_bool) == Some(true) {
         let out = auto_redact::clear(core, ctx, id).map_err(internal)?;
-        IGNORED.lock().unwrap().retain(|(doc, _, _)| doc != id);
+        IGNORED.lock().unwrap().retain(|(doc, _, _)| *doc != key);
         return Ok(
             json!({"documentId": id, "redactions": 0, "removed": out.removed, "counts": {}, "items": []}),
         );
@@ -304,14 +310,14 @@ pub(crate) fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> Command
     // Those removed by hand stay away, unless they are back in the document (Undo).
     let existing = auto_redact::managed(core, id).map_err(internal)?;
     IGNORED.lock().unwrap().retain(|(doc, c, s)| {
-        doc != id
+        *doc != key
             || !existing
                 .iter()
                 .any(|m| m.category == *c && m.source.iter().zip(s).all(|(a, b)| (a - b).abs() < 0.5))
     });
     let mut dropped: Vec<String> = Vec::new();
     wanted.retain(|w| {
-        let keep = !ignored(id, w);
+        let keep = !ignored(&key, w);
         if !keep {
             dropped.push(w.category.clone());
         }
@@ -425,7 +431,7 @@ pub(crate) fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> Command
                 .iter()
                 .filter(|e| remove.contains(&e.object_id) && e.category != auto_redact::MANUAL)
             {
-                ign.push((id.to_string(), e.category.clone(), e.source));
+                ign.push((key.clone(), e.category.clone(), e.source));
             }
         }
         auto_redact::edit(core, ctx, id, &add, &remove, &blur_style).map_err(internal)?
@@ -920,6 +926,53 @@ pub(crate) mod tests {
                 .any(|i| i["category"] == "email"),
             "{r}"
         );
+    }
+
+    /// SMT-002: with auto redact switched off its commands fail with `feature_disabled`,
+    /// naming the setting; a document with redactions still edits as usual.
+    #[test]
+    fn switched_off() {
+        if xs_ocr::languages().is_empty() {
+            eprintln!("no recognition language on this computer: skipped");
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let (core, id) = core_with_form(dir.path(), &["Correo: ana.ruiz@example.com"]);
+        let call = |cmd: &str, p: Value| core.call(Source::Ui, cmd, p, Some(xs_core::Lang::Es));
+        let r = call("smart.redact", json!({"documentId": id, "categories": ["email"]})).unwrap();
+        let object = r["items"][0]["objectId"].clone();
+        call(
+            "settings.set",
+            json!({"key": "smart.autoRedact.enabled", "value": false}),
+        )
+        .unwrap();
+        for (cmd, p) in [
+            ("smart.redact", json!({"documentId": id})),
+            ("smart.redact_words", json!({"documentId": id})),
+            ("smart.redact_batch", json!({"documentIds": [id]})),
+        ] {
+            let e = call(cmd, p).unwrap_err();
+            assert_eq!(e.code, ErrorCode::FeatureDisabled, "{cmd}");
+            assert!(e.message.contains("smart.autoRedact.enabled"), "{}", e.message);
+        }
+        // Its redaction is an object like any other.
+        call(
+            "document.update_object",
+            json!({"documentId": id, "objectIds": [object], "move": [5, 5]}),
+        )
+        .unwrap();
+        call(
+            "document.delete_object",
+            json!({"documentId": id, "objectIds": [object]}),
+        )
+        .unwrap();
+        assert!(redactions(&core, &id).is_empty());
+        call(
+            "settings.set",
+            json!({"key": "smart.autoRedact.enabled", "value": true}),
+        )
+        .unwrap();
+        assert!(call("smart.redact_words", json!({"documentId": id})).is_ok());
     }
 
     /// SMT-012: a word of the user's and a pattern count as categories of their own; an

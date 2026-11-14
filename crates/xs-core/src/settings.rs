@@ -322,6 +322,22 @@ pub fn definitions() -> Vec<SettingDef> {
             "TRY-007",
         ),
         // Preferences > Editor (EDT-118), in its order; the rest arrive with their features.
+        // SMT-002: one switch per smart feature, once the feature exists.
+        def(
+            "smart.extractText.enabled",
+            "editor",
+            boolean(),
+            json!(true),
+            "SMT-002",
+        ),
+        def(
+            "smart.autoRedact.enabled",
+            "editor",
+            boolean(),
+            json!(true),
+            "SMT-002",
+        ),
+        def("smart.steps.enabled", "editor", boolean(), json!(true), "SMT-002"),
         def("editor.shrinkToFit", "editor", boolean(), json!(true), "EDT-007"),
         def("editor.rememberView", "editor", boolean(), json!(true), "EDT-007"),
         def(

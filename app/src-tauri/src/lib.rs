@@ -129,8 +129,12 @@ fn xs_countdown_current(app: AppHandle) -> Option<Value> {
 
 /// The editor's menus, for the menu bar it draws on Windows (EDT-002).
 #[tauri::command]
-fn xs_editor_menus() -> Value {
-    xs_core::menus::to_json(&xs_core::menus::app_menu(xs_core::platform::Platform::Windows))
+fn xs_editor_menus(state: tauri::State<'_, AppState>) -> Value {
+    // Without the smart features switched off (SMT-002).
+    xs_core::menus::to_json(&xs_core::features::menu_for(
+        &state.core.settings,
+        xs_core::menus::app_menu(xs_core::platform::Platform::Windows),
+    ))
 }
 
 /// Prepares the files of a drag out to other apps (TRY-015): open documents by ID and
@@ -178,7 +182,10 @@ pub(crate) fn rebuild_app_menu(app: &AppHandle) {
     {
         let state = app.state::<AppState>();
         let mut actions = state.actions.lock().unwrap();
-        let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Macos);
+        let entries = xs_core::features::menu_for(
+            &state.core.settings,
+            xs_core::menus::app_menu(xs_core::platform::Platform::Macos),
+        );
         if let Ok(menu) = tray::build_menu(app, &state.core, &entries, tray::Shortcuts::None, &mut actions) {
             *state.window_menu.lock().unwrap() = Some(menu.clone());
             let _ = app.set_menu(menu);

@@ -32,6 +32,7 @@ import {
   revealDoc,
   tagDocs,
 } from "./trayActions";
+import { isOn } from "../features";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -119,17 +120,21 @@ export function trayMenu(
         separator: true,
         onSelect: () => openPicker(docs.map((d) => ({ documentId: d.documentId }))),
       },
-      // SMT-016: auto redact over the selected captures.
-      {
-        id: "redact",
-        label: t("ui.redact_batch.open"),
-        onSelect: () =>
-          void startBatch({
-            documentIds: items
-              .filter((d) => ids.includes(d.documentId) && !d.missing)
-              .map((d) => d.documentId),
-          }),
-      },
+      // SMT-016: auto redact over the selected captures (unless off, SMT-002).
+      ...(isOn("autoRedact")
+        ? [
+            {
+              id: "redact",
+              label: t("ui.redact_batch.open"),
+              onSelect: () =>
+                void startBatch({
+                  documentIds: items
+                    .filter((d) => ids.includes(d.documentId) && !d.missing)
+                    .map((d) => d.documentId),
+                }),
+            },
+          ]
+        : []),
       {
         id: "close",
         label: t("menu.close"),

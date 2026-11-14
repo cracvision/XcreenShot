@@ -18,6 +18,7 @@ import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
 import { useApp } from "../store";
 import { arrowFocus } from "../components/arrowFocus";
+import { FEATURE_SETTINGS } from "../features";
 
 const SECTIONS = [
   "general",
@@ -48,7 +49,8 @@ interface Navigation {
 /** Settings changed where they are used: auto redact's categories, terms and style
  * in its panel (SMT-011 to SMT-013). They still travel with exported settings. */
 function editedElsewhere(key: string): boolean {
-  return key.startsWith("smart.autoRedact.");
+  // Its switch is here, with the other smart features (SMT-002).
+  return key.startsWith("smart.autoRedact.") && key !== "smart.autoRedact.enabled";
 }
 
 export function Preferences() {
@@ -173,10 +175,14 @@ export function Preferences() {
         </>
       );
     }
-    const rows = inSection(section);
+    // Editor > Smart features (SMT-002): their switches in a group of their own.
+    const switches = new Set(Object.values(FEATURE_SETTINGS));
+    const all = inSection(section);
+    const rows = all.filter((s) => !switches.has(s.key));
+    const smart = all.filter((s) => switches.has(s.key));
     return (
       <>
-        {rows.length === 0 && section !== "general" && (
+        {all.length === 0 && section !== "general" && (
           <p className="empty">{t("ui.prefs.empty_section")}</p>
         )}
         {/* Where the library is comes first (LIB-027). */}
@@ -195,6 +201,15 @@ export function Preferences() {
           ) : (
             <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
           ),
+        )}
+        {smart.length > 0 && (
+          <>
+            <h2>{t("ui.features.title")}</h2>
+            <p className="muted hint">{t("ui.features.hint")}</p>
+            {smart.map((s) => (
+              <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+            ))}
+          </>
         )}
         {section === "general" && (
           <>

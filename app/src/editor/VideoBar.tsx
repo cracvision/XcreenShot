@@ -27,6 +27,7 @@ import {
   videoAction,
 } from "./videoState";
 import { formatTime, parseTime, snap } from "./videoTimeline";
+import { useFeature } from "../features";
 
 type Drag = "playhead" | "start" | "end";
 
@@ -236,6 +237,7 @@ function Clock() {
 
 export function VideoBar() {
   const { t } = useTranslation();
+  const textOn = useFeature("extractText");
   const v = useEditor((s) => s.doc?.video);
   const playing = useVideo((s) => s.playing);
   const start = useVideo((s) => s.start);
@@ -355,11 +357,15 @@ export function VideoBar() {
               label: t("ui.video.save_selection"),
               onSelect: () => void saveSelection(),
             },
-            {
-              id: "extract_text",
-              label: t("ui.video.extract_text"),
-              onSelect: () => void extractText(),
-            },
+            ...(textOn
+              ? [
+                  {
+                    id: "extract_text",
+                    label: t("ui.video.extract_text"),
+                    onSelect: () => void extractText(),
+                  },
+                ]
+              : []),
             {
               id: "silent_copy",
               label: t("ui.video.silent_copy"),

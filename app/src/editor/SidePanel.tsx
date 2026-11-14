@@ -63,6 +63,7 @@ import { StylesTab } from "./StylesTab";
 import { EffectsTab } from "./EffectsTab";
 import { TemplateTab } from "./TemplateTab";
 import { templateOf } from "./templateUi";
+import { useFeature } from "../features";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -244,6 +245,7 @@ function Properties({ target }: { target: Target }) {
 
 function KindProperties({ target }: { target: Target }) {
   const { t } = useTranslation();
+  const redactOn = useFeature("autoRedact");
   const fonts = useEditor((s) => s.fonts);
   const { kind, styles, commit } = target;
   const v = <T,>(key: string) => common<T>(styles, key);
@@ -485,10 +487,12 @@ function KindProperties({ target }: { target: Target }) {
           )}
           {shapeType}
           <p className="muted hint">{t("ui.editor.blur.security")}</p>
-          {/* Auto redact (SMT-010): finds what to cover and covers it. */}
-          <button type="button" className="btn" onClick={() => void openRedact()}>
-            {t("ui.redact.open")}
-          </button>
+          {/* Auto redact (SMT-010): finds what to cover and covers it (unless off, SMT-002). */}
+          {redactOn && (
+            <button type="button" className="btn" onClick={() => void openRedact()}>
+              {t("ui.redact.open")}
+            </button>
+          )}
         </>
       );
     }
@@ -1528,6 +1532,7 @@ export function SidePanel() {
   const editing = useEditor((s) => s.textEdit !== null);
   const target = useTarget();
   const redactDoc = useRedact((s) => s.documentId);
+  const redactOn = useFeature("autoRedact");
 
   let title: string;
   let body: React.ReactNode;
@@ -1579,7 +1584,7 @@ export function SidePanel() {
 
   if (!visible) return null;
   // Auto redact (SMT-010): its panel takes the place of the tabs while it is open.
-  if (doc && redactDoc === doc.documentId && !doc.video)
+  if (doc && redactDoc === doc.documentId && !doc.video && redactOn)
     return (
       <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
         <ResizeEdge />

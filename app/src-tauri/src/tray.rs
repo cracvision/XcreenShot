@@ -333,7 +333,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let menu = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        &xs_core::features::menu_for(
+            &core.settings,
+            xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        ),
         Shortcuts::Accelerators,
         &mut actions,
     )?;
@@ -425,7 +428,10 @@ pub fn refresh(app: &AppHandle) {
     if let Ok(menu) = build_menu(
         app,
         core,
-        &xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        &xs_core::features::menu_for(
+            &core.settings,
+            xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        ),
         Shortcuts::Accelerators,
         &mut actions,
     ) {

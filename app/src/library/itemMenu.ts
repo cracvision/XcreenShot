@@ -13,6 +13,7 @@ import { duplicateItems } from "../editor/trayActions";
 import { exportGuideFile, GUIDE_FORMATS } from "../editor/guideExport";
 import { useLibrary } from "./state";
 import { startBatch } from "../editor/redactBatchState";
+import { isOn } from "../features";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
 
@@ -38,7 +39,7 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       onSelect: () => openPicker(items.map((i) => i.path)),
     },
     // Several captures at once (SMT-016); videos are left out.
-    ...(items.length > 1
+    ...(items.length > 1 && isOn("autoRedact")
       ? [
           {
             id: "redact",

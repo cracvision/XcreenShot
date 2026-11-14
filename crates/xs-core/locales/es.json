@@ -1614,6 +1614,18 @@
     "video_hideDesktopIcons": {
       "label": "Ocultar los íconos del escritorio al grabar",
       "description": "Vuelven a su sitio al terminar la grabación."
+    },
+    "smart_extractText_enabled": {
+      "label": "Extraer texto",
+      "description": "El texto de una zona de la pantalla, una imagen o un fotograma de video."
+    },
+    "smart_autoRedact_enabled": {
+      "label": "Redacción automática",
+      "description": "Busca y tapa los datos personales de una captura."
+    },
+    "smart_steps_enabled": {
+      "label": "Grabador de pasos",
+      "description": "Graba cada clic como un paso de una guía."
     }
   },
   "errors": {
@@ -1745,7 +1757,8 @@
     "steps_not_supported": "El grabador de pasos aún no está disponible en este sistema.",
     "not_a_guide": "Este documento no es una guía de pasos.",
     "redact_batch_not_found": "No hay una redacción de varias capturas con id {{id}}: terminó o se cerró.",
-    "redact_batch_empty": "No hay capturas que redactar: elige imágenes o documentos (los videos no se incluyen)."
+    "redact_batch_empty": "No hay capturas que redactar: elige imágenes o documentos (los videos no se incluyen).",
+    "feature_disabled": "La función «{{feature}}» está desactivada. Actívala en Preferencias > Editor > Funciones inteligentes ({{setting}})."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4725,6 +4738,13 @@
         "images": "Imágenes por separado",
         "clipboard": "Copiar al portapapeles"
       }
+    },
+    "features": {
+      "title": "Funciones inteligentes",
+      "hint": "Una función desactivada deja sin sus botones, menús y atajos. Los documentos que ya tienen sus resultados se siguen abriendo y editando igual.",
+      "extractText": "Extraer texto",
+      "autoRedact": "Redacción automática",
+      "steps": "Grabador de pasos"
     }
   },
   "history": {

@@ -15,6 +15,7 @@ import {
   toSource,
   wholeSelected,
 } from "./videoTimeline";
+import { actionOff } from "../features";
 
 /** Speeds offered (VID-057). */
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -342,6 +343,7 @@ export function videoAction(action: string): boolean {
       void saveFrame();
       break;
     case "video_extract_text":
+      if (actionOff(action)) return false;
       void extractText();
       break;
     case "video_silent_copy":

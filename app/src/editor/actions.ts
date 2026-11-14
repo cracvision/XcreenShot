@@ -48,6 +48,7 @@ import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./
 import { useZones } from "./templateUi";
 import { videoAction } from "./videoState";
 import { openRedact } from "./redactState";
+import { actionOff } from "../features";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -916,7 +917,7 @@ export function performAction(action: string): boolean {
       return true;
     // Extract text of what the canvas shows, or of the selection (SMT-007).
     case "extract_text": {
-      if (!doc || doc.video) return false;
+      if (!doc || doc.video || actionOff(action)) return false;
       const sel = doc.pixelSelection;
       const b = sel && !sel.target ? sel.bounds : null;
       void extractTextOf(b ? { x: b.x, y: b.y, width: b.w, height: b.h } : null);
@@ -924,7 +925,7 @@ export function performAction(action: string): boolean {
     }
     // Auto redact (SMT-010): its panel, and the analysis.
     case "auto_redact":
-      if (!doc || doc.video) return false;
+      if (!doc || doc.video || actionOff(action)) return false;
       void openRedact();
       return true;
     // The Video menu (VID-056 to VID-064, ADR 0008).

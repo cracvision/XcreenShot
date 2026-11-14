@@ -1078,6 +1078,19 @@ fn build_registry(core: &Arc<Core>) -> Registry {
                 tr(ctx.lang, "errors.automation_disabled", &[]),
             ));
         }
+        // SMT-002: a smart feature switched off, named by its setting.
+        if let Some(f) = crate::features::blocks(&core.settings, spec.id) {
+            let feature = tr(ctx.lang, &format!("ui.features.{}", f.name), &[]);
+            return Err(CommandError::new(
+                ErrorCode::FeatureDisabled,
+                tr(
+                    ctx.lang,
+                    "errors.feature_disabled",
+                    &[("feature", &feature), ("setting", f.setting)],
+                ),
+            )
+            .with_details(json!({ "setting": f.setting })));
+        }
         Ok(())
     }));
     // APP-032 / APP-046: log every automation command with its outcome, never its params.

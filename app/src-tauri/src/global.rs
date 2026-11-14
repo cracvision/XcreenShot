@@ -40,6 +40,10 @@ pub fn apply(app: &AppHandle) {
     let print_screen = print_screen_to_system();
     let take_over = core.settings.get_bool("shortcuts.takeOver");
     for (slot, acc) in core.shortcuts.global_bindings(profile) {
+        // A smart feature switched off has no shortcuts (SMT-002).
+        if xs_core::features::blocks(&core.settings, slot.command).is_some() {
+            continue;
+        }
         let conflict = system_conflict(&acc, platform, print_screen);
         if conflict == Some(SystemConflict::Reserved) || (conflict.is_some() && !take_over) {
             tracing::warn!(slot = slot.id, shortcut = %acc, "shortcut assigned by the system");

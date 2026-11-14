@@ -9,6 +9,8 @@ import { useTranslation } from "react-i18next";
 import { MenuList, type CloseReason } from "../components/Menu";
 import { usePresence } from "../components/usePresence";
 import { menuItems, mnemonic, useMenuState, type MenuNode } from "./menus";
+import { FEATURE_SETTINGS } from "../features";
+import { settingValue, useApp } from "../store";
 
 type TopMenu = Extract<MenuNode, { kind: "submenu" }>;
 
@@ -45,11 +47,17 @@ export function MenuBar() {
     keysOf.current = menus.map((m) => mnemonic(t(m.label)).key);
   }, [menus, t]);
 
+  // Again when a smart feature is switched on or off: its entries come or go (SMT-002).
+  const features = useApp((s) =>
+    Object.values(FEATURE_SETTINGS)
+      .map((k) => String(settingValue(s.settings, k) !== false))
+      .join(),
+  );
   useEffect(() => {
     invoke<MenuNode[]>("xs_editor_menus")
       .then((all) => setMenus(all.filter((m): m is TopMenu => m.kind === "submenu")))
       .catch(() => undefined);
-  }, []);
+  }, [features]);
 
   const show = (i: number, how: "first" | "menu") => {
     setShown(i);
