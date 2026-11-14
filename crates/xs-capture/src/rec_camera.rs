@@ -45,7 +45,24 @@ struct Session {
     camera: Arc<xs_video::camera::Camera>,
     device: Option<String>,
     preview: Option<xs_video::campreview::Preview>,
+    /// Where the video is on the screen, for the preview; none: no preview.
+    area: Option<xs_video::campreview::Area>,
+}
+
+/// The preview of `camera` over `area` (VID-031, VID-032).
+#[cfg(windows)]
+fn show_preview(
+    svc: &CameraService,
+    camera: &Arc<xs_video::camera::Camera>,
     area: xs_video::campreview::Area,
+    look: Look,
+) -> Option<xs_video::campreview::Preview> {
+    let w = svc.core.lock().unwrap().clone();
+    xs_video::campreview::Preview::show(camera.feed(), area, look, move |change| {
+        if let Some(core) = w.upgrade() {
+            moved(&core, change);
+        }
+    })
 }
 
 #[derive(Default)]
@@ -150,16 +167,29 @@ fn sync_win(core: &Core, state: Option<&Value>) {
         return;
     };
     let n = |k: &str| state["area"][k].as_i64().unwrap_or(0) as i32;
-    let area = Area {
-        x: n("x"),
-        y: n("y"),
-        width: n("width"),
-        height: n("height"),
-        scale: record::area_scale(core) as f32,
+    // Where the video shows on the screen: the area recorded; with slides, the frame
+    // of the slide in the editor, at its scale to the video (VID-072).
+    let area = if state["source"]["type"] == "slides" {
+        crate::slides_mode::screen_frame(core).map(|(x, y, width, height, video)| Area {
+            x,
+            y,
+            width,
+            height,
+            scale: width as f32 / video.max(1) as f32,
+        })
+    } else {
+        let a = Area {
+            x: n("x"),
+            y: n("y"),
+            width: n("width"),
+            height: n("height"),
+            scale: record::area_scale(core) as f32,
+        };
+        if a.width < 2 || a.height < 2 {
+            return;
+        }
+        Some(a)
     };
-    if area.width < 2 || area.height < 2 {
-        return;
-    }
     let look = look(core);
     let device = device(core);
     let mut session = svc.session.lock().unwrap();
@@ -170,8 +200,10 @@ fn sync_win(core: &Core, state: Option<&Value>) {
     if let Some(s) = session.as_mut() {
         if s.area != area {
             s.area = area;
-            if let Some(p) = &s.preview {
-                p.set_area(area);
+            match (&s.preview, area) {
+                (Some(p), Some(a)) => p.set_area(a),
+                (None, Some(a)) => s.preview = show_preview(&svc, &s.camera, a, look.clone()),
+                (_, None) => s.preview = None,
             }
         }
         if let Some(p) = &s.preview {
@@ -211,18 +243,7 @@ fn sync_win(core: &Core, state: Option<&Value>) {
         match opened {
             Ok(camera) => {
                 let camera = Arc::new(camera);
-                let w = Arc::downgrade(&core);
-                // With slides the video is not on the screen: no preview over it.
-                let slides = state["source"]["type"] == "slides";
-                let preview = if slides {
-                    None
-                } else {
-                    xs_video::campreview::Preview::show(camera.feed(), area, look.clone(), move |change| {
-                        if let Some(core) = w.upgrade() {
-                            moved(&core, change);
-                        }
-                    })
-                };
+                let preview = area.and_then(|a| show_preview(&svc, &camera, a, look.clone()));
                 *svc.trouble.lock().unwrap() = None;
                 *svc.session.lock().unwrap() = Some(Session {
                     camera,

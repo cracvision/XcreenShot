@@ -90,6 +90,7 @@ exists fails a test.
 | `slides.remove` | `xcreenshot slides remove --index 1` | Takes a slide out (never the last one). |
 | `slides.set` | `xcreenshot slides set --size 1280x720 --background "#FFFFFF"` | The video's size (even, 320 to 3840; not while recording), its background and whether small images are enlarged (VID-074). They stay as the settings. |
 | `slides.view` | `xcreenshot slides view --zoom 2 --center '[0.25,0.25]'` | Zooms the slide showing (1 to 8) with `center` of the image in the middle; `reset` goes back. In the video it glides there (VID-074). |
+| `slides.frame` | (the app) | Where the editor shows the video's frame on the screen, so the camera's preview goes over the slide at the video's scale (VID-072). |
 | `slides.exit` | `xcreenshot slides exit` | Closes the mode without changing any image; not while recording. |
 | `record.cameras` | `xcreenshot record cameras --json` | The cameras plugged in (`id`, `name`) and the one chosen (VID-031). |
 | `record.camera` | `xcreenshot record camera --shape circle --corner topLeft --json` | Switches the camera and sets how it shows: `placement` (`pip` or `fullscreen`), `corner`, `size` (0.1 to 0.5 of the area's shorter side), `shape`, `aspect`, `mirror`, `border` and its colours and width. They stay as the settings and, while recording, change it from now on; the `device` changes only in Ready or paused. `retry` opens the camera again after a problem. Returns the camera's state, with `trouble` (`blocked`, `in_use`, `gone`, `black`) when it gives no picture (VID-038). |

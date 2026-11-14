@@ -3,14 +3,29 @@
 import type { MenuItem } from "../components/Menu";
 import { shortcutOf } from "../editor/menus";
 import { printFiles } from "../editor/printState";
+import { fail } from "../editor/actions";
+import { startSlides } from "../editor/slidesState";
 import { openPicker } from "../editor/templateUi";
-import type { LibraryItem } from "./state";
+import { useVideo } from "../editor/videoState";
+import { run } from "../lib/commands";
+import { useMainView, type LibraryItem } from "./state";
 
-/** The entries of Create: a new image from a template now; narrated slides and
- * combining videos arrive with the video features (M4). */
+/** Narrated slides of library images (VID-071): opened, then made slides in order. */
+async function slidesOf(images: LibraryItem[]): Promise<void> {
+  const ids: string[] = [];
+  for (const i of images) {
+    const doc = await run<{ documentId: string }>("document.open", { path: i.path, show: false });
+    ids.push(doc.documentId);
+  }
+  useMainView.getState().setView("editor");
+  await startSlides(ids);
+}
+
+/** The entries of Create: a new image from a template, narrated slides (VID-071) and
+ * combined videos (VID-067). */
 export function createItems(items: LibraryItem[], t: (key: string) => string): MenuItem[] {
   const images = items.filter((i) => i.kind === "image");
-  const later = t("ui.library.create.later");
+  const videos = items.filter((i) => i.kind === "video");
   return [
     {
       id: "from_template",
@@ -23,16 +38,22 @@ export function createItems(items: LibraryItem[], t: (key: string) => string): M
     {
       id: "slides",
       label: t("ui.library.create.slides"),
-      disabled: true,
-      title: later,
-      onSelect: () => undefined,
+      disabled: images.length === 0,
+      ...(images.length === 0 ? { title: t("ui.library.create.need_images") } : {}),
+      onSelect: () => void slidesOf(images).catch((e: unknown) => fail(e)),
     },
     {
       id: "videos",
       label: t("ui.library.create.videos"),
-      disabled: true,
-      title: later,
-      onSelect: () => undefined,
+      disabled: videos.length === 0,
+      ...(videos.length === 0 ? { title: t("ui.library.create.need_videos") } : {}),
+      onSelect: () => {
+        useMainView.getState().setView("editor");
+        useVideo.setState({
+          combineDialog: true,
+          combineWith: videos.map((v) => ({ path: v.path, name: v.name })),
+        });
+      },
     },
   ];
 }

@@ -851,6 +851,8 @@ pub fn toggle(core: &Arc<Core>, ctx: &Context) -> CommandResult {
         Some(State::Paused) => pause(core, ctx, false),
         Some(_) => Ok(status(core)),
         None if service(core).ready.lock().unwrap().is_some() => start(core, ctx, &json!({})),
+        // The slides mode waiting: Record (VID-072, the same shortcut as the screen's).
+        None if crate::slides_mode::active(core) => start(core, ctx, &json!({ "source": "slides" })),
         None => video(core, ctx, &json!({})),
     }
 }

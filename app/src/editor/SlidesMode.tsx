@@ -1,6 +1,7 @@
 // Narrated slides (VID-071 to VID-074): the editor shows the slide as it will be in
 // the video, a strip with all of them below, and the slides bar instead of the
 // toolbar. What is recorded is the slide, not the screen.
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
@@ -325,6 +326,34 @@ function Stage({
   const fh = Math.max(0, h * k);
   const r = place(w, h, slide.width, slide.height, mode.enlarge, slide.zoom, slide.center);
   const drag = useRef<{ x: number; y: number; center: [number, number] } | null>(null);
+  // Where the video's frame is on the screen: the camera's preview goes over it.
+  const frameRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const win = getCurrentWindow();
+    let alive = true;
+    const report = async () => {
+      const [pos, scale] = await Promise.all([win.innerPosition(), win.scaleFactor()]);
+      if (!alive) return;
+      const r = el.getBoundingClientRect();
+      await run("slides.frame", {
+        x: pos.x + r.left * scale,
+        y: pos.y + r.top * scale,
+        width: r.width * scale,
+        height: r.height * scale,
+      });
+    };
+    void report().catch(() => undefined);
+    const offs = [
+      win.onMoved(() => void report().catch(() => undefined)),
+      win.onResized(() => void report().catch(() => undefined)),
+    ];
+    return () => {
+      alive = false;
+      offs.forEach((o) => void o.then((f) => f()));
+    };
+  }, [fw, fh]);
   return (
     <div
       ref={host}
@@ -368,6 +397,7 @@ function Stage({
       }}
     >
       <div
+        ref={frameRef}
         className="slides-frame"
         role="img"
         aria-label={t("ui.slides.showing", { name: slide.name })}

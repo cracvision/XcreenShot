@@ -313,6 +313,7 @@ xcreenshot app ping --json
 | `slides.remove` | `xcreenshot slides remove --index 1` | `index` integer (required) | Takes a slide out (never the last one). _Changes data._ |
 | `slides.set` | `xcreenshot slides set --size 1280x720 --background "#FFFFFF"` | `size`; `background` string; `enlarge` boolean | The video's size (even, 320 to 3840; not while recording), its background and whether small images are enlarged (VID-074). They stay as the settings. _Changes data._ |
 | `slides.view` | `xcreenshot slides view --zoom 2 --center '[0.25,0.25]'` | `zoom` number; `center` array; `reset` boolean | Zooms the slide showing (1 to 8) with `center` of the image in the middle; `reset` goes back. In the video it glides there (VID-074). _Changes data._ |
+| `slides.frame` | (the app) | `x` number (required); `y` number (required); `width` number (required); `height` number (required) | Where the editor shows the video's frame on the screen, so the camera's preview goes over the slide at the video's scale (VID-072). _Changes data._ |
 | `slides.exit` | `xcreenshot slides exit` | — | Closes the mode without changing any image; not while recording. _Changes data._ |
 
 ### document

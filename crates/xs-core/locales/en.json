@@ -1150,6 +1150,10 @@
     "slides_exit": {
       "title": "Exit narrated slides",
       "description": "Closes the slides mode without changing any image."
+    },
+    "slides_frame": {
+      "title": "Slides frame on screen",
+      "description": "Where the editor shows the slides video, for the camera preview."
     }
   },
   "settings": {
@@ -4534,7 +4538,8 @@
         "videos": "Combine videos…",
         "later": "Arrives with video recording.",
         "need_images": "Choose images first.",
-        "need_selection": "Select items first."
+        "need_selection": "Select items first.",
+        "need_videos": "Choose one or more videos"
       },
       "merge": {
         "menu": "Merge another library…",

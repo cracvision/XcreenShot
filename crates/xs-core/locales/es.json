@@ -1150,6 +1150,10 @@
     "slides_exit": {
       "title": "Salir de las diapositivas narradas",
       "description": "Cierra el modo diapositivas sin cambiar ninguna imagen."
+    },
+    "slides_frame": {
+      "title": "Marco de las diapositivas en pantalla",
+      "description": "Dónde muestra el editor el video de diapositivas, para la vista previa de la cámara."
     }
   },
   "settings": {
@@ -4534,7 +4538,8 @@
         "videos": "Combinar videos…",
         "later": "Llega con la grabación de video.",
         "need_images": "Elige imágenes primero.",
-        "need_selection": "Selecciona elementos primero."
+        "need_selection": "Selecciona elementos primero.",
+        "need_videos": "Elige uno o más videos"
       },
       "merge": {
         "menu": "Fusionar otra biblioteca…",

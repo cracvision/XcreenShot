@@ -35,6 +35,9 @@ struct Mode {
 pub struct SlidesService {
     mode: Mutex<Option<Mode>>,
     next_id: std::sync::atomic::AtomicU64,
+    /// Where the editor shows the video's frame, in screen pixels (for the camera's
+    /// preview over it).
+    frame: Mutex<Option<(i32, i32, i32, i32)>>,
 }
 
 fn service(core: &Core) -> Arc<SlidesService> {
@@ -53,6 +56,49 @@ pub fn active(core: &Core) -> bool {
 /// The video's size, while the mode is open.
 pub fn size(core: &Core) -> Option<(u32, u32)> {
     service(core).mode.lock().unwrap().as_ref().map(|m| m.size)
+}
+
+/// Where the editor shows the video's frame on the screen, and the video's width: the
+/// camera's preview goes over it at that scale (VID-072).
+pub fn screen_frame(core: &Core) -> Option<(i32, i32, i32, i32, u32)> {
+    let svc = service(core);
+    let video = svc.mode.lock().unwrap().as_ref().map(|m| m.size.0)?;
+    let f = (*svc.frame.lock().unwrap())?;
+    (f.2 > 1 && f.3 > 1).then_some((f.0, f.1, f.2, f.3, video))
+}
+
+/// The camera's preview follows the mode (VID-072): while it waits, with the state
+/// a recording would have; while recording, the recording's bar does it.
+fn camera(core: &Core) {
+    if crate::record::running(core) {
+        crate::record::refresh(core);
+        return;
+    }
+    match size(core) {
+        Some((w, h)) => crate::rec_camera::sync(
+            core,
+            Some(&json!({
+                "status": "ready",
+                "source": { "type": "slides" },
+                "area": { "x": 0, "y": 0, "width": w, "height": h },
+            })),
+        ),
+        None => crate::rec_camera::sync(core, None),
+    }
+}
+
+/// `slides.frame` (VID-072): where the editor shows the video's frame now, in screen
+/// pixels; the camera's preview goes there.
+pub fn frame(core: &Core, p: &Value) -> CommandResult {
+    let n = |k: &str| p.get(k).and_then(Value::as_f64).unwrap_or(0.0).round() as i32;
+    let f = (n("x"), n("y"), n("width"), n("height"));
+    let svc = service(core);
+    let changed = *svc.frame.lock().unwrap() != Some(f);
+    if changed {
+        *svc.frame.lock().unwrap() = Some(f);
+        camera(core);
+    }
+    Ok(json!({ "frame": [f.0, f.1, f.2, f.3] }))
 }
 
 /// Where a recording gets the slide showing now.
@@ -121,6 +167,8 @@ pub fn state(core: &Core) -> Value {
         "size": [m.size.0, m.size.1],
         "background": hex(m.background),
         "enlarge": m.enlarge,
+        // Where the editor shows the video on the screen (for the camera's preview).
+        "frame": *svc.frame.lock().unwrap(),
         "slides": m.items.iter().map(|i| json!({
             "documentId": i.document,
             "name": i.name,
@@ -136,6 +184,7 @@ pub fn state(core: &Core) -> Value {
 fn changed(core: &Core) -> CommandResult {
     let s = state(core);
     core.host().editor_event("slides", s.clone());
+    camera(core);
     Ok(s)
 }
 
@@ -354,8 +403,14 @@ pub fn exit(core: &Core, ctx: &Context) -> CommandResult {
 
 /// Closes the mode (and tells the editor): after Exit, or when its video is saved.
 pub fn close(core: &Core) {
-    if service(core).mode.lock().unwrap().take().is_some() {
+    let svc = service(core);
+    if svc.mode.lock().unwrap().take().is_some() {
+        svc.frame.lock().unwrap().take();
         core.host().editor_event("slides", json!({ "active": false }));
+        // The camera goes with the mode, unless a recording still holds it.
+        if !crate::record::running(core) {
+            crate::rec_camera::sync(core, None);
+        }
     }
 }
 

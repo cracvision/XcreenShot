@@ -37,14 +37,22 @@ function CombineForm() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("modified");
-  // The video shown in the editor goes first (VID-067).
-  const [chosen, setChosen] = useState<Chosen[]>(() =>
-    doc?.video && doc.video.codec !== "GIF" && doc.path ? [{ path: doc.path, name: doc.name }] : [],
-  );
+  // The videos chosen in the library, or the video shown in the editor, go first
+  // (VID-067).
+  const [chosen, setChosen] = useState<Chosen[]>(() => {
+    const given = useVideo.getState().combineWith;
+    if (given) {
+      useVideo.setState({ combineWith: null });
+      return given;
+    }
+    return doc?.video && doc.video.codec !== "GIF" && doc.path
+      ? [{ path: doc.path, name: doc.name }]
+      : [];
+  });
   const [quick, setQuick] = useState<Record<string, Quick>>({});
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const close = () => useVideo.setState({ combineDialog: false });
+  const close = () => useVideo.setState({ combineDialog: false, combineWith: null });
 
   // The library's videos, in the order and with the filter chosen.
   useEffect(() => {

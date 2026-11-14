@@ -1545,6 +1545,16 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &[],
             ))
             .result(json!({"type": "object"})),
+        B::new("slides.frame", &["VID-072"])
+            .mutates()
+            .params(params(
+                json!({
+                    "x": {"type": "number"}, "y": {"type": "number"},
+                    "width": {"type": "number"}, "height": {"type": "number"}
+                }),
+                &["x", "y", "width", "height"],
+            ))
+            .result(json!({"type": "object", "description": "Where the editor shows the video's frame, in screen pixels, for the camera's preview"})),
         B::new("slides.exit", &["VID-071"])
             .scopes(ALL)
             .mutates()

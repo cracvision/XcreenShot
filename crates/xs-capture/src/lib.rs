@@ -1782,6 +1782,10 @@ pub fn extension() -> Extension {
             slides_mode::exit(&*upgrade(&w)?, ctx)
         });
         let w = weak.clone();
+        reg.handle("slides.frame", move |_ctx, p| {
+            slides_mode::frame(&*upgrade(&w)?, &p)
+        });
+        let w = weak.clone();
         reg.handle("record.sound", move |ctx, p| {
             record::sound(&*upgrade(&w)?, ctx, &p)
         });

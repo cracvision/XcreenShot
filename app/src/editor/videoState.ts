@@ -43,6 +43,8 @@ interface VideoState {
   gifDialog: boolean;
   /** The Combine videos window is open (VID-067). */
   combineDialog: boolean;
+  /** The videos Combine starts with, chosen in the library (VID-067). */
+  combineWith: { path: string; name: string }[] | null;
 }
 
 export const useVideo = create<VideoState>(() => ({
@@ -61,6 +63,7 @@ export const useVideo = create<VideoState>(() => ({
   goTo: false,
   gifDialog: false,
   combineDialog: false,
+  combineWith: null,
 }));
 
 function video(): DocDetails["video"] {
