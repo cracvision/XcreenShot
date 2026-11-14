@@ -727,6 +727,22 @@
       "title": "Palabras reconocidas",
       "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
     },
+    "smart_separate": {
+      "title": "Separar elementos",
+      "description": "Convierte los elementos y los trozos de texto de la imagen en objetos que se pueden mover, cambiar de tamaño o borrar."
+    },
+    "smart_separate_reset": {
+      "title": "Separar elementos: restablecer",
+      "description": "Devuelve la imagen a como estaba antes de separar."
+    },
+    "smart_separate_done": {
+      "title": "Separar elementos: listo",
+      "description": "Aplana las piezas en la imagen, en un solo paso de deshacer."
+    },
+    "smart_separate_text": {
+      "title": "Separar elementos: texto",
+      "description": "Un trozo de texto separado pasa a ser un objeto Texto."
+    },
     "smart_edit_text": {
       "title": "Editar texto",
       "description": "Sustituye el texto de una parte de la imagen por un objeto Texto del mismo tamaño y color, listo para escribir."
@@ -1646,6 +1662,10 @@
     "smart_editText_enabled": {
       "label": "Editar texto",
       "description": "El texto que forma parte de la imagen pasa a ser un objeto Texto que se puede cambiar."
+    },
+    "smart_separate_enabled": {
+      "label": "Separar elementos",
+      "description": "La herramienta Mover puede convertir los elementos de la imagen en objetos."
     }
   },
   "errors": {
@@ -1781,7 +1801,9 @@
     "feature_disabled": "La función «{{feature}}» está desactivada. Actívala en Preferencias > Editor > Funciones inteligentes ({{setting}}).",
     "simplify_nothing": "No se encontró nada que simplificar: ni texto ni elementos de interfaz. Funciona mejor con capturas de pantalla.",
     "edit_text_select": "Primero selecciona el texto que quieres editar, con la herramienta Selección.",
-    "edit_text_none": "No se encontró texto para editar."
+    "edit_text_none": "No se encontró texto para editar.",
+    "separate_nothing": "No se encontró nada útil que separar. Funciona mejor con capturas de interfaces.",
+    "separate_not_text": "Eso no es un trozo de texto separado."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4784,7 +4806,8 @@
       "steps": "Grabador de pasos",
       "textOnly": "Aplicar solo al texto",
       "autoSimplify": "Simplificar automático",
-      "editText": "Editar texto"
+      "editText": "Editar texto",
+      "separate": "Separar elementos"
     },
     "edit_text": {
       "title": "Editar texto",
@@ -4794,6 +4817,20 @@
       "fit": "Ajustar la selección al texto",
       "anyway": "Editar así",
       "rough": "El fondo no es liso: el relleno puede dejar marcas. Una selección más ajustada ayuda."
+    },
+    "separate": {
+      "open": "Separar elementos",
+      "help": "Convierte cada botón, campo, ícono y trozo de texto de la imagen en un objeto que se puede mover, cambiar de tamaño o borrar; los huecos se rellenan con el fondo.",
+      "title": "Separar elementos",
+      "hint": "Arrastra, cambia de tamaño o borra cada elemento. Doble clic en un texto para reescribirlo. Listo devuelve todo a la imagen.",
+      "detail": "Detalle",
+      "detail_help": "Poco: lo cercano se mueve junto (una fila de botones). Mucho: cada botón y cada palabra.",
+      "reset": "Restablecer",
+      "done": "Listo",
+      "confirm_title": "¿Separar de nuevo?",
+      "confirm_body_one": "Se perderán los cambios hechos a {{count}} elemento.",
+      "confirm_body_other": "Se perderán los cambios hechos a {{count}} elementos.",
+      "again": "Separar de nuevo"
     }
   },
   "history": {
@@ -4936,7 +4973,8 @@
     "duplicate_section": "Duplicar paso",
     "add_steps": "Añadir pasos",
     "auto_simplify": "Simplificar automático",
-    "edit_text": "Editar texto"
+    "edit_text": "Editar texto",
+    "separate": "Separar elementos"
   },
   "editor": {
     "edited": "{{name}} — Editado",

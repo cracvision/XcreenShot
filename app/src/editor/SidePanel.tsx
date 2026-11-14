@@ -74,6 +74,8 @@ import {
   confirmRegenerate,
   useAutoSimplify,
 } from "./simplifyAuto";
+import { SeparatePanel } from "./SeparatePanel";
+import { startSeparate, useSeparate } from "./separateState";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -1544,8 +1546,26 @@ function CropProperties() {
 
 function DocumentProperties({ doc }: { doc: DocDetails }) {
   const { t } = useTranslation();
+  const tool = useEditor((s) => s.tool);
+  const separateOn = useFeature("separate");
+  const busy = useSeparate((s) => s.busy);
   return (
     <>
+      {/* Move (EDT-042): Separate elements of the image (SMT-018). */}
+      {tool === "move" && separateOn && !doc.video && (
+        <>
+          <button
+            type="button"
+            className="btn"
+            disabled={busy}
+            title={t("ui.separate.help")}
+            onClick={() => void startSeparate()}
+          >
+            {t("ui.separate.open")}
+          </button>
+          <p className="muted hint">{t("ui.separate.help")}</p>
+        </>
+      )}
       <dl className="doc-props">
         <dt>{t("ui.editor.prop.size")}</dt>
         <dd>
@@ -1626,6 +1646,7 @@ export function SidePanel() {
   const target = useTarget();
   const redactDoc = useRedact((s) => s.documentId);
   const redactOn = useFeature("autoRedact");
+  const separating = useSeparate((s) => s.documentId);
 
   let title: string;
   let body: React.ReactNode;
@@ -1676,6 +1697,16 @@ export function SidePanel() {
   }
 
   if (!visible) return null;
+  // Separate elements (SMT-018): its panel while the mode is on.
+  if (doc && separating === doc.documentId)
+    return (
+      <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
+        <ResizeEdge />
+        <div className="side-body">
+          <SeparatePanel />
+        </div>
+      </aside>
+    );
   // Auto redact (SMT-010): its panel takes the place of the tabs while it is open.
   if (doc && redactDoc === doc.documentId && !doc.video && redactOn)
     return (

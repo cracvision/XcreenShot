@@ -759,6 +759,39 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "cut": {"type": "boolean", "description": "Nothing changed: the place cuts letters or lines; fitRect is the place that would not"},
                 "fitRect": {"type": "array"}
             }})),
+        B::new("smart.separate", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string", "description": "An upright floating image to separate instead of the image"},
+                    "detail": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5, "description": "Little: nearby things move together; a lot: each button and each word"},
+                    "force": {"type": "boolean", "default": false, "description": "Separate again with another detail although pieces were changed (the changes are lost)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "pieces": {"type": "integer"},
+                "ids": {"type": "array", "description": "The pieces: floating images marked separated"},
+                "needsConfirm": {"type": "boolean", "description": "Nothing changed: changed pieces would be lost; call again with force"},
+                "edited": {"type": "integer"}
+            }})),
+        B::new("smart.separate_reset", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"active": {"type": "boolean"}}})),
+        B::new("smart.separate_done", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"flattened": {"type": "integer"}}})),
+        B::new("smart.separate_text", &["SMT-018", "SMT-009"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id(), "objectId": {"type": "string"}}), &["objectId"]))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string", "description": "The new Text object"}}})),
         B::new("smart.simplify_auto", &["SMT-019"])
             .scopes(UI_CLI)
             .mutates()

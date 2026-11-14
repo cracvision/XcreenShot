@@ -497,6 +497,8 @@ export interface ImageObject {
   rect: Rect;
   rotation: number;
   style: ImageStyle;
+  /** A piece of Separate elements (SMT-018); `text` when it is a piece of text. */
+  separated?: { text?: { text: string } };
 }
 
 /** A template's image zone (EDT-098, ADR 0007): a frame that crops its picture. */

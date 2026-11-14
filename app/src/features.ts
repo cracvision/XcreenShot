@@ -5,7 +5,7 @@ import type { SettingEntry } from "./lib/commands";
 import { settingValue, useApp } from "./store";
 
 export type FeatureName =
-  "extractText" | "autoRedact" | "steps" | "textOnly" | "autoSimplify" | "editText";
+  "extractText" | "autoRedact" | "steps" | "textOnly" | "autoSimplify" | "editText" | "separate";
 
 export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   extractText: "smart.extractText.enabled",
@@ -14,6 +14,7 @@ export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   textOnly: "smart.textOnly.enabled",
   autoSimplify: "smart.autoSimplify.enabled",
   editText: "smart.editText.enabled",
+  separate: "smart.separate.enabled",
 };
 
 /** The editor actions of each feature. */

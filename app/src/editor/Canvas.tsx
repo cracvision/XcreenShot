@@ -117,6 +117,7 @@ import {
   type Size,
   type View,
 } from "./view";
+import { separatedText } from "./separateState";
 
 /** Movement below this (CSS px) is a click, not a drag: a click draws nothing (EDT-024). */
 const DRAG_THRESHOLD = 3;
@@ -2177,6 +2178,10 @@ export function Canvas({ doc, insets }: Props) {
       return;
     }
     const hit = hitObject(p);
+    if (hit?.type === "image" && hit.separated?.text) {
+      void separatedText(hit.id);
+      return;
+    }
     if (hit?.type === "text") startTextEdit(hit);
     // Edit value (EDT-035).
     if (hit?.type === "step") useEditor.setState({ stepEdit: { id: hit.id, value: hit.value } });

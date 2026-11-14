@@ -42,6 +42,7 @@ pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
+pub mod separate;
 pub mod simplify_auto;
 pub mod steps;
 pub mod steps_rec;
@@ -2085,6 +2086,7 @@ pub fn extension() -> Extension {
         text_only::register(reg, &weak);
         simplify_auto::register(reg, &weak);
         edit_text::register(reg, &weak);
+        separate::register(reg, &weak);
         steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();

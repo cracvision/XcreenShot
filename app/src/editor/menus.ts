@@ -30,6 +30,7 @@ import { captureIntoZone, replaceZoneImage, templateCommand } from "./templateAc
 import { useZones } from "./templateUi";
 import { useVideo } from "./videoState";
 import { isOn } from "../features";
+import { startSeparate } from "./separateState";
 
 interface Point {
   x: number;
@@ -223,6 +224,18 @@ export function canvasMenu(
     );
     const first = items[2];
     if (first) items[2] = { ...first, separator: true };
+  }
+  // Separate elements of a floating image (SMT-018).
+  {
+    const obj = image ? useEditor.getState().doc?.objects.find((o) => o.id === image) : undefined;
+    if (obj?.type === "image" && obj.rotation === 0 && isOn("separate")) {
+      items.push({
+        id: "smart.separate",
+        label: i18next.t("ui.separate.open"),
+        separator: true,
+        onSelect: () => void startSeparate(obj.id),
+      });
+    }
   }
   // Extract text (SMT-007): of the image, of the selection or of a floating image.
   {

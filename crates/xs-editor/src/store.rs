@@ -895,6 +895,49 @@ impl DocStore {
         Some(n)
     }
 
+    /// How many undo steps a document has (SMT-018 marks where a session starts).
+    pub fn undo_len(&self, id: &str) -> Option<usize> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.get_mut(id).map(|d| d.undo.len())
+    }
+
+    /// Back to how the document was when it had `len` undo steps: the steps after go,
+    /// with no redo (SMT-018's Reset).
+    pub fn rewind(&self, id: &str, len: usize) -> bool {
+        let mut inner = self.inner.lock().unwrap();
+        let Some(doc) = inner.get_mut(id) else {
+            return false;
+        };
+        if doc.undo.len() <= len {
+            return false;
+        }
+        let first = doc.undo.drain(len..).next().expect("a step");
+        doc.document = first.before;
+        doc.version = first.before_version;
+        doc.redo.clear();
+        true
+    }
+
+    /// The steps after the first `len` become one, named `label` (SMT-018: a session
+    /// undoes in one step).
+    pub fn squash(&self, id: &str, len: usize, label: &str) -> bool {
+        let mut inner = self.inner.lock().unwrap();
+        let Some(doc) = inner.get_mut(id) else {
+            return false;
+        };
+        if doc.undo.len() <= len {
+            return false;
+        }
+        let first = doc.undo.drain(len..).next().expect("a step");
+        doc.undo.push(Step {
+            label: label.to_string(),
+            before: first.before,
+            before_version: first.before_version,
+        });
+        doc.redo.clear();
+        true
+    }
+
     /// Undoes (`redo == false`) or redoes the last step. Returns its label.
     pub fn step(&self, id: &str, redo: bool) -> Option<Option<String>> {
         let mut inner = self.inner.lock().unwrap();

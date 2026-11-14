@@ -264,13 +264,13 @@ pub fn register(reg: &mut xs_core::command::Registry, weak: &std::sync::Weak<Cor
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::sync::Arc;
     use xs_core::Source;
 
     /// A settings window: lines of text and three buttons.
-    fn settings_window() -> image::RgbaImage {
+    pub(crate) fn settings_window() -> image::RgbaImage {
         use xs_core::document::{Document, Object};
         let (w, h) = (900u32, 420u32);
         let mut doc = Document::new(w, h, 96.0);

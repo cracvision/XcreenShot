@@ -53,6 +53,10 @@ fn differ(a: [u8; 3], b: [u8; 3], by: i32) -> bool {
     (0..3).any(|i| (a[i] as i32 - b[i] as i32).abs() > by)
 }
 
+/// How much a channel changes at an edge: subtle enough for a light gray button on a
+/// lighter background (screenshots have exact pixels).
+const EDGE: i32 = 14;
+
 /// Pixels where the color changes, both sides of the change: edges of things. A
 /// group's box is one pixel larger than the thing on every side.
 fn edges(img: &RgbaImage) -> Vec<bool> {
@@ -61,11 +65,11 @@ fn edges(img: &RgbaImage) -> Vec<bool> {
     for y in 0..h {
         for x in 0..w {
             let c = px(img, x, y);
-            if x + 1 < w && differ(c, px(img, x + 1, y), 24) {
+            if x + 1 < w && differ(c, px(img, x + 1, y), EDGE) {
                 out[(y * w + x) as usize] = true;
                 out[(y * w + x + 1) as usize] = true;
             }
-            if y + 1 < h && differ(c, px(img, x, y + 1), 24) {
+            if y + 1 < h && differ(c, px(img, x, y + 1), EDGE) {
                 out[(y * w + x) as usize] = true;
                 out[((y + 1) * w + x) as usize] = true;
             }

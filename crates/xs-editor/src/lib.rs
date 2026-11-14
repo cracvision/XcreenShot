@@ -2850,6 +2850,169 @@ pub fn replace_text(
     Ok(made)
 }
 
+/// Where pixels of what Separate elements works on go on the canvas (SMT-018):
+/// `canvas = origin + pixel × scale`.
+#[derive(Debug, Clone, Copy)]
+pub struct PixelMap {
+    pub ox: f64,
+    pub oy: f64,
+    pub sx: f64,
+    pub sy: f64,
+}
+
+/// The pixels Separate elements works on (SMT-018): the image (in base pixels) or an
+/// upright floating image's picture.
+pub fn separable_pixels(
+    core: &Core,
+    id: &str,
+    object: Option<&str>,
+) -> Result<(image::RgbaImage, PixelMap), String> {
+    let ed = editor(core);
+    let doc = ed
+        .store
+        .with(id, |d| d.document.clone())
+        .ok_or("document closed")?;
+    match object {
+        None => Ok((
+            image_pixels(core, id)?,
+            PixelMap {
+                ox: -doc.crop.x as f64,
+                oy: -doc.crop.y as f64,
+                sx: 1.0,
+                sy: 1.0,
+            },
+        )),
+        Some(oid) => {
+            let o = doc.object(oid).ok_or("no such object")?;
+            if o.kind != "image" {
+                return Err("only an image".into());
+            }
+            let rotation = o.props.get("rotation").and_then(Value::as_f64).unwrap_or(0.0);
+            if rotation.abs() > 0.01 {
+                return Err("only an upright image".into());
+            }
+            let name = o.props.get("image").and_then(Value::as_str).ok_or("no picture")?;
+            let bytes = ed.store.image_file(id, name).ok_or("no picture")?;
+            let picture = image::load_from_memory(&bytes)
+                .map_err(|e| e.to_string())?
+                .to_rgba8();
+            let r = xs_image::shapes::rect(o.props.get("rect"))?;
+            Ok((
+                picture.clone(),
+                PixelMap {
+                    ox: r.x,
+                    oy: r.y,
+                    sx: r.w / picture.width().max(1) as f64,
+                    sy: r.h / picture.height().max(1) as f64,
+                },
+            ))
+        }
+    }
+}
+
+/// Separate elements (SMT-018): the pixels of `mask` rebuilt from their surroundings
+/// (on the image, or in the floating image `object`'s picture) and each piece added as
+/// a floating image where it was, marked with `mark_key` (its mark plus `fp`, the
+/// piece's fingerprint by `fp`). One undo step. Returns the pieces' IDs.
+#[allow(clippy::too_many_arguments)]
+pub fn separate_into(
+    core: &Core,
+    ctx: &Context,
+    id: &str,
+    object: Option<&str>,
+    mask: &xs_image::selection::Mask,
+    pieces: &[(image::RgbaImage, [u32; 4], Map<String, Value>)],
+    map: &PixelMap,
+    mark_key: &str,
+    fp: fn(&Map<String, Value>) -> String,
+) -> Result<Vec<String>, CommandError> {
+    let lang = ctx.lang;
+    let (pixels, _) = separable_pixels(core, id, object).map_err(|e| internal(lang, "", e))?;
+    let mut filled = pixels.clone();
+    xs_image::selection::fill_gap_with(&mut filled, mask, xs_image::selection::Gap::Smart, &mut |_| true);
+    let gap = match (object, mask.bounds()) {
+        (None, Some(area)) => Some((
+            store_picture(core, id, &pixels::cut_area(&filled, area), lang)?,
+            Some(pixels::rect_of(area)),
+        )),
+        (Some(_), Some(_)) => Some((store_picture(core, id, &filled, lang)?, None)),
+        _ => None,
+    };
+    let mut objects_in: Vec<Map<String, Value>> = Vec::with_capacity(pieces.len());
+    for (img, r, mark) in pieces {
+        let name = store_picture(core, id, img, lang)?;
+        let rect = [
+            map.ox + r[0] as f64 * map.sx,
+            map.oy + r[1] as f64 * map.sy,
+            r[2] as f64 * map.sx,
+            r[3] as f64 * map.sy,
+        ];
+        let mut props = objects::image_object(&name, rect).map_err(invalid)?;
+        let mut mark = mark.clone();
+        mark.insert("fp".into(), json!(fp(&props)));
+        props.insert(mark_key.into(), Value::Object(mark));
+        objects_in.push(props);
+    }
+    let made = editor(core)
+        .store
+        .mutate(id, "history.separate", |doc| {
+            match (&gap, object) {
+                (Some((name, Some(rect))), None) => pixels::add_patch(doc, *rect, name.clone()),
+                (Some((name, None)), Some(oid)) => {
+                    if let Some(o) = doc.objects.iter_mut().find(|o| o.id == oid) {
+                        o.props.insert("image".into(), json!(name));
+                    }
+                }
+                _ => {}
+            }
+            let mut made = Vec::new();
+            for props in &objects_in {
+                let oid = doc.next_object_id();
+                doc.objects.push(Object {
+                    id: oid.clone(),
+                    kind: "image".to_string(),
+                    props: props.clone(),
+                });
+                made.push(oid);
+            }
+            Ok::<_, CommandError>(made)
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    changed(core, ctx, id);
+    Ok(made)
+}
+
+/// An object becomes a Text object in its place in the stack (SMT-018's pieces of
+/// text). Returns the new object's ID.
+pub fn object_to_text(
+    core: &Core,
+    ctx: &Context,
+    id: &str,
+    object: &str,
+    text: Map<String, Value>,
+) -> Result<String, CommandError> {
+    let props = objects::checked("text", &text).map_err(invalid)?;
+    let new_id = editor(core)
+        .store
+        .mutate(id, "history.edit_text", |doc| {
+            let at = doc
+                .objects
+                .iter()
+                .position(|o| o.id == object)
+                .ok_or_else(|| CommandError::internal("object gone"))?;
+            let oid = doc.next_object_id();
+            doc.objects[at] = Object {
+                id: oid.clone(),
+                kind: "text".to_string(),
+                props: props.clone(),
+            };
+            Ok::<_, CommandError>(oid)
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    changed(core, ctx, id);
+    Ok(new_id)
+}
+
 /// The pixel selection of the image (not of a floating image), in base pixels.
 pub fn image_selection(core: &Core, id: &str) -> Option<std::sync::Arc<xs_image::selection::Mask>> {
     editor(core)

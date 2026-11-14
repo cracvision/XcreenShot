@@ -727,6 +727,22 @@
       "title": "Recognized words",
       "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
     },
+    "smart_separate": {
+      "title": "Separate elements",
+      "description": "Turns the elements and pieces of text of the image into objects to move, resize or delete."
+    },
+    "smart_separate_reset": {
+      "title": "Separate elements: reset",
+      "description": "Puts the image back as it was before separating."
+    },
+    "smart_separate_done": {
+      "title": "Separate elements: done",
+      "description": "Flattens the pieces into the image, in one undo step."
+    },
+    "smart_separate_text": {
+      "title": "Separate elements: text",
+      "description": "A separated piece of text becomes a Text object."
+    },
     "smart_edit_text": {
       "title": "Edit text",
       "description": "Replaces the text in a part of the image with a Text object of the same size and color, ready to type."
@@ -1646,6 +1662,10 @@
     "smart_editText_enabled": {
       "label": "Edit text",
       "description": "Text that is part of the image becomes a Text object you can change."
+    },
+    "smart_separate_enabled": {
+      "label": "Separate elements",
+      "description": "The Move tool can turn the elements of the image into objects."
     }
   },
   "errors": {
@@ -1781,7 +1801,9 @@
     "feature_disabled": "The “{{feature}}” feature is switched off. Switch it on in Preferences > Editor > Smart features ({{setting}}).",
     "simplify_nothing": "Nothing to simplify was found: no text and no interface elements. It works best with screenshots.",
     "edit_text_select": "Select the text to edit first, with the Selection tool.",
-    "edit_text_none": "No text to edit was found."
+    "edit_text_none": "No text to edit was found.",
+    "separate_nothing": "Nothing useful to separate was found. It works best with screenshots of interfaces.",
+    "separate_not_text": "That is not a separated piece of text."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4784,7 +4806,8 @@
       "steps": "Step recorder",
       "textOnly": "Apply only to text",
       "autoSimplify": "Auto simplify",
-      "editText": "Edit text"
+      "editText": "Edit text",
+      "separate": "Separate elements"
     },
     "edit_text": {
       "title": "Edit text",
@@ -4794,6 +4817,20 @@
       "fit": "Fit the selection to the text",
       "anyway": "Edit as it is",
       "rough": "The background is not flat: the fill may leave marks. A tighter selection helps."
+    },
+    "separate": {
+      "open": "Separate elements",
+      "help": "Turns each button, field, icon and piece of text of the image into an object to move, resize or delete; the gaps fill with the background.",
+      "title": "Separate elements",
+      "hint": "Drag, resize or delete each element. Double-click a piece of text to type over it. Done puts everything back into the image.",
+      "detail": "Detail",
+      "detail_help": "Little: nearby things move together (a row of buttons). A lot: each button and each word.",
+      "reset": "Reset",
+      "done": "Done",
+      "confirm_title": "Separate again?",
+      "confirm_body_one": "The changes made to {{count}} element will be lost.",
+      "confirm_body_other": "The changes made to {{count}} elements will be lost.",
+      "again": "Separate again"
     }
   },
   "history": {
@@ -4936,7 +4973,8 @@
     "duplicate_section": "Duplicate step",
     "add_steps": "Add steps",
     "auto_simplify": "Auto simplify",
-    "edit_text": "Edit text"
+    "edit_text": "Edit text",
+    "separate": "Separate elements"
   },
   "editor": {
     "edited": "{{name}} — Edited",
