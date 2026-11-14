@@ -423,7 +423,8 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         tell(core, ctx.source, "record.ready", state.clone());
         return start_at_once(core, ctx, state);
     }
-    let (monitor, rect) = crate::interactive::pick_area(core, ctx)?;
+    // The screen stays live while the area is chosen (VID-002).
+    let (monitor, rect) = crate::interactive::pick_area(core, ctx, true)?;
     if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
         return Err(CommandError::new(
             ErrorCode::InvalidParams,

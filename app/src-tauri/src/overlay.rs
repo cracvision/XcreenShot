@@ -153,7 +153,9 @@ pub fn select(app: &AppHandle, request: Value, frames: Vec<Frame>) -> Result<Val
                 };
                 let width = r["width"].as_u64().unwrap_or(1) as u32;
                 let height = r["height"].as_u64().unwrap_or(1) as u32;
-                if let Some(pixels) = bgra.get_mut(index).and_then(Option::take) {
+                // Choosing a video's area, the screen stays live (VID-002).
+                let live = req["live"].as_bool() == Some(true);
+                if let Some(pixels) = bgra.get_mut(index).and_then(Option::take).filter(|_| !live) {
                     crate::freeze_win::show(index, rect, width, height, pixels);
                 }
             }

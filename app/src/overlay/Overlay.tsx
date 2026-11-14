@@ -76,6 +76,8 @@ interface Start {
     pointer: [number, number] | null;
     autoDetect: boolean;
     showMagnifier: boolean;
+    /** Choosing a video's area: the screen is not frozen (VID-002). */
+    live?: boolean;
     magnifierZoom: number;
     /** Universal with Selection = Window: windows only, no dragging (CAP-010). */
     windowsOnly?: boolean;
@@ -887,7 +889,10 @@ export function Overlay() {
       // Windows paints the frozen screen natively underneath (APP-048); elsewhere the
       // frame comes through the xsframe protocol.
       document.documentElement.classList.toggle("overlay-native", payload.nativeBackground);
-      if (!payload.nativeBackground) {
+      // A video's area is chosen over the live screen (VID-002): no frame at all.
+      const live = payload.request.live === true;
+      document.documentElement.classList.toggle("overlay-live", live);
+      if (!payload.nativeBackground && !live) {
         try {
           const buf = await fetch(frameUrl(payload.seq, payload.index)).then((r) =>
             r.arrayBuffer(),

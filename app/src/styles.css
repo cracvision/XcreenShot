@@ -2406,6 +2406,12 @@ html.overlay-root.overlay-native #root {
   background: transparent;
 }
 
+/* Choosing a video's area over the live screen (VID-002): an all but invisible veil, so
+   the window still gets the pointer. */
+html.overlay-root.overlay-live #root {
+  background: rgb(0 0 0 / 0.01);
+}
+
 .overlay-toast {
   position: absolute;
   top: 64px;

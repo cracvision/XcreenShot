@@ -191,7 +191,7 @@ fn areas_as_objects(core: &Core, id: &str, places: &[Rect]) {
 /// Lets the user select an area and returns it from the top left of the monitor it is
 /// mostly on, without capturing (Choose on screen, CAP-026).
 pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
-    let (monitor, inside) = pick_area(core, ctx)?;
+    let (monitor, inside) = pick_area(core, ctx, false)?;
     Ok(json!({
         "monitor": monitor.name,
         "x": inside.x - monitor.rect.x,
@@ -202,8 +202,9 @@ pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
 }
 
 /// Lets the user select an area on screen: the monitor it is mostly on, and the area
-/// inside it (virtual-screen pixels). The area to record a video (VID-002, VID-003).
-pub fn pick_area(core: &Core, ctx: &Context) -> Result<(MonitorInfo, Rect), CommandError> {
+/// inside it (virtual-screen pixels). The area to record a video (VID-002, VID-003):
+/// `live`, the screen is not frozen, to see what will be recorded (no magnifier then).
+pub fn pick_area(core: &Core, ctx: &Context, live: bool) -> Result<(MonitorInfo, Rect), CommandError> {
     let lang = ctx.lang;
     let frozen = freeze(lang)?;
     let request = json!({
@@ -212,10 +213,11 @@ pub fn pick_area(core: &Core, ctx: &Context) -> Result<(MonitorInfo, Rect), Comm
         "windows": frozen.windows,
         "pointer": frozen.pointer,
         "autoDetect": core.settings.get_bool("capture.autoDetect"),
-        "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
+        "showMagnifier": !live && core.settings.get_bool("capture.showMagnifier"),
         "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
         "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
         "helpHint": false,
+        "live": live,
         "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
     });
     let outcome = core.host().select_on_screen(request, frozen.frames.clone())?;
