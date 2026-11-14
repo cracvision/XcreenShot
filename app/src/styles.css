@@ -8808,3 +8808,35 @@ button.lc-head:hover,
   position: absolute;
   min-width: 160px;
 }
+
+/* The tray in slides mode (VID-071): its images go into the strip. */
+.slides-tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.slides-tray ul {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+}
+
+.slides-tray .slides-thumb {
+  width: 76px;
+  height: 48px;
+  cursor: grab;
+}
+
+.slides-tray-label {
+  color: var(--ink-muted);
+  font-size: 12px;
+}

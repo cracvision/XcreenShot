@@ -248,6 +248,9 @@ struct Converter {
     /// frame as a bitmap of the painter.
     camera: std::cell::RefCell<Option<(Arc<crate::camlook::Frame>, crate::camlook::Look)>>,
     camera_bitmap: std::cell::RefCell<Option<crate::win_fx::CameraBitmap>>,
+    /// Slides (VID-072): the pointer is where the slide says, in the video's pixels,
+    /// with its scale; `None` for the screen, where it is where the system says.
+    slide_pointer: std::cell::Cell<Option<Option<(f32, f32, f32)>>>,
     width: u32,
     height: u32,
 }
@@ -380,6 +383,7 @@ fn converter(
             painter,
             camera: std::cell::RefCell::new(None),
             camera_bitmap: std::cell::RefCell::new(None),
+            slide_pointer: std::cell::Cell::new(None),
             width: size.0,
             height: size.1,
         })
@@ -455,10 +459,22 @@ impl Converter {
                 cbSize: std::mem::size_of::<CURSORINFO>() as u32,
                 ..Default::default()
             };
-            let visible = cursor
+            let shows = cursor
                 && GetCursorInfo(&mut info).is_ok()
                 && info.flags == CURSOR_SHOWING
                 && !info.hCursor.is_invalid();
+            // Where the pointer goes in the picture and its scale: the screen's place,
+            // or over a slide (VID-072) the place the slide gives.
+            let place = match self.slide_pointer.get() {
+                None => Some((
+                    (info.ptScreenPos.x - self.origin.0) as f32,
+                    (info.ptScreenPos.y - self.origin.1) as f32,
+                    1.0f32,
+                )),
+                Some(p) => p,
+            };
+            let visible = shows && place.is_some();
+            let (px, py, k) = place.unwrap_or((0.0, 0.0, 1.0));
             let mut shown = fx.clone();
             if !cursor {
                 shown.highlight = None;
@@ -466,12 +482,7 @@ impl Converter {
             }
             if let (Some(p), true) = (&self.painter, shown.any()) {
                 let a = self.area.get();
-                let pointer = visible.then(|| {
-                    (
-                        (info.ptScreenPos.x - self.origin.0) as f32,
-                        (info.ptScreenPos.y - self.origin.1) as f32,
-                    )
-                });
+                let pointer = visible.then_some((px, py));
                 p.draw(
                     &shown,
                     live,
@@ -491,30 +502,56 @@ impl Converter {
                 return;
             }
             let mut icon = ICONINFO::default();
-            let hotspot = if GetIconInfo(HICON(info.hCursor.0), &mut icon).is_ok() {
+            // Its hot spot, and its size (a mask without colour is twice as tall).
+            let (hotspot, icon_size) = if GetIconInfo(HICON(info.hCursor.0), &mut icon).is_ok() {
+                use windows::Win32::Graphics::Gdi::{DeleteObject, GetObjectW, BITMAP};
                 let hs = (icon.xHotspot as i32, icon.yHotspot as i32);
-                use windows::Win32::Graphics::Gdi::DeleteObject;
+                let mut bm = BITMAP::default();
+                let (bitmap, half) = if icon.hbmColor.is_invalid() {
+                    (icon.hbmMask, true)
+                } else {
+                    (icon.hbmColor, false)
+                };
+                let size = if GetObjectW(
+                    bitmap.into(),
+                    std::mem::size_of::<BITMAP>() as i32,
+                    Some(&mut bm as *mut BITMAP as *mut std::ffi::c_void),
+                ) > 0
+                {
+                    (bm.bmWidth, if half { bm.bmHeight / 2 } else { bm.bmHeight })
+                } else {
+                    (32, 32)
+                };
                 if !icon.hbmMask.is_invalid() {
                     let _ = DeleteObject(icon.hbmMask.into());
                 }
                 if !icon.hbmColor.is_invalid() {
                     let _ = DeleteObject(icon.hbmColor.into());
                 }
-                hs
+                (hs, size)
             } else {
-                (0, 0)
+                ((0, 0), (32, 32))
             };
             let Ok(surface) = self.composite.cast::<IDXGISurface1>() else {
                 return;
             };
             if let Ok(dc) = surface.GetDC(false) {
+                // On the screen at its own size; over a slide, at the slide's scale.
+                let (cx, cy) = if (k - 1.0).abs() < 0.01 {
+                    (0, 0)
+                } else {
+                    (
+                        (icon_size.0 as f32 * k).round().max(1.0) as i32,
+                        (icon_size.1 as f32 * k).round().max(1.0) as i32,
+                    )
+                };
                 let _ = DrawIconEx(
                     dc,
-                    info.ptScreenPos.x - self.origin.0 - hotspot.0,
-                    info.ptScreenPos.y - self.origin.1 - hotspot.1,
+                    (px - hotspot.0 as f32 * k).round() as i32,
+                    (py - hotspot.1 as f32 * k).round() as i32,
                     HICON(info.hCursor.0),
-                    0,
-                    0,
+                    cx,
+                    cy,
                     0,
                     None,
                     DI_NORMAL,
@@ -1409,6 +1446,13 @@ pub(crate) fn record(
                     drawn = Some((slide.id, view, slide.background));
                     dirty = true;
                     changed_at = Some(now);
+                }
+                // The pointer over it, when it is in the video (VID-072).
+                let pointer = slide.pointer.filter(|_| shared.cursor.load(Ordering::Relaxed));
+                if conv.slide_pointer.get() != Some(pointer) {
+                    conv.slide_pointer.set(Some(pointer));
+                    dirty = true;
+                    changed_at.get_or_insert(now);
                 }
             }
             std::thread::sleep(Duration::from_secs_f64(due_in.min(0.01)));
@@ -2950,6 +2994,7 @@ mod tests {
                 background: [255, 255, 255],
                 enlarge: false,
                 view: Default::default(),
+                pointer: None,
             })
         });
         let r = match Recorder::start(Options {
@@ -3015,6 +3060,79 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    /// The pointer over a slide (VID-072): drawn where the slide says, at its scale;
+    /// gone when it leaves. Slides, not the screen.
+    #[test]
+    fn the_pointer_over_a_slide() {
+        let dir = tempfile_dir();
+        let path = dir.join("slide-pointer.mp4");
+        let over = Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let shown = over.clone();
+        let feed: crate::slides::SlideFeed = Arc::new(move || {
+            Some(crate::slides::Slide {
+                id: 1,
+                width: 640,
+                height: 480,
+                bgra: Arc::new([128, 128, 128, 255].repeat(640 * 480)),
+                background: [128, 128, 128],
+                enlarge: false,
+                view: Default::default(),
+                pointer: shown.load(Ordering::Relaxed).then_some((300.0, 200.0, 2.0)),
+            })
+        });
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 480,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: true,
+            system_audio: false,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: None,
+            microphone: None,
+            slides: Some(crate::slides::Source(feed)),
+            sound_tracks: None,
+        }) {
+            Ok(r) => r,
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(800));
+        over.store(false, Ordering::Relaxed);
+        std::thread::sleep(Duration::from_millis(800));
+        r.stop().unwrap();
+        // Pixels that are not the grey of the slide, near where the pointer goes.
+        let marked = |t: f64| {
+            let (w, _, px) = crate::frame_at(&path, t).unwrap();
+            let mut n = 0;
+            for y in 195..260usize {
+                for x in 295..340usize {
+                    let i = (y * w as usize + x) * 4;
+                    if px[i..i + 3].iter().any(|c| c.abs_diff(128) > 40) {
+                        n += 1;
+                    }
+                }
+            }
+            n
+        };
+        // No pointer to draw (a session without one): nothing to check.
+        let before = marked(0.4);
+        println!("pointer pixels: {before}, after it left: {}", marked(1.4));
+        if before > 0 {
+            assert!(before > 30, "drawn at the slide's scale");
+            assert_eq!(marked(1.4), 0, "gone once it left the slide");
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// The microphone and the system's sound kept apart (VID-042): two named tracks,
     /// also through the fragmented file. Slides, not the screen; a microphone that is
     /// not there, so none is opened.
@@ -3032,6 +3150,7 @@ mod tests {
                 background: [0, 0, 0],
                 enlarge: false,
                 view: Default::default(),
+                pointer: None,
             })
         });
         let names = ["Microphone".to_string(), "System audio".to_string()];

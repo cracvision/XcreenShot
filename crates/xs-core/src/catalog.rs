@@ -1512,7 +1512,10 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(ALL)
             .mutates()
             .params(params(
-                json!({"documentIds": {"type": "array", "items": {"type": "string"}}}),
+                json!({
+                    "documentIds": {"type": "array", "items": {"type": "string"}},
+                    "at": {"type": "integer", "minimum": 0, "description": "Where in the strip (0: first); at the end without it"}
+                }),
                 &["documentIds"],
             ))
             .result(json!({"type": "object"})),

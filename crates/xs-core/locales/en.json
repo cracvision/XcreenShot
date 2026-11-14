@@ -5263,7 +5263,12 @@
       "keep_title": "Annotations added while narrating",
       "keep_body": "{{count}} annotations were added to the images while narrating.",
       "keep": "Keep them",
-      "remove_annotations": "Remove the annotations added while narrating"
+      "remove_annotations": "Remove the annotations added while narrating",
+      "cursor_hint": "The pointer shows in the video while it is over the slide.",
+      "tray": "Tray",
+      "tray_hint": "Drag it onto the strip, or double-click to add it at the end.",
+      "tray_add": "Add {{name}}",
+      "count_total": "{{total}} slides"
     }
   },
   "history": {

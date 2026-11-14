@@ -74,7 +74,7 @@ exists fails a test.
 | `record.effects` | `xcreenshot record effects --clicks true --keys true --json` | Switches the cursor and keyboard effects (VID-045 to VID-047): `highlight` (a circle under the pointer), `clicks` (a wave at each click) and `keys` (the keys pressed, never in password fields), also while recording. Their colours and sizes are the `video.*` settings. |
 | `record.toggle` | `xcreenshot record toggle --json` | Record when Ready, Pause while recording, Resume when paused (VID-012); with nothing going on, Video capture. Shortcut Ctrl+Shift+F9. |
 | `record.stop` | `xcreenshot record stop --json` | Stops and waits for the file: `path`, `duration`, `width`, `height`, `fps`, `frames`, `bytes`, `encoder` (hardware or software). `not_found` when nothing is recording. |
-| `record.restart` | `xcreenshot record restart --json` | Drops what was recorded and goes back to Ready with the same area and settings (VID-014); Record counts down again. |
+| `record.restart` | `xcreenshot record restart --json` | Drops what was recorded and goes back to Ready with the same area and settings (VID-014); Record counts down again. With narrated slides, the slides mode waits to record again. |
 | `record.image` | `xcreenshot record image --json` | An image of the recording's area instead of a video (VID-010): when Ready it ends the recording; while recording it drops what was recorded. The image goes the normal way of a capture. |
 | `record.cancel` | `xcreenshot record cancel --json` | Stops without keeping a file. |
 | `record.pause` | `xcreenshot record pause --json` | Pauses; the pause is left out of the video. |
@@ -86,7 +86,7 @@ exists fails a test.
 | `slides.state` | `xcreenshot slides state --json` | The mode: `active`, the slide showing (`index`), `count`, the video's `size`, `background`, `enlarge` and each slide's document, size and zoom. |
 | `slides.go` | `xcreenshot slides go --to next` | To a slide: its number from 0, or `next`, `prev`, `first`, `last` (VID-072). Recording, the video cuts to it there. |
 | `slides.move` | `xcreenshot slides move --from 2 --to 0` | Changes the slides' order. |
-| `slides.add` | `xcreenshot slides add --document-ids '["d3"]'` | Adds open images at the end. |
+| `slides.add` | `xcreenshot slides add --document-ids '["d3"]'` | Adds open images at the end, or with `at` at that place of the strip (0: first), as dragging them from the tray does (VID-071). |
 | `slides.remove` | `xcreenshot slides remove --index 1` | Takes a slide out (never the last one). |
 | `slides.set` | `xcreenshot slides set --size 1280x720 --background "#FFFFFF"` | The video's size (even, 320 to 3840; not while recording), its background and whether small images are enlarged (VID-074). They stay as the settings. |
 | `slides.view` | `xcreenshot slides view --zoom 2 --center '[0.25,0.25]'` | Zooms the slide showing (1 to 8) with `center` of the image in the middle; `reset` goes back. In the video it glides there (VID-074). |

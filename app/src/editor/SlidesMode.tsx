@@ -6,10 +6,12 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { run } from "../lib/commands";
+import { useSetting } from "../store";
 import { clock } from "../windows/recClock";
 import { CameraControl } from "../windows/RecordCamera";
 import { MicControl } from "../windows/RecordSound";
 import { useLevels } from "../windows/recSound";
+import { docUrl, useEditor } from "./state";
 import {
   place,
   pollRecording,
@@ -22,6 +24,7 @@ import {
   type SlidesMode as Mode,
   type SlideTool,
 } from "./slidesState";
+import { trayOrder } from "./tray";
 
 const images = new Map<string, Promise<string>>();
 
@@ -61,7 +64,10 @@ export function SlidesMode({ mode }: { mode: Mode }) {
   const rec = useSlides((s) => s.rec);
   const since = useSlides((s) => s.since);
   const [now, setNow] = useState(() => Date.now());
-  const [asking, setAsking] = useState(false);
+  // Cancel or Restart waiting for a yes, after 10 s recorded (VID-014).
+  const [asking, setAsking] = useState<"cancel" | "restart" | null>(null);
+  // The pointer in the video while it is over the slide (VID-072).
+  const cursorOn = useSetting("video.cursor", true);
   // Annotating while narrating (VID-073): the tools shown, and the one chosen.
   const [annotating, setAnnotating] = useState(false);
   const [tool, setTool] = useState<SlideTool>("arrow");
@@ -141,9 +147,10 @@ export function SlidesMode({ mode }: { mode: Mode }) {
   const [custom, setCustom] = useState(!listed);
 
   const stop = () => act("record.stop");
-  const cancel = () => {
-    if (elapsed > 10) setAsking(true);
-    else act("record.cancel");
+  // Losing up to 10 s needs no question (VID-014).
+  const drop = (what: "cancel" | "restart") => {
+    if (elapsed > 10) setAsking(what);
+    else act(`record.${what}`);
   };
 
   return (
@@ -207,6 +214,15 @@ export function SlidesMode({ mode }: { mode: Mode }) {
           {t("ui.slides.enlarge")}
         </label>
         <span className="slides-gap" />
+        <button
+          type="button"
+          className="btn small recbar-toggle"
+          aria-pressed={cursorOn}
+          title={t("ui.slides.cursor_hint")}
+          onClick={() => act("record.cursor", { on: !cursorOn })}
+        >
+          {t("ui.recbar.cursor")}
+        </button>
         <MicControl levels={levels} up={false} onMenu={() => undefined} />
         <CameraControl levels={levels} up={false} onMenu={() => undefined} />
         <button
@@ -271,19 +287,21 @@ export function SlidesMode({ mode }: { mode: Mode }) {
         {asking ? (
           <>
             <span className="slides-ask">
-              {t("ui.recbar.cancel_lost", { time: clock(elapsed) })}
+              {t(asking === "restart" ? "ui.recbar.restart_confirm" : "ui.recbar.cancel_lost", {
+                time: clock(elapsed),
+              })}
             </span>
             <button
               type="button"
               className="btn small danger"
               onClick={() => {
-                setAsking(false);
-                act("record.cancel");
+                setAsking(null);
+                act(`record.${asking}`);
               }}
             >
-              {t("ui.recbar.cancel")}
+              {t(asking === "restart" ? "ui.recbar.restart" : "ui.recbar.cancel")}
             </button>
-            <button type="button" className="btn small" autoFocus onClick={() => setAsking(false)}>
+            <button type="button" className="btn small" autoFocus onClick={() => setAsking(null)}>
               {t("ui.recbar.keep")}
             </button>
           </>
@@ -303,9 +321,19 @@ export function SlidesMode({ mode }: { mode: Mode }) {
             <button
               type="button"
               className="btn icon small"
+              aria-label={t("ui.recbar.restart")}
+              title={t("ui.recbar.restart")}
+              disabled={!recording && !paused}
+              onClick={() => drop("restart")}
+            >
+              ↻
+            </button>
+            <button
+              type="button"
+              className="btn icon small"
               aria-label={t("ui.recbar.cancel")}
               title={t("ui.recbar.cancel")}
-              onClick={cancel}
+              onClick={() => drop("cancel")}
             >
               ×
             </button>
@@ -337,6 +365,58 @@ export function SlidesMode({ mode }: { mode: Mode }) {
         />
       )}
       <Strip mode={mode} locked={recording} />
+      {!recording && <TrayPick mode={mode} />}
+    </div>
+  );
+}
+
+/** What a tray item dragged onto the strip carries: its document (VID-071). */
+const SLIDE_DRAG = "application/x-xs-slide";
+
+/** The editor's tray while the slides wait or pause (VID-071): its images go into the
+ * strip by dragging them there, or with a double click at the end. */
+function TrayPick({ mode }: { mode: Mode }) {
+  const { t } = useTranslation();
+  const all = useEditor((s) => s.documents);
+  const tray = useEditor((s) => s.tray);
+  const images = trayOrder(all, tray).filter(
+    (d) => !d.missing && ["xshot", "png", "jpg"].includes(d.format),
+  );
+  if (images.length === 0) return null;
+  const add = (id: string) => act("slides.add", { documentIds: [id] });
+  return (
+    <div className="slides-tray">
+      <span className="slides-tray-label" id="slides-tray-label">
+        {t("ui.slides.tray")}
+      </span>
+      <ul aria-labelledby="slides-tray-label">
+        {images.map((d) => (
+          <li key={d.documentId}>
+            <button
+              type="button"
+              className="slides-thumb"
+              draggable
+              title={t("ui.slides.tray_hint")}
+              aria-label={t("ui.slides.tray_add", { name: d.name })}
+              onDragStart={(e) => {
+                e.dataTransfer.setData(SLIDE_DRAG, d.documentId);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              onDoubleClick={() => add(d.documentId)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  add(d.documentId);
+                }
+              }}
+            >
+              <img src={docUrl(d.documentId, "thumb", d.version)} alt="" draggable={false} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <span className="slides-count">{t("ui.slides.count_total", { total: mode.count })}</span>
     </div>
   );
 }
@@ -482,16 +562,34 @@ function Strip({ mode, locked }: { mode: Mode; locked: boolean }) {
   const { t } = useTranslation();
   const [dragged, setDragged] = useState<number | null>(null);
   return (
-    <ol className="slides-strip" aria-label={t("ui.slides.strip")}>
+    <ol
+      className="slides-strip"
+      aria-label={t("ui.slides.strip")}
+      onDragOver={(e) => {
+        if (!locked) e.preventDefault();
+      }}
+      // A tray image let go after the last slide goes at the end (VID-071).
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData(SLIDE_DRAG);
+        if (id && !locked) act("slides.add", { documentIds: [id] });
+      }}
+    >
       {mode.slides.map((s, i) => (
         <li
           key={`${s.documentId}-${i}`}
           className={i === mode.index ? "current" : undefined}
           draggable={!locked}
           onDragStart={() => setDragged(i)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => {
-            if (dragged !== null && dragged !== i) act("slides.move", { from: dragged, to: i });
+          onDragOver={(e) => {
+            if (!locked) e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.stopPropagation();
+            // A tray image goes in before this slide; a slide moves here.
+            const id = e.dataTransfer.getData(SLIDE_DRAG);
+            if (id && !locked) act("slides.add", { documentIds: [id], at: i });
+            else if (dragged !== null && dragged !== i)
+              act("slides.move", { from: dragged, to: i });
             setDragged(null);
           }}
         >

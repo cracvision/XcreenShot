@@ -1220,10 +1220,11 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         max_size,
         limit,
         software_only: core.settings.get_bool("video.softwareEncoding"),
-        cursor: slides.is_none()
-            && p.get("cursor")
-                .and_then(Value::as_bool)
-                .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
+        // Over slides too, while it is on them (VID-072).
+        cursor: p
+            .get("cursor")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| core.settings.get_bool("video.cursor")),
         system_audio: p
             .get("systemAudio")
             .and_then(Value::as_bool)
@@ -1504,6 +1505,11 @@ pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
 /// area and settings; Record counts down again.
 pub fn restart(core: &Core, ctx: &Context) -> CommandResult {
     let r = take(core, ctx.lang)?;
+    // Narrated slides (VID-072): dropped as with Cancel; the mode waits to record again.
+    if r.source["type"] == "slides" {
+        finish(core, ctx.source, r, true, ctx.lang)?;
+        return Ok(json!({ "status": "ready", "source": { "type": "slides" } }));
+    }
     let again = r.again.clone();
     let rid = r.rid.clone();
     let _ = r.recorder.cancel();

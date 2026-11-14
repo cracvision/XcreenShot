@@ -115,6 +115,11 @@ pub fn feed(core: &Core) -> Option<SlideFeed> {
         let mode = s.mode.lock().unwrap();
         let m = mode.as_ref()?;
         let item = m.items.get(m.index)?;
+        // The pointer over the frame on the screen, in the video's pixels (VID-072).
+        let frame = *s.frame.lock().unwrap();
+        let pointer = frame
+            .zip(crate::platform::cursor_position())
+            .and_then(|(f, c)| pointer_in(f, c, m.size.0));
         Some(Slide {
             id: item.id,
             width: item.width,
@@ -123,8 +128,21 @@ pub fn feed(core: &Core) -> Option<SlideFeed> {
             background: m.background,
             enlarge: m.enlarge,
             view: item.view,
+            pointer,
         })
     }))
+}
+
+/// The pointer at `at` (screen pixels) over the frame `f` (x, y, width, height on the
+/// screen) of a video `video` pixels wide: its place in the video and its scale, or
+/// none when it is outside.
+fn pointer_in(f: (i32, i32, i32, i32), at: (i32, i32), video: u32) -> Option<(f32, f32, f32)> {
+    let (x, y) = (at.0 - f.0, at.1 - f.1);
+    if f.2 < 2 || f.3 < 2 || x < 0 || y < 0 || x >= f.2 || y >= f.3 {
+        return None;
+    }
+    let k = video as f32 / f.2 as f32;
+    Some((x as f32 * k, y as f32 * k, k))
 }
 
 /// A document's final image as a slide, if it is one: an image, not a video or a
@@ -284,12 +302,21 @@ pub fn reorder(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     changed(core)
 }
 
-/// `slides.add` (VID-071): images at the end; `slides.remove`: one out (never the
+/// `slides.add` (VID-071): images at the end, or at a place (dragged from the tray); `slides.remove`: one out (never the
 /// last one left).
 pub fn add(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     let svc = service(core);
     let new: Vec<Item> = documents(p).iter().filter_map(|d| item(core, &svc, d)).collect();
-    with_mode(core, ctx.lang, |m| m.items.extend(new))?;
+    // At a place of the strip (dragged there from the tray), or at the end.
+    let at = p.get("at").and_then(Value::as_u64).map(|v| v as usize);
+    with_mode(core, ctx.lang, |m| {
+        let at = at.unwrap_or(m.items.len()).min(m.items.len());
+        if at <= m.index && !new.is_empty() && !m.items.is_empty() {
+            // The slide showing stays the one showing.
+            m.index += new.len();
+        }
+        m.items.splice(at..at, new);
+    })?;
     changed(core)
 }
 
@@ -298,6 +325,10 @@ pub fn remove(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     with_mode(core, ctx.lang, |m| {
         if let Some(i) = index.filter(|i| *i < m.items.len() && m.items.len() > 1) {
             m.items.remove(i);
+            // The slide showing stays the one showing, if it was not the one removed.
+            if i < m.index {
+                m.index -= 1;
+            }
             m.index = m.index.min(m.items.len() - 1);
         }
     })?;
@@ -517,6 +548,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_pointer_over_the_frame() {
+        // A 960 px wide frame at (100, 50) on the screen, for a 1920 px video.
+        let f = (100, 50, 960, 540);
+        assert_eq!(pointer_in(f, (100, 50), 1920), Some((0.0, 0.0, 2.0)));
+        assert_eq!(pointer_in(f, (580, 320), 1920), Some((960.0, 540.0, 2.0)));
+        assert_eq!(pointer_in(f, (99, 300), 1920), None);
+        assert_eq!(pointer_in(f, (1060, 300), 1920), None);
+    }
+
+    #[test]
     fn sizes_are_read_even_and_held() {
         assert_eq!(parse_size("1920x1080"), Some((1920, 1080)));
         assert_eq!(parse_size("1081 × 1921"), Some((1080, 1920)));
@@ -567,6 +608,16 @@ mod mode_tests {
             (s["slides"][0]["documentId"].clone(), s["index"].clone()),
             (json!(blue), json!(0))
         );
+        // A tray image dragged before the first (VID-071): the one showing stays.
+        let green = new(500, "#00FF00");
+        let s = call("slides.add", json!({"documentIds": [green], "at": 0})).unwrap();
+        assert_eq!(s["count"], 3);
+        assert_eq!(
+            (s["slides"][0]["documentId"].clone(), s["index"].clone()),
+            (json!(green), json!(1))
+        );
+        assert_eq!(feed().unwrap().width, 600);
+        call("slides.remove", json!({"index": 0})).unwrap();
         // Size, background and zoom.
         let s = call("slides.set", json!({"size": "1281x721", "background": "#FFFFFF"})).unwrap();
         assert_eq!(s["size"], json!([1280, 720]));

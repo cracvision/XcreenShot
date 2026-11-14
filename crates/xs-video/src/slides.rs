@@ -39,6 +39,10 @@ pub struct Slide {
     /// Small images are enlarged to fill (VID-074; off by default).
     pub enlarge: bool,
     pub view: View,
+    /// The pointer over the slide (VID-072): where it is in the video's pixels, and
+    /// how many of them a pixel of the screen is (the pointer's size); none when it is
+    /// elsewhere.
+    pub pointer: Option<(f32, f32, f32)>,
 }
 
 impl std::fmt::Debug for Slide {

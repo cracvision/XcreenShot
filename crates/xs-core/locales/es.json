@@ -5263,7 +5263,12 @@
       "keep_title": "Anotaciones añadidas al narrar",
       "keep_body": "Se añadieron {{count}} anotaciones a las imágenes al narrar.",
       "keep": "Conservarlas",
-      "remove_annotations": "Quitar las anotaciones añadidas al narrar"
+      "remove_annotations": "Quitar las anotaciones añadidas al narrar",
+      "cursor_hint": "El puntero sale en el video mientras está sobre la diapositiva.",
+      "tray": "Bandeja",
+      "tray_hint": "Arrástrala a la tira o haz doble clic para añadirla al final.",
+      "tray_add": "Añadir {{name}}",
+      "count_total": "{{total}} diapositivas"
     }
   },
   "history": {
