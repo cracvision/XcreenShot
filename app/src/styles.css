@@ -5059,6 +5059,12 @@ html.launcher-root #root {
   letter-spacing: 0.04em;
 }
 
+/* A guide's steps on its thumbnail (SMT-035): on the other corner from the format. */
+.lib-badge.guide {
+  left: 6px;
+  right: auto;
+}
+
 /* LIB-026: the Library's status bar, one line or with its tasks. */
 .library-status {
   flex-direction: column;

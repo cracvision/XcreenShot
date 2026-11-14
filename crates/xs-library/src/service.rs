@@ -773,6 +773,7 @@ fn build(f: &Found, id: String, favorite: bool, tags: Vec<String>) -> Item {
         tags,
         text: info.text,
         cloud: f.cloud,
+        steps: info.steps,
     }
 }
 

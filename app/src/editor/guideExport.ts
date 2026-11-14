@@ -30,11 +30,28 @@ function title(): string {
 
 /** Exports the guide shown in `format`, asking where. */
 export async function exportGuide(format: GuideFormat): Promise<void> {
-  const ed = useEditor.getState();
-  const doc = ed.doc;
+  const doc = useEditor.getState().doc;
   if (!doc || templateOf(doc)?.id !== "guide") return;
+  await exportTo({ documentId: doc.documentId }, title(), format);
+}
+
+/** Exports a guide's file of the library without opening it (SMT-035). */
+export async function exportGuideFile(
+  path: string,
+  name: string,
+  format: GuideFormat,
+): Promise<void> {
+  await exportTo({ path }, name, format);
+}
+
+async function exportTo(
+  target: { documentId: string } | { path: string },
+  name: string,
+  format: GuideFormat,
+): Promise<void> {
+  const ed = useEditor.getState();
   const t = i18next.t.bind(i18next);
-  const params: Record<string, unknown> = { documentId: doc.documentId, format };
+  const params: Record<string, unknown> = { ...target, format };
   try {
     if (format === "clipboard") {
       await run("smart.guide_export", params);
@@ -44,7 +61,7 @@ export async function exportGuide(format: GuideFormat): Promise<void> {
     const ext = FILE_EXT[format];
     if (ext) {
       const path = await save({
-        defaultPath: `${title()}.${ext}`,
+        defaultPath: `${name}.${ext}`,
         filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
       });
       if (!path) return;

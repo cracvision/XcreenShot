@@ -67,6 +67,7 @@ const ROW = 34;
 const IS_MAC = navigator.userAgent.includes("Mac");
 
 function typeName(item: LibraryItem, t: (key: string) => string): string {
+  if (item.kind === "guide") return t("ui.library.type_guide");
   const format = item.format === "jpeg" ? "jpg" : item.format;
   return t(`ui.library.type_${format}`);
 }
@@ -541,6 +542,12 @@ function Item({
             {item.format !== "xshot" && (
               <span className="lib-badge" aria-hidden="true">
                 {item.format === "jpeg" ? "JPG" : item.format.toUpperCase()}
+              </span>
+            )}
+            {/* A guide of steps: how many (SMT-035). */}
+            {item.kind === "guide" && item.steps != null && (
+              <span className="lib-badge guide">
+                {t("ui.library.steps_badge", { count: item.steps })}
               </span>
             )}
             <Star item={item} />

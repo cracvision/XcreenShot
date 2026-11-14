@@ -40,6 +40,8 @@ pub struct Info {
     pub url: Option<String>,
     /// Its annotations' text, one per line (LIB-007).
     pub text: String,
+    /// A guide of steps: how many (SMT-035).
+    pub steps: Option<u32>,
 }
 
 /// The format of an item file, or `None` for anything else (`.xmeta`, the index,
@@ -177,6 +179,7 @@ pub fn info(found: &Found) -> Info {
                 .filter(|s| !s.trim().is_empty())
                 .map(str::to_string);
             info.url = text("url");
+            info.steps = summary.guide_steps;
             info.text = summary.texts.join(
                 "
 ",

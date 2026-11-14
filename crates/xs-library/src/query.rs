@@ -107,6 +107,10 @@ pub fn app_name(app: &str) -> String {
 
 /// The type of an item for the Type filter.
 pub fn kind(item: &Item) -> &'static str {
+    // A guide of steps is a .xshot with steps (SMT-035).
+    if item.steps.is_some() {
+        return "guide";
+    }
     match item.format.as_str() {
         "mp4" | "m4v" | "mov" | "webm" => "video",
         "gif" => "gif",
@@ -532,6 +536,7 @@ mod tests {
             tags: Vec::new(),
             text: String::new(),
             cloud: false,
+            steps: None,
         }
     }
 

@@ -726,6 +726,62 @@ mod tests {
         assert!(paths[3].ends_with("pasos.txt"));
     }
 
+    /// SMT-035: a guide in the library is of the type Guide, with its steps, and the
+    /// search finds it by the text of one of its steps; it exports from its file.
+    #[test]
+    fn a_guide_in_the_library() {
+        let library = tempfile::tempdir().unwrap();
+        let recovery = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![
+                crate::extension(),
+                xs_library::extension_with(Some(library.path().to_path_buf())),
+            ],
+        );
+        editor(&core).set_folders(library.path().to_path_buf(), recovery.path().to_path_buf());
+        let step = |n: u32| GuideStep {
+            text: format!("Clic en **Botón {n}**"),
+            png: png(300, 200),
+            size: [300, 200],
+            frame: [0.0, 0.0, 300.0, 200.0],
+            at: [10.0, 10.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let steps: Vec<GuideStep> = (1..=7).map(step).collect();
+        let (_, path) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Pedido nuevo".into(),
+                steps,
+                meta: json!({"source": "steps"}),
+            },
+        )
+        .unwrap();
+        let lib = xs_library::library(&core);
+        lib.scan();
+        let call = |id: &str, p: Value| core.call(xs_core::Source::Cli, id, p, Some(Lang::Es)).unwrap();
+        let found = call("library.search", json!({"type": "guide"}));
+        let items = found["items"].as_array().unwrap();
+        assert_eq!(items.len(), 1, "{found}");
+        assert_eq!(items[0]["kind"], "guide");
+        assert_eq!(items[0]["steps"], 7);
+        // A word only in step 5.
+        let by_text = call("library.search", json!({"query": "Botón 5"}));
+        assert_eq!(by_text["items"].as_array().unwrap().len(), 1, "{by_text}");
+        // Export from the file, without the editor (SMT-035).
+        let out = library.path().join("export");
+        let r = call(
+            "smart.guide_export",
+            json!({"path": path, "format": "md", "out": out}),
+        );
+        assert!(std::path::Path::new(r["paths"][0].as_str().unwrap()).is_file());
+    }
+
     /// SMT-026: the zone shows exactly the frame, whatever the monitor.
     #[test]
     fn a_zone_frames_its_step() {

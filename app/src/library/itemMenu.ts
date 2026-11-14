@@ -10,6 +10,7 @@ import { askResolve } from "./maintenanceState";
 import { openLibraryQuickView } from "./quickViewState";
 import { exportItems } from "./exportState";
 import { duplicateItems } from "../editor/trayActions";
+import { exportGuideFile, GUIDE_FORMATS } from "../editor/guideExport";
 import { useLibrary } from "./state";
 
 const IS_MAC = navigator.userAgent.includes("Mac");
@@ -35,6 +36,22 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
       shortcut: shortcutOf("editor.new_from_template"),
       onSelect: () => openPicker(items.map((i) => i.path)),
     },
+    // A guide of steps: in another format, without the editor (SMT-035).
+    ...(one?.kind === "guide"
+      ? [
+          {
+            id: "export_guide",
+            label: t("ui.guide.export_as"),
+            onSelect: () => undefined,
+            submenu: GUIDE_FORMATS.map((f) => ({
+              id: `guide_${f}`,
+              label: t(`ui.guide.export.${f}`),
+              separator: f === "md" || f === "clipboard",
+              onSelect: () => void exportGuideFile(one.path, one.name, f),
+            })),
+          },
+        ]
+      : []),
     // A sync conflict (LIB-029).
     ...(one?.conflict
       ? [

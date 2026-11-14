@@ -4199,7 +4199,10 @@
       "merge_here": "Fusionarla con la mía",
       "merge_here_help_one": "Copia su elemento a tu biblioteca, con sus etiquetas; esa carpeta no cambia y tu biblioteca sigue donde está.",
       "merge_here_help_other": "Copia sus {{count}} elementos a tu biblioteca, con sus etiquetas; esa carpeta no cambia y tu biblioteca sigue donde está.",
-      "merging": "Fusionando la otra biblioteca: {{done}} de {{total}} elementos"
+      "merging": "Fusionando la otra biblioteca: {{done}} de {{total}} elementos",
+      "type_guide": "Guía de pasos",
+      "steps_badge_one": "{{count}} paso",
+      "steps_badge_other": "{{count}} pasos"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

@@ -324,6 +324,8 @@ pub struct XshotSummary {
     /// What its annotations say (text boxes, callouts), for the library's search
     /// (LIB-007).
     pub texts: Vec<String>,
+    /// A guide of steps (SMT-035): how many steps it has.
+    pub guide_steps: Option<u32>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -399,12 +401,23 @@ impl Xshot {
             .filter(|t| !t.trim().is_empty())
             .map(str::to_string)
             .collect();
+        // A guide's template: its step sections (SMT-035, ADR 0009).
+        let guide_steps = document
+            .template
+            .as_ref()
+            .filter(|t| t["id"] == "guide")
+            .map(|t| {
+                t["sections"].as_array().map_or(0, |s| {
+                    s.iter().filter(|s| s["kind"] == "guideStep").count() as u32
+                })
+            });
         Ok(XshotSummary {
             width: document.canvas.width,
             height: document.canvas.height,
             meta,
             thumb_png: read_entry(&mut zip, "thumb.png")?.unwrap_or_default(),
             texts,
+            guide_steps,
         })
     }
 

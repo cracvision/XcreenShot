@@ -10,7 +10,8 @@ use serde_json::{json, Value};
 /// Bumped when the schema changes; an index of another version is rebuilt.
 /// 2: the text of annotations (LIB-007), and the app's name read from CAP-056's
 /// `{name, version, id}`. 3: whether the file is only in the cloud (LIB-029).
-const VERSION: i64 = 3;
+/// 4: the steps of a guide (SMT-035).
+const VERSION: i64 = 4;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS items (
@@ -28,7 +29,8 @@ CREATE TABLE IF NOT EXISTS items (
     favorite INTEGER NOT NULL DEFAULT 0,
     tags TEXT NOT NULL DEFAULT '[]',
     text TEXT NOT NULL DEFAULT '',
-    cloud INTEGER NOT NULL DEFAULT 0
+    cloud INTEGER NOT NULL DEFAULT 0,
+    steps INTEGER
 );
 CREATE INDEX IF NOT EXISTS items_captured ON items (captured DESC);
 ";
@@ -56,6 +58,8 @@ pub struct Item {
     pub text: String,
     /// Only in the cloud: not downloaded on this computer (LIB-029).
     pub cloud: bool,
+    /// A guide of steps: how many (SMT-035).
+    pub steps: Option<u32>,
 }
 
 impl Item {
@@ -77,6 +81,7 @@ impl Item {
             tags: serde_json::from_str(&tags).unwrap_or_default(),
             text: r.get("text")?,
             cloud: r.get::<_, i64>("cloud")? != 0,
+            steps: r.get::<_, Option<i64>>("steps")?.map(|n| n.max(0) as u32),
         })
     }
 
@@ -104,6 +109,7 @@ impl Item {
             "favorite": self.favorite,
             "tags": self.tags,
             "cloud": self.cloud,
+            "steps": self.steps,
         })
     }
 }
@@ -136,9 +142,13 @@ impl Index {
     fn try_open(path: &Path) -> rusqlite::Result<Index> {
         let db = Connection::open(path)?;
         let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        // Version 2 only lacks the cloud flag: a column, nothing to read again.
+        // Versions 2 and 3 only lack columns: added, nothing to read again. A guide
+        // already indexed is found again at its next change.
         if version == 2 {
             db.execute_batch("ALTER TABLE items ADD COLUMN cloud INTEGER NOT NULL DEFAULT 0")?;
+        }
+        if version == 2 || version == 3 {
+            db.execute_batch("ALTER TABLE items ADD COLUMN steps INTEGER")?;
         } else if version != 0 && version != VERSION {
             return Err(rusqlite::Error::InvalidQuery);
         }
@@ -157,11 +167,11 @@ impl Index {
 
     pub fn upsert(&self, item: &Item) -> rusqlite::Result<()> {
         self.db.execute(
-            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text, cloud)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text, cloud, steps)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
              ON CONFLICT(id) DO UPDATE SET path = ?2, name = ?3, format = ?4, size = ?5, modified = ?6,
                captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13, text = ?14,
-               cloud = ?15",
+               cloud = ?15, steps = ?16",
             params![
                 item.id,
                 item.path,
@@ -178,6 +188,7 @@ impl Index {
                 serde_json::to_string(&item.tags).unwrap_or_else(|_| "[]".into()),
                 item.text,
                 item.cloud as i64,
+                item.steps.map(|n| n as i64),
             ],
         )?;
         Ok(())

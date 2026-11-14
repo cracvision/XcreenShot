@@ -4199,7 +4199,10 @@
       "merge_here": "Merge it into mine",
       "merge_here_help_one": "Copies its item into your library, with its tags; that folder does not change and your library stays where it is.",
       "merge_here_help_other": "Copies its {{count}} items into your library, with their tags; that folder does not change and your library stays where it is.",
-      "merging": "Merging the other library: {{done}} of {{total}} items"
+      "merging": "Merging the other library: {{done}} of {{total}} items",
+      "type_guide": "Guide of steps",
+      "steps_badge_one": "{{count}} step",
+      "steps_badge_other": "{{count}} steps"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",
