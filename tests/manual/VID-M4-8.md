@@ -31,3 +31,18 @@ Dibujar formas sobre la pantalla mientras se graba; quedan en el video y desapar
 11. [ ] Reproduce un video largo en el editor sin tocar el ratón más que el tiempo de apagado de pantalla: la pantalla no se apaga mientras se reproduce.
 
 Todavía no: la Lupa (`M`), el puntero con la forma de la herramienta y el botón en el menú del ícono.
+
+## Lupa (VID-049, 2026-11-14)
+
+- Pruebas automáticas:
+  - `the_magnifier_draws_nothing`: `M` elige la Lupa y arrastrar con ella no dibuja nada.
+  - `a_lens_shows_the_screen` (*ignored*): una lente puesta medio segundo en (300, 300) muestra la pantalla al doble. Un punto a 40 px del centro de la lente coincide con el que estaba a 20 px sin ella.
+
+### Para Carlos
+
+1. [ ] Durante una grabación, activa Dibujo en vivo y pulsa `M` (o el botón de la lupa en su barra).
+   - Una lente redonda ×2 sigue al puntero.
+   - Con la Lupa elegida, los clics llegan a la app que está debajo.
+2. [ ] Pulsa `A`: la lente desaparece.
+3. [ ] En el video grabado se ve la lente.
+

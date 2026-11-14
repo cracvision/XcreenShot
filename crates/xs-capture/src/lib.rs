@@ -20,6 +20,8 @@ pub mod freehand;
 pub mod inbox;
 pub mod interactive;
 pub mod interval;
+#[cfg(windows)]
+mod lens_win;
 pub mod livedraw;
 #[cfg(windows)]
 mod livedraw_win;

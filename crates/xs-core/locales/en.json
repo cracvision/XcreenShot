@@ -4708,7 +4708,8 @@
       "seconds": "{{n}} s",
       "undo": "Undo (Z)",
       "clear": "Clear all (Delete)",
-      "exit": "Stop drawing (Esc)"
+      "exit": "Stop drawing (Esc)",
+      "magnifier": "Magnifier (M)"
     },
     "redact": {
       "title": "Auto redact",

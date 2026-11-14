@@ -23,14 +23,15 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_MENU, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetAncestor, GetMessageW, GetWindowLongPtrW, GetWindowThreadProcessId,
-    PostThreadMessageW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, WindowFromPoint, GA_ROOT,
-    GWL_EXSTYLE, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL,
-    WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_QUIT, WM_RBUTTONDOWN,
-    WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_EX_TRANSPARENT,
+    CallNextHookEx, DispatchMessageW, GetAncestor, GetCursorPos, GetMessageW, GetWindowLongPtrW,
+    GetWindowThreadProcessId, PostThreadMessageW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx,
+    WindowFromPoint, GA_ROOT, GWL_EXSTYLE, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MSG,
+    MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MOUSEMOVE, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_EX_TRANSPARENT,
 };
 
-use crate::livedraw::{Key, KeyResult, Model};
+use crate::lens_win::Lens;
+use crate::livedraw::{Key, KeyResult, Model, Tool};
 
 /// What the hook tells the worker.
 pub enum Note {
@@ -142,6 +143,8 @@ struct HookState {
     /// Keys kept from the apps on their way down: their release is kept too.
     held: HashSet<u32>,
     ours: u32,
+    /// The magnifier, while it is the tool (VID-049).
+    lens: Option<Lens>,
 }
 
 thread_local! {
@@ -169,6 +172,7 @@ fn hook_thread(
                 right: false,
                 held: HashSet::new(),
                 ours: GetCurrentProcessId(),
+                lens: None,
             })
         });
         let module = GetModuleHandleW(std::ptr::null());
@@ -268,10 +272,34 @@ impl HookState {
         let _ = self.notes.send(Note::Changed);
     }
 
+    /// The magnifier follows the pointer while it is the tool (VID-049), on this
+    /// monitor; otherwise it goes away.
+    fn follow_lens(&mut self, x: i32, y: i32) {
+        let (wanted, scale) = {
+            let m = self.model.lock().unwrap();
+            (m.tool == Tool::Magnifier, m.scale)
+        };
+        if !wanted || !self.on_monitor(x, y) {
+            self.lens = None;
+            return;
+        }
+        if self.lens.is_none() {
+            self.lens = Lens::new((220.0 * scale.max(1.0)) as i32);
+        }
+        if let Some(l) = &self.lens {
+            l.move_to(x, y);
+        }
+    }
+
     /// Returns whether the event is kept from the apps.
     fn mouse(&mut self, message: u32, info: &MSLLHOOKSTRUCT) -> bool {
         let (x, y) = (info.pt.x, info.pt.y);
         let even = held(VK_SHIFT);
+        self.follow_lens(x, y);
+        // The magnifier only looks: clicks reach the apps (VID-049).
+        if self.lens.is_some() && !self.drawing {
+            return false;
+        }
         match message {
             WM_LBUTTONDOWN => {
                 if !self.on_monitor(x, y) || self.own_window_at(x, y) {
@@ -365,7 +393,15 @@ impl HookState {
                     KeyResult::Exit => {
                         let _ = self.notes.send(Note::Exit);
                     }
-                    KeyResult::Used => self.changed(),
+                    KeyResult::Used => {
+                        self.changed();
+                        // `M` shows the magnifier at once; another tool takes it away.
+                        let mut at = POINT { x: 0, y: 0 };
+                        // SAFETY: reading the pointer's position.
+                        if unsafe { GetCursorPos(&mut at) } != 0 {
+                            self.follow_lens(at.x, at.y);
+                        }
+                    }
                     KeyResult::Ignored => {}
                 }
                 // Typing does not reach the apps while drawing (VID-048).

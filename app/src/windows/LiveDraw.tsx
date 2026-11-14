@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 
-type Tool = "arrow" | "rect" | "oval" | "pen" | "step";
+type Tool = "arrow" | "rect" | "oval" | "pen" | "step" | "magnifier";
 
 interface Shape {
   id: number;
@@ -180,7 +180,7 @@ export function LiveDrawOverlay() {
   );
 }
 
-const TOOLS: Tool[] = ["arrow", "rect", "oval", "pen", "step"];
+const TOOLS: Tool[] = ["arrow", "rect", "oval", "pen", "step", "magnifier"];
 const FADES = [0, 1, 2, 3, 5, 10, 20, 30];
 
 /** The toolbar (VID-049, VID-050): tools, colors, thickness and fading. */
@@ -295,6 +295,12 @@ function ToolGlyph({ tool }: { tool: Tool }) {
         <>
           <circle cx="9" cy="9" r="6.5" {...p} />
           <path d="M8 6.5l1.5-1v7" {...p} />
+        </>
+      )}
+      {tool === "magnifier" && (
+        <>
+          <circle cx="8" cy="8" r="5" {...p} />
+          <path d="M11.8 11.8L15.5 15.5M6 8h4M8 6v4" {...p} />
         </>
       )}
     </svg>

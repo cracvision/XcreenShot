@@ -23,6 +23,8 @@ pub enum Tool {
     Oval,
     Pen,
     Step,
+    /// A round ×2 lens that follows the pointer; it draws nothing (VID-049).
+    Magnifier,
 }
 
 impl Tool {
@@ -33,6 +35,7 @@ impl Tool {
             Tool::Oval => "oval",
             Tool::Pen => "pen",
             Tool::Step => "step",
+            Tool::Magnifier => "magnifier",
         }
     }
 
@@ -43,6 +46,7 @@ impl Tool {
             "oval" => Tool::Oval,
             "pen" => Tool::Pen,
             "step" => Tool::Step,
+            "magnifier" => Tool::Magnifier,
             _ => return None,
         })
     }
@@ -157,6 +161,10 @@ impl Model {
 
     /// The left button went down: a step is placed at once; the rest start.
     pub fn press(&mut self, x: f64, y: f64, now: f64) {
+        // The magnifier only looks (VID-049).
+        if self.tool == Tool::Magnifier {
+            return;
+        }
         let mut shape = self.new_shape(x, y);
         if self.tool == Tool::Step {
             shape.number = Some(self.next_step);
@@ -219,6 +227,7 @@ impl Model {
                     'r' | 's' => self.tool = Tool::Rect,
                     'o' => self.tool = Tool::Oval,
                     'p' => self.tool = Tool::Pen,
+                    'm' => self.tool = Tool::Magnifier,
                     // `1` picks Step and counts from 1 again.
                     '1' => {
                         self.tool = Tool::Step;
@@ -399,7 +408,7 @@ fn apply_options(core: &Core, ctx: &Context, p: &Value) -> Result<bool, CommandE
     let mut any = false;
     if let Some(t) = p.get("tool").and_then(Value::as_str) {
         if Tool::from_name(t).is_none() {
-            return Err(bad(ctx, "tool", "arrow, rect, oval, pen or step"));
+            return Err(bad(ctx, "tool", "arrow, rect, oval, pen, step or magnifier"));
         }
         store(core, ctx, "video.drawTool", json!(t))?;
         any = true;
@@ -678,6 +687,20 @@ mod tests {
         assert!(m.shapes().is_empty());
         arrow(&mut m, 0.0);
         assert_eq!(m.shapes()[0].points, vec![[10.0, 10.0], [100.0, 80.0]]);
+    }
+
+    /// VID-049: `M` is the magnifier, which only looks: a drag draws nothing.
+    #[test]
+    fn the_magnifier_draws_nothing() {
+        let mut m = Model::default();
+        assert_eq!(m.key(Key::Char('m'), 0.0), KeyResult::Used);
+        assert_eq!(m.tool, Tool::Magnifier);
+        assert_eq!(Tool::from_name("magnifier"), Some(Tool::Magnifier));
+        assert_eq!(m.view(0.0)["tool"], "magnifier");
+        m.press(10.0, 10.0, 0.0);
+        m.drag(100.0, 80.0, false);
+        m.release(100.0, 80.0, false, 0.0);
+        assert!(m.shapes().is_empty());
     }
 
     /// VID-049: undo takes only the last shape; Delete takes them all.

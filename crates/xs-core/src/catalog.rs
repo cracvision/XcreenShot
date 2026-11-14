@@ -1345,7 +1345,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "on": {"type": "boolean", "description": "On or off; without it (and without options), the other way"},
-                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step"]},
+                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step", "magnifier"], "description": "magnifier: a round x2 lens that follows the pointer and draws nothing"},
                     "color": {"type": "string", "format": "color", "description": "#RRGGBB"},
                     "width": {"type": "string", "enum": ["thin", "medium", "thick"]},
                     "fade": {"type": "integer", "minimum": 0, "maximum": 30, "description": "Seconds before a shape fades; 0: never while on"},

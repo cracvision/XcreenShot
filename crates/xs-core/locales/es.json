@@ -4708,7 +4708,8 @@
       "seconds": "{{n}} s",
       "undo": "Deshacer (Z)",
       "clear": "Borrar todo (Supr)",
-      "exit": "Dejar de dibujar (Esc)"
+      "exit": "Dejar de dibujar (Esc)",
+      "magnifier": "Lupa (M)"
     },
     "redact": {
       "title": "Redacción automática",
