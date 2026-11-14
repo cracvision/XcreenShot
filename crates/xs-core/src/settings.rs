@@ -697,6 +697,25 @@ pub fn definitions() -> Vec<SettingDef> {
             "VID-047",
         ),
         def("video.systemAudio", "video", boolean(), json!(false), "VID-040"),
+        // The microphone (VID-039): on with the system's default input (VID-001); the
+        // device by its id (empty: the default); the automatic level on.
+        def("video.microphone", "video", boolean(), json!(true), "VID-039"),
+        def(
+            "video.microphoneDevice",
+            "video",
+            json!({"type": "string"}),
+            json!(""),
+            "VID-039",
+        ),
+        def(
+            "video.microphoneAutoLevel",
+            "video",
+            boolean(),
+            json!(true),
+            "VID-039",
+        ),
+        // A warning in the bar when the microphone is muted or nothing comes from it.
+        def("video.mutedMicAlert", "video", boolean(), json!(true), "VID-019"),
         def(
             "video.countdown",
             "video",

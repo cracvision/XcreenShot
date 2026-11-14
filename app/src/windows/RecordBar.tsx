@@ -1,12 +1,20 @@
 // The recording bar (VID-011): Ready with Record and Cancel; while recording, the
 // time, Pause / Resume, Stop and Cancel (VID-012 to VID-014). It never shows in the
 // video, and it can be moved by its edge.
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
 import { clock, longHint } from "./recClock";
+import { MicControl, SoundStrip, SystemAudioControl } from "./RecordSound";
+import { DISMISS_MS, soundWarning, useLevels } from "./recSound";
+
+/** The bar's height, a warning's under it and a menu entry's, in CSS px. */
+const BAR_H = 52;
+const STRIP_H = 46;
+const ROW_H = 34;
 
 interface RecState {
   status: "ready" | "countdown" | "recording" | "paused" | "finalizing" | "idle";
@@ -48,6 +56,24 @@ export function RecordBar() {
   // When the last state arrived, and now: the time moves on between updates.
   const [since, setSince] = useState(0);
   const [now, setNow] = useState(0);
+  // The sound's meters and warnings (VID-011, VID-019); the microphone's menu open.
+  const active = ["ready", "recording", "paused"].includes(state.status);
+  const levels = useLevels(active);
+  const alerts = useSetting("video.mutedMicAlert", true);
+  const [dismissed, setDismissed] = useState<Partial<Record<string, number>>>({});
+  const [menuRows, setMenuRows] = useState(0);
+  // Low on its monitor, the bar grows upwards (for the menu and the warning).
+  const [up] = useState(() => {
+    const s = window.screen as Screen & { availTop?: number };
+    return window.screenY - (s.availTop ?? 0) + BAR_H / 2 > s.availHeight / 2;
+  });
+  const raw = soundWarning(levels, alerts);
+  const closedAt = raw ? dismissed[raw] : undefined;
+  const warning = raw && !(closedAt !== undefined && now - closedAt < DISMISS_MS) ? raw : null;
+  const height = BAR_H + (warning ? STRIP_H : 0) + (menuRows ? menuRows * ROW_H + 24 : 0);
+  useEffect(() => {
+    void invoke("xs_recbar_fit", { height, up }).catch(() => undefined);
+  }, [height, up]);
 
   useEffect(() => {
     document.documentElement.classList.add("launcher-root");
@@ -83,6 +109,27 @@ export function RecordBar() {
     else act(`record.${what}`);
   };
   const fits = (m: number) => (m >= 120 ? `${Math.floor(m / 60)} h` : `${m} min`);
+  // The Ready summary (VID-006): it gives way first when the bar is short of room.
+  const summary =
+    state.minutesFree != null && state.minutesFree < 10
+      ? t("ui.recbar.little_space", { minutes: state.minutesFree })
+      : t(state.open === "none" ? "ui.recbar.summary_library" : "ui.recbar.summary_editor", {
+          fps: state.fps ?? 0,
+          codec: state.codec ?? "H.264",
+        });
+
+  const strip = warning && (
+    <SoundStrip
+      warning={warning}
+      onDismiss={() => setDismissed((d) => ({ ...d, [warning]: now }))}
+    />
+  );
+  const stack = (bar: React.ReactNode) => (
+    <div className={`recbar-stack${up ? " up" : ""}`}>
+      {bar}
+      {strip}
+    </div>
+  );
 
   if (asking) {
     const question = t(
@@ -93,7 +140,7 @@ export function RecordBar() {
           : "ui.recbar.restart_confirm",
       { time: clock(elapsed) },
     );
-    return (
+    return stack(
       <div
         className="recbar glass"
         role="alertdialog"
@@ -114,11 +161,11 @@ export function RecordBar() {
         <button type="button" className="btn small" autoFocus onClick={() => setAsking(null)}>
           {t("ui.recbar.keep")}
         </button>
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return stack(
     <div
       className="recbar glass"
       role="toolbar"
@@ -159,7 +206,7 @@ export function RecordBar() {
         state.width &&
         state.height && (
           <span
-            className="recbar-size"
+            className="recbar-size keep"
             title={
               ready && state.reduced
                 ? t("ui.recbar.reduced_help", {
@@ -179,18 +226,14 @@ export function RecordBar() {
       {ready && state.fps && (
         <span
           className={`recbar-size${state.minutesFree != null && state.minutesFree < 10 ? " low" : ""}`}
-          title={
-            state.minutesFree != null
-              ? t("ui.recbar.fits", { time: fits(state.minutesFree) })
-              : undefined
-          }
+          title={[
+            summary,
+            state.minutesFree != null ? t("ui.recbar.fits", { time: fits(state.minutesFree) }) : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         >
-          {state.minutesFree != null && state.minutesFree < 10
-            ? t("ui.recbar.little_space", { minutes: state.minutesFree })
-            : t(state.open === "none" ? "ui.recbar.summary_library" : "ui.recbar.summary_editor", {
-                fps: state.fps,
-                codec: state.codec ?? "H.264",
-              })}
+          {summary}
         </span>
       )}
       <span className="recbar-fill" data-tauri-drag-region />
@@ -236,22 +279,8 @@ export function RecordBar() {
           {t("ui.livedraw.button")}
         </button>
       )}
-      {ready && (
-        <button
-          type="button"
-          className="btn small recbar-toggle"
-          aria-pressed={state.systemAudio === true}
-          title={t("ui.recbar.sound")}
-          onClick={() => {
-            const on = state.systemAudio !== true;
-            void run("settings.set", { key: "video.systemAudio", value: on })
-              .then(() => setState((s) => ({ ...s, systemAudio: on })))
-              .catch(() => undefined);
-          }}
-        >
-          {t("ui.recbar.sound")}
-        </button>
-      )}
+      {active && <SystemAudioControl levels={levels} />}
+      {active && <MicControl levels={levels} up={up} onMenu={setMenuRows} />}
       {state.status === "countdown" && (
         <span className="recbar-size" role="status">
           {t("ui.recbar.countdown")}
@@ -316,7 +345,7 @@ export function RecordBar() {
       >
         ×
       </button>
-    </div>
+    </div>,
   );
 }
 

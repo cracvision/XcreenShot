@@ -1057,7 +1057,21 @@ pub(crate) fn record(
         } else {
             None
         };
-        let audio_rate = loopback.as_ref().map(|l| l.rate);
+        // The microphone (VID-039), at the system sound's rate so they add up.
+        let mic = options.microphone.as_ref().and_then(|m| {
+            let rate = loopback.as_ref().map_or(48_000, |l| l.rate);
+            match crate::audio::microphone(m.device.as_deref(), rate) {
+                Ok(c) => Some(c),
+                Err(e) => {
+                    tracing::warn!(error = %e, "video: no microphone");
+                    None
+                }
+            }
+        });
+        // A sound track whenever some sound was asked for, even if its device is not
+        // there yet: it can come (VID-043) or be switched on later (VID-011).
+        let audio_rate = (options.system_audio || options.microphone.is_some())
+            .then(|| loopback.as_ref().map_or(48_000, |l| l.rate));
         let _ = std::fs::remove_file(target);
         let w = if options.software_only {
             writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, fragmented)?
@@ -1087,9 +1101,9 @@ pub(crate) fn record(
             "video: engine started"
         );
         let gpu = KeepOnDrop(Some(gpu), adapter_id(&adapter));
-        Ok((gpu, output, dup, conv, w, loopback, audio_rate))
+        Ok((gpu, output, dup, conv, w, loopback, mic, audio_rate))
     })();
-    let (gpu, output, mut dup, conv, mut w, mut loopback, audio_rate) = match setup {
+    let (gpu, output, mut dup, conv, mut w, mut loopback, mut mic, audio_rate) = match setup {
         Ok(s) => s,
         Err(e) => {
             let _ = ready.send(Err(e.clone()));
@@ -1110,9 +1124,24 @@ pub(crate) fn record(
     let mut dirty = true;
     let mut was_paused = false;
     let mut failure: Option<String> = None;
-    // Sound frames written so far, and when a lost output was last looked for.
-    let mut audio_frames = 0u64;
+    // When a lost output was last looked for.
     let mut last_reopen = Instant::now();
+    // The sound, put together (VID-039, VID-040): the system's and the microphone's,
+    // each at its moment; the microphone leveled.
+    let mut mixer = audio_rate.map(crate::mix::Mixer::new);
+    let (mut system_track, mut mic_track) = (crate::mix::Track::default(), crate::mix::Track::default());
+    let mut agc = crate::mix::Agc::default();
+    let mut had_mic = mic.is_some();
+    let mut had_system = loopback.is_some();
+    let mut last_mic_reopen = Instant::now();
+    // The microphone wanted now, which device is open, and the meters (VID-011).
+    let mut want_mic = options.microphone.clone();
+    let mut mic_open_for = mic
+        .as_ref()
+        .map(|_| want_mic.as_ref().and_then(|m| m.device.clone()));
+    let mut mic_seen = 0u32;
+    let (mut mic_gauge, mut system_gauge) = (crate::mix::Gauge::default(), crate::mix::Gauge::default());
+    let (mut mic_muted, mut last_mute): (bool, Option<Instant>) = (false, None);
     // Cursor and keyboard effects (VID-045 to VID-047): what shows, the hooks that
     // feed it while clicks or keys are wanted, and the password check.
     let mut live = Live::default();
@@ -1252,50 +1281,101 @@ pub(crate) fn record(
                 break;
             }
         }
-        // The sound (VID-040): what played, placed at the moment it was heard, with
-        // silence before it for the time nothing played.
-        if let Some(l) = &loopback {
-            match l.read() {
-                Ok(samples) if shared.paused.load(Ordering::Relaxed) => drop(samples),
-                Ok(samples) => {
-                    let rate = l.rate as f64;
-                    let now = now_recorded();
-                    let length = samples.len() as f64 / 2.0 / rate;
-                    // Without sound for a while, silence up to a moment ago.
-                    let target = if samples.is_empty() {
-                        now - 0.3
-                    } else {
-                        now - length
-                    };
-                    let written = audio_frames as f64 / rate;
-                    let (gap, skip) = crate::audio_fit(written, target, l.rate, samples.len() / 2);
-                    if gap > 0 {
-                        let silence = vec![0i16; gap * 2];
-                        if w.write_audio(&silence, written).is_ok() {
-                            audio_frames += gap as u64;
+        // The sound (VID-039, VID-040): each source placed at the moment it was heard;
+        // what all have had time to give is written, silence where nothing played.
+        if let Some(mx) = mixer.as_mut() {
+            let paused = shared.paused.load(Ordering::Relaxed);
+            let rate = mx.rate as f64;
+            let at_now = Instant::now();
+            // The system's sound, kept while it is on (VID-011); measured always.
+            let system_on = shared.system_audio.load(Ordering::Relaxed);
+            if let Some(l) = &loopback {
+                match l.read() {
+                    Ok(samples) => {
+                        let p = crate::mix::peak(&samples);
+                        system_gauge.feed(p, p, p >= 0.99, at_now);
+                        if system_on && !paused && !samples.is_empty() {
+                            let target = now_recorded() - samples.len() as f64 / 2.0 / rate;
+                            mx.place(&mut system_track, target, &samples);
                         }
                     }
-                    let samples = &samples[skip * 2..];
-                    if !samples.is_empty() {
-                        let at = audio_frames as f64 / rate;
-                        if w.write_audio(samples, at).is_ok() {
-                            audio_frames += (samples.len() / 2) as u64;
-                        }
+                    Err(e) if crate::audio::device_gone(&e) => {
+                        // Another output was chosen: listen to the new one, at the same rate.
+                        loopback = crate::audio::Loopback::open()
+                            .ok()
+                            .filter(|n| Some(n.rate) == audio_rate);
                     }
+                    Err(_) => {}
                 }
-                Err(e) if crate::audio::device_gone(&e) => {
-                    // Another output was chosen: listen to the new one, at the same rate.
-                    loopback = crate::audio::Loopback::open()
-                        .ok()
-                        .filter(|n| Some(n.rate) == audio_rate);
-                }
-                Err(_) => {}
+            } else if system_on && last_reopen.elapsed() > Duration::from_secs(1) {
+                last_reopen = Instant::now();
+                loopback = crate::audio::Loopback::open()
+                    .ok()
+                    .filter(|n| Some(n.rate) == audio_rate);
+                had_system |= loopback.is_some();
             }
-        } else if audio_rate.is_some() && last_reopen.elapsed() > Duration::from_secs(1) {
-            last_reopen = Instant::now();
-            loopback = crate::audio::Loopback::open()
-                .ok()
-                .filter(|n| Some(n.rate) == audio_rate);
+            // The microphone switched on, off or to another device (VID-011).
+            let changed = shared.microphone_changed.load(Ordering::Relaxed);
+            if changed != mic_seen {
+                mic_seen = changed;
+                want_mic = shared.microphone.lock().unwrap().clone();
+                let device = want_mic.as_ref().map(|m| m.device.clone());
+                if device.is_none() || mic_open_for != device {
+                    mic = None;
+                    mic_open_for = None;
+                    last_mic_reopen = Instant::now() - Duration::from_secs(2);
+                }
+            }
+            if let Some(m) = &mic {
+                match m.read() {
+                    Ok(mut samples) => {
+                        let raw = crate::mix::peak(&samples);
+                        let auto_level = want_mic.as_ref().is_some_and(|m| m.auto_level);
+                        agc.process(&mut samples, mx.rate, auto_level);
+                        mic_gauge.feed(raw, agc.peak, agc.clipped, at_now);
+                        if !paused && !samples.is_empty() {
+                            let target = now_recorded() - samples.len() as f64 / 2.0 / rate;
+                            mx.place(&mut mic_track, target, &samples);
+                        }
+                    }
+                    Err(e) if crate::audio::device_gone(&e) => {
+                        // Unplugged: the recording goes on without it (VID-043).
+                        tracing::warn!("video: the microphone went away");
+                        mic = None;
+                        mic_open_for = None;
+                    }
+                    Err(_) => {}
+                }
+            } else if let Some(want) = want_mic.as_ref() {
+                mic_gauge.feed(0.0, 0.0, false, at_now);
+                // Plugged in again, or switched on: it comes (VID-043).
+                if last_mic_reopen.elapsed() > Duration::from_secs(1) {
+                    last_mic_reopen = Instant::now();
+                    mic = crate::audio::microphone(want.device.as_deref(), mx.rate).ok();
+                    if mic.is_some() {
+                        mic_open_for = Some(want.device.clone());
+                        had_mic = true;
+                    }
+                }
+            }
+            // Muted in the system (VID-019), looked at every 2 s.
+            if let Some(want) = want_mic.as_ref() {
+                if last_mute.is_none_or(|t| t.elapsed() > Duration::from_secs(2)) {
+                    last_mute = Some(at_now);
+                    mic_muted = crate::audio::input_muted(want.device.as_deref()).unwrap_or(false);
+                }
+            }
+            *shared.levels.lock().unwrap() = crate::mix::Levels {
+                microphone: want_mic.is_some().then(|| mic_gauge.reading(at_now)),
+                system: system_on.then(|| system_gauge.reading(at_now)),
+                microphone_muted: want_mic.is_some() && mic_muted,
+            };
+            let upto = ((now_recorded() - 0.25).max(0.0) * rate) as u64;
+            let at = mx.written() as f64 / rate;
+            let out = mx.take(upto);
+            if !out.is_empty() {
+                let _ = w.write_audio(&out, at);
+            }
         }
         fx = shared.effects.lock().unwrap().clone();
         let cursor_on = shared.cursor.load(Ordering::Relaxed);
@@ -1473,6 +1553,8 @@ pub(crate) fn record(
             audio: false,
             low_disk: false,
             window_closed: false,
+            microphone: false,
+            system_audio: false,
             cancelled: true,
             first_frame_at,
             late_frames,
@@ -1501,12 +1583,13 @@ pub(crate) fn record(
             }
         }
     }
-    if let (Some(rate), None) = (audio_rate, &failure) {
-        let rate = rate as f64;
-        let written = audio_frames as f64 / rate;
-        if duration > written {
-            let gap = ((duration - written) * rate) as usize;
-            let _ = w.write_audio(&vec![0i16; gap * 2], written);
+    // The rest of the sound, up to the end.
+    if let (Some(mx), None) = (mixer.as_mut(), &failure) {
+        let rate = mx.rate as f64;
+        let at = mx.written() as f64 / rate;
+        let out = mx.take((duration * rate) as u64);
+        if !out.is_empty() {
+            let _ = w.write_audio(&out, at);
         }
     }
     let encoder = if w.hardware { "hardware" } else { "software" };
@@ -1548,6 +1631,8 @@ pub(crate) fn record(
         audio: audio_rate.is_some(),
         low_disk,
         window_closed,
+        microphone: had_mic,
+        system_audio: had_system,
         cancelled: false,
         first_frame_at,
         late_frames,
@@ -1888,6 +1973,7 @@ mod tests {
                 effects: Default::default(),
                 path: path.clone(),
                 recovery: None,
+                microphone: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(700));
@@ -2214,6 +2300,7 @@ mod tests {
                 effects: Default::default(),
                 path: path.clone(),
                 recovery: None,
+                microphone: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(400));
@@ -2366,6 +2453,7 @@ mod tests {
             effects: Default::default(),
             path: path.clone(),
             recovery: Some(recovery.clone()),
+            microphone: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(1000));
@@ -2665,6 +2753,7 @@ mod tests {
             effects: Default::default(),
             path: path.clone(),
             recovery: None,
+            microphone: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(500));
@@ -2733,6 +2822,7 @@ mod tests {
             effects: Default::default(),
             path: path.clone(),
             recovery: None,
+            microphone: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(2000));
@@ -2792,6 +2882,7 @@ mod tests {
             effects: Default::default(),
             path: path.clone(),
             recovery: None,
+            microphone: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -2875,6 +2966,7 @@ mod tests {
             },
             path: path.clone(),
             recovery: None,
+            microphone: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -2921,6 +3013,7 @@ mod tests {
                 effects: Default::default(),
                 path: path.clone(),
                 recovery: None,
+                microphone: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(2500));

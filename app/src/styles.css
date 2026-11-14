@@ -2765,6 +2765,87 @@ html.launcher-root #root {
   font-size: 13px;
 }
 
+/* The bar and, under it (or above it when it sits low), a warning (VID-019); the window
+   grows for them and for the microphone's menu. */
+.recbar-stack {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recbar-stack.up {
+  flex-direction: column-reverse;
+}
+
+.recbar-stack > .recbar {
+  position: relative;
+  inset: auto;
+  flex: none;
+  height: 52px;
+}
+
+.recbar-strip {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 6px 0 12px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.recbar-strip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex: none;
+}
+
+.recbar-strip-text {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* A switch with its meter and, for the microphone, its menu (VID-011). */
+.recbar-split {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recbar-chev {
+  padding-inline: 2px;
+}
+
+.recbar-meter {
+  position: relative;
+  width: 32px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+  flex: none;
+}
+
+.recbar-meter > span {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--brand);
+  transition: transform 80ms linear;
+}
+
+.recbar-meter.clip > span {
+  background: var(--danger);
+}
+
 .recbar-grip {
   color: var(--ink-muted);
   font-size: 11px;
@@ -2791,8 +2872,16 @@ html.launcher-root #root {
 }
 
 .recbar-size {
+  min-width: 0;
+  overflow: hidden;
   color: var(--ink-muted);
   font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.recbar-size.keep {
+  flex: none;
 }
 
 .recbar-size.low {
@@ -4688,7 +4777,9 @@ html.launcher-root #root {
 .quick-bar,
 .zone-frame-bar,
 .hint-bubble,
-.pending-share {
+.pending-share,
+.recbar,
+.recbar-strip {
   border: 1px solid var(--glass-edge);
   background: transparent;
   box-shadow:
@@ -4705,7 +4796,9 @@ html.launcher-root #root {
 .quick-bar::before,
 .zone-frame-bar::before,
 .hint-bubble::before,
-.pending-share::before {
+.pending-share::before,
+.recbar::before,
+.recbar-strip::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -8402,6 +8495,10 @@ button.lc-head:hover,
   .recorder .dot,
   .recbar-dot.on {
     animation: none;
+  }
+
+  .recbar-meter > span {
+    transition: none;
   }
 
   .stepsbar-count.flash,

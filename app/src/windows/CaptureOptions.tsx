@@ -14,11 +14,12 @@ import {
   type ScheduleProps,
 } from "../lib/commands";
 import { Menu, type MenuItem } from "../components/Menu";
+import { MicDeviceSelect } from "../components/MicDeviceSelect";
 import { EffectFields } from "../editor/EffectFields";
 import { dropIndex } from "./presetsState";
 import { FIELDS } from "../editor/effectOptions";
 import { DEFAULTS as FX_DEFAULTS } from "../editor/effects";
-import { useSetting } from "../store";
+import { useSetting, useStringSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
 import { captureModes } from "../features";
 import { useApp } from "../store";
@@ -180,6 +181,10 @@ export function VideoOptions({
   const id = useId();
   const cursor = useSetting("video.cursor", true);
   const sound = useSetting("video.systemAudio", false);
+  // The microphone (VID-039): on with the system's default, its device and level.
+  const mic = useSetting("video.microphone", true);
+  const micDevice = useStringSetting("video.microphoneDevice", "");
+  const micAuto = useSetting("video.microphoneAutoLevel", true);
   // Cursor and keyboard effects (VID-045 to VID-047): colours and sizes in Preferences.
   const highlight = useSetting("video.highlight", false);
   const clicks = useSetting("video.clicks", false);
@@ -224,6 +229,45 @@ export function VideoOptions({
         />
         {t("ui.panel.video_sound")}
       </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={mic}
+          onChange={(e) => set("video.microphone", e.target.checked)}
+        />
+        {t("ui.panel.video_mic")}
+      </label>
+      {mic && (
+        <>
+          <label className="panel-field" htmlFor={`${id}-vmic`}>
+            <span>{t("ui.panel.video_mic_device")}</span>
+            <MicDeviceSelect
+              id={`${id}-vmic`}
+              value={micDevice}
+              onChange={(v) =>
+                void run("settings.set", { key: "video.microphoneDevice", value: v }).catch(
+                  () => undefined,
+                )
+              }
+            />
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={micAuto}
+              onChange={(e) => set("video.microphoneAutoLevel", e.target.checked)}
+            />
+            {t("ui.panel.video_mic_auto")}
+          </label>
+          <button
+            type="button"
+            className="btn link small"
+            onClick={() => void run("record.sound_settings").catch(() => undefined)}
+          >
+            {t("ui.panel.video_sound_settings")}
+          </button>
+        </>
+      )}
       <label className="panel-check">
         <input
           type="checkbox"

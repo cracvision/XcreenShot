@@ -327,6 +327,16 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M4, entrega 9: micrófono y sonido)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| VID-011 / VID-039 | ¿Se puede encender el micrófono o el audio del sistema en una grabación que empezó sin ningún sonido? | No: el MP4 solo lleva pista de sonido si al empezar se pidió alguno de los dos (con el micrófono activado por defecto, casi siempre). Sin pista, los dos interruptores aparecen desactivados con el motivo. Una pista silenciosa en todos los videos haría pesar más los que no la necesitan | Provisional |
+| VID-019 | ¿Cuándo "no llega sonido del micrófono"? | 10 s seguidos sin ninguna muestra por encima de -80 dB (un micrófono que funciona siempre da al menos su propio ruido, por encima de -70 dB). Es lo que pasa con el botón de silencio de unos auriculares o de la bocina, que Windows no ve | Provisional |
+| VID-019 | Primer aviso: hablar con el micrófono apagado | Queda para la entrega de reducción de ruido (VID-041): distinguir voz de ruido (ventilador, teclado, música) necesita un detector de voz, que es la misma pieza | Provisional |
+| VID-011 | La barra no tenía fondo: la clase `glass` no tenía estilo, y sobre una pantalla clara u oscura los controles se leían mal | La barra de grabación, la del grabador de pasos y la franja de avisos usan ahora el material de cristal de los paneles flotantes | Provisional |
+| VID-011 | La barra crece para el menú del micrófono y para los avisos | La ventana crece hacia abajo, o hacia arriba si la barra está en la mitad de abajo de su monitor, y vuelve a su tamaño al cerrarse. Mientras está crecida, la parte transparente no deja pasar los clics | Provisional |
+
 ## Dudas del equipo de construcción (M4, entrega 8: Dibujo en vivo)
 
 | ID | Duda | Propuesta | Estado |

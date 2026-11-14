@@ -426,6 +426,36 @@ pub fn live_draw(app: &AppHandle, area: Option<(i32, i32, u32, u32)>) -> tauri::
     Ok(())
 }
 
+/// The recording bar's height in CSS px, for a warning under it or a menu (VID-011,
+/// VID-019): it grows down from its top edge, or up from its bottom edge when it sits
+/// low on its monitor (`up`), and shrinks back the same way.
+pub fn fit_recording_bar(app: &AppHandle, height: f64, up: bool) -> tauri::Result<()> {
+    let Some(bar) = app.get_webview_window(RECBAR) else {
+        return Ok(());
+    };
+    let scale = bar.scale_factor()?;
+    let (pos, size) = (bar.outer_position()?, bar.outer_size()?);
+    let new_h = (height.clamp(40.0, 600.0) * scale).round() as u32;
+    if new_h == size.height {
+        return Ok(());
+    }
+    let y = if up {
+        pos.y + size.height as i32 - new_h as i32
+    } else {
+        pos.y
+    };
+    if y != pos.y {
+        // A move of its own, not the user's (VID-016).
+        let mut place = BAR_PLACE.lock().unwrap();
+        if place.0 == Some((pos.x, pos.y)) {
+            place.0 = Some((pos.x, y));
+        }
+        drop(place);
+        bar.set_position(tauri::PhysicalPosition::new(pos.x, y))?;
+    }
+    bar.set_size(tauri::PhysicalSize::new(size.width, new_h))
+}
+
 pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
     let Some(state) = state else {
         // Moved by the user: remembered for the session (VID-016).
@@ -481,7 +511,8 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         frame.show()?;
     }
     if app.get_webview_window(RECBAR).is_none() {
-        let (bw, bh) = (600.0, 52.0);
+        // Wide enough for the sound's switches and meters (VID-011).
+        let (bw, bh) = (840.0, 52.0);
         let gap = 10.0 * scale;
         let mut px = x + w / 2.0 - bw * scale / 2.0;
         // Under the area; above it when there is no room; inside it at the bottom when

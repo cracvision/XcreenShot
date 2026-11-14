@@ -1723,6 +1723,20 @@ pub fn extension() -> Extension {
             Ok(record::status(&*upgrade(&w)?))
         });
         let w = weak.clone();
+        reg.handle("record.devices", move |ctx, _p| {
+            record::devices(&*upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
+        reg.handle("record.level", move |_ctx, _p| Ok(record::level(&*upgrade(&w)?)));
+        let w = weak.clone();
+        reg.handle("record.sound", move |ctx, p| {
+            record::sound(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("record.sound_settings", move |_ctx, _p| {
+            record::sound_settings(&*upgrade(&w)?)
+        });
+        let w = weak.clone();
         reg.handle("record.video", move |ctx, p| {
             record::video(&upgrade(&w)?, ctx, &p)
         });

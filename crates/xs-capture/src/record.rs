@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, Weak};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 use xs_core::i18n::tr;
@@ -21,8 +21,6 @@ struct Running {
     path: PathBuf,
     /// The area recorded (virtual-screen pixels), for its border and bar.
     rect: Rect,
-    /// The system's sound was asked for (VID-040).
-    wants_audio: bool,
     /// Open in the editor when it stops (VID-052).
     open: bool,
     /// What Restart goes back to (VID-014).
@@ -69,7 +67,14 @@ pub struct Recording {
     awake: Mutex<Option<xs_video::StayAwake>>,
     /// The recording paused because the computer went to sleep (VID-021).
     slept: std::sync::atomic::AtomicBool,
+    /// The meters of Ready (VID-011): the sound measured, never kept.
+    meter: Mutex<Option<xs_video::Meter>>,
+    /// The inputs, looked at again every 2 s (VID-043).
+    inputs: Mutex<Option<(Instant, Inputs)>>,
 }
+
+/// The sound inputs that are on, and the default one's id.
+type Inputs = (Vec<xs_video::Input>, Option<String>);
 
 fn service(core: &Core) -> Arc<Recording> {
     core.service(Recording::default)
@@ -352,6 +357,196 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     start_at_once(core, ctx, state)
 }
 
+/// The inputs now, at most 2 s old (VID-043: they follow what is plugged in).
+fn inputs(core: &Core) -> Inputs {
+    let svc = service(core);
+    let mut cache = svc.inputs.lock().unwrap();
+    match cache.as_ref() {
+        Some((at, list)) if at.elapsed() < Duration::from_secs(2) => list.clone(),
+        _ => {
+            let list = xs_video::inputs().unwrap_or_default();
+            *cache = Some((Instant::now(), list.clone()));
+            list
+        }
+    }
+}
+
+/// The microphone a recording takes (VID-039): asked for in `p`, or as the settings
+/// say; its device and automatic level from the settings. A device that is not
+/// plugged in gives the system's default (VID-043).
+fn microphone_of(core: &Core, p: &Value) -> Option<xs_video::Microphone> {
+    let on = p
+        .get("microphone")
+        .and_then(Value::as_bool)
+        .unwrap_or_else(|| core.settings.get_bool("video.microphone"));
+    on.then(|| {
+        let device = p
+            .get("microphoneDevice")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .unwrap_or_else(|| core.settings.get_str("video.microphoneDevice"));
+        let (list, _) = inputs(core);
+        xs_video::Microphone {
+            device: Some(device).filter(|d| !d.is_empty() && list.iter().any(|i| &i.id == d)),
+            auto_level: core.settings.get_bool("video.microphoneAutoLevel"),
+        }
+    })
+}
+
+/// The meters and what the warnings need (VID-011, VID-019, VID-043).
+fn levels_json(core: &Core, l: xs_video::mix::Levels, mic_on: bool, system_on: bool, track: bool) -> Value {
+    let (list, default) = inputs(core);
+    let chosen = core.settings.get_str("video.microphoneDevice");
+    let missing = !chosen.is_empty() && !list.iter().any(|i| i.id == chosen);
+    let using = if chosen.is_empty() || missing {
+        default
+    } else {
+        Some(chosen)
+    };
+    let input = using.and_then(|id| list.iter().find(|i| i.id == id));
+    let mic = l.microphone.unwrap_or_default();
+    let system = l.system.unwrap_or_default();
+    let round = |v: f32| (v as f64 * 100.0).round() / 100.0;
+    json!({
+        "microphone": {
+            "on": mic_on,
+            "level": round(mic.level),
+            "clip": mic.clip,
+            "quietSeconds": round(mic.quiet_seconds),
+            "muted": l.microphone_muted,
+            "device": input.map(|i| i.name.clone()),
+            "wireless": input.is_some_and(|i| i.wireless),
+            "missing": missing,
+            "none": list.is_empty(),
+        },
+        "systemAudio": { "on": system_on, "level": round(system.level), "clip": system.clip },
+        "track": track,
+    })
+}
+
+/// `record.level` (VID-011, VID-019, VID-039, VID-040): the meters now, in Ready too
+/// (the sound is measured to try it, never kept: APP-054) and while recording.
+pub fn level(core: &Core) -> Value {
+    let svc = service(core);
+    if let Some(r) = svc.current.lock().unwrap().as_ref() {
+        let mut v = levels_json(
+            core,
+            r.recorder.levels(),
+            r.recorder.microphone().is_some(),
+            r.recorder.system_audio(),
+            r.recorder.audio,
+        );
+        v["status"] = json!(if r.recorder.state() == State::Paused {
+            "paused"
+        } else {
+            "recording"
+        });
+        return v;
+    }
+    let ready = svc.ready.lock().unwrap().is_some();
+    let mut meter = svc.meter.lock().unwrap();
+    if !ready {
+        *meter = None;
+        return json!({ "status": "idle" });
+    }
+    let mic = microphone_of(core, &json!({}));
+    let system = core.settings.get_bool("video.systemAudio");
+    let stale = meter
+        .as_ref()
+        .is_none_or(|m| !m.running() || m.microphone != mic || m.system_audio != system);
+    if stale {
+        *meter = (mic.is_some() || system).then(|| xs_video::Meter::start(mic.clone(), system));
+    }
+    let l = meter.as_ref().map(|m| m.levels()).unwrap_or_default();
+    drop(meter);
+    let mut v = levels_json(core, l, mic.is_some(), system, true);
+    v["status"] = json!("ready");
+    v
+}
+
+/// `record.sound` (VID-011, VID-039, VID-040): the system's sound and the microphone
+/// (on or off, its device, its automatic level), as the settings for the next
+/// recordings and, while recording, from now on. The microphone's device changes
+/// only in Ready or paused, so the voice is not cut.
+pub fn sound(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let svc = service(core);
+    let current = svc.current.lock().unwrap();
+    if let Some(r) = current.as_ref() {
+        if p.get("microphoneDevice").is_some() && r.recorder.state() == State::Recording {
+            return Err(CommandError::new(
+                ErrorCode::Busy,
+                tr(lang, "errors.mic_device_recording", &[]),
+            ));
+        }
+        let switches_on = ["systemAudio", "microphone"]
+            .iter()
+            .any(|k| p.get(*k) == Some(&json!(true)));
+        if switches_on && !r.recorder.audio {
+            return Err(CommandError::new(
+                ErrorCode::Busy,
+                tr(lang, "errors.no_sound_track", &[]),
+            ));
+        }
+    }
+    for (param, key) in [
+        ("systemAudio", "video.systemAudio"),
+        ("microphone", "video.microphone"),
+        ("microphoneAutoLevel", "video.microphoneAutoLevel"),
+    ] {
+        if let Some(v) = p.get(param).and_then(Value::as_bool) {
+            store(core, ctx, key, json!(v))?;
+        }
+    }
+    if let Some(d) = p.get("microphoneDevice").and_then(Value::as_str) {
+        store(core, ctx, "video.microphoneDevice", json!(d))?;
+    }
+    if let Some(r) = current.as_ref() {
+        r.recorder
+            .set_system_audio(core.settings.get_bool("video.systemAudio"));
+        r.recorder.set_microphone(microphone_of(core, &json!({})));
+    }
+    drop(current);
+    let state = status(core);
+    if state["status"] != "idle" {
+        bar(core, Some(state.clone()));
+    }
+    Ok(json!({
+        "systemAudio": core.settings.get_bool("video.systemAudio"),
+        "microphone": core.settings.get_bool("video.microphone"),
+        "microphoneDevice": core.settings.get_str("video.microphoneDevice"),
+        "microphoneAutoLevel": core.settings.get_bool("video.microphoneAutoLevel"),
+    }))
+}
+
+/// `record.sound_settings` (VID-039, VID-019): the system's sound settings, where the
+/// microphone is unmuted and its volume set.
+pub fn sound_settings(core: &Core) -> CommandResult {
+    let uri = if cfg!(target_os = "macos") {
+        "x-apple.systempreferences:com.apple.preference.sound?input"
+    } else {
+        "ms-settings:sound"
+    };
+    core.host().open_uri(uri)?;
+    Ok(json!({ "uri": uri }))
+}
+
+/// `record.devices` (VID-039): the microphones that are on, the default one, and the
+/// one chosen.
+pub fn devices(core: &Core, ctx: &Context) -> CommandResult {
+    let (inputs, default) = xs_video::inputs().map_err(|e| {
+        CommandError::new(
+            ErrorCode::Internal,
+            tr(ctx.lang, "errors.record_failed", &[("reason", &e)]),
+        )
+    })?;
+    Ok(json!({
+        "inputs": inputs,
+        "default": default,
+        "chosen": core.settings.get_str("video.microphoneDevice"),
+    }))
+}
+
 /// Where recordings are written while they record (VID-022).
 pub fn recovery_dir(core: &Core) -> PathBuf {
     core.paths.local_dir.join("recovery").join("video")
@@ -543,6 +738,8 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "cursor": core.settings.get_bool("video.cursor"),
         "clicks": core.settings.get_bool("video.clicks"),
         "systemAudio": core.settings.get_bool("video.systemAudio"),
+        "microphone": core.settings.get_bool("video.microphone"),
+        "audio": true,
     })
 }
 
@@ -729,6 +926,10 @@ fn status_of(r: &Running) -> Value {
         "fps": r.recorder.fps,
         "cursor": r.recorder.cursor(),
         "clicks": r.recorder.effects().clicks.is_some(),
+        // The sound (VID-011): what is on now; its meters come from record.level.
+        "microphone": r.recorder.microphone().is_some(),
+        "systemAudio": r.recorder.system_audio(),
+        "audio": r.recorder.audio,
     })
 }
 
@@ -778,6 +979,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     } else {
         svc.ready.lock().unwrap().take()
     };
+    // The meters of Ready let go of the devices: the recording takes them.
+    svc.meter.lock().unwrap().take();
     // The countdown (VID-008): from the bar, the setting's; from automation only when
     // asked (VID-024). Esc goes back to Ready.
     let countdown = p.get("countdown").and_then(Value::as_f64).unwrap_or_else(|| {
@@ -900,6 +1103,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         effects: effects(core),
         path: path.clone(),
         recovery: Some(recovery_file.clone()),
+        microphone: microphone_of(core, p),
     })
     .map_err(|e| {
         if hide {
@@ -917,10 +1121,6 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             tr(lang, "errors.record_failed", &[("reason", &e)]),
         )
     })?;
-    let wants_audio = p
-        .get("systemAudio")
-        .and_then(Value::as_bool)
-        .unwrap_or_else(|| core.settings.get_bool("video.systemAudio"));
     let again = again_of.unwrap_or(Ready {
         rect,
         scale,
@@ -934,7 +1134,6 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         source,
         path,
         rect,
-        wants_audio,
         open,
         again,
         pressed,
@@ -998,7 +1197,9 @@ fn watch(core: Weak<Core>, source: Source) {
 fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> CommandResult {
     crate::livedraw::recording_ended(core);
     restore_icons(core);
-    let wants_audio = r.wants_audio;
+    // The sound as it was at the end (VID-011: it can be switched while recording).
+    let wants_audio = r.recorder.system_audio();
+    let wants_mic = r.recorder.microphone().is_some();
     let open = r.open;
     let pressed = r.pressed;
     let rid = r.rid.clone();
@@ -1049,6 +1250,7 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         "bytes": result.bytes,
         "encoder": result.encoder,
         "audio": result.audio,
+        "microphone": result.microphone,
     });
     // VID-030: from Record to the first frame, and the frames lost.
     let startup_ms = result
@@ -1068,9 +1270,13 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         // It stopped by itself: less than 1 GB was left (VID-023).
         warnings.push(tr(lang, "notify.recording_low_disk", &[]));
     }
-    if wants_audio && !result.audio {
+    if wants_audio && !result.system_audio {
         // Asked for and missing: no sound output was on (VID-040, VID-043).
         warnings.push(tr(lang, "notify.recording_no_audio", &[]));
+    }
+    if wants_mic && !result.microphone {
+        // Asked for and never there: no microphone was plugged in (VID-043).
+        warnings.push(tr(lang, "notify.recording_no_mic", &[]));
     }
     if !warnings.is_empty() {
         value["warnings"] = json!(warnings);
@@ -1136,6 +1342,7 @@ pub fn stop(core: &Core, ctx: &Context) -> CommandResult {
 /// `record.cancel`: ends without a file (VID-014); when Ready, nothing is recorded.
 pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
     if service(core).ready.lock().unwrap().take().is_some() {
+        service(core).meter.lock().unwrap().take();
         crate::livedraw::recording_ended(core);
         restore_icons(core);
         bar(core, None);

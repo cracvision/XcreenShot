@@ -16,10 +16,62 @@ use serde::Serialize;
 mod audio;
 #[cfg(test)]
 mod demo;
+pub mod mix;
 #[cfg(windows)]
 mod power;
 #[cfg(windows)]
 pub use power::{stay_awake, watch_suspend, StayAwake};
+
+/// A sound input (only listed on Windows yet).
+#[cfg(not(windows))]
+#[derive(Debug, Clone, Serialize)]
+pub struct Input {
+    pub id: String,
+    pub name: String,
+    pub wireless: bool,
+}
+
+/// The sound inputs (none listed on this platform yet).
+#[cfg(not(windows))]
+pub fn inputs() -> Result<(Vec<Input>, Option<String>), String> {
+    Ok((Vec::new(), None))
+}
+
+/// Whether an input is muted (not told on this platform yet).
+#[cfg(not(windows))]
+pub fn input_muted(_device: Option<&str>) -> Option<bool> {
+    None
+}
+
+#[cfg(windows)]
+mod meter;
+#[cfg(windows)]
+pub use meter::Meter;
+
+/// The meters before recording (not on this platform yet).
+#[cfg(not(windows))]
+pub struct Meter {
+    pub microphone: Option<Microphone>,
+    pub system_audio: bool,
+}
+
+#[cfg(not(windows))]
+impl Meter {
+    pub fn start(microphone: Option<Microphone>, system_audio: bool) -> Meter {
+        Meter {
+            microphone,
+            system_audio,
+        }
+    }
+
+    pub fn levels(&self) -> mix::Levels {
+        mix::Levels::default()
+    }
+
+    pub fn running(&self) -> bool {
+        false
+    }
+}
 
 /// Keeps the computer awake (nothing to do on this platform yet).
 #[cfg(not(windows))]
@@ -42,6 +94,8 @@ mod win_edit;
 #[cfg(windows)]
 mod win_fx;
 /// What a video file holds: width, height, frames and the last frame's time (s).
+#[cfg(windows)]
+pub use audio::{input_muted, inputs, Input};
 #[cfg(windows)]
 pub use win::{audio_info, first_frame, free_space, info, probe, size, warm_up};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
@@ -345,6 +399,17 @@ pub struct Options {
     /// Where it is written while it records (VID-022): a fragmented MP4 that keeps
     /// what was recorded if the app dies. When it stops it becomes the MP4 at `path`.
     pub recovery: Option<PathBuf>,
+    /// The microphone, when it records too (VID-039).
+    pub microphone: Option<Microphone>,
+}
+
+/// The microphone of a recording (VID-039).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Microphone {
+    /// Its id ([`inputs`]), or the system's default input.
+    pub device: Option<String>,
+    /// The automatic level (on by default).
+    pub auto_level: bool,
 }
 
 /// How often a recording into a fragmented file gets a key frame while something
@@ -439,6 +504,10 @@ pub struct Summary {
     pub low_disk: bool,
     /// It stopped because the window it followed closed (VID-005).
     pub window_closed: bool,
+    /// The microphone is in it (VID-039).
+    pub microphone: bool,
+    /// The system's sound is in it: an output was there to listen to (VID-040).
+    pub system_audio: bool,
     pub cancelled: bool,
     /// When the first frame was written (VID-030: the start's delay).
     #[serde(skip)]
@@ -477,6 +546,14 @@ pub(crate) struct Shared {
     pub state: AtomicU8,
     /// Time recorded so far, pauses left out.
     pub clock: Mutex<Clock>,
+    /// The meters now (VID-011, VID-039, VID-040).
+    pub levels: Mutex<mix::Levels>,
+    /// The microphone wanted now: it can be switched on or off while recording, and to
+    /// another device while paused (VID-011). Its number changes with it.
+    pub microphone: Mutex<Option<Microphone>>,
+    pub microphone_changed: std::sync::atomic::AtomicU32,
+    /// The system's sound is kept (VID-011: switched off, the rest is silent).
+    pub system_audio: AtomicBool,
 }
 
 #[derive(Default)]
@@ -527,6 +604,9 @@ pub struct Recorder {
     pub width: u32,
     pub height: u32,
     pub fps: u32,
+    /// The video has a sound track: the microphone and the system's sound can be
+    /// switched on and off while it records (VID-011).
+    pub audio: bool,
 }
 
 impl Recorder {
@@ -550,7 +630,13 @@ impl Recorder {
             cancel: AtomicBool::new(false),
             state: AtomicU8::new(0),
             clock: Mutex::new(Clock::default()),
+            levels: Mutex::new(mix::Levels::default()),
+            microphone: Mutex::new(options.microphone.clone()),
+            microphone_changed: std::sync::atomic::AtomicU32::new(0),
+            system_audio: AtomicBool::new(options.system_audio),
         });
+        // A sound track when some sound was asked for, so either can be switched on later.
+        let audio = options.system_audio || options.microphone.is_some();
         let (ready_tx, ready_rx) = std::sync::mpsc::channel::<Result<(), String>>();
         let thread_shared = shared.clone();
         let thread = std::thread::Builder::new()
@@ -564,6 +650,7 @@ impl Recorder {
                 width,
                 height,
                 fps,
+                audio,
             }),
             Ok(Err(e)) => {
                 let _ = thread.join();
@@ -620,6 +707,34 @@ impl Recorder {
     /// Time recorded so far, pauses left out.
     pub fn recorded(&self) -> Duration {
         self.shared.clock.lock().unwrap().recorded(Instant::now())
+    }
+
+    /// The meters now (VID-011, VID-039, VID-040).
+    pub fn levels(&self) -> mix::Levels {
+        *self.shared.levels.lock().unwrap()
+    }
+
+    /// The microphone from now on (VID-011): on, off, or another device (only while
+    /// paused, which the caller checks).
+    pub fn set_microphone(&self, microphone: Option<Microphone>) {
+        let mut m = self.shared.microphone.lock().unwrap();
+        if *m != microphone {
+            *m = microphone;
+            self.shared.microphone_changed.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    pub fn microphone(&self) -> Option<Microphone> {
+        self.shared.microphone.lock().unwrap().clone()
+    }
+
+    /// The system's sound from now on (VID-011).
+    pub fn set_system_audio(&self, on: bool) {
+        self.shared.system_audio.store(on, Ordering::Relaxed);
+    }
+
+    pub fn system_audio(&self) -> bool {
+        self.shared.system_audio.load(Ordering::Relaxed)
     }
 
     /// The thread ended by itself (the limit, or an error).

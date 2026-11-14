@@ -122,6 +122,151 @@ impl Drop for Loopback {
     }
 }
 
+/// A microphone (VID-039): `device` by its id, or the system's default input. Windows
+/// converts whatever it gives (mono or stereo, 16 or 24 bits, 44.1 or 48 kHz) to
+/// stereo float at `rate`, so it adds to the system's sound sample for sample.
+pub fn microphone(device: Option<&str>, rate: u32) -> Result<Loopback, String> {
+    // SAFETY: COM calls on this thread (initialized by the caller); the format lives
+    // through Initialize.
+    unsafe {
+        let devices: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).map_err(|e| err("audio devices", e))?;
+        let device = match device {
+            Some(id) => devices
+                .GetDevice(&windows::core::HSTRING::from(id))
+                .map_err(|e| err("microphone", e))?,
+            None => devices
+                .GetDefaultAudioEndpoint(eCapture, eConsole)
+                .map_err(|e| err("microphone", e))?,
+        };
+        let client: IAudioClient = device
+            .Activate(CLSCTX_ALL, None)
+            .map_err(|e| err("microphone", e))?;
+        let format = windows::Win32::Media::Audio::WAVEFORMATEX {
+            wFormatTag: 3, // IEEE float
+            nChannels: 2,
+            nSamplesPerSec: rate,
+            nAvgBytesPerSec: rate * 8,
+            nBlockAlign: 8,
+            wBitsPerSample: 32,
+            cbSize: 0,
+        };
+        client
+            .Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
+                10_000_000,
+                0,
+                &format,
+                None,
+            )
+            .map_err(|e| err("microphone", e))?;
+        let capture: IAudioCaptureClient = client.GetService().map_err(|e| err("microphone", e))?;
+        client.Start().map_err(|e| err("microphone", e))?;
+        Ok(Loopback {
+            client,
+            capture,
+            channels: 2,
+            float: true,
+            rate,
+        })
+    }
+}
+
+/// A sound input: its id, the name Windows shows, and whether it is wireless
+/// (Bluetooth: the voice may sound worse, VID-039).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Input {
+    pub id: String,
+    pub name: String,
+    pub wireless: bool,
+}
+
+/// COM on this thread, once (the command threads have no COM of their own).
+fn com() {
+    thread_local!(static DONE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) });
+    DONE.with(|d| {
+        if !d.get() {
+            // SAFETY: initializes COM on this thread; if it already has it in another
+            // mode, that one is kept, which serves as well.
+            unsafe {
+                let _ = windows::Win32::System::Com::CoInitializeEx(
+                    None,
+                    windows::Win32::System::Com::COINIT_MULTITHREADED,
+                );
+            }
+            d.set(true);
+        }
+    });
+}
+
+/// Whether an input (`device`, or the default) is muted in the system or has its
+/// volume at zero (VID-019); `None` when it cannot be told.
+pub fn input_muted(device: Option<&str>) -> Option<bool> {
+    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+    com();
+    // SAFETY: COM reads of the input's mute and volume.
+    unsafe {
+        let devices: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let d = match device {
+            Some(id) => devices.GetDevice(&windows::core::HSTRING::from(id)).ok()?,
+            None => devices.GetDefaultAudioEndpoint(eCapture, eConsole).ok()?,
+        };
+        let v: IAudioEndpointVolume = d.Activate(CLSCTX_ALL, None).ok()?;
+        let muted = v.GetMute().ok()?.as_bool();
+        let volume = v.GetMasterVolumeLevelScalar().ok()?;
+        Some(muted || volume < 0.005)
+    }
+}
+
+/// The microphones and other inputs that are on (VID-039), and the default one's id.
+pub fn inputs() -> Result<(Vec<Input>, Option<String>), String> {
+    use windows::Win32::Devices::FunctionDiscovery::{PKEY_Device_EnumeratorName, PKEY_Device_FriendlyName};
+    use windows::Win32::System::Com::STGM_READ;
+    com();
+    // SAFETY: COM calls; the ids are freed after they are copied, the property values
+    // are read as the strings they are.
+    unsafe {
+        let devices: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).map_err(|e| err("audio devices", e))?;
+        let id_of = |d: &IMMDevice| -> Option<String> {
+            let p = d.GetId().ok()?;
+            let s = p.to_string().ok();
+            CoTaskMemFree(Some(p.0 as *const _));
+            s
+        };
+        let default = devices
+            .GetDefaultAudioEndpoint(eCapture, eConsole)
+            .ok()
+            .and_then(|d| id_of(&d));
+        let list = devices
+            .EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE)
+            .map_err(|e| err("audio devices", e))?;
+        let mut out = Vec::new();
+        for i in 0..list.GetCount().unwrap_or(0) {
+            let Ok(d) = list.Item(i) else { continue };
+            let Some(id) = id_of(&d) else { continue };
+            let store = d.OpenPropertyStore(STGM_READ).ok();
+            let read = |key| {
+                store
+                    .as_ref()
+                    .and_then(|s| s.GetValue(key).ok())
+                    .map(|v| v.to_string())
+                    .unwrap_or_default()
+            };
+            let name = Some(read(&PKEY_Device_FriendlyName))
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| id.clone());
+            // Bluetooth inputs come from its enumerators (BTHENUM, BTHHFENUM).
+            let wireless = read(&PKEY_Device_EnumeratorName)
+                .to_ascii_uppercase()
+                .starts_with("BTH");
+            out.push(Input { id, name, wireless });
+        }
+        Ok((out, default))
+    }
+}
+
 /// Whether an error means the output device changed or went away.
 pub fn device_gone(e: &windows::core::Error) -> bool {
     e.code() == AUDCLNT_E_DEVICE_INVALIDATED
@@ -129,6 +274,81 @@ pub fn device_gone(e: &windows::core::Error) -> bool {
 
 #[cfg(test)]
 mod tests {
+    /// The inputs this computer has (by hand: it lists devices, nothing is recorded).
+    #[test]
+    #[ignore]
+    fn lists_the_inputs() {
+        unsafe {
+            let _ = windows::Win32::System::Com::CoInitializeEx(
+                None,
+                windows::Win32::System::Com::COINIT_MULTITHREADED,
+            );
+        }
+        println!("{:?}", super::inputs());
+        println!("muted: {:?}", super::input_muted(None));
+    }
+
+    /// Reads the default microphone for 3 s and prints its loudest sample every half
+    /// second (by hand; nothing is kept).
+    #[test]
+    #[ignore]
+    fn listens_to_the_microphone() {
+        unsafe {
+            let _ = windows::Win32::System::Com::CoInitializeEx(
+                None,
+                windows::Win32::System::Com::COINIT_MULTITHREADED,
+            );
+        }
+        // SAFETY: COM reads of the default input's volume.
+        unsafe {
+            use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+            use windows::Win32::Media::Audio::*;
+            use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
+            let devices: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).unwrap();
+            let d = devices.GetDefaultAudioEndpoint(eCapture, eConsole).unwrap();
+            let v: IAudioEndpointVolume = d.Activate(CLSCTX_ALL, None).unwrap();
+            println!(
+                "muted {:?}, volume {:?}",
+                v.GetMute().map(|b| b.as_bool()),
+                v.GetMasterVolumeLevelScalar()
+            );
+        }
+        let m = super::microphone(None, 48_000).unwrap();
+        // Windows's own meter of the input, apart from this code's samples.
+        // SAFETY: COM reads of the default input's mix format and meter.
+        let meter = unsafe {
+            use windows::Win32::Media::Audio::Endpoints::IAudioMeterInformation;
+            use windows::Win32::Media::Audio::*;
+            use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
+            let devices: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).unwrap();
+            let d = devices.GetDefaultAudioEndpoint(eCapture, eConsole).unwrap();
+            let c: IAudioClient = d.Activate(CLSCTX_ALL, None).unwrap();
+            let f = std::ptr::read_unaligned(c.GetMixFormat().unwrap());
+            println!(
+                "input format: tag {:#x}, {} channels, {} Hz, {} bits",
+                { f.wFormatTag },
+                { f.nChannels },
+                { f.nSamplesPerSec },
+                { f.wBitsPerSample }
+            );
+            d.Activate::<IAudioMeterInformation>(CLSCTX_ALL, None).unwrap()
+        };
+        let seconds = std::env::var("XS_MIC_SECONDS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(3);
+        for _ in 0..seconds * 2 {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let s = m.read().unwrap();
+            let peak = s.iter().map(|v| v.unsigned_abs()).max().unwrap_or(0);
+            // SAFETY: a read of the meter's current peak.
+            let windows_peak = unsafe { meter.GetPeakValue() };
+            println!("{} samples, peak {peak}, windows meter {windows_peak:?}", s.len());
+        }
+    }
+
     #[test]
     #[ignore]
     fn opens_the_loopback() {

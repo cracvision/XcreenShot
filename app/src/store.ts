@@ -48,6 +48,14 @@ export function useSetting(key: string, fallback: boolean): boolean {
   });
 }
 
+/** A text setting, live (for instance the microphone chosen, VID-039). */
+export function useStringSetting(key: string, fallback: string): string {
+  return useApp((s) => {
+    const value = settingValue(s.settings, key);
+    return typeof value === "string" ? value : fallback;
+  });
+}
+
 export const useApp = create<State>((set, get) => ({
   ready: false,
   ping: null,

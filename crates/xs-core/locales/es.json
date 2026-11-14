@@ -1086,6 +1086,22 @@
     "video_export": {
       "title": "Exportar el video como MP4 H.264",
       "description": "El video abierto, con sus cortes, como MP4 H.264 en una ruta, sea cual sea su códec."
+    },
+    "record_devices": {
+      "title": "Listar los micrófonos",
+      "description": "Las entradas de sonido activas, la predeterminada y la elegida."
+    },
+    "record_level": {
+      "title": "Niveles de sonido",
+      "description": "Los medidores del micrófono y del audio del sistema, en Lista y durante la grabación."
+    },
+    "record_sound": {
+      "title": "Cambiar el sonido",
+      "description": "El micrófono y el audio del sistema: activados o no, dispositivo y nivel automático."
+    },
+    "record_sound_settings": {
+      "title": "Abrir los ajustes de sonido",
+      "description": "Los ajustes de sonido del sistema, para el silencio y el volumen del micrófono."
     }
   },
   "settings": {
@@ -1698,6 +1714,22 @@
     "library_ocrIndex": {
       "label": "Reconocer el texto de las imágenes para la búsqueda",
       "description": "En segundo plano y en este equipo: la búsqueda encuentra también las palabras que se ven dentro de las capturas. Desactivado, el texto leído sale del índice."
+    },
+    "video_microphone": {
+      "label": "Grabar el micrófono",
+      "description": "Tu voz entra en el video junto con el audio del sistema. Activado por defecto, con el micrófono predeterminado del sistema."
+    },
+    "video_microphoneDevice": {
+      "label": "Micrófono",
+      "description": "Qué entrada graba; vacío: la predeterminada del sistema."
+    },
+    "video_microphoneAutoLevel": {
+      "label": "Ajustar el nivel automáticamente",
+      "description": "Mantiene la voz a un volumen constante: sube las voces bajas, baja las altas y nunca satura."
+    },
+    "video_mutedMicAlert": {
+      "label": "Avisar si el micrófono está silenciado",
+      "description": "Durante la grabación, un aviso en la barra si el micrófono está silenciado en el sistema o no llega sonido de él."
     }
   },
   "errors": {
@@ -1837,7 +1869,9 @@
     "separate_nothing": "No se encontró nada útil que separar. Funciona mejor con capturas de interfaces.",
     "separate_not_text": "Eso no es un trozo de texto separado.",
     "qr_too_long": "Demasiado largo para un código QR: {{bytes}} bytes, como mucho {{max}} con esta corrección de errores.",
-    "recover_video_failed": "No se pudo recuperar la grabación: {{reason}}"
+    "recover_video_failed": "No se pudo recuperar la grabación: {{reason}}",
+    "mic_device_recording": "El micrófono se cambia en Lista o en pausa, para no cortar la voz.",
+    "no_sound_track": "Esta grabación empezó sin sonido: activa el micrófono o el audio del sistema antes de grabar."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2238,7 +2272,8 @@
     "recording_low_disk": "Se detuvo sola porque quedaba menos de 1 GB libre en el disco.",
     "recording_window_closed": "La ventana se cerró: la grabación se detuvo y se guardó.",
     "steps_disk_full": "El disco está lleno: la grabación de pasos se pausó. Los pasos grabados se conservan.",
-    "recording_slept": "La grabación se pausó porque el equipo se suspendió. Reanúdala o detenla desde su barra."
+    "recording_slept": "La grabación se pausó porque el equipo se suspendió. Reanúdala o detenla desde su barra.",
+    "recording_no_mic": "No se grabó la voz: no había ningún micrófono conectado."
   },
   "source": {
     "ui": "la interfaz",
@@ -2424,7 +2459,8 @@
       },
       "folder_choose": "Elegir…",
       "folder_none": "Ninguna",
-      "folder_clear": "No usar ninguna"
+      "folder_clear": "No usar ninguna",
+      "mic_not_connected": "No conectado (se usa el predeterminado)"
     },
     "permissions": {
       "title": "Permisos",
@@ -2858,7 +2894,12 @@
       "steps_area_monitor": "Un monitor",
       "steps_area_window": "Una ventana (la del primer clic)",
       "steps_title": "Título de la guía",
-      "steps_title_auto": "Se propone al terminar"
+      "steps_title_auto": "Se propone al terminar",
+      "video_mic": "Micrófono",
+      "video_mic_device": "Micrófono",
+      "video_mic_default": "Predeterminado del sistema",
+      "video_mic_auto": "Ajustar el nivel automáticamente",
+      "video_sound_settings": "Ajustes de sonido del sistema…"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4583,7 +4624,25 @@
       "reduced_help": "El área mide {{width}} × {{height}}: el video se reduce (Preferencias > Video > Tamaño máximo del video)",
       "summary_editor": "{{fps}} fps · {{codec}} · se abre en el editor",
       "summary_library": "{{fps}} fps · {{codec}} · va a la biblioteca",
-      "long": "Una hora grabada: puedes detener y seguir en otro clip, y combinarlos después"
+      "long": "Una hora grabada: puedes detener y seguir en otro clip, y combinarlos después",
+      "mic": "Micrófono",
+      "mic_options": "Opciones del micrófono",
+      "mic_default": "Predeterminado del sistema",
+      "mic_default_named": "Predeterminado del sistema ({{name}})",
+      "mic_auto": "Ajustar el nivel automáticamente",
+      "mic_wireless": "Inalámbrico: puede reducir la calidad de la voz",
+      "mic_meter": "Nivel del micrófono",
+      "system_meter": "Nivel del audio del sistema",
+      "clip": "Demasiado alto",
+      "sound_settings": "Ajustes de sonido del sistema…",
+      "mic_muted": "El micrófono está silenciado en el sistema",
+      "mic_quiet": "No llega sonido del micrófono",
+      "mic_missing": "El micrófono elegido no está conectado: se usa el predeterminado",
+      "mic_none": "No hay ningún micrófono conectado",
+      "open_sound_settings": "Abrir ajustes de sonido",
+      "dismiss": "Cerrar",
+      "mic_device_locked": "El micrófono se cambia en Lista o en pausa",
+      "no_track": "Actívalo antes de grabar para que el video tenga sonido"
     },
     "video": {
       "silent_suffix": "sin sonido",

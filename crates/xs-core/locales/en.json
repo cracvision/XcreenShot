@@ -1086,6 +1086,22 @@
     "video_export": {
       "title": "Export the video as MP4 H.264",
       "description": "The open video, with its cuts, as an MP4 H.264 at a path, whatever its codec."
+    },
+    "record_devices": {
+      "title": "List the microphones",
+      "description": "The sound inputs that are on, the default and the one chosen."
+    },
+    "record_level": {
+      "title": "Sound levels",
+      "description": "The microphone and system sound meters now, in Ready and while recording."
+    },
+    "record_sound": {
+      "title": "Switch the sound",
+      "description": "The microphone and the system sound: on or off, device and automatic level."
+    },
+    "record_sound_settings": {
+      "title": "Open the sound settings",
+      "description": "The system's sound settings, for the microphone's mute and volume."
     }
   },
   "settings": {
@@ -1698,6 +1714,22 @@
     "library_ocrIndex": {
       "label": "Recognize the text of images for the search",
       "description": "In the background, on this computer: the search also finds the words that show inside captures. Off, the text read leaves the index."
+    },
+    "video_microphone": {
+      "label": "Record the microphone",
+      "description": "Your voice goes into the video with the system's sound. On by default, with the system's default microphone."
+    },
+    "video_microphoneDevice": {
+      "label": "Microphone",
+      "description": "Which input records; empty: the system's default."
+    },
+    "video_microphoneAutoLevel": {
+      "label": "Adjust the level automatically",
+      "description": "Keeps the voice at a steady volume: quiet voices up, loud ones down, never clipping."
+    },
+    "video_mutedMicAlert": {
+      "label": "Warn when the microphone is muted",
+      "description": "While recording, a warning in the bar if the microphone is muted in the system or no sound comes from it."
     }
   },
   "errors": {
@@ -1837,7 +1869,9 @@
     "separate_nothing": "Nothing useful to separate was found. It works best with screenshots of interfaces.",
     "separate_not_text": "That is not a separated piece of text.",
     "qr_too_long": "Too long for a QR code: {{bytes}} bytes, at most {{max}} with this error correction.",
-    "recover_video_failed": "The recording could not be recovered: {{reason}}"
+    "recover_video_failed": "The recording could not be recovered: {{reason}}",
+    "mic_device_recording": "The microphone can be changed while ready or paused, so the voice isn't cut.",
+    "no_sound_track": "This recording started without sound: turn on the microphone or the system sound before recording."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2238,7 +2272,8 @@
     "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk.",
     "recording_window_closed": "The window closed: the recording stopped and was saved.",
     "steps_disk_full": "The disk is full: recording steps paused. The steps so far are kept.",
-    "recording_slept": "The recording was paused because the computer went to sleep. Resume or stop it from its bar."
+    "recording_slept": "The recording was paused because the computer went to sleep. Resume or stop it from its bar.",
+    "recording_no_mic": "No voice was recorded: no microphone was connected."
   },
   "source": {
     "ui": "the interface",
@@ -2424,7 +2459,8 @@
       },
       "folder_choose": "Choose…",
       "folder_none": "None",
-      "folder_clear": "Use none"
+      "folder_clear": "Use none",
+      "mic_not_connected": "Not connected (the default is used)"
     },
     "permissions": {
       "title": "Permissions",
@@ -2858,7 +2894,12 @@
       "steps_area_monitor": "One monitor",
       "steps_area_window": "One window (the first one clicked)",
       "steps_title": "Guide title",
-      "steps_title_auto": "Proposed when it ends"
+      "steps_title_auto": "Proposed when it ends",
+      "video_mic": "Microphone",
+      "video_mic_device": "Microphone",
+      "video_mic_default": "System default",
+      "video_mic_auto": "Adjust the level automatically",
+      "video_sound_settings": "System sound settings…"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4583,7 +4624,25 @@
       "reduced_help": "The area is {{width}} × {{height}}: the video is made smaller (Preferences > Video > Largest video size)",
       "summary_editor": "{{fps}} fps · {{codec}} · opens in the editor",
       "summary_library": "{{fps}} fps · {{codec}} · goes to the library",
-      "long": "An hour recorded: you can stop and go on in another clip, and combine them later"
+      "long": "An hour recorded: you can stop and go on in another clip, and combine them later",
+      "mic": "Microphone",
+      "mic_options": "Microphone options",
+      "mic_default": "System default",
+      "mic_default_named": "System default ({{name}})",
+      "mic_auto": "Adjust the level automatically",
+      "mic_wireless": "Wireless: may lower voice quality",
+      "mic_meter": "Microphone level",
+      "system_meter": "System sound level",
+      "clip": "Too loud",
+      "sound_settings": "System sound settings…",
+      "mic_muted": "The microphone is muted in the system",
+      "mic_quiet": "No sound is coming from the microphone",
+      "mic_missing": "The chosen microphone isn't connected: using the default",
+      "mic_none": "No microphone is connected",
+      "open_sound_settings": "Open sound settings",
+      "dismiss": "Dismiss",
+      "mic_device_locked": "Change the microphone while ready or paused",
+      "no_track": "Turn it on before recording so the video has sound"
     },
     "video": {
       "silent_suffix": "silent",

@@ -1161,6 +1161,8 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
                     "window": {"type": "integer", "description": "A window's id (as capture.window takes it): its area, followed when it moves or resizes (VID-005)"},
                     "systemAudio": {"type": "boolean", "description": "What the computer plays, as an AAC track (default: the setting video.systemAudio, off)"},
+                    "microphone": {"type": "boolean", "description": "The microphone too, mixed with the system's sound (default: the setting video.microphone, off)"},
+                    "microphoneDevice": {"type": "string", "description": "An input's id from record.devices; empty: the system's default"},
                     "countdown": {"type": "number", "minimum": 0, "maximum": 10, "description": "Seconds of countdown first (VID-008); from automation none unless asked, from the bar the setting"},
                     "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
                 }),
@@ -1448,7 +1450,44 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
                 "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
                 "source": {"type": "object"}, "path": {"type": "string"},
-                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
+                "microphone": {"type": "boolean", "description": "The microphone is on (VID-039)"},
+                "systemAudio": {"type": "boolean", "description": "The system's sound is on (VID-040)"},
+                "audio": {"type": "boolean", "description": "The video has a sound track: either can be switched on while it records"}
+            }})),
+        B::new("record.level", &["VID-011", "VID-019", "VID-039", "VID-040", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "recording", "paused", "idle"]},
+                "microphone": {"type": "object", "description": "on, level (0 to 1), clip, quietSeconds (how long nothing has come), muted (in the system), device (its name), wireless, missing (the chosen one is not plugged in: the default is used), none (no input at all)"},
+                "systemAudio": {"type": "object", "description": "on, level, clip"},
+                "track": {"type": "boolean", "description": "The video has a sound track"}
+            }})),
+        B::new("record.sound", &["VID-011", "VID-039", "VID-040"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "systemAudio": {"type": "boolean", "description": "What the computer plays (VID-040)"},
+                    "microphone": {"type": "boolean", "description": "The microphone (VID-039)"},
+                    "microphoneDevice": {"type": "string", "description": "An input's id from record.devices; empty: the system's default. Only in Ready or paused"},
+                    "microphoneAutoLevel": {"type": "boolean", "description": "The automatic level"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "systemAudio": {"type": "boolean"}, "microphone": {"type": "boolean"},
+                "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"}
+            }})),
+        B::new("record.sound_settings", &["VID-039", "VID-019"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),
+        B::new("record.devices", &["VID-039", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "inputs": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "wireless": {"type": "boolean"}}}},
+                "default": {"type": ["string", "null"]},
+                "chosen": {"type": "string", "description": "The setting video.microphoneDevice; empty: the system's default"}
             }})),
         B::new("capture.details_text", &["CAP-051"])
             .mutates()

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { ContextMenu } from "../components/Menu";
+import { MicDeviceSelect } from "../components/MicDeviceSelect";
 import { isCommandError, run, type SettingEntry } from "../lib/commands";
 import { applyGlass } from "../theme";
 
@@ -28,7 +29,18 @@ export function SettingRow({ setting, highlighted }: Props) {
   };
 
   let control;
-  if (setting.key === "general.glassIntensity") {
+  if (setting.key === "video.microphoneDevice") {
+    // An input chosen from those plugged in, not its id typed (VID-039).
+    control = (
+      <MicDeviceSelect
+        id={id}
+        value={String(setting.value ?? "")}
+        disabled={setting.locked}
+        describedBy={`${id}-desc`}
+        onChange={(v) => void change(v)}
+      />
+    );
+  } else if (setting.key === "general.glassIntensity") {
     control = <GlassSlider id={id} setting={setting} change={change} />;
   } else if (setting.key === "general.accent" && setting.schema.enum) {
     control = (

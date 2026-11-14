@@ -259,6 +259,8 @@ interface MenuProps {
   title?: string;
   chevron?: boolean;
   disabled?: boolean;
+  /** The list appears (true) and has gone (false): a small window makes room for it. */
+  onShown?: (shown: boolean) => void;
 }
 
 /** A button that opens a list of actions or choices below it (or above, with `side`). */
@@ -272,6 +274,7 @@ export function Menu({
   title,
   chevron = true,
   disabled,
+  onShown,
 }: MenuProps) {
   const [open, setOpen] = useState(false);
   const [focus, setFocus] = useState<"first" | "menu">("menu");
@@ -280,6 +283,13 @@ export function Menu({
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const id = useId();
+  const shownRef = useRef(onShown);
+  useEffect(() => {
+    shownRef.current = onShown;
+  });
+  useEffect(() => {
+    shownRef.current?.(presence.mounted);
+  }, [presence.mounted]);
 
   useEffect(() => {
     if (!open) return;
