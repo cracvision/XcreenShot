@@ -364,7 +364,7 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | VID-048 | El puntero de la herramienta | Por ahora el puntero no cambia: cambiar el puntero de todo el sistema es arriesgado si la app se cierra de golpe | Provisional |
 | VID-050 | Teclas de color: el comportamiento dice "de `2` a `7` para los seis primeros colores" y el criterio dice "con `3`, el tercer color" | Se sigue el comportamiento: `2` es el primer color, `3` el segundo… `7` el sexto. **Pregunta para Carlos:** ¿prefieres que `3` sea el tercero (y entonces `2` el segundo, y el primero sin tecla)? | Pregunta |
 | VID-075 | Atajo de Dibujo en vivo en el perfil de compatibilidad | `Ctrl+Alt+Mayús+D` en los dos perfiles de Windows: `Ctrl+Mayús+D` ya es Duplicar del editor | Provisional |
-| VID-049 | Lupa | Queda para más adelante: necesita leer la pantalla en cada fotograma | Provisional |
+| VID-049 | Lupa | Hecha después (commit `b2b7970`): la API de ampliación de Windows, una lente redonda ×2 que sigue al puntero; se ve en pantalla y en el video, y los clics llegan a las apps | Provisional |
 
 ## Dudas del equipo de construcción (M4, entrega 6: el video en el editor)
 
