@@ -13,6 +13,7 @@ Scripts de PowerShell para comprobar la app en marcha sin depender de que Carlos
 | `esc-countdown.ps1` | Lanza una captura con retardo y pulsa `Esc` durante la cuenta atrás. |
 | `enter-universal.ps1` | Lanza una captura universal y pulsa `Enter` cuando aparece la selección. |
 | `cdp.mjs` | Maneja la ventana principal de una instancia aislada por el protocolo de DevTools: clics, arrastres, teclas, rueda, capturas de la página y evaluar código. `media forced-colors active` o `media prefers-reduced-motion reduce` emulan esos ajustes solo en la página (APP-045). **No mueve el ratón ni el teclado reales.** |
+| `sync-signal.html` | Señal de luz y sonido para medir la sincronía (VID-030): cada 10 s la página se pone blanca y pita. Procedimiento en `tests/manual/VID-030.md`. |
 | `a11y-audit.js` | Auditoría de accesibilidad de una ventana (controles sin nombre, campos sin etiqueta, imágenes sin texto alternativo). Se ejecuta con `cdp.mjs eval "$(cat scripts/dev/a11y-audit.js)"`. |
 
 ## Instancia aislada con DevTools (para `cdp.mjs`)

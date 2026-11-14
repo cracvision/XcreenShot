@@ -14,6 +14,8 @@ use serde::Serialize;
 
 #[cfg(windows)]
 mod audio;
+#[cfg(test)]
+mod demo;
 pub mod effects;
 pub mod timeline;
 #[cfg(windows)]
@@ -24,7 +26,7 @@ mod win_edit;
 mod win_fx;
 /// What a video file holds: width, height, frames and the last frame's time (s).
 #[cfg(windows)]
-pub use win::{audio_info, first_frame, free_space, info, probe, size};
+pub use win::{audio_info, first_frame, free_space, info, probe, size, warm_up};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
 #[cfg(windows)]
 pub use win_edit::{combine, export, facts, frame_at, frames, Piece};
@@ -118,6 +120,10 @@ pub fn info(_path: &std::path::Path) -> Result<Info, String> {
 pub fn size(_path: &std::path::Path) -> Result<(u32, u32), String> {
     Err("not available on this platform yet".into())
 }
+
+/// Gets the recording engine ready (nothing to do on this platform yet).
+#[cfg(not(windows))]
+pub fn warm_up(_area: Area, _software_only: bool) {}
 
 /// The first frame of a video (not available on this platform yet).
 #[cfg(not(windows))]
@@ -342,6 +348,29 @@ pub struct Summary {
     /// It stopped because the window it followed closed (VID-005).
     pub window_closed: bool,
     pub cancelled: bool,
+    /// When the first frame was written (VID-030: the start's delay).
+    #[serde(skip)]
+    pub first_frame_at: Option<Instant>,
+    /// Frames lost: moments a change on screen waited past its frame's turn
+    /// (VID-030: at most 1 % of the frames).
+    pub late_frames: u64,
+}
+
+/// Keeps a sound in step with the picture (VID-030). `written` is where the sound
+/// written so far ends and `target` where the next `frames` should start (seconds):
+/// behind by more than 20 ms, silence fills the gap; ahead by more than 30 ms (the
+/// sound card's clock runs fast), the start of the new sound is dropped down to
+/// 10 ms ahead. Returns (silence frames, frames dropped).
+pub(crate) fn audio_fit(written: f64, target: f64, rate: u32, frames: usize) -> (usize, usize) {
+    let rate = rate as f64;
+    if target - written > 0.02 {
+        (((target - written) * rate) as usize, 0)
+    } else if written - target > 0.03 {
+        let skip = ((written - target - 0.01) * rate) as usize;
+        (0, skip.min(frames))
+    } else {
+        (0, 0)
+    }
 }
 
 /// What the recording thread and its owner share.
@@ -566,6 +595,33 @@ fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_sound_stays_in_step() {
+        // In step: as it comes.
+        assert_eq!(audio_fit(10.0, 10.01, 48_000, 480), (0, 0));
+        assert_eq!(audio_fit(10.02, 10.0, 48_000, 480), (0, 0));
+        // Behind (nothing played for a while): silence up to the target.
+        assert_eq!(audio_fit(10.0, 10.5, 48_000, 480), (24_000, 0));
+        // Ahead by 50 ms (a fast clock): 40 ms of the new sound dropped.
+        assert_eq!(audio_fit(10.05, 10.0, 48_000, 4_800), (0, 1_920));
+        // Never more than what came.
+        assert_eq!(audio_fit(11.0, 10.0, 48_000, 480), (0, 480));
+        // A clock 100 ppm fast over 30 minutes stays within 30 ms.
+        let (rate, packet) = (48_000u32, 480usize);
+        let fast = rate as f64 * 1.0001;
+        let mut written = 0u64;
+        let mut worst: f64 = 0.0;
+        for n in 0..(30 * 60 * 100) {
+            let now = (n + 1) as f64 * packet as f64 / fast;
+            let target = now - packet as f64 / rate as f64;
+            let at = written as f64 / rate as f64;
+            let (gap, skip) = audio_fit(at, target, rate, packet);
+            written += (gap + packet - skip) as u64;
+            worst = worst.max((written as f64 / rate as f64 - now).abs());
+        }
+        assert!(worst <= 0.031, "{worst}");
+    }
 
     #[test]
     fn sizes_follow_the_setting_and_stay_even() {

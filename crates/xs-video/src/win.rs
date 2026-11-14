@@ -106,6 +106,81 @@ fn gpu(adapter: &IDXGIAdapter1) -> Result<Gpu, String> {
     }
 }
 
+/// The Direct3D device kept between recordings, and its adapter (VID-030): making
+/// one takes about 100 ms of the start.
+struct Kept(Gpu, (u32, i32));
+
+// SAFETY: Direct3D 11 devices are free-threaded and the immediate context is
+// multithread-protected (`gpu`); one recording uses it at a time.
+unsafe impl Send for Kept {}
+
+static DEVICE: std::sync::Mutex<Option<Kept>> = std::sync::Mutex::new(None);
+
+/// A recording's device, put back for the next one when it ends.
+struct KeepOnDrop(Option<Gpu>, (u32, i32));
+
+impl Drop for KeepOnDrop {
+    fn drop(&mut self) {
+        if let (Some(g), Ok(mut slot)) = (self.0.take(), DEVICE.lock()) {
+            *slot = Some(Kept(g, self.1));
+        }
+    }
+}
+
+impl std::ops::Deref for KeepOnDrop {
+    type Target = Gpu;
+    fn deref(&self) -> &Gpu {
+        self.0.as_ref().expect("a device until dropped")
+    }
+}
+static ENCODER_WARM: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn adapter_id(adapter: &IDXGIAdapter1) -> (u32, i32) {
+    // SAFETY: a plain query.
+    unsafe { adapter.GetDesc1() }
+        .map(|d| (d.AdapterLuid.LowPart, d.AdapterLuid.HighPart))
+        .unwrap_or_default()
+}
+
+/// The kept device for `adapter` if it still works, or a new one.
+fn take_gpu(slot: &mut Option<Kept>, adapter: &IDXGIAdapter1) -> Result<Gpu, String> {
+    if let Some(Kept(g, id)) = slot.take() {
+        // SAFETY: a plain query.
+        if id == adapter_id(adapter) && unsafe { g.device.GetDeviceRemovedReason() }.is_ok() {
+            return Ok(g);
+        }
+    }
+    gpu(adapter)
+}
+
+/// Gets the recording engine ready for `area` (VID-030), in the background: the
+/// Direct3D device, and the first time the hardware encoder's libraries. A
+/// recording that starts meanwhile waits for it and uses what it made.
+pub fn warm_up(area: Area, software_only: bool) {
+    let _ = std::thread::Builder::new()
+        .name("xs-record-warm".into())
+        .spawn(move || {
+            // SAFETY: COM and Media Foundation for this thread.
+            unsafe {
+                let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+                let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+            }
+            let Ok((adapter, _, _)) = find_output(area) else {
+                return;
+            };
+            let mut slot = DEVICE.lock().unwrap();
+            let Ok(gpu) = take_gpu(&mut slot, &adapter) else {
+                return;
+            };
+            if !software_only && !ENCODER_WARM.swap(true, Ordering::Relaxed) {
+                let path = std::env::temp_dir().join(format!("xs-warm-{}.mp4", std::process::id()));
+                drop(writer(&gpu, &path, (1280, 720), 30, 2_000_000, true, None));
+                let _ = std::fs::remove_file(&path);
+            }
+            *slot = Some(Kept(gpu, adapter_id(&adapter)));
+        });
+}
+
 fn texture(
     gpu: &Gpu,
     w: u32,
@@ -699,7 +774,9 @@ impl Writer {
 /// The monitor's picture as it is now, read with GDI into `conv.frame`: the first
 /// frame, so a screen that does not change (or a display that sleeps, when Desktop
 /// Duplication gets nothing) is never recorded black.
-fn snapshot(gpu: &Gpu, conv: &Converter, monitor: RECT) -> Result<(), String> {
+/// The monitor's picture with GDI (BGRA, rows of w × 4 bytes): a still or sleeping
+/// screen is never recorded black.
+fn screen_bits(monitor: RECT) -> Result<Vec<u8>, String> {
     use windows::Win32::Graphics::Gdi::*;
     let (w, h) = (monitor.right - monitor.left, monitor.bottom - monitor.top);
     // SAFETY: GDI objects are released on every path; the bits pointer is valid while
@@ -734,14 +811,12 @@ fn snapshot(gpu: &Gpu, conv: &Converter, monitor: RECT) -> Result<(), String> {
                     monitor.top,
                     SRCCOPY | CAPTUREBLT,
                 );
-                if copied.is_ok() {
-                    // GDI leaves alpha at 0: the converter ignores it.
-                    gpu.context
-                        .UpdateSubresource(&conv.frame, 0, None, bits, (w * 4) as u32, 0);
-                }
+                // GDI leaves alpha at 0: the converter ignores it.
+                let pixels = copied
+                    .map(|_| std::slice::from_raw_parts(bits as *const u8, (w * h * 4) as usize).to_vec());
                 SelectObject(mem, old);
                 let _ = DeleteObject(dib.into());
-                copied.map_err(|e| err("screen picture", e))
+                pixels.map_err(|e| err("screen picture", e))
             }
             Err(e) => Err(err("screen picture", e)),
         };
@@ -863,8 +938,12 @@ pub(crate) fn record(
     }
     let fps = options.quality.fps();
     let setup = (|| {
+        let t0 = Instant::now();
         let (adapter, output, mr) = find_output(options.area)?;
-        let gpu = gpu(&adapter)?;
+        // The first picture, read while the engine starts (VID-030).
+        let picture = std::thread::spawn(move || screen_bits(mr));
+        let gpu = take_gpu(&mut DEVICE.lock().unwrap(), &adapter)?;
+        let t_device = t0.elapsed();
         // SAFETY: duplication of the output on this device.
         let dup = unsafe { output.DuplicateOutput(&gpu.device) }.map_err(|e| err("screen duplication", e))?;
         let monitor = ((mr.right - mr.left) as u32, (mr.bottom - mr.top) as u32);
@@ -896,6 +975,7 @@ pub(crate) fn record(
             fps,
             options.scale as f32,
         )?;
+        let t_dup = t0.elapsed();
         let bitrate = options.quality.bitrate(size.0, size.1);
         // The system's sound, when asked; without it the video goes on silent.
         let loopback = if options.system_audio {
@@ -923,8 +1003,22 @@ pub(crate) fn record(
                 }
             }
         };
+        let t_enc = t0.elapsed();
         // The first picture, whatever Desktop Duplication does.
-        snapshot(&gpu, &conv, mr)?;
+        let bits = picture.join().map_err(|_| "screen picture".to_string())??;
+        // SAFETY: the pixels are the monitor's size in BGRA, rows of width × 4 bytes.
+        unsafe {
+            gpu.context
+                .UpdateSubresource(&conv.frame, 0, None, bits.as_ptr() as _, monitor.0 * 4, 0);
+        }
+        tracing::info!(
+            device_ms = t_device.as_millis() as u64,
+            duplication_ms = (t_dup - t_device).as_millis() as u64,
+            encoder_ms = (t_enc - t_dup).as_millis() as u64,
+            total_ms = t0.elapsed().as_millis() as u64,
+            "video: engine started"
+        );
+        let gpu = KeepOnDrop(Some(gpu), adapter_id(&adapter));
         Ok((gpu, output, dup, conv, w, loopback, audio_rate))
     })();
     let (gpu, output, mut dup, conv, mut w, mut loopback, audio_rate) = match setup {
@@ -964,14 +1058,16 @@ pub(crate) fn record(
     let mut window_at: Option<RECT> = None;
     let mut window_closed = false;
     let mut hold = false;
-    let now_recorded = || {
-        shared
-            .clock
-            .lock()
-            .unwrap()
-            .recorded(Instant::now())
-            .as_secs_f64()
-    };
+    // VID-030: when the first frame was written, since when a change waits, and the
+    // frame turns changes missed.
+    let mut first_frame_at: Option<Instant> = None;
+    let mut dirty_since: Option<Instant> = None;
+    let mut late_frames = 0u64;
+    // When the screen last changed: the frame's time, not when it is written, which
+    // can be up to a frame later (VID-030).
+    let mut changed_at: Option<Instant> = None;
+    let recorded_at = |at: Instant| shared.clock.lock().unwrap().recorded(at).as_secs_f64();
+    let now_recorded = || recorded_at(Instant::now());
 
     // Writes the current picture at the recorded time. A hardware encoder that fails
     // on the first frame is replaced by software; one that fails later stops the
@@ -981,10 +1077,11 @@ pub(crate) fn record(
                        last_time: &mut f64,
                        frames: &mut u64,
                        fx: &Effects,
-                       live: &Live|
+                       live: &Live,
+                       at: Option<Instant>|
      -> Result<(), String> {
         let frame = conv.nv12(&gpu, shared.cursor.load(Ordering::Relaxed), fx, live)?;
-        let t = now_recorded().max(*last_time + 0.001);
+        let t = at.map_or_else(now_recorded, recorded_at).max(*last_time + 0.001);
         w.write(&gpu, &frame, t, interval)?;
         *last_time = t;
         *last_frame = Some(frame);
@@ -1008,6 +1105,7 @@ pub(crate) fn record(
                         hold = !conv.retarget(&gpu, r);
                         window_at = Some(r);
                         dirty = true;
+                        changed_at = None;
                     }
                 }
                 Err(true) => {
@@ -1038,7 +1136,10 @@ pub(crate) fn record(
             (due_in * 1000.0) as u32,
             shared.cursor.load(Ordering::Relaxed),
         ) {
-            Ok(true) => dirty = true,
+            Ok(true) => {
+                dirty = true;
+                changed_at = Some(Instant::now());
+            }
             Ok(false) => {}
             Err(e) if e.code() == DXGI_ERROR_ACCESS_LOST => {
                 // A mode change, or the secure desktop: duplicate again.
@@ -1073,16 +1174,17 @@ pub(crate) fn record(
                         now - length
                     };
                     let written = audio_frames as f64 / rate;
-                    if target - written > 0.02 {
-                        let gap = ((target - written) * rate) as usize;
+                    let (gap, skip) = crate::audio_fit(written, target, l.rate, samples.len() / 2);
+                    if gap > 0 {
                         let silence = vec![0i16; gap * 2];
                         if w.write_audio(&silence, written).is_ok() {
                             audio_frames += gap as u64;
                         }
                     }
+                    let samples = &samples[skip * 2..];
                     if !samples.is_empty() {
                         let at = audio_frames as f64 / rate;
-                        if w.write_audio(&samples, at).is_ok() {
+                        if w.write_audio(samples, at).is_ok() {
                             audio_frames += (samples.len() / 2) as u64;
                         }
                     }
@@ -1134,11 +1236,14 @@ pub(crate) fn record(
             }
         }
         // Waves, a drag or labels showing: frames keep coming.
-        if live.tick(Instant::now()) {
+        let animating = live.tick(Instant::now());
+        if animating {
             dirty = true;
         }
         if shared.paused.load(Ordering::Relaxed) {
             was_paused = true;
+            dirty_since = None;
+            changed_at = None;
             continue;
         }
         if was_paused {
@@ -1146,11 +1251,29 @@ pub(crate) fn record(
             was_paused = false;
             dirty = true;
         }
+        if dirty && !hold {
+            dirty_since.get_or_insert_with(Instant::now);
+        } else {
+            dirty_since = None;
+        }
         let due = last_write.is_none_or(|t| t.elapsed().as_secs_f64() >= interval);
         if dirty && due && !hold {
-            match write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live) {
+            // Effects drawn now: the frame is of now.
+            let at = changed_at.filter(|_| !animating);
+            match write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live, at) {
                 Ok(()) => {
-                    last_write = Some(Instant::now());
+                    changed_at = None;
+                    let now = Instant::now();
+                    // The change was due one interval after the last frame, or when
+                    // it came if later: every interval past that is a frame lost.
+                    if let (Some(since), Some(prev)) = (dirty_since, last_write) {
+                        let due_at = since.max(prev + Duration::from_secs_f64(interval));
+                        let late = now.saturating_duration_since(due_at).as_secs_f64();
+                        late_frames += (late / interval) as u64;
+                    }
+                    dirty_since = None;
+                    first_frame_at.get_or_insert(now);
+                    last_write = Some(now);
                     dirty = false;
                 }
                 Err(e) if w.hardware && frames == 0 => {
@@ -1202,12 +1325,14 @@ pub(crate) fn record(
             low_disk: false,
             window_closed: false,
             cancelled: true,
+            first_frame_at,
+            late_frames,
         });
     }
     if failure.is_none() {
         // The last change, and the last picture held until the end.
         if dirty {
-            let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live);
+            let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live, None);
         }
         if let Some(f) = &last_frame {
             if duration - last_time > interval {
@@ -1255,6 +1380,8 @@ pub(crate) fn record(
         low_disk,
         window_closed,
         cancelled: false,
+        first_frame_at,
+        late_frames,
     })
 }
 
@@ -1665,6 +1792,353 @@ mod tests {
         assert_eq!((channels, rate), (2, 48_000));
         assert!((end - 2.0).abs() < 0.1, "{end}");
         let _ = std::fs::remove_file(&path);
+    }
+
+    /// The flashes (mean brightness jumps from dark to light) and the beeps (sound
+    /// after a second of quiet) in a recording of `scripts/dev/sync-signal.html`,
+    /// in seconds.
+    fn signals(path: &std::path::Path) -> (Vec<f64>, Vec<f64>) {
+        // SAFETY: Media Foundation reading calls; each buffer is unlocked after use
+        // and read within its length.
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+            let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None).unwrap();
+            let video = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;
+            let audio = MF_SOURCE_READER_FIRST_AUDIO_STREAM.0 as u32;
+            let want = |major: &windows::core::GUID, sub: &windows::core::GUID| {
+                let t = MFCreateMediaType().unwrap();
+                t.SetGUID(&MF_MT_MAJOR_TYPE, major).unwrap();
+                t.SetGUID(&MF_MT_SUBTYPE, sub).unwrap();
+                t
+            };
+            reader
+                .SetCurrentMediaType(video, None, &want(&MFMediaType_Video, &MFVideoFormat_NV12))
+                .unwrap();
+            let pcm = want(&MFMediaType_Audio, &MFAudioFormat_PCM);
+            pcm.SetUINT32(&MF_MT_AUDIO_BITS_PER_SAMPLE, 16).unwrap();
+            reader.SetCurrentMediaType(audio, None, &pcm).unwrap();
+            let size = reader
+                .GetCurrentMediaType(video)
+                .unwrap()
+                .GetUINT64(&MF_MT_FRAME_SIZE)
+                .unwrap();
+            let (w, h) = ((size >> 32) as usize, (size & 0xffff_ffff) as usize);
+            let at = reader.GetCurrentMediaType(audio).unwrap();
+            let rate = at.GetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND).unwrap() as f64;
+            let channels = at.GetUINT32(&MF_MT_AUDIO_NUM_CHANNELS).unwrap() as usize;
+            let read = |stream: u32, each: &mut dyn FnMut(f64, &[u8])| loop {
+                let (mut flags, mut time, mut sample) = (0u32, 0i64, None);
+                reader
+                    .ReadSample(
+                        stream,
+                        0,
+                        None,
+                        Some(&mut flags),
+                        Some(&mut time),
+                        Some(&mut sample),
+                    )
+                    .unwrap();
+                if let Some(s) = sample {
+                    let b = s.ConvertToContiguousBuffer().unwrap();
+                    let (mut data, mut len) = (std::ptr::null_mut(), 0u32);
+                    b.Lock(&mut data, None, Some(&mut len)).unwrap();
+                    each(time as f64 / HNS, std::slice::from_raw_parts(data, len as usize));
+                    let _ = b.Unlock();
+                }
+                if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                    break;
+                }
+            };
+            // The picture: the mean of every 8th luma sample.
+            let mut flashes = Vec::new();
+            let mut dark = true;
+            read(video, &mut |t, px| {
+                let luma = &px[..(w * h).min(px.len())];
+                let n = luma.len() / 8;
+                let mean = luma.iter().step_by(8).map(|v| *v as u64).sum::<u64>() / n.max(1) as u64;
+                if dark && mean > 128 {
+                    flashes.push(t);
+                }
+                if mean < 64 {
+                    dark = true;
+                } else if mean > 128 {
+                    dark = false;
+                }
+            });
+            // The sound: the first loud sample after a second of quiet.
+            let mut beeps = Vec::new();
+            let mut quiet_since = 0.0f64;
+            let mut last_loud = f64::NEG_INFINITY;
+            read(audio, &mut |t, bytes| {
+                for (i, frame) in bytes.chunks_exact(2 * channels).enumerate() {
+                    let at = t + i as f64 / rate;
+                    let loud = frame
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .any(|s| i16::from_le_bytes(*s).unsigned_abs() > 6000);
+                    if loud {
+                        if at - last_loud > 1.0 && at - quiet_since > 1.0 {
+                            beeps.push(at);
+                        }
+                        last_loud = at;
+                    } else if at - last_loud > 0.2 && last_loud > quiet_since {
+                        quiet_since = last_loud;
+                    }
+                }
+            });
+            (flashes, beeps)
+        }
+    }
+
+    /// VID-030: the file keeps the picture and the sound where they were written
+    /// (no shift from the sound's encoder), and `signals` finds them: flashes at 3,
+    /// 13 and 23 s with beeps 20 ms after, on time and 30 ms before.
+    #[test]
+    fn flashes_and_beeps_stay_in_place() {
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return; // no monitor (a headless runner)
+        };
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let (w, h, fps) = (320u32, 240u32, 30u32);
+        let whole = RECT {
+            left: 0,
+            top: 0,
+            right: w as i32,
+            bottom: h as i32,
+        };
+        let conv = converter(&gpu, (w, h), (0, 0), whole, (w, h), fps, 1.0).unwrap();
+        let path = tempfile_dir().join("signals.mp4");
+        let Ok(writer) = writer(&gpu, &path, (w, h), fps, 1_000_000, false, Some(48_000)) else {
+            return;
+        };
+        let frame_of = |v: u8| {
+            let px = vec![v; (w * h * 4) as usize];
+            // SAFETY: the pixels are w × h BGRA, rows of w × 4 bytes.
+            unsafe {
+                gpu.context
+                    .UpdateSubresource(&conv.frame, 0, None, px.as_ptr() as _, w * 4, 0);
+            }
+            conv.nv12(&gpu, false, &Effects::default(), &Live::default())
+                .unwrap()
+        };
+        let (black, white) = (frame_of(0), frame_of(255));
+        let interval = 1.0 / fps as f64;
+        for i in 0..25 * fps {
+            let t = i as f64 * interval;
+            let lit = [3.0, 13.0, 23.0].iter().any(|f| t >= *f - 1e-6 && t < f + 0.1);
+            writer
+                .write(&gpu, if lit { &white } else { &black }, t, interval)
+                .unwrap();
+        }
+        let beeps = [3.02, 13.0, 22.97];
+        for second in 0..25 {
+            let chunk: Vec<i16> = (0..48_000)
+                .flat_map(|n| {
+                    let t = second as f64 + n as f64 / 48_000.0;
+                    let on = beeps.iter().any(|b| t >= *b && t < b + 0.1);
+                    let v = if on {
+                        ((t * 1000.0 * std::f64::consts::TAU).sin() * 16_000.0) as i16
+                    } else {
+                        0
+                    };
+                    [v, v]
+                })
+                .collect();
+            writer.write_audio(&chunk, second as f64).unwrap();
+        }
+        writer.finish().unwrap();
+        drop(writer);
+        let (flashes, found) = signals(&path);
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(flashes.len(), 3, "{flashes:?}");
+        assert_eq!(found.len(), 3, "{found:?}");
+        for (f, want) in flashes.iter().zip([3.0, 13.0, 23.0]) {
+            assert!((f - want).abs() < 0.002, "flash {f} for {want}");
+        }
+        for (b, want) in found.iter().zip(beeps) {
+            assert!((b - want).abs() < 0.003, "beep {b} for {want}");
+        }
+    }
+
+    /// VID-030's sync: the gap between each flash and its beep in a recording of
+    /// `scripts/dev/sync-signal.html` (`XS_SYNC_FILE=<video>`), at most 40 ms.
+    /// `cargo test -p xs-video --release -- --ignored --nocapture sync_check`
+    #[test]
+    #[ignore]
+    fn sync_check() {
+        let Some(path) = std::env::var_os("XS_SYNC_FILE") else {
+            return;
+        };
+        let (flashes, beeps) = signals(std::path::Path::new(&path));
+        println!("{} flashes, {} beeps", flashes.len(), beeps.len());
+        let mut worst: f64 = 0.0;
+        let mut paired = 0;
+        for f in &flashes {
+            let Some(b) = beeps
+                .iter()
+                .copied()
+                .filter(|b| (b - f).abs() < 0.5)
+                .min_by(|a, b| (a - f).abs().total_cmp(&(b - f).abs()))
+            else {
+                println!("{f:8.3} s: flash without a beep");
+                continue;
+            };
+            let gap = (b - f) * 1000.0;
+            println!("{f:8.3} s: the sound {gap:+.0} ms after the picture");
+            worst = worst.max(gap.abs());
+            paired += 1;
+        }
+        println!("{paired} pairs, worst {worst:.0} ms");
+        assert!(paired > 0, "no flash with its beep");
+        assert!(worst <= 40.0, "worst gap {worst:.0} ms");
+    }
+
+    /// VID-030's start: in 20 recordings of a small area of the screen, each after
+    /// half a second of Ready (the engine warming up, as the bar does), the first
+    /// frame is written at most 300 ms after asking to record (the engine alone;
+    /// `record.stop`'s `startupMs` measures it from the Record button). The videos
+    /// are deleted at once.
+    /// `cargo test -p xs-video --release -- --ignored --nocapture twenty_starts`
+    #[test]
+    #[ignore]
+    fn twenty_starts() {
+        let dir = tempfile_dir();
+        let mut times = Vec::new();
+        for i in 0..20 {
+            let path = dir.join(format!("start-{i}.mp4"));
+            let area = Area {
+                x: 0,
+                y: 0,
+                width: 320,
+                height: 200,
+            };
+            warm_up(area, false);
+            std::thread::sleep(Duration::from_millis(500));
+            let asked = Instant::now();
+            let r = Recorder::start(Options {
+                area: Area {
+                    x: 0,
+                    y: 0,
+                    width: 320,
+                    height: 200,
+                },
+                scale: 1.0,
+                quality: Quality::High,
+                max_size: MaxSize::Original,
+                limit: None,
+                software_only: false,
+                cursor: false,
+                system_audio: false,
+                window: None,
+                effects: Default::default(),
+                path: path.clone(),
+            })
+            .unwrap();
+            std::thread::sleep(Duration::from_millis(400));
+            let s = r.stop().unwrap();
+            let _ = std::fs::remove_file(&path);
+            let ms = s.first_frame_at.unwrap().duration_since(asked).as_millis();
+            println!(
+                "{i:2}: first frame after {ms} ms ({}), {} late",
+                s.encoder, s.late_frames
+            );
+            times.push(ms);
+        }
+        let worst = *times.iter().max().unwrap();
+        println!("worst {worst} ms");
+        assert!(worst <= 300, "{times:?}");
+    }
+
+    /// VID-030's size: the reference minute (an interface demo drawn in memory, no
+    /// screen) at 1080p30 in High takes at most 20 MB, with each encoder there is.
+    /// `cargo test -p xs-video --release -- --ignored --nocapture reference_minute`
+    #[test]
+    #[ignore]
+    fn reference_minute() {
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return;
+        };
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let (w, h) = (1920u32, 1080u32);
+        let quality = Quality::High;
+        let fps = quality.fps();
+        let interval = 1.0 / fps as f64;
+        let whole = RECT {
+            left: 0,
+            top: 0,
+            right: w as i32,
+            bottom: h as i32,
+        };
+        let conv = converter(&gpu, (w, h), (0, 0), whole, (w, h), fps, 1.0).unwrap();
+        let dir = tempfile_dir();
+        let mut measured = 0;
+        for hardware in [true, false] {
+            let name = if hardware { "hardware" } else { "software" };
+            let path = dir.join(format!("reference-{name}.mp4"));
+            let _ = std::fs::remove_file(&path);
+            let Ok(writer) = writer(&gpu, &path, (w, h), fps, quality.bitrate(w, h), hardware, None) else {
+                println!("{name}: no encoder");
+                continue;
+            };
+            let mut demo = crate::demo::Demo::new(w, h);
+            let started = Instant::now();
+            let mut frames = 0;
+            let mut last = None;
+            for i in 0..60 * fps {
+                if !demo.step(i, fps) {
+                    continue;
+                }
+                // SAFETY: the pixels are w × h BGRA, rows of w × 4 bytes.
+                unsafe {
+                    gpu.context
+                        .UpdateSubresource(&conv.frame, 0, None, demo.px.as_ptr() as _, w * 4, 0);
+                }
+                let frame = conv
+                    .nv12(&gpu, false, &Effects::default(), &Live::default())
+                    .unwrap();
+                writer.write(&gpu, &frame, i as f64 * interval, interval).unwrap();
+                last = Some(frame);
+                frames += 1;
+            }
+            // The last picture held to the minute's end, like the recorder.
+            if let Some(f) = &last {
+                writer.write(&gpu, f, 60.0 - interval, interval).unwrap();
+            }
+            writer.finish().unwrap();
+            drop(writer);
+            let bytes = std::fs::metadata(&path).unwrap().len();
+            let (_, _, _, end) = probe(&path).unwrap();
+            println!(
+                "{name}: {frames} frames, {:.1} s, {:.2} MB, encoded in {:.1} s",
+                end,
+                bytes as f64 / 1e6,
+                started.elapsed().as_secs_f64()
+            );
+            let _ = std::fs::remove_file(&path);
+            assert!(bytes <= 20_000_000, "{name}: {bytes} bytes");
+            measured += 1;
+        }
+        assert!(measured > 0, "no encoder at all");
     }
 
     /// The effects drawn on a grey picture in memory (no screen, no input): the

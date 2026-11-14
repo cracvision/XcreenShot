@@ -27,6 +27,8 @@ struct Running {
     open: bool,
     /// What Restart goes back to (VID-014).
     again: Ready,
+    /// When Record was pressed or the countdown ended (VID-030).
+    pressed: std::time::Instant,
 }
 
 /// Open in (VID-052): `open` is `editor` or `none`; without it, the Video tab says, and
@@ -253,6 +255,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             open: opens_editor(core, ctx.source, p),
         };
         *svc.ready.lock().unwrap() = Some(r.clone());
+        warm(core, &r);
         let state = ready_state(core, &r);
         bar(core, Some(state.clone()));
         tell(core, ctx.source, "record.ready", state.clone());
@@ -269,6 +272,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             open: opens_editor(core, ctx.source, p),
         };
         *svc.ready.lock().unwrap() = Some(r.clone());
+        warm(core, &r);
         let state = ready_state(core, &r);
         bar(core, Some(state.clone()));
         tell(core, ctx.source, "record.ready", state.clone());
@@ -290,10 +294,24 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         open: opens_editor(core, ctx.source, p),
     };
     *svc.ready.lock().unwrap() = Some(r.clone());
+    warm(core, &r);
     let state = ready_state(core, &r);
     bar(core, Some(state.clone()));
     tell(core, ctx.source, "record.ready", state.clone());
     start_at_once(core, ctx, state)
+}
+
+/// Gets the engine ready while the bar waits for Record (VID-030: the start).
+fn warm(core: &Core, r: &Ready) {
+    xs_video::warm_up(
+        Area {
+            x: r.rect.x,
+            y: r.rect.y,
+            width: r.rect.width,
+            height: r.rect.height,
+        },
+        core.settings.get_bool("video.softwareEncoding"),
+    );
 }
 
 /// Where XcreenShot notes that it hid the desktop's icons, to show them again even after
@@ -621,6 +639,9 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             return Err(crate::cancelled(lang));
         }
     }
+    // VID-030: the start's delay counts from here, Record pressed or the countdown
+    // over.
+    let pressed = std::time::Instant::now();
     let ready_limit = ready.as_ref().and_then(|r| r.limit);
     let open = match &ready {
         Some(r) => r.open,
@@ -701,6 +722,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         // From the bar: it stays Ready, to try again or cancel.
         if let Some(r) = &again_of {
             *svc.ready.lock().unwrap() = Some(r.clone());
+            warm(core, r);
         }
         CommandError::new(
             ErrorCode::Internal,
@@ -727,6 +749,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         wants_audio,
         open,
         again,
+        pressed,
     };
     let status = status_of(&running);
     {
@@ -785,6 +808,7 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     restore_icons(core);
     let wants_audio = r.wants_audio;
     let open = r.open;
+    let pressed = r.pressed;
     let summary = if cancel {
         r.recorder.cancel()
     } else {
@@ -827,7 +851,15 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         "encoder": result.encoder,
         "audio": result.audio,
     });
+    // VID-030: from Record to the first frame, and the frames lost.
+    let startup_ms = result
+        .first_frame_at
+        .map(|t| t.saturating_duration_since(pressed).as_millis() as u64);
     let mut value = value;
+    if let Some(ms) = startup_ms {
+        value["startupMs"] = json!(ms);
+    }
+    value["lateFrames"] = json!(result.late_frames);
     let mut warnings = Vec::new();
     if result.window_closed {
         // The window it followed closed (VID-005).
@@ -846,6 +878,8 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     }
     tracing::info!(
         frames = result.frames,
+        late_frames = result.late_frames,
+        startup_ms = startup_ms,
         bytes = result.bytes,
         encoder = result.encoder,
         "recording saved"
@@ -928,6 +962,7 @@ pub fn restart(core: &Core, ctx: &Context) -> CommandResult {
         core.host().hide_for_capture(false);
     }
     *service(core).ready.lock().unwrap() = Some(again.clone());
+    warm(core, &again);
     let state = ready_state(core, &again);
     bar(core, Some(state.clone()));
     tell(core, ctx.source, "record.ready", state.clone());

@@ -1391,7 +1391,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .assignable()
             .mutates()
             .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
-        B::new("record.stop", &["VID-024", "VID-013"])
+        B::new("record.stop", &["VID-024", "VID-013", "VID-030"])
             .scopes(ALL)
             .assignable()
             .mutates()
@@ -1403,7 +1403,9 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
                 "frames": {"type": "integer"}, "bytes": {"type": "integer"},
-                "encoder": {"type": "string", "enum": ["hardware", "software"]}
+                "encoder": {"type": "string", "enum": ["hardware", "software"]},
+                "startupMs": {"type": "integer", "description": "From Record (or the countdown's end) to the first frame (VID-030)"},
+                "lateFrames": {"type": "integer", "description": "Frames lost: changes that waited past their frame's turn (VID-030)"}
             }})),
         B::new("record.restart", &["VID-014", "VID-024"])
             .scopes(ALL)
