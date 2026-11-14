@@ -14,6 +14,7 @@ import { Launcher } from "./windows/Launcher";
 import { WebpagePrompt } from "./windows/WebpagePrompt";
 import { AskText } from "./windows/AskText";
 import { RecordBar, RecordFrame } from "./windows/RecordBar";
+import { LiveDrawBar, LiveDrawOverlay } from "./windows/LiveDraw";
 import { Working } from "./windows/Working";
 import { Welcome } from "./windows/Welcome";
 import { isOverlay, windowLabel } from "./windowKind";
@@ -50,6 +51,10 @@ export function App() {
       return <RecordBar />;
     case "recframe":
       return <RecordFrame />;
+    case "livedraw":
+      return <LiveDrawOverlay />;
+    case "drawbar":
+      return <LiveDrawBar />;
     case "working":
       return <Working />;
     case "help":

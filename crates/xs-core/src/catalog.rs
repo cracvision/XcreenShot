@@ -1038,6 +1038,38 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .result(json!({"type": "object", "properties": {
                 "documentId": {"type": "string"}, "path": {"type": "string"}
             }})),
+        B::new("record.draw", &["VID-048", "VID-049", "VID-050", "VID-051", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "on": {"type": "boolean", "description": "On or off; without it (and without options), the other way"},
+                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step"]},
+                    "color": {"type": "string", "format": "color", "description": "#RRGGBB"},
+                    "width": {"type": "string", "enum": ["thin", "medium", "thick"]},
+                    "fade": {"type": "integer", "minimum": 0, "maximum": 30, "description": "Seconds before a shape fades; 0: never while on"},
+                    "undo": {"type": "boolean", "description": "Takes away the last shape"},
+                    "clear": {"type": "boolean", "description": "Takes away every shape"},
+                    "query": {"type": "boolean", "description": "Only what it shows now; changes nothing"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "on": {"type": "boolean"}, "tool": {"type": "string"}, "color": {"type": "string"},
+                "width": {"type": "string"}, "fade": {"type": ["number", "null"]}, "shapes": {"type": "array"}
+            }})),
+        B::new("record.draw_shape", &["VID-049"])
+            .mutates()
+            .params(params(
+                json!({
+                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step"]},
+                    "points": {"type": "array", "items": {"type": "array"}, "minItems": 1, "description": "[[x, y], ...] in physical pixels of the monitor drawn on, from its top left: from and to for an arrow, corners for a rectangle or an oval, the path of a pen, the place of a step"},
+                    "color": {"type": "string", "format": "color"}
+                }),
+                &["points"],
+            ))
+            .result(json!({"type": "object"})),
         B::new("record.effects", &["VID-045", "VID-046", "VID-047", "VID-011"])
             .mutates()
             .params(params(

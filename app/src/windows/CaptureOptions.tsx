@@ -181,6 +181,8 @@ export function VideoOptions({
   const highlight = useSetting("video.highlight", false);
   const clicks = useSetting("video.clicks", false);
   const keys = useSetting("video.keys", false);
+  // Live drawing (VID-051): its button and shortcut while recording.
+  const liveDraw = useSetting("video.liveDraw", true);
   const set = (key: string, v: boolean) =>
     void run("settings.set", { key, value: v }).catch(() => undefined);
   // A pointer effect switches the pointer on (VID-044): the command does it.
@@ -238,6 +240,14 @@ export function VideoOptions({
       <label className="panel-check">
         <input type="checkbox" checked={keys} onChange={(e) => effect("keys", e.target.checked)} />
         {t("ui.panel.video_keys")}
+      </label>
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={liveDraw}
+          onChange={(e) => set("video.liveDraw", e.target.checked)}
+        />
+        {t("ui.panel.video_livedraw")}
       </label>
       <label className="panel-field" htmlFor={`${id}-vlim`}>
         <span>{t("ui.panel.video_limit")}</span>

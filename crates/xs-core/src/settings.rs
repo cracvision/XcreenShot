@@ -517,6 +517,44 @@ pub fn definitions() -> Vec<SettingDef> {
             "VID-046",
         ),
         def("video.keys", "video", boolean(), json!(false), "VID-047"),
+        // Live drawing (VID-048 to VID-051): available, also without a recording, and
+        // its remembered options.
+        def("video.liveDraw", "video", boolean(), json!(true), "VID-051"),
+        def(
+            "video.liveDrawAnytime",
+            "video",
+            boolean(),
+            json!(false),
+            "VID-051",
+        ),
+        def(
+            "video.drawTool",
+            "video",
+            one_of(&["arrow", "rect", "oval", "pen", "step"]),
+            json!("arrow"),
+            "VID-049",
+        ),
+        def(
+            "video.drawColor",
+            "video",
+            json!({"type": "string", "format": "color"}),
+            json!("#E53935"),
+            "VID-050",
+        ),
+        def(
+            "video.drawWidth",
+            "video",
+            one_of(&["thin", "medium", "thick"]),
+            json!("medium"),
+            "VID-050",
+        ),
+        def(
+            "video.drawFade",
+            "video",
+            json!({"type": "integer", "minimum": 0, "maximum": 30}),
+            json!(3),
+            "VID-050",
+        ),
         def(
             "video.keysWhich",
             "video",

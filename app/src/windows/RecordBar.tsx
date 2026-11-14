@@ -5,6 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
+import { useSetting } from "../store";
 import { clock } from "./recClock";
 
 interface RecState {
@@ -16,6 +17,8 @@ interface RecState {
   cursor?: boolean;
   /** A wave at each click (VID-046). */
   clicks?: boolean;
+  /** Live drawing is on (VID-048). */
+  drawing?: boolean;
   /** The system's sound, chosen while Ready (VID-040). */
   systemAudio?: boolean;
   /** The Ready summary (VID-006): frames, codec and minutes that fit (VID-023). */
@@ -29,6 +32,13 @@ export function RecordBar() {
   const [state, setState] = useState<RecState>({ status: "ready" });
   // Restart or Cancel waiting for a yes, after 10 s recorded (VID-014).
   const [asking, setAsking] = useState<"cancel" | "restart" | "image" | null>(null);
+  // Live drawing (VID-048): its button, when the Video tab allows it (VID-051).
+  const liveDraw = useSetting("video.liveDraw", true);
+  const [drawing, setDrawing] = useState(false);
+  useEffect(() => {
+    const off = listen<{ on: boolean }>("xs://livedraw", (e) => setDrawing(e.payload.on));
+    return () => void off.then((f) => f());
+  }, []);
   // When the last state arrived, and now: the time moves on between updates.
   const [since, setSince] = useState(0);
   const [now, setNow] = useState(0);
@@ -181,6 +191,21 @@ export function RecordBar() {
       >
         {t("ui.recbar.clicks")}
       </button>
+      {liveDraw && (recording || paused) && (
+        <button
+          type="button"
+          className="btn small recbar-toggle"
+          aria-pressed={drawing}
+          title={t("ui.livedraw.title")}
+          onClick={() =>
+            void run<{ on: boolean }>("record.draw", { on: !drawing })
+              .then((r) => setDrawing(r.on))
+              .catch(() => undefined)
+          }
+        >
+          {t("ui.livedraw.button")}
+        </button>
+      )}
       {ready && (
         <button
           type="button"

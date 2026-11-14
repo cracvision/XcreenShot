@@ -958,6 +958,14 @@
     "video_combine": {
       "title": "Combinar videos",
       "description": "Videos uno tras otro como un video nuevo en la biblioteca: tan grande como el mayor, los más pequeños centrados sobre negro."
+    },
+    "record_draw": {
+      "title": "Dibujo en vivo",
+      "description": "Activa o desactiva Dibujo en vivo (formas sobre la pantalla al grabar) y cambia su herramienta, color, grosor y desvanecimiento."
+    },
+    "record_draw_shape": {
+      "title": "Dibujar una forma",
+      "description": "Dibuja una flecha, un rectángulo, un óvalo, un trazo de lápiz o un paso con Dibujo en vivo, como con el ratón."
     }
   },
   "settings": {
@@ -1448,6 +1456,42 @@
         "medium": "Mediano",
         "large": "Grande"
       }
+    },
+    "video_liveDraw": {
+      "label": "Dibujo en vivo",
+      "description": "El botón Dibujar de la barra de grabación y su atajo: formas dibujadas sobre la pantalla mientras grabas, que desaparecen solas."
+    },
+    "video_liveDrawAnytime": {
+      "label": "Dibujo en vivo en cualquier momento",
+      "description": "Su atajo funciona también sin grabar, sobre el monitor donde está el puntero: para señalar cosas al compartir pantalla."
+    },
+    "video_drawTool": {
+      "label": "Herramienta de Dibujo en vivo",
+      "description": "Con la que empieza.",
+      "options": {
+        "arrow": "Flecha",
+        "rect": "Rectángulo",
+        "oval": "Óvalo",
+        "pen": "Lápiz",
+        "step": "Paso"
+      }
+    },
+    "video_drawColor": {
+      "label": "Color de Dibujo en vivo",
+      "description": "El color de las siguientes formas."
+    },
+    "video_drawWidth": {
+      "label": "Grosor de Dibujo en vivo",
+      "description": "Lo gruesas que son las líneas.",
+      "options": {
+        "thin": "Fino",
+        "medium": "Medio",
+        "thick": "Grueso"
+      }
+    },
+    "video_drawFade": {
+      "label": "Las formas desaparecen tras",
+      "description": "Segundos, de 1 a 30; 0: nunca mientras Dibujo en vivo esté activo."
     }
   },
   "errors": {
@@ -1569,7 +1613,10 @@
     "gif_cancelled": "Se canceló el GIF: no se guardó nada.",
     "combine_two": "Elige al menos dos videos para combinarlos.",
     "combine_not_video": "{{name}} no es un video: los GIF y las imágenes no se combinan.",
-    "combine_cancelled": "Se canceló la combinación: no se guardó nada."
+    "combine_cancelled": "Se canceló la combinación: no se guardó nada.",
+    "livedraw_off": "Dibujo en vivo está desactivado en la pestaña Video del panel de captura.",
+    "livedraw_not_recording": "Dibujo en vivo funciona al grabar. Para usarlo en cualquier momento, activa Preferencias > Video > Dibujo en vivo en cualquier momento.",
+    "livedraw_inactive": "Dibujo en vivo no está activo."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2542,7 +2589,8 @@
       "video_selection_window": "Ventana",
       "video_highlight": "Resaltar cursor",
       "video_clicks": "Animación de clic",
-      "video_keys": "Mostrar teclas pulsadas"
+      "video_keys": "Mostrar teclas pulsadas",
+      "video_livedraw": "Dibujo en vivo (botón Dibujar)"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4350,6 +4398,26 @@
         "result": "{{count}} videos · {{time}} · {{width}} × {{height}} px",
         "busy": "Combinando… {{percent}} %"
       }
+    },
+    "livedraw": {
+      "title": "Dibujo en vivo",
+      "button": "Dibujar",
+      "arrow": "Flecha (A)",
+      "rect": "Rectángulo (R)",
+      "oval": "Óvalo (O)",
+      "pen": "Lápiz (P)",
+      "step": "Paso (1)",
+      "color": "Color {{n}} ({{key}})",
+      "width": "Grosor",
+      "thin": "Fino",
+      "medium": "Medio",
+      "thick": "Grueso",
+      "fade": "Desaparecen tras",
+      "never": "Nunca",
+      "seconds": "{{n}} s",
+      "undo": "Deshacer (Z)",
+      "clear": "Borrar todo (Supr)",
+      "exit": "Dejar de dibujar (Esc)"
     }
   },
   "history": {

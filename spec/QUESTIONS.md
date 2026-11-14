@@ -254,6 +254,16 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Dudas del equipo de construcción (M4, entrega 8: Dibujo en vivo)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| VID-048 | ¿Cómo se dibuja encima de las apps sin que reciban los clics? | Una ventana transparente sobre el monitor grabado que solo muestra las formas (los clics la atraviesan y sale en el video) y unos ganchos de bajo nivel de ratón y teclado, solo mientras el modo está activo, que se quedan los clics y las teclas sin Ctrl, Alt ni Win; el movimiento, la rueda, los clics en las ventanas de XcreenShot y los atajos globales pasan | Provisional |
+| VID-048 | El puntero de la herramienta | Por ahora el puntero no cambia: cambiar el puntero de todo el sistema es arriesgado si la app se cierra de golpe | Provisional |
+| VID-050 | Teclas de color: el comportamiento dice "de `2` a `7` para los seis primeros colores" y el criterio dice "con `3`, el tercer color" | Se sigue el comportamiento: `2` es el primer color, `3` el segundo… `7` el sexto. **Pregunta para Carlos:** ¿prefieres que `3` sea el tercero (y entonces `2` el segundo, y el primero sin tecla)? | Pregunta |
+| VID-075 | Atajo de Dibujo en vivo en el perfil de compatibilidad | `Ctrl+Alt+Mayús+D` en los dos perfiles de Windows: `Ctrl+Mayús+D` ya es Duplicar del editor | Provisional |
+| VID-049 | Lupa | Queda para más adelante: necesita leer la pantalla en cada fotograma | Provisional |
+
 ## Dudas del equipo de construcción (M4, entrega 6: el video en el editor)
 
 | ID | Duda | Propuesta | Estado |

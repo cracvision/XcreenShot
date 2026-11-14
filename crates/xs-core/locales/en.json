@@ -958,6 +958,14 @@
     "video_combine": {
       "title": "Combine videos",
       "description": "Videos one after the other as a new video in the library: as large as the largest, the smaller ones centered on black."
+    },
+    "record_draw": {
+      "title": "Live drawing",
+      "description": "Switches live drawing on or off (shapes over the screen while recording) and sets its tool, color, thickness and fading."
+    },
+    "record_draw_shape": {
+      "title": "Draw a shape",
+      "description": "Draws an arrow, rectangle, oval, pen stroke or step with live drawing, as if with the mouse."
     }
   },
   "settings": {
@@ -1448,6 +1456,42 @@
         "medium": "Medium",
         "large": "Large"
       }
+    },
+    "video_liveDraw": {
+      "label": "Live drawing",
+      "description": "The Draw button on the recording bar and its shortcut: shapes drawn over the screen while recording, which fade by themselves."
+    },
+    "video_liveDrawAnytime": {
+      "label": "Live drawing at any time",
+      "description": "Its shortcut also works without a recording, over the monitor under the pointer: to point things out while sharing your screen."
+    },
+    "video_drawTool": {
+      "label": "Live drawing tool",
+      "description": "The tool it starts with.",
+      "options": {
+        "arrow": "Arrow",
+        "rect": "Rectangle",
+        "oval": "Oval",
+        "pen": "Pen",
+        "step": "Step"
+      }
+    },
+    "video_drawColor": {
+      "label": "Live drawing color",
+      "description": "The color of the next shapes."
+    },
+    "video_drawWidth": {
+      "label": "Live drawing thickness",
+      "description": "How thick the lines are.",
+      "options": {
+        "thin": "Thin",
+        "medium": "Medium",
+        "thick": "Thick"
+      }
+    },
+    "video_drawFade": {
+      "label": "Shapes disappear after",
+      "description": "Seconds, 1 to 30; 0: never while Live drawing is on."
     }
   },
   "errors": {
@@ -1569,7 +1613,10 @@
     "gif_cancelled": "The GIF was cancelled: nothing was saved.",
     "combine_two": "Choose at least two videos to combine.",
     "combine_not_video": "{{name}} is not a video: GIFs and images cannot be combined.",
-    "combine_cancelled": "The combination was cancelled: nothing was saved."
+    "combine_cancelled": "The combination was cancelled: nothing was saved.",
+    "livedraw_off": "Live drawing is off in the Video tab of the capture panel.",
+    "livedraw_not_recording": "Live drawing works while recording. To use it at any time, turn on Preferences > Video > Live drawing at any time.",
+    "livedraw_inactive": "Live drawing is not on."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2542,7 +2589,8 @@
       "video_selection_window": "Window",
       "video_highlight": "Highlight cursor",
       "video_clicks": "Click animation",
-      "video_keys": "Show keys pressed"
+      "video_keys": "Show keys pressed",
+      "video_livedraw": "Live drawing (Draw button)"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4350,6 +4398,26 @@
         "result": "{{count}} videos · {{time}} · {{width}} × {{height}} px",
         "busy": "Combining… {{percent}} %"
       }
+    },
+    "livedraw": {
+      "title": "Live drawing",
+      "button": "Draw",
+      "arrow": "Arrow (A)",
+      "rect": "Rectangle (R)",
+      "oval": "Oval (O)",
+      "pen": "Pen (P)",
+      "step": "Step (1)",
+      "color": "Color {{n}} ({{key}})",
+      "width": "Thickness",
+      "thin": "Thin",
+      "medium": "Medium",
+      "thick": "Thick",
+      "fade": "Disappear after",
+      "never": "Never",
+      "seconds": "{{n}} s",
+      "undo": "Undo (Z)",
+      "clear": "Clear all (Delete)",
+      "exit": "Stop drawing (Esc)"
     }
   },
   "history": {

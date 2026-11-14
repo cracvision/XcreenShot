@@ -445,6 +445,8 @@ pub fn slots() -> Vec<Slot> {
         capture("record.video", "record.video", ""),
         capture("record.toggle", "record.toggle", ""),
         capture("record.stop", "record.stop", ""),
+        // Live drawing on and off (VID-048, VID-075).
+        capture("record.draw", "record.draw", ""),
         // No default: losing a recording by accident is worse (VID-075).
         capture("record.restart", "record.restart", ""),
         capture("record.cancel", "record.cancel", ""),
@@ -806,6 +808,9 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("record.toggle", Global, Compatibility, Macos) => "Ctrl+Shift+Space",
         ("record.stop", Global, Coexistence, Windows) => "Ctrl+Shift+F10",
         ("record.stop", Global, Compatibility, Windows) => "Shift+F10",
+        // Ctrl+Shift+D is Duplicate of the editor (Compatibility, Windows).
+        ("record.draw", Global, Compatibility, Macos) => "Ctrl+Shift+KeyD",
+        ("record.draw", Global, _, _) => "Ctrl+Alt+Shift+KeyD",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",

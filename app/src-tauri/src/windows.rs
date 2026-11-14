@@ -343,6 +343,86 @@ static BAR_PLACE: std::sync::Mutex<(Place, Place)> = std::sync::Mutex::new((None
 /// The recording bar and the border around the recorded area (VID-011, VID-020):
 /// both stay out of the video (content protection) and the border lets clicks
 /// through. `None` closes them.
+/// Live drawing's overlay (VID-048): the shapes, over a whole monitor.
+pub const LIVEDRAW: &str = "livedraw";
+/// Live drawing's toolbar (VID-049, VID-050).
+pub const DRAWBAR: &str = "drawbar";
+
+/// Shows live drawing's overlay over the monitor holding `area` and its toolbar, or
+/// closes both (VID-048 to VID-051). The overlay lets every click through and shows
+/// in videos; the toolbar never shows in them.
+pub fn live_draw(app: &AppHandle, area: Option<(i32, i32, u32, u32)>) -> tauri::Result<()> {
+    let Some((x, y, w, h)) = area else {
+        for label in [LIVEDRAW, DRAWBAR] {
+            if let Some(win) = app.get_webview_window(label) {
+                win.destroy()?;
+            }
+        }
+        return Ok(());
+    };
+    let (cx, cy) = (x as f64 + w as f64 / 2.0, y as f64 + h as f64 / 2.0);
+    let Some(monitor) = app
+        .monitor_from_point(cx, cy)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten())
+    else {
+        return Ok(());
+    };
+    let (mp, ms, scale) = (*monitor.position(), *monitor.size(), monitor.scale_factor());
+    if app.get_webview_window(LIVEDRAW).is_none() {
+        let overlay = WebviewWindowBuilder::new(app, LIVEDRAW, WebviewUrl::App("index.html".into()))
+            .title("XcreenShot")
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .focused(false)
+            .focusable(false)
+            .visible(false)
+            .content_protected(false)
+            .theme(theme(app))
+            .build()?;
+        overlay.set_position(mp)?;
+        overlay.set_size(ms)?;
+        let _ = overlay.set_ignore_cursor_events(true);
+        overlay.show()?;
+    }
+    if app.get_webview_window(DRAWBAR).is_none() {
+        let (bw, bh) = (470.0, 46.0);
+        // Above the recording bar; at the top of the monitor without one.
+        let (px, py) = match app
+            .get_webview_window(RECBAR)
+            .and_then(|b| b.outer_position().ok())
+        {
+            Some(p) => (p.x as f64, (p.y as f64 - (bh + 8.0) * scale).max(mp.y as f64)),
+            None => (
+                mp.x as f64 + ms.width as f64 / 2.0 - bw * scale / 2.0,
+                mp.y as f64 + 12.0 * scale,
+            ),
+        };
+        let bar = WebviewWindowBuilder::new(app, DRAWBAR, WebviewUrl::App("index.html".into()))
+            .title("XcreenShot")
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .focused(false)
+            .visible(false)
+            .content_protected(true)
+            .theme(theme(app))
+            .inner_size(bw, bh)
+            .build()?;
+        bar.set_position(tauri::PhysicalPosition::new(px as i32, py as i32))?;
+        bar.show()?;
+    }
+    Ok(())
+}
+
 pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
     let Some(state) = state else {
         // Moved by the user: remembered for the session (VID-016).
@@ -798,9 +878,18 @@ pub fn restore_capture_panel(app: &AppHandle) {
 pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
     for w in app.webview_windows().values() {
         // Selection windows, the countdown, the recording bar and its border, and the
-        // working sign are always excluded.
+        // working sign are always excluded; live drawing's shapes are always in, and its
+        // toolbar always out (VID-048).
         if w.label().starts_with(crate::overlay::LABEL_PREFIX)
-            || [crate::countdown::LABEL, RECBAR, RECFRAME, WORKING].contains(&w.label())
+            || [
+                crate::countdown::LABEL,
+                RECBAR,
+                RECFRAME,
+                WORKING,
+                LIVEDRAW,
+                DRAWBAR,
+            ]
+            .contains(&w.label())
         {
             continue;
         }

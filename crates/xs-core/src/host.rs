@@ -205,6 +205,13 @@ pub trait Host: Send + Sync {
     /// The recording bar and the border of the area (VID-011, VID-020): shown for
     /// `Some(state)` (`status`, `area`, `elapsed`, `width`, `height`), closed for `None`.
     fn recording_bar(&self, state: Option<Value>) {}
+    /// Live drawing (VID-048 to VID-051): its overlay over the monitor that holds
+    /// `area` (x, y, width, height in physical pixels of the virtual screen) and its
+    /// toolbar; neither with `None`. The overlay shows in captures and videos; clicks go
+    /// through it; the toolbar never shows in them.
+    fn live_draw(&self, area: Option<(i32, i32, u32, u32)>) {}
+    /// What the overlay and the toolbar show: the shapes, the tool, the colors.
+    fn live_draw_state(&self, state: Value) {}
     /// The system's Open dialog: the files chosen, or none if cancelled. `filters`
     /// are (name, extensions) (CAP-040, CAP-041).
     fn pick_files(

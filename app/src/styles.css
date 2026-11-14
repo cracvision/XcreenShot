@@ -7428,6 +7428,66 @@ button.lc-head:hover,
   accent-color: var(--brand);
 }
 
+/* Live drawing (VID-048 to VID-050): the shapes over the monitor, and the toolbar. */
+.livedraw {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.35));
+}
+
+.drawbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 100vh;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: grab;
+}
+
+.drawbar .btn.small,
+.drawbar select {
+  cursor: pointer;
+}
+
+.drawbar-tool[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.drawbar-color {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--control-line);
+  cursor: pointer;
+}
+
+.drawbar-color[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--brand-ink);
+}
+
+.drawbar-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 var(--space-1);
+  background: var(--line);
+}
+
+.drawbar select {
+  min-height: 30px;
+}
+
 /* Create GIF (VID-068). */
 .gif-form fieldset {
   display: grid;

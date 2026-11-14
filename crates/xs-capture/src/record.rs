@@ -346,6 +346,26 @@ pub fn menu_items(core: &Core) -> Vec<(String, String)> {
     }
 }
 
+/// The monitor of the recording, or of the area waiting to be recorded: live drawing
+/// covers it (VID-048).
+pub(crate) fn drawing_monitor(core: &Core) -> Option<(Rect, f64)> {
+    let svc = service(core);
+    let current = svc.current.lock().unwrap().as_ref().map(|r| r.rect);
+    let rect = current.or_else(|| svc.ready.lock().unwrap().as_ref().map(|r| r.rect))?;
+    monitor_of(rect)
+}
+
+/// The monitor under the pointer: its place and scale.
+pub(crate) fn pointer_monitor() -> Option<(Rect, f64)> {
+    let (x, y) = platform::cursor_position().unwrap_or((0, 0));
+    monitors()
+        .ok()?
+        .into_iter()
+        .map(|(_, i)| i)
+        .find(|i| i.rect.contains(x, y))
+        .map(|i| (i.rect, i.scale as f64))
+}
+
 /// The monitor holding the middle of `r`: its place and scale.
 fn monitor_of(r: Rect) -> Option<(Rect, f64)> {
     let (cx, cy) = (r.x + r.width as i32 / 2, r.y + r.height as i32 / 2);
@@ -720,6 +740,7 @@ fn watch(core: Weak<Core>, source: Source) {
 
 /// Stops (or cancels) `r` and reports the file.
 fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> CommandResult {
+    crate::livedraw::recording_ended(core);
     let wants_audio = r.wants_audio;
     let open = r.open;
     let summary = if cancel {

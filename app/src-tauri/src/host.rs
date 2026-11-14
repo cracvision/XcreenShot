@@ -416,6 +416,22 @@ impl Host for TauriHost {
         });
     }
 
+    fn live_draw(&self, area: Option<(i32, i32, u32, u32)>) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::live_draw(&app, area) {
+                tracing::warn!(error = %e, "live drawing windows");
+            }
+        });
+    }
+
+    fn live_draw_state(&self, state: Value) {
+        // The recording bar shows whether it is on (its Draw button).
+        for label in [windows::LIVEDRAW, windows::DRAWBAR, windows::RECBAR] {
+            let _ = self.app.emit_to(label, "xs://livedraw", state.clone());
+        }
+    }
+
     fn recording_event(&self, state: Value) {
         let _ = self.app.emit("xs://record", state);
         // Stop recording in the icon's menu, and its clock (VID-020).

@@ -19,6 +19,9 @@ pub mod freehand;
 pub mod inbox;
 pub mod interactive;
 pub mod interval;
+pub mod livedraw;
+#[cfg(windows)]
+mod livedraw_win;
 pub mod menus;
 pub mod multi;
 #[cfg(windows)]
@@ -1689,6 +1692,14 @@ pub fn extension() -> Extension {
         });
         let w = weak.clone();
         reg.handle("record.toggle", move |ctx, _p| record::toggle(&upgrade(&w)?, ctx));
+        let w = weak.clone();
+        reg.handle("record.draw", move |ctx, p| {
+            crate::livedraw::command(&upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("record.draw_shape", move |ctx, p| {
+            crate::livedraw::draw_shape(&*upgrade(&w)?, ctx, &p)
+        });
         let w = weak.clone();
         reg.handle("record.effects", move |ctx, p| {
             record::set_effects(&*upgrade(&w)?, ctx, &p)
