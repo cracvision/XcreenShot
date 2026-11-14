@@ -94,6 +94,7 @@ import {
   type ZoneObject,
 } from "./state";
 import { RedactOverlay } from "./RedactOverlay";
+import { MeasureOverlay } from "./MeasureOverlay";
 import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
@@ -3444,6 +3445,16 @@ export function Canvas({ doc, insets }: Props) {
                   })}
             </Layer>
           </Stage>
+          {/* Measure (EDT-094): its marks over the canvas, never in the image. */}
+          {tool === "measure" && (
+            <MeasureOverlay
+              documentId={doc.documentId}
+              version={doc.version}
+              toScreen={toScreen}
+              toCanvas={toCanvas}
+              insets={{ top: insetTop, right: insetRight, bottom: insetBottom, left: insetLeft }}
+            />
+          )}
           {/* Auto redact's panel is open: the words read can be clicked (SMT-014). */}
           <RedactOverlay
             documentId={doc.documentId}

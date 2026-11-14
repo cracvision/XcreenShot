@@ -1688,6 +1688,16 @@ export function SidePanel() {
   } else if (doc && tool === "crop") {
     title = t("ui.editor.tool.crop");
     body = <CropProperties />;
+  } else if (doc && tool === "measure") {
+    // Measure (EDT-094): nothing to set, only how it works.
+    title = t("ui.editor.tool.measure");
+    body = (
+      <ul className="measure-help">
+        {["hover", "alt", "drag", "dimension"].map((k) => (
+          <li key={k}>{t(`ui.measure.help_${k}`)}</li>
+        ))}
+      </ul>
+    );
   } else if (doc) {
     title = t("ui.editor.props_document");
     body = <DocumentProperties doc={doc} />;

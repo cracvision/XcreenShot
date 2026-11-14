@@ -1984,7 +1984,8 @@
       "editor_video_go_to": "Go to… (video)",
       "editor_video_save_frame": "Save frame",
       "editor_video_gif": "Create GIF",
-      "editor_video_info": "Video information"
+      "editor_video_info": "Video information",
+      "editor_tool_measure": "Measure tool"
     }
   },
   "tray": {
@@ -2929,7 +2930,8 @@
         "select": "Selection",
         "wand": "Magic wand",
         "favorites": "Favorites",
-        "cutout": "Cut out"
+        "cutout": "Cut out",
+        "measure": "Measure"
       },
       "undo": "Undo",
       "undo_named": "Undo {{label}}",
@@ -4930,6 +4932,15 @@
       "open_yes": "Open",
       "detected_one": "QR code detected",
       "detected_other": "{{count}} QR codes detected"
+    },
+    "measure": {
+      "label": "Measure",
+      "dimension": "Make a dimension",
+      "clear": "Clear the ruler",
+      "help_hover": "Point at the image: how far what is under the pointer goes to each side, and its size.",
+      "help_alt": "With an object selected, hold Alt and point at another: the space between them.",
+      "help_drag": "Drag to lay a ruler: its length, angle and ΔX/ΔY. Shift keeps it straight or at 45°; Esc clears it.",
+      "help_dimension": "Right-click the ruler > Make a dimension: a line with its length that stays in the image. The marks of Measure are never exported."
     }
   },
   "history": {

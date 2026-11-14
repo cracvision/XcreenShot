@@ -275,6 +275,12 @@ const ICONS = {
       <path d="M2.5 6H14v11.5" />
     </Svg>
   ),
+  measure: (
+    <Svg>
+      <path d="M2.5 12.5 12.5 2.5l5 5-10 10z" />
+      <path d="M6 9l1.5 1.5M8.5 6.5 10 8M11 4l1.5 1.5" />
+    </Svg>
+  ),
   bold: (
     <Svg>
       <path d="M6 4h5a3 3 0 010 6H6zM6 10h6a3 3 0 010 6H6z" strokeWidth="2" />

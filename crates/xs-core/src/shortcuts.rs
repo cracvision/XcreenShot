@@ -800,6 +800,8 @@ pub fn slots() -> Vec<Slot> {
         tool("editor.tool_fill", r#"{"tool":"fill"}"#),
         tool("editor.tool_eraser", r#"{"tool":"eraser"}"#),
         tool("editor.tool_crop", r#"{"tool":"crop"}"#),
+        // Measure (EDT-094): assignable, none by default.
+        tool("editor.tool_measure", r#"{"tool":"measure"}"#),
     ]
 }
 

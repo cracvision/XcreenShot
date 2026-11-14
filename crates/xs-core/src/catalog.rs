@@ -2959,7 +2959,7 @@ fn specs_6(section: &Value, shortcut_scope: &Value) -> Vec<B> {
 }
 
 /// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
-pub const TOOLS: [&str; 21] = [
+pub const TOOLS: [&str; 22] = [
     "favorites",
     "move",
     "arrow",
@@ -2981,6 +2981,8 @@ pub const TOOLS: [&str; 21] = [
     "eraser",
     "crop",
     "cutout",
+    // Live measurement (EDT-094): marks over the canvas, nothing in the image.
+    "measure",
 ];
 
 /// What `editor.action` can do in the editor window: the entries of its menus and

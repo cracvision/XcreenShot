@@ -173,7 +173,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-091 | Aplanar y desaplanar | M2 | Should | En curso |
 | EDT-092 | Deshacer y rehacer | M1 | Must | Win |
 | EDT-093 | Cursor como objeto | M2 | Should | En curso (Windows: el puntero capturado es un Cursor que se mueve, redimensiona con proporción, borra o aplana; Tamaño 50–400 %, Forma (la capturada, flecha, mano, texto, cruz) y Resalte (ninguno, amarillo, acento); en el lienzo y en la imagen final igual) |
-| EDT-094 | Medición en vivo | M5 | Could | — |
+| EDT-094 | Medición en vivo | M5 | Could | En curso (Windows: herramienta **Medir** en **Más > Imagen** (atajo asignable): bajo el puntero, cuánto se extiende hacia cada lado lo que hay debajo (por color) y su tamaño; con un objeto seleccionado y `Alt` sobre otro, el espacio entre ambos; arrastrar tiende una regla con longitud, ángulo y ΔX/ΔY (`Mayús`: recta o a 45°; `Esc` la quita); clic derecho > **Convertir en cota**: línea con extremos de barra y su medida, con los estilos actuales de Línea y Texto. Las marcas se dibujan sobre el lienzo y nunca se exportan. Falta: macOS) |
 | EDT-095 | Nuevo desde plantilla | M2 | Should | En curso (Windows: Archivo > Nuevo desde plantilla, Aplicar plantilla, Combinar desde la Biblioteca, filtro "Para N imágenes", máximo 20 con aviso; falta la selección múltiple en la Bandeja reciente) |
 | EDT-096 | Plantillas incorporadas | M2 | Should | Hecho en Windows (11 plantillas en 4 familias, con el tema activo) |
 | EDT-097 | Ajustes de la plantilla | M2 | Should | Hecho en Windows |

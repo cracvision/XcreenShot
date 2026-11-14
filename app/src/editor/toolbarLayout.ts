@@ -74,7 +74,7 @@ export const TOOL_GROUPS: { key: "annotation" | "pixels" | "image"; tools: Tool[
     ],
   },
   { key: "pixels", tools: ["select", "wand", "fill", "eraser", "cutout"] },
-  { key: "image", tools: ["crop"] },
+  { key: "image", tools: ["crop", "measure"] },
 ];
 
 /** `items` with the one at `from` moved to `to` (its index after the move). */

@@ -1984,7 +1984,8 @@
       "editor_video_go_to": "Ir a… (video)",
       "editor_video_save_frame": "Guardar fotograma",
       "editor_video_gif": "Crear GIF",
-      "editor_video_info": "Información del video"
+      "editor_video_info": "Información del video",
+      "editor_tool_measure": "Herramienta Medir"
     }
   },
   "tray": {
@@ -2929,7 +2930,8 @@
         "select": "Selección",
         "wand": "Varita mágica",
         "favorites": "Favoritos",
-        "cutout": "Quitar franja"
+        "cutout": "Quitar franja",
+        "measure": "Medir"
       },
       "undo": "Deshacer",
       "undo_named": "Deshacer {{label}}",
@@ -4930,6 +4932,15 @@
       "open_yes": "Abrir",
       "detected_one": "Código QR detectado",
       "detected_other": "{{count}} códigos QR detectados"
+    },
+    "measure": {
+      "label": "Medir",
+      "dimension": "Convertir en cota",
+      "clear": "Quitar la regla",
+      "help_hover": "Señala la imagen: cuánto se extiende hacia cada lado lo que hay bajo el puntero, y su tamaño.",
+      "help_alt": "Con un objeto seleccionado, mantén Alt y señala otro: el espacio entre ambos.",
+      "help_drag": "Arrastra para tender una regla: su longitud, su ángulo y ΔX/ΔY. Mayús la deja recta o a 45°; Esc la quita.",
+      "help_dimension": "Clic derecho en la regla > Convertir en cota: una línea con su medida que queda en la imagen. Las marcas de Medir nunca se exportan."
     }
   },
   "history": {

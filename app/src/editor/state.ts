@@ -34,7 +34,8 @@ export type Tool =
   | "fill"
   | "eraser"
   | "crop"
-  | "cutout";
+  | "cutout"
+  | "measure";
 
 export interface DocSummary {
   documentId: string;
