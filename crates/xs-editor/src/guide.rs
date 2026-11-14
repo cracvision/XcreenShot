@@ -22,6 +22,8 @@ pub struct GuideStep {
     /// Where a drag ended.
     pub to: Option<[f64; 2]>,
     pub right: bool,
+    /// The click's ring (not on a keyboard shortcut's step).
+    pub ring: bool,
     /// The pointer (CAP-047): its PNG, its top left and its size.
     pub pointer: Option<(Vec<u8>, [f64; 2], [u32; 2])>,
 }
@@ -129,16 +131,36 @@ fn build(core: &Arc<Core>, lang: Lang, g: GuideIn) -> (Document, Value, BTreeMap
     }
     let mut doc = Document::new(1, 1, 96.0);
     relayout(core, lang, &mut doc, &t, true);
-    // The steps' pictures and texts, and the title.
-    let mut images = BTreeMap::new();
     let step_sections: Vec<String> = t
         .sections
         .iter()
         .filter(|s| s.kind == "guideStep")
         .map(|s| s.id.clone())
         .collect();
-    for (i, (step, sid)) in g.steps.iter().zip(&step_sections).enumerate() {
-        let name = format!("step-{:03}.png", i + 1);
+    if let Some(o) = doc.objects.iter_mut().find(|o| slot_of(o) == Some("title")) {
+        o.props.insert("text".into(), json!(g.title));
+    }
+    let mut images = BTreeMap::new();
+    fill(core, lang, &mut doc, &step_sections, &g.steps, 0, &mut images);
+    let mut meta = g.meta;
+    meta["name"] = json!(g.title);
+    (doc, meta, images)
+}
+
+/// Puts each step in its section (`sids`, laid out already): its picture, named after
+/// `first` (`step-NNN.png`), its text, the framing, the click's ring, the drag's arrow
+/// and the pointer (SMT-026, SMT-028).
+fn fill(
+    core: &Arc<Core>,
+    lang: Lang,
+    doc: &mut Document,
+    sids: &[String],
+    steps: &[GuideStep],
+    first: usize,
+    images: &mut BTreeMap<String, Vec<u8>>,
+) {
+    for (i, (step, sid)) in steps.iter().zip(sids).enumerate() {
+        let name = format!("step-{:03}.png", first + i + 1);
         images.insert(name.clone(), step.png.clone());
         for o in doc.objects.iter_mut() {
             match slot_of(o) {
@@ -152,14 +174,12 @@ fn build(core: &Arc<Core>, lang: Lang, g: GuideIn) -> (Document, Value, BTreeMap
             }
         }
     }
-    if let Some(o) = doc.objects.iter_mut().find(|o| slot_of(o) == Some("title")) {
-        o.props.insert("text".into(), json!(g.title));
-    }
     // Laid out again: each section as tall as its text, the numbers on the steps.
-    let t = Template::of(&doc).unwrap_or(t);
-    relayout(core, lang, &mut doc, &t, false);
+    if let Some(t) = Template::of(doc) {
+        relayout(core, lang, doc, &t, false);
+    }
     // Each zone frames its step; the ring, the arrow and the pointer go on it.
-    for (i, (step, sid)) in g.steps.iter().zip(&step_sections).enumerate() {
+    for (i, (step, sid)) in steps.iter().zip(sids).enumerate() {
         let Some(zone) = doc
             .objects
             .iter_mut()
@@ -195,20 +215,22 @@ fn build(core: &Arc<Core>, lang: Lang, g: GuideIn) -> (Document, Value, BTreeMap
                     .as_object()
                     .expect("object"),
             ) {
-                add("arrow", props, &mut doc);
+                add("arrow", props, doc);
             }
         }
-        let color = if step.right { RING_RIGHT } else { RING_LEFT };
-        let ring = json!({
-            "rect": {"x": at[0] - RING_SIZE / 2.0, "y": at[1] - RING_SIZE / 2.0, "w": RING_SIZE, "h": RING_SIZE},
-            "rotation": 0,
-            "style": {"shapeType": "ellipse", "fill": null, "outline": color, "outlineWidth": 5, "opacity": 75},
-        });
-        if let Ok(props) = objects::checked("shape", ring.as_object().expect("object")) {
-            add("shape", props, &mut doc);
+        if step.ring {
+            let color = if step.right { RING_RIGHT } else { RING_LEFT };
+            let ring = json!({
+                "rect": {"x": at[0] - RING_SIZE / 2.0, "y": at[1] - RING_SIZE / 2.0, "w": RING_SIZE, "h": RING_SIZE},
+                "rotation": 0,
+                "style": {"shapeType": "ellipse", "fill": null, "outline": color, "outlineWidth": 5, "opacity": 75},
+            });
+            if let Ok(props) = objects::checked("shape", ring.as_object().expect("object")) {
+                add("shape", props, doc);
+            }
         }
         if let Some((png, top_left, size)) = &step.pointer {
-            let name = format!("pointer-{:03}.png", i + 1);
+            let name = format!("pointer-{:03}.png", first + i + 1);
             let p = place(*top_left);
             let (w, h) = (size[0] as f64 * k, size[1] as f64 * k);
             if let Ok(mut props) = objects::image_object(&name, [p[0], p[1], w.max(1.0), h.max(1.0)]) {
@@ -219,13 +241,72 @@ fn build(core: &Arc<Core>, lang: Lang, g: GuideIn) -> (Document, Value, BTreeMap
                     );
                 }
                 images.insert(name, png.clone());
-                add("image", props, &mut doc);
+                add("image", props, doc);
             }
         }
     }
-    let mut meta = g.meta;
-    meta["name"] = json!(g.title);
-    (doc, meta, images)
+}
+
+/// "Record more steps here" (SMT-029): steps go into an open guide, after the section
+/// `after` (else at the end), in one undo step. Returns how many.
+pub fn add_steps(
+    core: &Arc<Core>,
+    ctx: &Context,
+    id: &str,
+    after: Option<&str>,
+    steps: Vec<GuideStep>,
+) -> Result<usize, CommandError> {
+    let lang = ctx.lang;
+    let ed = editor(core);
+    let doc = ed
+        .store
+        .with(id, |d| d.document.clone())
+        .ok_or_else(|| CommandError::internal("document closed"))?;
+    let used = ed.store.image_names(id);
+    let mut t = Template::of(&doc)
+        .filter(|t| t.is_guide())
+        .ok_or_else(|| invalid(tr(lang, "errors.not_a_guide", &[])))?;
+    let at = after
+        .and_then(|a| t.sections.iter().position(|s| s.id == a))
+        .map(|i| i + 1)
+        .unwrap_or_else(|| {
+            t.sections
+                .iter()
+                .rposition(|s| s.kind != "footer")
+                .map_or(0, |i| i + 1)
+        });
+    let mut sids = Vec::new();
+    for (k, st) in steps.iter().enumerate() {
+        let mut s = t.new_section("guideStep", 1);
+        s.natural = Some([st.frame[2], st.frame[3]]);
+        s.picture = Some(templates::guide_picture([st.frame[2], st.frame[3]]));
+        sids.push(s.id.clone());
+        t.sections.insert(at + k, s);
+    }
+    let mut next = doc;
+    relayout(core, lang, &mut next, &t, false);
+    // New names after the pictures already there.
+    let first = used
+        .iter()
+        .filter_map(|n| {
+            n.strip_prefix("step-")?
+                .strip_suffix(".png")?
+                .parse::<usize>()
+                .ok()
+        })
+        .max()
+        .unwrap_or(0);
+    let mut images = BTreeMap::new();
+    fill(core, lang, &mut next, &sids, &steps, first, &mut images);
+    ed.store.add_images(id, &images).map_err(CommandError::internal)?;
+    ed.store
+        .mutate(id, "history.add_steps", |d| {
+            *d = next;
+            Ok::<_, CommandError>(())
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    changed(core, ctx, id);
+    Ok(steps.len())
 }
 
 #[cfg(test)]
@@ -254,6 +335,7 @@ mod tests {
                 at: [40.0, 20.0],
                 to: None,
                 right: false,
+                ring: true,
                 pointer: Some((png(32, 32), [40.0, 20.0], [32, 32])),
             },
             GuideStep {
@@ -264,6 +346,7 @@ mod tests {
                 at: [500.0, 300.0],
                 to: Some([700.0, 450.0]),
                 right: true,
+                ring: true,
                 pointer: None,
             },
         ];
@@ -332,6 +415,245 @@ mod tests {
         // It renders.
         let img = crate::final_image(&core, &id).unwrap();
         assert_eq!(img.width(), 1200);
+    }
+
+    /// SMT-029: editing a guide. Moving step 4 before step 2 numbers them 1 to 4 and its
+    /// arrow stays on the same place of its picture; a longer text pushes its picture
+    /// down (and the ring with it); duplicating, adding a text and a picture, the
+    /// pictures at 50 %, and deleting several steps at once.
+    #[test]
+    fn editing_a_guide() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let step = |n: u32, drag: bool| GuideStep {
+            text: format!("Paso **{n}**"),
+            png: png(800, 500),
+            size: [800, 500],
+            frame: [0.0, 0.0, 800.0, 500.0],
+            at: [100.0 * n as f64, 100.0],
+            to: drag.then_some([400.0, 300.0]),
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, _) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Guía".into(),
+                steps: vec![step(1, false), step(2, false), step(3, false), step(4, true)],
+                meta: json!({}),
+            },
+        )
+        .unwrap();
+        let call = |cmd: &str, p: Value| core.call(xs_core::Source::Cli, cmd, p, Some(Lang::Es)).unwrap();
+        let doc = || editor(&core).store.with(&id, |d| d.document.clone()).unwrap();
+        let steps_of = |d: &Document| -> Vec<String> {
+            Template::of(d)
+                .unwrap()
+                .sections
+                .iter()
+                .filter(|s| s.kind == "guideStep")
+                .map(|s| s.id.clone())
+                .collect()
+        };
+        let zone = |d: &Document, sid: &str| {
+            d.objects
+                .iter()
+                .find(|o| o.kind == "zone" && o.props.get("section").and_then(Value::as_str) == Some(sid))
+                .and_then(rect_of)
+                .unwrap()
+        };
+        let arrow_on_picture = |d: &Document, sid: &str| {
+            let a = d.objects.iter().find(|o| o.kind == "arrow").unwrap();
+            let from = a.props["from"].as_array().unwrap();
+            let z = zone(d, sid);
+            (from[0].as_f64().unwrap() - z[0], from[1].as_f64().unwrap() - z[1])
+        };
+        let numbers = |d: &Document| -> Vec<String> {
+            d.objects
+                .iter()
+                .filter(|o| o.kind == "step")
+                .map(|o| o.props["value"].as_str().unwrap().to_string())
+                .collect()
+        };
+        let d = doc();
+        let ids = steps_of(&d);
+        let fourth = ids[3].clone();
+        let before = arrow_on_picture(&d, &fourth);
+        // Step 4 before step 2: header is section 0, so step 2 is at index 2.
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "move_section", "sectionId": fourth, "index": 2}),
+        );
+        let d = doc();
+        assert_eq!(steps_of(&d)[1], fourth);
+        assert_eq!(numbers(&d), ["1", "2", "3", "4"]);
+        let after = arrow_on_picture(&d, &fourth);
+        assert!(
+            (after.0 - before.0).abs() < 1.0 && (after.1 - before.1).abs() < 1.0,
+            "{before:?} {after:?}"
+        );
+        // A long text pushes its picture down; the arrow goes with the picture.
+        let caption = d
+            .objects
+            .iter()
+            .find(|o| o.props.get("slot").and_then(Value::as_str) == Some(&format!("caption:{fourth}:0")))
+            .unwrap()
+            .id
+            .clone();
+        let z0 = zone(&d, &fourth);
+        let long = "y sigue ".repeat(80);
+        call(
+            "document.update_object",
+            json!({"documentId": id, "objectId": caption, "set": {"text": long}}),
+        );
+        let d = doc();
+        assert!(zone(&d, &fourth)[1] > z0[1] + 40.0, "the picture went down");
+        let moved = arrow_on_picture(&d, &fourth);
+        assert!((moved.0 - before.0).abs() < 1.0 && (moved.1 - before.1).abs() < 1.0);
+        // Duplicate: one more step, with its arrow.
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "duplicate_section", "sectionId": fourth}),
+        );
+        let d = doc();
+        assert_eq!(steps_of(&d).len(), 5);
+        assert_eq!(d.objects.iter().filter(|o| o.kind == "arrow").count(), 2);
+        assert_eq!(numbers(&d), ["1", "2", "3", "4", "5"]);
+        // A text and an empty picture; an empty picture is not in the final image.
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "add_section", "kind": "guideText"}),
+        );
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "add_section", "kind": "guideImage"}),
+        );
+        let d = doc();
+        let t = Template::of(&d).unwrap();
+        let kinds: Vec<&str> = t.sections.iter().map(|s| s.kind.as_str()).collect();
+        assert_eq!(&kinds[kinds.len() - 3..], ["guideText", "guideImage", "footer"]);
+        let printed = xs_image::render::printed_objects(&d.objects);
+        assert!(
+            printed.iter().filter(|o| o.kind == "zone").count()
+                < d.objects.iter().filter(|o| o.kind == "zone").count()
+        );
+        // Pictures at 50 %: half as wide, framing kept.
+        let w0 = zone(&d, &fourth)[2];
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "settings", "settings": {"imageScale": 50}}),
+        );
+        let d = doc();
+        assert!(
+            (zone(&d, &fourth)[2] - w0 / 2.0).abs() < 1.0,
+            "{} {}",
+            zone(&d, &fourth)[2],
+            w0
+        );
+        // Its arrow shrinks with it, on the same place of the picture.
+        let half = arrow_on_picture(&d, &fourth);
+        assert!(
+            (half.0 - before.0 / 2.0).abs() < 1.0 && (half.1 - before.1 / 2.0).abs() < 1.0,
+            "{half:?} {before:?}"
+        );
+        // Several steps deleted at once.
+        let ids = steps_of(&d);
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "remove_section", "sectionIds": [ids[0], ids[1]]}),
+        );
+        assert_eq!(steps_of(&doc()).len(), 3);
+        assert_eq!(numbers(&doc()), ["1", "2", "3"]);
+    }
+
+    /// SMT-029: "Record more steps here" puts the new steps after the chosen one, with
+    /// pictures of their own names, numbered with the rest, in one undo step.
+    #[test]
+    fn more_steps_go_where_asked() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let step = |n: u32| GuideStep {
+            text: format!("Paso **{n}**"),
+            png: png(600, 400),
+            size: [600, 400],
+            frame: [0.0, 0.0, 600.0, 400.0],
+            at: [50.0, 50.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, _) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Guía".into(),
+                steps: vec![step(1), step(2)],
+                meta: json!({}),
+            },
+        )
+        .unwrap();
+        let ed = editor(&core);
+        let first = Template::of(&ed.store.with(&id, |d| d.document.clone()).unwrap())
+            .unwrap()
+            .sections
+            .iter()
+            .find(|s| s.kind == "guideStep")
+            .unwrap()
+            .id
+            .clone();
+        let ctx = Context {
+            source: xs_core::Source::Cli,
+            lang: Lang::Es,
+        };
+        assert_eq!(
+            add_steps(&core, &ctx, &id, Some(&first), vec![step(9)]).unwrap(),
+            1
+        );
+        let doc = ed.store.with(&id, |d| d.document.clone()).unwrap();
+        let texts: Vec<String> = Template::of(&doc)
+            .unwrap()
+            .sections
+            .iter()
+            .filter(|s| s.kind == "guideStep")
+            .filter_map(|s| {
+                doc.objects
+                    .iter()
+                    .find(|o| slot_of(o) == Some(&format!("caption:{}:0", s.id)))
+                    .and_then(|o| o.props.get("text")?.as_str().map(str::to_string))
+            })
+            .collect();
+        assert_eq!(texts, ["Paso **1**", "Paso **9**", "Paso **2**"]);
+        assert!(ed.store.image_names(&id).contains(&"step-003.png".to_string()));
+        let numbers: Vec<&str> = doc
+            .objects
+            .iter()
+            .filter(|o| o.kind == "step")
+            .filter_map(|o| o.props.get("value")?.as_str())
+            .collect();
+        assert_eq!(numbers, ["1", "2", "3"]);
+        // One undo takes them away.
+        core.call(
+            xs_core::Source::Cli,
+            "document.undo",
+            json!({"documentId": id}),
+            None,
+        )
+        .unwrap();
+        let doc = ed.store.with(&id, |d| d.document.clone()).unwrap();
+        assert_eq!(
+            Template::of(&doc)
+                .unwrap()
+                .sections
+                .iter()
+                .filter(|s| s.kind == "guideStep")
+                .count(),
+            2
+        );
     }
 
     /// SMT-026: the zone shows exactly the frame, whatever the monitor.

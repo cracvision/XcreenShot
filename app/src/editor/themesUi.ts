@@ -1,9 +1,26 @@
 // Themes outside the Styles tab (EDT-017, EDT-018): importing a `.xtheme` from a menu,
 // a drop or the tab itself.
+import { useEffect, useState } from "react";
 import i18next from "i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { run } from "../lib/commands";
 import { useEditor, xsdocUrl } from "./state";
+
+/** The themes, by id and name, again when they change (EDT-017). */
+export function useThemes(): { id: string; name: string }[] {
+  const version = useEditor((s) => s.themesVersion);
+  const [themes, setThemes] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    run<{ themes: { id: string; name: string }[] }>("editor.themes")
+      .then((r) => alive && setThemes(r.themes))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+  return themes;
+}
 
 /** Tools with saved styles (the core's `STYLED_TOOLS`). */
 export const STYLED_TOOLS = [

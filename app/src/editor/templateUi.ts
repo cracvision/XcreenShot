@@ -20,6 +20,8 @@ export interface TemplateSettings {
   numberShape: StepShapeKind;
   reversed: boolean;
   theme: string | null;
+  /** A guide's pictures, % of their size (SMT-029). */
+  imageScale?: number;
 }
 
 export interface TemplateSection {
@@ -39,6 +41,12 @@ export interface Template {
 
 /** Section kinds a user can add (EDT-099), in the menu's order. */
 export const SECTION_KINDS = ["step", "imageText", "text", "twoImages", "title", "footer"] as const;
+
+/** A guide's text without its bold marks, cut short for a list (SMT-029). */
+export function plainText(text: string, max = 70): string {
+  const plain = text.replaceAll("**", "").replace(/\s+/g, " ").trim();
+  return plain.length > max ? `${plain.slice(0, max - 1)}…` : plain;
+}
 
 /** The template of a document, if it is one. */
 export function templateOf(doc: Pick<DocDetails, "template"> | null): Template | null {

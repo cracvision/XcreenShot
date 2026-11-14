@@ -608,7 +608,8 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "A countdown first (CAP-048)"},
                     "effects": {"type": "array", "description": "Capture effects (CAP-051): Scale image applies to every step's picture"},
                     "open": {"type": "string", "enum": ["editor", "none"], "default": "editor", "description": "Open the guide when it is done"},
-                    "copy": {"type": "boolean", "default": false}
+                    "copy": {"type": "boolean", "default": false},
+                    "into": {"type": "object", "description": "{documentId, after}: the steps go into this open guide, after this section (SMT-029)"}
                 }),
                 &[],
             ))
@@ -2137,9 +2138,10 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "documentId": document_id(),
-                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
+                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "duplicate_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
                     "settings": {"type": "object", "description": "settings: the settings to change (EDT-097)"},
-                    "kind": {"type": "string", "enum": ["step", "imageText", "text", "twoImages", "title", "footer"], "description": "add_section: its kind"},
+                    "kind": {"type": "string", "enum": ["step", "imageText", "text", "twoImages", "title", "footer", "guideStep", "guideText", "guideImage"], "description": "add_section: its kind (a guide of steps: guideStep, guideText or guideImage, SMT-029)"},
+                    "sectionIds": {"type": "array", "items": {"type": "string"}, "description": "remove_section: several at once"},
                     "index": {"type": "integer", "minimum": 0, "description": "add_section, move_section: its place among the sections"},
                     "sectionId": {"type": "string"},
                     "height": {"type": "number", "minimum": 40, "maximum": 5000, "description": "resize_section"},
@@ -2149,7 +2151,7 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "sourceDocumentId": {"type": "string", "description": "fill_zone: an open document's final image"},
                     "fromObject": {"type": "string", "description": "fill_zone: a floating image that goes into the zone"},
                     "clipboard": {"type": "boolean", "description": "fill_zone: the image on the clipboard"},
-                    "zoom": {"type": "number", "minimum": 0.1, "maximum": 10, "description": "frame_zone: 1 = fitted or filled"},
+                    "zoom": {"type": "number", "minimum": 0.1, "maximum": 100, "description": "frame_zone: 1 = fitted or filled"},
                     "zoomBy": {"type": "number", "description": "frame_zone: steps of 10 % (+1, -1)"},
                     "offset": {"type": "array", "items": {"type": "number"}, "description": "frame_zone: [x, y] px from the centered place"},
                     "reset": {"type": "boolean", "description": "frame_zone: back to as placed"},

@@ -988,6 +988,12 @@ impl DocStore {
         Ok(())
     }
 
+    /// The names of a document's pictures (`images/`).
+    pub fn image_names(&self, id: &str) -> Vec<String> {
+        self.with(id, |d| d.images.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
     /// The bytes of one picture of a document's `images/` folder.
     pub fn image_file(&self, id: &str, name: &str) -> Option<Vec<u8>> {
         self.with(id, |d| d.images.get(name).cloned()).flatten()

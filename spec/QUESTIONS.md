@@ -251,7 +251,10 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | SMT-024 | "La imagen justo antes del clic" | Se toma en cuanto llega la pulsación, sin retener el clic: casi siempre la app aún no ha redibujado. Retenerlo daría la imagen exacta, pero retrasaría el clic y Windows desactiva los ganchos lentos | Provisional |
 | SMT-025 | Plantillas de frase que el spec no da | Opción: "Elegir la opción **X**"; lista: "Clic en la lista **X**"; atajo: "Pulsar **Ctrl+S**" | Provisional |
 | SMT-026 | Colores del anillo "tomados del tema activo si los define" | Los temas aún no definen esos colores: naranja y violeta fijos | Provisional |
-| SMT-027 | Guías muy largas | Una guía de 300 pasos en 1080p ocupa más de 2 GB al abrirse, porque el editor carga todas las imágenes. Se resuelve en la entrega de edición de la guía (ADR 0009, punto 8) | Pendiente |
+| SMT-027 | Guías muy largas | Las imágenes de todos los documentos se guardan comprimidas y se descodifican al dibujarse, con una caché de 512 MB como mucho (las menos usadas salen primero). Prueba automática con 60 imágenes de 2000×2000 | Hecho |
+| SMT-029 | "Unir dos pasos de texto o dividir uno en dos" | Queda para después: se puede duplicar un paso y borrar el texto que sobre. **Pregunta para Carlos:** ¿unir es juntar los textos de dos pasos en uno (perdiendo la segunda imagen) o juntar dos secciones de texto? | Pregunta |
+| SMT-029 | Candado de la imagen | La guía usa el de las zonas de imagen de las plantillas (EDT-098): zoom de 10 % en 10 % y ajuste; alejar el zoom recupera lo de alrededor del monitor | Provisional |
+| SMT-029 | Escala de las imágenes | Un control de la guía (10–100 %) que cambia el tamaño de todas las imágenes de paso sin tocar las originales; las anotaciones se escalan con su imagen | Provisional |
 | SMT-028 | Fecha del encabezado | En formato AAAA-MM-DD en los dos idiomas | Provisional |
 | SMT-028 | Textos en negrita mientras se editan | Al escribir se ven los asteriscos de `**…**`; al terminar, la negrita | Provisional |
 

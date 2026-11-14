@@ -42,6 +42,8 @@ pub struct Settings {
     pub reversed: bool,
     /// The theme of its colors and font (EDT-096); none: the active one.
     pub theme: Option<String>,
+    /// A guide's pictures, % of their size (SMT-029): 100 = as captured.
+    pub image_scale: f64,
 }
 
 impl Default for Settings {
@@ -61,6 +63,7 @@ impl Default for Settings {
             number_shape: "circle".into(),
             reversed: false,
             theme: None,
+            image_scale: 100.0,
         }
     }
 }
@@ -78,6 +81,9 @@ pub struct Section {
     /// A guide's step or image section: the size of its picture (SMT-028, ADR 0009).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub picture: Option<[f64; 2]>,
+    /// The same, at 100 %: the size of the part of the picture shown (SMT-029).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub natural: Option<[f64; 2]>,
 }
 
 /// The `template` field of a document.
@@ -113,6 +119,7 @@ impl Template {
             height: default_height(kind, zones),
             zones,
             picture: None,
+            natural: None,
         }
     }
 
@@ -148,6 +155,7 @@ pub fn guide(pictures: &[[f64; 2]]) -> Template {
     for p in pictures {
         let mut s = t.new_section("guideStep", 1);
         s.picture = Some(guide_picture(*p));
+        s.natural = Some(*p);
         t.sections.push(s);
     }
     let footer = t.new_section("footer", 0);
@@ -208,6 +216,10 @@ fn text_height(text: &str, width: f64, font: Option<&str>, dpi: f64) -> f64 {
 
 /// Section kinds a user can add (EDT-099).
 pub const ADDABLE: [&str; 6] = ["step", "imageText", "text", "twoImages", "title", "footer"];
+/// Section kinds a guide can add (SMT-029): a step, a text, an image.
+pub const GUIDE_ADDABLE: [&str; 3] = ["guideStep", "guideText", "guideImage"];
+/// The size of a new, empty picture of a guide (SMT-029).
+pub const GUIDE_EMPTY: [f64; 2] = [1080.0, 520.0];
 
 fn default_height(kind: &str, zones: usize) -> f64 {
     match kind {
@@ -581,7 +593,7 @@ impl Layout<'_> {
                     .get(&slot)
                     .cloned()
                     .unwrap_or_else(|| tr(self.lang, "editor.template.caption", &[]));
-                let picture = s.picture.unwrap_or([inner, 400.0]);
+                let picture = s.picture.unwrap_or(GUIDE_EMPTY);
                 let probe = guide_step_places(top, 0.0, picture);
                 let text_h = text_height(&text, probe.text[2], self.look.font.as_deref(), self.dpi);
                 let p = guide_step_places(top, text_h, picture);
@@ -613,6 +625,35 @@ impl Layout<'_> {
                     sid,
                     json!({"type": "text", "at": [p.text[0], p.text[1]], "width": p.text[2], "text": text, "style": style}),
                 );
+            }
+            "guideText" => {
+                let slot = format!("text:{sid}");
+                let text = self
+                    .texts
+                    .get(&slot)
+                    .cloned()
+                    .unwrap_or_else(|| tr(self.lang, "editor.template.text", &[]));
+                let mut style = json!({"size": GUIDE_TEXT_SIZE, "color": self.look.text, "align": "left", "markup": true});
+                if let Some(f) = &self.look.font {
+                    style["font"] = json!(f);
+                }
+                self.push(
+                    slot,
+                    sid,
+                    json!({"type": "text", "at": [m, top + 20.0], "width": inner, "text": text, "style": style}),
+                );
+            }
+            "guideImage" => {
+                let picture = s.picture.unwrap_or(GUIDE_EMPTY);
+                let slot = format!("zone:{sid}:0");
+                if let Ok(props) = objects::zone_props([m, top + 20.0, picture[0], picture[1]], None, true) {
+                    self.out.push(Placed {
+                        slot,
+                        section: sid.to_string(),
+                        kind: "zone".into(),
+                        props,
+                    });
+                }
             }
             "footer" => {
                 let date = chrono::Local::now().format("%Y-%m-%d").to_string();
@@ -792,20 +833,36 @@ pub fn layout(
             }
         }
         grown = t.clone();
-        for s in grown.sections.iter_mut().filter(|s| s.kind == "guideStep") {
-            let text = texts
-                .get(&format!("caption:{}:0", s.id))
-                .cloned()
-                .unwrap_or_else(|| tr(lang, "editor.template.caption", &[]));
-            let picture = s.picture.unwrap_or([WIDTH - 2.0 * MARGIN, 400.0]);
-            let width = guide_step_places(0.0, 0.0, picture).text[2];
-            let h = text_height(&text, width, look.font.as_deref(), doc.dpi);
-            s.height = guide_step_places(0.0, h, picture).height;
-        }
+        let scale = (grown.settings.image_scale / 100.0).clamp(0.1, 1.0);
         for s in grown.sections.iter_mut() {
+            // The pictures at the guide's scale, never wider than the column (SMT-029).
+            if let Some(n) = s.natural {
+                s.picture = Some(guide_picture([n[0] * scale, n[1] * scale]));
+            }
             match s.kind.as_str() {
                 "guideHeader" => s.height = 140.0,
                 "footer" => s.height = 70.0,
+                "guideStep" => {
+                    let text = texts
+                        .get(&format!("caption:{}:0", s.id))
+                        .cloned()
+                        .unwrap_or_else(|| tr(lang, "editor.template.caption", &[]));
+                    let picture = s.picture.unwrap_or(GUIDE_EMPTY);
+                    let width = guide_step_places(0.0, 0.0, picture).text[2];
+                    let h = text_height(&text, width, look.font.as_deref(), doc.dpi);
+                    s.height = guide_step_places(0.0, h, picture).height;
+                }
+                "guideText" => {
+                    let text = texts
+                        .get(&format!("text:{}", s.id))
+                        .cloned()
+                        .unwrap_or_else(|| tr(lang, "editor.template.text", &[]));
+                    let h = text_height(&text, WIDTH - 2.0 * MARGIN, look.font.as_deref(), doc.dpi);
+                    s.height = (h + 44.0).ceil();
+                }
+                "guideImage" => {
+                    s.height = s.picture.unwrap_or(GUIDE_EMPTY)[1] + 40.0;
+                }
                 _ => {}
             }
         }
@@ -861,6 +918,16 @@ pub fn layout(
                     props.insert(key.into(), v.clone());
                 }
             }
+            // A guide's picture shown larger or smaller: its framing follows (SMT-029).
+            if p.kind == "zone" && t.is_guide() {
+                let (w0, w1) = (rect_w(&prev.props), rect_w(&props));
+                if w0 > 0.0 && (w1 - w0).abs() > 0.5 {
+                    if let Some([x, y]) = offset_of(&props) {
+                        let k = w1 / w0;
+                        props.insert("offset".into(), json!([x * k, y * k]));
+                    }
+                }
+            }
             if !restyle && p.kind != "zone" {
                 if let Some(style) = prev.props.get("style") {
                     props.insert("style".into(), style.clone());
@@ -904,13 +971,38 @@ pub fn layout(
                 .collect()
         })
         .unwrap_or_default();
+    // In a guide, an annotation keeps its place on its step's picture (SMT-029): the
+    // picture's old and new rectangles, by section.
+    let pictures: BTreeMap<String, ([f64; 4], [f64; 4])> = if t.is_guide() {
+        objects
+            .iter()
+            .filter(|o| o.kind == "zone")
+            .filter_map(|o| {
+                let slot = o.props.get("slot")?.as_str()?;
+                let sid = o.props.get("section")?.as_str()?.to_string();
+                let old = rect_of(&by_slot.get(slot)?.props)?;
+                Some((sid, (old, rect_of(&o.props)?)))
+            })
+            .collect()
+    } else {
+        BTreeMap::new()
+    };
     for mut o in old.into_iter().filter(|o| o.props.get("slot").is_none()) {
         let Some(b) = xs_image::object_bounds(&o, doc.dpi) else {
             objects.push(o);
             continue;
         };
         let cy = (b[1] + b[3]) / 2.0;
-        match bands.iter().find(|(_, top, h)| cy >= *top && cy < top + h) {
+        let cx = (b[0] + b[2]) / 2.0;
+        let band = bands.iter().find(|(_, top, h)| cy >= *top && cy < top + h);
+        if let Some((old_r, new_r)) = band.and_then(|(id, _, _)| pictures.get(id)) {
+            if tops.contains_key(&band.expect("band").0) {
+                anchor(&mut o, *old_r, *new_r, (cx, cy));
+                objects.push(o);
+            }
+            continue;
+        }
+        match band {
             // In a section that went, it goes too (EDT-099).
             Some((id, top, h)) => {
                 if let Some((new_top, new_h)) = tops.get(id) {
@@ -1010,6 +1102,52 @@ pub fn reverse_pictures(doc: &mut Document) {
 /// The account's name for the footer (EDT-097: Author = system name).
 pub fn system_author() -> String {
     xs_core::platform::account_name()
+}
+
+fn rect_of(props: &Map<String, Value>) -> Option<[f64; 4]> {
+    let r = props.get("rect")?;
+    Some([
+        r.get("x")?.as_f64()?,
+        r.get("y")?.as_f64()?,
+        r.get("w")?.as_f64()?,
+        r.get("h")?.as_f64()?,
+    ])
+}
+
+/// Keeps an annotation on the same place of its step's picture, which moved from
+/// `old` to `new` and maybe changed size (SMT-029): an arrow by its two points, a ring
+/// or a pointer by its rectangle, anything else by its middle.
+fn anchor(o: &mut Object, old: [f64; 4], new: [f64; 4], middle: (f64, f64)) {
+    let k = new[2] / old[2].max(1.0);
+    let map = |x: f64, y: f64| [new[0] + (x - old[0]) * k, new[1] + (y - old[1]) * k];
+    let point = |v: &Value| Some([v.get(0)?.as_f64()?, v.get(1)?.as_f64()?]);
+    if let (Some(from), Some(to)) = (
+        o.props.get("from").and_then(point),
+        o.props.get("to").and_then(point),
+    ) {
+        o.props.insert("from".into(), json!(map(from[0], from[1])));
+        o.props.insert("to".into(), json!(map(to[0], to[1])));
+        return;
+    }
+    if let Some(r) = rect_of(&o.props) {
+        let [x, y] = map(r[0], r[1]);
+        o.props.insert(
+            "rect".into(),
+            json!({"x": x, "y": y, "w": r[2] * k, "h": r[3] * k}),
+        );
+        return;
+    }
+    let [x, y] = map(middle.0, middle.1);
+    o.translate(x - middle.0, y - middle.1);
+}
+
+fn rect_w(props: &Map<String, Value>) -> f64 {
+    rect_of(props).map_or(0.0, |r| r[2])
+}
+
+fn offset_of(props: &Map<String, Value>) -> Option<[f64; 2]> {
+    let a = props.get("offset")?.as_array()?;
+    Some([a.first()?.as_f64()?, a.get(1)?.as_f64()?])
 }
 
 #[cfg(test)]

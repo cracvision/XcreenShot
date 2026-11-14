@@ -1710,7 +1710,8 @@
     "video_codec": "{{name}} no se puede reproducir en este equipo: su códec ({{codec}}) no está instalado en Windows. ({{reason}})",
     "steps_busy": "Ya hay una grabación de video o de pasos en curso.",
     "steps_not_recording": "No se están grabando pasos.",
-    "steps_not_supported": "El grabador de pasos aún no está disponible en este sistema."
+    "steps_not_supported": "El grabador de pasos aún no está disponible en este sistema.",
+    "not_a_guide": "Este documento no es una guía de pasos."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4596,6 +4597,28 @@
       "disk_full": "Disco lleno: en pausa",
       "notice": "Grabando pasos: cada clic crea un paso",
       "notice_cancel": "{{key}} cancela"
+    },
+    "guide": {
+      "title": "Pasos",
+      "steps": "Pasos de la guía",
+      "empty_step": "Paso sin imagen",
+      "empty_image": "Imagen vacía",
+      "kind": {
+        "guideText": "Texto",
+        "guideImage": "Imagen"
+      },
+      "duplicate": "Duplicar",
+      "remove": "Eliminar",
+      "add_after": "Añadir después",
+      "add": {
+        "guideStep": "Paso",
+        "guideText": "Texto",
+        "guideImage": "Imagen"
+      },
+      "help": "Haz clic en un paso para verlo; Ctrl+clic elige varios y Supr los elimina. Doble clic en un texto de la guía para editarlo; **así** va en negrita.",
+      "layout": "Diseño",
+      "scale": "Tamaño de las imágenes",
+      "record_here": "Grabar más pasos aquí"
     }
   },
   "history": {
@@ -4734,7 +4757,9 @@
     "convert_zone": "Convertir en zona de imagen",
     "apply_theme": "Aplicar tema",
     "cut_video": "Cortar",
-    "auto_redact": "Redacción automática"
+    "auto_redact": "Redacción automática",
+    "duplicate_section": "Duplicar paso",
+    "add_steps": "Añadir pasos"
   },
   "editor": {
     "edited": "{{name}} — Editado",

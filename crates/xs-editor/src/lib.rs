@@ -3995,7 +3995,13 @@ pub fn extension() -> Extension {
                             objects::share_spotlights(doc, first);
                         }
                     }
-                    if auto {
+                    // A guide's text grows its section at once, never cut (SMT-028).
+                    if set.contains_key("text") {
+                        if let Some(t) = templates::Template::of(doc).filter(|t| t.is_guide()) {
+                            template_cmds::relayout(&core, ctx.lang, doc, &t, false);
+                        }
+                    }
+                    if auto && templates::Template::of(doc).is_none_or(|t| !t.is_guide()) {
                         fit::fit_canvas(doc);
                     }
                     // After the canvas fits: it may have moved every object.

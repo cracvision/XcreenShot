@@ -70,6 +70,8 @@ pub(crate) struct Session {
     pub open: String,
     pub copy: bool,
     pub title: Option<String>,
+    /// "Record more steps here": the open guide and the section they go after (SMT-029).
+    pub into: Option<(String, Option<String>)>,
     /// Scale of the pictures (the Scale image effect, SMT-022), 1 = as captured.
     pub scale: f64,
     pub started: chrono::DateTime<chrono::Local>,
@@ -253,6 +255,12 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             },
             copy: bool_or(p, "copy", false),
             title,
+            into: p.get("into").and_then(|i| {
+                Some((
+                    i.get("documentId")?.as_str()?.to_string(),
+                    i.get("after").and_then(Value::as_str).map(str::to_string),
+                ))
+            }),
             scale: scale_of(p.get("effects").unwrap_or(&Value::Null), size),
             started,
             hook: Mutex::new(None),
@@ -415,6 +423,21 @@ pub fn stop(core: &Arc<Core>, ctx: &Context) -> CommandResult {
             .publish("steps.cancelled", s.source, json!({"status": "empty"}));
         return Ok(json!({"status": "empty", "steps": 0}));
     }
+    // More steps for an open guide (SMT-029).
+    if let Some((doc_id, after)) = &s.into {
+        let g = guide_input(ctx.lang, &s.folder, &steps, None, s.started).map_err(CommandError::internal)?;
+        let n = xs_editor::guide::add_steps(core, ctx, doc_id, after.as_deref(), g.steps)?;
+        let _ = std::fs::remove_dir_all(&s.folder);
+        let _ = core.call(
+            Source::Ui,
+            "editor.show",
+            json!({"documentId": doc_id}),
+            Some(ctx.lang),
+        );
+        let result = json!({"status": "done", "documentId": doc_id, "steps": n, "added": true});
+        core.events.publish("steps.done", s.source, result.clone());
+        return Ok(result);
+    }
     let made = guide_from(core, ctx.lang, &s.folder, &steps, s.title.clone(), s.started)?;
     let _ = std::fs::remove_dir_all(&s.folder);
     let (id, path) = made;
@@ -533,6 +556,7 @@ fn guide_input(
             at: st.at,
             to: st.to,
             right: st.kind == crate::steps::Kind::Right,
+            ring: st.kind != crate::steps::Kind::Keys,
             pointer,
         });
     }

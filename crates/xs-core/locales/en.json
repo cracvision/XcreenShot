@@ -1710,7 +1710,8 @@
     "video_codec": "{{name}} cannot be played on this computer: its codec ({{codec}}) is not installed in Windows. ({{reason}})",
     "steps_busy": "A video or step recording is already going on.",
     "steps_not_recording": "No steps are being recorded.",
-    "steps_not_supported": "The step recorder is not available on this system yet."
+    "steps_not_supported": "The step recorder is not available on this system yet.",
+    "not_a_guide": "This document is not a guide of steps."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4596,6 +4597,28 @@
       "disk_full": "Disk full: paused",
       "notice": "Recording steps: every click makes a step",
       "notice_cancel": "{{key}} cancels"
+    },
+    "guide": {
+      "title": "Steps",
+      "steps": "Steps of the guide",
+      "empty_step": "Step without a picture",
+      "empty_image": "Empty picture",
+      "kind": {
+        "guideText": "Text",
+        "guideImage": "Picture"
+      },
+      "duplicate": "Duplicate",
+      "remove": "Delete",
+      "add_after": "Add after",
+      "add": {
+        "guideStep": "Step",
+        "guideText": "Text",
+        "guideImage": "Picture"
+      },
+      "help": "Click a step to see it; Ctrl+click picks several, and Delete removes them. Double-click a text on the guide to edit it; **like this** is bold.",
+      "layout": "Layout",
+      "scale": "Pictures' size",
+      "record_here": "Record more steps here"
     }
   },
   "history": {
@@ -4734,7 +4757,9 @@
     "convert_zone": "Convert to image zone",
     "apply_theme": "Apply theme",
     "cut_video": "Cut",
-    "auto_redact": "Auto redact"
+    "auto_redact": "Auto redact",
+    "duplicate_section": "Duplicate step",
+    "add_steps": "Add steps"
   },
   "editor": {
     "edited": "{{name}} — Edited",

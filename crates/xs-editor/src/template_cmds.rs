@@ -655,11 +655,21 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
         }
         "add_section" => {
             let t = template.as_mut().ok_or_else(not_template)?;
-            let kind = text("kind").unwrap_or("step");
-            if !templates::ADDABLE.contains(&kind) {
-                return Err(bad(lang, "kind", &templates::ADDABLE.join(", ")));
+            // A guide adds steps, texts and pictures (SMT-029).
+            let allowed: &[&str] = if t.is_guide() {
+                &templates::GUIDE_ADDABLE
+            } else {
+                &templates::ADDABLE
+            };
+            let kind = text("kind").unwrap_or(if t.is_guide() { "guideStep" } else { "step" });
+            if !allowed.contains(&kind) {
+                return Err(bad(lang, "kind", &allowed.join(", ")));
             }
-            let zones = if kind == "twoImages" { 2 } else { 1 };
+            let zones = match kind {
+                "twoImages" => 2,
+                "guideText" => 0,
+                _ => 1,
+            };
             let section = t.new_section(kind, zones);
             // At the end, before the footer, unless given.
             let end = t
@@ -677,9 +687,35 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
         }
         "remove_section" => {
             let t = template.as_mut().ok_or_else(not_template)?;
-            let i = section_of(t)?;
-            t.sections.remove(i);
+            // Several at once (SMT-029: Delete on the selected steps).
+            let many: Vec<String> = p
+                .get("sectionIds")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            if many.is_empty() {
+                let i = section_of(t)?;
+                t.sections.remove(i);
+            } else {
+                t.sections.retain(|s| !many.contains(&s.id));
+            }
             "history.remove_section"
+        }
+        "duplicate_section" => {
+            let t = template.as_mut().ok_or_else(not_template)?;
+            let i = section_of(t)?;
+            duplicate_section(core, lang, &mut next, t, i)?;
+            return finish(
+                core,
+                ctx,
+                &id,
+                &mut next,
+                None,
+                false,
+                "history.duplicate_section",
+                Vec::new(),
+                lang,
+            );
         }
         "resize_section" => {
             let t = template.as_mut().ok_or_else(not_template)?;
@@ -750,6 +786,15 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
                 ));
             };
             put_picture(&mut next.objects[z], Some(&pic.name));
+            // A guide's section takes the picture's size (SMT-029).
+            if let (Some(t), Some(sid)) = (
+                template.as_mut().filter(|t| t.is_guide()),
+                next.objects[z].props.get("section").and_then(Value::as_str),
+            ) {
+                if let Some(s) = t.sections.iter_mut().find(|s| s.id == sid) {
+                    s.natural = Some([pic.width as f64, pic.height as f64]);
+                }
+            }
             added.push(pic);
             grow_custom_steps(&mut template, &next);
             "history.fill_zone"
@@ -803,8 +848,9 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
                     (None, Some(steps)) => ((zoom + 0.1 * steps) * 100.0).round() / 100.0,
                     _ => zoom,
                 };
-                if !(0.1..=10.0).contains(&zoom) {
-                    return Err(bad(lang, "zoom", "between 0.1 and 10"));
+                // A guide frames a small part of a large monitor (SMT-026): up to 100.
+                if !(0.1..=100.0).contains(&zoom) {
+                    return Err(bad(lang, "zoom", "between 0.1 and 100"));
                 }
                 o.props.insert("zoom".into(), json!(zoom));
                 if let Some(off) = p.get("offset").and_then(Value::as_array) {
@@ -883,6 +929,91 @@ fn grow_custom_steps(template: &mut Option<Template>, doc: &Document) {
             .map_or(0, |i| i + 1);
         t.sections.insert(end, s);
     }
+}
+
+/// Duplicates a guide's section `i` (SMT-029): its picture, framing and text, and the
+/// annotations on it, right after it.
+fn duplicate_section(
+    core: &Arc<Core>,
+    lang: Lang,
+    next: &mut Document,
+    t: &mut Template,
+    i: usize,
+) -> Result<(), CommandError> {
+    let orig = t.sections[i].clone();
+    if !templates::GUIDE_ADDABLE.contains(&orig.kind.as_str()) {
+        return Err(bad(lang, "sectionId", "a guide's step, text or picture"));
+    }
+    let mut copy = t.new_section(&orig.kind, orig.zones);
+    copy.height = orig.height;
+    copy.picture = orig.picture;
+    copy.natural = orig.natural;
+    let new_id = copy.id.clone();
+    t.sections.insert(i + 1, copy);
+    // Its places, named for the copy: the layout keeps their text and picture.
+    let placed: Vec<Object> = next
+        .objects
+        .iter()
+        .filter(|o| o.props.get("section").and_then(Value::as_str) == Some(orig.id.as_str()))
+        .filter(|o| o.props.get("slot").is_some())
+        .cloned()
+        .collect();
+    for mut o in placed {
+        let slot = o
+            .props
+            .get("slot")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let renamed = slot.replacen(&format!(":{}", orig.id), &format!(":{new_id}"), 1);
+        o.props.insert("slot".into(), json!(renamed));
+        o.props.insert("section".into(), json!(new_id));
+        o.id = next.next_object_id();
+        next.objects.push(o);
+    }
+    relayout(core, lang, next, t, false);
+    // The annotations on the original go on the copy too, as far down as it is.
+    let zone_y = |doc: &Document, sid: &str| {
+        doc.objects
+            .iter()
+            .find(|o| o.kind == "zone" && o.props.get("section").and_then(Value::as_str) == Some(sid))
+            .and_then(|o| o.props.get("rect")?.get("y")?.as_f64())
+    };
+    let laid = Template::of(next).unwrap_or_else(|| t.clone());
+    let band = templates::bands(&laid)
+        .into_iter()
+        .find(|(s, _)| s.id == orig.id)
+        .map(|(s, top)| (top, s.height));
+    let copy_top = templates::bands(&laid)
+        .into_iter()
+        .find(|(s, _)| s.id == new_id)
+        .map(|(_, top)| top);
+    let (Some((top, h)), Some(copy_top)) = (band, copy_top) else {
+        return Ok(());
+    };
+    let dy = match (zone_y(next, &orig.id), zone_y(next, &new_id)) {
+        (Some(a), Some(b)) => b - a,
+        _ => copy_top - top,
+    };
+    let dpi = next.dpi;
+    let copies: Vec<Object> = next
+        .objects
+        .iter()
+        .filter(|o| o.props.get("slot").is_none())
+        .filter(|o| {
+            xs_image::object_bounds(o, dpi).is_some_and(|b| {
+                let cy = (b[1] + b[3]) / 2.0;
+                cy >= top && cy < top + h
+            })
+        })
+        .cloned()
+        .collect();
+    for mut o in copies {
+        o.id = next.next_object_id();
+        o.translate(0.0, dy);
+        next.objects.push(o);
+    }
+    Ok(())
 }
 
 /// Lays the template out again if there is one, keeps new pictures and makes the

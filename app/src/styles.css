@@ -6532,6 +6532,66 @@ body.preparing-drag * {
   background: var(--surface);
 }
 
+/* A guide's steps (SMT-029): a small picture and the step's text. */
+.guide-step {
+  flex-wrap: wrap;
+  padding: 2px;
+}
+
+/* The tools go on a line of their own: the step's text keeps the width. */
+.guide-step .guide-step-main {
+  flex: 1 1 100%;
+}
+
+.guide-step .tpl-section-tools {
+  margin-left: auto;
+}
+
+.guide-step.selected {
+  border-color: var(--brand-ink);
+  background: var(--brand-soft);
+}
+
+.guide-step-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.guide-thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  object-fit: cover;
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+}
+
+.guide-step-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .tpl-section-name {
   flex: 1;
   min-width: 0;

@@ -1,10 +1,9 @@
 // The Template tab (EDT-097, EDT-099): the settings of a template and its sections.
 // Every change is one command of the core (`document.template`) and one undo step.
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu } from "../components/Menu";
 import { useIndicator } from "../components/useIndicator";
-import { run } from "../lib/commands";
 import { ColorPicker } from "./ColorPicker";
 import { FontField, SelectField } from "./Fields";
 import { Icon } from "./icons";
@@ -13,21 +12,8 @@ import { STEP_SHAPES, useEditor, type StepShapeKind } from "./state";
 import { askSaveTemplate, setTemplate, templateCommand } from "./templateActions";
 import { SECTION_KINDS, bands, templateOf, type TemplateSettings } from "./templateUi";
 import { useDraft } from "./useDraft";
-
-function useThemes(): { id: string; name: string }[] {
-  const version = useEditor((s) => s.themesVersion);
-  const [themes, setThemes] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    let alive = true;
-    run<{ themes: { id: string; name: string }[] }>("editor.themes")
-      .then((r) => alive && setThemes(r.themes))
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [version]);
-  return themes;
-}
+import { GuideTab } from "./GuideTab";
+import { useThemes } from "./themesUi";
 
 export function TemplateTab() {
   const { t } = useTranslation();
@@ -40,6 +26,8 @@ export function TemplateTab() {
   if (!doc || !template) {
     return <p className="muted">{t("ui.editor.template.not_template")}</p>;
   }
+  // A guide of steps has its own tab (SMT-029).
+  if (template.id === "guide") return <GuideTab themes={themes} />;
   const s = template.settings;
   const set = (changes: Partial<TemplateSettings>) => void setTemplate(changes);
   const check = (key: "title" | "captions" | "footer" | "numbering", label: string) => (

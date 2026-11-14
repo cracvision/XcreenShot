@@ -1608,6 +1608,7 @@ export function SidePanel() {
         tab={tab === "template" && !isTemplate ? "props" : tab}
         setTab={setTab}
         template={isTemplate}
+        guide={templateOf(doc)?.id === "guide"}
       />
       <div className="side-body" role="tabpanel">
         {tab === "template" && isTemplate ? (
@@ -1724,10 +1725,13 @@ function PanelTabs({
   tab,
   setTab,
   template,
+  guide,
 }: {
   tab: string;
   setTab: (tab: "styles" | "props" | "effects" | "template") => void;
   template: boolean;
+  /** A guide of steps: its tab is Steps (SMT-029). */
+  guide: boolean;
 }) {
   const { t } = useTranslation();
   const tabs = useRef<HTMLDivElement>(null);
@@ -1767,10 +1771,10 @@ function PanelTabs({
           type="button"
           role="tab"
           aria-selected={tab === "template"}
-          title={t("ui.editor.tab_template")}
+          title={guide ? t("ui.guide.title") : t("ui.editor.tab_template")}
           onClick={() => setTab("template")}
         >
-          {t("ui.editor.tab_template")}
+          {guide ? t("ui.guide.title") : t("ui.editor.tab_template")}
         </button>
       )}
     </div>
