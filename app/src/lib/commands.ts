@@ -39,7 +39,13 @@ export interface SettingEntry {
   section: string;
   label: string;
   description: string;
-  schema: { type?: string; enum?: string[] };
+  schema: {
+    type?: string | string[];
+    enum?: string[];
+    minimum?: number;
+    maximum?: number;
+    format?: string;
+  };
   default: unknown;
   value: unknown;
   locked: boolean;
@@ -60,7 +66,7 @@ export interface ShortcutRow {
   /** The command it runs, and with which parameters (CAP-065). */
   runs: string;
   params: Record<string, unknown>;
-  scope: "global" | "app";
+  scope: "global" | "app" | "editor";
   group: string;
   title: string;
   shortcut: string | null;
@@ -97,22 +103,154 @@ export interface CommandEvent {
 }
 
 /** Capture panel settings (CAP-001, CAP-002, CAP-010), as `capture.settings` returns them. */
+/** The File destination's options (CAP-053). */
+export interface FileDest {
+  /** Empty: Pictures\\XcreenShot. */
+  folder: string;
+  prefix: string;
+  pattern: string;
+  format: "png" | "jpg" | "xshot";
+  quality: number;
+  onExists: "number" | "overwrite" | "ask";
+  /** Ask for the name and folder at each capture (CAP-053). */
+  ask: boolean;
+  /** Write the capture's metadata in the file (CAP-053). */
+  metadata: boolean;
+}
+
+/** The properties of Selection = Region (CAP-026). */
+export interface RegionProps {
+  fixed: boolean;
+  width: number;
+  height: number;
+  /** Also a fixed place: captured at once, without selecting. */
+  positioned: boolean;
+  /** The monitor's name; x and y from its top left, physical pixels. */
+  monitor: string;
+  x: number;
+  y: number;
+}
+
+/** The properties of Selection = Scrolling (CAP-034, CAP-035). */
+/** Timing = Interval (CAP-049): seconds between captures, when it stops, duplicates. */
+export interface IntervalProps {
+  every: number;
+  stop: "manual" | "count" | "duration" | "time";
+  count: number;
+  minutes: number;
+  /** HH:MM, local time. */
+  until: string;
+  discard: boolean;
+  sensitivity: "exact" | "small";
+}
+
+/** Timing = Scheduled (CAP-050): the day (empty: today), the minute and the repeat. */
+export interface ScheduleProps {
+  date: string;
+  time: string;
+  repeat: "once" | "daily" | "weekdays" | "weekly";
+}
+
+/** A pending scheduled capture (capture.schedule_list). */
+export interface ScheduledCapture {
+  id: string;
+  name: string;
+  preset: string | null;
+  /** The next capture, RFC 3339. */
+  at: string;
+  repeat: ScheduleProps["repeat"];
+}
+
+/** A running interval series (capture.interval_state). */
+export interface IntervalSeries {
+  id: string;
+  name: string;
+  preset: string | null;
+  count: number;
+  every: number;
+  nextAt: string;
+  endsAt: string | null;
+}
+
+export interface ScrollProps {
+  type: "manual" | "auto";
+  direction: "vertical" | "horizontal" | "both";
+  startFrom: "start" | "current";
+  /** Seconds between steps, 0 to 5. */
+  wait: number;
+  restore: boolean;
+  /** Detect fixed parts (CAP-036). */
+  fixed: boolean;
+}
+
 export interface PanelSettings {
-  tab: "universal" | "image";
+  tab: "universal" | "image" | "video";
+  /** The Video tab (VID-001); pointer and sound are settings (video.cursor, video.systemAudio). */
+  video: {
+    selection: "region" | "window" | "fullscreen";
+    limit: number;
+    /** Open in (VID-052). */
+    open: "editor" | "none";
+  };
   expanded: boolean;
   universal: {
     selection: "region" | "window" | "fullscreen";
     copy: boolean;
     cursor: boolean;
-    open: "editor" | "none";
+    open: "editor" | "quick" | "none";
     delay5: boolean;
+    /** Destinations (CAP-052): `file` for now. */
+    share: "file"[];
+    file: FileDest;
   };
   image: {
-    selection: "region" | "window" | "fullscreen";
+    /** `scrolling`: CAP-034, CAP-035; `menu`: CAP-031; `multi`: CAP-033; `text`: SMT-005. */
+    selection:
+      | "region"
+      | "window"
+      | "fullscreen"
+      | "picker"
+      | "scrolling"
+      | "menu"
+      | "multi"
+      | "clipboard"
+      | "file"
+      | "pdf"
+      | "webpage"
+      | "freehand"
+      | "text"
+      | "steps";
     copy: boolean;
     cursor: boolean;
-    open: "editor" | "none";
-    timing: "none" | "delay";
+    open: "editor" | "quick" | "none";
+    timing: "none" | "delay" | "interval" | "scheduled";
     delay: number;
+    /** Timing = Interval (CAP-049). */
+    interval: IntervalProps;
+    /** Timing = Scheduled (CAP-050). */
+    schedule: ScheduleProps;
+    /** Selection = File: a fixed file (CAP-040); empty asks each time. */
+    sourceFile: string;
+    /** Selection = Web page (CAP-037): view width, scale (0: the monitor's), wait, lazy. */
+    web: { width: number; scale: 0 | 1 | 2; wait: number; lazy: boolean };
+    /** Selection = Freehand (CAP-032). */
+    freehand: "free" | "polygon" | "ellipse";
+    /** Selection = Full screen: each window as its own object (CAP-029). */
+    windowsAsObjects: boolean;
+    /** Selection = Scrolling (CAP-034, CAP-035). */
+    scroll: ScrollProps;
+    /** Selection = Region (CAP-026). */
+    region: RegionProps;
+    /** Selection = Multiple areas (CAP-033). */
+    areas: { composition: "original" | "stacked" | "row"; gap: number };
+    /** Selection = Menu (CAP-031). */
+    menu: { submenus: boolean; menubar: boolean };
+    /** Selection = Step recorder (SMT-022): the area and a fixed title. */
+    steps: { area: "all" | "monitor" | "window"; title: string };
+    /** Effects for every capture (CAP-051): the editor's entries, `{type, …settings}`. */
+    effects: ({ type: string } & Record<string, unknown>)[];
+    /** Destinations (CAP-052): `file` for now. */
+    share: "file"[];
+    file: FileDest;
   };
 }

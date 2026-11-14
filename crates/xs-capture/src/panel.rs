@@ -19,6 +19,10 @@ pub struct UniversalTab {
     pub open: String,
     /// Fixed 5 s countdown (CAP-010, CAP-048).
     pub delay5: bool,
+    /// Destinations (CAP-052): `file` for now.
+    pub share: Vec<String>,
+    /// The File destination's options (CAP-053).
+    pub file: crate::filedest::FileDest,
 }
 
 impl Default for UniversalTab {
@@ -29,7 +33,154 @@ impl Default for UniversalTab {
             cursor: false,
             open: "editor".into(),
             delay5: false,
+            share: Vec::new(),
+            file: crate::filedest::FileDest::default(),
         }
+    }
+}
+
+/// The properties of Selection = Step recorder (SMT-022): the area and a fixed title.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct StepsTab {
+    /// `all`, `monitor` or `window`.
+    pub area: String,
+    /// Empty: proposed when it ends (SMT-028).
+    pub title: String,
+}
+
+impl Default for StepsTab {
+    fn default() -> Self {
+        StepsTab {
+            area: "all".into(),
+            title: String::new(),
+        }
+    }
+}
+
+/// The properties of Selection = Menu (CAP-031).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MenuTab {
+    pub submenus: bool,
+    pub menubar: bool,
+}
+
+impl Default for MenuTab {
+    fn default() -> Self {
+        MenuTab {
+            submenus: true,
+            menubar: false,
+        }
+    }
+}
+
+/// The properties of Selection = Multiple areas (CAP-033).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AreasTab {
+    /// `original`, `stacked` or `row`.
+    pub composition: String,
+    /// Space between stacked or side by side areas, in pixels.
+    pub gap: u32,
+}
+
+impl Default for AreasTab {
+    fn default() -> Self {
+        AreasTab {
+            composition: "original".into(),
+            gap: 10,
+        }
+    }
+}
+
+/// The properties of Selection = Region (CAP-026): a fixed size, and a fixed place.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RegionTab {
+    pub fixed: bool,
+    pub width: u32,
+    pub height: u32,
+    /// Also a fixed place: the capture is taken at once, without selecting.
+    pub positioned: bool,
+    /// The monitor's name (CAP-026); x and y from its top left, physical pixels.
+    pub monitor: String,
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Default for RegionTab {
+    fn default() -> Self {
+        RegionTab {
+            fixed: false,
+            width: 800,
+            height: 600,
+            positioned: false,
+            monitor: String::new(),
+            x: 0,
+            y: 0,
+        }
+    }
+}
+
+impl RegionTab {
+    /// What `capture.region` takes for these properties: a `rect` on a monitor, a
+    /// `size` to place, or nothing (a free selection).
+    pub fn params(&self) -> Value {
+        if !self.fixed {
+            return json!({});
+        }
+        if self.positioned {
+            json!({ "rect": { "monitor": self.monitor, "x": self.x, "y": self.y, "width": self.width, "height": self.height } })
+        } else {
+            json!({ "size": { "width": self.width, "height": self.height } })
+        }
+    }
+}
+
+/// The properties of Selection = Scrolling (CAP-034, CAP-035).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ScrollTab {
+    /// `manual` or `auto`.
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// Automatic: `vertical`, `horizontal` or `both`.
+    pub direction: String,
+    /// Automatic: `start` (the beginning) or `current`.
+    pub start_from: String,
+    /// Automatic: seconds between steps, 0 to 5.
+    pub wait: f64,
+    /// Automatic: put the content back where it was.
+    pub restore: bool,
+    /// Detect fixed parts: headers, footers and bars once (CAP-036).
+    pub fixed: bool,
+}
+
+impl Default for ScrollTab {
+    fn default() -> Self {
+        ScrollTab {
+            kind: "manual".into(),
+            direction: "vertical".into(),
+            start_from: "start".into(),
+            wait: 0.3,
+            restore: true,
+            fixed: true,
+        }
+    }
+}
+
+impl ScrollTab {
+    /// The parameters of `capture.scrolling` these properties stand for.
+    pub fn params(&self) -> Value {
+        json!({
+            "type": self.kind,
+            "direction": self.direction,
+            "startFrom": self.start_from,
+            "wait": self.wait,
+            "restore": self.restore,
+            "fixed": self.fixed,
+        })
     }
 }
 
@@ -42,10 +193,87 @@ pub struct ImageTab {
     pub copy: bool,
     pub cursor: bool,
     pub open: String,
-    /// `none` or `delay` (CAP-048; interval and scheduled arrive in M3).
+    /// `none`, `delay` (CAP-048), `interval` (CAP-049) or `scheduled` (CAP-050).
     pub timing: String,
+    /// Timing = Interval (CAP-049).
+    pub interval: crate::interval::IntervalTab,
+    /// Timing = Scheduled (CAP-050).
+    pub schedule: crate::schedule::ScheduleTab,
     /// Delay seconds, 1–60 (default 5).
     pub delay: u32,
+    /// Selection = Scrolling (CAP-034, CAP-035).
+    pub scroll: ScrollTab,
+    /// Selection = Region (CAP-026).
+    pub region: RegionTab,
+    /// Selection = Multiple areas (CAP-033).
+    pub areas: AreasTab,
+    /// Selection = Menu (CAP-031).
+    pub menu: MenuTab,
+    /// Selection = Step recorder (SMT-022).
+    pub steps: StepsTab,
+    /// Effects applied to every capture, in order (CAP-051): the editor's effect
+    /// entries (EDT-053), `{type, …settings}`.
+    pub effects: Vec<Value>,
+    /// Destinations (CAP-052): `file` for now.
+    pub share: Vec<String>,
+    /// The File destination's options (CAP-053).
+    pub file: crate::filedest::FileDest,
+    /// Selection = File: a fixed file, used without asking (CAP-040); empty asks.
+    pub source_file: String,
+    /// Selection = Web page (CAP-037).
+    pub web: WebTab,
+    /// Selection = Freehand: `free`, `polygon` or `ellipse` (CAP-032).
+    pub freehand: String,
+    /// Selection = Full screen: each window as its own object (CAP-029).
+    pub windows_as_objects: bool,
+}
+
+/// The properties of Selection = Web page (CAP-037).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WebTab {
+    /// Width of the page's view, 320 to 3840 CSS pixels.
+    pub width: u32,
+    /// 1 or 2; 0 is the main monitor's.
+    pub scale: u32,
+    /// Seconds to wait after loading, 0 to 10.
+    pub wait: f64,
+    /// Scroll to the bottom first so late content loads.
+    pub lazy: bool,
+}
+
+impl Default for WebTab {
+    fn default() -> Self {
+        WebTab {
+            width: 1280,
+            scale: 0,
+            wait: 1.0,
+            lazy: true,
+        }
+    }
+}
+
+impl WebTab {
+    pub fn validate(&self) -> Result<(), String> {
+        if !(320..=3840).contains(&self.width) {
+            return Err("image.web.width: between 320 and 3840".into());
+        }
+        if self.scale > 2 {
+            return Err("image.web.scale: 0 (the monitor's), 1 or 2".into());
+        }
+        if !(0.0..=10.0).contains(&self.wait) {
+            return Err("image.web.wait: between 0 and 10 seconds".into());
+        }
+        Ok(())
+    }
+
+    fn params(&self) -> Value {
+        let mut p = json!({ "width": self.width, "wait": self.wait, "lazy": self.lazy });
+        if self.scale > 0 {
+            p["scale"] = json!(self.scale);
+        }
+        p
+    }
 }
 
 impl Default for ImageTab {
@@ -56,7 +284,46 @@ impl Default for ImageTab {
             cursor: false,
             open: "editor".into(),
             timing: "none".into(),
+            interval: crate::interval::IntervalTab::default(),
+            schedule: crate::schedule::ScheduleTab::default(),
             delay: 5,
+            scroll: ScrollTab::default(),
+            region: RegionTab::default(),
+            areas: AreasTab::default(),
+            menu: MenuTab::default(),
+            steps: StepsTab::default(),
+            effects: Vec::new(),
+            share: Vec::new(),
+            file: crate::filedest::FileDest::default(),
+            source_file: String::new(),
+            web: WebTab::default(),
+            freehand: "free".into(),
+            windows_as_objects: false,
+        }
+    }
+}
+
+/// The Video tab (VID-001): what to record and for how long. The pointer and the
+/// system's sound are the settings `video.cursor` and `video.systemAudio`, the same the
+/// recording bar switches: one place for them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct VideoTab {
+    /// `region` (chosen on screen), `window` (followed, VID-005) or `fullscreen` (the
+    /// monitor under the pointer).
+    pub selection: String,
+    /// Seconds after which it stops by itself; 0: no limit (VID-015).
+    pub limit: u32,
+    /// Open in (VID-052): `editor` or `none` (only the library and the tray).
+    pub open: String,
+}
+
+impl Default for VideoTab {
+    fn default() -> Self {
+        VideoTab {
+            selection: "region".into(),
+            limit: 0,
+            open: "editor".into(),
         }
     }
 }
@@ -64,12 +331,13 @@ impl Default for ImageTab {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PanelSettings {
-    /// Active tab: `universal` or `image` (`video` arrives in M4).
+    /// Active tab: `universal`, `image` or `video`.
     pub tab: String,
     /// Options shown (expanded) or only the Capture button (compact).
     pub expanded: bool,
     pub universal: UniversalTab,
     pub image: ImageTab,
+    pub video: VideoTab,
 }
 
 impl Default for PanelSettings {
@@ -79,11 +347,29 @@ impl Default for PanelSettings {
             expanded: true,
             universal: UniversalTab::default(),
             image: ImageTab::default(),
+            video: VideoTab::default(),
         }
     }
 }
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
+/// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
+const IMAGE_SELECTIONS: [&str; 14] = [
+    "region",
+    "window",
+    "fullscreen",
+    "picker",
+    "scrolling",
+    "menu",
+    "multi",
+    "clipboard",
+    "file",
+    "pdf",
+    "webpage",
+    "freehand",
+    "text",
+    "steps",
+];
 
 impl PanelSettings {
     /// Checks every value; returns the offending field.
@@ -95,14 +381,74 @@ impl PanelSettings {
                 Err(format!("{field}: expected one of {options:?}"))
             }
         };
-        one_of("tab", &self.tab, &["universal", "image"])?;
+        one_of("tab", &self.tab, &["universal", "image", "video"])?;
+        one_of(
+            "video.selection",
+            &self.video.selection,
+            &["region", "window", "fullscreen"],
+        )?;
+        one_of("video.open", &self.video.open, &["editor", "none"])?;
+        if self.video.limit > 4 * 3600 {
+            return Err("video.limit: at most 4 hours".into());
+        }
         one_of("universal.selection", &self.universal.selection, &SELECTIONS)?;
-        one_of("universal.open", &self.universal.open, &["editor", "none"])?;
-        one_of("image.selection", &self.image.selection, &SELECTIONS)?;
-        one_of("image.open", &self.image.open, &["editor", "none"])?;
-        one_of("image.timing", &self.image.timing, &["none", "delay"])?;
+        one_of(
+            "universal.open",
+            &self.universal.open,
+            &["editor", "quick", "none"],
+        )?;
+        one_of("image.selection", &self.image.selection, &IMAGE_SELECTIONS)?;
+        one_of("image.open", &self.image.open, &["editor", "quick", "none"])?;
+        one_of(
+            "image.timing",
+            &self.image.timing,
+            &["none", "delay", "interval", "scheduled"],
+        )?;
+        self.image.interval.validate()?;
+        self.image.schedule.validate()?;
+        self.image.web.validate()?;
+        one_of(
+            "image.freehand",
+            &self.image.freehand,
+            &["free", "polygon", "ellipse"],
+        )?;
         if !(1..=60).contains(&self.image.delay) {
             return Err("image.delay: must be between 1 and 60".into());
+        }
+        let s = &self.image.scroll;
+        one_of("image.scroll.type", &s.kind, &["manual", "auto"])?;
+        one_of(
+            "image.scroll.direction",
+            &s.direction,
+            &["vertical", "horizontal", "both"],
+        )?;
+        one_of("image.scroll.startFrom", &s.start_from, &["start", "current"])?;
+        if !(0.0..=5.0).contains(&s.wait) {
+            return Err("image.scroll.wait: must be between 0 and 5".into());
+        }
+        one_of(
+            "image.areas.composition",
+            &self.image.areas.composition,
+            &["original", "stacked", "row"],
+        )?;
+        if self.image.areas.gap > 500 {
+            return Err("image.areas.gap: must be between 0 and 500".into());
+        }
+        for e in &self.image.effects {
+            xs_image::fx::check(e).map_err(|r| format!("image.effects: {r}"))?;
+        }
+        for (tab, share, file) in [
+            ("universal", &self.universal.share, &self.universal.file),
+            ("image", &self.image.share, &self.image.file),
+        ] {
+            if share.iter().any(|d| d != "file") {
+                return Err(format!("{tab}.share: only file is available"));
+            }
+            file.validate().map_err(|e| format!("{tab}.{e}"))?;
+        }
+        let r = &self.image.region;
+        if r.width == 0 || r.height == 0 || r.width > 100_000 || r.height > 100_000 {
+            return Err("image.region: width and height must be between 1 and 100000".into());
         }
         Ok(())
     }
@@ -125,11 +471,50 @@ impl PanelSettings {
             "cursor": i.cursor,
             "open": i.open,
             "delay": if i.timing == "delay" { i.delay } else { 0 },
+            "effects": i.effects,
+            "share": i.share,
+            "file": i.file,
         })
     }
 
     /// Command and parameters that "Capture" runs with `tab` (CAP-006, CAP-065).
+    /// With Timing = Interval, the series that runs that capture again (CAP-049).
     pub fn plan(&self, tab: &str) -> (&'static str, Value, Value) {
+        let (command, params, extra) = self.plan_once(tab);
+        let timed = matches!(self.image.timing.as_str(), "interval" | "scheduled");
+        if tab != "image" || !timed {
+            return (command, params, extra);
+        }
+        let selection = match (command, self.image.selection.as_str()) {
+            ("capture.region", "region") => "region",
+            ("capture.window", _) => "window",
+            ("capture.fullscreen", _) => "fullscreen",
+            ("capture.menu", _) => "menu",
+            ("capture.clipboard", _) => "clipboard",
+            ("capture.file", _) => "file",
+            ("capture.webpage", _) => "webpage",
+            // Not with an interval: the start says so.
+            (_, other) => other,
+        };
+        if self.image.timing == "scheduled" {
+            let mut params = with_overrides(params, &self.image.schedule.params());
+            params["selection"] = json!(selection);
+            return ("capture.schedule", params, json!({}));
+        }
+        let mut params = with_overrides(params, &self.image.interval.params());
+        params["selection"] = json!(selection);
+        ("capture.interval", params, json!({}))
+    }
+
+    fn plan_once(&self, tab: &str) -> (&'static str, Value, Value) {
+        // Video capture (VID-001, VID-002): the area, then the bar waits Ready.
+        if tab == "video" {
+            return (
+                "record.video",
+                json!({ "selection": self.video.selection, "limit": self.video.limit, "open": self.video.open }),
+                json!({}),
+            );
+        }
         if tab == "universal" {
             let u = &self.universal;
             let params = json!({
@@ -137,6 +522,8 @@ impl PanelSettings {
                 "cursor": u.cursor,
                 "open": u.open,
                 "delay": if u.delay5 { 5 } else { 0 },
+                "share": u.share,
+                "file": u.file,
             });
             let extra = json!({
                 "windowsOnly": u.selection == "window",
@@ -145,13 +532,99 @@ impl PanelSettings {
             ("capture.universal", params, extra)
         } else {
             let mut params = self.image_options();
+            if self.image.selection == "text" {
+                // A zone of the screen whose text is read (SMT-005): the delay and
+                // the clipboard apply; the pointer and Open in do not.
+                params["extract"] = json!(true);
+                params["cursor"] = json!(false);
+                return ("capture.region", params, json!({}));
+            }
+            // The step recorder (SMT-022): its area and title; the pointer, the delay,
+            // the effects, Open in and Copy apply.
+            if self.image.selection == "steps" {
+                params["area"] = json!(self.image.steps.area);
+                if !self.image.steps.title.trim().is_empty() {
+                    params["title"] = json!(self.image.steps.title.trim());
+                }
+                return ("smart.steps_start", params, json!({}));
+            }
+            if self.image.selection == "clipboard" {
+                params["cursor"] = json!(false);
+                return ("capture.clipboard", params, json!({}));
+            }
+            // A file (CAP-040): the fixed one, or chosen when capturing.
+            if self.image.selection == "file" {
+                params["cursor"] = json!(false);
+                if !self.image.source_file.trim().is_empty() {
+                    params["paths"] = json!([self.image.source_file.trim()]);
+                }
+                return ("capture.file", params, json!({}));
+            }
+            // Freehand (CAP-032): a shape on the frozen screens.
+            if self.image.selection == "freehand" {
+                params["freehand"] = json!(self.image.freehand);
+                return ("capture.region", params, json!({}));
+            }
+            // A web page (CAP-037): the address is asked in its box.
+            if self.image.selection == "webpage" {
+                params["cursor"] = json!(false);
+                return (
+                    "capture.webpage",
+                    with_overrides(params, &self.image.web.params()),
+                    json!({}),
+                );
+            }
+            // Import PDF (CAP-041): the file is chosen, then its window.
+            if self.image.selection == "pdf" {
+                params["cursor"] = json!(false);
+                return ("capture.pdf", params, json!({}));
+            }
+            if self.image.selection == "picker" {
+                return ("capture.window_picker", params, json!({}));
+            }
+            if self.image.selection == "menu" {
+                // From the panel there is always time to open the menu: the delay, or
+                // 5 s without one (CAP-031). No pointer in a menu capture.
+                params["delay"] = json!(if self.image.timing == "delay" {
+                    self.image.delay
+                } else {
+                    5
+                });
+                params["cursor"] = json!(false);
+                params["submenus"] = json!(self.image.menu.submenus);
+                params["menubar"] = json!(self.image.menu.menubar);
+                return ("capture.menu", params, json!({}));
+            }
+            if self.image.selection == "multi" {
+                let a = &self.image.areas;
+                params["multiple"] = json!({ "composition": a.composition, "gap": a.gap });
+                return ("capture.region", params, json!({}));
+            }
+            if self.image.selection == "scrolling" {
+                // No pointer in a scrolling capture (CAP-002).
+                params["cursor"] = json!(false);
+                return (
+                    "capture.scrolling",
+                    with_overrides(params, &self.image.scroll.params()),
+                    json!({}),
+                );
+            }
             let command = match self.image.selection.as_str() {
                 "window" => {
                     params["target"] = json!("interactive");
                     "capture.window"
                 }
-                "fullscreen" => "capture.fullscreen",
-                _ => "capture.region",
+                "fullscreen" => {
+                    if self.image.windows_as_objects {
+                        params["windows"] = json!(true);
+                    }
+                    "capture.fullscreen"
+                }
+                _ => {
+                    // A fixed region (CAP-026).
+                    params = with_overrides(params, &self.image.region.params());
+                    "capture.region"
+                }
             };
             (command, params, json!({}))
         }
@@ -205,7 +678,10 @@ mod tests {
                 copy: true,
                 cursor: false,
                 open: "editor".into(),
-                delay5: false
+                delay5: false,
+                // No destination by default (CAP-052).
+                share: Vec::new(),
+                file: crate::filedest::FileDest::default(),
             }
         );
         assert_eq!(s.image.selection, "region");
@@ -221,9 +697,27 @@ mod tests {
         let p = s.patched(&json!({"image": {"selection": "window"}})).unwrap();
         assert_eq!(p.image.selection, "window");
         assert_eq!(p.image.delay, 5, "untouched fields stay");
-        assert!(s.patched(&json!({"image": {"selection": "scrolling"}})).is_err());
+        assert!(s.patched(&json!({"image": {"selection": "camera"}})).is_err());
+        let p = s
+            .patched(&json!({"image": {"selection": "scrolling", "scroll": {"type": "auto"}}}))
+            .unwrap();
+        let (command, params, _) = p.plan("image");
+        assert_eq!(command, "capture.scrolling");
+        assert_eq!(params["type"], "auto");
+        assert_eq!(params["direction"], "vertical");
+        assert_eq!(params["startFrom"], "start");
+        assert!(s.patched(&json!({"image": {"scroll": {"wait": 9}}})).is_err());
         assert!(s.patched(&json!({"image": {"delay": 0}})).is_err());
-        assert!(s.patched(&json!({"tab": "video"})).is_err());
+        assert!(s.patched(&json!({"tab": "camera"})).is_err());
+        // The Video tab (VID-001): its selection and timer go to Video capture.
+        let p = s
+            .patched(&json!({"tab": "video", "video": {"selection": "fullscreen", "limit": 600}}))
+            .unwrap();
+        let (command, params, _) = p.plan("video");
+        assert_eq!(command, "record.video");
+        assert_eq!(params["selection"], "fullscreen");
+        assert_eq!(params["limit"], 600);
+        assert!(s.patched(&json!({"video": {"selection": "camera"}})).is_err());
     }
 
     /// CAP-006, CAP-001: Capture follows the tab's settings.
@@ -254,15 +748,48 @@ mod tests {
         s.image.open = "none".into();
         s.image.timing = "delay".into();
         s.image.delay = 7;
+        let o = s.image_options();
         assert_eq!(
-            s.image_options(),
-            json!({"copy": true, "cursor": false, "open": "none", "delay": 7})
+            (&o["copy"], &o["cursor"], &o["open"], &o["delay"]),
+            (&json!(true), &json!(false), &json!("none"), &json!(7))
         );
+        assert!(o.get("selection").is_none());
+        // And the destinations with their options (CAP-052, CAP-053).
+        assert_eq!(o["share"], json!([]));
+        assert_eq!(o["file"]["pattern"], "{prefix}_{date}_{time}");
     }
 
     #[test]
     fn overrides_win() {
         let merged = with_overrides(json!({"copy": true, "open": "editor"}), &json!({"open": "none"}));
         assert_eq!(merged, json!({"copy": true, "open": "none"}));
+    }
+
+    /// CAP-026: a fixed region is a size to place, or a rectangle on a monitor.
+    #[test]
+    fn a_fixed_region_plans_its_size_or_place() {
+        let s = PanelSettings::default();
+        let p = s
+            .patched(&json!({"image": {"region": {"fixed": true, "width": 1080, "height": 1080}}}))
+            .unwrap();
+        let (command, params, _) = p.plan("image");
+        assert_eq!(command, "capture.region");
+        assert_eq!(params["size"], json!({"width": 1080, "height": 1080}));
+        assert!(params.get("rect").is_none());
+        let p = p
+            .patched(&json!({"image": {"region": {"positioned": true, "monitor": "M2", "x": 100, "y": 50, "width": 800, "height": 600}}}))
+            .unwrap();
+        let (_, params, _) = p.plan("image");
+        assert_eq!(
+            params["rect"],
+            json!({"monitor": "M2", "x": 100, "y": 50, "width": 800, "height": 600})
+        );
+        assert!(p.patched(&json!({"image": {"region": {"width": 0}}})).is_err());
+        // Off, a free selection again.
+        let p = p
+            .patched(&json!({"image": {"region": {"fixed": false}}}))
+            .unwrap();
+        let (_, params, _) = p.plan("image");
+        assert!(params.get("rect").is_none() && params.get("size").is_none());
     }
 }

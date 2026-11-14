@@ -2,13 +2,17 @@
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
 mod countdown;
+mod docs;
+mod drag_out;
 #[cfg(windows)]
 mod freeze_win;
 mod global;
 mod host;
+mod launcher;
 mod overlay;
 mod permissions;
 mod tray;
+mod webpage;
 mod windows;
 
 use std::collections::HashMap;
@@ -17,7 +21,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
+use tauri::menu::{Menu, MenuItemKind};
+use tauri::{AppHandle, Manager, RunEvent, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
 use xs_core::ipc::{self, Request, Response};
 use xs_core::paths::Paths;
@@ -27,6 +32,10 @@ pub struct AppState {
     pub core: Arc<Core>,
     /// Native menu id -> (command, params).
     pub actions: Mutex<tray::Actions>,
+    /// The editor menus: the main window's on Windows, the menu bar on macOS (EDT-002).
+    pub window_menu: Mutex<Option<Menu<Wry>>>,
+    /// What the editor last said about its menu entries (`editor.menu_state`).
+    pub menu_state: Mutex<Value>,
     /// OS shortcut id -> (command, params).
     pub shortcut_map: Mutex<HashMap<u32, (String, Value)>>,
     /// Section/key to show when the Preferences window finishes loading.
@@ -37,6 +46,9 @@ pub struct AppState {
     pub countdown: countdown::Countdown,
     /// The capture panel was hidden for the capture in progress (CAP-001).
     pub panel_stepped_aside: AtomicBool,
+    /// When the last on-screen selection was confirmed, to time it until the editor
+    /// shows the capture (APP-049).
+    pub capture_confirmed: Mutex<Option<std::time::Instant>>,
 }
 
 /// The single entry point from the webviews: run a registered command.
@@ -85,7 +97,22 @@ fn xs_frame_patch(
 /// The user finished or cancelled the on-screen selection.
 #[tauri::command]
 fn xs_overlay_finish(app: AppHandle, seq: u64, outcome: Value) {
+    if matches!(outcome["kind"].as_str(), Some("rect" | "window")) {
+        *app.state::<AppState>().capture_confirmed.lock().unwrap() = Some(std::time::Instant::now());
+    }
     overlay::finish(&app, seq, outcome);
+}
+
+/// The editor painted a document: right after a selection, how long the capture took
+/// to appear (APP-049, in the log for diagnostics).
+#[tauri::command]
+fn xs_editor_painted(state: tauri::State<'_, AppState>) {
+    if let Some(at) = state.capture_confirmed.lock().unwrap().take() {
+        let ms = at.elapsed().as_millis() as u64;
+        if ms < 30_000 {
+            tracing::info!(ms, "capture to editor");
+        }
+    }
 }
 
 /// Cancel button of the delay countdown (CAP-048).
@@ -100,6 +127,49 @@ fn xs_countdown_current(app: AppHandle) -> Option<Value> {
     countdown::current(&app)
 }
 
+/// The editor's menus, for the menu bar it draws on Windows (EDT-002).
+#[tauri::command]
+fn xs_editor_menus(state: tauri::State<'_, AppState>) -> Value {
+    // Without the smart features switched off (SMT-002).
+    xs_core::menus::to_json(&xs_core::features::menu_for(
+        &state.core.settings,
+        xs_core::menus::app_menu(xs_core::platform::Platform::Windows),
+    ))
+}
+
+/// Prepares the files of a drag out to other apps (TRY-015): open documents by ID and
+/// library files by path. Returns the files and the picture for the pointer.
+#[tauri::command]
+async fn xs_drag_prepare(
+    state: tauri::State<'_, AppState>,
+    docs: Vec<String>,
+    paths: Vec<String>,
+) -> Result<Value, CommandError> {
+    let core = state.core.clone();
+    tauri::async_runtime::spawn_blocking(move || drag_out::prepare(&core, &docs, &paths))
+        .await
+        .map_err(|e| CommandError::internal(e.to_string()))?
+}
+
+/// Drags prepared files out of the window until they are dropped (TRY-015).
+#[tauri::command]
+async fn xs_drag_start(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    files: Vec<std::path::PathBuf>,
+    image: Option<std::path::PathBuf>,
+) -> Result<&'static str, CommandError> {
+    tauri::async_runtime::spawn_blocking(move || drag_out::start(&app, window, files, image))
+        .await
+        .map_err(|e| CommandError::internal(e.to_string()))?
+}
+
+/// The recording bar grows for a warning or a menu and shrinks back (VID-011, VID-019).
+#[tauri::command]
+fn xs_recbar_fit(app: AppHandle, height: f64, up: bool) {
+    let _ = windows::fit_recording_bar(&app, height, up);
+}
+
 /// The capture panel fits its content (CAP-001).
 #[tauri::command]
 fn xs_panel_fit(app: AppHandle, height: f64) {
@@ -112,27 +182,67 @@ fn xs_take_navigation(state: tauri::State<'_, AppState>) -> Option<Value> {
     state.pending_navigation.lock().unwrap().take()
 }
 
+/// Builds the application menu again: language or shortcuts changed.
 pub(crate) fn rebuild_app_menu(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
         let state = app.state::<AppState>();
         let mut actions = state.actions.lock().unwrap();
-        let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Macos);
-        if let Ok(menu) = tray::build_menu(app, &state.core, &entries, false, &mut actions) {
+        let entries = xs_core::features::menu_for(
+            &state.core.settings,
+            xs_core::menus::app_menu(xs_core::platform::Platform::Macos),
+        );
+        if let Ok(menu) = tray::build_menu(app, &state.core, &entries, tray::Shortcuts::None, &mut actions) {
+            *state.window_menu.lock().unwrap() = Some(menu.clone());
             let _ = app.set_menu(menu);
         }
     }
-    #[cfg(windows)]
-    {
-        let state = app.state::<AppState>();
-        if let Some(w) = app.get_webview_window(windows::MAIN) {
-            let mut actions = state.actions.lock().unwrap();
-            let entries = xs_core::menus::app_menu(xs_core::platform::Platform::Windows);
-            if let Ok(menu) = tray::build_menu(app, &state.core, &entries, false, &mut actions) {
-                let _ = w.set_menu(menu);
+    // Windows: the editor draws its menu bar and follows language and shortcuts itself.
+    apply_menu_state(app);
+}
+
+/// Greys out and ticks the editor menu entries as the editor window last said
+/// (EDT-002): entries that do not apply are disabled, never hidden.
+pub(crate) fn apply_menu_state(app: &AppHandle) {
+    fn visit(items: &[MenuItemKind<Wry>], f: &mut impl FnMut(&MenuItemKind<Wry>)) {
+        for item in items {
+            f(item);
+            if let MenuItemKind::Submenu(sub) = item {
+                if let Ok(children) = sub.items() {
+                    visit(&children, f);
+                }
             }
         }
     }
+    let state = app.state::<AppState>();
+    let Some(menu) = state.window_menu.lock().unwrap().clone() else {
+        return;
+    };
+    let s = state.menu_state.lock().unwrap().clone();
+    let Ok(items) = menu.items() else {
+        return;
+    };
+    visit(&items, &mut |item| {
+        let id = item.id().as_ref();
+        let enabled = s["enabled"].get(id).and_then(Value::as_bool);
+        let checked = s["checked"].get(id).and_then(Value::as_bool);
+        match item {
+            MenuItemKind::MenuItem(i) => {
+                if let Some(on) = enabled {
+                    let _ = i.set_enabled(on);
+                }
+            }
+            MenuItemKind::Check(c) => {
+                if let Some(on) = enabled {
+                    let _ = c.set_enabled(on);
+                }
+                if let Some(on) = checked {
+                    let _ = c.set_checked(on);
+                }
+            }
+            _ => {}
+        }
+    });
 }
 
 /// APP-040: refuse to start below Windows 10 22H2 with a clear message.
@@ -161,6 +271,7 @@ fn check_windows_version(lang: xs_core::Lang) -> bool {
 /// Requests from the CLI. The claimed source is not trusted: only a second app
 /// launch may ask, as the UI, to show the main window (single instance, APP-001).
 fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
+    let events_core = core.clone();
     let handler: ipc::RequestHandler = Arc::new(move |req: Request| {
         let source = match (req.source, req.command.as_str()) {
             (Source::Ui, "app.show") => Source::Ui,
@@ -169,7 +280,28 @@ fn serve_ipc(core: Arc<Core>) -> std::io::Result<()> {
         };
         Response::from(core.call(source, &req.command, req.params, req.lang))
     });
-    ipc::serve(&ipc::endpoint(), handler).map(|_| ())
+    // `xcreenshot events watch` keeps its connection and gets one line per event (APP-031).
+    let streams: ipc::StreamHandler = Arc::new(move |req: &Request, emit: &mut dyn FnMut(&Value) -> bool| {
+        if req.command != "events.watch" {
+            return false;
+        }
+        let lang = req.lang.unwrap_or_else(|| events_core.lang());
+        events_core.watch_events(&req.params, lang, emit);
+        true
+    });
+    ipc::serve_with_streams(&ipc::endpoint(), handler, Some(streams)).map(|_| ())
+}
+
+/// The files on the command line: what the system passes on a double click or "Open
+/// with" (APP-001). Flags (`--background`) are not files.
+fn opened_files() -> Vec<String> {
+    std::env::args()
+        .skip(1)
+        .filter(|a| !a.starts_with("--"))
+        .filter_map(|a| std::path::absolute(&a).ok())
+        .filter(|p| p.is_file())
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect()
 }
 
 pub fn run() {
@@ -179,22 +311,39 @@ pub fn run() {
     let log = logging::init(&paths.logs_dir(), false);
     let endpoint = ipc::endpoint();
 
+    // Files to open (double click, "Open with"; APP-001).
+    let files = opened_files();
+
     // Single instance (APP-001): hand over to the running one and leave.
     if ipc::is_running(&endpoint) {
-        if !background {
+        if !background || !files.is_empty() {
+            let (command, params) = if files.is_empty() {
+                ("app.show", json!({}))
+            } else {
+                ("app.open_files", json!({ "paths": files }))
+            };
             let req = Request {
                 v: ipc::PROTOCOL_VERSION,
-                command: "app.show".into(),
-                params: json!({}),
+                command: command.into(),
+                params,
                 source: Source::Ui,
                 lang: None,
             };
-            let _ = ipc::send(&endpoint, &req, Some(Duration::from_secs(5)));
+            let _ = ipc::send(&endpoint, &req, Some(Duration::from_secs(30)));
         }
         return;
     }
 
-    let core = Core::with_extensions(paths.clone(), Some(log), vec![xs_capture::extension()]);
+    let core = Core::with_extensions(
+        paths.clone(),
+        Some(log),
+        vec![
+            xs_capture::extension(),
+            xs_editor::extension(),
+            xs_library::extension(),
+            xs_ai::extension(),
+        ],
+    );
     #[cfg(windows)]
     if !check_windows_version(core.lang()) {
         return;
@@ -221,22 +370,44 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
         // windows and the countdown are left out: the plugin shows any window it has no
-        // saved state for, which made a hidden selection window appear at startup.
+        // saved state for, which made a hidden selection window appear at startup. So are
+        // the windows XcreenShot places itself every time: the recording bar and border
+        // (VID-011, VID-020), the working sign, the text box of Capture details and the
+        // off-screen web page views; restored, they came back at an old size and place.
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_filter(|label| !label.starts_with(overlay::LABEL_PREFIX) && label != countdown::LABEL)
+                .with_filter(|label| {
+                    !label.starts_with(overlay::LABEL_PREFIX)
+                        && !label.starts_with("webcap-")
+                        && ![
+                            countdown::LABEL,
+                            windows::RECBAR,
+                            windows::RECFRAME,
+                            windows::STEPSBAR,
+                            windows::STEPSNOTE,
+                            windows::LIVEDRAW,
+                            windows::DRAWBAR,
+                            windows::WORKING,
+                            windows::ASK_TEXT,
+                        ]
+                        .contains(&label)
+                })
                 .build(),
         )
         .manage(AppState {
             core: core.clone(),
             actions: Mutex::new(HashMap::new()),
+            window_menu: Mutex::new(None),
+            menu_state: Mutex::new(json!({})),
             shortcut_map: Mutex::new(HashMap::new()),
             pending_navigation: Mutex::new(None),
             overlays: overlay::Overlays::default(),
             countdown: countdown::Countdown::default(),
             panel_stepped_aside: AtomicBool::new(false),
+            capture_confirmed: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             xs_run,
@@ -246,24 +417,51 @@ pub fn run() {
             xs_frame_patch,
             xs_countdown_cancel,
             xs_countdown_current,
-            xs_panel_fit
+            xs_panel_fit,
+            xs_recbar_fit,
+            launcher::xs_launcher,
+            launcher::xs_launcher_grab,
+            launcher::xs_launcher_drag,
+            launcher::xs_launcher_drop,
+            xs_editor_menus,
+            xs_drag_prepare,
+            xs_drag_start,
+            xs_editor_painted
         ])
         .register_asynchronous_uri_scheme_protocol("xsframe", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || responder.respond(overlay::serve_frame(&app, &request)));
         })
+        // Document pixels for the editor canvas (ADR 0004).
+        .register_asynchronous_uri_scheme_protocol("xsdoc", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            std::thread::spawn(move || responder.respond(docs::serve(&app, &request)));
+        })
         .setup(move |app| {
             let handle = app.handle().clone();
             core.set_host(Arc::new(host::TauriHost { app: handle.clone() }));
             permissions::init(core.paths.config_dir.clone());
+            host::setup_notifications(&handle);
+            // Recovery copies of unsaved documents every 30 s (EDT-012).
+            xs_editor::start_background(&core);
+            // The documents open when XcreenShot last ended (EDT-120).
+            xs_editor::reopen_documents(&core);
+            // The library index catches up with the folder, then follows it (LIB-022).
+            xs_library::start(&core);
+            // System fonts load in the background, so the first text does not wait.
+            xs_image::text::warm_up();
 
             if let Err(e) = serve_ipc(core.clone()) {
                 tracing::error!(error = %e, "could not open the local automation channel");
             }
 
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
-            if !first_run_marker.exists() {
-                if !cfg!(debug_assertions) && core.settings.get_bool("general.launchAtLogin") {
+            let first_run = !first_run_marker.exists();
+            if first_run {
+                if !cfg!(debug_assertions)
+                    && !xs_core::paths::isolated()
+                    && core.settings.get_bool("general.launchAtLogin")
+                {
                     let _ = handle.autolaunch().enable();
                 }
                 let _ = std::fs::create_dir_all(&core.paths.config_dir);
@@ -281,14 +479,34 @@ pub fn run() {
             // Shortcuts and icon first; the window (if any) after (APP-003, APP-051).
             global::apply(&handle);
             tray::create(&handle)?;
+            // The edge launcher, if it is on (CAP-004).
+            launcher::start(&handle);
             global::startup_notice(&handle);
             // Time from process start to "icon and shortcuts work" (APP-003, APP-051).
             tracing::info!(
                 elapsed_ms = started.elapsed().as_millis() as u64,
                 "ready: icon and shortcuts active"
             );
-            if !background {
+            // The first time, the welcome instead of the editor (APP-005); never when
+            // started in the background or by automation.
+            if !background && first_run {
+                windows::open_welcome(&handle)?;
+            } else if !background {
                 windows::show_main(&handle)?;
+            }
+            // The files it was opened with, once the commands are there (APP-001).
+            if !files.is_empty() {
+                let opener = core.clone();
+                let files = files.clone();
+                std::thread::spawn(move || {
+                    while !opener.is_ready() {
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                    if let Err(e) = opener.call(Source::Ui, "app.open_files", json!({ "paths": files }), None)
+                    {
+                        tracing::warn!(code = e.code.as_str(), "files not opened");
+                    }
+                });
             }
             // Selection windows wait hidden so the crosshair appears fast (APP-048).
             overlay::prewarm(&handle, xs_capture::monitors().map(|m| m.len()).unwrap_or(1));
@@ -318,14 +536,44 @@ pub fn run() {
             let app = window.app_handle();
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
-                    let keep_loaded = app
-                        .state::<AppState>()
-                        .core
-                        .settings
-                        .get_bool("advanced.keepEditorLoaded");
+                    let core = app.state::<AppState>().core.clone();
+                    // Extract text's results window: its size and place for the next
+                    // one (SMT-006).
+                    if window.label().starts_with("text-") {
+                        windows::remember_text_window(app, window);
+                    }
+                    if window.label() == windows::MAIN {
+                        // Library documents save themselves when the editor closes (EDT-012).
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_editor::save_library_documents(&core));
+                    }
+                    if window.label() == windows::PICKER {
+                        // Closing the picker cancels it (CAP-030).
+                        let core = core.clone();
+                        std::thread::spawn(move || {
+                            xs_capture::picker::choose(&core, xs_capture::picker::Choice::Cancel);
+                        });
+                    }
+                    if window.label() == windows::SCROLL_PANEL {
+                        // Closing the scrolling capture's panel cancels it (CAP-034).
+                        let core = core.clone();
+                        std::thread::spawn(move || {
+                            xs_capture::scroll::act(&core, xs_capture::scroll::Action::Cancel);
+                        });
+                    }
+                    if window.label() == windows::MULTI_PANEL {
+                        // Closing the panel ends the session (CAP-067); its captures
+                        // stay in the library.
+                        let core = core.clone();
+                        std::thread::spawn(move || xs_capture::multi::stop(&core, true));
+                    }
+                    let keep_loaded = core.settings.get_bool("advanced.keepEditorLoaded");
                     if window.label() == windows::MAIN && keep_loaded {
                         api.prevent_close();
                         let _ = window.hide();
+                        if let Some(w) = app.get_webview_window(windows::MAIN) {
+                            windows::memory_target(&w, true);
+                        }
                     }
                     windows::after_window_gone(app, window.label());
                 }

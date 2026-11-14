@@ -35,7 +35,7 @@ export function Countdown() {
 
   return (
     <div className="countdown" role="timer" aria-live="off">
-      <div className="countdown-number" aria-hidden="true">
+      <div className="countdown-number" aria-hidden="true" key={left}>
         {left}
       </div>
       <div className="countdown-text">

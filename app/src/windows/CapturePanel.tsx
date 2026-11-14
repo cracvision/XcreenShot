@@ -3,24 +3,31 @@
 // shows what `capture.settings` returns.
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
+import { Menu } from "../components/Menu";
+import { useIndicator } from "../components/useIndicator";
 import { display } from "../lib/accelerator";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import {
   isCommandError,
   run,
   type CommandEvent,
+  type IntervalSeries,
+  type ScheduledCapture,
   type PanelSettings,
   type ShortcutRow,
 } from "../lib/commands";
 import { ShortcutRecorder } from "../prefs/ShortcutRecorder";
 import { useApp } from "../store";
+import { ImageOptions, UniversalOptions, VideoOptions } from "./CaptureOptions";
+import { askImport, exportPresets, restoreBuiltins } from "./presetActions";
+import { PresetsSection } from "./PresetsSection";
+import { useFileDrop } from "./fileDrop";
 
 type Tab = PanelSettings["tab"];
-const TABS: Tab[] = ["universal", "image"];
-const SELECTIONS = ["region", "window", "fullscreen"] as const;
+const TABS: Tab[] = ["universal", "image", "video"];
 
 /** Deep partial for `capture.configure` patches. */
 type Patch = {
@@ -28,6 +35,7 @@ type Patch = {
   expanded?: boolean;
   universal?: Partial<PanelSettings["universal"]>;
   image?: Partial<PanelSettings["image"]>;
+  video?: Partial<PanelSettings["video"]>;
 };
 
 export function CapturePanel() {
@@ -37,6 +45,22 @@ export function CapturePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  // Files dropped on the panel (CAP-005).
+  const dropping = useFileDrop(setStatus);
+  // The panel's interval series (CAP-049) and schedule (CAP-050), if any.
+  const [series, setSeries] = useState<IntervalSeries | null>(null);
+  const [scheduled, setScheduled] = useState<ScheduledCapture | null>(null);
+
+  useEffect(() => {
+    type Timed = { series: IntervalSeries[]; schedules: ScheduledCapture[] };
+    const pick = (state: Timed) => {
+      setSeries(state.series.find((x) => x.preset === "@panel") ?? null);
+      setScheduled(state.schedules.find((x) => x.preset === "@panel") ?? null);
+    };
+    void run<Timed>("capture.interval_state").then(pick);
+    const un = listen<Timed>("xs://interval", (e) => pick(e.payload));
+    return () => void un.then((f) => f());
+  }, []);
 
   const load = useCallback(() => {
     void run<PanelSettings>("capture.settings").then(setSettings);
@@ -88,7 +112,13 @@ export function CapturePanel() {
     if (!settings) return;
     setStatus(null);
     try {
-      await run(settings.tab === "universal" ? "capture.universal" : "capture.image");
+      await run(
+        settings.tab === "universal"
+          ? "capture.universal"
+          : settings.tab === "video"
+            ? "capture.capture"
+            : "capture.image",
+      );
     } catch (e) {
       // Cancelling is not an error worth showing.
       if (isCommandError(e) && e.code === "cancelled") return;
@@ -103,9 +133,22 @@ export function CapturePanel() {
 
   if (!settings) return <div className="panel" ref={root} />;
   const tab = settings.tab;
+  // Timing = Interval: Start, and Stop while its series runs (CAP-049).
+  const interval = tab === "image" && settings.image.timing === "interval";
+  // Timing = Scheduled: Schedule, and Cancel schedule while it waits (CAP-050).
+  const schedule = tab === "image" && settings.image.timing === "scheduled";
+  const label = series
+    ? t("ui.panel.stop")
+    : scheduled
+      ? t("ui.panel.unschedule")
+      : interval
+        ? t("ui.panel.start")
+        : schedule
+          ? t("ui.panel.schedule")
+          : t("ui.panel.capture");
 
   return (
-    <div className="panel" ref={root}>
+    <div className={`panel${dropping ? " dropping" : ""}`} ref={root}>
       <div className="panel-top">
         <Tabs value={tab} onChange={(next) => void change({ tab: next })} />
         <button
@@ -129,7 +172,9 @@ export function CapturePanel() {
           role="tabpanel"
           aria-labelledby={`tab-${tab}`}
         >
-          {tab === "universal" ? (
+          {tab === "video" ? (
+            <VideoOptions value={settings.video} onChange={(v) => void change({ video: v })} />
+          ) : tab === "universal" ? (
             <UniversalOptions
               value={settings.universal}
               onChange={(u) => void change({ universal: u })}
@@ -141,16 +186,53 @@ export function CapturePanel() {
       )}
 
       <div className="panel-bottom">
-        <button type="button" className="btn primary panel-capture" onClick={() => void capture()}>
-          {t("ui.panel.capture")}
+        <button
+          type="button"
+          className="btn primary panel-capture"
+          onClick={() =>
+            void (series
+              ? run("capture.interval_stop", { id: series.id })
+              : scheduled
+                ? run("capture.schedule_cancel", { id: scheduled.id })
+                : capture())
+          }
+        >
+          {label}
         </button>
         <CaptureShortcut />
       </div>
+      {scheduled && (
+        <p className="panel-status info" role="status">
+          {t("ui.panel.schedule_status", {
+            when: new Date(scheduled.at).toLocaleString([], {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })}
+        </p>
+      )}
+      {series && (
+        <p className="panel-status info" role="status">
+          {t("ui.panel.series_status", {
+            count: series.count,
+            time: new Date(series.nextAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          })}
+        </p>
+      )}
       {status && (
         <p className="panel-status" role="alert">
           {status}
         </p>
       )}
+
+      <PresetsSection tab={tab} />
 
       {confirmReset && (
         <Dialog
@@ -188,6 +270,8 @@ function merge(s: PanelSettings, p: Patch): PanelSettings {
 function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const list = useRef<HTMLDivElement>(null);
+  useIndicator(list, value);
   const onKey = (e: React.KeyboardEvent) => {
     const i = TABS.indexOf(value);
     const next =
@@ -206,7 +290,14 @@ function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
     refs.current[next]?.focus();
   };
   return (
-    <div className="panel-tabs" role="tablist" aria-label={t("ui.panel.tabs")} onKeyDown={onKey}>
+    <div
+      className="panel-tabs seg"
+      role="tablist"
+      aria-label={t("ui.panel.tabs")}
+      onKeyDown={onKey}
+      ref={list}
+    >
+      <span className="seg-indicator" aria-hidden="true" />
       {TABS.map((tab) => (
         <button
           key={tab}
@@ -225,146 +316,6 @@ function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
         </button>
       ))}
     </div>
-  );
-}
-
-interface Common {
-  selection: (typeof SELECTIONS)[number];
-  copy: boolean;
-  cursor: boolean;
-  open: "editor" | "none";
-}
-
-/** Controls shared by both tabs, in the CAP-002 order (Selection … Capture cursor). */
-function CommonOptions<T extends Common>({
-  value,
-  onChange,
-}: {
-  value: T;
-  onChange: (patch: Partial<Common>) => void;
-}) {
-  const { t } = useTranslation();
-  const id = useId();
-  return (
-    <>
-      <label className="panel-field" htmlFor={`${id}-sel`}>
-        <span>{t("ui.panel.selection")}</span>
-        <select
-          id={`${id}-sel`}
-          value={value.selection}
-          onChange={(e) => onChange({ selection: e.target.value as Common["selection"] })}
-        >
-          {SELECTIONS.map((s) => (
-            <option key={s} value={s}>
-              {t(`ui.panel.sel_${s}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="panel-field" htmlFor={`${id}-open`}>
-        <span>{t("ui.panel.open_in")}</span>
-        <select
-          id={`${id}-open`}
-          value={value.open}
-          onChange={(e) => onChange({ open: e.target.value as Common["open"] })}
-        >
-          <option value="editor">{t("ui.panel.open_editor")}</option>
-          <option value="none">{t("ui.panel.open_none")}</option>
-        </select>
-      </label>
-      <label className="panel-check">
-        <input
-          type="checkbox"
-          checked={value.copy}
-          onChange={(e) => onChange({ copy: e.target.checked })}
-        />
-        {t("ui.panel.copy")}
-      </label>
-      {/* CAP-047 arrives with the editor; the reason is in the tooltip (CAP-002). */}
-      <label className="panel-check disabled" title={t("ui.panel.cursor_later")}>
-        <input type="checkbox" checked={false} disabled aria-describedby={`${id}-cursor`} />
-        {t("ui.panel.cursor")}
-        <span id={`${id}-cursor`} className="sr-only">
-          {t("ui.panel.cursor_later")}
-        </span>
-      </label>
-    </>
-  );
-}
-
-function UniversalOptions({
-  value,
-  onChange,
-}: {
-  value: PanelSettings["universal"];
-  onChange: (patch: Partial<PanelSettings["universal"]>) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <CommonOptions value={value} onChange={onChange} />
-      <label className="panel-check">
-        <input
-          type="checkbox"
-          checked={value.delay5}
-          onChange={(e) => onChange({ delay5: e.target.checked })}
-        />
-        {t("ui.panel.delay5")}
-      </label>
-    </>
-  );
-}
-
-function ImageOptions({
-  value,
-  onChange,
-}: {
-  value: PanelSettings["image"];
-  onChange: (patch: Partial<PanelSettings["image"]>) => void;
-}) {
-  const { t } = useTranslation();
-  const id = useId();
-  // What is being typed; the saved value shows otherwise.
-  const [draft, setDraft] = useState<string | null>(null);
-  const commitSeconds = () => {
-    const n = Math.round(Number(draft));
-    if (draft !== null && Number.isFinite(n) && n >= 1 && n <= 60) onChange({ delay: n });
-    setDraft(null);
-  };
-  return (
-    <>
-      <CommonOptions value={value} onChange={onChange} />
-      <div className="panel-row">
-        <label className="panel-field" htmlFor={`${id}-timing`}>
-          <span>{t("ui.panel.timing")}</span>
-          <select
-            id={`${id}-timing`}
-            value={value.timing}
-            onChange={(e) => onChange({ timing: e.target.value as "none" | "delay" })}
-          >
-            <option value="none">{t("ui.panel.timing_none")}</option>
-            <option value="delay">{t("ui.panel.timing_delay")}</option>
-          </select>
-        </label>
-        {value.timing === "delay" && (
-          <label className="panel-field narrow" htmlFor={`${id}-sec`}>
-            <span>{t("ui.panel.seconds")}</span>
-            <input
-              id={`${id}-sec`}
-              type="number"
-              min={1}
-              max={60}
-              step={1}
-              value={draft ?? String(value.delay)}
-              title={t("ui.panel.seconds_range")}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitSeconds}
-              onKeyDown={(e) => e.key === "Enter" && commitSeconds()}
-            />
-          </label>
-        )}
-      </div>
-    </>
   );
 }
 
@@ -454,69 +405,53 @@ function CaptureShortcut() {
 /** "More" menu (CAP-001): only the entries whose features exist. */
 function MoreMenu({ onReset }: { onReset: () => void }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    menu.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    const close = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!menu.current?.contains(target) && !button.current?.contains(target)) setOpen(false);
-    };
-    window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
-  }, [open]);
-
-  const onKey = (e: React.KeyboardEvent) => {
-    const items = [...(menu.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      setOpen(false);
-      button.current?.focus();
-    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      const d = e.key === "ArrowDown" ? 1 : -1;
-      items[(i + d + items.length) % items.length]?.focus();
-    }
-  };
-  const choose = (action: () => void) => {
-    setOpen(false);
-    button.current?.focus();
-    action();
-  };
-
+  // The edge launcher (CAP-004): shown with the panel, or not.
+  const iface = useApp((s) => s.settings.find((x) => x.key === "capture.interface")?.value);
+  const launcherOn = iface === "launcher" || iface === "both";
   return (
     <div className="panel-more">
-      <button
-        ref={button}
-        type="button"
-        className="btn icon"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={t("ui.panel.more")}
+      <Menu
+        triggerClass="btn icon"
+        align="end"
+        chevron={false}
+        ariaLabel={t("ui.panel.more")}
         title={t("ui.panel.more")}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span aria-hidden="true">⋯</span>
-      </button>
-      {open && (
-        <div className="menu" role="menu" ref={menu} onKeyDown={onKey}>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            onClick={() => choose(() => void run("settings.open", { section: "capture" }))}
-          >
-            {t("ui.panel.capture_prefs")}
-          </button>
-          <button type="button" role="menuitem" tabIndex={-1} onClick={() => choose(onReset)}>
-            {t("ui.panel.reset")}
-          </button>
-        </div>
-      )}
+        label={<span aria-hidden="true">⋯</span>}
+        items={[
+          {
+            id: "prefs",
+            label: t("ui.panel.capture_prefs"),
+            onSelect: () => void run("settings.open", { section: "capture" }),
+          },
+          { id: "reset", label: t("ui.panel.reset"), onSelect: onReset },
+          {
+            id: "launcher",
+            label: launcherOn ? t("ui.panel.hide_launcher") : t("ui.panel.show_launcher"),
+            onSelect: () =>
+              void run("settings.set", {
+                key: "capture.interface",
+                value: launcherOn ? "panel" : "both",
+              }),
+          },
+          // CAP-063, CAP-064.
+          {
+            id: "import_presets",
+            label: t("ui.panel.presets.import"),
+            separator: true,
+            onSelect: () => void askImport(),
+          },
+          {
+            id: "export_presets",
+            label: t("ui.panel.presets.export_all"),
+            onSelect: () => void exportPresets(null),
+          },
+          {
+            id: "restore_presets",
+            label: t("ui.panel.presets.restore_builtins"),
+            onSelect: () => void restoreBuiltins(),
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ const UI_SHORTCUT_CLI: &[Scope] = &[Scope::Ui, Scope::Shortcut, Scope::Cli];
 const UI_CLI: &[Scope] = &[Scope::Ui, Scope::Cli];
 const UI_SHORTCUT: &[Scope] = &[Scope::Ui, Scope::Shortcut];
 const UI: &[Scope] = &[Scope::Ui];
+const CLI: &[Scope] = &[Scope::Cli];
 
 fn no_params() -> Value {
     json!({"type": "object", "properties": {}, "additionalProperties": false})
@@ -67,6 +68,10 @@ impl B {
         self.0.destructive = true;
         self
     }
+    fn network(mut self) -> B {
+        self.0.network = true;
+        self
+    }
     fn assignable(mut self) -> B {
         self.0.assignable = true;
         self
@@ -77,17 +82,38 @@ impl B {
     }
 }
 
+/// The sections of Preferences (APP-006), in their order.
+pub const SETTING_SECTIONS: [&str; 10] = [
+    "general",
+    "capture",
+    "video",
+    "editor",
+    "library",
+    "share",
+    "ai",
+    "shortcuts",
+    "advanced",
+    "experimental",
+];
+
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
-pub const EXTERNAL_AREAS: &[&str] = &["capture"];
+pub const EXTERNAL_AREAS: &[&str] = &[
+    "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video", "slides",
+];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
 fn capture_params(own: Value) -> Value {
     let mut props = json!({
         "cursor": {"type": "boolean", "description": "Include the pointer (CAP-047)"},
         "copy": {"type": "boolean", "description": "Copy to the clipboard (CAP-046)"},
-        "open": {"type": "string", "enum": ["editor", "none"], "description": "Open in (CAP-045)"},
+        "open": {"type": "string", "enum": ["editor", "quick", "none"], "description": "Open in (CAP-045); quick: mark the area on screen first (CAP-057, a trial feature)"},
         "out": {"type": "string", "description": "Also write a PNG to this path"},
-        "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"}
+        "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "Seconds to wait first (CAP-048)"},
+        "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects for the capture (CAP-051), the editor's entries {type, …settings}: border, shadow, edges, corners, scale, rotate, filters, watermark…; editable in the document, applied in the clipboard and files"},
+        "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the capture also goes to (CAP-052): file"},
+        "file": {"type": "object", "description": "The File destination (CAP-053): folder, prefix, pattern ({prefix}_{date}_{time} by default), format png|jpg|xshot, quality 1-100, onExists number|overwrite"},
+        "series": {"type": "string", "description": "Internal: the interval series the capture belongs to (CAP-049)"},
+        "schedule": {"type": "object", "description": "Internal: the schedule that makes the capture, {id, at, late} (CAP-050)"}
     });
     if let (Some(p), Some(o)) = (props.as_object_mut(), own.as_object()) {
         p.extend(o.clone());
@@ -101,7 +127,8 @@ fn capture_result() -> Value {
         "properties": {
             "status": {"type": "string", "enum": ["completed", "cancelled", "failed", "busy", "none"], "description": "none: nothing to repeat yet (CAP-007)"},
             "panel": {"type": "boolean", "description": "The capture panel was opened instead"},
-            "path": {"type": "string"},
+            "documentId": {"type": "string", "description": "The capture as an open document, for document.* commands"},
+            "path": {"type": "string", "description": "The .xshot in the library, or the --out file"},
             "files": {"type": "array", "items": {"type": "string"}},
             "width": {"type": "integer"},
             "height": {"type": "integer"},
@@ -111,11 +138,64 @@ fn capture_result() -> Value {
     })
 }
 
+/// What the multi-capture panel shows (CAP-067).
+fn ai_model() -> Value {
+    json!({"type": "string", "enum": crate::settings::AI_MODELS, "description": "Default: the model chosen in Preferences > AI"})
+}
+
+fn ai_key_status() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "saved": {"type": "boolean"},
+            "hint": {"type": "string", "description": "Last four characters of the saved key"}
+        }
+    })
+}
+
+fn multi_state() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "capturing": {"type": "boolean", "description": "Clicks are being captured"},
+            "items": {
+                "type": "array",
+                "description": "Captures of the session, oldest first, saved in the library",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "path": {"type": "string"},
+                        "width": {"type": "integer"},
+                        "height": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "required": ["capturing", "items"]
+    })
+}
+
 const PERMISSIONS: [&str; 4] = ["screen_recording", "accessibility", "camera", "microphone"];
 
 pub fn specs() -> Vec<CommandSpec> {
     let section = json!({"type": "string", "enum": crate::settings::SECTIONS});
-    let shortcut_scope = json!({"type": "string", "enum": ["global", "app"]});
+    let shortcut_scope = json!({"type": "string", "enum": ["global", "app", "editor"]});
+    // Built in parts: as one list, its frame was too big for the main thread of a
+    // debug build (STATUS_STACK_OVERFLOW).
+    let mut all: Vec<B> = Vec::new();
+    all.extend(specs_1(&section, &shortcut_scope));
+    all.extend(specs_2(&section, &shortcut_scope));
+    all.extend(specs_3(&section, &shortcut_scope));
+    all.extend(specs_4(&section, &shortcut_scope));
+    all.extend(specs_5(&section, &shortcut_scope));
+    all.extend(specs_6(&section, &shortcut_scope));
+    all.into_iter().map(|b| b.0).collect()
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
     vec![
         B::new("app.ping", &["APP-027"])
             .scopes(ALL)
@@ -138,11 +218,89 @@ pub fn specs() -> Vec<CommandSpec> {
         B::new("app.commands", &["APP-027"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("app.show", &["APP-001"]).scopes(ALL).assignable(),
         B::new("app.close_window", &["APP-004"]).scopes(UI_SHORTCUT).assignable(),
-        B::new("app.quit", &["APP-004"]).scopes(ALL).assignable(),
+        B::new("app.open_files", &["APP-001", "CAP-063"])
+            .mutates()
+            .params(params(
+                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG and JPG open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel"}}),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "opened": {"type": "array", "description": "documentId of each document opened"},
+                "imports": {"type": "integer", "description": "Files whose import started (it asks in its window)"},
+                "skipped": {"type": "array", "description": "{path, reason}"}
+            }})),
+        B::new("app.take_opening", &["APP-001"])
+            .mutates()
+            .params(params(
+                json!({"kind": {"type": "string", "enum": ["editor", "presets"]}}),
+                &["kind"],
+            ))
+            .result(json!({"type": "object", "properties": {"paths": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("app.quit", &["APP-004"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({"force": {"type": "boolean", "default": false, "description": "Quit without asking about unsaved documents (they stay recoverable)"}}),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["quitting", "needs_decision"]},
+                    "pending": {"type": "array", "items": {"type": "object"}}
+                }
+            })),
         B::new("app.diagnostics", &["APP-046"])
             .params(params(json!({"copy": {"type": "boolean", "default": false}}), &[]))
             .result(json!({"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]})),
+        B::new("events.watch", &["APP-031"])
+            .scopes(CLI)
+            .params(params(
+                json!({"filter": {"type": "string", "description": "Events to show, separated by commas; a * at the end matches the rest (capture.*,file.written). Without it, all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"watching": {"type": "boolean"}}})),
+        B::new("app.welcome", &["APP-005"]).scopes(UI_CLI),
+        B::new("app.help", &["APP-015"])
+            .scopes(UI_CLI)
+            .assignable()
+            .params(params(
+                json!({"topic": {"type": "string", "enum": ["start", "capture", "editor", "library", "shortcuts", "permissions", "automation", "video", "share", "about"]}}),
+                &[],
+            )),
+        B::new("app.about", &["APP-015"])
+            .params(params(
+                json!({"open": {"type": "boolean", "default": false, "description": "Also show it, in the Help window"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+            "version": {"type": "string"}, "build": {"type": "string"}, "date": {"type": "string"},
+            "platform": {"type": "string"}, "arch": {"type": "string"}, "channel": {"type": "string"},
+            "dataDir": {"type": "string"}, "configDir": {"type": "string"}, "managed": {"type": "string"},
+            "network": {"type": "array", "items": {"type": "string"}}
+        }})),
+        B::new("app.feedback", &["APP-015"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"url": {"type": "string"}}})),
         B::new("app.open_logs", &["APP-046"]).scopes(UI_CLI),
+        B::new("app.open_data_folder", &["APP-009", "APP-046"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"open": {"type": "boolean", "default": true, "description": "Open the folder; false only returns where it is"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"data": {"type": "string"}, "config": {"type": "string"}}})),
+        B::new("app.mcp_config", &["APP-029", "SMT-043"])
+            .scopes(UI_CLI)
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "The installed CLI"},
+                    "args": {"type": "array", "items": {"type": "string"}},
+                    "config": {"type": "string", "description": "JSON block for an MCP client's configuration"},
+                    "claudeCode": {"type": "string", "description": "Command that adds the server to Claude Code"}
+                }
+            })),
         B::new("app.permissions", &["APP-024"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("app.request_permission", &["APP-024"])
             .scopes(UI_CLI)
@@ -165,10 +323,74 @@ pub fn specs() -> Vec<CommandSpec> {
             .positional(&["key", "value"])
             .params(params(json!({"key": {"type": "string"}, "value": {}}), &["key", "value"]))
             .result(json!({"type": "object", "properties": {"key": {"type": "string"}, "value": {}, "changed": {"type": "boolean"}}})),
+        B::new("settings.export", &["APP-011", "APP-030"])
+            .params(params(
+                json!({
+                    "out": {"type": "string", "description": "The .xsettings file to write"},
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar", "presets"]}, "description": "Default: all of them"}
+                }),
+                &["out"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "groups": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("settings.import", &["APP-011", "APP-030"])
+            .destructive()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "An .xsettings file"},
+                    "groups": {"type": "array", "items": {"type": "string", "enum": ["preferences", "shortcuts", "themes", "toolbar", "presets"]}, "description": "Default: all of them"},
+                    "convertShortcuts": {"type": "boolean", "default": true, "description": "From the other platform: convert Ctrl and Cmd, Alt and Option, Win and Control; false keeps this computer's shortcuts"},
+                    "onConflict": {"type": "string", "enum": ["replace", "keepBoth", "skip"], "default": "keepBoth", "description": "A theme or saved effect with the name of an existing one"},
+                    "dryRun": {"type": "boolean", "default": false, "description": "Only say what would change, by group"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "platform": {"type": "string"},
+                "samePlatform": {"type": "boolean"},
+                "dryRun": {"type": "boolean"},
+                "groups": {"type": "object", "description": "By group: preferences {changes, notApplied}, shortcuts {changes, kept, unconvertible, conflicts}, themes {themes, effects, favorites}, toolbar {changes}"}
+            }})),
+        B::new("settings.reset", &["APP-010", "APP-030"])
+            .destructive()
+            .params(params(
+                json!({
+                    "section": {"type": "string", "enum": SETTING_SECTIONS, "description": "Only this section; without it, every setting and every shortcut"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"reset": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("app.hints", &["APP-014"])
+            .scopes(UI)
+            .params(params(
+                json!({"seen": {"type": "string", "description": "A hint just seen and closed: it does not show again"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"enabled": {"type": "boolean"}, "seen": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("app.warnings", &["APP-010", "APP-014"])
+            .params(params(
+                json!({
+                    "reset": {"type": "boolean", "default": false, "description": "Show again every warning answered with Don't ask again"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"hidden": {"type": "integer"}, "restored": {"type": "integer"}}})),
         B::new("settings.list", &["APP-006"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("settings.schema", &["APP-006"]).result(json!({"type": "array", "items": {"type": "object"}})),
         B::new("shortcuts.list", &["APP-017", "APP-018"])
             .result(json!({"type": "object", "properties": {"profile": {"type": "string"}, "paused": {"type": "boolean"}, "rows": {"type": "array"}}})),
+        B::new("shortcuts.export", &["APP-023"])
+            .params(params(
+                json!({
+                    "format": {"type": "string", "enum": ["pdf", "html", "json"], "default": "pdf"},
+                    "out": {"type": "string", "description": "The file to write; without it, the sheet comes back as data"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": ["string", "null"]},
+                "sheet": {"type": "object", "description": "title, profile, platform, date, groups [{id, title, rows [{title, keys, scope, inactive}]}]"}
+            }})),
         B::new("shortcuts.set", &["APP-017", "APP-018", "APP-019"])
             .mutates()
             .positional(&["command", "shortcut"])
@@ -193,6 +415,13 @@ pub fn specs() -> Vec<CommandSpec> {
             .mutates()
             .params(params(json!({"paused": {"type": "boolean"}}), &[]))
             .result(json!({"type": "object", "properties": {"paused": {"type": "boolean"}}})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
         B::new("shortcuts.set_profile", &["APP-021"])
             .scopes(UI_CLI)
             .mutates()
@@ -217,7 +446,8 @@ pub fn specs() -> Vec<CommandSpec> {
             .assignable()
             .mutates()
             .params(capture_params(json!({
-                "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"}
+                "monitor": {"type": "string", "description": "pointer (default), primary, all, or a monitor name"},
+                "windows": {"type": "boolean", "description": "Windows as objects (CAP-029): in the document, each visible window whole as its own image object named after its app; the clipboard and files get the flat screen"}
             })))
             .result(capture_result()),
         B::new("capture.capture", &["CAP-006", "CAP-001"])
@@ -251,17 +481,548 @@ pub fn specs() -> Vec<CommandSpec> {
             .assignable()
             .params(params(json!({"show": {"type": "boolean"}}), &[]))
             .result(json!({"type": "object", "properties": {"visible": {"type": "boolean"}}})),
+        B::new("capture.multi_start", &["CAP-067"])
+            .scopes(ALL)
+            .assignable()
+            .interactive()
+            .mutates()
+            .result(multi_state()),
+        B::new("capture.multi_stop", &["CAP-067"])
+            .params(params(
+                json!({"close": {"type": "boolean", "default": false, "description": "Also close the panel and forget the session's captures (they stay in the library)"}}),
+                &[],
+            ))
+            .result(multi_state()),
+        B::new("capture.multi_state", &["CAP-067"]).result(multi_state()),
+        B::new("capture.multi_remove", &["CAP-067"])
+            .mutates()
+            .params(params(
+                json!({"ids": {"type": "array", "items": {"type": "string"}, "description": "Ids of captures of the session"}}),
+                &["ids"],
+            ))
+            .result(multi_state()),
+        B::new("capture.multi_clear", &["CAP-067"])
+            .mutates()
+            .result(multi_state()),
+        // Scrolling capture (CAP-034 to CAP-036).
+        B::new("capture.scrolling", &["CAP-034", "CAP-035", "CAP-036", "CAP-008"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({
+                "type": {"type": "string", "enum": ["manual", "auto"], "description": "manual: the user scrolls and presses Done; auto: XcreenShot scrolls (default: the Image tab's)"},
+                "direction": {"type": "string", "enum": ["vertical", "horizontal", "both"], "description": "Automatic: which way to scroll (default: the Image tab's)"},
+                "startFrom": {"type": "string", "enum": ["start", "current"], "description": "Automatic: from the beginning or from where the content is"},
+                "wait": {"type": "number", "minimum": 0, "maximum": 5, "description": "Automatic: seconds between steps, for content that loads late"},
+                "restore": {"type": "boolean", "description": "Automatic: put the content back where it was"},
+                "fixed": {"type": "boolean", "default": true, "description": "Detect fixed parts (CAP-036): headers, footers and bars appear once; off, every frame goes in whole"},
+                "rect": {"type": "object", "description": "The area, a rectangle of the desktop in physical pixels, without selecting on screen"}
+            })))
+            .result(capture_result()),
+        B::new("capture.scroll_action", &["CAP-034", "CAP-035"])
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": ["start", "done", "cancel"], "description": "start (with Ask before scrolling), done (keep what was captured; Stop here) or cancel"}}),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"running": {"type": "boolean"}}})),
+        B::new("capture.scroll_state", &["CAP-034", "CAP-035"]).result(json!({"type": "object", "properties": {
+            "running": {"type": "boolean"}, "auto": {"type": "boolean"}, "started": {"type": "boolean"},
+            "width": {"type": "integer"}, "height": {"type": "integer"}, "full": {"type": "boolean"}
+        }})),
         B::new("capture.settings", &["CAP-001", "CAP-002", "CAP-010"]).result(json!({"type": "object"})),
         B::new("capture.configure", &["CAP-001", "CAP-002", "CAP-010"])
             .mutates()
             .params(params(
                 json!({
-                    "tab": {"type": "string", "enum": ["universal", "image"]},
+                    "tab": {"type": "string", "enum": ["universal", "image", "video"]},
                     "expanded": {"type": "boolean"},
                     "universal": {"type": "object"},
-                    "image": {"type": "object"}
+                    "image": {"type": "object"},
+                    "video": {"type": "object", "description": "The Video tab (VID-001): selection region|window|fullscreen, limit (seconds, 0: none), open editor|none (VID-052)"}
                 }),
                 &[],
+            ))
+            .result(json!({"type": "object"})),
+        // Extract text (SMT-003 to SMT-006).
+        B::new("smart.extract_text", &["SMT-005", "SMT-003", "APP-030"])
+            .scopes(ALL)
+            .mutates()
+            .interactive()
+            .positional(&["source"])
+            .params(params(
+                json!({
+                    "source": {"type": "string", "enum": ["screen", "file", "document"], "default": "screen", "description": "screen: the user selects a zone (or rect); file: an image file; document: what the editor shows of an open document (SMT-007)"},
+                    "path": {"type": "string", "description": "The image file, with source file"},
+                    "documentId": {"type": "string", "description": "With source document; default: the document shown in the editor"},
+                    "rect": {"type": "object", "description": "screen: a rectangle of the desktop in physical pixels, without selecting on screen; document: a part of the canvas, in its pixels"},
+                    "language": {"type": ["string", "array"], "items": {"type": "string"}, "description": "auto, or up to 3 languages (es, en, pt, fr, de, ja, zh-Hans…); default: the setting"},
+                    "copy": {"type": "boolean", "description": "Copy the text (default: yes from the app; no from the CLI)"},
+                    "show": {"type": "boolean", "description": "Open the results window (default: the setting; no from the CLI)"},
+                    "delay": {"type": "number", "minimum": 0, "maximum": 60}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "id": {"type": "string"}, "found": {"type": "boolean"}, "words": {"type": "integer"},
+                "language": {"type": "string"}, "text": {"type": "string"}, "html": {"type": "string"},
+                "copied": {"type": "boolean"}
+            }})),
+        B::new("smart.redact", &["SMT-010", "SMT-011", "SMT-012", "SMT-013", "SMT-017"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": {"type": "string", "description": "An open document; default: the one shown in the editor"},
+                    "path": {"type": "string", "description": "An image file instead: it is redacted apart and written to output, flat; the file itself never changes"},
+                    "output": {"type": "string", "description": "With path: where the redacted image goes (default: next to it, \"<name> (redacted)\")"},
+                    "categories": {"type": "array", "items": {"type": "string", "enum": ["email", "phone", "card", "id", "address", "ip", "url", "date", "face"]}, "description": "What to cover; default and remembered: smart.autoRedact.categories"},
+                    "terms": {"type": "array", "items": {"type": "object"}, "description": "Your words and patterns: [{name, text, exact, on} | {name, pattern, on}]; default and remembered: smart.autoRedact.customTerms"},
+                    "style": {"type": "object", "description": "{type: solid | blur | pixelate, color: #RRGGBB, intensity, margin: 0-10}; given, every managed redaction takes it; default and remembered: smart.autoRedact.style"},
+                    "flatten": {"type": "boolean", "default": false, "description": "Merge the redactions into the image (cannot be undone with Unflatten)"},
+                    "clear": {"type": "boolean", "default": false, "description": "Remove the managed redactions"},
+                    "add": {"type": "array", "items": {"type": "array"}, "description": "Redactions by hand (SMT-014): [x, y, w, h] in canvas pixels each; category manual, kept by every analysis"},
+                    "remove": {"type": "array", "items": {"type": "string"}, "description": "Managed redactions to remove (object ids); an automatic one is not put back in this document"},
+                    "matches": {"type": "object", "description": "{text, exact, remove}: redact every place where the text appears (SMT-015), or with remove, uncover them"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"},
+                "redactions": {"type": "integer", "description": "Managed redactions in the document"},
+                "added": {"type": "integer"}, "removed": {"type": "integer"}, "restyled": {"type": "integer"},
+                "counts": {"type": "object", "description": "Matches per category (term:<name> for your terms), also of those switched off"},
+                "items": {"type": "array", "description": "{objectId, category, rect: [x, y, w, h]} of each managed redaction"},
+                "invalidPatterns": {"type": "array", "items": {"type": "string"}},
+                "textRead": {"type": "boolean", "description": "False without a recognition language: only faces"},
+                "addedByHand": {"type": "integer", "description": "add or matches: how many were added"},
+                "output": {"type": "string"}
+            }})),
+        B::new("smart.steps_start", &["SMT-022", "SMT-024", "SMT-026", "SMT-027"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "area": {"type": "string", "enum": ["all", "monitor", "window"], "default": "all", "description": "all screens; the monitor under the pointer; or the window of the first click"},
+                    "title": {"type": "string", "description": "The guide's title; default: \"Steps in <app most used>\""},
+                    "cursor": {"type": "boolean", "default": false, "description": "The pointer as an object in each step (CAP-047)"},
+                    "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "A countdown first (CAP-048)"},
+                    "effects": {"type": "array", "description": "Capture effects (CAP-051): Scale image applies to every step's picture"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "default": "editor", "description": "Open the guide when it is done"},
+                    "copy": {"type": "boolean", "default": false},
+                    "into": {"type": "object", "description": "{documentId, after}: the steps go into this open guide, after this section (SMT-029)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.guide_export", &["SMT-030", "SMT-032", "SMT-033", "SMT-034", "SMT-035"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": {"type": "string", "description": "An open guide; default: the one shown"},
+                    "path": {"type": "string", "description": "A guide file instead (it is opened apart and closed after)"},
+                    "format": {"type": "string", "enum": ["docx", "pptx", "md", "html", "pdf", "images", "clipboard"]},
+                    "out": {"type": "string", "description": "docx, pptx, pdf: the file; md, html, images: the folder where it goes"},
+                    "singleFile": {"type": "boolean", "default": false, "description": "html: the pictures inside the page"},
+                    "imageFormat": {"type": "string", "enum": ["png", "jpg"], "default": "png"},
+                    "withText": {"type": "boolean", "default": false, "description": "images: also a text file with each step"},
+                    "paper": {"type": "string", "enum": ["auto", "a4", "letter"], "default": "auto", "description": "pdf: auto is the system's"},
+                    "onConflict": {"type": "string", "enum": ["new", "replace"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced"}
+                }),
+                &["format"],
+            ))
+            .result(json!({"type": "object", "properties": {"format": {"type": "string"}, "paths": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("smart.steps_pause", &["SMT-023"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_resume", &["SMT-023"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_toggle", &["SMT-023"]).scopes(ALL).assignable().mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_status", &["SMT-022"]).result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_undo", &["SMT-023"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {"removed": {"type": "boolean"}, "steps": {"type": "integer"}}})),
+        B::new("smart.steps_stop", &["SMT-023", "SMT-028"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["done", "empty"]},
+                "documentId": {"type": "string"}, "steps": {"type": "integer"}, "path": {"type": "string"}
+            }})),
+        B::new("smart.steps_cancel", &["SMT-023"])
+            .mutates()
+            .params(params(
+                json!({"confirm": {"type": "boolean", "description": "Discard without asking (default from the CLI); from the bar, with steps, it asks first"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"status": {"type": "string", "enum": ["cancelled", "confirm"]}, "steps": {"type": "integer"}}})),
+        B::new("smart.steps_keep", &["SMT-023"]).scopes(UI).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_notice_closed", &["SMT-022"]).scopes(UI).result(json!({"type": "object"})),
+        B::new("smart.redact_words", &["SMT-014"])
+            .scopes(UI_CLI)
+            .params(params(json!({"documentId": {"type": "string"}}), &[]))
+            .result(json!({"type": "object", "properties": {"lines": {"type": "array", "description": "{words: [{text, rect: [x, y, w, h]}]} in canvas pixels"}}})),
+        B::new("smart.redact_batch", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Captures by file (library items); videos are left out"},
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Open documents (the recent tray); they stay open"},
+                    "documentId": {"type": "string", "description": "The document it starts from: its texts redacted by hand are looked for in the others"},
+                    "texts": {"type": "array", "items": {"type": "string"}, "description": "More texts to redact wherever they appear"},
+                    "categories": {"type": "array", "items": {"type": "string"}, "description": "Default: the panel's"},
+                    "terms": {"type": "array", "description": "Default: My terms"},
+                    "style": {"type": "object", "description": "Default: the panel's"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "jobId": {"type": "integer"},
+                "running": {"type": "boolean"},
+                "done": {"type": "integer"},
+                "total": {"type": "integer"},
+                "texts": {"type": "integer", "description": "How many texts by hand are looked for"},
+                "items": {"type": "array", "description": "{index, name, path, documentId, state, redactions, counts, error?, output?}; state: waiting, working, ready, nothing, accepted, skipped, review, video, failed, cancelled, undone"}
+            }})),
+        B::new("smart.redact_batch_status", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_decide", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "jobId": {"type": "integer"},
+                    "decision": {"type": "string", "enum": ["accept", "skip", "review"], "default": "accept"},
+                    "items": {"type": "array", "items": {"type": "integer"}, "description": "Indexes; default: every capture ready"}
+                }),
+                &["jobId"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.redact_batch; with review, shown: the document shown in the editor"})),
+        B::new("smart.redact_batch_undo", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"jobId": {"type": "integer"}, "items": {"type": "array", "items": {"type": "integer"}}}),
+                &["jobId"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_cancel", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch"})),
+        B::new("smart.redact_batch_close", &["SMT-016"])
+            .scopes(UI_CLI)
+            .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
+            .result(json!({"type": "object", "description": "As smart.redact_batch, with closed: true"})),
+        B::new("smart.edit_text", &["SMT-009"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h] in canvas pixels; default: the pixel selection"},
+                    "fit": {"type": "boolean", "default": false, "description": "Fit the place to the whole lines it touches"},
+                    "anyway": {"type": "boolean", "default": false, "description": "Go on although the place cuts letters"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "ids": {"type": "array", "description": "The new Text objects, one per paragraph"},
+                "lines": {"type": "integer"},
+                "rough": {"type": "boolean", "description": "A gradient or a photo below: the fill may leave marks"},
+                "cut": {"type": "boolean", "description": "Nothing changed: the place cuts letters or lines; fitRect is the place that would not"},
+                "fitRect": {"type": "array"}
+            }})),
+        B::new("library.seen_status", &["LIB-008"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "enabled": {"type": "boolean", "description": "library.ocrIndex"},
+                "done": {"type": "integer", "description": "Images whose text is read"},
+                "waiting": {"type": "integer", "description": "Images still to read"}
+            }})),
+        B::new("smart.qr_create", &["SMT-036"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "content": {"type": "string", "description": "A link (https:// is added when there is no scheme) or text"},
+                    "kind": {"type": "string", "enum": ["link", "text"], "default": "link"},
+                    "ecc": {"type": "string", "enum": ["L", "M", "Q", "H"], "default": "M", "description": "Error correction: more resists damage better, with a denser code"},
+                    "color": {"type": "string", "default": "#000000"},
+                    "background": {"type": ["string", "null"], "default": "#FFFFFF", "description": "null: transparent"},
+                    "margin": {"type": "integer", "minimum": 0, "maximum": 8, "default": 4, "description": "Around the code, in modules"},
+                    "preview": {"type": "boolean", "default": false, "description": "Return the code as SVG"},
+                    "path": {"type": "string", "description": "Write a file: PNG or SVG by the extension"},
+                    "size": {"type": "integer", "minimum": 16, "maximum": 8192, "default": 512, "description": "PNG side in pixels"},
+                    "documentId": {"type": "string", "description": "Insert as a QR object in this document"},
+                    "objectId": {"type": "string", "description": "With documentId: change this QR object instead"},
+                    "rect": {"type": "object", "description": "With documentId: where it goes (default: the middle)"}
+                }),
+                &["content"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "content": {"type": "string"},
+                "modules": {"type": "integer"},
+                "bytes": {"type": "integer"},
+                "max": {"type": "integer", "description": "The most bytes with this correction"},
+                "readable": {"type": "boolean", "description": "Our own reader reads it"},
+                "hardToRead": {"type": "boolean", "description": "Low contrast or lighter than its background"},
+                "svg": {"type": "string"},
+                "path": {"type": "string"},
+                "objectId": {"type": "string"}
+            }})),
+        B::new("smart.qr_read", &["SMT-038"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "An image file instead of a document"},
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h]: only this part"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "codes": {"type": "array", "description": "{text, rect: [x, y, w, h], kind: url (host) | wifi (ssid, security, password) | text}"}
+            }})),
+        B::new("smart.qr_open", &["SMT-038"])
+            .scopes(UI_CLI)
+            .params(params(json!({"url": {"type": "string", "description": "An http or https link, after the user said yes"}}), &["url"]))
+            .result(json!({"type": "object", "properties": {"opened": {"type": "boolean"}}})),
+        B::new("smart.separate", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string", "description": "An upright floating image to separate instead of the image"},
+                    "detail": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5, "description": "Little: nearby things move together; a lot: each button and each word"},
+                    "force": {"type": "boolean", "default": false, "description": "Separate again with another detail although pieces were changed (the changes are lost)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "pieces": {"type": "integer"},
+                "ids": {"type": "array", "description": "The pieces: floating images marked separated"},
+                "needsConfirm": {"type": "boolean", "description": "Nothing changed: changed pieces would be lost; call again with force"},
+                "edited": {"type": "integer"}
+            }})),
+        B::new("smart.separate_reset", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"active": {"type": "boolean"}}})),
+        B::new("smart.separate_done", &["SMT-018"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"flattened": {"type": "integer"}}})),
+        B::new("smart.separate_text", &["SMT-018", "SMT-009"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"documentId": document_id(), "objectId": {"type": "string"}}), &["objectId"]))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string", "description": "The new Text object"}}})),
+        B::new("smart.simplify_auto", &["SMT-019"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "detail": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5, "description": "Little: big blocks; a lot: each element and each line"},
+                    "palette": {"type": "string", "description": "A palette of the Simplify tool, by name; default: the one in use"},
+                    "force": {"type": "boolean", "default": false, "description": "Generate again although the user changed generated objects (they are lost)"},
+                    "remove": {"type": "boolean", "default": false, "description": "Switched off: remove the generated objects the user did not change"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "added": {"type": "integer"},
+                "removed": {"type": "integer"},
+                "text": {"type": "integer", "description": "Text bars and paragraphs"},
+                "elements": {"type": "integer", "description": "Buttons, fields and icons"},
+                "needsConfirm": {"type": "boolean", "description": "Nothing changed: edited objects would be lost; call again with force"},
+                "edited": {"type": "integer"},
+                "kept": {"type": "integer", "description": "remove: generated objects kept because the user changed them"}
+            }})),
+        B::new("smart.ocr_languages", &["SMT-004"])
+            .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
+        B::new("smart.language_settings", &["SMT-004"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),
+        B::new("smart.text_result", &["SMT-006"])
+            .scopes(UI)
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.text_again", &["SMT-006", "SMT-004"])
+            .scopes(UI)
+            .params(params(
+                json!({"id": {"type": "string"}, "language": {"type": ["string", "array"], "items": {"type": "string"}}}),
+                &["id", "language"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("smart.text_close", &["SMT-006", "SMT-001"])
+            .scopes(UI)
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.show_text", &["SMT-006"])
+            .scopes(UI)
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object"})),
+        B::new("smart.copy_text", &["SMT-006"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({"text": {"type": "string"}, "html": {"type": ["string", "null"]}}),
+                &["text"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("smart.save_text", &["SMT-006"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({"path": {"type": "string"}, "text": {"type": "string"}}),
+                &["path", "text"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}}})),
+        // Presets (CAP-058 to CAP-064).
+        B::new("preset.list", &["CAP-058", "APP-030"])
+            .result(json!({"type": "object", "properties": {"presets": {"type": "array", "description": "In order: id, name, kind, settings, summary, builtin, shortcut, shortcutDisplay, slot, running, warnings"}}})),
+        B::new("preset.run", &["CAP-058", "CAP-062", "APP-030"])
+            .scopes(ALL)
+            .mutates()
+            .interactive()
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "name": {"type": "string", "description": "The preset's name, any case"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The capture's result"})),
+        B::new("preset.create", &["CAP-059"])
+            .mutates()
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "name": {"type": "string", "description": "1 to 64 characters; a taken one gets \" (2)\". Without it, a name that says what it does"},
+                    "kind": {"type": "string", "enum": ["universal", "image", "video"], "default": "image"},
+                    "settings": {"type": "object", "description": "The tab's settings (capture.settings shows them); missing ones take their defaults"},
+                    "fromCurrent": {"type": "boolean", "description": "Copy the capture panel's active tab"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.update", &["CAP-060"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "settings": {"type": "object", "description": "Settings to change; the rest stay"},
+                    "fromCurrent": {"type": "boolean", "description": "Take the panel's active tab (same kind only)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.rename", &["CAP-060"])
+            .mutates()
+            .positional(&["id", "to"])
+            .params(params(
+                json!({"id": {"type": "string"}, "to": {"type": "string", "description": "The new name; its shortcut stays"}}),
+                &["id", "to"],
+            ))
+            .result(json!({"type": "object"})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
+        B::new("preset.duplicate", &["CAP-060"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}, "name": {"type": "string"}}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("preset.delete", &["CAP-060"])
+            .mutates()
+            .destructive()
+            .positional(&["ids"])
+            .params(params(
+                json!({"ids": {"type": "array", "items": {"type": "string"}}, "id": {"type": "string"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}, "undo": {"type": "string", "description": "For preset.restore"}}})),
+        B::new("preset.restore", &["CAP-060"])
+            .mutates()
+            .positional(&["undo"])
+            .params(params(json!({"undo": {"type": "string"}}), &["undo"]))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "integer"}}})),
+        B::new("preset.move", &["CAP-061"])
+            .mutates()
+            .positional(&["id", "index"])
+            .params(params(
+                json!({"id": {"type": "string"}, "index": {"type": "integer", "minimum": 0, "description": "0 = first"}}),
+                &["id", "index"],
+            ))
+            .result(json!({"type": "object", "properties": {"index": {"type": "integer"}}})),
+        B::new("preset.restore_builtins", &["CAP-064"])
+            .mutates()
+            .params(params(
+                json!({"reset": {"type": "boolean", "default": false, "description": "Also put back the settings and name of the ones that were changed"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "array"}, "modified": {"type": "array"}}})),
+        B::new("preset.export", &["CAP-063", "APP-030"])
+            .positional(&["ids"])
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Without it, every preset"},
+                    "out": {"type": "string", "description": "The .xpreset file to write; without it, the file comes back as data"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("preset.import", &["CAP-063", "APP-030"])
+            .mutates()
+            .destructive()
+            .positional(&["paths"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": ".xpreset files"},
+                    "dryRun": {"type": "boolean", "description": "Only list what the files bring"},
+                    "only": {"type": "array", "items": {"type": "string"}, "description": "Only these names"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "skip"], "default": "keepBoth"},
+                    "convertShortcuts": {"type": "boolean", "default": true}
+                }),
+                &["paths"],
             ))
             .result(json!({"type": "object"})),
         B::new("capture.reset_settings", &["CAP-003"])
@@ -273,7 +1034,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .interactive()
             .assignable()
             .mutates()
-            .params(capture_params(json!({})))
+            .params(capture_params(json!({
+                "fixed": {"type": "boolean", "description": "The edge launcher's settings (CAP-004): editor, pointer, no delay, effects or destinations, whatever the panel says"}
+            })))
             .result(capture_result()),
         B::new("capture.region", &["CAP-025", "CAP-008"])
             .scopes(ALL)
@@ -282,29 +1045,2322 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(capture_params(json!({
                 "rect": {
                     "type": "object",
-                    "description": "Physical pixels on the virtual desktop. Omit for an interactive selection.",
+                    "description": "Physical pixels on the virtual desktop, or from the top left of `monitor` (CAP-026). Omit for an interactive selection.",
                     "properties": {
                         "x": {"type": "integer"}, "y": {"type": "integer"},
-                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}
+                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1},
+                        "monitor": {"type": "string", "description": "A monitor's name (capture.monitors): x and y are measured from its top left"}
                     },
                     "required": ["x", "y", "width", "height"],
+                    "additionalProperties": false
+                },
+                "freehand": {"type": "string", "enum": ["free", "polygon", "ellipse"], "description": "Freehand (CAP-032): select a free outline, a polygon (clicks, Enter closes) or an ellipse (Shift: a circle); the image is the rectangle around it, transparent outside"},
+                "multiple": {
+                    "type": "object",
+                    "description": "Multiple areas (CAP-033): the user picks several areas (drag or click each) and Enter ends; they become one image",
+                    "properties": {
+                        "composition": {"type": "string", "enum": ["original", "stacked", "row"], "default": "original"},
+                        "gap": {"type": "integer", "minimum": 0, "maximum": 500, "default": 10}
+                    },
+                    "additionalProperties": false
+                },
+                "size": {
+                    "type": "object",
+                    "description": "Fixed region (CAP-026): a rectangle of this size follows the pointer; a click places it and captures",
+                    "properties": {
+                        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}
+                    },
+                    "required": ["width", "height"],
                     "additionalProperties": false
                 }
             })))
             .result(capture_result()),
+        B::new("capture.interval", &["CAP-049", "CAP-045", "CAP-056"])
+            .scopes(ALL)
+            .interactive()
+            .mutates()
+            .params(capture_params(json!({
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file", "webpage"], "default": "fullscreen", "description": "What each turn captures: a region or window chosen once at the start (unless `rect` is given), the full screen, the open menu or the clipboard"},
+                "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen once"},
+                "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
+                "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen once"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file read again each turn; a capture only when it changed"},
+                "url": {"type": "string", "description": "Web page: its address, loaded again each turn (with width, scale, wait, lazy as capture.webpage)"},
+                "width": {"type": "integer"}, "scale": {"type": "number"}, "wait": {"type": "number"}, "lazy": {"type": "boolean"},
+                "every": {"type": "number", "minimum": 1, "maximum": 86400, "default": 60, "description": "Seconds between captures; fewer than 3 become 3"},
+                "stop": {"type": "string", "enum": ["manual", "count", "duration", "time"], "default": "manual", "description": "manual (capture.interval_stop), after `count` captures, after `minutes`, or at `until`"},
+                "count": {"type": "integer", "minimum": 1, "maximum": 100000, "default": 10},
+                "minutes": {"type": "integer", "minimum": 1, "maximum": 10080, "default": 60},
+                "until": {"type": "string", "description": "HH:MM, local time (today, or tomorrow if it has passed)"},
+                "discard": {"type": "boolean", "default": true, "description": "Drop a capture just like the last one kept"},
+                "sensitivity": {"type": "string", "enum": ["exact", "small"], "default": "exact", "description": "exact: any pixel counts as a change; small: changes in fewer than 0.5 % of the pixels do not"},
+                "name": {"type": "string", "description": "Shown in the icon's menu (Stop capture: <name>)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["started"]},
+                "series": {"type": "object", "description": "id, name, count, every, startedAt, nextAt, endsAt, stopAfter"}
+            }})),
+        B::new("capture.file", &["CAP-040", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "Image files, in order; one capture each (PNG, JPG, GIF, BMP, TIFF, WebP, HEIC if the system has it, ICO). A PDF goes to Import PDF and an .xshot opens in the editor. Omit to choose them in the Open dialog"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string"},
+                "count": {"type": "integer"},
+                "documents": {"type": "array", "items": {"type": "string"}},
+                "pdfWindows": {"type": "array", "items": {"type": "string"}},
+                "skipped": {"type": "array", "items": {"type": "object"}, "description": "{path, reason} of the files that could not be read"}
+            }})),
+        B::new("capture.pdf", &["CAP-041"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "path": {"type": "string", "description": "The PDF; omit to choose it in the Open dialog"},
+                "id": {"type": "string", "description": "Internal: the Import PDF window's import"},
+                "password": {"type": "string", "description": "For a PDF with a password"},
+                "pages": {"type": "string", "description": "Pages, as 1-3, 7 (default: all, at most 200)"},
+                "dpi": {"type": "integer", "minimum": 72, "maximum": 300, "default": 150, "description": "72, 96, 150, 200 or 300 (another value is 150)"},
+                "combine": {"type": "boolean", "default": false, "description": "All pages in one image, one under the other (several images past 60,000 px)"},
+                "background": {"type": "string", "enum": ["white", "transparent"], "default": "white"},
+                "dialog": {"type": "boolean", "description": "Open the Import PDF window instead of importing (default: yes from the app, no from automation)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["completed", "dialog"]},
+                "count": {"type": "integer"},
+                "documents": {"type": "array", "items": {"type": "string"}},
+                "id": {"type": "string"}
+            }})),
+        B::new("capture.webpage", &["CAP-037", "APP-054"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({
+                "url": {"type": "string", "description": "http or https (https:// is added when there is no scheme). From the app without it, a box asks for it"},
+                "width": {"type": "integer", "minimum": 320, "maximum": 3840, "default": 1280, "description": "Width of the page's view, in CSS pixels (375, 768, 1280, 1440, 1920…)"},
+                "scale": {"type": "number", "minimum": 1, "maximum": 2, "description": "1 or 2 (default: the main monitor's)"},
+                "wait": {"type": "number", "minimum": 0, "maximum": 10, "default": 1, "description": "Seconds after loading, for animations and late content"},
+                "lazy": {"type": "boolean", "default": true, "description": "Scroll to the bottom first so content that loads on scrolling appears"}
+            })))
+            .result(capture_result()),
+        B::new("record.start", &["VID-024", "VID-002", "VID-025", "VID-028"])
+            .mutates()
+            .params(params(
+                json!({
+                    "source": {"type": "string", "enum": ["screen", "region", "slides"], "default": "screen", "description": "slides: the narrated slides open in the editor (slides.start), not the screen (VID-071)"},
+                    "monitor": {"description": "screen: primary (default), pointer or a monitor's number (capture.monitors)"},
+                    "x": {"type": "number"}, "y": {"type": "number"},
+                    "width": {"type": "number", "minimum": 64}, "height": {"type": "number", "minimum": 64},
+                    "quality": {"type": "string", "enum": ["very_low", "low", "medium", "high", "very_high"], "description": "Most frames per second: 5, 10, 15, 30 or 60 (default: the setting)"},
+                    "maxSize": {"type": "string", "enum": ["original", "reduce_high_density", "fit_1080"]},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "When it stops: open it in the editor, or only the library and the tray (VID-052). Default: the Video tab's Open in; from the CLI and MCP, none"},
+                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
+                    "cursor": {"type": "boolean", "description": "The pointer in the video (default: the setting video.cursor, on)"},
+                    "window": {"type": "integer", "description": "A window's id (as capture.window takes it): its area, followed when it moves or resizes (VID-005)"},
+                    "systemAudio": {"type": "boolean", "description": "What the computer plays, as an AAC track (default: the setting video.systemAudio, off)"},
+                    "microphone": {"type": "boolean", "description": "The microphone too, mixed with the system's sound (default: the setting video.microphone, off)"},
+                    "microphoneDevice": {"type": "string", "description": "An input's id from record.devices; empty: the system's default"},
+                    "countdown": {"type": "number", "minimum": 0, "maximum": 10, "description": "Seconds of countdown first (VID-008); from automation none unless asked, from the bar the setting"},
+                    "path": {"type": "string", "description": "The MP4 to write; default: the library's month folder"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.video", &["VID-002", "VID-003", "VID-004", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(params(
+                json!({
+                    "selection": {"type": "string", "enum": ["region", "window", "fullscreen"], "default": "region", "description": "region: chosen on screen; window: a window chosen on screen, followed when it moves (VID-005); fullscreen: the monitor under the pointer"},
+                    "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "When it stops: open it in the editor, or only the library and the tray (VID-052). Default: the Video tab's Open in; from the CLI and MCP, none"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
+                "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
+        B::new("record.cursor", &["VID-044", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({"on": {"type": "boolean", "description": "Without it, switches"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cursor": {"type": "boolean"}, "status": {"type": "string"}}})),
+        B::new("video.info", &["VID-064", "VID-024"])
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "An MP4 file"},
+                    "quick": {"type": "boolean", "description": "Only what its header says: size, duration, fps, codec and sound (fast)"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "name": {"type": "string"}, "path": {"type": "string"}, "bytes": {"type": "integer"}, "created": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"},
+                "frames": {"type": "integer"}, "fpsAverage": {"type": "number"}, "fpsMax": {"type": "integer"},
+                "codec": {"type": "string"}, "bitrate": {"type": "integer"},
+                "audio": {"type": "array", "description": "{channels, rate} of each sound track"}
+            }})),
+        // Videos open in the editor (ADR 0008). Times are seconds of the video as it
+        // is now, after its cuts.
+        B::new("video.cut", &["VID-059"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "Seconds"},
+                    "end": {"type": "number", "minimum": 0, "description": "Seconds"}
+                }),
+                &["start", "end"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "duration": {"type": "number", "description": "Seconds of the file"},
+                "length": {"type": "number", "description": "Seconds after the cuts"},
+                "kept": {"type": "array", "description": "[start, end] of the file kept"},
+                "marks": {"type": "array", "description": "Where each cut is, in seconds after the cuts"}
+            }})),
+        B::new("video.save_selection", &["VID-060"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0},
+                    "end": {"type": "number", "minimum": 0}
+                }),
+                &["start", "end"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"}
+            }})),
+        B::new("video.save_frame", &["VID-061"])
+            .mutates()
+            .params(params(
+                json!({"documentId": document_id(), "time": {"type": "number", "minimum": 0}}),
+                &["time"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
+        B::new("video.extract_text", &["VID-062", "SMT-005"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "time": {"type": "number", "minimum": 0},
+                    "copy": {"type": "boolean", "description": "Copy the text (default: true)"},
+                    "show": {"type": "boolean", "description": "Show the results window"}
+                }),
+                &["time"],
+            ))
+            .result(json!({"type": "object", "description": "As smart.extract_text"})),
+        B::new("video.gif", &["VID-068", "VID-069", "VID-070"])
+            .mutates()
+            .params(params(json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "With end: only this part (seconds of the video as it is now); without: the whole video"},
+                    "end": {"type": "number", "minimum": 0},
+                    "optimize": {"type": "string", "enum": ["screen", "motion", "small", "best", "custom"], "description": "Optimize for (VID-069); default screen"},
+                    "fps": {"type": "number", "minimum": 1, "maximum": 30, "description": "custom: frames per second"},
+                    "percent": {"type": "number", "minimum": 1, "maximum": 100, "description": "custom: size in percent"},
+                    "width": {"type": "integer", "minimum": 16, "description": "custom: width in pixels"},
+                    "height": {"type": "integer", "minimum": 16, "description": "custom: height in pixels"},
+                    "dither": {"type": "boolean", "description": "custom: dithering"},
+                    "dynamic": {"type": "boolean", "description": "custom: a palette per frame (default true)"},
+                    "loops": {"description": "forever (default), once, or 1 to 100 plays"},
+                    "fade": {"type": "number", "minimum": 0, "maximum": 3, "description": "Seconds of fade to black at the end"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the GIF in the editor (default) or leave it in the tray"}
+                }), &[]))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"},
+                "fps": {"type": "number"}, "duration": {"type": "number"}, "bytes": {"type": "integer"}
+            }})),
+        B::new("video.gif_estimate", &["VID-068", "VID-069", "VID-070"])
+            .params(params(json!({
+                    "documentId": document_id(),
+                    "start": {"type": "number", "minimum": 0, "description": "With end: only this part (seconds of the video as it is now); without: the whole video"},
+                    "end": {"type": "number", "minimum": 0},
+                    "optimize": {"type": "string", "enum": ["screen", "motion", "small", "best", "custom"], "description": "Optimize for (VID-069); default screen"},
+                    "fps": {"type": "number", "minimum": 1, "maximum": 30, "description": "custom: frames per second"},
+                    "percent": {"type": "number", "minimum": 1, "maximum": 100, "description": "custom: size in percent"},
+                    "width": {"type": "integer", "minimum": 16, "description": "custom: width in pixels"},
+                    "height": {"type": "integer", "minimum": 16, "description": "custom: height in pixels"},
+                    "dither": {"type": "boolean", "description": "custom: dithering"},
+                    "dynamic": {"type": "boolean", "description": "custom: a palette per frame (default true)"},
+                    "loops": {"description": "forever (default), once, or 1 to 100 plays"},
+                    "fade": {"type": "number", "minimum": 0, "maximum": 3, "description": "Seconds of fade to black at the end"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the GIF in the editor (default) or leave it in the tray"}
+                }), &[]))
+            .result(json!({"type": "object", "properties": {
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "number"},
+                "duration": {"type": "number"}, "bytes": {"type": "integer", "description": "Estimated size"},
+                "long": {"type": "boolean", "description": "Longer than 30 s"},
+                "heavy": {"type": "boolean", "description": "More than 10 MB"},
+                "preview": {"type": "string", "description": "The first seconds as a GIF data URL"}
+            }})),
+        B::new("video.combine", &["VID-067"])
+            .mutates()
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 2, "description": "Videos in order; an open one goes with its cuts"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the result in the editor (default) or leave it in the tray"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"}
+            }})),
+        B::new("video.cancel", &["VID-068", "VID-067"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "job": {"type": "string", "enum": ["gif", "combine"], "description": "combine: the videos being combined; default: the GIF of the document"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
+        B::new("video.export", &["VID-066", "VID-027"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "The .mp4 file to write"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"}, "duration": {"type": "number"}, "codec": {"type": "string"}
+            }})),
+        B::new("video.silent_copy", &["VID-063"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"}
+            }})),
+        B::new("record.draw", &["VID-048", "VID-049", "VID-050", "VID-051", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "on": {"type": "boolean", "description": "On or off; without it (and without options), the other way"},
+                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step", "magnifier"], "description": "magnifier: a round x2 lens that follows the pointer and draws nothing"},
+                    "color": {"type": "string", "format": "color", "description": "#RRGGBB"},
+                    "width": {"type": "string", "enum": ["thin", "medium", "thick"]},
+                    "fade": {"type": "integer", "minimum": 0, "maximum": 30, "description": "Seconds before a shape fades; 0: never while on"},
+                    "undo": {"type": "boolean", "description": "Takes away the last shape"},
+                    "clear": {"type": "boolean", "description": "Takes away every shape"},
+                    "query": {"type": "boolean", "description": "Only what it shows now; changes nothing"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "on": {"type": "boolean"}, "tool": {"type": "string"}, "color": {"type": "string"},
+                "width": {"type": "string"}, "fade": {"type": ["number", "null"]}, "shapes": {"type": "array"}
+            }})),
+        B::new("record.draw_shape", &["VID-049"])
+            .mutates()
+            .params(params(
+                json!({
+                    "tool": {"type": "string", "enum": ["arrow", "rect", "oval", "pen", "step"]},
+                    "points": {"type": "array", "items": {"type": "array"}, "minItems": 1, "description": "[[x, y], ...] in physical pixels of the monitor drawn on, from its top left: from and to for an arrow, corners for a rectangle or an oval, the path of a pen, the place of a step"},
+                    "color": {"type": "string", "format": "color"}
+                }),
+                &["points"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("record.effects", &["VID-045", "VID-046", "VID-047", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({
+                    "highlight": {"type": "boolean", "description": "Highlight cursor (VID-045)"},
+                    "clicks": {"type": "boolean", "description": "Click animation (VID-046)"},
+                    "keys": {"type": "boolean", "description": "Show keys pressed (VID-047)"},
+                    "highlightColor": {"type": "string", "format": "color", "description": "Highlight colour as #RRGGBB; switches the highlight on"},
+                    "clickColor": {"type": "string", "format": "color", "description": "Main click colour as #RRGGBB; switches the clicks on"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "highlight": {"type": "boolean"}, "clicks": {"type": "boolean"}, "keys": {"type": "boolean"},
+                "cursor": {"type": "boolean"}
+            }})),
+        B::new("record.toggle", &["VID-012", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
+        B::new("record.stop", &["VID-024", "VID-013", "VID-030"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The recording (there is only one; the icon's Stop recording passes it)"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string"}, "path": {"type": "string"}, "duration": {"type": "number"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
+                "frames": {"type": "integer"}, "bytes": {"type": "integer"},
+                "encoder": {"type": "string", "enum": ["hardware", "software"]},
+                "startupMs": {"type": "integer", "description": "From Record (or the countdown's end) to the first frame (VID-030)"},
+                "lateFrames": {"type": "integer", "description": "Frames lost: changes that waited past their frame's turn (VID-030)"}
+            }})),
+        B::new("record.restart", &["VID-014", "VID-024"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string", "description": "ready: the same area, waiting for Record"}}})),
+        B::new("record.image", &["VID-010"])
+            .mutates()
+            .result(capture_result()),
+        B::new("record.cancel", &["VID-024", "VID-014"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {"status": {"type": "string"}}})),
+        B::new("record.pause", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.resume", &["VID-024", "VID-012"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"}
+            }})),
+        B::new("record.status", &["VID-024"]).result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "countdown", "recording", "paused", "finalizing", "idle"]},
+                "elapsed": {"type": "number", "description": "Seconds recorded, pauses left out"},
+                "source": {"type": "object"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "fps": {"type": "integer"},
+                "microphone": {"type": "boolean", "description": "The microphone is on (VID-039)"},
+                "systemAudio": {"type": "boolean", "description": "The system's sound is on (VID-040)"},
+                "audio": {"type": "boolean", "description": "The video has a sound track: either can be switched on while it records"}
+            }})),
+        B::new("record.level", &["VID-011", "VID-019", "VID-039", "VID-040", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["ready", "recording", "paused", "idle"]},
+                "microphone": {"type": "object", "description": "on, level (0 to 1), clip, quietSeconds (how long nothing has come), muted (in the system), device (its name), wireless, missing (the chosen one is not plugged in: the default is used), none (no input at all), blocked (by the system's privacy), talking (someone talks while it is off)"},
+                "systemAudio": {"type": "object", "description": "on, level, clip"},
+                "track": {"type": "boolean", "description": "The video has a sound track"}
+            }})),
+        B::new("record.sound", &["VID-011", "VID-039", "VID-040"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "systemAudio": {"type": "boolean", "description": "What the computer plays (VID-040)"},
+                    "microphone": {"type": "boolean", "description": "The microphone (VID-039)"},
+                    "microphoneDevice": {"type": "string", "description": "An input's id from record.devices; empty: the system's default. Only in Ready or paused"},
+                    "microphoneAutoLevel": {"type": "boolean", "description": "The automatic level"},
+                    "noiseReduction": {"type": "boolean", "description": "Background noise filtered out of the microphone (VID-041)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "systemAudio": {"type": "boolean"}, "microphone": {"type": "boolean"},
+                "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"},
+                "noiseReduction": {"type": "boolean"}
+            }})),
+        B::new("slides.start", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"documentIds": {"type": "array", "items": {"type": "string"}, "description": "Open images, in order; default: the one in the editor. Videos and guides are left out"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The mode: active, index, count, size, background, enlarge and the slides"})),
+        B::new("slides.state", &["VID-071"])
+            .scopes(ALL)
+            .result(json!({"type": "object"})),
+        B::new("slides.go", &["VID-072"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"to": {"description": "A slide's number from 0, or next (default), prev, first or last"}}),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.move", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"from": {"type": "integer", "minimum": 0}, "to": {"type": "integer", "minimum": 0}}),
+                &["from", "to"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.add", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &["documentIds"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.remove", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(json!({"index": {"type": "integer", "minimum": 0}}), &["index"]))
+            .result(json!({"type": "object"})),
+        B::new("slides.set", &["VID-074"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "size": {"description": "\"1920x1080\" or [width, height]: even, 320 to 3840. Not while recording"},
+                    "background": {"type": "string", "format": "color"},
+                    "enlarge": {"type": "boolean", "description": "Small images enlarged to fill"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.view", &["VID-074"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "zoom": {"type": "number", "minimum": 1, "maximum": 8},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "[x, y] of the image, 0 to 1, put in the middle"},
+                    "reset": {"type": "boolean"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("slides.frame", &["VID-072"])
+            .mutates()
+            .params(params(
+                json!({
+                    "x": {"type": "number"}, "y": {"type": "number"},
+                    "width": {"type": "number"}, "height": {"type": "number"}
+                }),
+                &["x", "y", "width", "height"],
+            ))
+            .result(json!({"type": "object", "description": "Where the editor shows the video's frame, in screen pixels, for the camera's preview"})),
+        B::new("slides.annotate", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"objects": {"type": "array", "items": {"type": "object"}, "description": "As document.annotate takes them, in the slide image's pixels"}}),
+                &["objects"],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("slides.undo", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("slides.annotations", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"keep": {"type": "boolean", "default": true, "description": "false: removed from all the images at once"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"kept": {"type": "boolean"}, "count": {"type": "integer"}}})),
+        B::new("slides.exit", &["VID-071"])
+            .scopes(ALL)
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("record.cameras", &["VID-031", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "cameras": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}}}},
+                "chosen": {"type": "string", "description": "The setting video.cameraDevice; empty: the first camera"}
+            }})),
+        B::new("record.camera", &["VID-031", "VID-032", "VID-033", "VID-034", "VID-036", "VID-038"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "on": {"type": "boolean", "description": "The camera in the video (VID-031)"},
+                    "enabled": {"type": "boolean", "description": "Use the camera in videos at all; off, it is never opened"},
+                    "device": {"type": "string", "description": "A camera's id from record.cameras; empty: the first. Only in Ready or paused"},
+                    "placement": {"type": "string", "enum": ["pip", "fullscreen"], "description": "In a corner, or filling the video (VID-034)"},
+                    "corner": {"type": "string", "enum": ["topLeft", "topRight", "bottomLeft", "bottomRight"]},
+                    "size": {"type": "number", "minimum": 0.1, "maximum": 0.5, "description": "Its shorter side, as a share of the area's shorter side (Small 0.15, Medium 0.25, Large 0.4)"},
+                    "shape": {"type": "string", "enum": ["circle", "roundedRect", "rect", "square", "roundedSquare"]},
+                    "aspect": {"type": "string", "enum": ["16:9", "4:3"], "description": "For the rectangles"},
+                    "mirror": {"type": "boolean"},
+                    "border": {"type": "string", "enum": ["none", "solid", "gradient"]},
+                    "borderColor": {"type": "string", "format": "color"},
+                    "borderColor2": {"type": "string", "format": "color", "description": "The gradient's second colour"},
+                    "borderWidth": {"type": "integer", "minimum": 2, "maximum": 16},
+                    "borderAngle": {"type": "integer", "minimum": 0, "maximum": 359, "description": "The gradient's direction in degrees (0: left to right)"},
+                    "retry": {"type": "boolean", "description": "Opens the camera again after a problem (VID-038)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The camera now: on, enabled, available, open, device, missing, trouble (blocked, in_use, gone, black, failed) and placement"})),
+        B::new("record.camera_swap", &["VID-035", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("record.sound_settings", &["VID-039", "VID-019"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),
+        B::new("record.devices", &["VID-039", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "inputs": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "wireless": {"type": "boolean"}}}},
+                "default": {"type": ["string", "null"]},
+                "chosen": {"type": "string", "description": "The setting video.microphoneDevice; empty: the system's default"}
+            }})),
+        B::new("capture.details_text", &["CAP-051"])
+            .mutates()
+            .params(params(
+                json!({"text": {"type": "string", "default": "", "description": "Empty: no text (Esc)"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"accepted": {"type": "boolean"}}})),
+        B::new("capture.send_pending", &["CAP-052"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": {"type": "string"},
+                    "send": {"type": "boolean", "default": true, "description": "false: Don't send"}
+                }),
+                &["documentId"],
+            ))
+            .result(json!({"type": "object", "properties": {"sent": {"type": "boolean"}, "files": {"type": "array"}}})),
+        B::new("capture.pending_shares", &["CAP-052"]).result(json!({"type": "object", "properties": {
+            "items": {"type": "array", "items": {"type": "object"}, "description": "{documentId, destinations}: captures opened in the editor that wait to be sent"}
+        }})),
+        B::new("capture.webpage_cancel", &["CAP-037"])
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("capture.webpage_suggest", &["CAP-037"]).result(json!({"type": "object", "properties": {
+            "url": {"type": "string"}, "from": {"type": "string", "enum": ["clipboard", "last", "none"]}
+        }})),
+        B::new("capture.pdf_info", &["CAP-041"])
+            .params(params(
+                json!({
+                    "path": {"type": "string"},
+                    "id": {"type": "string", "description": "An Import PDF window's import"},
+                    "password": {"type": "string"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"}, "name": {"type": "string"}, "pages": {"type": "integer"},
+                "sizes": {"type": "array", "description": "[width, height] of each page, in 1/96 inch"},
+                "needsPassword": {"type": "boolean"}, "wrongPassword": {"type": "boolean"}
+            }})),
+        B::new("capture.pdf_page", &["CAP-041"])
+            .params(params(
+                json!({
+                    "path": {"type": "string"},
+                    "id": {"type": "string"},
+                    "password": {"type": "string"},
+                    "page": {"type": "integer", "minimum": 1},
+                    "width": {"type": "integer", "minimum": 16, "maximum": 1600, "default": 160}
+                }),
+                &["page"],
+            ))
+            .result(json!({"type": "object", "properties": {"png": {"type": "string", "description": "Base64 PNG"}}})),
+        B::new("capture.pdf_cancel", &["CAP-041"])
+            .mutates()
+            .params(params(json!({"id": {"type": "string"}}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("capture.schedule", &["CAP-050", "CAP-045", "CAP-056"])
+            .scopes(ALL)
+            .interactive()
+            .mutates()
+            .params(capture_params(json!({
+                "selection": {"type": "string", "enum": ["region", "window", "fullscreen", "menu", "clipboard", "file", "webpage"], "default": "fullscreen", "description": "What is captured: a region or window chosen now (unless `rect` or `id` is given), the full screen, the open menu or the clipboard"},
+                "rect": {"type": "object", "description": "Region: physical pixels, as capture.region's rect (with `monitor`); omit to choose it on screen now"},
+                "monitor": {"type": "string", "description": "Full screen: pointer (default), all, primary or a monitor's name"},
+                "id": {"type": "integer", "description": "Window: its id (as the window picker lists them); omit to choose it on screen now"},
+                "paths": {"type": "array", "items": {"type": "string"}, "description": "File: the image file to read at that time"},
+                "url": {"type": "string", "description": "Web page: its address (with width, scale, wait, lazy as capture.webpage)"},
+                "width": {"type": "integer"}, "scale": {"type": "number"}, "wait": {"type": "number"}, "lazy": {"type": "boolean"},
+                "date": {"type": "string", "description": "YYYY-MM-DD, local; omit for today"},
+                "time": {"type": "string", "description": "HH:MM, local; the capture is made at second 0 of that minute. A moment already gone is refused"},
+                "repeat": {"type": "string", "enum": ["once", "daily", "weekdays", "weekly"], "default": "once"},
+                "name": {"type": "string", "description": "Shown in the icon's menu (Stop capture: <name>)"}
+            })))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["scheduled"]},
+                "schedule": {"type": "object", "description": "id, name, preset, command, at (RFC 3339), repeat"}
+            }})),
+        B::new("capture.schedule_list", &["CAP-050"]).result(json!({"type": "object", "properties": {
+            "schedules": {"type": "array", "items": {"type": "object"}, "description": "id, name, preset, command, at (the next capture, RFC 3339), repeat"}
+        }})),
+        B::new("capture.schedule_cancel", &["CAP-050", "CAP-005"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The schedule (capture.schedule_list); omit to cancel them all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("capture.interval_state", &["CAP-049"]).result(json!({"type": "object", "properties": {
+            "running": {"type": "boolean"},
+            "series": {"type": "array", "items": {"type": "object"}, "description": "id, name, preset, command, count (captures kept), every, startedAt, nextAt, endsAt, stopAfter"}
+        }})),
+        B::new("capture.interval_stop", &["CAP-049", "CAP-005"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string", "description": "The series (capture.interval_state); omit to stop them all"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"stopped": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("capture.quick_annotate", &["CAP-057", "CAP-065", "APP-034"])
+            .scopes(ALL)
+            .interactive()
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.clipboard", &["CAP-039", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.window_picker", &["CAP-030", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({})))
+            .result(capture_result()),
+        B::new("capture.picker_state", &["CAP-030"]).result(json!({"type": "object", "properties": {
+            "open": {"type": "boolean"}, "windows": {"type": "array", "items": {"type": "object"}}
+        }})),
+        B::new("capture.picker_choose", &["CAP-030"])
+            .params(params(
+                json!({"id": {"type": "integer", "description": "The window to capture; without it, the picker is cancelled"}}),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("capture.menu", &["CAP-031", "CAP-065"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .interactive()
+            .params(capture_params(json!({
+                "submenus": {"type": "boolean", "default": true, "description": "Include the open submenus"},
+                "menubar": {"type": "boolean", "default": false, "description": "Include the menu bar item the menu hangs from"}
+            })))
+            .result(capture_result()),
+        B::new("capture.file_name", &["CAP-053"])
+            .params(params(
+                json!({
+                    "file": {"type": "object", "description": "The File destination's options"},
+                    "next": {"type": "integer", "minimum": 1, "description": "Set its counter's next number"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "folder": {"type": "string"}, "name": {"type": "string"}, "next": {"type": "integer"},
+                "counter": {"type": "boolean"}, "markers": {"type": "array"}
+            }})),
+        B::new("capture.pick_area", &["CAP-026"])
+            .scopes(UI_CLI)
+            .interactive()
+            .result(json!({"type": "object", "properties": {
+                "monitor": {"type": "string"}, "x": {"type": "integer"}, "y": {"type": "integer"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}
+            }})),
         B::new("capture.window", &["CAP-027", "CAP-008"])
             .scopes(ALL)
             .assignable()
             .mutates()
             .params(capture_params(json!({
-                "target": {"type": "string", "enum": ["active", "interactive", "point", "title"], "default": "active"},
+                "target": {"type": "string", "enum": ["active", "interactive", "point", "title", "id"], "default": "active"},
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
-                "title": {"type": "string", "description": "Part of the window title or process name (first match)"}
+                "title": {"type": "string", "description": "Part of the window title or process name (first match)"},
+                "id": {"type": "integer", "description": "target id: a window by its id (as the window picker lists them); an interval series uses it (CAP-049)"}
             })))
             .result(capture_result()),
+        // Editor and documents (EDT-119). Handlers live in xs-editor.
+        B::new("document.open", &["EDT-105", "EDT-119"])
+            .scopes(ALL)
+            .mutates()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "A .xshot, PNG or JPG file, or a video (MP4, M4V, MOV)"},
+                    "show": {"type": "boolean", "description": "Show it in the editor (default: false from the CLI and MCP)"}
+                }),
+                &["path"],
+            ))
+            .result(document_summary()),
+        B::new("document.list", &["EDT-001", "TRY-002"]).result(json!({
+            "type": "object",
+            "properties": {
+                "active": {"type": ["string", "null"]},
+                "documents": {"type": "array", "items": document_summary()}
+            }
+        })),
+        B::new("document.info", &["EDT-119"])
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("document.annotate", &["EDT-119", "EDT-024"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objects": {"type": "array", "items": {"type": "object"}, "description": "Objects to add: type, geometry and style. All or none are created."}
+                }),
+                &["objects"],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.update_object", &["EDT-119", "EDT-014", "EDT-042"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "set": {"type": "object", "description": "Geometry to replace and style properties to change"},
+                    "move": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Move every object by [dx, dy] canvas pixels, in one undo step"},
+                    "moves": {"type": "object", "description": "A move for each object, {\"o1\": [dx, dy], …}, in one undo step (aligning, EDT-083)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
+        B::new("document.arrange", &["EDT-081", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "to": {"type": "string", "enum": ["front", "forward", "backward", "back"]}
+                }),
+                &["to"],
+            ))
+            .result(json!({"type": "object", "properties": {"order": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.simplify_view", &["EDT-041"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "showOriginal": {"type": "boolean", "description": "Show the original image under the simplified shapes"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "description": "How strongly it shows, %"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"showOriginal": {"type": "boolean"}, "opacity": {"type": "number"}}})),
+        B::new("editor.stamps", &["EDT-031"])
+            .params(params(
+                json!({
+                    "query": {"type": "string", "description": "Words of its name or keywords, in English or Spanish"},
+                    "category": {"type": "string", "enum": ["indicators", "cursors", "keys", "devices", "interface", "labels", "arrows"]}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"categories": {"type": "array"}, "stamps": {"type": "array"}}})),
+        B::new("document.steps", &["EDT-035"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["restart", "renumber"], "description": "restart: the next step shows the first value again; renumber: number the steps again by the order they were made, without gaps (one undo step)"},
+                    "sequence": {"type": "string", "enum": ["number", "upper", "lower", "romanUpper", "romanLower"], "description": "Default: the Step tool's"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"next": {"type": "string"}, "renumbered": {"type": "integer"}}})),
+        B::new("document.flatten", &["EDT-091", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "all": {"type": "boolean", "default": false, "description": "Flatten every object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "layers": {"type": "array", "items": {"type": "string"}, "description": "New layers, oldest first: each blur has one of its own"},
+                "permanent": {"type": "boolean", "description": "A blur was flattened: it cannot become objects again"}
+            }})),
+        B::new("document.unflatten", &["EDT-091", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "layerId": {"type": "string", "description": "A layer of `flattened` in document.info"},
+                    "all": {"type": "boolean", "default": false, "description": "Every layer that can"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.fill", &["EDT-047", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "at": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "The pixel clicked, in canvas pixels"},
+                    "color": {"type": ["string", "object", "null"], "description": "#RRGGBB or #RRGGBBAA, a gradient {type: linear | radial, angle, stops: [{color, pos}]} over the filled area, or null to make the pixels transparent (the canvas color shows)"},
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 100, "default": 10, "description": "How different a color may be from the clicked one and still fill, %; 0 = only that exact color"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "default": 100},
+                    "global": {"type": "boolean", "default": false, "description": "Every pixel of that color in the image, touching or not"},
+                    "objectId": {"type": "string", "description": "A floating image to fill instead of the image (`at` is still in canvas pixels)"}
+                }),
+                &["at"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False when the click is outside the pixels"}}})),
+        B::new("document.erase", &["EDT-048", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "points": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}, "minItems": 1, "description": "The stroke, in canvas pixels"},
+                    "width": {"type": "number", "minimum": 1, "maximum": 200, "default": 20, "description": "Thickness, px"},
+                    "shape": {"type": "string", "enum": ["round", "square"], "default": "round"},
+                    "opacity": {"type": "number", "minimum": 0, "maximum": 100, "default": 100, "description": "How much it erases, %"},
+                    "antialias": {"type": "boolean", "default": true, "description": "Smooth edges"},
+                    "objectId": {"type": "string", "description": "A floating image to erase instead of the image"}
+                }),
+                &["points"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}}})),
+        B::new("document.select_pixels", &["EDT-043", "EDT-046", "EDT-119"])
+            .positional(&["shape"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "shape": {"type": "string", "enum": ["rectangle", "ellipse", "polygon", "freehand", "wand", "all", "invert", "none"], "default": "rectangle", "description": "What to select: a drawn shape, the magic wand at `at`, everything; invert or drop the selection"},
+                    "rect": {"type": "object", "description": "Rectangle or ellipse, in canvas pixels", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "w": {"type": "number"}, "h": {"type": "number"}}},
+                    "points": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}, "description": "Polygon or freehand loop, in canvas pixels; it closes by itself"},
+                    "at": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Magic wand: the pixel clicked, in canvas pixels"},
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 100, "default": 15, "description": "Magic wand: how different a color may be, %"},
+                    "global": {"type": "boolean", "default": false, "description": "Magic wand: every pixel of that color, touching or not"},
+                    "mode": {"type": "string", "enum": ["replace", "add", "subtract"], "default": "replace"},
+                    "antialias": {"type": "boolean", "default": true, "description": "Smooth edges"},
+                    "feather": {"type": "number", "minimum": 0, "maximum": 50, "default": 0, "description": "Soft edges, px"},
+                    "snap": {"type": "boolean", "default": false, "description": "Rectangle or ellipse: shrink to the visual element inside it"},
+                    "level": {"type": "number", "minimum": 0, "maximum": 100, "default": 50, "description": "Snap: from the smallest element to the widest group"},
+                    "objectId": {"type": "string", "description": "Select on this floating image instead of the image"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"bounds": {"description": "The rectangle around the selection, in canvas pixels; null without one"}}})),
+        B::new("document.selection_action", &["EDT-044", "EDT-045", "EDT-119"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["delete", "cut", "copy", "move", "float", "crop", "effect"], "description": "delete or cut leave the gap filled; copy puts the pixels on the clipboard; move takes them by `offset`; float makes them a floating image; crop crops to them; effect fixes `effect` into them"},
+                    "effect": {"type": "object", "description": "effect: a filters, color, replace or spotlight effect (spotlight: dim, blur, zoom 100–400, borderColor, borderWidth)"},
+                    "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "move: [dx, dy] in canvas pixels"},
+                    "gapFill": {"type": "string", "enum": ["smart", "transparent", "canvas"], "default": "smart", "description": "What fills the place the pixels leave"},
+                    "quality": {"type": "string", "enum": ["fast", "photo"], "default": "fast", "description": "Smart fill: fast for interfaces and flat backgrounds; photo rebuilds textures (slower; editor.cancel stops it)"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "ids": {"type": "array", "items": {"type": "string"}, "description": "float: the new floating image"}}})),
+        B::new("document.effects", &["EDT-053", "EDT-055", "EDT-056", "EDT-057", "EDT-058", "EDT-059", "EDT-060", "EDT-061", "EDT-062", "EDT-063", "EDT-064", "EDT-066", "EDT-067", "EDT-068", "EDT-119"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["set", "add", "update", "remove", "move", "clear"], "default": "set", "description": "set: the whole stack; add: one at the end; update: change `index` with `effect`'s values; remove / move (`to`); clear: every effect off"},
+                    "effects": {"type": "array", "items": {"type": "object"}, "description": "set: the stack, in order"},
+                    "effect": {"type": "object", "description": "{type, enabled, …settings}. Types: border, edges, shadow, perspective, pageCurl, reflection, fade, filters, color, replace, watermark, details, trim, corners, scale, rotate"},
+                    "index": {"type": "integer", "minimum": 0},
+                    "to": {"type": "integer", "minimum": 0},
+                    "objectId": {"type": "string", "description": "A floating image's own stack instead of the document's"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"effects": {"type": "array"}}})),
+        B::new("editor.saved_effects", &["EDT-054"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"effects": {"type": "array", "description": "[{id, name, stack}]"}}})),
+        B::new("editor.saved_effect", &["EDT-054", "EDT-016"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["apply", "save", "update", "rename", "delete", "move", "favorite"], "description": "apply: the saved effect becomes the target's stack (with append, it goes at the end); save / update: from the target's stack; favorite: a copy in Favorites"},
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "to": {"type": "integer", "minimum": 0},
+                    "append": {"type": "boolean", "default": false},
+                    "documentId": document_id(),
+                    "objectId": {"type": "string", "description": "A floating image instead of the document"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.resize", &["EDT-069", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "width": {"type": "number", "minimum": 1, "description": "New width of the image, px (alone: the height keeps the proportion)"},
+                    "height": {"type": "number", "minimum": 1},
+                    "percent": {"type": "number", "exclusiveMinimum": 0, "description": "Instead of width and height"},
+                    "resample": {"type": "string", "enum": ["auto", "bicubic", "bilinear", "lanczos", "nearest"], "default": "auto"},
+                    "resampleImage": {"type": "boolean", "default": true, "description": "false: the pixels stay and only the resolution changes"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"width": {"type": "integer"}, "height": {"type": "integer"}, "dpi": {"type": "number"}}})),
+        B::new("document.rotate", &["EDT-072", "EDT-119"])
+            .mutates()
+            .positional(&["degrees"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "degrees": {"type": "number", "minimum": -359.9, "maximum": 359.9, "description": "Clockwise; 90, 180, 270 or any angle"},
+                    "background": {"type": "string", "enum": ["transparent", "canvas"], "default": "transparent", "description": "The new corners of an angle that is not a quarter turn"}
+                }),
+                &["degrees"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.flip", &["EDT-073", "EDT-119"])
+            .mutates()
+            .positional(&["direction"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "direction": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "Only these objects, around the box that holds them; without it, the image and every object"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
     ]
-    .into_iter()
-    .map(|b| b.0)
-    .collect()
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_4(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
+        B::new("document.trim", &["EDT-051", "EDT-119"])
+            .mutates()
+            .positional(&["tolerance"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "tolerance": {"type": "number", "minimum": 0, "maximum": 20, "default": 2, "description": "Percent: how far a border pixel may be from the top-left one"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean", "description": "False (with a message) when there are no uniform borders"}}})),
+        B::new("document.print_pages", &["EDT-114", "EDT-102"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Or image files (library items), one fitted per page, without opening them (LIB-017)"},
+                    "setup": {"type": "object", "description": "{paper: a4 | letter | legal | a3, orientation: auto | portrait | landscape, margin (mm), size: fit | actual | percent, percent, position: center | topLeft}"},
+                    "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}: printing a selection"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"pages": {"type": "array", "description": "{png (base64), paper {w, h}, at {x, y}, size {w, h}} in millimeters"}}})),
+        B::new("document.print", &["EDT-114", "EDT-102", "EDT-119"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "As document.print_pages (LIB-017)"},
+                    "setup": {"type": "object", "description": "As document.print_pages"},
+                    "rect": {"type": "object", "description": "Only this part of the canvas {x, y, w, h}"},
+                    "open": {"type": "boolean", "default": true, "description": "Open the PDF in the system's viewer to print it"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "pages": {"type": "integer"}}})),
+        B::new("document.batch_export", &["EDT-113", "EDT-119"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Files (.xshot, PNG, JPG) and folders of them, in this order"},
+                    "format": {"type": "string", "enum": ["png", "jpg", "gif", "bmp", "tiff", "tif", "pdf", "ico", "psd"]},
+                    "options": {"type": "object", "description": "As document.export (EDT-112)"},
+                    "effects": {"type": ["string", "array", "null"], "description": "A saved effect's id (EDT-054) or a stack, added to each file's own effects"},
+                    "folder": {"type": "string", "description": "Where the files go"},
+                    "nextToOriginal": {"type": "boolean", "default": false, "description": "Each next to its source instead"},
+                    "naming": {"type": "object", "description": "{mode: keep | base | name, base, start (1), digits (2), prefix, suffix, name}: base gives guia_01, guia_02…; name gives that name (one file, LIB-018)"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "skip"], "default": "keepBoth"}
+                }),
+                &["paths", "format"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "exported": {"type": "array", "description": "{source, path} of each file written"},
+                "failed": {"type": "array", "description": "{source, reason}"},
+                "skipped": {"type": "array", "description": "{source, path} that already existed (onConflict: skip)"},
+                "cancelled": {"type": "boolean"}
+            }})),
+        B::new("document.new", &["EDT-103", "EDT-119"])
+            .params(params(
+                json!({
+                    "width": {"type": "integer", "minimum": 1, "maximum": 32000, "description": "Defaults to editor.newImage.width"},
+                    "height": {"type": "integer", "minimum": 1, "maximum": 32000, "description": "Defaults to editor.newImage.height"},
+                    "color": {"type": ["string", "object", "null"], "description": "Canvas color #RRGGBB(AA), a gradient, or null for transparent; defaults to editor.newImage.color"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "default": 96},
+                    "remember": {"type": "boolean", "default": false, "description": "Make the size and color the defaults"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}, "path": {"type": "string"}}})),
+        B::new("document.new_from_clipboard", &["EDT-104", "EDT-119"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}, "path": {"type": ["string", "null"]}}})),
+        B::new("document.cut_out", &["EDT-052", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "direction": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal", "description": "horizontal: a strip of the whole width (the height changes); vertical: of the whole height"},
+                    "from": {"type": "number", "description": "Where the strip starts, in canvas pixels along the direction's axis (y for horizontal)"},
+                    "to": {"type": "number", "description": "Where it ends"},
+                    "mode": {"type": "string", "enum": ["remove", "add"], "default": "remove", "description": "remove the strip, or add that much space of the canvas color"},
+                    "join": {"type": "string", "enum": ["straight", "torn", "wavy", "zigzag"], "default": "straight", "description": "How the parts join; all but straight leave a gap"},
+                    "gap": {"type": "number", "minimum": 8, "maximum": 60, "default": 16, "description": "The gap, px"}
+                }),
+                &["from", "to"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "crossing": {"type": "array", "items": {"type": "string"}, "description": "Objects across the strip: they stay where they were"}
+            }})),
+        B::new("document.fit_canvas", &["EDT-051", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}}})),
+        B::new("document.crop_to_canvas", &["EDT-051", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "changed": {"type": "boolean"},
+                "sticking": {"type": "array", "items": {"type": "string"}, "description": "Annotations that still stick out: they are not cut"}
+            }})),
+        B::new("document.revert", &["EDT-076", "EDT-119"])
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(json!({"type": "object"})),
+        B::new("document.canvas", &["EDT-074", "EDT-075", "EDT-077", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "color": {"type": ["string", "object", "null"], "description": "Canvas color #RRGGBB(AA), a gradient {type: linear | radial, angle, stops: [{color, pos}]} over the whole canvas, or null for transparent"},
+                    "cornerRadius": {"type": ["number", "string"], "description": "Rounded corners, px, or \"circle\" (first a centered square)"},
+                    "dpi": {"type": "number", "minimum": 1, "maximum": 10000, "description": "Resolution: the pixels do not change"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.canvas_size", &["EDT-070", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "width": {"type": "number", "minimum": 1, "maximum": 32000},
+                    "height": {"type": "number", "minimum": 1, "maximum": 32000},
+                    "anchor": {"type": "string", "enum": ["topLeft", "top", "topRight", "left", "center", "right", "bottomLeft", "bottom", "bottomRight"], "default": "center", "description": "What stays put: the canvas grows or shrinks on the other sides"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("document.transform", &["EDT-080", "EDT-083", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "scale": {
+                        "type": "object",
+                        "description": "Stretch them as one: from the box `from` (default: the box around them) to `to`, or by `factor` (a number or [x, y]) from its top left corner",
+                        "properties": {
+                            "from": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                            "to": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                            "factor": {"type": ["number", "array"]}
+                        }
+                    },
+                    "strokes": {"type": "boolean", "description": "With scale: line widths and text sizes too. Default: the editor.scaleStrokes setting"},
+                    "rotate": {"type": "number", "description": "Turn them as one, in degrees clockwise"},
+                    "around": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "With rotate: the center (default: the center of the box around them)"},
+                    "equal": {"type": "string", "enum": ["width", "height"], "description": "Give them all the same width or height"},
+                    "size": {"type": "number", "minimum": 1, "description": "With equal: the size (default: the largest)"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"objects": {"type": "array"}}})),
+        B::new("document.group", &["EDT-082", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "ungroup": {"type": "boolean", "default": false, "description": "Take them out of their outermost group instead"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"group": {"type": ["string", "null"]}}})),
+        B::new("document.duplicate", &["EDT-088", "EDT-119"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "offset": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2, "description": "Where the copies go from the originals, [dx, dy] (default [10, 10])"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("document.delete_object", &["EDT-119", "EDT-042"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "array"}}})),
+        B::new("document.undo", &["EDT-092"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(history_result()),
+        B::new("document.redo", &["EDT-092"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(json!({"documentId": document_id()}), &[]))
+            .result(history_result()),
+        B::new("document.save", &["EDT-107", "EDT-106", "LIB-021"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "Save as: another file. Omit to save in its own file"},
+                    "format": {"type": "string", "enum": ["xshot", "png", "jpg"], "description": "Default: from the path extension"},
+                    "confirmFlatten": {"type": "boolean", "default": false, "description": "The user accepted that a PNG or JPG keeps the objects flattened (UI)"},
+                    "dontAskAgain": {"type": "boolean", "default": false, "description": "Do not warn about flattening again (UI)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["saved", "needs_decision"]},
+                    "reason": {"type": "string", "enum": ["flatten"]},
+                    "path": {"type": "string"},
+                    "linked": {"type": "boolean"}
+                }
+            })),
+        B::new("document.export", &["EDT-107", "EDT-110"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Several documents in one PDF or TIFF, one page each, in this order (EDT-111)"},
+                    "format": {"type": "string", "enum": ["png", "jpg", "gif", "bmp", "tiff", "tif", "pdf", "ico", "psd"]},
+                    "path": {"type": "string", "description": "Required unless estimate"},
+                    "quality": {"type": "integer", "minimum": 1, "maximum": 100, "description": "JPG quality (default 90); also options.quality"},
+                    "options": {"type": "object", "description": "Format options (EDT-112): quality, pngCompression (fast | max), pngColors256, gifTransparent, tiffCompression (none | lzw | zip), pdfPage (auto | a4 | letter | legal | a3), pdfOrientation (auto | portrait | landscape), pdfMargin (mm), pdfFitWidth, pdfSinglePage, pdfLossless, icoSizes ([16…256]), scale (25–400 %), colorProfile"},
+                    "estimate": {"type": "boolean", "default": false, "description": "Only say how many bytes it would take; nothing is written"},
+                    "onConflict": {"type": "string", "enum": ["keepBoth", "replace", "fail"], "default": "keepBoth"}
+                }),
+                &["format"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "bytes": {"type": "integer"},
+                    "pages": {"type": "integer", "description": "Images in the file"}
+                }
+            })),
+        B::new("document.crop", &["EDT-049", "EDT-050", "EDT-119"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "rect": {
+                        "type": "object",
+                        "description": "New canvas in canvas pixels. It may reach past the canvas, up to the edges of the original image (EDT-050)",
+                        "properties": {
+                            "x": {"type": "number"}, "y": {"type": "number"},
+                            "w": {"type": "number", "minimum": 1}, "h": {"type": "number", "minimum": 1}
+                        },
+                        "required": ["x", "y", "w", "h"],
+                        "additionalProperties": false
+                    },
+                    "trim": {"type": "boolean", "description": "Trim plain borders (EDT-051, M2)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "outside": {"type": "integer", "description": "Objects now partly or wholly outside the canvas"}
+                }
+            })),
+        B::new("document.copy_objects", &["EDT-089"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}},
+                    "cut": {"type": "boolean", "default": false, "description": "Cut: copy and delete them"}
+                }),
+                &["objectIds"],
+            ))
+            .result(json!({"type": "object", "properties": {"count": {"type": "integer"}}})),
+        B::new("document.insert_images", &["EDT-078", "CAP-067"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Library documents (.xshot) or PNG/JPG files"},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "Canvas point [x, y] the first image is centered on (default: the canvas center)"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "documentId": {"type": "string"},
+                    "ids": {"type": "array", "items": {"type": "string"}},
+                    "created": {"type": "boolean", "description": "A new document was made for them"}
+                }
+            })),
+        B::new("document.rename", &["SMT-041", "TRY-006"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "name": {"type": "string", "minLength": 1, "description": "New file name, without folder or extension"}
+                }),
+                &["name"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "name": {"type": "string"}}})),
+        B::new("document.locate", &["TRY-002"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "Where the file is now"}
+                }),
+                &["path"],
+            ))
+            .result(document_summary()),
+        B::new("document.image", &["SMT-043", "APP-029"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "maxSize": {"type": "integer", "minimum": 64, "maximum": 2576, "default": 1568, "description": "Longest side in pixels; larger images are scaled down"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "image": {"type": "object", "description": "PNG: {mimeType, data (base64)}. MCP clients get it as an image"},
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "path": {"type": "string"}
+                }
+            })),
+        B::new("document.paste", &["EDT-089"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "inPlace": {"type": "boolean", "default": false, "description": "Paste copied objects at their original place"},
+                    "center": {"type": "array", "items": {"type": "number"}, "description": "Canvas point [x, y] to center what is pasted on (the middle of the view)"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "pasted": {"type": "string", "enum": ["objects", "text", "document"]},
+                    "documentId": {"type": "string"},
+                    "ids": {"type": "array", "items": {"type": "string"}}
+                }
+            })),
+        B::new("document.copy_all", &["EDT-090", "SHR-019"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(json!({"documentId": document_id()}), &[])),
+        B::new("document.close", &["EDT-108", "EDT-012"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Several documents at once (TRY-008)"},
+                    "all": {"type": "boolean", "default": false},
+                    "save": {"type": "array", "items": {"type": "string"}, "description": "Documents with unsaved changes to save first"},
+                    "discard": {"type": "array", "items": {"type": "string"}, "description": "Documents whose unsaved changes may be lost"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["closed", "needs_decision"]},
+                    "closed": {"type": "array", "items": {"type": "string"}},
+                    "pending": {"type": "array", "items": {"type": "object"}}
+                }
+            })),
+        B::new("editor.show", &["EDT-001", "EDT-119"])
+            .scopes(ALL)
+            .params(params(
+                json!({
+                    "view": {"type": "string", "enum": ["editor", "library"], "default": "editor"},
+                    "documentId": document_id()
+                }),
+                &[],
+            )),
+        B::new("editor.state", &["EDT-014", "EDT-003"]).result(json!({"type": "object"})),
+        B::new("editor.fonts", &["EDT-026"]).result(json!({
+            "type": "object",
+            "properties": {"fonts": {"type": "array", "items": {"type": "string"}}}
+        })),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
+        B::new("editor.select_tool", &["EDT-003", "EDT-119"])
+            .scopes(ALL)
+            .positional(&["tool"])
+            .params(params(json!({"tool": {"type": "string", "enum": TOOLS}}), &["tool"]))
+            .result(json!({"type": "object", "properties": {"tool": {"type": "string"}}})),
+        B::new("editor.action", &["EDT-002", "EDT-116", "EDT-119"])
+            .scopes(ALL)
+            .assignable()
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": EDITOR_ACTIONS.as_slice()}}),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("editor.toolbar", &["EDT-003", "EDT-004"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["get", "set", "reset"], "default": "get"},
+                    "items": {"type": "array", "items": {"type": "string"}, "description": "For set: tool:<id>, action:<editor action> (commands and action:effect_…), sep or space, in order"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "default": {"type": "array", "items": {"type": "string"}},
+                "available": {"type": "object", "description": "{tools, actions, effects} that can go on it"}
+            }})),
+        B::new("editor.templates", &["EDT-095", "EDT-096", "EDT-101"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["list", "rename", "duplicate", "delete", "import", "export"], "default": "list"},
+                    "id": {"type": "string", "description": "An own template, own:<name> (rename, duplicate, delete, export)"},
+                    "name": {"type": "string", "description": "The new name (rename)"},
+                    "path": {"type": "string", "description": "The .xtemplate file to import, or where to export"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "templates": {"type": "array", "description": "{id, name, family, min, max, own} in the picker's order; own ones add path and zones"},
+                "max": {"type": "integer", "description": "Most images a template takes"},
+                "folder": {"type": "string"},
+                "result": {"description": "The new id (import, rename, duplicate) or the exported file"}
+            }})),
+        B::new("document.from_template", &["EDT-095", "EDT-096", "EDT-097"])
+            .positional(&["template"])
+            .params(params(
+                json!({
+                    "template": {"type": "string", "description": "A built-in template id (editor.templates), own:<name> or a .xtemplate file"},
+                    "images": {"type": "array", "maxItems": 100, "items": {"type": ["string", "object"]}, "description": "Files (paths) or {documentId} of open documents, in zone order; the first 20 are used"},
+                    "settings": {"type": "object", "description": "Template settings (EDT-097): scale fit|fill, title, captions, footer, author system|custom, authorText, font, textColor, background, numbering, numberColor, numberShape, reversed, theme"}
+                }),
+                &["template"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"},
+                "path": {"type": "string"},
+                "zones": {"type": "integer"},
+                "placed": {"type": "integer"},
+                "warnings": {"type": "array", "items": {"type": "string"}}
+            }})),
+        B::new("document.template", &["EDT-097", "EDT-098", "EDT-099", "EDT-101"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "action": {"type": "string", "enum": ["info", "settings", "reverse", "add_section", "remove_section", "duplicate_section", "resize_section", "move_section", "fill_zone", "clear_zone", "swap_zones", "frame_zone", "remove_caption", "convert_zone"], "default": "info"},
+                    "settings": {"type": "object", "description": "settings: the settings to change (EDT-097)"},
+                    "kind": {"type": "string", "enum": ["step", "imageText", "text", "twoImages", "title", "footer", "guideStep", "guideText", "guideImage"], "description": "add_section: its kind (a guide of steps: guideStep, guideText or guideImage, SMT-029)"},
+                    "sectionIds": {"type": "array", "items": {"type": "string"}, "description": "remove_section: several at once"},
+                    "index": {"type": "integer", "minimum": 0, "description": "add_section, move_section: its place among the sections"},
+                    "sectionId": {"type": "string"},
+                    "height": {"type": "number", "minimum": 40, "maximum": 5000, "description": "resize_section"},
+                    "zone": {"type": "string", "description": "A zone: its object id or slot (zone:<section>:<n>)"},
+                    "with": {"type": "string", "description": "swap_zones: the other zone"},
+                    "path": {"type": "string", "description": "fill_zone: an image or .xshot file"},
+                    "sourceDocumentId": {"type": "string", "description": "fill_zone: an open document's final image"},
+                    "fromObject": {"type": "string", "description": "fill_zone: a floating image that goes into the zone"},
+                    "clipboard": {"type": "boolean", "description": "fill_zone: the image on the clipboard"},
+                    "zoom": {"type": "number", "minimum": 0.1, "maximum": 100, "description": "frame_zone: 1 = fitted or filled"},
+                    "zoomBy": {"type": "number", "description": "frame_zone: steps of 10 % (+1, -1)"},
+                    "offset": {"type": "array", "items": {"type": "number"}, "description": "frame_zone: [x, y] px from the centered place"},
+                    "reset": {"type": "boolean", "description": "frame_zone: back to as placed"},
+                    "objectId": {"type": "string", "description": "convert_zone: a floating image"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "isTemplate": {"type": "boolean"},
+                "template": {"type": ["object", "null"]},
+                "sections": {"type": "array", "description": "{id, kind, top, height} of the sections shown"},
+                "zones": {"type": "array", "description": "{objectId, slot, section, rect, filled, zoom}"}
+            }})),
+        B::new("document.save_as_template", &["EDT-101"])
+            .positional(&["name"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "name": {"type": "string"},
+                    "family": {"type": "string", "enum": ["steps", "timeline", "compare", "collage", "mine"], "default": "mine"},
+                    "emptyZones": {"type": "boolean", "default": true},
+                    "replace": {"type": "boolean", "default": false, "description": "Overwrite an own template of that name"}
+                }),
+                &["name"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}, "path": {"type": "string"}}})),
+        B::new("document.apply_theme", &["EDT-100"])
+            .mutates()
+            .positional(&["themeId"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "themeId": {"type": "string"},
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "Only these; without it, every object"},
+                    "fromThemeId": {"type": "string", "description": "The theme the colors come from; default: the template's or the active one"}
+                }),
+                &["themeId"],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "integer"}}})),
+        B::new("editor.clipboard", &["EDT-103", "EDT-104"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "image": {"type": ["object", "null"], "description": "{width, height} of the image in the clipboard"},
+                "files": {"type": "integer", "description": "Image files copied in the file manager"},
+                "text": {"type": "boolean"}
+            }})),
+        B::new("editor.cancel", &["EDT-045"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean", "description": "Whether something was running"}}})),
+        B::new("editor.menu_state", &["EDT-002"])
+            .scopes(UI)
+            .params(params(
+                json!({
+                    "enabled": {"type": "object", "description": "Menu entry id -> whether it can be used now"},
+                    "checked": {"type": "object", "description": "Menu entry id -> whether it is ticked"}
+                }),
+                &[],
+            )),
+        B::new("editor.set_style", &["EDT-014"])
+            .mutates()
+            .params(params(
+                json!({"tool": {"type": "string", "enum": TOOLS}, "style": {"type": "object"}}),
+                &["tool", "style"],
+            ))
+            .result(json!({"type": "object", "properties": {"style": {"type": "object"}}})),
+        B::new("editor.styles", &["EDT-015", "EDT-016"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "theme": {"type": "object"},
+                "tools": {"type": "object", "description": "Saved styles of the active theme by tool: [{id, name, style}]"},
+                "favorites": {"type": "array", "description": "[{id, tool, style}]"}
+            }})),
+        B::new("editor.style", &["EDT-015", "EDT-016"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["apply", "save", "update", "rename", "delete", "move", "reset", "favorite", "unfavorite", "move_favorite", "apply_favorite"], "description": "apply: the tool takes the style (and objectIds, if given); save: the tool's current style as a new one; update: a style becomes the current one; reset: back to the theme's styles of the tool; favorite: a copy in Favorites (of styleId, or of the current style)"},
+                    "tool": {"type": "string", "enum": ["arrow", "line", "text", "callout", "shape", "step", "highlight", "pen", "magnify", "spotlight", "blur"]},
+                    "styleId": {"type": "string"},
+                    "favoriteId": {"type": "string"},
+                    "name": {"type": "string"},
+                    "to": {"type": "integer", "minimum": 0, "description": "move: the new position, 0 is first"},
+                    "documentId": document_id(),
+                    "objectIds": {"type": "array", "items": {"type": "string"}, "description": "apply: objects of that tool that take the style too (not their position, size or text)"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("editor.colors", &["EDT-019"])
+            .scopes(ALL)
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"mine": {"type": "array", "items": {"type": "string"}}, "recent": {"type": "array", "items": {"type": "string"}}, "gradients": {"type": "array"}}})),
+        B::new("editor.color", &["EDT-019"])
+            .scopes(ALL)
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["save", "remove", "used", "save_gradient", "remove_gradient"], "description": "save: add to My colors (up to 24); remove: take it out; used: first of the 8 recent colors; save_gradient / remove_gradient: My gradients (up to 16)"},
+                    "color": {"type": "string", "description": "#RRGGBB or #RRGGBBAA"},
+                    "gradient": {"type": "object", "description": "{type: linear | radial, angle, stops: [{color, pos}]}"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"mine": {"type": "array"}, "recent": {"type": "array"}}})),
+        B::new("editor.themes", &["EDT-017"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"active": {"type": "string"}, "themes": {"type": "array"}}})),
+        B::new("editor.theme", &["EDT-017", "EDT-018"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["activate", "save", "preview", "duplicate", "rename", "delete", "export", "import"], "description": "preview: how `theme` would look, without saving it (PNG samples)"},
+                    "id": {"type": "string", "description": "The theme; save without it creates one"},
+                    "theme": {"type": "object", "description": "save: {name, colors (2 to 8, none twice), font (empty: the system's), shadow, shadowOff (tools)}; its styles are made again", "properties": {
+                        "name": {"type": "string"},
+                        "colors": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 8},
+                        "font": {"type": ["string", "null"]},
+                        "shadow": {"type": "boolean"},
+                        "shadowOff": {"type": "array", "items": {"type": "string"}}
+                    }},
+                    "name": {"type": "string"},
+                    "path": {"type": "string", "description": "export or import: a .xtheme file"},
+                    "onConflict": {"type": "string", "enum": ["replace", "keep"], "description": "import: a theme of the user with that name exists"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object"})),
+        B::new("editor.zoom", &["EDT-007", "EDT-119"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({
+                    "mode": {"type": "string", "enum": ["actual", "fit", "original", "in", "out", "percent"]},
+                    "value": {"type": "number", "minimum": 10, "maximum": 3200, "description": "Percent, with mode percent"},
+                    "documentId": document_id()
+                }),
+                &["mode"],
+            ))
+            .result(json!({"type": "object", "properties": {"zoom": {"type": "number"}}})),
+        B::new("editor.view", &["EDT-007"])
+            .scopes(UI)
+            .params(params(
+                json!({
+                    "documentId": {"type": "string"},
+                    "zoom": {"type": "number"},
+                    "x": {"type": "number"},
+                    "y": {"type": "number"},
+                    "viewportWidth": {"type": "number"},
+                    "viewportHeight": {"type": "number"},
+                    "dpr": {"type": "number"}
+                }),
+                &["documentId", "zoom", "x", "y", "viewportWidth", "viewportHeight", "dpr"],
+            )),
+        // Cloud AI (SMT-039 to SMT-042): never from an agent, only on the user's request.
+        B::new("ai.key_set", &["SMT-039"])
+            .scopes(UI)
+            .mutates()
+            .params(params(json!({"key": {"type": "string", "minLength": 1}}), &["key"]))
+            .result(ai_key_status()),
+        // The library (LIB-); the rest of the area arrives with M2 (LIB-034).
+        B::new("library.list", &["LIB-001", "LIB-002", "LIB-004", "LIB-005", "LIB-006", "LIB-007", "LIB-022", "LIB-034"])
+            .params(params(
+                json!({
+                    "sort": {"type": "string", "enum": ["modified", "captured", "name", "size", "type", "app"], "default": "modified"},
+                    "order": {"type": "string", "enum": ["asc", "desc"], "description": "Default: newest and largest first, names A to Z"},
+                    "query": {"type": "string", "description": "Search (LIB-007): words by prefix in any field, a quoted phrase, tag:, app:, site:, type: (image, video, gif, guide); no case or accents"},
+                    "filters": {"type": "object", "description": "{types, dates (2026, 2026-11, 2026-11-12, today, yesterday, last7, month), apps, sites, tags, favorites}: values of a section add up, sections cross", "properties": {
+                        "types": {"type": "array", "items": {"type": "string"}},
+                        "dates": {"type": "array", "items": {"type": "string"}},
+                        "apps": {"type": "array", "items": {"type": "string"}},
+                        "sites": {"type": "array", "items": {"type": "string"}},
+                        "tags": {"type": "array", "items": {"type": "string"}},
+                        "favorites": {"type": "boolean"}
+                    }},
+                    "offset": {"type": "integer", "minimum": 0, "default": 0},
+                    "limit": {"type": "integer", "minimum": 1, "description": "Default: all"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "root": {"type": "string"},
+                    "synced": {"type": "boolean"},
+                    "total": {"type": "integer", "description": "Items in the library"},
+                    "count": {"type": "integer", "description": "Items that pass the filters and the search"},
+                    "items": {"type": "array", "items": library_item()},
+                    "facets": {"type": "object", "description": "Counts of each filter value over the other sections: types, dates (years, months, days), quickDates, apps, sites, tags, favorites"}
+                }
+            })),
+        B::new("library.search", &["LIB-034", "LIB-005", "LIB-007"])
+            .positional(&["query"])
+            .params(params(
+                json!({
+                    "query": {"type": "string", "description": "Words of the name, tags, app, site or annotations (LIB-007 rules)"},
+                    "tag": {"type": ["string", "array"], "items": {"type": "string"}},
+                    "type": {"type": ["string", "array"], "items": {"type": "string"}, "description": "image, video, gif, guide"},
+                    "app": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Part of the application's name"},
+                    "site": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Part of the website"},
+                    "from": {"type": "string", "description": "First capture day, YYYY-MM-DD"},
+                    "to": {"type": "string", "description": "Last capture day, YYYY-MM-DD"},
+                    "favorite": {"type": "boolean"},
+                    "sort": {"type": "string", "enum": ["modified", "captured", "name", "size", "type", "app"]},
+                    "order": {"type": "string", "enum": ["asc", "desc"]},
+                    "offset": {"type": "integer", "minimum": 0},
+                    "limit": {"type": "integer", "minimum": 1}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "total": {"type": "integer"},
+                "count": {"type": "integer"},
+                "items": {"type": "array", "items": library_item()}
+            }})),
+        B::new("library.reveal", &["LIB-014", "LIB-034"])
+            .scopes(UI_CLI_MCP)
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "path": {"type": "string", "description": "A file of the library, instead of its ID"}
+                }),
+                &[],
+            ))
+            .result(library_item()),
+        // The recent tray (TRY-017): the documents shown in the editor, in order.
+        B::new("tray.list", &["TRY-017", "TRY-002"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "items": {"type": "array", "description": "{documentId, name, path, libraryId, pinned, dirty, active, missing}, left to right"},
+                "capacity": {"type": "integer"}
+            }})),
+        B::new("tray.open", &["TRY-017"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string", "description": "A library item (library.list)"},
+                    "path": {"type": "string", "description": "Or a file"},
+                    "activate": {"type": "boolean", "default": true, "description": "Show it in the editor; false only puts it in the tray"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}}})),
+        B::new("tray.activate", &["TRY-017", "TRY-013"])
+            .positional(&["documentId"])
+            .params(params(json!({"documentId": {"type": "string"}}), &["documentId"]))
+            .result(json!({"type": "object", "properties": {"documentId": {"type": "string"}}})),
+        B::new("tray.pin", &["TRY-017", "TRY-004"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({"documentId": document_id(), "documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "items": {"type": "array"}}})),
+        B::new("tray.unpin", &["TRY-017", "TRY-004"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({"documentId": document_id(), "documentIds": {"type": "array", "items": {"type": "string"}}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"changed": {"type": "boolean"}, "items": {"type": "array"}}})),
+        B::new("tray.move", &["TRY-017", "TRY-005"])
+            .mutates()
+            .positional(&["documentId", "index"])
+            .params(params(
+                json!({
+                    "documentId": {"type": "string"},
+                    "index": {"type": "integer", "minimum": 0, "description": "Its new place, 0 is the left end; among the pinned ones it is pinned, among the rest unpinned"}
+                }),
+                &["documentId", "index"],
+            ))
+            .result(json!({"type": "object", "properties": {"index": {"type": "integer"}, "pinned": {"type": "boolean"}}})),
+        B::new("tray.close", &["TRY-017", "TRY-008"])
+            .mutates()
+            .positional(&["documentId"])
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}},
+                    "which": {"type": "string", "enum": ["this", "others", "all", "unpinned"], "default": "this", "description": "this: the documents named; others: all but them; all; unpinned"},
+                    "save": {"type": "array", "items": {"type": "string"}, "description": "As document.close"},
+                    "discard": {"type": "array", "items": {"type": "string"}, "description": "As document.close"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["closed", "needs_decision"]},
+                "closed": {"type": "array", "items": {"type": "string"}},
+                "pending": {"type": "array"}
+            }})),
+        B::new("library.duplicate", &["TRY-010", "LIB-034"])
+            .mutates()
+            .positional(&["ids"])
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Library items"},
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Or open documents (their unsaved changes go into the copy)"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Or files"},
+                    "open": {"type": "boolean", "default": false, "description": "Put the copies in the tray next to their originals; a single copy is shown"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "copies": {"type": "array", "description": "{source, path, id, documentId} of each copy"}
+            }})),
+    ]
+}
+
+#[inline(never)]
+#[allow(unused_variables)]
+fn specs_6(section: &Value, shortcut_scope: &Value) -> Vec<B> {
+    vec![
+        B::new("library.import", &["LIB-024", "LIB-034"])
+            .mutates()
+            .positional(&["paths"])
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "Files (.xshot, PNG, JPG) and folders of them; they are copied, the originals do not change"},
+                    "tagFolders": {"type": "boolean", "default": true, "description": "A folder's name becomes a tag of the images that came from it"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "imported": {"type": "array", "description": "{source, path, id} of each copy"},
+                "skipped": {"type": "array", "description": "{source, reason}: unsupported, in_library or unreadable"}
+            }})),
+        B::new("library.merge", &["LIB-031", "LIB-034"])
+            .mutates()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "The other library's folder; nothing in it changes"},
+                    "background": {"type": "boolean", "default": false, "description": "Return at once and report with library_merge events (the window)"},
+                    "cancel": {"type": "boolean", "description": "Cancel the merge in progress: what was copied is removed"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "added": {"type": "integer", "description": "Items copied here"},
+                "duplicates": {"type": "integer", "description": "Items not copied: the same file is already here"},
+                "enriched": {"type": "integer", "description": "Items here that gained tags or the favorite from a duplicate"},
+                "renamed": {"type": "array", "description": "{from, path}: copies that got \" (2)\" because the name was taken"},
+                "failed": {"type": "array", "items": {"type": "string"}},
+                "cancelled": {"type": "boolean"},
+                "started": {"type": "boolean"},
+                "total": {"type": "integer"}
+            }})),
+        B::new("library.export", &["LIB-033", "LIB-018", "LIB-034"])
+            .positional(&["folder"])
+            .params(params(
+                json!({
+                    "folder": {"type": "string", "description": "Where the copy goes: a folder outside the library"},
+                    "format": {"type": "string", "enum": ["png", "jpg"], "default": "png", "description": "What .xshot images become, with their annotations; PNG and JPG files are copied as they are"},
+                    "ids": {"type": "array", "items": {"type": "string"}, "description": "Only these items"},
+                    "filters": {"type": "object", "description": "Only what these filters show, as library.list"},
+                    "query": {"type": "string", "description": "Only what this search shows, as library.list"},
+                    "metadata": {"type": "boolean", "default": true, "description": "Add a CSV with each item's name, dates, app, website and tags"}
+                }),
+                &["folder"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "folder": {"type": "string"},
+                "exported": {"type": "integer", "description": ".xshot images written as PNG or JPG"},
+                "copied": {"type": "integer", "description": "PNG and JPG files copied"},
+                "failed": {"type": "array", "description": "{source, name, reason}"},
+                "cancelled": {"type": "boolean", "description": "Stopped with editor.cancel; what was written stays"},
+                "csv": {"type": ["string", "null"]}
+            }})),
+        B::new("library.resolve", &["LIB-029", "LIB-034"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string", "description": "A conflict copy (conflict: true in library.list)"},
+                    "keep": {"type": "string", "enum": ["this", "original", "both"], "default": "both"}
+                }),
+                &["id"],
+            ))
+            .result(json!({"type": "object", "properties": {"kept": {"type": "string"}, "undo": {"type": ["string", "null"]}}})),
+        B::new("library.tag", &["LIB-009", "LIB-034"])
+            .mutates()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "add": {"type": ["array", "string"], "items": {"type": "string"}, "description": "Tags to add: 1 to 50 characters; case does not make a new tag"},
+                    "remove": {"type": ["array", "string"], "items": {"type": "string"}}
+                }),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"items": {"type": "array", "items": library_item()}}})),
+        B::new("library.tags", &["LIB-010", "LIB-034"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["list", "rename", "merge", "delete"], "default": "list"},
+                    "tag": {"type": "string"},
+                    "to": {"type": "string", "description": "rename: the new name"},
+                    "merge": {"type": "boolean", "default": false, "description": "rename onto a tag that exists: merge them"},
+                    "into": {"type": "string", "description": "merge: the tag that stays"},
+                    "sort": {"type": "string", "enum": ["name", "count"], "default": "name"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "tags": {"type": "array", "description": "{tag, count}"},
+                "changed": {"type": ["integer", "null"], "description": "Items changed"}
+            }})),
+        B::new("library.location", &["LIB-027", "LIB-028", "LIB-034"])
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["get", "inspect"], "default": "get"},
+                    "path": {"type": "string", "description": "inspect: a folder, what it holds"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"},
+                "default": {"type": "string"},
+                "synced": {"type": "boolean"},
+                "moving": {"type": "boolean"},
+                "items": {"type": "integer", "description": "inspect: items in the folder"},
+                "library": {"type": "boolean", "description": "inspect: it holds a library of XcreenShot"},
+                "size": {"type": "integer", "description": "inspect: bytes of the current library"},
+                "free": {"type": ["integer", "null"], "description": "inspect: bytes free on that folder's disk"},
+                "enough": {"type": "boolean", "description": "inspect: room to move the library there (always on the same disk)"},
+                "bigSync": {"type": "boolean", "description": "inspect: a synced folder and a library of more than 5 GB"}
+            }})),
+        B::new("library.relocate", &["LIB-028"])
+            .scopes(UI)
+            .mutates()
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "The new folder"},
+                    "mode": {"type": "string", "enum": ["move", "empty", "use"], "default": "move", "description": "move the items there, start an empty library there, or use the library already there"},
+                    "cancel": {"type": "boolean", "description": "Cancel the move in progress: what was moved goes back"},
+                    "retry": {"type": "array", "items": {"type": "string"}, "description": "Files the last move left behind, to move again"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "started": {"type": "boolean"}, "total": {"type": "integer"}}})),
+        B::new("library.rebuild", &["LIB-023", "LIB-034"])
+            .mutates()
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"items": {"type": "integer"}}})),
+        B::new("library.check", &["LIB-023", "LIB-034"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({"action": {"type": "string", "enum": ["report", "clean"], "default": "report", "description": "clean: delete sidecars whose file is gone"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "damaged": {"type": "array", "items": {"type": "string"}, "description": "Files that cannot be read"},
+                "orphans": {"type": "integer", "description": "Sidecars (.xmeta) without their file"},
+                "writable": {"type": "boolean"},
+                "cleaned": {"type": ["integer", "null"]}
+            }})),
+        B::new("library.favorite", &["LIB-011", "LIB-034"])
+            .mutates()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "value": {"type": "boolean", "description": "Without it: all become favorites, unless all already are"}
+                }),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"favorite": {"type": "boolean"}, "count": {"type": "integer"}}})),
+        B::new("library.get", &["LIB-034", "LIB-012"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "details": {"type": "boolean", "default": false, "description": "Add `details`: capture metadata (app and version, website, system, user, display scale) and the file's dates (LIB-012)"}
+                }),
+                &["id"],
+            ))
+            .positional(&["id"])
+            .result(library_item()),
+        B::new("library.open_url", &["LIB-012"])
+            .scopes(UI_CLI)
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string"}}), &["id"]))
+            .result(json!({"type": "object", "properties": {"url": {"type": "string"}}})),
+        B::new("library.delete", &["LIB-015", "TRY-009"])
+            .destructive()
+            .params(params(
+                json!({
+                    "ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Library item IDs"},
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files, in the library or not (ids or paths, or both)"},
+                    "permanent": {"type": "boolean", "default": false, "description": "Delete for good instead of moving to the trash"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}, "undo": {"type": ["string", "null"]}}})),
+        B::new("library.restore", &["LIB-015", "TRY-009"])
+            .mutates()
+            .params(params(json!({"undo": {"type": "string"}}), &["undo"]))
+            .result(json!({"type": "object", "properties": {"restored": {"type": "integer"}}})),
+        B::new("library.rename", &["TRY-006", "LIB-002"])
+            .mutates()
+            .params(params(
+                json!({"id": {"type": "string"}, "name": {"type": "string", "minLength": 1}}),
+                &["id", "name"],
+            ))
+            .result(library_item()),
+        B::new("library.show_in_folder", &["EDT-109", "LIB-002"])
+            .scopes(UI_CLI)
+            .params(params(
+                json!({"id": {"type": "string"}, "path": {"type": "string"}}),
+                &[],
+            )),
+        B::new("ai.key_clear", &["SMT-039"]).scopes(UI_CLI).destructive().result(ai_key_status()),
+        B::new("ai.key_status", &["SMT-039"]).scopes(UI_CLI).result(ai_key_status()),
+        B::new("ai.key_test", &["SMT-039"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(json!({"model": ai_model()}), &[]))
+            .result(json!({"type": "object", "properties": {"ok": {"type": "boolean"}, "model": {"type": "string"}}})),
+        B::new("ai.ask", &["SMT-040", "SMT-042"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "prompt": {"type": "string", "minLength": 1, "description": "What to do with the image"},
+                    "history": {
+                        "type": "array",
+                        "description": "Earlier questions and answers about the same image, oldest first",
+                        "items": {
+                            "type": "object",
+                            "properties": {"prompt": {"type": "string"}, "answer": {"type": "string"}},
+                            "required": ["prompt", "answer"]
+                        }
+                    },
+                    "model": ai_model(),
+                    "requestId": {"type": "string", "description": "Tags the answer so far, sent to the editor window while it arrives"}
+                }),
+                &["prompt"],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "model": {"type": "string"},
+                    "stopReason": {"type": "string"},
+                    "usage": {"type": "object", "properties": {"inputTokens": {"type": "integer"}, "outputTokens": {"type": "integer"}}},
+                    "width": {"type": "integer", "description": "Size of the image sent"},
+                    "height": {"type": "integer"}
+                }
+            })),
+        B::new("ai.suggest_name", &["SMT-041", "SMT-042"])
+            .scopes(UI_CLI)
+            .network()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "model": ai_model(),
+                    "avoid": {"type": "array", "items": {"type": "string"}, "description": "Names already suggested"}
+                }),
+                &[],
+            ))
+            .result(json!({
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "model": {"type": "string"},
+                    "usage": {"type": "object"}
+                }
+            })),
+        B::new("ai.open_console", &["SMT-039"]).scopes(UI_CLI),
+        B::new("ai.cancel", &["SMT-040"])
+            .scopes(UI_CLI)
+            .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
+        B::new("editor.recovery_list", &["APP-047", "EDT-012", "VID-022"]).result(json!({
+            "type": "object",
+            "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
+                "id": {"type": "string"}, "name": {"type": "string"},
+                "originalPath": {"type": ["string", "null"]}, "savedAt": {"type": "string"},
+                "kind": {"type": "string", "description": "library, external, or video: a recording cut short (VID-022)"},
+                "duration": {"type": "number", "description": "A video's length in seconds"},
+                "thumbnail": {"type": "string", "description": "A video's first frame, a PNG data URL"}
+            }}}}
+        })),
+        B::new("editor.recovery_restore", &["APP-047", "EDT-012", "VID-022"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"]))
+            .result(json!({"type": "object", "properties": {"documents": {"type": "array"}}})),
+        B::new("editor.recovery_discard", &["APP-047", "EDT-012", "VID-022"])
+            .scopes(UI_CLI)
+            .destructive()
+            .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"])),
+    ]
+}
+
+/// Editor tools of M1 (EDT-003). The ones of a later build answer `not_found`.
+pub const TOOLS: [&str; 22] = [
+    "favorites",
+    "move",
+    "arrow",
+    "line",
+    "text",
+    "callout",
+    "shape",
+    "stamp",
+    "step",
+    "highlight",
+    "pen",
+    "magnify",
+    "spotlight",
+    "blur",
+    "simplify",
+    "select",
+    "wand",
+    "fill",
+    "eraser",
+    "crop",
+    "cutout",
+    // Live measurement (EDT-094): marks over the canvas, nothing in the image.
+    "measure",
+];
+
+/// What `editor.action` can do in the editor window: the entries of its menus and
+/// shortcuts that act on what the window shows (EDT-002, EDT-116).
+pub const EDITOR_ACTIONS: [&str; 124] = [
+    "open",
+    "save",
+    "save_as",
+    "export",
+    "close",
+    "close_all",
+    "undo",
+    "redo",
+    "cut",
+    "copy",
+    "paste",
+    "paste_in_place",
+    "copy_all",
+    "delete",
+    "deselect",
+    "side_panel",
+    "toolbar_labels",
+    "recover",
+    "ai_ask",
+    "ai_name",
+    "view_editor",
+    "view_library",
+    "tray",
+    "prev_item",
+    "next_item",
+    "close_others",
+    "rename_item",
+    "pin_item",
+    "duplicate_item",
+    "shortcut_sheet",
+    "move_computer",
+    "show_in_folder",
+    "delete_item",
+    "select_all",
+    "duplicate",
+    "bring_front",
+    "bring_forward",
+    "send_backward",
+    "send_back",
+    "lock",
+    "unlock_all",
+    "align_left",
+    "align_hcenter",
+    "align_right",
+    "align_top",
+    "align_vcenter",
+    "align_bottom",
+    "distribute_h",
+    "distribute_v",
+    "group",
+    "ungroup",
+    "equal_width",
+    "equal_height",
+    "flatten",
+    "flatten_all",
+    "unflatten_all",
+    "invert_selection",
+    "float_selection",
+    "crop_selection",
+    "import_theme",
+    // The Image menu (EDT-069 to EDT-077) and Object > Flip (EDT-073).
+    "resize_image",
+    "canvas_size",
+    "canvas_color",
+    "rotate_right",
+    "rotate_left",
+    "rotate_180",
+    "rotate_custom",
+    "flip_horizontal",
+    "flip_vertical",
+    "corners",
+    "resolution",
+    "revert",
+    "flip_objects_horizontal",
+    "flip_objects_vertical",
+    "crop_to_canvas",
+    "fit_canvas",
+    "trim",
+    // Image > Snapping (EDT-084).
+    "snap",
+    // File > New image and New from clipboard (EDT-103, EDT-104).
+    "new_image",
+    "new_from_clipboard",
+    // File > Show in library (LIB-014).
+    "show_in_library",
+    // File > New from template, Apply template, Save as template, Import > Template
+    // (EDT-095, EDT-101).
+    "new_from_template",
+    "apply_template",
+    "save_as_template",
+    "import_template",
+    // File > Batch export (EDT-113).
+    "batch_export",
+    // File > Print (EDT-114).
+    "print",
+    // View > Pixel grid and Full screen (EDT-008, EDT-009).
+    "pixel_grid",
+    "fullscreen",
+    // View > Toolbar > Customize (EDT-004).
+    "customize_toolbar",
+    // Image > Effects: turns one on and shows it in the Effects tab (EDT-053).
+    "effect_border",
+    "effect_edges",
+    "effect_shadow",
+    "effect_perspective",
+    "effect_page_curl",
+    "effect_reflection",
+    "effect_fade",
+    "effect_filters",
+    "effect_color",
+    "effect_replace",
+    "effect_watermark",
+    "effect_details",
+    "effect_trim",
+    "effect_corners",
+    "effect_scale",
+    "effect_rotate",
+    // The Video menu (VID-056 to VID-064, ADR 0008): only with a video shown.
+    "video_play",
+    "video_prev_frame",
+    "video_next_frame",
+    "video_start",
+    "video_end",
+    "video_go_to",
+    "video_cut",
+    "video_save_selection",
+    "video_save_frame",
+    "video_gif",
+    "video_extract_text",
+    "video_silent_copy",
+    "video_combine",
+    "video_info",
+    // Extract text in the editor (SMT-007).
+    "extract_text",
+    // Auto redact's panel (SMT-010).
+    "auto_redact",
+    // Insert a QR code (SMT-036).
+    "insert_qr",
+    // Narrated slides from the image shown (VID-071).
+    "slides",
+];
+
+fn library_item() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Stable: it survives renames (LIB-034)"},
+            "name": {"type": "string"},
+            "path": {"type": "string"},
+            "format": {"type": "string", "enum": ["xshot", "png", "jpg"]},
+            "captured": {"type": "string"},
+            "modified": {"type": "string"},
+            "width": {"type": ["integer", "null"]},
+            "height": {"type": ["integer", "null"]},
+            "app": {"type": ["string", "null"]},
+            "size": {"type": "integer"}
+        }
+    })
+}
+
+fn document_id() -> Value {
+    json!({"type": "string", "description": "Default: the document shown in the editor"})
+}
+
+fn document_summary() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "documentId": {"type": "string"},
+            "name": {"type": "string"},
+            "path": {"type": ["string", "null"]},
+            "kind": {"type": "string", "enum": ["library", "external"]},
+            "width": {"type": "integer"},
+            "height": {"type": "integer"},
+            "objects": {"type": "integer"},
+            "dirty": {"type": "boolean"}
+        }
+    })
+}
+
+fn history_result() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "label": {"type": ["string", "null"], "description": "Name of the step undone or redone"},
+            "canUndo": {"type": "boolean"},
+            "canRedo": {"type": "boolean"}
+        }
+    })
 }

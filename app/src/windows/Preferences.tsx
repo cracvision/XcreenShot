@@ -1,15 +1,24 @@
 // Single Preferences window, same structure on Windows and macOS (APP-006).
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { run, type SettingEntry } from "../lib/commands";
+import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
+import { SettingsTransfer } from "../prefs/SettingsTransfer";
+import { AiSection } from "../prefs/AiSection";
+import { LibraryLocation } from "../prefs/LibraryLocation";
+import { FolderSetting } from "../prefs/FolderSetting";
+import { OcrLanguages } from "../prefs/OcrLanguages";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
+import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
 import { SettingRow } from "../prefs/SettingRow";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
 import { useApp } from "../store";
+import { arrowFocus } from "../components/arrowFocus";
+import { FEATURE_SETTINGS } from "../features";
 
 const SECTIONS = [
   "general",
@@ -18,6 +27,7 @@ const SECTIONS = [
   "editor",
   "library",
   "share",
+  "ai",
   "shortcuts",
   "advanced",
   "experimental",
@@ -34,6 +44,13 @@ function initialSection(): Section {
 interface Navigation {
   section?: string | null;
   key?: string | null;
+}
+
+/** Settings changed where they are used: auto redact's categories, terms and style
+ * in its panel (SMT-011 to SMT-013). They still travel with exported settings. */
+function editedElsewhere(key: string): boolean {
+  // Its switch is here, with the other smart features (SMT-002).
+  return key.startsWith("smart.autoRedact.") && key !== "smart.autoRedact.enabled";
 }
 
 export function Preferences() {
@@ -80,13 +97,43 @@ export function Preferences() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
-    return settings.filter((s) =>
-      [s.label, s.description, s.key].some((x) => x.toLowerCase().includes(q)),
+    return settings.filter(
+      (s) =>
+        !editedElsewhere(s.key) &&
+        [s.label, s.description, s.key].some((x) => x.toLowerCase().includes(q)),
     );
   }, [query, settings]);
 
+  // The highlight behind the open section springs to the next one (styles.css).
+  const navList = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  const current = results ? null : section;
+  useLayoutEffect(() => {
+    const active = navList.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const bar = indicator.current;
+    if (!bar) return;
+    bar.style.opacity = active ? "" : "0";
+    if (active) {
+      bar.style.transform = `translateY(${active.offsetTop}px)`;
+      bar.style.height = `${active.offsetHeight}px`;
+    }
+  }, [current, t]);
+  // Turn the transition on after the first placement so it does not slide in on open.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => navList.current?.setAttribute("data-ready", ""));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  // Quick annotation's settings appear while its trial is on (CAP-057, APP-034).
+  const quickOn = settings.some((s) => s.key === "experimental.quickAnnotate" && s.value === true);
   const inSection = (name: Section): SettingEntry[] =>
-    settings.filter((s) => s.section === name && s.key !== "shortcuts.profile");
+    settings.filter(
+      (s) =>
+        s.section === name &&
+        s.key !== "shortcuts.profile" &&
+        !editedElsewhere(s.key) &&
+        (quickOn || !s.key.startsWith("capture.quickAnnotate.")),
+    );
 
   const content = () => {
     if (results) {
@@ -97,44 +144,97 @@ export function Preferences() {
           {results
             .filter((r) => r.section === sec)
             .map((r) => (
-              <button
-                key={r.key}
-                className="btn"
-                style={{ display: "block", margin: "6px 0", textAlign: "left" }}
-                onClick={() => go({ key: r.key })}
-              >
+              <button key={r.key} className="btn search-result" onClick={() => go({ key: r.key })}>
                 {r.label}
               </button>
             ))}
         </div>
       ));
     }
-    if (section === "shortcuts") return <ShortcutsSection highlightKey={highlight} />;
-    const rows = inSection(section);
+    if (section === "shortcuts" || section === "ai") {
+      return (
+        <>
+          {section === "shortcuts" ? (
+            <ShortcutsSection highlightKey={highlight} />
+          ) : (
+            <AiSection highlightKey={highlight} />
+          )}
+          <ResetSection section={section} />
+        </>
+      );
+    }
+    if (section === "experimental") {
+      const rows = inSection(section);
+      return (
+        <>
+          <ExperimentalSection empty={rows.length === 0} />
+          {rows.map((s) => (
+            <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+          ))}
+          {rows.length > 0 && <ResetSection section={section} />}
+        </>
+      );
+    }
+    // Editor > Smart features (SMT-002): their switches in a group of their own.
+    const switches = new Set(Object.values(FEATURE_SETTINGS));
+    const all = inSection(section);
+    const rows = all.filter((s) => !switches.has(s.key));
+    const smart = all.filter((s) => switches.has(s.key));
     return (
       <>
-        {rows.length === 0 && section !== "general" && (
+        {all.length === 0 && section !== "general" && (
           <p className="empty">{t("ui.prefs.empty_section")}</p>
         )}
-        {rows.map((s) => (
-          <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
-        ))}
+        {/* Where the library is comes first (LIB-027). */}
+        {section === "library" && <LibraryLocation />}
+        {rows.map((s) =>
+          // A list of up to 3 languages has its own control (SMT-004).
+          // A folder (the receive folder, CAP-043).
+          s.key === "capture.inbox.folder" ? (
+            <FolderSetting key={s.key} setting={s} highlighted={highlight === s.key} />
+          ) : s.key === "smart.ocr.languages" ? (
+            <OcrLanguages
+              key={s.key}
+              value={Array.isArray(s.value) ? (s.value as string[]) : ["auto"]}
+              highlighted={highlight === s.key}
+            />
+          ) : (
+            <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+          ),
+        )}
+        {smart.length > 0 && (
+          <>
+            <h2>{t("ui.features.title")}</h2>
+            <p className="muted hint">{t("ui.features.hint")}</p>
+            {smart.map((s) => (
+              <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
+            ))}
+          </>
+        )}
         {section === "general" && (
           <>
+            <ShowWarningsAgain />
             <h2>{t("ui.permissions.title")}</h2>
             <PermissionsBlock />
           </>
         )}
         {section === "advanced" && (
-          <div className="row" style={{ marginTop: 16 }}>
-            <button className="btn" onClick={() => void run("app.open_logs")}>
-              {t("menu.open_logs")}
-            </button>
-            <button className="btn" onClick={() => void run("app.diagnostics", { copy: true })}>
-              {t("menu.copy_diagnostics")}
-            </button>
-          </div>
+          <>
+            <div className="row" style={{ marginTop: 16 }}>
+              <button className="btn" onClick={() => void run("app.open_logs")}>
+                {t("menu.open_logs")}
+              </button>
+              <button className="btn" onClick={() => void run("app.diagnostics", { copy: true })}>
+                {t("menu.copy_diagnostics")}
+              </button>
+            </div>
+            <AdvancedExtras />
+            <SettingsTransfer />
+            <ResetAll />
+          </>
         )}
+        {/* Every section with settings can go back to its defaults (APP-010). */}
+        {rows.length > 0 && <ResetSection section={section} />}
       </>
     );
   };
@@ -149,20 +249,23 @@ export function Preferences() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {SECTIONS.map((s) => (
-          <button
-            key={s}
-            aria-current={!results && section === s ? "page" : undefined}
-            onClick={() => go({ section: s })}
-          >
-            {t(`ui.prefs.section.${s}`)}
-          </button>
-        ))}
+        <div className="nav-list" ref={navList} onKeyDown={arrowFocus("vertical")}>
+          <span className="nav-indicator" ref={indicator} aria-hidden="true" />
+          {SECTIONS.map((s) => (
+            <button
+              key={s}
+              aria-current={current === s ? "page" : undefined}
+              onClick={() => go({ section: s })}
+            >
+              <span>{t(`ui.prefs.section.${s}`)}</span>
+            </button>
+          ))}
+        </div>
         <div className="nav-footer">
           <LanguageToggle />
         </div>
       </nav>
-      <main>
+      <main key={current ?? "search"} className="section-enter">
         <h1>{results ? t("ui.prefs.search") : t(`ui.prefs.section.${section}`)}</h1>
         {content()}
       </main>

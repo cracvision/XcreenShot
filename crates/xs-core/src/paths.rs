@@ -10,6 +10,12 @@ pub struct Paths {
     pub local_dir: PathBuf,
 }
 
+/// An instance with its own data folder (`XCREENSHOT_DATA_DIR`): a test copy. It never
+/// touches what belongs to the installed app, such as starting with the system.
+pub fn isolated() -> bool {
+    std::env::var_os("XCREENSHOT_DATA_DIR").is_some()
+}
+
 impl Paths {
     /// Standard locations: `%APPDATA%\XcreenShot` / `%LOCALAPPDATA%\XcreenShot` on
     /// Windows, `~/Library/Application Support/XcreenShot` on macOS.

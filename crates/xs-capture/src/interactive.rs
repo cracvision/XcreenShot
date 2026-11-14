@@ -29,12 +29,16 @@ pub struct Frozen {
     pub frames: Vec<Frame>,
     pub windows: Vec<WindowRect>,
     pub pointer: Option<(i32, i32)>,
+    /// The pointer's picture when the screens were frozen (CAP-047).
+    pub cursor: Option<crate::pointer::ScreenPointer>,
 }
 
 /// Takes every monitor as it is right now (CAP-013, APP-048).
 pub fn freeze(lang: Lang) -> Result<Frozen, CommandError> {
     let started = Instant::now();
     let pointer = platform::cursor_position();
+    // Where the pointer is when the capture starts, not where the crosshair ends (CAP-047).
+    let cursor = crate::pointer::grab();
     let list = monitors().map_err(|e| failed(lang, e))?;
     let mut frames = Vec::with_capacity(list.len());
     for (m, _) in &list {
@@ -74,7 +78,38 @@ pub fn freeze(lang: Lang) -> Result<Frozen, CommandError> {
         frames,
         windows,
         pointer,
+        cursor,
     })
+}
+
+/// UI memory: how many selections showed "H: help" (CAP-020).
+const HELP_HINT_KEY: &str = "hint.capture_help";
+/// UI memory: the simplified crosshair was offered once (CAP-014).
+const SLOW_HINT_KEY: &str = "hint.simple_crosshair";
+
+/// Whether this selection shows "H: help", counting it (CAP-020: the first three).
+fn help_hint(core: &Core) -> bool {
+    let shown = core.recall(HELP_HINT_KEY).and_then(|v| v.as_u64()).unwrap_or(0);
+    if shown >= 3 {
+        return false;
+    }
+    core.remember(HELP_HINT_KEY, json!(shown + 1));
+    true
+}
+
+/// The crosshair ran under 30 frames a second: offer the simplified one, once
+/// (CAP-014, APP-053).
+fn offer_simple_crosshair(core: &Core, lang: Lang) {
+    if core.settings.get_bool("capture.simpleCrosshair") || core.recall(SLOW_HINT_KEY).is_some() {
+        return;
+    }
+    core.remember(SLOW_HINT_KEY, json!(true));
+    tracing::info!("slow crosshair: simplified crosshair offered");
+    core.host().notify(
+        "problems",
+        &tr(lang, "app.name", &[]),
+        &tr(lang, "notify.slow_crosshair", &[]),
+    );
 }
 
 /// RGBA to BGRA (the byte order GDI paints), for showing frozen screens natively.
@@ -113,6 +148,144 @@ pub fn crop_frames(monitors: &[MonitorInfo], frames: &[Frame], area: Rect) -> Rg
     out
 }
 
+/// In the editor, each area of a multiple-area capture is an image object of its own
+/// over a transparent canvas, to move apart (CAP-033): its pixels are floated off the
+/// base, which keeps the flat image the clipboard and files got.
+fn areas_as_objects(core: &Core, id: &str, places: &[Rect]) {
+    for r in places {
+        let picked = core.call(
+            xs_core::Source::Ui,
+            "document.select_pixels",
+            json!({ "documentId": id, "shape": "rectangle", "antialias": false,
+                "rect": { "x": r.x, "y": r.y, "w": r.width, "h": r.height } }),
+            None,
+        );
+        let floated = picked.and_then(|_| {
+            core.call(
+                xs_core::Source::Ui,
+                "document.selection_action",
+                json!({ "documentId": id, "action": "float", "gapFill": "transparent" }),
+                None,
+            )
+        });
+        if let Err(e) = floated {
+            tracing::warn!(error = %e.message, "multiple areas: an area stays in the base");
+        }
+    }
+    let _ = core.call(
+        xs_core::Source::Ui,
+        "document.select_pixels",
+        json!({ "documentId": id, "shape": "none" }),
+        None,
+    );
+    if let Err(e) = core.call(
+        xs_core::Source::Ui,
+        "document.save",
+        json!({ "documentId": id }),
+        None,
+    ) {
+        tracing::warn!(error = %e.message, "multiple areas: not saved");
+    }
+}
+
+/// Lets the user select an area and returns it from the top left of the monitor it is
+/// mostly on, without capturing (Choose on screen, CAP-026).
+pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
+    let (monitor, inside) = pick_area(core, ctx)?;
+    Ok(json!({
+        "monitor": monitor.name,
+        "x": inside.x - monitor.rect.x,
+        "y": inside.y - monitor.rect.y,
+        "width": inside.width,
+        "height": inside.height,
+    }))
+}
+
+/// Lets the user select an area on screen: the monitor it is mostly on, and the area
+/// inside it (virtual-screen pixels). The area to record a video (VID-002, VID-003).
+pub fn pick_area(core: &Core, ctx: &Context) -> Result<(MonitorInfo, Rect), CommandError> {
+    let lang = ctx.lang;
+    let frozen = freeze(lang)?;
+    let request = json!({
+        "mode": "region",
+        "monitors": frozen.monitors,
+        "windows": frozen.windows,
+        "pointer": frozen.pointer,
+        "autoDetect": core.settings.get_bool("capture.autoDetect"),
+        "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        "helpHint": false,
+        "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+    });
+    let outcome = core.host().select_on_screen(request, frozen.frames.clone())?;
+    let area = match outcome.get("kind").and_then(Value::as_str) {
+        Some("rect") => outcome.get("rect").and_then(rect_from),
+        Some("window") => {
+            let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
+            frozen.windows.iter().find(|w| w.id == id).map(|w| w.rect)
+        }
+        _ => None,
+    }
+    .ok_or_else(|| {
+        CommandError::new(ErrorCode::Cancelled, tr(lang, "errors.capture_cancelled", &[]))
+            .with_details(json!({ "status": "cancelled" }))
+    })?;
+    let monitor = frozen
+        .monitors
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0))
+        .ok_or_else(|| CommandError::internal("no monitor"))?;
+    // Inside that monitor, so the capture never comes out partial.
+    let inside = monitor.rect.intersect(&area).unwrap_or(area);
+    Ok((monitor.clone(), inside))
+}
+
+/// A rectangle given as `{x, y, width, height}`.
+pub fn rect_of(v: &Value) -> Option<Rect> {
+    rect_from(v)
+}
+
+/// Where an area is, for the capture's metadata (CAP-056): its monitor and scale, and
+/// the window covering most of it.
+pub fn place_of(core: &Core, area: Rect) -> crate::scroll::Place {
+    let _ = core;
+    let list: Vec<MonitorInfo> = monitors()
+        .map(|l| l.into_iter().map(|(_, i)| i).collect())
+        .unwrap_or_default();
+    let hit: Vec<&MonitorInfo> = list
+        .iter()
+        .filter(|m| m.rect.intersect(&area).is_some())
+        .collect();
+    let main = hit
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
+    let window = app_windows()
+        .into_iter()
+        .filter_map(|w| {
+            let r = Rect {
+                x: w.x().ok()?,
+                y: w.y().ok()?,
+                width: w.width().ok()?,
+                height: w.height().ok()?,
+            };
+            Some((r.intersect(&area)?.area(), w))
+        })
+        .max_by_key(|(a, _)| *a)
+        .map(|(_, w)| w);
+    crate::scroll::Place {
+        scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
+        monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
+        app: window.as_ref().and_then(|w| {
+            Some(platform::app_info(
+                w.pid().ok()?,
+                &w.app_name().unwrap_or_default(),
+            ))
+        }),
+        window_title: window.and_then(|w| w.title().ok()),
+    }
+}
+
 fn rect_from(v: &Value) -> Option<Rect> {
     Some(Rect {
         x: v.get("x")?.as_i64()? as i32,
@@ -120,6 +293,68 @@ fn rect_from(v: &Value) -> Option<Rect> {
         width: v.get("width")?.as_u64()?.max(1) as u32,
         height: v.get("height")?.as_u64()?.max(1) as u32,
     })
+}
+
+/// A window chosen on screen once (Interval with Selection = Window, CAP-049): its id.
+pub fn pick_window(core: &Core, ctx: &Context) -> Result<u32, CommandError> {
+    let lang = ctx.lang;
+    let frozen = freeze(lang)?;
+    let request = json!({
+        "mode": "window",
+        "monitors": frozen.monitors,
+        "windows": frozen.windows,
+        "pointer": frozen.pointer,
+        "autoDetect": true,
+        "showMagnifier": false,
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        "helpHint": false,
+        "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+    });
+    let outcome = core.host().select_on_screen(request, frozen.frames.clone())?;
+    match outcome.get("kind").and_then(Value::as_str) {
+        Some("window") => outcome
+            .get("id")
+            .and_then(Value::as_u64)
+            .map(|id| id as u32)
+            .ok_or_else(|| crate::cancelled(lang)),
+        _ => Err(crate::cancelled(lang)),
+    }
+}
+
+/// The last tool of quick annotation (CAP-057).
+const QUICK_TOOL_KEY: &str = "capture.quickAnnotate.lastTool";
+
+/// A region cut from the frozen screens, with what is known about it.
+fn region_shot(frozen: &Frozen, area: Rect, mode: &'static str) -> Shot {
+    let image = crop_frames(&frozen.monitors, &frozen.frames, area);
+    let hit: Vec<&MonitorInfo> = frozen
+        .monitors
+        .iter()
+        .filter(|m| m.rect.intersect(&area).is_some())
+        .collect();
+    let main = hit
+        .iter()
+        .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
+    // "Aplicación" of a region: the window covering most of it (CAP-056).
+    let window = frozen
+        .windows
+        .iter()
+        .filter_map(|w| Some((w.rect.intersect(&area)?.area(), w)))
+        .max_by_key(|(a, _)| *a)
+        .map(|(_, w)| w);
+    Shot {
+        image,
+        rect: area,
+        mode,
+        scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
+        monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
+        app: window.map(|w| platform::app_info(w.pid, &w.app)),
+        window_title: window.map(|w| w.title.clone()),
+        window_id: None,
+        pointer: frozen.cursor.clone(),
+        warnings: Vec::new(),
+    }
 }
 
 /// Runs an interactive capture: `mode` is `region`, `window` or `universal`.
@@ -131,7 +366,7 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         host.hide_for_capture(true);
     }
     let frozen = freeze(lang);
-    if hide {
+    if hide && !crate::record::running(core) {
         host.hide_for_capture(false);
     }
     let frozen = frozen?;
@@ -142,58 +377,239 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         "pointer": frozen.pointer,
         "autoDetect": core.settings.get_bool("capture.autoDetect"),
         "showMagnifier": core.settings.get_bool("capture.showMagnifier"),
+        "simpleCrosshair": core.settings.get_bool("capture.simpleCrosshair"),
+        // The keys of the selection follow the shortcut profile on Windows (CAP-066).
+        "compatibility": cfg!(windows) && core.settings.get_str("shortcuts.profile") == "compatibility",
+        // "H: help" the first three times (CAP-020).
+        "helpHint": help_hint(core),
         "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+        // QR codes are looked for on the frozen screens (SMT-038).
+        "qr": core.settings.get_bool("smart.qr.enabled") && core.settings.get_bool("smart.qr.detectOnCapture"),
     });
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());
     }
+    // Quick annotation (CAP-057): the selection stops to be marked, while its trial is
+    // on (APP-034); otherwise Open in = Quick annotation opens the editor.
+    let quick = opts.quick && core.settings.get_bool("experimental.quickAnnotate");
+    if quick {
+        request["quickAnnotate"] = json!(true);
+        let last = core
+            .recall(QUICK_TOOL_KEY)
+            .filter(|_| core.settings.get_str("capture.quickAnnotate.firstTool") == "last");
+        request["quickTool"] = last.unwrap_or(json!("arrow"));
+        // The marks' colors: the active theme's (EDT-017).
+        if let Ok(themes) = core.call(xs_core::Source::Ui, "editor.themes", json!({}), None) {
+            let active = themes["active"].clone();
+            if let Some(colors) = themes["themes"]
+                .as_array()
+                .and_then(|list| list.iter().find(|t| t["id"] == active))
+                .map(|t| t["colors"].clone())
+                .filter(|c| c.as_array().is_some_and(|a| !a.is_empty()))
+            {
+                request["quickColors"] = colors;
+            }
+        }
+    }
+    // Menu capture (CAP-031): the menus open now, while the screens are frozen.
+    let menus = if mode == "menu" {
+        let found = crate::menus::open_menus();
+        if found.levels.is_empty() {
+            tracing::info!("menu capture: no system menu open");
+            core.host().notify(
+                "problems",
+                &tr(lang, "app.name", &[]),
+                &tr(lang, "notify.no_menu", &[]),
+            );
+        }
+        request["menus"] = json!(found.levels);
+        Some(found)
+    } else {
+        None
+    };
+    let scroll_params = request.get("scroll").cloned().unwrap_or_else(|| json!({}));
+    let multiple_params = request.get("multiple").cloned().unwrap_or_else(|| json!({}));
+    let scroll_menu_params = request.get("menu").cloned().unwrap_or_else(|| json!({}));
     let outcome = host.select_on_screen(request, frozen.frames.clone())?;
+    if outcome.get("slow").and_then(Value::as_bool).unwrap_or(false) {
+        offer_simple_crosshair(core, lang);
+    }
     if let Some(zoom) = outcome.get("magnifierZoom").filter(|z| z.is_u64()) {
         core.remember("capture.magnifierZoom", zoom.clone());
     }
-    match outcome.get("kind").and_then(Value::as_str) {
+    // Scrolling (CAP-034, CAP-035): from the capture bar's Scrolling button or arrows, or
+    // any area or window picked with Selection = Scrolling.
+    let scrolling = mode == "scrolling";
+    let kind = outcome.get("kind").and_then(Value::as_str);
+    if kind == Some("scroll") || (scrolling && matches!(kind, Some("rect") | Some("window"))) {
+        let area = match kind {
+            Some("window") => {
+                let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
+                frozen.windows.iter().find(|w| w.id == id).map(|w| w.rect)
+            }
+            _ => outcome.get("rect").and_then(rect_from),
+        }
+        .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
+        // The bar's buttons and keys say manual or automatic; otherwise the Image tab.
+        let mut p = scroll_params;
+        if kind == Some("scroll") {
+            p["type"] = outcome.get("type").cloned().unwrap_or(json!("manual"));
+            if let Some(d) = outcome.get("direction") {
+                p["direction"] = d.clone();
+            }
+        }
+        let scroll_kind = crate::scroll_kind(core, &p);
+        let place = place_of(core, area);
+        return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
+    }
+    // Freehand (CAP-032): the rectangle around the shape, transparent outside it.
+    if kind == Some("shape") {
+        let points: Vec<(f64, f64)> = outcome
+            .get("points")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(|p| Some((p.get(0)?.as_f64()?, p.get(1)?.as_f64()?)))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let area = crate::freehand::bounds(&points).ok_or_else(|| crate::cancelled(lang))?;
+        let mut shot = region_shot(&frozen, area, "freehand");
+        crate::freehand::cut_out(&mut shot.image, area, &points);
+        return finish(core, ctx, shot, opts);
+    }
+    // Quick annotation (CAP-057): the area with its marks as the editor's objects;
+    // Copy leaves it on the clipboard without the editor, Open in the editor opens it.
+    if kind == Some("quick") {
+        let area = outcome
+            .get("rect")
+            .and_then(rect_from)
+            .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
+        if let Some(tool) = outcome.get("tool").filter(|t| t.is_string()) {
+            core.remember(QUICK_TOOL_KEY, tool.clone());
+        }
+        let mut opts = opts.clone();
+        opts.objects = outcome
+            .get("objects")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if outcome.get("action").and_then(Value::as_str) == Some("editor") {
+            opts.open_editor = true;
+        } else {
+            opts.open_editor = false;
+            opts.copy = true;
+            opts.keep = Some(core.settings.get_bool("capture.quickAnnotate.saveToLibrary"));
+        }
+        let shot = region_shot(&frozen, area, "region");
+        return finish(core, ctx, shot, &opts);
+    }
+    // Menu capture (CAP-031): the menus as they were, with their shape.
+    if kind == Some("menu") {
+        let Some(found) = menus.filter(|m| !m.levels.is_empty()) else {
+            return Err(crate::cancelled(lang));
+        };
+        let props = &scroll_menu_params;
+        let parts = crate::menus::parts(
+            &found,
+            props["submenus"].as_bool().unwrap_or(true),
+            props["menubar"].as_bool().unwrap_or(false),
+        );
+        let area = crate::menus::bounds(&parts).ok_or_else(|| crate::cancelled(lang))?;
+        let mut image = crop_frames(&frozen.monitors, &frozen.frames, area);
+        let scale = frozen
+            .monitors
+            .iter()
+            .find(|m| m.rect.intersect(&area).is_some())
+            .map(|m| m.scale)
+            .unwrap_or(1.0);
+        // Windows 11 rounds the corners of menus; the bar item stays square.
+        let rounded: Vec<bool> = parts.iter().map(|r| Some(*r) != found.bar_item).collect();
+        crate::menus::cut_out(&mut image, area, &parts, (8.0 * scale).round() as u32, &rounded);
+        let place = place_of(core, area);
+        let shot = Shot {
+            image,
+            rect: area,
+            mode: "menu",
+            scale: place.scale,
+            monitor: place.monitor,
+            app: place.app,
+            window_title: place.window_title,
+            window_id: None,
+            pointer: None,
+            warnings: Vec::new(),
+        };
+        return finish(core, ctx, shot, opts);
+    }
+    // Multiple areas (CAP-033): each cut from the frozen screens, joined as the Image
+    // tab says; in the editor each one becomes an image object of its own.
+    if kind == Some("multi") {
+        let rects: Vec<Rect> = outcome
+            .get("rects")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(rect_from).collect())
+            .unwrap_or_default();
+        if rects.is_empty() {
+            return Err(crate::cancelled(lang));
+        }
+        let multiple = multiple_params.clone();
+        let composition =
+            crate::areas::Composition::parse(multiple["composition"].as_str().unwrap_or("original"));
+        let gap = multiple["gap"].as_u64().unwrap_or(10).min(500) as u32;
+        let parts: Vec<(Rect, RgbaImage)> = rects
+            .iter()
+            .map(|r| (*r, crop_frames(&frozen.monitors, &frozen.frames, *r)))
+            .collect();
+        let (image, places) = crate::areas::compose(&parts, composition, gap);
+        let around = rects.iter().skip(1).fold(rects[0], |a, r| crate::compose::Rect {
+            x: a.x.min(r.x),
+            y: a.y.min(r.y),
+            width: (a.right().max(r.right()) - a.x.min(r.x)) as u32,
+            height: (a.bottom().max(r.bottom()) - a.y.min(r.y)) as u32,
+        });
+        let place = place_of(core, around);
+        let shot = Shot {
+            image,
+            rect: around,
+            mode: "multi",
+            scale: place.scale,
+            monitor: place.monitor,
+            app: place.app,
+            window_title: place.window_title,
+            window_id: None,
+            pointer: None,
+            warnings: Vec::new(),
+        };
+        let result = finish(core, ctx, shot, opts)?;
+        if places.len() > 1 {
+            if let Some(id) = result.get("documentId").and_then(Value::as_str) {
+                areas_as_objects(core, id, &places);
+            }
+        }
+        return Ok(result);
+    }
+    match kind {
         Some("rect") => {
             let area = outcome
                 .get("rect")
                 .and_then(rect_from)
                 .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
-            let image = crop_frames(&frozen.monitors, &frozen.frames, area);
-            let hit: Vec<&MonitorInfo> = frozen
-                .monitors
-                .iter()
-                .filter(|m| m.rect.intersect(&area).is_some())
-                .collect();
-            let main = hit
-                .iter()
-                .max_by_key(|m| m.rect.intersect(&area).map(|r| r.area()).unwrap_or(0));
-            // "Aplicación" of a region: the window covering most of it (CAP-056).
-            let window = frozen
-                .windows
-                .iter()
-                .filter_map(|w| Some((w.rect.intersect(&area)?.area(), w)))
-                .max_by_key(|(a, _)| *a)
-                .map(|(_, w)| w);
-            let shot = Shot {
-                image,
-                rect: area,
-                mode: if mode == "universal" {
+            let shot = region_shot(
+                &frozen,
+                area,
+                if mode == "universal" {
                     "universal"
                 } else {
                     "region"
                 },
-                scale: hit.iter().map(|m| m.scale).fold(1.0f32, f32::max),
-                monitor: main.map(|m| m.name.clone()).unwrap_or_default(),
-                app: window.map(|w| platform::app_info(w.pid, &w.app)),
-                window_title: window.map(|w| w.title.clone()),
-                window_id: None,
-                warnings: Vec::new(),
-            };
+            );
             finish(core, ctx, shot, opts)
         }
         Some("window") => {
             let id = outcome.get("id").and_then(Value::as_u64).unwrap_or(0) as u32;
             // The whole window, even if covered (CAP-027): taken live, not from the frames.
-            let shot = crate::capture_window(&crate::WindowTarget::Id(id), lang)?;
+            let mut shot = crate::capture_window(&crate::WindowTarget::Id(id), lang)?;
+            shot.pointer = frozen.cursor.clone();
             finish(core, ctx, shot, opts)
         }
         _ => Err(

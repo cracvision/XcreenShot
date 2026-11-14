@@ -41,8 +41,9 @@ Construyes **únicamente** a partir de `spec/`.
 | Archivo | Estado |
 |---|---|
 | `SPEC.md`, `01-captura.md`, `03-video.md`, `05-app.md`, `06-inteligentes.md` | Completos |
-| `02-editor.md` | Completo hasta las herramientas y efectos. Las plantillas, la exportación y los atajos del editor se completan antes de M2 |
-| `04-biblioteca-compartir.md` | Solo el alcance de M1. Se completa antes de M2 y de M6 |
+| `02-editor.md` | Completo (herramientas, efectos, plantillas, exportación y atajos) |
+| `04-biblioteca-compartir.md` | Biblioteca y bandeja completas (M1 y M2). Compartir (`SHR-`) solo tiene lo de M1: se completa antes de M6 |
+| `IDEAS.md` | Ideas de Carlos sin aprobar. **No se construyen** hasta que tengan su bloque con ID |
 
 Si un ID que necesitas no existe todavía, para y pregunta.
 
@@ -72,10 +73,12 @@ Para cambiar una dependencia importante, proponlo primero en `spec/QUESTIONS.md`
 crates/xs-core      comandos, modelo de documento (.xshot), preferencias
 crates/xs-capture   selección y captura de imagen
 crates/xs-video     grabación y codificación
-crates/xs-image     píxeles y efectos
+crates/xs-image     píxeles, efectos y la imagen final de un documento (ADR 0004)
+crates/xs-editor    documentos abiertos, deshacer, guardado y comandos document.* y editor.*
 crates/xs-ocr       reconocimiento de texto
 crates/xs-library   biblioteca e índice
 crates/xs-share     destinos de compartir
+crates/xs-ai        IA en la nube: clave en el llavero, peticiones a la API de Claude (SMT-039 a SMT-042)
 crates/xs-cli       binario `xcreenshot` (CLI + MCP)
 app/src-tauri       shell, bandeja / barra de menú, atajos globales
 app/src             React
@@ -103,6 +106,30 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ---
 
+## Diseño: Cristal
+
+La interfaz usa el sistema **Cristal** (aprobado por Carlos el 2026-11-12; sustituye a Snap): neutros fríos, un solo color de acento usado solo donde importa, y paneles de cristal que flotan sobre la captura. Todo vive en `app/src/styles.css`; el logo original está en `docs/brand/`.
+
+- **Colores:** solo tokens con nombre de función.
+  - Superficies y texto: `--surface*`, `--ink*`, `--line`, `--line-strong`, `--control-line`, `--hover`, `--press`.
+  - `--brand*`: el **acento** (preferencia `general.accent`: azul del logo, violeta, turquesa o grafito). `--brand` rellena el botón principal y los interruptores encendidos; `--brand-ink` es el acento para texto y foco; `--brand-soft`, el tinte de lo elegido. Nada de degradados ni brillos.
+  - `--star`: amarillo decorativo, nunca para texto. `--magenta`: lo experimental. `--rec`, `--danger`, `--warning`: estados.
+  - Nada de colores sueltos, salvo en las capas de la selección en pantalla.
+  - Texto ≥ 4,5:1 y bordes de control ≥ 3:1, en claro y en oscuro, también sobre el cristal.
+- **Cristal:** barra de herramientas, panel lateral, barra de estado, bandeja, menús y avisos flotan sobre el lienzo con el material de cristal (tinte, desenfoque y brillo; reglas "Glass" de `styles.css`). La intensidad es la preferencia `general.glassIntensity` (0–100): `theme.ts` la pone en `--glass` y el CSS deriva el resto. El tinte nunca baja del 75 % (claro) u 80 % (oscuro); con 0 o con los efectos de transparencia de Windows desactivados, es sólido. En los paneles grandes el desenfoque va en `::before`, para que no se vuelvan el bloque contenedor de los elementos `fixed` que abren.
+- **Lienzo:** ocupa todo el área de trabajo (`editor/Workspace.tsx`); las barras flotantes le pasan cuánto tapan (`editor/insets.ts`) y el zoom, el centrado y el desplazamiento trabajan en la parte visible. Las barras de desplazamiento del lienzo las dibuja la app (`editor/CanvasBars.tsx`).
+- **Formas:** esquinas de 8 px en botones y herramientas, 10 en menús, 12 en barras y 14 en paneles. Los botones no son píldoras.
+- **Letra:** `--font-display` (Outfit, empaquetada con la app) para títulos; `--font-sans` (la del sistema) para lo demás. La app no carga fuentes de internet.
+- **Movimiento:**
+  - Duraciones `--dur-*` y curvas `--ease-*`: se entra con `--ease-spring` y se sale con `--ease-in`. Movimiento sobrio: nada de giros ni bamboleos.
+  - Toda animación nueva tiene su versión en el bloque "Reduced motion" del final de `styles.css`: un fundido de 100 ms como mucho.
+- **Componentes:**
+  - Cualquier menú dentro de una ventana usa `Menu`, `ContextMenu` o `MenuList` (`app/src/components/Menu.tsx`), no menús nativos. Los nativos quedan solo para la bandeja y la barra de menús de macOS.
+  - Las opciones segmentadas usan `.seg` con `useIndicator`. Los diálogos usan `Dialog`.
+  - En Windows, la barra de menús del editor la dibuja la app (`app/src/editor/MenuBar.tsx`) con los menús de `xs_core::menus`.
+- **Ícono:** `node scripts/make-icon.mjs` dibuja el emblema simplificado. Después, `npx tauri icon …` (tabla de abajo), y hay que borrar los íconos de tiendas, Android e iOS que genera.
+- El sistema de diseño publicado por Claude Design sigue en turquesa: la fuente de verdad es el código.
+
 ## Flujo de trabajo
 
 1. Trabaja por hito (`SPEC.md` §4) y por ID.
@@ -120,9 +147,9 @@ AGENTS.md           cómo operan la app los agentes (CLI y MCP)
 
 ## Privacidad
 
-- Sin telemetría. La única red es compartir (cuando el usuario lo elige) y las actualizaciones.
+- Sin telemetría. La única red es compartir (cuando el usuario lo elige), las actualizaciones y la IA en la nube (SMT-039 a SMT-043: solo si el usuario la activa y la pide sobre una imagen).
 - Las credenciales van en el llavero del sistema, nunca en archivos ni en logs.
-- El procesamiento inteligente es siempre local.
+- El procesamiento inteligente es siempre local, salvo esa IA en la nube, aprobada por Carlos el 2026-11-01. Nunca se registran la imagen, la petición, la respuesta ni la clave.
 - MCP solo por stdio.
 
 ## Comandos de desarrollo
@@ -140,13 +167,15 @@ Requisitos: Rust estable (rustup), Node 22, y en Windows las Build Tools de Visu
 | UI: lint, formato, tipos, pruebas | `npm run lint` · `npm run format:check` · `npm run typecheck` · `npm test` en `app/` |
 | Sin telemetría (APP-054) | `node scripts/check-no-telemetry.mjs` |
 | Regenerar el ícono | `node scripts/make-icon.mjs` y después `npx tauri icon src-tauri/icons/app-icon.png -o src-tauri/icons` en `app/` |
-| Paquete instalable | `npm run tauri build` en `app/` |
+| Paquete instalable (con el CLI dentro) | `npm run package` en `app/` |
+| Servidor MCP contra la app en marcha | `target/debug/xcreenshot mcp` (JSON-RPC por la entrada y la salida estándar) |
 
 Dónde vive cada cosa:
-- Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs`.
+- Comandos: especificación en `crates/xs-core/src/catalog.rs`, manejadores en `crates/xs-core/src/core.rs` (los de captura en `xs-capture`, los del editor en `xs-editor`).
+- Editor: modelo y formato `.xshot` en `crates/xs-core/src/document.rs` (esquema en `docs/formats/`); la geometría de cada objeto está en `crates/xs-image/src/geometry.rs` y su copia en `app/src/editor/geometry.ts`, comprobadas con `tests/fixtures/` (regenerar con `XS_REGEN_FIXTURES=1 cargo test -p xs-image`).
 - Textos EN/ES: `crates/xs-core/locales/{en,es}.json` (los comparten Rust y React).
 - Datos del usuario: `%APPDATA%\XcreenShot\config` y `%LOCALAPPDATA%\XcreenShot\data` (Windows); `~/Library/Application Support/XcreenShot` (macOS). `XCREENSHOT_DATA_DIR` y `XCREENSHOT_IPC_NAME` aíslan una instancia para pruebas.
-- Un comando nuevo exige: entrada en el catálogo, manejador, textos en los dos idiomas y fila en `AGENTS.md` (hay pruebas que fallan si falta alguno).
+- Un comando nuevo exige: entrada en el catálogo, manejador y textos en los dos idiomas (hay pruebas que fallan si falta alguno). `AGENTS.md` se genera del registro (APP-033): añade su ejemplo y explicación en `crates/xs-core/agents/commands.md` y regenéralo con `XS_REGEN_AGENTS=1 cargo test -p xs-core agents`.
 
 ## Cómo trabajar con Carlos
 

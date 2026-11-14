@@ -22,7 +22,32 @@ const BASE_ICON: &[u8] = include_bytes!("../icons/tray.png");
 pub struct Visual {
     pub paused: bool,
     pub attention: bool,
+    /// An interval or scheduled capture is active: a small clock (APP-002, CAP-049).
+    pub timer: bool,
     pub monochrome: bool,
+}
+
+/// What the icon's menu shows now besides its fixed entries.
+fn tray_state(core: &Core) -> xs_core::menus::TrayState {
+    xs_core::menus::TrayState {
+        scrolling: xs_capture::scroll::running(core),
+        quick: core.settings.get_bool("experimental.quickAnnotate"),
+        stops: xs_capture::interval::menu_items(core)
+            .into_iter()
+            .map(|(id, text)| (id, text, "capture.interval_stop"))
+            .chain(
+                xs_capture::schedule::menu_items(core)
+                    .into_iter()
+                    .map(|(id, text)| (id, text, "capture.schedule_cancel")),
+            )
+            .chain(
+                xs_capture::record::menu_items(core)
+                    .into_iter()
+                    .map(|(id, text)| (id, text, "record.stop")),
+            )
+            .chain(xs_capture::steps_rec::menu_items(core))
+            .collect(),
+    }
 }
 
 fn light_taskbar() -> bool {
@@ -56,7 +81,8 @@ pub fn render(v: Visual) -> Image<'static> {
             p[..3].copy_from_slice(&mono_color);
         }
     }
-    let glyph: [u8; 3] = if v.monochrome { mono_color } else { [14, 140, 127] };
+    // The paused slash: the logo's blue, as the dark theme's brand color.
+    let glyph: [u8; 3] = if v.monochrome { mono_color } else { [77, 124, 255] };
     let size = w as f32;
     if v.paused {
         // Paused: the X goes away (the brackets stay) so the slash drawn below reads
@@ -65,6 +91,19 @@ pub fn render(v: Visual) -> Image<'static> {
             for x in 0..w {
                 let (fx, fy) = (x as f32 / size, y as f32 / size);
                 if (0.2..0.8).contains(&fx) && (0.2..0.8).contains(&fy) {
+                    px[((y * w + x) * 4 + 3) as usize] = 0;
+                }
+            }
+        }
+    }
+    // The clock's place (below): a gap cut out of the glyph.
+    let (clock_x, clock_y, clock_r) = (size * 0.76, size * 0.76, size * 0.24);
+    if v.timer {
+        let gap = clock_r + size * 0.06;
+        for y in 0..h {
+            for x in 0..w {
+                let (fx, fy) = (x as f32 + 0.5 - clock_x, y as f32 + 0.5 - clock_y);
+                if (fx * fx + fy * fy).sqrt() < gap {
                     px[((y * w + x) * 4 + 3) as usize] = 0;
                 }
             }
@@ -108,6 +147,27 @@ pub fn render(v: Visual) -> Image<'static> {
             }
         }
     }
+    if v.timer {
+        // A small clock in the bottom-right corner, on a gap cut out of the glyph:
+        // a ring and two hands.
+        let (cx, cy, r) = (clock_x, clock_y, clock_r);
+
+        let ink = if v.monochrome { glyph } else { [77, 124, 255] };
+        for y in 0..h {
+            for x in 0..w {
+                let (fx, fy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+                let d = (fx * fx + fy * fy).sqrt();
+                // The rim.
+                paint(x, y, ink, (r - d + 0.5).min(d - (r - size * 0.07) + 0.5));
+                // The hands: up to 12 and to 3.
+                let up = fx.abs() <= size * 0.035 && fy <= 0.0 && fy >= -r * 0.62;
+                let right = fy.abs() <= size * 0.035 && fx >= 0.0 && fx <= r * 0.5;
+                if up || right {
+                    paint(x, y, ink, 1.0);
+                }
+            }
+        }
+    }
     if v.paused {
         for p in px.as_chunks_mut::<4>().0.iter_mut() {
             p[3] = (p[3] as f32 * 0.75) as u8;
@@ -119,13 +179,29 @@ pub fn render(v: Visual) -> Image<'static> {
 /// Menu id -> (command, params).
 pub type Actions = HashMap<String, (String, Value)>;
 
-fn shortcut_label(core: &Core, command: &str) -> Option<String> {
+/// Shortcut of a menu entry: the editor row named like the entry (EDT-116), else the
+/// global or app row of its command.
+fn shortcut_of(core: &Core, id: &str, command: &str) -> Option<xs_core::shortcuts::Accelerator> {
     let profile = core.profile();
-    [ShortcutScope::Global, ShortcutScope::App]
+    core.shortcuts
+        .find_slot(id, ShortcutScope::Editor)
         .into_iter()
-        .filter_map(|scope| core.shortcuts.find_slot(command, scope))
+        .chain(
+            [ShortcutScope::Global, ShortcutScope::App]
+                .into_iter()
+                .filter_map(|scope| core.shortcuts.find_slot(command, scope)),
+        )
         .find_map(|slot| core.shortcuts.binding(&slot, profile))
-        .map(|a| a.to_string())
+}
+
+/// How a menu shows shortcuts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Shortcuts {
+    /// The macOS menu bar, until its key equivalents are set up.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    None,
+    /// Real accelerators: the tray, where they never act as key bindings.
+    Accelerators,
 }
 
 fn native(app: &AppHandle, item: NativeItem) -> tauri::Result<PredefinedMenuItem<Wry>> {
@@ -143,14 +219,13 @@ fn native(app: &AppHandle, item: NativeItem) -> tauri::Result<PredefinedMenuItem
     }
 }
 
-/// Builds native menu items from the menu data. `with_accelerators` shows shortcut
-/// labels (tray only: in window menus they would also act as key bindings).
+/// Builds native menu items from the menu data.
 pub fn build_items(
     app: &AppHandle,
     core: &Core,
     entries: &[MenuEntry],
     lang: Lang,
-    with_accelerators: bool,
+    shortcuts: Shortcuts,
     actions: &mut Actions,
 ) -> tauri::Result<Vec<Box<dyn IsMenuItem<Wry>>>> {
     let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
@@ -165,10 +240,10 @@ pub fn build_items(
             } => {
                 actions.insert(id.to_string(), (command.to_string(), params.clone()));
                 let text = tr(lang, label, &[]);
-                let accel = if with_accelerators {
-                    shortcut_label(core, command)
-                } else {
-                    None
+                let shortcut = shortcut_of(core, id, command);
+                let accel = match shortcuts {
+                    Shortcuts::Accelerators => shortcut.map(|a| a.to_string()),
+                    Shortcuts::None => None,
                 };
                 if let Some(state) = checked {
                     let on = *state == "shortcuts_paused" && core.shortcuts.user_paused();
@@ -191,13 +266,37 @@ pub fn build_items(
                 }
             }
             MenuEntry::Submenu { label, items: sub } => {
-                let children = build_items(app, core, sub, lang, with_accelerators, actions)?;
+                let children = build_items(app, core, sub, lang, shortcuts, actions)?;
                 let refs: Vec<&dyn IsMenuItem<Wry>> = children.iter().map(|b| b.as_ref()).collect();
                 items.push(Box::new(Submenu::with_items(
                     app,
                     tr(lang, label, &[]),
                     true,
                     &refs,
+                )?));
+            }
+            MenuEntry::Named {
+                id,
+                text,
+                command,
+                params,
+            } => {
+                // A preset (CAP-058): its own name and its shortcut.
+                actions.insert(id.clone(), (command.to_string(), params.clone()));
+                let accel = match shortcuts {
+                    Shortcuts::Accelerators => core
+                        .shortcuts
+                        .slot_by_key(&format!("{id}@global"))
+                        .and_then(|slot| core.shortcuts.binding(&slot, core.profile()))
+                        .map(|a| a.to_string()),
+                    Shortcuts::None => None,
+                };
+                items.push(Box::new(MenuItem::with_id(
+                    app,
+                    id.as_str(),
+                    text,
+                    true,
+                    accel.as_deref(),
                 )?));
             }
             MenuEntry::Placeholder { label } => {
@@ -219,10 +318,10 @@ pub fn build_menu(
     app: &AppHandle,
     core: &Core,
     entries: &[MenuEntry],
-    with_accelerators: bool,
+    shortcuts: Shortcuts,
     actions: &mut Actions,
 ) -> tauri::Result<Menu<Wry>> {
-    let items = build_items(app, core, entries, core.lang(), with_accelerators, actions)?;
+    let items = build_items(app, core, entries, core.lang(), shortcuts, actions)?;
     let refs: Vec<&dyn IsMenuItem<Wry>> = items.iter().map(|b| b.as_ref()).collect();
     Menu::with_items(app, &refs)
 }
@@ -231,7 +330,16 @@ pub fn create(app: &AppHandle) -> tauri::Result<TrayIcon> {
     let state = app.state::<AppState>();
     let core = &state.core;
     let mut actions = state.actions.lock().unwrap();
-    let menu = build_menu(app, core, &xs_core::menus::tray_menu(), true, &mut actions)?;
+    let menu = build_menu(
+        app,
+        core,
+        &xs_core::features::menu_for(
+            &core.settings,
+            xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        ),
+        Shortcuts::Accelerators,
+        &mut actions,
+    )?;
     let visual = current_visual(app);
     let tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(render(visual))
@@ -278,6 +386,8 @@ fn tooltip(core: &Core, v: Visual) -> String {
     let lang = core.lang();
     if v.paused {
         tr(lang, "tray.tooltip_paused", &[])
+    } else if v.timer {
+        tr(lang, "tray.tooltip_timer", &[])
     } else if v.attention {
         tr(lang, "tray.tooltip_attention", &[])
     } else {
@@ -295,6 +405,9 @@ pub fn current_visual(app: &AppHandle) -> Visual {
     Visual {
         paused: core.shortcuts.user_paused(),
         attention,
+        timer: xs_capture::interval::running(core)
+            || xs_capture::schedule::any(core)
+            || xs_capture::record::running(core),
         monochrome: core.settings.get_bool("general.monochromeIcon"),
     }
 }
@@ -312,7 +425,16 @@ pub fn refresh(app: &AppHandle) {
     let _ = tray.set_tooltip(Some(tooltip(core, visual)));
     let _ = tray.set_visible(core.settings.get_bool("general.showIcon"));
     let mut actions = state.actions.lock().unwrap();
-    if let Ok(menu) = build_menu(app, core, &xs_core::menus::tray_menu(), true, &mut actions) {
+    if let Ok(menu) = build_menu(
+        app,
+        core,
+        &xs_core::features::menu_for(
+            &core.settings,
+            xs_core::menus::tray_menu_with(&xs_capture::presets::menu_items(core), &tray_state(core)),
+        ),
+        Shortcuts::Accelerators,
+        &mut actions,
+    ) {
         let _ = tray.set_menu(Some(menu));
     }
 }
@@ -332,6 +454,7 @@ mod tests {
         let base = Visual {
             paused: false,
             attention: false,
+            timer: false,
             monochrome: true,
         };
         let normal = render(base);
@@ -340,6 +463,7 @@ mod tests {
             attention: true,
             ..base
         });
+        let timer = render(Visual { timer: true, ..base });
         let shapes = |i: &Image| {
             i.rgba()
                 .as_chunks::<4>()
@@ -351,6 +475,7 @@ mod tests {
         assert_ne!(shapes(&normal), shapes(&paused));
         assert_ne!(shapes(&normal), shapes(&attention));
         assert_ne!(shapes(&paused), shapes(&attention));
+        assert_ne!(shapes(&normal), shapes(&timer));
         assert!(alpha_sum(&attention) > alpha_sum(&normal));
     }
 }
@@ -365,14 +490,16 @@ fn dump_icons() {
     };
     let dir = std::path::PathBuf::from(dir);
     for mono in [false, true] {
-        for (name, paused, attention) in [
-            ("normal", false, false),
-            ("paused", true, false),
-            ("attention", false, true),
+        for (name, paused, attention, timer) in [
+            ("normal", false, false, false),
+            ("paused", true, false, false),
+            ("attention", false, true, false),
+            ("timer", false, false, true),
         ] {
             let img = render(Visual {
                 paused,
                 attention,
+                timer,
                 monochrome: mono,
             });
             let file = dir.join(format!(

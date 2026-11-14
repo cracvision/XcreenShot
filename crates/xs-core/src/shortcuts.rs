@@ -298,6 +298,28 @@ pub enum ShortcutScope {
     Global,
     /// Works while a XcreenShot window has focus.
     App,
+    /// Works in the editor window, where it takes precedence over an app shortcut with
+    /// the same combination (EDT-115, EDT-116; `Ctrl+W` closes the document there).
+    Editor,
+}
+
+impl ShortcutScope {
+    pub fn parse(s: &str) -> Option<ShortcutScope> {
+        match s {
+            "global" => Some(ShortcutScope::Global),
+            "app" => Some(ShortcutScope::App),
+            "editor" => Some(ShortcutScope::Editor),
+            _ => None,
+        }
+    }
+
+    /// Whether two shortcuts of these scopes can be pressed in the same place: a global
+    /// one everywhere, app ones in every window, editor ones in the editor, where they
+    /// win over app ones.
+    fn collides_with(self, other: ShortcutScope) -> bool {
+        use ShortcutScope::*;
+        !matches!((self, other), (App, Editor) | (Editor, App))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -335,6 +357,7 @@ impl Slot {
         let scope = match self.scope {
             ShortcutScope::Global => "global",
             ShortcutScope::App => "app",
+            ShortcutScope::Editor => "editor",
         };
         format!("{}@{scope}", self.id)
     }
@@ -354,6 +377,11 @@ impl Slot {
     }
 }
 
+/// The key of a preset's row (`preset.<id>@global`, CAP-062).
+pub fn is_preset_key(key: &str) -> bool {
+    key.starts_with("preset.")
+}
+
 /// Assignable slots that exist in this build. Owners add theirs as features land.
 pub fn slots() -> Vec<Slot> {
     use ShortcutScope::*;
@@ -371,11 +399,33 @@ pub fn slots() -> Vec<Slot> {
         scope,
         group: "app",
     };
+    // Editor actions run in the editor view (`editor.action`), tools and zoom by
+    // their own commands. Only what exists in this build (EDT-115, EDT-116).
+    let editor = |id, command, params| Slot {
+        id,
+        command,
+        params,
+        scope: Editor,
+        group: "editor",
+    };
+    let tool = |id, params| Slot {
+        id,
+        command: "editor.select_tool",
+        params,
+        scope: Editor,
+        group: "tools",
+    };
     vec![
         // Capture actions (CAP-065), in the spec's order.
         capture("capture.capture", "capture.capture", ""),
         capture("capture.universal", "capture.universal", ""),
         capture("capture.image", "capture.image", ""),
+        // Extract text (SMT-005).
+        capture(
+            "smart.extract_text",
+            "smart.extract_text",
+            r#"{"source":"screen"}"#,
+        ),
         capture("capture.window", "capture.window", r#"{"target":"interactive"}"#),
         capture(
             "capture.active_window",
@@ -386,14 +436,372 @@ pub fn slots() -> Vec<Slot> {
         // No default in any profile (CAP-065); assignable in Preferences > Shortcuts.
         capture("capture.repeat_last_area", "capture.repeat_last_area", ""),
         capture("capture.panel", "capture.panel", ""),
+        // No default (CAP-067); assignable in Preferences > Shortcuts.
+        capture("capture.multi_start", "capture.multi_start", ""),
+        // The window picker (CAP-030).
+        capture("capture.window_picker", "capture.window_picker", ""),
+        // Video (VID-075): Video capture (stops during a recording), Record / Pause /
+        // Resume and Stop recording.
+        capture("record.video", "record.video", ""),
+        capture("record.toggle", "record.toggle", ""),
+        capture("record.stop", "record.stop", ""),
+        // Live drawing on and off (VID-048, VID-075).
+        capture("record.draw", "record.draw", ""),
+        // No default: losing a recording by accident is worse (VID-075).
+        capture("record.restart", "record.restart", ""),
+        capture("record.cancel", "record.cancel", ""),
+        // The step recorder (SMT-022, SMT-023). No defaults.
+        capture("smart.steps_start", "smart.steps_start", ""),
+        capture("smart.steps_toggle", "smart.steps_toggle", ""),
+        capture("smart.steps_stop", "smart.steps_stop", ""),
+        // The clipboard as a source (CAP-039). No default.
+        capture("capture.clipboard", "capture.clipboard", ""),
+        // Quick annotation (CAP-057): only while its trial feature is on (APP-034).
+        capture("capture.quick_annotate", "capture.quick_annotate", ""),
+        // The open menu, without a countdown (CAP-031). No default yet: the spec's
+        // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
+        capture("capture.menu", "capture.menu", ""),
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),
         s("settings.open", App),
+        s("app.help", App),
         s("shortcuts.pause", Global),
         s("app.close_window", App),
         s("app.quit", Global),
         s("app.quit", App),
+        // Editor: file, edit and view (EDT-116), in the spec's order.
+        editor("editor.open", "editor.action", r#"{"action":"open"}"#),
+        editor("editor.save", "editor.action", r#"{"action":"save"}"#),
+        editor("editor.save_as", "editor.action", r#"{"action":"save_as"}"#),
+        editor("editor.export", "editor.action", r#"{"action":"export"}"#),
+        editor("editor.close", "editor.action", r#"{"action":"close"}"#),
+        editor("editor.close_all", "editor.action", r#"{"action":"close_all"}"#),
+        editor("editor.undo", "editor.action", r#"{"action":"undo"}"#),
+        editor("editor.redo", "editor.action", r#"{"action":"redo"}"#),
+        editor("editor.redo_alt", "editor.action", r#"{"action":"redo"}"#),
+        editor("editor.cut", "editor.action", r#"{"action":"cut"}"#),
+        editor("editor.copy", "editor.action", r#"{"action":"copy"}"#),
+        editor("editor.paste", "editor.action", r#"{"action":"paste"}"#),
+        editor(
+            "editor.paste_in_place",
+            "editor.action",
+            r#"{"action":"paste_in_place"}"#,
+        ),
+        editor("editor.copy_all", "editor.action", r#"{"action":"copy_all"}"#),
+        editor("editor.delete", "editor.action", r#"{"action":"delete"}"#),
+        editor("editor.delete_alt", "editor.action", r#"{"action":"delete"}"#),
+        editor("editor.duplicate", "editor.action", r#"{"action":"duplicate"}"#),
+        editor(
+            "editor.bring_front",
+            "editor.action",
+            r#"{"action":"bring_front"}"#,
+        ),
+        editor(
+            "editor.bring_forward",
+            "editor.action",
+            r#"{"action":"bring_forward"}"#,
+        ),
+        editor(
+            "editor.send_backward",
+            "editor.action",
+            r#"{"action":"send_backward"}"#,
+        ),
+        editor("editor.send_back", "editor.action", r#"{"action":"send_back"}"#),
+        editor(
+            "editor.equal_width",
+            "editor.action",
+            r#"{"action":"equal_width"}"#,
+        ),
+        editor(
+            "editor.equal_height",
+            "editor.action",
+            r#"{"action":"equal_height"}"#,
+        ),
+        editor("editor.flatten", "editor.action", r#"{"action":"flatten"}"#),
+        editor(
+            "editor.flatten_all",
+            "editor.action",
+            r#"{"action":"flatten_all"}"#,
+        ),
+        editor(
+            "editor.unflatten_all",
+            "editor.action",
+            r#"{"action":"unflatten_all"}"#,
+        ),
+        editor("editor.group", "editor.action", r#"{"action":"group"}"#),
+        editor("editor.ungroup", "editor.action", r#"{"action":"ungroup"}"#),
+        editor("editor.lock", "editor.action", r#"{"action":"lock"}"#),
+        // No default (EDT-116): assignable in Preferences > Shortcuts.
+        editor("editor.unlock_all", "editor.action", r#"{"action":"unlock_all"}"#),
+        editor("editor.align_left", "editor.action", r#"{"action":"align_left"}"#),
+        editor(
+            "editor.align_hcenter",
+            "editor.action",
+            r#"{"action":"align_hcenter"}"#,
+        ),
+        editor(
+            "editor.align_right",
+            "editor.action",
+            r#"{"action":"align_right"}"#,
+        ),
+        editor("editor.align_top", "editor.action", r#"{"action":"align_top"}"#),
+        editor(
+            "editor.align_vcenter",
+            "editor.action",
+            r#"{"action":"align_vcenter"}"#,
+        ),
+        editor(
+            "editor.align_bottom",
+            "editor.action",
+            r#"{"action":"align_bottom"}"#,
+        ),
+        editor(
+            "editor.distribute_h",
+            "editor.action",
+            r#"{"action":"distribute_h"}"#,
+        ),
+        editor(
+            "editor.distribute_v",
+            "editor.action",
+            r#"{"action":"distribute_v"}"#,
+        ),
+        editor("editor.select_all", "editor.action", r#"{"action":"select_all"}"#),
+        editor("editor.deselect", "editor.action", r#"{"action":"deselect"}"#),
+        editor(
+            "editor.import_theme",
+            "editor.action",
+            r#"{"action":"import_theme"}"#,
+        ),
+        // Pixel selection (EDT-044).
+        editor(
+            "editor.invert_selection",
+            "editor.action",
+            r#"{"action":"invert_selection"}"#,
+        ),
+        editor(
+            "editor.float_selection",
+            "editor.action",
+            r#"{"action":"float_selection"}"#,
+        ),
+        editor(
+            "editor.crop_selection",
+            "editor.action",
+            r#"{"action":"crop_selection"}"#,
+        ),
+        // The Image menu (EDT-069 to EDT-077) and Object > Flip (EDT-073).
+        editor(
+            "editor.resize_image",
+            "editor.action",
+            r#"{"action":"resize_image"}"#,
+        ),
+        editor(
+            "editor.canvas_size",
+            "editor.action",
+            r#"{"action":"canvas_size"}"#,
+        ),
+        editor(
+            "editor.canvas_color",
+            "editor.action",
+            r#"{"action":"canvas_color"}"#,
+        ),
+        editor(
+            "editor.rotate_right",
+            "editor.action",
+            r#"{"action":"rotate_right"}"#,
+        ),
+        editor(
+            "editor.rotate_left",
+            "editor.action",
+            r#"{"action":"rotate_left"}"#,
+        ),
+        editor("editor.rotate_180", "editor.action", r#"{"action":"rotate_180"}"#),
+        editor(
+            "editor.rotate_custom",
+            "editor.action",
+            r#"{"action":"rotate_custom"}"#,
+        ),
+        editor(
+            "editor.flip_horizontal",
+            "editor.action",
+            r#"{"action":"flip_horizontal"}"#,
+        ),
+        editor(
+            "editor.flip_vertical",
+            "editor.action",
+            r#"{"action":"flip_vertical"}"#,
+        ),
+        editor("editor.corners", "editor.action", r#"{"action":"corners"}"#),
+        editor("editor.resolution", "editor.action", r#"{"action":"resolution"}"#),
+        editor("editor.revert", "editor.action", r#"{"action":"revert"}"#),
+        editor(
+            "editor.flip_objects_horizontal",
+            "editor.action",
+            r#"{"action":"flip_objects_horizontal"}"#,
+        ),
+        editor(
+            "editor.flip_objects_vertical",
+            "editor.action",
+            r#"{"action":"flip_objects_vertical"}"#,
+        ),
+        editor(
+            "editor.crop_to_canvas",
+            "editor.action",
+            r#"{"action":"crop_to_canvas"}"#,
+        ),
+        editor("editor.fit_canvas", "editor.action", r#"{"action":"fit_canvas"}"#),
+        editor("editor.trim", "editor.action", r#"{"action":"trim"}"#),
+        editor("editor.snap", "editor.action", r#"{"action":"snap"}"#),
+        editor("editor.new_image", "editor.action", r#"{"action":"new_image"}"#),
+        editor(
+            "editor.show_in_library",
+            "editor.action",
+            r#"{"action":"show_in_library"}"#,
+        ),
+        editor(
+            "editor.new_from_template",
+            "editor.action",
+            r#"{"action":"new_from_template"}"#,
+        ),
+        editor(
+            "editor.apply_template",
+            "editor.action",
+            r#"{"action":"apply_template"}"#,
+        ),
+        editor(
+            "editor.save_as_template",
+            "editor.action",
+            r#"{"action":"save_as_template"}"#,
+        ),
+        editor(
+            "editor.import_template",
+            "editor.action",
+            r#"{"action":"import_template"}"#,
+        ),
+        editor(
+            "editor.batch_export",
+            "editor.action",
+            r#"{"action":"batch_export"}"#,
+        ),
+        editor("editor.print", "editor.action", r#"{"action":"print"}"#),
+        editor("editor.pixel_grid", "editor.action", r#"{"action":"pixel_grid"}"#),
+        editor("editor.fullscreen", "editor.action", r#"{"action":"fullscreen"}"#),
+        editor(
+            "editor.new_from_clipboard",
+            "editor.action",
+            r#"{"action":"new_from_clipboard"}"#,
+        ),
+        editor("editor.zoom_in", "editor.zoom", r#"{"mode":"in"}"#),
+        editor("editor.zoom_out", "editor.zoom", r#"{"mode":"out"}"#),
+        editor(
+            "editor.zoom_actual",
+            "editor.zoom",
+            r#"{"mode":"percent","value":100}"#,
+        ),
+        editor("editor.zoom_fit", "editor.zoom", r#"{"mode":"fit"}"#),
+        editor("editor.zoom_original", "editor.zoom", r#"{"mode":"original"}"#),
+        editor("editor.side_panel", "editor.action", r#"{"action":"side_panel"}"#),
+        editor(
+            "editor.extract_text",
+            "editor.action",
+            r#"{"action":"extract_text"}"#,
+        ),
+        // Auto redact (SMT-010): assignable, none by default.
+        editor(
+            "editor.auto_redact",
+            "editor.action",
+            r#"{"action":"auto_redact"}"#,
+        ),
+        // Insert a QR code (SMT-036): assignable, none by default.
+        editor("editor.insert_qr", "editor.action", r#"{"action":"insert_qr"}"#),
+        // The Video menu (VID-076): they act only while a video is shown.
+        editor(
+            "editor.video_go_to",
+            "editor.action",
+            r#"{"action":"video_go_to"}"#,
+        ),
+        editor(
+            "editor.video_save_frame",
+            "editor.action",
+            r#"{"action":"video_save_frame"}"#,
+        ),
+        editor("editor.video_gif", "editor.action", r#"{"action":"video_gif"}"#),
+        editor("editor.video_info", "editor.action", r#"{"action":"video_info"}"#),
+        editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
+        editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
+        editor(
+            "editor.view_editor",
+            "editor.action",
+            r#"{"action":"view_editor"}"#,
+        ),
+        editor(
+            "editor.view_library",
+            "editor.action",
+            r#"{"action":"view_library"}"#,
+        ),
+        editor("editor.tray", "editor.action", r#"{"action":"tray"}"#),
+        editor("editor.prev_item", "editor.action", r#"{"action":"prev_item"}"#),
+        editor("editor.next_item", "editor.action", r#"{"action":"next_item"}"#),
+        editor(
+            "editor.close_others",
+            "editor.action",
+            r#"{"action":"close_others"}"#,
+        ),
+        editor(
+            "editor.rename_item",
+            "editor.action",
+            r#"{"action":"rename_item"}"#,
+        ),
+        editor("editor.pin_item", "editor.action", r#"{"action":"pin_item"}"#),
+        editor(
+            "editor.duplicate_item",
+            "editor.action",
+            r#"{"action":"duplicate_item"}"#,
+        ),
+        editor(
+            "editor.shortcut_sheet",
+            "editor.action",
+            r#"{"action":"shortcut_sheet"}"#,
+        ),
+        editor(
+            "editor.move_computer",
+            "editor.action",
+            r#"{"action":"move_computer"}"#,
+        ),
+        editor(
+            "editor.show_in_folder",
+            "editor.action",
+            r#"{"action":"show_in_folder"}"#,
+        ),
+        editor(
+            "editor.delete_item",
+            "editor.action",
+            r#"{"action":"delete_item"}"#,
+        ),
+        // Tools (EDT-115): a single key.
+        tool("editor.tool_favorites", r#"{"tool":"favorites"}"#),
+        tool("editor.tool_move", r#"{"tool":"move"}"#),
+        tool("editor.tool_arrow", r#"{"tool":"arrow"}"#),
+        tool("editor.tool_line", r#"{"tool":"line"}"#),
+        tool("editor.tool_text", r#"{"tool":"text"}"#),
+        tool("editor.tool_shape", r#"{"tool":"shape"}"#),
+        tool("editor.tool_callout", r#"{"tool":"callout"}"#),
+        tool("editor.tool_stamp", r#"{"tool":"stamp"}"#),
+        tool("editor.tool_step", r#"{"tool":"step"}"#),
+        tool("editor.tool_highlight", r#"{"tool":"highlight"}"#),
+        tool("editor.tool_pen", r#"{"tool":"pen"}"#),
+        tool("editor.tool_magnify", r#"{"tool":"magnify"}"#),
+        tool("editor.tool_spotlight", r#"{"tool":"spotlight"}"#),
+        tool("editor.tool_blur", r#"{"tool":"blur"}"#),
+        tool("editor.tool_simplify", r#"{"tool":"simplify"}"#),
+        tool("editor.tool_select", r#"{"tool":"select"}"#),
+        tool("editor.tool_wand", r#"{"tool":"wand"}"#),
+        tool("editor.tool_cutout", r#"{"tool":"cutout"}"#),
+        tool("editor.tool_fill", r#"{"tool":"fill"}"#),
+        tool("editor.tool_eraser", r#"{"tool":"eraser"}"#),
+        tool("editor.tool_crop", r#"{"tool":"crop"}"#),
+        // Measure (EDT-094): assignable, none by default.
+        tool("editor.tool_measure", r#"{"tool":"measure"}"#),
     ]
 }
 
@@ -415,9 +823,26 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.universal", Global, _, _) => "Ctrl+Alt+Shift+KeyO",
         ("capture.image", Global, Compatibility, Macos) => "Ctrl+Shift+KeyS",
         ("capture.image", Global, _, _) => "Ctrl+Alt+Shift+KeyS",
+        ("smart.extract_text", Global, _, _) => "Ctrl+Alt+Shift+KeyT",
         ("capture.window", Global, Compatibility, Macos) => "Ctrl+Shift+KeyW",
         ("capture.window", Global, _, _) => "Ctrl+Alt+Shift+KeyW",
         ("capture.active_window", Global, _, _) => "Ctrl+Alt+Shift+KeyA",
+        ("capture.window_picker", Global, Compatibility, Macos) => "Ctrl+Shift+KeyM",
+        ("capture.window_picker", Global, _, _) => "Ctrl+Alt+Shift+KeyM",
+        ("capture.quick_annotate", Global, _, _) => "Ctrl+Alt+Shift+KeyQ",
+        // VID-075.
+        ("record.video", Global, Compatibility, Windows) => return None,
+        ("record.video", Global, Compatibility, Macos) => "Ctrl+Shift+KeyV",
+        ("record.video", Global, _, _) => "Ctrl+Alt+Shift+KeyV",
+        ("record.toggle", Global, Coexistence, Windows) => "Ctrl+Shift+F9",
+        ("record.toggle", Global, Compatibility, Windows) => "Shift+F9",
+        ("record.toggle", Global, Coexistence, Macos) => "Ctrl+Alt+Shift+Space",
+        ("record.toggle", Global, Compatibility, Macos) => "Ctrl+Shift+Space",
+        ("record.stop", Global, Coexistence, Windows) => "Ctrl+Shift+F10",
+        ("record.stop", Global, Compatibility, Windows) => "Shift+F10",
+        // Ctrl+Shift+D is Duplicate of the editor (Compatibility, Windows).
+        ("record.draw", Global, Compatibility, Macos) => "Ctrl+Shift+KeyD",
+        ("record.draw", Global, _, _) => "Ctrl+Alt+Shift+KeyD",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",
@@ -431,9 +856,171 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("app.close_window", App, _, Macos) => "Super+KeyW",
         ("settings.open", App, _, Windows) => "Ctrl+Comma",
         ("settings.open", App, _, Macos) => "Super+Comma",
+        ("app.help", App, _, Windows) => "F1",
+        ("app.help", App, _, Macos) => "Super+Shift+Slash",
+        (_, Editor, _, _) => return editor_default(slot.id, profile, platform),
         _ => return None,
     };
     Some(s.parse().expect("default shortcuts parse"))
+}
+
+/// Editor defaults (EDT-115, EDT-116). Written for Windows; on macOS `Ctrl` becomes
+/// `Cmd`, except where the table names `Control`.
+fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Accelerator> {
+    use Platform::*;
+    use Profile::*;
+    let s = match (id, profile, platform) {
+        ("editor.close", Compatibility, Macos) => "Super+Shift+KeyW",
+        ("editor.copy_all", Compatibility, Macos) => "Alt+Super+KeyC",
+        ("editor.side_panel", Compatibility, Macos) => "Super+Digit5",
+        ("editor.redo", _, Macos) => "Super+Shift+KeyZ",
+        // The table's Ctrl+Alt+Shift+S is Image capture on Windows (CAP-065), a global
+        // shortcut that would never let it through (spec/QUESTIONS.md).
+        ("editor.export", _, Windows) => "Ctrl+Alt+Shift+KeyE",
+        ("editor.redo_alt", _, Macos) => return None,
+        // macOS: Control+Cmd+F (EDT-009).
+        ("editor.fullscreen", _, Macos) => "Ctrl+Super+KeyF",
+        // Compatibility on Windows: Ctrl+Shift+X quits the app (a global shortcut).
+        ("editor.trim", Compatibility, Windows) => return None,
+        // Compatibility on macOS: Cmd+R asks for the angle (EDT-116).
+        ("editor.rotate_custom", Compatibility, Macos) => "Super+KeyR",
+        ("editor.rotate_right", Compatibility, Macos) => return None,
+        // Compatibility on macOS: Control and a letter per tool (EDT-115).
+        ("editor.tool_favorites", Compatibility, Macos) => "Ctrl+KeyR",
+        ("editor.tool_move", Compatibility, Macos) => "Ctrl+KeyV",
+        ("editor.tool_arrow", Compatibility, Macos) => "Ctrl+KeyA",
+        ("editor.tool_text", Compatibility, Macos) => "Ctrl+KeyT",
+        ("editor.tool_shape", Compatibility, Macos) => "Ctrl+KeyU",
+        ("editor.tool_blur", Compatibility, Macos) => "Ctrl+KeyB",
+        ("editor.tool_simplify", Compatibility, Macos) => "Ctrl+KeyY",
+        ("editor.tool_select", Compatibility, Macos) => "Ctrl+KeyL",
+        ("editor.tool_wand", Compatibility, Macos) => "Ctrl+KeyW",
+        ("editor.tool_cutout", Compatibility, Macos) => "Ctrl+KeyX",
+        ("editor.tool_fill", Compatibility, Macos) => "Ctrl+KeyF",
+        ("editor.tool_eraser", Compatibility, Macos) => "Ctrl+KeyE",
+        ("editor.tool_step", Compatibility, Macos) => "Ctrl+KeyS",
+        ("editor.tool_stamp", Compatibility, Macos) => "Ctrl+KeyI",
+        ("editor.tool_highlight", Compatibility, Macos) => "Ctrl+KeyH",
+        ("editor.tool_pen", Compatibility, Macos) => "Ctrl+KeyP",
+        ("editor.tool_magnify", Compatibility, Macos) => "Ctrl+KeyM",
+        ("editor.tool_callout", Compatibility, Macos) => "Ctrl+KeyD",
+        ("editor.tool_crop", Compatibility, Macos) => "Ctrl+KeyC",
+        ("editor.tool_favorites", ..) => "KeyF",
+        ("editor.tool_move", ..) => "KeyV",
+        ("editor.tool_arrow", ..) => "KeyA",
+        ("editor.tool_text", ..) => "KeyT",
+        ("editor.tool_line", ..) => "KeyL",
+        ("editor.tool_shape", ..) => "KeyU",
+        ("editor.tool_blur", ..) => "KeyB",
+        ("editor.tool_simplify", ..) => "KeyY",
+        ("editor.tool_select", ..) => "KeyQ",
+        ("editor.tool_wand", ..) => "KeyW",
+        ("editor.tool_cutout", ..) => "KeyX",
+        ("editor.tool_fill", ..) => "KeyG",
+        ("editor.tool_eraser", ..) => "KeyE",
+        ("editor.tool_step", ..) => "KeyN",
+        ("editor.tool_stamp", ..) => "KeyS",
+        ("editor.tool_highlight", ..) => "KeyH",
+        ("editor.tool_pen", ..) => "KeyP",
+        ("editor.tool_magnify", ..) => "KeyM",
+        ("editor.tool_spotlight", ..) => "KeyO",
+        ("editor.tool_callout", ..) => "KeyC",
+        ("editor.tool_crop", ..) => "KeyR",
+        ("editor.delete", ..) => "Delete",
+        // LIB-001: Cmd+1 / Cmd+2 on macOS; Ctrl+Shift on Windows, where Ctrl+1…9 pick
+        // tools. TRY-001, TRY-009, TRY-013 as the spec writes them.
+        ("editor.view_editor", _, Macos) => "Super+Digit1",
+        ("editor.view_library", _, Macos) => "Super+Digit2",
+        ("editor.tray", _, Macos) => "Alt+Super+KeyT",
+        ("editor.prev_item", _, Macos) => "Super+BracketLeft",
+        ("editor.next_item", _, Macos) => "Super+BracketRight",
+        ("editor.delete_item", _, Macos) => "Super+Backspace",
+        ("editor.rename_item", _, Macos) => return None,
+        // TRY-004: Control+Shift+P on macOS too, as the spec writes it.
+        ("editor.pin_item", _, Macos) => "Ctrl+Shift+KeyP",
+        // LIB-014: none on Windows, where Ctrl+Shift+L is the share link.
+        ("editor.show_in_library", _, Macos) => "Shift+Super+KeyL",
+        ("editor.show_in_library", ..) => return None,
+        ("editor.delete_alt", ..) => "Backspace",
+        _ => {
+            let windows = match id {
+                "editor.open" => "Ctrl+KeyO",
+                // Extract text (SMT-007): Shift+Cmd+O on macOS.
+                "editor.extract_text" => "Ctrl+Shift+KeyO",
+                "editor.new_image" => "Ctrl+KeyN",
+                "editor.new_from_template" => "Ctrl+Shift+KeyT",
+                "editor.print" => "Ctrl+KeyP",
+                "editor.pixel_grid" => "Ctrl+Quote",
+                "editor.fullscreen" => "F11",
+                "editor.new_from_clipboard" => "Ctrl+Shift+KeyN",
+                "editor.save" => "Ctrl+KeyS",
+                "editor.save_as" => "Ctrl+Shift+KeyS",
+                "editor.export" => "Ctrl+Alt+Shift+KeyS",
+                "editor.close" => "Ctrl+KeyW",
+                "editor.close_all" => "Ctrl+Alt+KeyW",
+                "editor.undo" => "Ctrl+KeyZ",
+                "editor.redo" => "Ctrl+KeyY",
+                "editor.redo_alt" => "Ctrl+Shift+KeyZ",
+                "editor.cut" => "Ctrl+KeyX",
+                "editor.copy" => "Ctrl+KeyC",
+                "editor.paste" => "Ctrl+KeyV",
+                "editor.paste_in_place" => "Ctrl+Shift+KeyV",
+                "editor.copy_all" => "Ctrl+Shift+KeyC",
+                "editor.select_all" => "Ctrl+KeyA",
+                "editor.duplicate" => "Ctrl+KeyJ",
+                // VID-076. Go to… has no own default: Ctrl+J is Duplicate's, and with
+                // a video shown Duplicate goes to Go to… (QUESTIONS.md).
+                "editor.video_save_frame" => "Ctrl+Alt+KeyF",
+                "editor.video_gif" => "Ctrl+Alt+KeyG",
+                "editor.video_info" => "Ctrl+Alt+KeyI",
+                "editor.lock" => "Ctrl+KeyL",
+                "editor.group" => "Ctrl+KeyG",
+                "editor.flatten" => "Ctrl+KeyE",
+                "editor.flatten_all" => "Ctrl+Shift+KeyE",
+                "editor.ungroup" => "Ctrl+Shift+KeyG",
+                "editor.bring_forward" => "Ctrl+ArrowUp",
+                "editor.send_backward" => "Ctrl+ArrowDown",
+                "editor.bring_front" => "Ctrl+Shift+ArrowUp",
+                "editor.send_back" => "Ctrl+Shift+ArrowDown",
+                "editor.deselect" => "Ctrl+KeyD",
+                "editor.invert_selection" => "Ctrl+Shift+KeyI",
+                "editor.float_selection" => "Ctrl+Shift+KeyJ",
+                "editor.crop_selection" => "Ctrl+Shift+KeyK",
+                "editor.resize_image" => "Ctrl+Shift+KeyR",
+                "editor.canvas_size" => "Ctrl+Alt+KeyK",
+                "editor.rotate_right" => "Ctrl+KeyR",
+                "editor.crop_to_canvas" => "Ctrl+KeyK",
+                "editor.trim" => "Ctrl+Shift+KeyX",
+                "editor.snap" => "Ctrl+Semicolon",
+                "editor.zoom_in" => "Ctrl+Equal",
+                "editor.zoom_out" => "Ctrl+Minus",
+                "editor.zoom_actual" => "Ctrl+Digit0",
+                "editor.zoom_fit" => "Ctrl+Shift+Digit0",
+                "editor.zoom_original" => "Ctrl+Alt+Digit0",
+                "editor.side_panel" => "Ctrl+Alt+KeyP",
+                "editor.view_editor" => "Ctrl+Shift+Digit1",
+                "editor.view_library" => "Ctrl+Shift+Digit2",
+                "editor.tray" => "Ctrl+Alt+KeyR",
+                "editor.prev_item" => "Ctrl+PageUp",
+                "editor.next_item" => "Ctrl+PageDown",
+                "editor.delete_item" => "Ctrl+Delete",
+                "editor.rename_item" => "F2",
+                "editor.pin_item" => "Ctrl+Shift+KeyP",
+                // TRY-010: Shift+Cmd+D on macOS.
+                "editor.duplicate_item" => "Ctrl+Shift+KeyD",
+                // APP-023: Cmd+/ on macOS.
+                "editor.shortcut_sheet" => "Ctrl+Slash",
+                _ => return None,
+            };
+            let mut acc: Accelerator = windows.parse().expect("editor defaults parse");
+            if platform == Macos && acc.ctrl {
+                acc.ctrl = false;
+                acc.meta = true;
+            }
+            return Some(acc);
+        }
+    };
+    Some(s.parse().expect("editor defaults parse"))
 }
 
 // ---------------------------------------------------------------------------
@@ -616,10 +1203,19 @@ pub struct SetOutcome {
     pub reassigned_from: Option<String>,
 }
 
+/// Rows of features on trial (APP-034): the row and the setting that turns it on.
+/// While the setting is off the row does not exist (CAP-057).
+pub const TRIAL_SLOTS: [(&str, &str); 1] = [("capture.quick_annotate", "experimental.quickAnnotate")];
+
 pub struct ShortcutStore {
     path: Option<PathBuf>,
     platform: Platform,
     slots: Vec<Slot>,
+    /// Rows of trial features that are off (APP-034).
+    hidden: RwLock<Vec<&'static str>>,
+    /// Rows that come and go with the user's things, with their own title: one per
+    /// capture preset (CAP-062, APP-022).
+    extra: RwLock<Vec<(Slot, String)>>,
     stored: RwLock<Stored>,
     statuses: RwLock<HashMap<String, Status>>,
     paused: AtomicBool,
@@ -636,6 +1232,8 @@ impl ShortcutStore {
             path: Some(path),
             platform: Platform::current(),
             slots: slots(),
+            hidden: RwLock::new(TRIAL_SLOTS.iter().map(|(id, _)| *id).collect()),
+            extra: RwLock::new(Vec::new()),
             stored: RwLock::new(stored),
             statuses: RwLock::new(HashMap::new()),
             paused: AtomicBool::new(false),
@@ -648,6 +1246,8 @@ impl ShortcutStore {
             path: None,
             platform,
             slots: slots(),
+            hidden: RwLock::new(TRIAL_SLOTS.iter().map(|(id, _)| *id).collect()),
+            extra: RwLock::new(Vec::new()),
             stored: RwLock::new(Stored::default()),
             statuses: RwLock::new(HashMap::new()),
             paused: AtomicBool::new(false),
@@ -659,15 +1259,100 @@ impl ShortcutStore {
         self.platform
     }
 
-    pub fn slots(&self) -> &[Slot] {
-        &self.slots
+    /// Shows or hides the rows of trial features as `on` says for each setting
+    /// (APP-034). Returns whether anything changed.
+    pub fn set_trials(&self, on: impl Fn(&str) -> bool) -> bool {
+        let hidden: Vec<&'static str> = TRIAL_SLOTS
+            .iter()
+            .filter(|(_, key)| !on(key))
+            .map(|(id, _)| *id)
+            .collect();
+        let mut current = self.hidden.write().unwrap();
+        let changed = *current != hidden;
+        *current = hidden;
+        changed
+    }
+
+    /// Every row: the app's, then the presets' (CAP-062).
+    pub fn slots(&self) -> Vec<Slot> {
+        let hidden = self.hidden.read().unwrap().clone();
+        let mut all: Vec<Slot> = self
+            .slots
+            .iter()
+            .filter(|s| !hidden.contains(&s.id))
+            .copied()
+            .collect();
+        all.extend(self.extra.read().unwrap().iter().map(|(s, _)| *s));
+        all
+    }
+
+    /// The rows of the user's things (one per preset) and their titles; they replace
+    /// the ones there were (CAP-062).
+    pub fn set_extra(&self, rows: Vec<(Slot, String)>) {
+        *self.extra.write().unwrap() = rows;
+    }
+
+    /// The title of a row of the user's things.
+    pub fn extra_title(&self, slot: &Slot) -> Option<String> {
+        self.extra
+            .read()
+            .unwrap()
+            .iter()
+            .find(|(s, _)| s == slot)
+            .map(|(_, t)| t.clone())
+    }
+
+    /// Forgets the shortcut of a row that is gone (a deleted preset), so the keys are
+    /// free again (CAP-060).
+    pub fn forget(&self, key: &str) -> Option<Option<Accelerator>> {
+        let old = self.stored.write().unwrap().overrides.remove(key);
+        self.save();
+        old
+    }
+
+    /// Puts back a row's shortcut as it was (Undo of a delete, CAP-060).
+    pub fn put_back(&self, key: &str, acc: Option<Accelerator>) {
+        self.stored
+            .write()
+            .unwrap()
+            .overrides
+            .insert(key.to_string(), acc);
+        self.save();
     }
 
     pub fn find_slot(&self, id: &str, scope: ShortcutScope) -> Option<Slot> {
-        self.slots
-            .iter()
-            .copied()
-            .find(|s| s.id == id && s.scope == scope)
+        self.slots().into_iter().find(|s| s.id == id && s.scope == scope)
+    }
+
+    /// The user's own shortcuts: slot key → shortcut, or `None` where a default was
+    /// removed (APP-011).
+    pub fn overrides(&self) -> BTreeMap<String, Option<Accelerator>> {
+        self.stored.read().unwrap().overrides.clone()
+    }
+
+    /// The slot with this key (`<id>` or `<id>@<scope>`).
+    pub fn slot_by_key(&self, key: &str) -> Option<Slot> {
+        self.slots().into_iter().find(|s| s.key() == key)
+    }
+
+    /// The user's shortcuts become `wanted` (APP-011): what equals the profile's default
+    /// is not kept as an override; slots not named go back to their default.
+    pub fn replace_overrides(&self, wanted: &BTreeMap<String, Option<Accelerator>>, profile: Profile) {
+        {
+            let mut stored = self.stored.write().unwrap();
+            // A preset's shortcut goes with its preset, not with the app's (APP-021).
+            stored.overrides.retain(|k, _| is_preset_key(k));
+            let all = self.slots();
+            for (key, acc) in wanted {
+                let Some(slot) = all.iter().find(|s| s.key() == *key) else {
+                    continue;
+                };
+                if *acc != default_for(slot, profile, self.platform) {
+                    stored.overrides.insert(key.clone(), acc.clone());
+                }
+            }
+        }
+        self.save();
     }
 
     pub fn is_custom(&self, slot: &Slot) -> bool {
@@ -683,9 +1368,9 @@ impl ShortcutStore {
     }
 
     pub fn bindings(&self, profile: Profile) -> Vec<(Slot, Accelerator)> {
-        self.slots
-            .iter()
-            .filter_map(|s| self.binding(s, profile).map(|a| (*s, a)))
+        self.slots()
+            .into_iter()
+            .filter_map(|s| self.binding(&s, profile).map(|a| (s, a)))
             .collect()
     }
 
@@ -705,13 +1390,11 @@ impl ShortcutStore {
             .collect()
     }
 
-    /// Other slot that already uses `acc` in a way that collides with `slot` (APP-017):
-    /// global vs global, and app vs global in both directions.
+    /// Other slot that already uses `acc` where `slot` would also work (APP-017). An
+    /// editor shortcut may repeat an app one: in the editor it wins.
     pub fn collision(&self, slot: &Slot, acc: &Accelerator, profile: Profile) -> Option<Slot> {
         self.bindings(profile).into_iter().find_map(|(other, a)| {
-            let same_command_and_scope = other == *slot;
-            let scopes_collide = slot.scope == ShortcutScope::Global || other.scope == ShortcutScope::Global;
-            (!same_command_and_scope && scopes_collide && a == *acc).then_some(other)
+            (other != *slot && slot.scope.collides_with(other.scope) && a == *acc).then_some(other)
         })
     }
 
@@ -767,7 +1450,8 @@ impl ShortcutStore {
                 Some(s) => {
                     stored.overrides.remove(&s.key());
                 }
-                None => stored.overrides.clear(),
+                // Presets keep theirs: they belong to the preset (CAP-062, APP-021).
+                None => stored.overrides.retain(|k, _| is_preset_key(k)),
             }
         }
         self.save();
@@ -779,6 +1463,7 @@ impl ShortcutStore {
         let mut changes = Vec::new();
         let mut conflicts = Vec::new();
         for slot in &self.slots {
+            // The presets' rows have no profile default and keep their shortcut.
             let before = self.binding(slot, from);
             let after = if reset_custom || !self.is_custom(slot) {
                 default_for(slot, to, self.platform)
@@ -798,7 +1483,7 @@ impl ShortcutStore {
                         if other != slot
                             && !self.is_custom(other)
                             && default_for(other, to, self.platform).as_ref() == Some(acc)
-                            && (slot.scope == ShortcutScope::Global || other.scope == ShortcutScope::Global)
+                            && slot.scope.collides_with(other.scope)
                         {
                             conflicts.push(json!({"slot": slot.key(), "with": other.key(), "shortcut": acc.display(self.platform)}));
                         }
@@ -830,16 +1515,21 @@ impl ShortcutStore {
         if slot.scope == ShortcutScope::App {
             return Status::Active;
         }
-        if let Some((winner, _)) = self
-            .bindings(profile)
-            .into_iter()
-            .find(|(s, a)| s.scope == ShortcutScope::Global && *a == acc)
-        {
+        // A global shortcut takes the keys first; of two editor shortcuts with the same
+        // keys, the first one runs.
+        if let Some((winner, _)) = self.bindings(profile).into_iter().find(|(s, a)| {
+            *a == acc
+                && (s.scope == ShortcutScope::Global
+                    || (slot.scope == ShortcutScope::Editor && s.scope == ShortcutScope::Editor))
+        }) {
             if winner != *slot {
                 return Status::Duplicate {
                     command: winner.id.to_string(),
                 };
             }
+        }
+        if slot.scope == ShortcutScope::Editor {
+            return Status::Active;
         }
         if self.paused() {
             return Status::Paused;
@@ -872,10 +1562,9 @@ impl ShortcutStore {
 
     /// Global shortcuts that could not be activated, for the single startup notice (APP-019).
     pub fn failed(&self, profile: Profile) -> Vec<Slot> {
-        self.slots
-            .iter()
+        self.slots()
+            .into_iter()
             .filter(|s| s.scope == ShortcutScope::Global && self.status(s, profile).is_conflict())
-            .copied()
             .collect()
     }
 }
@@ -886,6 +1575,26 @@ mod tests {
 
     fn acc(s: &str) -> Accelerator {
         s.parse().unwrap()
+    }
+
+    /// CAP-057, APP-034: a trial feature's shortcut exists only while it is on.
+    #[test]
+    fn a_trial_feature_shortcut_comes_and_goes_with_it() {
+        let store = ShortcutStore::in_memory(Platform::Windows);
+        let has = |s: &ShortcutStore| s.slots().iter().any(|x| x.id == "capture.quick_annotate");
+        assert!(!has(&store));
+        assert!(store.set_trials(|k| k == "experimental.quickAnnotate"));
+        assert!(has(&store));
+        let slot = store
+            .find_slot("capture.quick_annotate", ShortcutScope::Global)
+            .unwrap();
+        assert_eq!(
+            default_for(&slot, Profile::Coexistence, Platform::Windows),
+            Some(acc("Ctrl+Alt+Shift+KeyQ"))
+        );
+        assert!(!store.set_trials(|k| k == "experimental.quickAnnotate"));
+        store.set_trials(|_| false);
+        assert!(!has(&store));
     }
 
     #[test]
@@ -983,6 +1692,99 @@ mod tests {
         }
     }
 
+    /// EDT-116 criterion: no two actions share a combination where both would work.
+    #[test]
+    fn no_default_combination_is_shared() {
+        for platform in [Platform::Windows, Platform::Macos] {
+            for profile in [Profile::Coexistence, Profile::Compatibility] {
+                let store = ShortcutStore::in_memory(platform);
+                let bindings = store.bindings(profile);
+                for (i, (a, acc_a)) in bindings.iter().enumerate() {
+                    for (b, acc_b) in &bindings[i + 1..] {
+                        assert!(
+                            !(acc_a == acc_b && a.scope.collides_with(b.scope)),
+                            "{platform:?} {profile:?}: {} and {} share {acc_a}",
+                            a.key(),
+                            b.key()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn editor_shortcuts_win_over_app_ones_but_not_global_ones() {
+        let store = ShortcutStore::in_memory(Platform::Windows);
+        let close = store.find_slot("editor.close", ShortcutScope::Editor).unwrap();
+        let app_close = store.find_slot("app.close_window", ShortcutScope::App).unwrap();
+        // Both use Ctrl+W: in the editor it closes the document (EDT-108).
+        assert_eq!(store.binding(&close, Profile::Coexistence), Some(acc("Ctrl+W")));
+        assert_eq!(
+            store.binding(&app_close, Profile::Coexistence),
+            Some(acc("Ctrl+W"))
+        );
+        assert_eq!(store.status(&close, Profile::Coexistence), Status::Active);
+        let e = store
+            .set(
+                &close,
+                Some(acc("Ctrl+Alt+Shift+K")),
+                false,
+                Profile::Coexistence,
+                Lang::En,
+            )
+            .unwrap_err();
+        assert_eq!(e.details.unwrap()["command"], "app.ping");
+        // A single key is fine in the editor (EDT-115).
+        let arrow = store
+            .find_slot("editor.tool_arrow", ShortcutScope::Editor)
+            .unwrap();
+        assert!(store
+            .set(&arrow, Some(acc("J")), false, Profile::Coexistence, Lang::En)
+            .is_ok());
+        // Two editor actions cannot share one.
+        let text = store
+            .find_slot("editor.tool_text", ShortcutScope::Editor)
+            .unwrap();
+        assert!(store
+            .set(&text, Some(acc("J")), false, Profile::Coexistence, Lang::En)
+            .is_err());
+    }
+
+    #[test]
+    fn editor_defaults_follow_the_platform() {
+        let mac = ShortcutStore::in_memory(Platform::Macos);
+        let slot = |id| mac.find_slot(id, ShortcutScope::Editor).unwrap();
+        assert_eq!(
+            mac.binding(&slot("editor.save"), Profile::Coexistence),
+            Some(acc("Cmd+S"))
+        );
+        assert_eq!(
+            mac.binding(&slot("editor.copy_all"), Profile::Compatibility),
+            Some(acc("Option+Cmd+C"))
+        );
+        assert_eq!(
+            mac.binding(&slot("editor.tool_crop"), Profile::Compatibility),
+            Some(acc("Control+C"))
+        );
+        assert_eq!(mac.binding(&slot("editor.redo_alt"), Profile::Coexistence), None);
+        // The Video menu (VID-076): Option+Cmd on macOS, Ctrl+Alt on Windows.
+        assert_eq!(
+            mac.binding(&slot("editor.video_gif"), Profile::Coexistence),
+            Some(acc("Option+Cmd+G"))
+        );
+        let win = ShortcutStore::in_memory(Platform::Windows);
+        let wslot = |id| win.find_slot(id, ShortcutScope::Editor).unwrap();
+        assert_eq!(
+            win.binding(&wslot("editor.video_save_frame"), Profile::Coexistence),
+            Some(acc("Ctrl+Alt+F"))
+        );
+        assert_eq!(
+            win.binding(&wslot("editor.video_info"), Profile::Coexistence),
+            Some(acc("Ctrl+Alt+I"))
+        );
+    }
+
     #[test]
     fn app_shortcut_cannot_match_a_global_one() {
         let store = ShortcutStore::in_memory(Platform::Windows);
@@ -1042,8 +1844,9 @@ mod tests {
             Some(acc("Ctrl+Alt+Shift+J"))
         );
         let preview = store.preview_profile(Profile::Coexistence, Profile::Compatibility, false);
-        // Only the defaults that differ (Capture and Quit); the custom one stays.
-        assert_eq!(preview["changes"].as_array().unwrap().len(), 2);
+        // Only the defaults that differ (Capture, the three of video, Quit, and Trim
+        // edges, which gives Ctrl+Shift+X to Quit); the custom one stays.
+        assert_eq!(preview["changes"].as_array().unwrap().len(), 6);
         store.reset(None);
         assert_eq!(
             store.binding(&ping, Profile::Compatibility),

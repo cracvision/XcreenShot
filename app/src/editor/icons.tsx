@@ -1,0 +1,504 @@
+// XcreenShot's own toolbar icons (SPEC §2.4): simple 20 px line drawings.
+import type { ReactNode } from "react";
+
+function Svg({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+const ICONS = {
+  // A pushpin (TRY-004).
+  pin: (
+    <Svg>
+      <path d="M8 3h4M9 3v5l-3 3h8l-3-3V3M10 11v6" />
+    </Svg>
+  ),
+  lock: (
+    <Svg>
+      <rect x="5" y="9" width="10" height="8" rx="1.5" />
+      <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+    </Svg>
+  ),
+  // Align and distribute (EDT-083): a guide line and two bars.
+  align_left: (
+    <Svg>
+      <path d="M4 3v14M7 6h8M7 13h5" />
+    </Svg>
+  ),
+  align_hcenter: (
+    <Svg>
+      <path d="M10 3v14M5 6h10M7 13h6" />
+    </Svg>
+  ),
+  align_right: (
+    <Svg>
+      <path d="M16 3v14M5 6h8M8 13h5" />
+    </Svg>
+  ),
+  align_top: (
+    <Svg>
+      <path d="M3 4h14M6 7v8M13 7v5" />
+    </Svg>
+  ),
+  align_vcenter: (
+    <Svg>
+      <path d="M3 10h14M6 5v10M13 7v6" />
+    </Svg>
+  ),
+  align_bottom: (
+    <Svg>
+      <path d="M3 16h14M6 5v8M13 8v5" />
+    </Svg>
+  ),
+  distribute_h: (
+    <Svg>
+      <path d="M3 3v14M17 3v14M8 6v8M12 6v8" />
+    </Svg>
+  ),
+  // Equal width and height (EDT-083): two bars made the same size.
+  equal_width: (
+    <Svg>
+      <path d="M4 6h12M4 13h12M4 4v4M16 4v4M4 11v4M16 11v4" />
+    </Svg>
+  ),
+  equal_height: (
+    <Svg>
+      <path d="M6 4v12M13 4v12M4 4h4M4 16h4M11 4h4M11 16h4" />
+    </Svg>
+  ),
+  distribute_v: (
+    <Svg>
+      <path d="M3 3h14M3 17h14M6 8h8M6 12h8" />
+    </Svg>
+  ),
+  capture: (
+    <Svg>
+      <path d="M3 7V4h3M14 4h3v3M17 13v3h-3M6 16H3v-3" />
+      <circle cx="10" cy="10" r="2.5" />
+    </Svg>
+  ),
+  move: (
+    <Svg>
+      <path d="M5 3l9 6-4 1.2L12.5 16l-2 1-2.4-5.6L5 14z" />
+    </Svg>
+  ),
+  arrow: (
+    <Svg>
+      <path d="M4 16L15 5" />
+      <path d="M8.5 4.5H15.5V11.5" />
+    </Svg>
+  ),
+  text: (
+    <Svg>
+      <path d="M4.5 5V3.5h11V5M10 3.5v13M7.5 16.5h5" />
+    </Svg>
+  ),
+  shape: (
+    <Svg>
+      <rect x="3" y="5" width="14" height="10" rx="1" />
+    </Svg>
+  ),
+  // A lit zone in the dark (EDT-039).
+  spotlight: (
+    <Svg>
+      <rect
+        x="2.5"
+        y="3.5"
+        width="15"
+        height="13"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.3"
+      />
+      <circle cx="10" cy="10" r="4" />
+    </Svg>
+  ),
+  // A magnifying glass (EDT-038).
+  magnify: (
+    <Svg>
+      <circle cx="8.5" cy="8.5" r="5" />
+      <path d="m12.5 12.5 4 4M6.5 8.5h4M8.5 6.5v4" />
+    </Svg>
+  ),
+  // A pen (EDT-037).
+  pen: (
+    <Svg>
+      <path d="m4 16 1-4 8-8 3 3-8 8z" />
+      <path d="m11 6 3 3" />
+    </Svg>
+  ),
+  // A marker's stroke (EDT-036).
+  highlight: (
+    <Svg>
+      <path d="M3 13h14v3H3z" fill="currentColor" stroke="none" opacity="0.35" />
+      <path d="m12 3 4 4-6 6H6v-4z" />
+    </Svg>
+  ),
+  // A plain segment (EDT-025).
+  line: (
+    <Svg>
+      <path d="M4 16 16 4" />
+    </Svg>
+  ),
+  // A speech bubble (EDT-028).
+  callout: (
+    <Svg>
+      <path d="M4 4h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+    </Svg>
+  ),
+  // Flat bars standing in for an interface (EDT-041).
+  // Favorites (EDT-016): a star.
+  favorites: (
+    <Svg>
+      <path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7L10 2.8Z" />
+    </Svg>
+  ),
+  // Effects (EDT-053): sparkles.
+  effects: (
+    <Svg>
+      <path d="M8 3.5 9.3 7l3.5 1.3-3.5 1.3L8 13l-1.3-3.4L3.2 8.3 6.7 7 8 3.5Z" />
+      <path d="M14.5 11.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" />
+    </Svg>
+  ),
+  // More actions: three dots.
+  more: (
+    <Svg>
+      <circle cx="5" cy="10" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  // Selection (EDT-043): a dashed box.
+  select: (
+    <Svg>
+      <rect x="3.5" y="4.5" width="13" height="11" rx="1" strokeDasharray="2.4 2.2" />
+    </Svg>
+  ),
+  // Cut out (EDT-052): two parts with the cut between them.
+  cutout: (
+    <Svg>
+      <rect x="3.5" y="3" width="13" height="4.5" rx="1" />
+      <rect x="3.5" y="12.5" width="13" height="4.5" rx="1" />
+      <path d="M3 10h2.2M7.4 10h2.2M11.8 10h2.2M16.2 10h1" />
+    </Svg>
+  ),
+  // Magic wand (EDT-046): a stick and a sparkle.
+  wand: (
+    <Svg>
+      <path d="M3.5 16.5 12 8" />
+      <path d="M14.5 2.5v4M12.5 4.5h4" />
+      <path d="M16.5 10v1.5M15.75 10.75h1.5M8 3v1.5M7.25 3.75h1.5" />
+    </Svg>
+  ),
+  // Fill (EDT-047): a tipped bucket and a drop.
+  fill: (
+    <Svg>
+      <path d="M3.8 9.6 9.4 4l6 6-5.6 5.6a1.5 1.5 0 0 1-2.1 0l-3.9-3.9a1.5 1.5 0 0 1 0-2.1Z" />
+      <path d="M3.6 10.2h11.2" />
+      <path
+        d="M17.6 14.2c0 .9-.6 1.6-1.4 1.6s-1.4-.7-1.4-1.6c0-1 1.4-2.6 1.4-2.6s1.4 1.6 1.4 2.6Z"
+        fill="currentColor"
+        stroke="none"
+      />
+    </Svg>
+  ),
+  // Eraser (EDT-048): a tilted block on a line.
+  eraser: (
+    <Svg>
+      <path d="M9 16.5h8" />
+      <path d="M3.9 11.9 11.2 4.6a1.5 1.5 0 0 1 2.1 0l2.6 2.6a1.5 1.5 0 0 1 0 2.1L8.8 16.5H7.3a1.5 1.5 0 0 1-1-.4l-2.4-2.4a1.5 1.5 0 0 1 0-1.8Z" />
+      <path d="M7.4 8.4l4.7 4.7" />
+    </Svg>
+  ),
+  simplify: (
+    <Svg>
+      <rect x="3" y="4" width="14" height="3" rx="1.5" fill="currentColor" stroke="none" />
+      <rect
+        x="3"
+        y="9"
+        width="10"
+        height="3"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.6"
+      />
+      <rect
+        x="3"
+        y="14"
+        width="7"
+        height="3"
+        rx="1.5"
+        fill="currentColor"
+        stroke="none"
+        opacity="0.6"
+      />
+    </Svg>
+  ),
+  // A stamp (EDT-031).
+  stamp: (
+    <Svg>
+      <path d="M10 3a3.5 3.5 0 0 0-2 6.4V12H5a1.5 1.5 0 0 0-1.5 1.5V15h13v-1.5A1.5 1.5 0 0 0 15 12h-3V9.4A3.5 3.5 0 0 0 10 3zM4 17h12" />
+    </Svg>
+  ),
+  // A numbered marker (EDT-035).
+  step: (
+    <Svg>
+      <circle cx="10" cy="10" r="7" />
+      <path d="M8.5 7.5 10 6.5v7M8.5 13.5h3" />
+    </Svg>
+  ),
+  blur: (
+    <Svg>
+      <rect x="3" y="3" width="14" height="14" rx="1.5" strokeDasharray="2 2" />
+      <path d="M6.5 7h2v2h-2zM11.5 7h2v2h-2zM9 11h2v2H9z" fill="currentColor" stroke="none" />
+    </Svg>
+  ),
+  crop: (
+    <Svg>
+      <path d="M6 2.5V14h11.5" />
+      <path d="M2.5 6H14v11.5" />
+    </Svg>
+  ),
+  measure: (
+    <Svg>
+      <path d="M2.5 12.5 12.5 2.5l5 5-10 10z" />
+      <path d="M6 9l1.5 1.5M8.5 6.5 10 8M11 4l1.5 1.5" />
+    </Svg>
+  ),
+  bold: (
+    <Svg>
+      <path d="M6 4h5a3 3 0 010 6H6zM6 10h6a3 3 0 010 6H6z" strokeWidth="2" />
+    </Svg>
+  ),
+  italic: (
+    <Svg>
+      <path d="M9 4h6M5 16h6M12 4l-4 12" />
+    </Svg>
+  ),
+  alignLeft: (
+    <Svg>
+      <path d="M3 5h14M3 9h9M3 13h14M3 17h9" />
+    </Svg>
+  ),
+  alignCenter: (
+    <Svg>
+      <path d="M3 5h14M5.5 9h9M3 13h14M5.5 17h9" />
+    </Svg>
+  ),
+  alignRight: (
+    <Svg>
+      <path d="M3 5h14M8 9h9M3 13h14M8 17h9" />
+    </Svg>
+  ),
+  alignJustify: (
+    <Svg>
+      <path d="M3 5h14M3 9h14M3 13h14M3 17h14" />
+    </Svg>
+  ),
+  undo: (
+    <Svg>
+      <path d="M7 5L3.5 8.5 7 12" />
+      <path d="M4 8.5h7.5a4.5 4.5 0 010 9H9" />
+    </Svg>
+  ),
+  redo: (
+    <Svg>
+      <path d="M13 5l3.5 3.5L13 12" />
+      <path d="M16 8.5H8.5a4.5 4.5 0 000 9H11" />
+    </Svg>
+  ),
+  open: (
+    <Svg>
+      <path d="M2.5 15.5V5a1 1 0 011-1h4l1.5 2h7a1 1 0 011 1v1.5" />
+      <path d="M2.5 15.5l2.5-6.5h13l-2.5 6.5z" />
+    </Svg>
+  ),
+  save: (
+    <Svg>
+      <path d="M4 3.5h9.5L16.5 6.5V16a.5.5 0 01-.5.5H4a.5.5 0 01-.5-.5V4a.5.5 0 01.5-.5z" />
+      <path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5" />
+    </Svg>
+  ),
+  // Toolbar commands (EDT-004): XcreenShot's own simple drawings.
+  save_as: (
+    <Svg>
+      <path d="M4 3.5h8.5L15.5 6.5V9" />
+      <path d="M3.5 4v12a.5.5 0 00.5.5h5" />
+      <path d="M6.5 3.5v3.5h5" />
+      <path d="M11.5 16.5l1-3 4-4 2 2-4 4z" />
+    </Svg>
+  ),
+  export: (
+    <Svg>
+      <path d="M10 12.5V3.5M6.5 7l3.5-3.5L13.5 7" />
+      <path d="M4 11v4.5a1 1 0 001 1h10a1 1 0 001-1V11" />
+    </Svg>
+  ),
+  print: (
+    <Svg>
+      <path d="M6 7.5V3.5h8v4" />
+      <rect x="3.5" y="7.5" width="13" height="6.5" rx="1.5" />
+      <path d="M6 12h8v4.5H6z" />
+    </Svg>
+  ),
+  revert: (
+    <Svg>
+      <path d="M4.5 8.5A6 6 0 1 1 6 14" />
+      <path d="M4 4.5v4h4" />
+    </Svg>
+  ),
+  trim: (
+    <Svg>
+      <path d="M5 2.5v12.5h12.5" />
+      <path d="M2.5 5H15v12.5" strokeDasharray="2 2" />
+    </Svg>
+  ),
+  paste_new: (
+    <Svg>
+      <path d="M7 4H5a1 1 0 00-1 1v11a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1h-2" />
+      <rect x="7" y="2.5" width="6" height="3" rx="1" />
+      <path d="M10 9v5M7.5 11.5h5" />
+    </Svg>
+  ),
+  copy: (
+    <Svg>
+      <rect x="6.5" y="6.5" width="10" height="10" rx="1.5" />
+      <path d="M13.5 4.5v-.5A1 1 0 0012.5 3H4a1 1 0 00-1 1v8.5a1 1 0 001 1h.5" />
+    </Svg>
+  ),
+  share: (
+    <Svg>
+      <path d="M10 12.5V3M6.5 6.5L10 3l3.5 3.5" />
+      <path d="M4 10.5V16a1 1 0 001 1h10a1 1 0 001-1v-5.5" />
+    </Svg>
+  ),
+  settings: (
+    <Svg>
+      <circle cx="10" cy="10" r="2.5" />
+      <path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7" />
+    </Svg>
+  ),
+  close: (
+    <Svg>
+      <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+    </Svg>
+  ),
+  editor: (
+    <Svg>
+      <rect x="2.5" y="4" width="15" height="12" rx="1.5" />
+      <path d="M7 12.5l5.5-5.5 1.5 1.5L8.5 14H7z" />
+    </Svg>
+  ),
+  library: (
+    <Svg>
+      <rect x="3" y="3" width="6" height="6" rx="1.2" />
+      <rect x="11" y="3" width="6" height="6" rx="1.2" />
+      <rect x="3" y="11" width="6" height="6" rx="1.2" />
+      <rect x="11" y="11" width="6" height="6" rx="1.2" />
+    </Svg>
+  ),
+  recent: (
+    <Svg>
+      <rect x="2.5" y="8.5" width="15" height="8" rx="1.5" />
+      <path d="M4.5 6h11M6.5 3.5h7" />
+    </Svg>
+  ),
+  minus: (
+    <Svg>
+      <path d="M5 10h10" />
+    </Svg>
+  ),
+  plus: (
+    <Svg>
+      <path d="M5 10h10M10 5v10" />
+    </Svg>
+  ),
+  chevron: (
+    <Svg>
+      <path d="M6 8l4 4 4-4" />
+    </Svg>
+  ),
+  up: (
+    <Svg>
+      <path d="M6 12l4-4 4 4" />
+    </Svg>
+  ),
+  trash: (
+    <Svg>
+      <path d="M4.5 6h11M8 6V4.5h4V6M6 6l.8 9.5h6.4L14 6M8.5 9v4M11.5 9v4" />
+    </Svg>
+  ),
+  template: (
+    <Svg>
+      <rect x="3.5" y="3.5" width="13" height="13" rx="1.5" />
+      <path d="M3.5 7.5h13M10 7.5v9" />
+    </Svg>
+  ),
+  // The video player (VID-056 to VID-061).
+  play: (
+    <Svg>
+      <path d="M6.5 4.5v11l9-5.5z" />
+    </Svg>
+  ),
+  pause: (
+    <Svg>
+      <path d="M7 4.5v11M13 4.5v11" />
+    </Svg>
+  ),
+  frame_back: (
+    <Svg>
+      <path d="M5.5 5v10M15 5l-6.5 5 6.5 5z" />
+    </Svg>
+  ),
+  frame_next: (
+    <Svg>
+      <path d="M14.5 5v10M5 5l6.5 5L5 15z" />
+    </Svg>
+  ),
+  scissors: (
+    <Svg>
+      <circle cx="6" cy="14" r="2.5" />
+      <circle cx="14" cy="14" r="2.5" />
+      <path d="M7.7 12.2L14.5 3.5M12.3 12.2L5.5 3.5" />
+    </Svg>
+  ),
+  frame: (
+    <Svg>
+      <rect x="3" y="4.5" width="14" height="11" rx="1.5" />
+      <path d="M3 12.5l4-3.5 3.5 3 2.5-2 4 3" />
+      <circle cx="13" cy="8" r="1" />
+    </Svg>
+  ),
+  volume: (
+    <Svg>
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5zM13.5 7.5a3.5 3.5 0 0 1 0 5M15.5 5.5a6.5 6.5 0 0 1 0 9" />
+    </Svg>
+  ),
+  mute: (
+    <Svg>
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5zM13.5 8l4 4M17.5 8l-4 4" />
+    </Svg>
+  ),
+};
+
+export type IconName = keyof typeof ICONS;
+
+export function Icon({ name }: { name: IconName }) {
+  return ICONS[name];
+}

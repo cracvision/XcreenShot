@@ -19,6 +19,8 @@ use xs_core::paths::Paths;
 use xs_core::settings::SettingsStore;
 use xs_core::{CommandError, CommandSpec, ErrorCode, Lang, Source};
 
+mod mcp;
+
 /// `camelCase` / `snake_case` parameter name to `--kebab-case`.
 fn kebab(name: &str) -> String {
     let mut out = String::new();
@@ -69,6 +71,15 @@ fn param_arg(name: &str, schema: &Value, positional_index: Option<usize>) -> Arg
         arg = arg.value_name(name.to_uppercase());
     }
     let types = type_of(schema);
+    // A list of texts takes several values: `library import a.png b.png`, or
+    // `--tags A --tags B`; one JSON array still works.
+    if is_text_list(schema) {
+        return if positional_index.is_some() {
+            arg.num_args(1..)
+        } else {
+            arg.action(ArgAction::Append)
+        };
+    }
     if types == ["boolean"] && positional_index.is_none() {
         arg = arg
             .num_args(0..=1)
@@ -192,6 +203,8 @@ fn build_cli(lang: Lang, specs: &[CommandSpec]) -> Command {
                     .help(tr(lang, "cli.opt_yes", &[])),
             ),
     )
+    .subcommand(Command::new("mcp").about(tr(lang, "cli.mcp_about", &[])))
+    .subcommand(Command::new("agents-md").about(tr(lang, "cli.agents_md_about", &[])))
     .subcommand(
         Command::new("help")
             .about(tr(lang, "cli.help_about", &[]))
@@ -257,10 +270,28 @@ fn read_params_arg(raw: Option<&String>) -> Result<Map<String, Value>, String> {
     }
 }
 
+/// An array of strings.
+fn is_text_list(schema: &Value) -> bool {
+    type_of(schema) == ["array"] && schema["items"]["type"] == "string"
+}
+
 fn collect_params(spec: &CommandSpec, m: &ArgMatches) -> Result<Value, String> {
     let mut params = read_params_arg(m.get_one::<String>("__params"))?;
     let props = spec.params["properties"].as_object().cloned().unwrap_or_default();
     for (name, schema) in &props {
+        if is_text_list(schema) {
+            if let Some(values) = m.get_many::<String>(name) {
+                let values: Vec<&String> = values.collect();
+                let v = match values.as_slice() {
+                    [one] if one.trim_start().starts_with('[') => {
+                        serde_json::from_str(one).map_err(|e| format!("{name}: {e}"))?
+                    }
+                    _ => json!(values),
+                };
+                params.insert(name.clone(), v);
+            }
+            continue;
+        }
         if let Some(raw) = m.get_one::<String>(name) {
             let v = convert(raw, schema).map_err(|e| format!("{name}: {e}"))?;
             params.insert(name.clone(), v);
@@ -283,12 +314,41 @@ fn app_binary() -> Option<PathBuf> {
     candidate.exists().then_some(candidate)
 }
 
+/// Keeps the app this CLI starts from inheriting the CLI's own standard handles.
+/// Windows hands every inheritable handle to a child, so the app would hold the
+/// pipes of whoever runs the CLI (a script reading its output, an MCP client) open
+/// for as long as it runs, and that reader would never see the end of the output.
+#[cfg(windows)]
+fn keep_std_handles_to_ourselves() {
+    use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE_FLAG_INHERIT};
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
+    for which in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+        // SAFETY: plain Win32 calls on this process's own standard handles; an
+        // invalid or missing handle makes them fail, which changes nothing.
+        unsafe {
+            let handle = GetStdHandle(which);
+            if !handle.is_null() {
+                SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0);
+            }
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn keep_std_handles_to_ourselves() {
+    // The child's 0, 1 and 2 become /dev/null and std opens everything else with
+    // close-on-exec: nothing of ours stays open in the app.
+}
+
 /// Starts the app in the background (no windows) and waits until it listens.
 fn launch(endpoint: &str, lang: Lang, quiet: bool) -> bool {
     let Some(bin) = app_binary() else { return false };
     if !quiet {
         eprintln!("{}", tr(lang, "cli.launching", &[]));
     }
+    keep_std_handles_to_ourselves();
     if std::process::Command::new(bin)
         .arg("--background")
         .stdin(std::process::Stdio::null())
@@ -369,6 +429,14 @@ fn main() -> ExitCode {
     let no_launch = matches.get_flag("no_launch");
 
     let (spec, params, yes) = match matches.subcommand() {
+        Some(("mcp", _)) => return mcp::serve(&specs, no_launch, lang),
+        // APP-033: the guide for agents, built from this build's registry.
+        Some(("agents-md", _)) => {
+            // A reader that stops early (`| head`) is not an error.
+            use std::io::Write;
+            let _ = std::io::stdout().write_all(xs_core::agents_md::render().as_bytes());
+            return ExitCode::SUCCESS;
+        }
         Some(("help", m)) => {
             let mut cli = cli;
             return match m.get_one::<String>("command") {
@@ -455,7 +523,9 @@ fn main() -> ExitCode {
         None => return ExitCode::from(2),
     };
 
-    if spec.destructive && !yes {
+    // A dry run only says what would change (settings.import, APP-011).
+    let dry_run = params.get("dryRun").and_then(Value::as_bool) == Some(true);
+    if spec.destructive && !yes && !dry_run {
         return out.fail(
             CommandError::new(ErrorCode::InvalidParams, tr(lang, "cli.needs_yes", &[])),
             lang,
@@ -477,11 +547,46 @@ fn main() -> ExitCode {
         lang: Some(lang),
     };
     let _ = std::io::stderr().flush();
+    // One JSON line per event until interrupted (APP-031).
+    if spec.id == "events.watch" {
+        return watch(&endpoint, &request, &out, lang);
+    }
     match ipc::send(&endpoint, &request, timeout) {
         Ok(response) => out.finish(response, lang),
         Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
             out.fail(CommandError::new(ErrorCode::Timeout, e.to_string()), lang)
         }
+        Err(e) => out.fail(
+            CommandError::new(
+                ErrorCode::NotRunning,
+                format!("{}: {e}", tr(lang, "cli.not_running", &[])),
+            ),
+            lang,
+        ),
+    }
+}
+
+/// `xcreenshot events watch`: the app answers first whether it watches, then sends
+/// every event; each one is printed as a JSON line as it arrives.
+fn watch(endpoint: &str, request: &Request, out: &Output, lang: Lang) -> ExitCode {
+    let mut refused = None;
+    let mut first = true;
+    let streamed = ipc::stream(endpoint, request, |line| {
+        if std::mem::take(&mut first) {
+            if line["ok"] == json!(false) {
+                refused = serde_json::from_value::<CommandError>(line["error"].clone()).ok();
+                return false;
+            }
+            return true;
+        }
+        let mut stdout = std::io::stdout().lock();
+        writeln!(stdout, "{line}").and_then(|_| stdout.flush()).is_ok()
+    });
+    if let Some(e) = refused {
+        return out.fail(e, lang);
+    }
+    match streamed {
+        Ok(()) => ExitCode::SUCCESS,
         Err(e) => out.fail(
             CommandError::new(
                 ErrorCode::NotRunning,
@@ -530,6 +635,20 @@ mod tests {
             collect_params(spec, am).unwrap(),
             json!({"key": "general.theme", "value": "dark"})
         );
+        // A list takes several values, or one JSON array (LIB-024).
+        let spec = specs.iter().find(|s| s.id == "library.import").unwrap();
+        for args in [
+            vec!["xcreenshot", "library", "import", "a.png", "D:/Proyecto X"],
+            vec!["xcreenshot", "library", "import", r#"["a.png","D:/Proyecto X"]"#],
+        ] {
+            let m = cli.clone().try_get_matches_from(args).unwrap();
+            let (_, sm) = m.subcommand().unwrap();
+            let (_, am) = sm.subcommand().unwrap();
+            assert_eq!(
+                collect_params(spec, am).unwrap()["paths"],
+                json!(["a.png", "D:/Proyecto X"])
+            );
+        }
         let m = cli
             .try_get_matches_from([
                 "xcreenshot",
