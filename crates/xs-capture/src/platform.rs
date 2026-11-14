@@ -299,6 +299,53 @@ mod imp {
             std::env::var("COMPUTERNAME").unwrap_or_default(),
         )
     }
+
+    /// The desktop's icon list: the SysListView32 under SHELLDLL_DefView, in Progman or,
+    /// with a slideshow wallpaper, in a WorkerW.
+    fn desktop_list() -> Option<isize> {
+        use windows_sys::Win32::Foundation::{HWND, LPARAM};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{EnumWindows, FindWindowExW, FindWindowW};
+        let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+        let (defview, list) = (wide("SHELLDLL_DefView"), wide("SysListView32"));
+        // SAFETY: window lookups; the handles are only read.
+        unsafe {
+            let progman = FindWindowW(wide("Progman").as_ptr(), std::ptr::null());
+            let mut view = FindWindowExW(progman, std::ptr::null_mut(), defview.as_ptr(), std::ptr::null());
+            if view.is_null() {
+                unsafe extern "system" fn each(hwnd: HWND, found: LPARAM) -> i32 {
+                    let name: Vec<u16> = "SHELLDLL_DefView".encode_utf16().chain(Some(0)).collect();
+                    // SAFETY: a child lookup in a window EnumWindows gave.
+                    let v =
+                        unsafe { FindWindowExW(hwnd, std::ptr::null_mut(), name.as_ptr(), std::ptr::null()) };
+                    if v.is_null() {
+                        return 1;
+                    }
+                    // SAFETY: `found` points to the HWND being looked for.
+                    unsafe { *(found as *mut HWND) = v };
+                    0
+                }
+                EnumWindows(Some(each), &mut view as *mut HWND as LPARAM);
+            }
+            if view.is_null() {
+                return None;
+            }
+            let l = FindWindowExW(view, std::ptr::null_mut(), list.as_ptr(), std::ptr::null());
+            (!l.is_null()).then_some(l as isize)
+        }
+    }
+
+    /// Shows or hides the desktop's icons, where they are (VID-018); returns whether they
+    /// were showing, or `None` without a desktop.
+    pub fn desktop_icons(show: bool) -> Option<bool> {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOWNA};
+        let list = desktop_list()? as windows_sys::Win32::Foundation::HWND;
+        // SAFETY: showing or hiding the shell's icon list, which keeps the icons' places.
+        unsafe {
+            let was = IsWindowVisible(list) != 0;
+            ShowWindow(list, if show { SW_SHOWNA } else { SW_HIDE });
+            Some(was)
+        }
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -333,6 +380,11 @@ mod imp {
 
     pub fn is_regular_window(_id: u32) -> bool {
         true
+    }
+
+    /// The desktop's icons (VID-018): not on this platform yet.
+    pub fn desktop_icons(_show: bool) -> Option<bool> {
+        None
     }
 
     pub fn is_cloaked(_id: u32) -> bool {
@@ -397,7 +449,7 @@ mod imp {
 }
 
 pub use imp::{
-    app_info, clipboard_owner_pid, cursor_position, foreground_pid, is_app_window, is_cloaked,
+    app_info, clipboard_owner_pid, cursor_position, desktop_icons, foreground_pid, is_app_window, is_cloaked,
     is_regular_window, os_info, session_locked, show_window, user_and_machine,
 };
 
@@ -406,4 +458,25 @@ pub fn clipboard_app() -> Option<AppInfo> {
     clipboard_owner_pid()
         .map(|pid| app_info(pid, ""))
         .filter(|a| !a.name.is_empty())
+}
+
+#[cfg(all(test, windows))]
+mod icon_tests {
+    /// VID-018 on this computer: the desktop's icons hide and come back (run by hand,
+    /// `--ignored`: they blink).
+    #[test]
+    #[ignore]
+    fn icons_hide_and_come_back() {
+        let was = super::desktop_icons(false);
+        if was != Some(true) {
+            // No desktop, or icons the user hid: leave them as they were.
+            if was == Some(false) {
+                let _ = super::desktop_icons(false);
+            }
+            return;
+        }
+        // Hidden now; shown again, where they were.
+        assert_eq!(super::desktop_icons(true), Some(false));
+        assert_eq!(super::desktop_icons(true), Some(true));
+    }
 }

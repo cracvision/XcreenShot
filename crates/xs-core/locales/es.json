@@ -1492,6 +1492,14 @@
     "video_drawFade": {
       "label": "Las formas desaparecen tras",
       "description": "Segundos, de 1 a 30; 0: nunca mientras Dibujo en vivo esté activo."
+    },
+    "video_startAtOnce": {
+      "label": "Empezar a grabar sin esperar",
+      "description": "En cuanto eliges el área, la grabación empieza (tras la cuenta atrás) sin pulsar Grabar."
+    },
+    "video_hideDesktopIcons": {
+      "label": "Ocultar los íconos del escritorio al grabar",
+      "description": "Vuelven a su sitio al terminar la grabación."
     }
   },
   "errors": {

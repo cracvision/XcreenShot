@@ -458,6 +458,16 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         def("video.cursor", "video", boolean(), json!(true), "VID-044"),
         // Cursor and keyboard effects (VID-045 to VID-047).
+        // A clean desktop while recording (VID-018).
+        def(
+            "video.hideDesktopIcons",
+            "video",
+            boolean(),
+            json!(false),
+            "VID-018",
+        ),
+        // Start recording without waiting (VID-007).
+        def("video.startAtOnce", "video", boolean(), json!(false), "VID-007"),
         def("video.highlight", "video", boolean(), json!(false), "VID-045"),
         def(
             "video.highlightColor",

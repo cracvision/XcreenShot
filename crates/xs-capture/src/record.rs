@@ -250,7 +250,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         let state = ready_state(core, &r);
         bar(core, Some(state.clone()));
         tell(core, ctx.source, "record.ready", state.clone());
-        return Ok(state);
+        return start_at_once(core, ctx, state);
     }
     if p.get("selection").and_then(Value::as_str) == Some("fullscreen") {
         let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": "pointer" }), ctx.lang)?;
@@ -266,7 +266,7 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         let state = ready_state(core, &r);
         bar(core, Some(state.clone()));
         tell(core, ctx.source, "record.ready", state.clone());
-        return Ok(state);
+        return start_at_once(core, ctx, state);
     }
     let (monitor, rect) = crate::interactive::pick_area(core, ctx)?;
     if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
@@ -287,7 +287,41 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let state = ready_state(core, &r);
     bar(core, Some(state.clone()));
     tell(core, ctx.source, "record.ready", state.clone());
-    Ok(state)
+    start_at_once(core, ctx, state)
+}
+
+/// Where XcreenShot notes that it hid the desktop's icons, to show them again even after
+/// a crash (VID-018).
+const ICONS_KEY: &str = "video.iconsHidden";
+
+/// Hides the desktop's icons for a recording, with the preference (VID-018); only when
+/// they were showing, so icons the user hid stay hidden.
+fn hide_icons(core: &Core) {
+    if !core.settings.get_bool("video.hideDesktopIcons") || core.recall(ICONS_KEY).is_some() {
+        return;
+    }
+    if platform::desktop_icons(false) == Some(true) {
+        core.remember(ICONS_KEY, json!(true));
+    }
+}
+
+/// Shows the icons hidden for a recording, where they were (VID-018).
+pub fn restore_icons(core: &Core) {
+    if core.recall(ICONS_KEY).is_some() {
+        let _ = platform::desktop_icons(true);
+        core.forget(ICONS_KEY);
+    }
+}
+
+/// Start recording without waiting (VID-007): with the preference, Ready goes on to
+/// the countdown and the recording by itself, as if Record were pressed.
+fn start_at_once(core: &Arc<Core>, ctx: &Context, ready: Value) -> CommandResult {
+    // A clean desktop already in Ready, to see the result (VID-018).
+    hide_icons(core);
+    if !core.settings.get_bool("video.startAtOnce") {
+        return Ok(ready);
+    }
+    start(core, ctx, &json!({}))
 }
 
 fn ready_state(core: &Core, r: &Ready) -> Value {
@@ -741,6 +775,7 @@ fn watch(core: Weak<Core>, source: Source) {
 /// Stops (or cancels) `r` and reports the file.
 fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> CommandResult {
     crate::livedraw::recording_ended(core);
+    restore_icons(core);
     let wants_audio = r.wants_audio;
     let open = r.open;
     let summary = if cancel {
@@ -861,6 +896,8 @@ pub fn stop(core: &Core, ctx: &Context) -> CommandResult {
 /// `record.cancel`: ends without a file (VID-014); when Ready, nothing is recorded.
 pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
     if service(core).ready.lock().unwrap().take().is_some() {
+        crate::livedraw::recording_ended(core);
+        restore_icons(core);
         bar(core, None);
         tell(
             core,
@@ -908,6 +945,8 @@ pub fn image(core: &Core, ctx: &Context) -> CommandResult {
             rect
         }
     };
+    crate::livedraw::recording_ended(core);
+    restore_icons(core);
     bar(core, None);
     tell(
         core,

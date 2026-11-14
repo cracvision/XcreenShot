@@ -1492,6 +1492,14 @@
     "video_drawFade": {
       "label": "Shapes disappear after",
       "description": "Seconds, 1 to 30; 0: never while Live drawing is on."
+    },
+    "video_startAtOnce": {
+      "label": "Start recording without waiting",
+      "description": "Once the area is chosen, the recording starts (after the countdown) without pressing Record."
+    },
+    "video_hideDesktopIcons": {
+      "label": "Hide the desktop icons while recording",
+      "description": "They come back where they were when the recording ends."
     }
   },
   "errors": {
