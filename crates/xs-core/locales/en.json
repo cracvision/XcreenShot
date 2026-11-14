@@ -2560,7 +2560,8 @@
         "scroll_auto": "scroll down, right or both ways by itself",
         "add_area": "add an area (from Universal or Region)",
         "remove_last_area": "remove the last area",
-        "finish_areas": "finish (with at least one area)"
+        "finish_areas": "finish (with at least one area)",
+        "qr": "Read the QR codes in the selection"
       },
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
@@ -2587,7 +2588,11 @@
       "hint_menu": "Click or press Enter to capture the highlighted menu, or drag an area",
       "freehand_free": "Drag around what you want; let go to close the shape",
       "freehand_polygon": "Click each corner · Enter or double-click closes · Backspace removes the last",
-      "freehand_ellipse": "Drag an ellipse · Shift: a circle"
+      "freehand_ellipse": "Drag an ellipse · Shift: a circle",
+      "qr_one": "QR",
+      "qr_other": "QR ×{{count}}",
+      "qr_title_one": "The QR code in the selection",
+      "qr_title_other": "The {{count}} QR codes in the selection"
     },
     "panel": {
       "title": "XcreenShot · Capture",

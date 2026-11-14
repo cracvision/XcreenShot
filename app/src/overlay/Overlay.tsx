@@ -8,6 +8,8 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QuickBar } from "./QuickAnnotate";
+import { QrPanel } from "./QrPanel";
+import { codesIn, type QrCode } from "../lib/qr";
 import { closes, ellipsePoints, extend, SCISSORS, type FreehandShape } from "./freehand";
 import {
   COLORS,
@@ -83,6 +85,8 @@ interface Start {
     simpleCrosshair?: boolean;
     /** The compatibility profile's keys on Windows (CAP-066). */
     compatibility?: boolean;
+    /** QR codes are looked for on the frozen screens (SMT-038). */
+    qr?: boolean;
     /** Show "H: help" in the hint, the first times (CAP-020). */
     helpHint?: boolean;
     /** Region with a fixed size (CAP-026): a rectangle of this size follows the pointer. */
@@ -198,6 +202,9 @@ export function Overlay() {
   const [sel, setSel] = useState<Rect | null>(null);
   const [clamped, setClamped] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // QR codes found on the frozen screens, and their panel (SMT-038).
+  const [qr, setQr] = useState<{ seq: number; codes: QrCode[] } | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const bg = useRef<HTMLCanvasElement>(null);
   const fg = useRef<HTMLCanvasElement>(null);
   const mag = useRef<HTMLCanvasElement>(null);
@@ -223,6 +230,9 @@ export function Overlay() {
     anchor: null as Pt | null,
     snapped: null as [number, number] | null,
     help: false,
+    // The QR codes in the selection and whether their panel is open (SMT-038).
+    qrCount: 0,
+    qrOpen: false,
     // Frame timing, to notice a slow crosshair (CAP-014, APP-053).
     asked: 0,
     lag: { sum: 0, count: 0, since: 0 },
@@ -792,6 +802,8 @@ export function Overlay() {
       const payload = e.payload;
       if (payload.index !== myIndex) return;
       setLanguage(payload.lang);
+      setQr((q) => (q && q.seq === payload.seq ? q : null));
+      setQrOpen(false);
       const st = s.current;
       st.finished = false;
       st.sel = null;
@@ -893,6 +905,10 @@ export function Overlay() {
       const timings = { fetchMs: Math.round(fetchMs), totalMs: Math.round(performance.now() - t0) };
       await invoke("xs_overlay_ready", { seq: payload.seq, index: payload.index, timings });
     });
+    // The codes come a moment after the screens freeze (SMT-038).
+    const unQr = listen<{ seq: number; codes: QrCode[] }>("xs://overlay-qr", (e) =>
+      setQr(e.payload),
+    );
     const unEnd = listen("xs://overlay-end", () => {
       // Free the frozen frame right away.
       for (const c of [bg.current, fg.current]) {
@@ -905,6 +921,7 @@ export function Overlay() {
     });
     return () => {
       void unStart.then((f) => f());
+      void unQr.then((f) => f());
       void unEnd.then((f) => f());
     };
   }, [showText]);
@@ -1256,6 +1273,15 @@ export function Overlay() {
     ],
   );
 
+  // The QR codes inside the selection (SMT-038).
+  const qrHere =
+    start && qr && qr.seq === start.seq && sel && phase === "adjusting"
+      ? codesIn(qr.codes, sel)
+      : [];
+  useEffect(() => {
+    s.current.qrCount = qrHere.length;
+  }, [qrHere.length]);
+
   // ---------------------------------------------------------------- keyboard
   useEffect(() => {
     if (!start || !monitor || !desktop) return;
@@ -1264,6 +1290,15 @@ export function Overlay() {
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" && e.key !== "Escape") return;
       if (target.tagName === "TEXTAREA") return;
+      // The QR panel (SMT-038): Esc closes it; its buttons take the other keys.
+      if (st.qrOpen) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          st.qrOpen = false;
+          setQrOpen(false);
+        }
+        return;
+      }
       if (e.key === "Escape") {
         e.preventDefault();
         if (start.request.quickAnnotate && st.drawing) {
@@ -1415,6 +1450,9 @@ export function Overlay() {
             ? { kind: "scroll", type: "auto", direction, rect: st.sel }
             : { kind: "scroll", type: "manual", rect: st.sel },
         );
+      } else if (key === "q" && st.phase === "adjusting" && st.qrCount > 0) {
+        st.qrOpen = true;
+        setQrOpen(true);
       } else if (e.key === "Backspace" && st.phase === "adjusting") {
         redo();
       } else if (e.key.startsWith("Arrow") && st.phase === "adjusting" && st.sel) {
@@ -1561,6 +1599,7 @@ export function Overlay() {
           windowsOnly={windowsOnly(start)}
           compatibility={start.request.compatibility === true}
           monitors={start.request.monitors.length}
+          qr={start.request.qr === true}
         />
       )}
       {barHere && sel && monitor && start?.request.quickAnnotate && (
@@ -1650,8 +1689,23 @@ export function Overlay() {
               : undefined
           }
           scrollOk={start ? scrollable(start, sel) : false}
+          qr={qrHere.length}
+          onQr={() => {
+            s.current.qrOpen = true;
+            setQrOpen(true);
+          }}
           onRedo={redo}
           onCancel={cancel}
+        />
+      )}
+      {barHere && sel && monitor && qrOpen && qrHere.length > 0 && (
+        <QrPanel
+          codes={qrHere}
+          style={qrPanelPlace(sel, monitor.rect, cssPerPx)}
+          onClose={() => {
+            s.current.qrOpen = false;
+            setQrOpen(false);
+          }}
         />
       )}
     </div>
@@ -1667,11 +1721,13 @@ function KeysHelp({
   windowsOnly: windowOnly,
   compatibility,
   monitors,
+  qr,
 }: {
   phase: Phase;
   windowsOnly: boolean;
   compatibility: boolean;
   monitors: number;
+  qr: boolean;
 }) {
   const { t } = useTranslation();
   const rows: [string, string][] = [];
@@ -1683,6 +1739,7 @@ function KeysHelp({
     k("← ↑ → ↓", "move");
     k("Shift", "move_more");
     k("Alt + ← ↑ → ↓", "resize");
+    if (qr) k("Q", "qr");
     k("⌫", "redo");
   } else if (windowOnly) {
     k(t("ui.overlay.keys.click_key"), "click_window");
@@ -1780,6 +1837,9 @@ interface BarProps {
   onScroll: ((direction?: "vertical" | "horizontal" | "both") => void) | undefined;
   /** The selection is big enough to scroll. */
   scrollOk: boolean;
+  /** QR codes in the selection (SMT-038), and their panel. */
+  qr: number;
+  onQr: () => void;
   onRedo: () => void;
   onCancel: () => void;
 }
@@ -1794,6 +1854,8 @@ function CaptureBar({
   onImage,
   onScroll,
   scrollOk,
+  qr,
+  onQr,
   onRedo,
   onCancel,
 }: BarProps) {
@@ -1906,6 +1968,17 @@ function CaptureBar({
           ))}
         </span>
       )}
+      {qr > 0 && (
+        <button
+          className="overlay-btn"
+          onClick={onQr}
+          title={t("ui.overlay.qr_title", { count: qr })}
+          aria-label={t("ui.overlay.qr_title", { count: qr })}
+          aria-keyshortcuts="Q"
+        >
+          {t("ui.overlay.qr", { count: qr })} <kbd>Q</kbd>
+        </button>
+      )}
       <button className="overlay-btn" onClick={onRedo} title="Backspace">
         {t("ui.overlay.redo")}
       </button>
@@ -1919,6 +1992,17 @@ function CaptureBar({
       )}
     </div>
   );
+}
+
+/** The QR panel beside the selection (right, else left), inside the window (SMT-038). */
+function qrPanelPlace(sel: Rect, monitor: Rect, cssPerPx: number): React.CSSProperties {
+  const width = 360;
+  const x = (sel.x - monitor.x) * cssPerPx;
+  const y = (sel.y - monitor.y) * cssPerPx;
+  let left = x + sel.width * cssPerPx + 12;
+  if (left + width > window.innerWidth - 8) left = Math.max(8, x - width - 12);
+  const top = Math.min(Math.max(8, y), Math.max(8, window.innerHeight - 280));
+  return { left, top, width };
 }
 
 /** Where quick annotation's bar goes: under the area, or above it near the bottom. */

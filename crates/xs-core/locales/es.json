@@ -2560,7 +2560,8 @@
         "scroll_auto": "desplazar solo hacia abajo, a la derecha o en ambas direcciones",
         "add_area": "añadir un área (desde Universal o Región)",
         "remove_last_area": "quitar la última área",
-        "finish_areas": "terminar (con al menos un área)"
+        "finish_areas": "terminar (con al menos un área)",
+        "qr": "Leer los códigos QR de la selección"
       },
       "fullscreen": "Pantalla completa",
       "all_monitors": "Todos los monitores",
@@ -2587,7 +2588,11 @@
       "hint_menu": "Haz clic o pulsa Enter para capturar el menú resaltado, o arrastra un área",
       "freehand_free": "Arrastra alrededor de lo que quieras; al soltar se cierra la forma",
       "freehand_polygon": "Clic en cada esquina · Enter o doble clic cierra · Retroceso quita la última",
-      "freehand_ellipse": "Arrastra una elipse · Mayús: un círculo"
+      "freehand_ellipse": "Arrastra una elipse · Mayús: un círculo",
+      "qr_one": "QR",
+      "qr_other": "QR ×{{count}}",
+      "qr_title_one": "El código QR de la selección",
+      "qr_title_other": "Los {{count}} códigos QR de la selección"
     },
     "panel": {
       "title": "XcreenShot · Captura",

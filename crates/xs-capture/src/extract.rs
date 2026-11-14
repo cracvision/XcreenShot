@@ -144,8 +144,15 @@ pub fn recognize(
         "text extracted"
     );
     let id = new_id();
+    // The zone's QR codes, at the end of the window (SMT-038).
+    let codes = if core.settings.get_bool("smart.qr.enabled") {
+        crate::qr_cmds::codes_in(&image, (0.0, 0.0))
+    } else {
+        Vec::new()
+    };
     let result = json!({
         "id": id,
+        "codes": codes,
         "found": r.words() > 0,
         "words": r.words(),
         "language": r.language,

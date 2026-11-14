@@ -2152,6 +2152,72 @@ html.overlay-root #root {
   color: #fff;
 }
 
+/* The QR codes of the selection while capturing (SMT-038). */
+.overlay-qr {
+  position: absolute;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgb(20 24 28 / 0.96);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 14px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 0.5);
+  font:
+    12px "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #fff;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.overlay-qr p {
+  margin: 0;
+}
+
+/* A list of QR codes read (SMT-038): while capturing and in Extract text. */
+.qr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 !important;
+  display: grid;
+  gap: 8px;
+}
+
+.qr-list-code,
+.qr-list-ask {
+  display: grid;
+  gap: 6px;
+}
+
+.qr-list-ask p {
+  margin: 0;
+}
+
+.qr-list-text,
+.qr-list-url {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.qr-list-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.text-result-codes {
+  display: grid;
+  gap: 8px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.text-result-codes h2 {
+  margin: 0;
+  font: 600 13px var(--font-sans);
+}
+
 .overlay-grip {
   cursor: grab;
   opacity: 0.7;

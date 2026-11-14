@@ -11,6 +11,7 @@ import { isCommandError, run } from "../lib/commands";
 import { useAppShortcuts } from "../lib/appShortcuts";
 import { useApp, useSetting } from "../store";
 import { textTips, type TextResultData } from "./textResultState";
+import { QrCodeList } from "../components/QrCodeList";
 
 interface Languages {
   languages: { code: string; name: string; tag: string | null; available: boolean }[];
@@ -178,6 +179,12 @@ export function TextResult({ id }: { id: string }) {
             ))}
           </ul>
         </div>
+      )}
+      {result.codes && result.codes.length > 0 && (
+        <section className="text-result-codes" aria-label={t("ui.qr.codes_title")}>
+          <h2>{t("ui.qr.codes_title")}</h2>
+          <QrCodeList codes={result.codes} button="btn small" primary="btn primary small" />
+        </section>
       )}
       <div className="text-result-bar">
         {result.found && (

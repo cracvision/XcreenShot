@@ -383,6 +383,8 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         // "H: help" the first three times (CAP-020).
         "helpHint": help_hint(core),
         "magnifierZoom": core.recall("capture.magnifierZoom").unwrap_or(json!(4)),
+        // QR codes are looked for on the frozen screens (SMT-038).
+        "qr": core.settings.get_bool("smart.qr.enabled") && core.settings.get_bool("smart.qr.detectOnCapture"),
     });
     if let (Some(r), Some(e)) = (request.as_object_mut(), extra.as_object()) {
         r.extend(e.clone());

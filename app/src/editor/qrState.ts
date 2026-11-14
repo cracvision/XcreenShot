@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { run } from "../lib/commands";
 import { useEditor, type QrObject, type QrStyle } from "./state";
+import type { QrCode } from "../lib/qr";
 
 export const DEFAULT_QR: QrStyle = {
   kind: "link",
@@ -22,15 +23,7 @@ export interface QrCheck {
   svg?: string;
 }
 
-export interface QrCode {
-  text: string;
-  rect: [number, number, number, number];
-  kind: "url" | "wifi" | "text";
-  host?: string;
-  ssid?: string;
-  security?: string;
-  password?: string;
-}
+export { splitUrl, type QrCode } from "../lib/qr";
 
 interface QrState {
   /** The create panel: new (objectId null) or changing a QR object. */
@@ -171,12 +164,6 @@ export async function redactCode(code: QrCode): Promise<void> {
   } catch (e) {
     fail(e);
   }
-}
-
-/** The address with its domain apart, to show before opening it. */
-export function splitUrl(url: string): [string, string, string] {
-  const m = /^([a-z][a-z0-9+.-]*:\/\/)([^/?#]*)(.*)$/i.exec(url);
-  return m ? [m[1] ?? "", m[2] ?? "", m[3] ?? ""] : ["", url, ""];
 }
 
 /** After a capture opens in the editor: its codes, quietly (SMT-038). */

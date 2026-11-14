@@ -164,6 +164,36 @@ fn described(text: &str) -> Value {
     json!({"kind": "text"})
 }
 
+/// The QR codes on the frozen screens while capturing (SMT-038): what each says and
+/// where it is on the virtual screen (physical px). `monitors` are the selection
+/// request's (their `rect`), in the order of `frames`.
+pub fn codes_on_screen(frames: &[xs_core::host::Frame], monitors: &[Value]) -> Vec<Value> {
+    let mut out = Vec::new();
+    for (frame, m) in frames.iter().zip(monitors) {
+        let ox = m["rect"]["x"].as_f64().unwrap_or(0.0);
+        let oy = m["rect"]["y"].as_f64().unwrap_or(0.0);
+        let Some(img) = image::RgbaImage::from_raw(frame.width, frame.height, frame.rgba.as_ref().clone())
+        else {
+            continue;
+        };
+        out.extend(codes_in(&img, (ox, oy)));
+    }
+    out
+}
+
+/// The QR codes of `img`, what each is and where (moved by `offset`) (SMT-038).
+pub fn codes_in(img: &image::RgbaImage, offset: (f64, f64)) -> Vec<Value> {
+    xs_image::qr::read(img)
+        .into_iter()
+        .map(|f| {
+            let mut v = described(&f.text);
+            v["text"] = json!(f.text);
+            v["rect"] = json!([f.rect[0] + offset.0, f.rect[1] + offset.1, f.rect[2], f.rect[3]]);
+            v
+        })
+        .collect()
+}
+
 /// `smart.qr_read` (SMT-038).
 pub fn read(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
@@ -255,6 +285,65 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use xs_core::Source;
+
+    /// SMT-038, while capturing: the codes of two frozen monitors (the second left of
+    /// the first), on the virtual screen, with what each is.
+    #[test]
+    fn codes_on_the_frozen_screens() {
+        let style = xs_image::qr::QrStyle::default();
+        let frame = |content: &str, at: (i64, i64)| {
+            let mut img = image::RgbaImage::from_pixel(800, 600, image::Rgba([250, 250, 250, 255]));
+            let code = xs_image::qr::picture(content, &style, 240).unwrap();
+            image::imageops::overlay(&mut img, &code, at.0, at.1);
+            xs_core::host::Frame {
+                width: 800,
+                height: 600,
+                rgba: Arc::new(img.into_raw()),
+            }
+        };
+        let frames = vec![
+            frame("https://example.com/menu", (400, 300)),
+            frame("WIFI:S:Casa;T:WPA;P:secreta;;", (100, 50)),
+        ];
+        let monitors = vec![
+            json!({"rect": {"x": 0, "y": 0, "width": 800, "height": 600}}),
+            json!({"rect": {"x": -800, "y": 120, "width": 800, "height": 600}}),
+        ];
+        let codes = codes_on_screen(&frames, &monitors);
+        assert_eq!(codes.len(), 2, "{codes:?}");
+        let url = codes.iter().find(|c| c["kind"] == "url").unwrap();
+        assert_eq!(url["host"], "example.com");
+        let r = url["rect"].as_array().unwrap();
+        assert!((r[0].as_f64().unwrap() - 400.0).abs() < 40.0, "{r:?}");
+        let wifi = codes.iter().find(|c| c["kind"] == "wifi").unwrap();
+        assert_eq!(wifi["ssid"], "Casa");
+        let r = wifi["rect"].as_array().unwrap();
+        assert!(
+            r[0].as_f64().unwrap() < -600.0 && r[1].as_f64().unwrap() > 150.0,
+            "{r:?}"
+        );
+    }
+
+    /// How long the codes of a 4K screen take (SMT-038: in the background, never
+    /// before the crosshair). `cargo test -p xs-capture --release -- --ignored --nocapture a_4k_screen`
+    #[test]
+    #[ignore]
+    fn a_4k_screen() {
+        let style = xs_image::qr::QrStyle::default();
+        let mut img = image::RgbaImage::from_pixel(3840, 2160, image::Rgba([240, 240, 240, 255]));
+        let code = xs_image::qr::picture("https://example.com", &style, 300).unwrap();
+        image::imageops::overlay(&mut img, &code, 2000, 1200);
+        let frames = vec![xs_core::host::Frame {
+            width: 3840,
+            height: 2160,
+            rgba: Arc::new(img.into_raw()),
+        }];
+        let monitors = vec![json!({"rect": {"x": 0, "y": 0}})];
+        let t = std::time::Instant::now();
+        let codes = codes_on_screen(&frames, &monitors);
+        println!("{} code(s) in {} ms", codes.len(), t.elapsed().as_millis());
+        assert_eq!(codes.len(), 1);
+    }
 
     fn core() -> (Arc<Core>, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
