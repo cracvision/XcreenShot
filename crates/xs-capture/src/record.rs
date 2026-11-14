@@ -29,6 +29,8 @@ struct Running {
     again: Ready,
     /// When Record was pressed or the countdown ended (VID-030).
     pressed: std::time::Instant,
+    /// Its name in the recovery folder (VID-022).
+    rid: String,
 }
 
 /// Open in (VID-052): `open` is `editor` or `none`; without it, the Video tab says, and
@@ -299,6 +301,109 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     bar(core, Some(state.clone()));
     tell(core, ctx.source, "record.ready", state.clone());
     start_at_once(core, ctx, state)
+}
+
+/// Where recordings are written while they record (VID-022).
+pub fn recovery_dir(core: &Core) -> PathBuf {
+    core.paths.local_dir.join("recovery").join("video")
+}
+
+/// The files of recording `rid` in the recovery folder go.
+fn forget_recovery(core: &Core, rid: &str) {
+    let dir = recovery_dir(core);
+    let video = dir.join(format!("{rid}.mp4"));
+    let _ = std::fs::remove_file(xs_video::time_file(&video));
+    let _ = std::fs::remove_file(video);
+    let _ = std::fs::remove_file(dir.join(format!("{rid}.json")));
+}
+
+/// Recordings the app did not finish (VID-022): each becomes an item of Recover
+/// work, with its date, length and first frame. One with nothing readable goes.
+pub fn recover_leftovers(core: &Arc<Core>) {
+    let current = service(core)
+        .current
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|r| r.rid.clone());
+    let dir = recovery_dir(core);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return;
+    };
+    let items = xs_editor::editor(core).recovery_dir();
+    for meta_file in entries.flatten().map(|e| e.path()) {
+        if meta_file.extension().is_none_or(|x| x != "json") {
+            continue;
+        }
+        let Some(rid) = meta_file.file_stem().map(|s| s.to_string_lossy().into_owned()) else {
+            continue;
+        };
+        if current.as_deref() == Some(rid.as_str()) {
+            continue;
+        }
+        let video = dir.join(format!("{rid}.mp4"));
+        let length = video
+            .exists()
+            .then(|| xs_video::recovered_length(&video))
+            .flatten()
+            .filter(|l| *l > 0.0);
+        let Some(length) = length else {
+            forget_recovery(core, &rid);
+            continue;
+        };
+        let meta: Value = std::fs::read(&meta_file)
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default();
+        let target = meta["path"].as_str().map(PathBuf::from);
+        let name = target
+            .as_ref()
+            .and_then(|p| p.file_stem())
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Video".into());
+        let saved_at = meta["started"]
+            .as_str()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or_else(chrono::Utc::now);
+        let entry = xs_editor::recovery::Entry {
+            id: rid.clone(),
+            name,
+            original_path: target,
+            kind: "video".into(),
+            format: "mp4".into(),
+            saved_at,
+            video: Some(video.clone()),
+            duration: Some((length * 10.0).round() / 10.0),
+            thumbnail: thumbnail_of(&video),
+            open: meta["open"].as_bool(),
+        };
+        let _ = std::fs::create_dir_all(&items);
+        if xs_editor::recovery::write_entry(&items, &entry).is_ok() {
+            let _ = std::fs::remove_file(&meta_file);
+            tracing::info!(seconds = length, "a recording cut short is in Recover work");
+        }
+    }
+}
+
+/// The first frame of a video, 160 px wide, as a PNG data URL.
+fn thumbnail_of(video: &std::path::Path) -> Option<String> {
+    use base64::Engine;
+    let (w, h, mut px) = xs_video::frame_at(video, 0.0).ok()?;
+    for p in px.as_chunks_mut::<4>().0 {
+        p.swap(0, 2);
+        p[3] = 255;
+    }
+    let image = image::RgbaImage::from_raw(w, h, px)?;
+    let small = image::imageops::thumbnail(&image, 160, (160 * h / w.max(1)).max(1));
+    let mut png = Vec::new();
+    small
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .ok()?;
+    Some(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(png)
+    ))
 }
 
 /// Gets the engine ready while the bar waits for Record (VID-030: the start).
@@ -685,6 +790,21 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         .map(Duration::from_secs_f64)
         .or(ready_limit);
     let path = file_path(core, p, lang);
+    // VID-022: written into the recovery folder while it records, with what Recover
+    // work needs if the app dies.
+    let rid = xs_editor::recovery::new_id();
+    let rdir = recovery_dir(core);
+    let _ = std::fs::create_dir_all(&rdir);
+    let recovery_file = rdir.join(format!("{rid}.mp4"));
+    let meta = json!({
+        "path": path,
+        "open": open,
+        "started": chrono::Utc::now().to_rfc3339(),
+    });
+    let _ = xs_core::paths::write_atomic(
+        &rdir.join(format!("{rid}.json")),
+        &serde_json::to_vec_pretty(&meta).unwrap_or_default(),
+    );
     // The panel and the editor stay out of the video, still on screen (VID-017),
     // from its first picture.
     let hide = core.settings.get_bool("capture.hideOnCapture");
@@ -714,11 +834,13 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         window: window.map(|w| w as isize),
         effects: effects(core),
         path: path.clone(),
+        recovery: Some(recovery_file.clone()),
     })
     .map_err(|e| {
         if hide {
             core.host().hide_for_capture(false);
         }
+        forget_recovery(core, &rid);
         // From the bar: it stays Ready, to try again or cancel.
         if let Some(r) = &again_of {
             *svc.ready.lock().unwrap() = Some(r.clone());
@@ -750,6 +872,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         open,
         again,
         pressed,
+        rid,
     };
     let status = status_of(&running);
     {
@@ -809,6 +932,7 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     let wants_audio = r.wants_audio;
     let open = r.open;
     let pressed = r.pressed;
+    let rid = r.rid.clone();
     let summary = if cancel {
         r.recorder.cancel()
     } else {
@@ -817,6 +941,11 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     bar(core, None);
     if core.settings.get_bool("capture.hideOnCapture") {
         core.host().hide_for_capture(false);
+    }
+    // VID-022: a recording that ended (or was cancelled) leaves nothing to recover;
+    // one that failed stays for Recover work if its file is there.
+    if summary.is_ok() || !recovery_dir(core).join(format!("{rid}.mp4")).exists() {
+        forget_recovery(core, &rid);
     }
     let result = match summary {
         Ok(s) if s.cancelled => {
@@ -1039,5 +1168,70 @@ pub fn status(core: &Core) -> Value {
     match ready {
         Some(r) => ready_state(core, &r),
         None => json!({ "status": "idle" }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    /// VID-022: a recording the app did not finish (here the sample video stands for
+    /// its file) is in Recover work with its length and first frame; Recover makes
+    /// it an MP4 where it would have been saved and opens it; Discard removes its
+    /// files; one with nothing readable is not offered.
+    #[test]
+    fn a_video_cut_short_is_offered_and_recovered() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![crate::extension(), xs_editor::extension()],
+        );
+        let lib = dir.path().join("lib");
+        core.remember("library.location", json!(lib));
+        xs_editor::editor(&core).set_folders(lib.clone(), dir.path().join("rec"));
+        let sample =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+        let rdir = recovery_dir(&core);
+        std::fs::create_dir_all(&rdir).unwrap();
+        let leave = |rid: &str, target: &Path, open: bool| {
+            std::fs::copy(&sample, rdir.join(format!("{rid}.mp4"))).unwrap();
+            let meta = json!({"path": target, "open": open, "started": "2026-11-14T09:00:00+00:00"});
+            std::fs::write(rdir.join(format!("{rid}.json")), meta.to_string()).unwrap();
+        };
+        let target = lib.join("2026-11").join("Video 2026-11-14 09.00.00.mp4");
+        leave("a", &target, true);
+        leave("b", &lib.join("other.mp4"), false);
+        // Nothing readable: not offered, and its files go.
+        std::fs::write(rdir.join("c.json"), "{}").unwrap();
+        std::fs::write(rdir.join("c.mp4"), b"not a video").unwrap();
+
+        let call = |id: &str, p: Value| core.call(Source::Ui, id, p, Some(Lang::Es));
+        let list = call("editor.recovery_list", json!({})).unwrap();
+        let items = list["items"].as_array().unwrap();
+        assert_eq!(items.len(), 2, "{list}");
+        let a = items.iter().find(|i| i["id"] == "a").unwrap();
+        assert_eq!(a["kind"], "video");
+        assert_eq!(a["name"], "Video 2026-11-14 09.00.00");
+        assert!(a["duration"].as_f64().unwrap() > 0.5, "{a}");
+        assert!(a["thumbnail"]
+            .as_str()
+            .unwrap()
+            .starts_with("data:image/png;base64,"));
+        assert!(!rdir.join("c.mp4").exists() && !rdir.join("c.json").exists());
+        assert!(!rdir.join("a.json").exists(), "the item took its place");
+
+        // Recover: the MP4 where it would have been saved, opened.
+        let restored = call("editor.recovery_restore", json!({"ids": ["a"]})).unwrap();
+        assert!(target.exists());
+        assert!(restored["documents"][0].is_string(), "{restored}");
+        assert!(!rdir.join("a.mp4").exists());
+        // Discard: its files go.
+        call("editor.recovery_discard", json!({"ids": ["b"]})).unwrap();
+        assert!(!rdir.join("b.mp4").exists());
+        assert!(call("editor.recovery_list", json!({})).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .is_empty());
     }
 }

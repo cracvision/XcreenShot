@@ -29,7 +29,7 @@ mod win_fx;
 pub use win::{audio_info, first_frame, free_space, info, probe, size, warm_up};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
 #[cfg(windows)]
-pub use win_edit::{combine, export, facts, frame_at, frames, Piece};
+pub use win_edit::{combine, export, facts, frame_at, frames, recover, recovered_length, remux, Piece};
 
 /// Gets each frame of [`frames`]: its time in the result, width, height and BGRA
 /// pixels; returns false to stop.
@@ -119,6 +119,18 @@ pub fn info(_path: &std::path::Path) -> Result<Info, String> {
 #[cfg(not(windows))]
 pub fn size(_path: &std::path::Path) -> Result<(u32, u32), String> {
     Err("not available on this platform yet".into())
+}
+
+/// A recording cut short as an MP4 (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn recover(_fragmented: &std::path::Path, _dst: &std::path::Path) -> Result<f64, String> {
+    Err("not available on this platform yet".into())
+}
+
+/// How long a recording cut short is (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn recovered_length(_fragmented: &std::path::Path) -> Option<f64> {
+    None
 }
 
 /// Gets the recording engine ready (nothing to do on this platform yet).
@@ -313,6 +325,69 @@ pub struct Options {
     /// (VID-005, Window area mode).
     pub window: Option<isize>,
     pub path: PathBuf,
+    /// Where it is written while it records (VID-022): a fragmented MP4 that keeps
+    /// what was recorded if the app dies. When it stops it becomes the MP4 at `path`.
+    pub recovery: Option<PathBuf>,
+}
+
+/// How often a recording into a fragmented file gets a key frame while something
+/// new waits in its open fragment (VID-022): what can be lost if the app dies.
+pub(crate) const KEY_EVERY: f64 = 3.0;
+
+/// The file next to a recording's fragmented file with the time recorded so far
+/// (VID-022): a recording cut short keeps its length.
+pub fn time_file(fragmented: &std::path::Path) -> PathBuf {
+    let mut s = fragmented.as_os_str().to_owned();
+    s.push(".time");
+    PathBuf::from(s)
+}
+
+/// The time noted next to a fragmented recording, in seconds.
+pub(crate) fn noted_time(fragmented: &std::path::Path) -> Option<f64> {
+    std::fs::read_to_string(time_file(fragmented))
+        .ok()?
+        .trim()
+        .parse()
+        .ok()
+}
+
+/// Recording into a fragmented file (VID-022): when a key frame is due and when to
+/// note the time recorded.
+#[derive(Debug, Default)]
+pub(crate) struct Keeper {
+    last_key: f64,
+    pending: bool,
+    last_note: Option<Instant>,
+}
+
+impl Keeper {
+    /// A key frame is due at `now` (seconds recorded): something was written since
+    /// the last one, `KEY_EVERY` seconds ago or more.
+    pub fn key_due(&self, now: f64) -> bool {
+        self.pending && now - self.last_key >= KEY_EVERY
+    }
+
+    /// A frame was written at `t`: a key frame or not, with something `new` on it
+    /// or the same picture again.
+    pub fn wrote(&mut self, t: f64, key: bool, new: bool) {
+        if key {
+            self.last_key = t;
+            self.pending = false;
+        } else if new {
+            self.pending = true;
+        }
+    }
+
+    /// Notes `recorded` next to `fragmented`, once a second.
+    pub fn note(&mut self, fragmented: &std::path::Path, recorded: f64) {
+        if self
+            .last_note
+            .is_none_or(|t| t.elapsed() >= Duration::from_secs(1))
+        {
+            self.last_note = Some(Instant::now());
+            let _ = std::fs::write(time_file(fragmented), format!("{recorded:.3}"));
+        }
+    }
 }
 
 /// Where a recording is (the states of `03-video.md`).
@@ -595,6 +670,28 @@ fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn key_frames_come_while_something_waits() {
+        let mut k = Keeper::default();
+        // The first frame is a key frame.
+        k.wrote(0.0, true, true);
+        k.wrote(0.5, false, false);
+        assert!(!k.key_due(10.0), "nothing new: no key frame, however long");
+        k.wrote(1.0, false, true);
+        assert!(!k.key_due(2.9));
+        assert!(k.key_due(3.0));
+        k.wrote(3.0, true, false);
+        assert!(!k.key_due(7.0));
+        // The time is noted next to the file, once a second.
+        let dir = std::env::temp_dir().join(format!("xs-keeper-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("rec.mp4");
+        k.note(&file, 4.25);
+        k.note(&file, 4.5);
+        assert_eq!(noted_time(&file), Some(4.25));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn the_sound_stays_in_step() {

@@ -63,6 +63,114 @@ fn streams(reader: &IMFSourceReader) -> (Option<u32>, Option<u32>) {
     (video, audio)
 }
 
+/// Copies the picture and the sound of `src` into a regular MP4 at `dst` without
+/// coding them again (VID-022): a recording's fragmented file into the one kept. A
+/// file cut short by a crash gives what can be read of it. Returns the seconds of
+/// picture copied.
+pub fn remux(src: &Path, dst: &Path) -> Result<f64, String> {
+    remux_until(src, dst, None)
+}
+
+/// A recording cut short (VID-022) as a regular MP4 at `dst`, as long as it was
+/// recorded: its last picture stays until the time noted next to it. Returns its
+/// length in seconds.
+pub fn recover(fragmented: &Path, dst: &Path) -> Result<f64, String> {
+    remux_until(fragmented, dst, crate::noted_time(fragmented))
+}
+
+/// How long a recording cut short is (VID-022): what can be read of it, or the time
+/// noted next to it if later.
+pub fn recovered_length(fragmented: &Path) -> Option<f64> {
+    let read = crate::probe(fragmented).ok().map(|p| p.3);
+    match (read, crate::noted_time(fragmented)) {
+        (Some(a), Some(b)) => Some(a.max(b)),
+        (a, b) => a.or(b),
+    }
+}
+
+fn remux_until(src: &Path, dst: &Path, until: Option<f64>) -> Result<f64, String> {
+    start();
+    // SAFETY: Media Foundation calls with arguments that live through each call;
+    // samples go from the reader to the writer as they are.
+    unsafe {
+        let reader = MFCreateSourceReaderFromURL(&HSTRING::from(src.as_os_str()), None)
+            .map_err(|e| unreadable(src, e))?;
+        let (video, audio) = streams(&reader);
+        let video = video.ok_or("the recording has no picture")?;
+        let mut attrs = None;
+        MFCreateAttributes(&mut attrs, 1).map_err(|e| err("attributes", e))?;
+        let attrs: IMFAttributes = attrs.ok_or("no attributes")?;
+        attrs
+            .SetGUID(&MF_TRANSCODE_CONTAINERTYPE, &MFTranscodeContainerType_MPEG4)
+            .map_err(|e| err("attributes", e))?;
+        let _ = std::fs::remove_file(dst);
+        let sink = MFCreateSinkWriterFromURL(&HSTRING::from(dst.as_os_str()), None, &attrs)
+            .map_err(|e| err("the video file", e))?;
+        let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
+        let mut map = Vec::new();
+        for stream in [Some(video), audio].into_iter().flatten() {
+            let t = reader
+                .GetNativeMediaType(stream, 0)
+                .map_err(|e| err("stream type", e))?;
+            reader
+                .SetCurrentMediaType(stream, None, &t)
+                .map_err(|e| err("stream type", e))?;
+            reader
+                .SetStreamSelection(stream, true)
+                .map_err(|e| err("stream", e))?;
+            let out = sink.AddStream(&t).map_err(|e| err("stream", e))?;
+            sink.SetInputMediaType(out, &t, None)
+                .map_err(|e| err("stream type", e))?;
+            map.push((stream, out, false));
+        }
+        sink.BeginWriting().map_err(|e| err("video writing", e))?;
+        let mut end = 0.0f64;
+        // The last picture waits: it may have to last until `until`.
+        let mut held: Option<(IMFSample, i64, u32)> = None;
+        while map.iter().any(|m| !m.2) {
+            let (mut actual, mut flags, mut time, mut sample) = (0u32, 0u32, 0i64, None);
+            let read = reader.ReadSample(
+                MF_SOURCE_READER_ANY_STREAM.0 as u32,
+                0,
+                Some(&mut actual),
+                Some(&mut flags),
+                Some(&mut time),
+                Some(&mut sample),
+            );
+            if read.is_err() || flags & MF_SOURCE_READERF_ERROR.0 as u32 != 0 {
+                // The rest of a file cut short: what was read is kept.
+                break;
+            }
+            let Some(m) = map.iter_mut().find(|m| m.0 == actual) else {
+                continue;
+            };
+            if let Some(s) = sample {
+                if actual == video {
+                    let length = s.GetSampleDuration().unwrap_or(0);
+                    end = end.max((time + length) as f64 / HNS);
+                    if let Some((prev, _, out)) = held.replace((s, time, m.1)) {
+                        sink.WriteSample(out, &prev).map_err(|e| err("writing", e))?;
+                    }
+                } else {
+                    sink.WriteSample(m.1, &s).map_err(|e| err("writing", e))?;
+                }
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                m.2 = true;
+            }
+        }
+        if let Some((s, time, out)) = held {
+            if let Some(u) = until.filter(|u| *u > end) {
+                let _ = s.SetSampleDuration((u * HNS) as i64 - time);
+                end = u;
+            }
+            sink.WriteSample(out, &s).map_err(|e| err("writing", e))?;
+        }
+        sink.Finalize().map_err(|e| err("finishing the video", e))?;
+        Ok(end)
+    }
+}
+
 fn seek(reader: &IMFSourceReader, seconds: f64) -> Result<(), String> {
     let mut v = PROPVARIANT::default();
     // SAFETY: a VT_I8 PROPVARIANT, filled as such and read by the reader.

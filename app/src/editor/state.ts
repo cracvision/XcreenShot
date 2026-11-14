@@ -721,6 +721,11 @@ export interface RecoveryItem {
   name: string;
   originalPath: string | null;
   savedAt: string;
+  /** `video`: a recording cut short (VID-022), with its length and first frame. */
+  kind?: string;
+  duration?: number | null;
+  /** A PNG data URL. */
+  thumbnail?: string | null;
 }
 
 /** A zoom asked for one document: applied once, by that document's canvas. */

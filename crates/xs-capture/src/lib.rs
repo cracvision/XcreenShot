@@ -1551,6 +1551,8 @@ pub fn extension() -> Extension {
             record::restore_icons(&core);
             // A step recording cut short is offered in Recover work (SMT-027).
             xs_editor::add_recovery_preparer(&core, steps_rec::recover_leftovers);
+            // And a video recording (VID-022).
+            xs_editor::add_recovery_preparer(&core, record::recover_leftovers);
         }
         reg.handle("capture.monitors", move |ctx, _p| {
             let list = monitors().map_err(|e| failed(ctx.lang, e))?;

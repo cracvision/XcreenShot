@@ -111,6 +111,7 @@ pub fn recover_guide(core: &Arc<Core>, lang: Lang, g: GuideIn) -> Result<String,
             kind: "library".into(),
             format: "xshot".into(),
             saved_at: chrono::Utc::now(),
+            ..Default::default()
         },
     )
     .map_err(|e| e.to_string())?;

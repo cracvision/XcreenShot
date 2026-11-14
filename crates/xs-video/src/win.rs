@@ -543,6 +543,8 @@ struct Writer {
     /// The sound's stream and its rate (VID-040).
     audio: Option<(u32, u32)>,
     hardware: bool,
+    /// The encoder, to ask for a key frame (VID-022: fragmented files).
+    codec: Option<ICodecAPI>,
     /// For the software encoder: frames go through memory.
     staging: Option<ID3D11Texture2D>,
     width: u32,
@@ -604,6 +606,22 @@ fn writer(
     hardware: bool,
     audio_rate: Option<u32>,
 ) -> Result<Writer, String> {
+    writer_in(gpu, path, size, fps, bitrate, hardware, audio_rate, false)
+}
+
+/// A writer; `fragmented`, a fragmented MP4: what was written up to a second or two
+/// before stays readable if the app dies (VID-022).
+#[allow(clippy::too_many_arguments)]
+fn writer_in(
+    gpu: &Gpu,
+    path: &std::path::Path,
+    size: (u32, u32),
+    fps: u32,
+    bitrate: u32,
+    hardware: bool,
+    audio_rate: Option<u32>,
+    fragmented: bool,
+) -> Result<Writer, String> {
     // SAFETY: Media Foundation calls with arguments that live through each call.
     unsafe {
         let mut attrs = None;
@@ -611,7 +629,12 @@ fn writer(
         let attrs: IMFAttributes = attrs.ok_or("no attributes")?;
         let set = |r: windows::core::Result<()>| r.map_err(|e| err("attributes", e));
         set(attrs.SetUINT32(&MF_SINK_WRITER_DISABLE_THROTTLING, 1))?;
-        set(attrs.SetGUID(&MF_TRANSCODE_CONTAINERTYPE, &MFTranscodeContainerType_MPEG4))?;
+        let container = if fragmented {
+            MFTranscodeContainerType_FMPEG4
+        } else {
+            MFTranscodeContainerType_MPEG4
+        };
+        set(attrs.SetGUID(&MF_TRANSCODE_CONTAINERTYPE, &container))?;
         if hardware {
             let mut token = 0u32;
             let mut manager = None;
@@ -665,6 +688,14 @@ fn writer(
             None => None,
         };
         sink.BeginWriting().map_err(|e| err("video writing", e))?;
+        let codec = if fragmented {
+            encoder_api(&sink, stream)
+        } else {
+            None
+        };
+        if fragmented && codec.is_none() {
+            tracing::info!("video: no key frames on demand; a crash may lose more");
+        }
         let staging = if hardware {
             None
         } else {
@@ -675,6 +706,7 @@ fn writer(
             stream,
             audio,
             hardware,
+            codec,
             staging,
             width: size.0,
             height: size.1,
@@ -682,7 +714,39 @@ fn writer(
     }
 }
 
+/// The encoder of the writer's `stream`, to change its settings while it works.
+fn encoder_api(sink: &IMFSinkWriter, stream: u32) -> Option<ICodecAPI> {
+    let ex: IMFSinkWriterEx = sink.cast().ok()?;
+    for i in 0..4 {
+        let mut category = windows::core::GUID::zeroed();
+        let mut transform = None;
+        // SAFETY: out-parameters that live through the call; an error ends the list.
+        if unsafe { ex.GetTransformForStream(stream, i, Some(&mut category), &mut transform) }.is_err() {
+            break;
+        }
+        if category == MFT_CATEGORY_VIDEO_ENCODER {
+            if let Some(api) = transform.and_then(|t| t.cast::<ICodecAPI>().ok()) {
+                return Some(api);
+            }
+        }
+    }
+    None
+}
+
 impl Writer {
+    /// The next frame is a key frame: it closes the fragment before it (VID-022).
+    fn force_key(&self) {
+        let Some(api) = &self.codec else { return };
+        let mut v = windows::Win32::System::Variant::VARIANT::default();
+        // SAFETY: a VT_UI4 VARIANT, filled as such and read by the encoder.
+        unsafe {
+            let inner = &mut *v.Anonymous.Anonymous;
+            inner.vt = windows::Win32::System::Variant::VT_UI4;
+            inner.Anonymous.ulVal = 1;
+            let _ = api.SetValue(&CODECAPI_AVEncVideoForceKeyFrame, &v);
+        }
+    }
+
     /// Writes `frame` (NV12 on the GPU) at `time` (seconds) lasting `length`.
     fn write(&self, gpu: &Gpu, frame: &ID3D11Texture2D, time: f64, length: f64) -> Result<(), String> {
         // SAFETY: Media Foundation and D3D11 calls; a mapped texture is unmapped before
@@ -937,6 +1001,10 @@ pub(crate) fn record(
         let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
     }
     let fps = options.quality.fps();
+    // VID-022: written into the fragmented file while it records, when there is one.
+    let target = options.recovery.as_deref().unwrap_or(&options.path);
+    let fragmented = options.recovery.is_some();
+    let mut keeper = crate::Keeper::default();
     let setup = (|| {
         let t0 = Instant::now();
         let (adapter, output, mr) = find_output(options.area)?;
@@ -990,16 +1058,16 @@ pub(crate) fn record(
             None
         };
         let audio_rate = loopback.as_ref().map(|l| l.rate);
-        let _ = std::fs::remove_file(&options.path);
+        let _ = std::fs::remove_file(target);
         let w = if options.software_only {
-            writer(&gpu, &options.path, size, fps, bitrate, false, audio_rate)?
+            writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, fragmented)?
         } else {
-            match writer(&gpu, &options.path, size, fps, bitrate, true, audio_rate) {
+            match writer_in(&gpu, target, size, fps, bitrate, true, audio_rate, fragmented) {
                 Ok(w) => w,
                 Err(e) => {
                     tracing::info!(error = %e, "video: no hardware encoder, software instead");
-                    let _ = std::fs::remove_file(&options.path);
-                    writer(&gpu, &options.path, size, fps, bitrate, false, audio_rate)?
+                    let _ = std::fs::remove_file(target);
+                    writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, fragmented)?
                 }
             }
         };
@@ -1088,6 +1156,29 @@ pub(crate) fn record(
         *frames += 1;
         Ok(())
     };
+    // VID-022, into a fragmented file: the frame of a turn of the grid at `t`, the
+    // picture now when `fresh`, else the last one again; a key frame when `key`.
+    let grid_frame = |w: &Writer,
+                      last_frame: &mut Option<ID3D11Texture2D>,
+                      fresh: bool,
+                      key: bool,
+                      t: f64,
+                      fx: &Effects,
+                      live: &Live|
+     -> Result<(), String> {
+        let frame = match (fresh, last_frame.as_ref()) {
+            (false, Some(f)) => f.clone(),
+            _ => conv.nv12(&gpu, shared.cursor.load(Ordering::Relaxed), fx, live)?,
+        };
+        if key {
+            w.force_key();
+        }
+        w.write(&gpu, &frame, t, interval)?;
+        *last_frame = Some(frame);
+        Ok(())
+    };
+    // The next turn of the grid (VID-022).
+    let mut slot = 0u64;
 
     loop {
         if shared.stop.load(Ordering::Relaxed) {
@@ -1119,13 +1210,16 @@ pub(crate) fn record(
         }
         if last_disk.elapsed() > Duration::from_secs(2) {
             last_disk = Instant::now();
-            if free_space(&options.path).is_some_and(crate::low_disk) {
+            let low = |p: &std::path::Path| free_space(p).is_some_and(crate::low_disk);
+            if low(&options.path) || (fragmented && low(target)) {
                 tracing::warn!("video: the disk is almost full, stopping");
                 low_disk = true;
                 break;
             }
         }
         let due_in = match last_write {
+            // Into a fragmented file: until the next turn.
+            _ if fragmented => (slot as f64 * interval - now_recorded()).clamp(0.0, 0.1),
             Some(t) if dirty => (interval - t.elapsed().as_secs_f64()).max(0.0),
             _ => 0.1,
         };
@@ -1256,6 +1350,56 @@ pub(crate) fn record(
         } else {
             dirty_since = None;
         }
+        if fragmented {
+            keeper.note(target, now_recorded());
+            // VID-022: into the fragmented file, a frame on every turn (the picture
+            // again when nothing changed): its fragments time each frame by its
+            // length, so a turn without one would shorten the video. A key frame now
+            // and then while something new waits in the open fragment.
+            let upto = (now_recorded() / interval).floor() as u64;
+            while slot <= upto {
+                let fresh = last_frame.is_none() || (slot == upto && dirty && !hold);
+                if slot < upto && dirty && !hold {
+                    // A change waited past this turn.
+                    late_frames += 1;
+                }
+                let t = slot as f64 * interval;
+                let key = keeper.key_due(t);
+                match grid_frame(&w, &mut last_frame, fresh, key, t, &fx, &live) {
+                    Ok(()) => {
+                        frames += 1;
+                        slot += 1;
+                        keeper.wrote(t, key || frames == 1, fresh);
+                        first_frame_at.get_or_insert_with(Instant::now);
+                        last_write = Some(Instant::now());
+                        if fresh {
+                            dirty = false;
+                            dirty_since = None;
+                        }
+                    }
+                    Err(e) if w.hardware && frames == 0 => {
+                        tracing::warn!(error = %e, "video: hardware encoder failed, software instead");
+                        let _ = std::fs::remove_file(target);
+                        let bitrate = options.quality.bitrate(size.0, size.1);
+                        match writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, true) {
+                            Ok(sw) => w = sw,
+                            Err(e) => {
+                                failure = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        failure = Some(e);
+                        break;
+                    }
+                }
+            }
+            if failure.is_some() {
+                break;
+            }
+            continue;
+        }
         let due = last_write.is_none_or(|t| t.elapsed().as_secs_f64() >= interval);
         if dirty && due && !hold {
             // Effects drawn now: the frame is of now.
@@ -1279,15 +1423,16 @@ pub(crate) fn record(
                 Err(e) if w.hardware && frames == 0 => {
                     // The hardware encoder failed on the first frame: software.
                     tracing::warn!(error = %e, "video: hardware encoder failed, software instead");
-                    let _ = std::fs::remove_file(&options.path);
-                    match writer(
+                    let _ = std::fs::remove_file(target);
+                    match writer_in(
                         &gpu,
-                        &options.path,
+                        target,
                         size,
                         fps,
                         options.quality.bitrate(size.0, size.1),
                         false,
                         audio_rate,
+                        fragmented,
                     ) {
                         Ok(sw) => w = sw,
                         Err(e) => {
@@ -1307,9 +1452,13 @@ pub(crate) fn record(
     shared.set_state(State::Finalizing);
     let cancelled = shared.cancel.load(Ordering::Relaxed);
     let duration = now_recorded();
+    let forget = |p: &std::path::Path| {
+        let _ = std::fs::remove_file(p);
+        let _ = std::fs::remove_file(crate::time_file(p));
+    };
     if cancelled {
         drop(w);
-        let _ = std::fs::remove_file(&options.path);
+        forget(target);
         shared.set_state(State::Done);
         return Ok(Summary {
             path: options.path,
@@ -1329,7 +1478,18 @@ pub(crate) fn record(
             late_frames,
         });
     }
-    if failure.is_none() {
+    if failure.is_none() && fragmented {
+        // The turns up to the end (VID-022).
+        let upto = (duration / interval).floor() as u64;
+        while slot <= upto {
+            let t = slot as f64 * interval;
+            if grid_frame(&w, &mut last_frame, slot == upto && dirty, false, t, &fx, &live).is_err() {
+                break;
+            }
+            frames += 1;
+            slot += 1;
+        }
+    } else if failure.is_none() {
         // The last change, and the last picture held until the end.
         if dirty {
             let _ = write_frame(&w, &mut last_frame, &mut last_time, &mut frames, &fx, &live, None);
@@ -1356,14 +1516,23 @@ pub(crate) fn record(
         Err("nothing was recorded".into())
     };
     drop(w);
-    shared.set_state(State::Done);
-    if let Some(e) = failure {
+    if let Some(e) = &failure {
         if frames == 0 {
-            let _ = std::fs::remove_file(&options.path);
-            return Err(e);
+            forget(target);
+            shared.set_state(State::Done);
+            return Err(e.clone());
         }
         tracing::warn!(error = %e, "video: stopped early");
     }
+    // VID-022: the fragmented file becomes the MP4 kept, the same picture and sound
+    // without coding them again. If that fails it stays for Recover work.
+    let finished = finished.and_then(|()| match options.recovery.as_deref() {
+        Some(fragmented_file) => {
+            crate::remux(fragmented_file, &options.path).map(|_| forget(fragmented_file))
+        }
+        None => Ok(()),
+    });
+    shared.set_state(State::Done);
     finished?;
     let bytes = std::fs::metadata(&options.path).map(|m| m.len()).unwrap_or(0);
     Ok(Summary {
@@ -1718,6 +1887,7 @@ mod tests {
                 window: None,
                 effects: Default::default(),
                 path: path.clone(),
+                recovery: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(700));
@@ -2043,6 +2213,7 @@ mod tests {
                 window: None,
                 effects: Default::default(),
                 path: path.clone(),
+                recovery: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(400));
@@ -2058,6 +2229,162 @@ mod tests {
         let worst = *times.iter().max().unwrap();
         println!("worst {worst} ms");
         assert!(worst <= 300, "{times:?}");
+    }
+
+    /// The recording side of `a_recording_cut_short_is_recovered`: 3 s of the demo,
+    /// then a still screen, written into a fragmented file the way the recorder
+    /// does (a key frame when due, the time noted every second) until 12 s, and the
+    /// process dies without finishing the file.
+    #[test]
+    #[ignore]
+    fn cut_short_child() {
+        let Some(path) = std::env::var_os("XS_CUT_SHORT") else {
+            return;
+        };
+        let path = std::path::PathBuf::from(path);
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _ = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return;
+        };
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let (w, h, fps) = (640u32, 360u32, 30u32);
+        let whole = RECT {
+            left: 0,
+            top: 0,
+            right: w as i32,
+            bottom: h as i32,
+        };
+        let conv = converter(&gpu, (w, h), (0, 0), whole, (w, h), fps, 1.0).unwrap();
+        let hardware = std::env::var("XS_CUT_SHORT_HW").is_ok_and(|v| v == "1");
+        let Ok(writer) = writer_in(&gpu, &path, (w, h), fps, 1_000_000, hardware, None, true) else {
+            return;
+        };
+        let mut demo = crate::demo::Demo::new(w, h);
+        let mut keeper = crate::Keeper::default();
+        let interval = 1.0 / fps as f64;
+        let mut last = None;
+        for i in 0..12 * fps {
+            let t = i as f64 * interval;
+            if i % fps == 0 {
+                std::fs::write(crate::time_file(&path), format!("{t:.3}")).unwrap();
+            }
+            let key = keeper.key_due(t);
+            // A frame every turn: the same picture when nothing changed.
+            let changed = i < 3 * fps && demo.step(i, fps);
+            if changed || last.is_none() {
+                unsafe {
+                    gpu.context
+                        .UpdateSubresource(&conv.frame, 0, None, demo.px.as_ptr() as _, w * 4, 0);
+                }
+                last = Some(
+                    conv.nv12(&gpu, false, &Effects::default(), &Live::default())
+                        .unwrap(),
+                );
+            }
+            if key {
+                writer.force_key();
+            }
+            writer.write(&gpu, last.as_ref().unwrap(), t, interval).unwrap();
+            keeper.wrote(t, key || i == 0, changed);
+        }
+        std::thread::sleep(Duration::from_millis(500));
+        std::process::abort();
+    }
+
+    /// VID-022: a recording whose app died at 12 s, with the screen still since 3 s,
+    /// becomes an MP4 of about 12 s (at most 5 s lost), with each encoder.
+    #[test]
+    fn a_recording_cut_short_is_recovered() {
+        let exe = std::env::current_exe().unwrap();
+        for hw in ["1", "0"] {
+            let path = tempfile_dir().join(format!("cut-short-{hw}.mp4"));
+            let _ = std::fs::remove_file(&path);
+            let _ = std::process::Command::new(&exe)
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "win::tests::cut_short_child",
+                    "--test-threads=1",
+                ])
+                .env("XS_CUT_SHORT", &path)
+                .env("XS_CUT_SHORT_HW", hw)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+            if !path.exists() {
+                continue; // no monitor or no encoder (a headless runner)
+            }
+            let length = crate::recovered_length(&path).unwrap();
+            assert!((11.0..=12.0).contains(&length), "{hw}: {length}");
+            let fixed = path.with_extension("recovered.mp4");
+            let end = crate::recover(&path, &fixed).unwrap();
+            let (_, _, frames, last) = probe(&fixed).unwrap();
+            println!("{hw}: {length:.2} s noted, {end:.2} s recovered, {frames} frames, ends at {last:.2}");
+            assert!(end >= 12.0 - 5.0, "{hw}: {end}");
+            // The picture of the still screen, held to the end.
+            assert!(crate::frame_at(&fixed, end - 0.5).is_ok());
+            assert_eq!(crate::facts(&fixed).map(|f| f.duration >= 7.0).ok(), Some(true));
+            for p in [&path, &crate::time_file(&path), &fixed] {
+                let _ = std::fs::remove_file(p);
+            }
+        }
+    }
+
+    /// VID-022: a recording through its fragmented file (a small area of the screen,
+    /// 2 s with a pause) ends as a regular MP4 as long as it was recorded, a frame on
+    /// every turn, and leaves nothing in the recovery folder. Deleted at once.
+    /// `cargo test -p xs-video --release -- --ignored --nocapture through_a_fragmented_file`
+    #[test]
+    #[ignore]
+    fn through_a_fragmented_file() {
+        let dir = tempfile_dir();
+        let path = dir.join("kept.mp4");
+        let recovery = dir.join("recovery.mp4");
+        let r = Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 320,
+                height: 200,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: false,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: Some(recovery.clone()),
+        })
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(1000));
+        assert!(recovery.exists() && crate::time_file(&recovery).exists());
+        r.pause();
+        std::thread::sleep(Duration::from_millis(700));
+        r.resume();
+        std::thread::sleep(Duration::from_millis(1000));
+        let s = r.stop().unwrap();
+        let (_, _, frames, last) = probe(&path).unwrap();
+        println!(
+            "{} s, {} frames written, {frames} read, last at {last:.3}, {} late",
+            s.duration, s.frames, s.late_frames
+        );
+        let _ = std::fs::remove_file(&path);
+        assert!(!recovery.exists() && !crate::time_file(&recovery).exists());
+        assert!((s.duration - 2.0).abs() < 0.2, "{}", s.duration);
+        assert!((last - s.duration).abs() < 0.1, "{last}");
+        assert_eq!(frames, s.frames);
     }
 
     /// VID-030's size: the reference minute (an interface demo drawn in memory, no
@@ -2092,42 +2419,81 @@ mod tests {
         let conv = converter(&gpu, (w, h), (0, 0), whole, (w, h), fps, 1.0).unwrap();
         let dir = tempfile_dir();
         let mut measured = 0;
-        for hardware in [true, false] {
-            let name = if hardware { "hardware" } else { "software" };
-            let path = dir.join(format!("reference-{name}.mp4"));
+        // Each encoder, into a regular file and into a fragmented one with a key
+        // frame every 3 s while something changes (VID-022), then made regular.
+        for (hardware, fragmented) in [(true, false), (true, true), (false, false), (false, true)] {
+            let name = match (hardware, fragmented) {
+                (true, false) => "hardware",
+                (true, true) => "hardware, fragmented",
+                (false, false) => "software",
+                (false, true) => "software, fragmented",
+            };
+            let path = dir.join(format!("reference-{}.mp4", name.replace(", ", "-")));
             let _ = std::fs::remove_file(&path);
-            let Ok(writer) = writer(&gpu, &path, (w, h), fps, quality.bitrate(w, h), hardware, None) else {
+            let Ok(writer) = writer_in(
+                &gpu,
+                &path,
+                (w, h),
+                fps,
+                quality.bitrate(w, h),
+                hardware,
+                None,
+                fragmented,
+            ) else {
                 println!("{name}: no encoder");
                 continue;
             };
             let mut demo = crate::demo::Demo::new(w, h);
+            let mut keeper = crate::Keeper::default();
             let started = Instant::now();
             let mut frames = 0;
             let mut last = None;
             for i in 0..60 * fps {
-                if !demo.step(i, fps) {
+                let t = i as f64 * interval;
+                let key = fragmented && keeper.key_due(t);
+                let new = demo.step(i, fps);
+                // Fragmented: a frame every turn, the same picture when nothing changed.
+                if !new && !fragmented {
                     continue;
                 }
-                // SAFETY: the pixels are w × h BGRA, rows of w × 4 bytes.
-                unsafe {
-                    gpu.context
-                        .UpdateSubresource(&conv.frame, 0, None, demo.px.as_ptr() as _, w * 4, 0);
+                if key {
+                    writer.force_key();
                 }
-                let frame = conv
-                    .nv12(&gpu, false, &Effects::default(), &Live::default())
-                    .unwrap();
-                writer.write(&gpu, &frame, i as f64 * interval, interval).unwrap();
+                let frame = if new || last.is_none() {
+                    // SAFETY: the pixels are w × h BGRA, rows of w × 4 bytes.
+                    unsafe {
+                        gpu.context
+                            .UpdateSubresource(&conv.frame, 0, None, demo.px.as_ptr() as _, w * 4, 0);
+                    }
+                    conv.nv12(&gpu, false, &Effects::default(), &Live::default())
+                        .unwrap()
+                } else {
+                    last.clone().unwrap()
+                };
+                writer.write(&gpu, &frame, t, interval).unwrap();
+                keeper.wrote(t, key || frames == 0, new);
                 last = Some(frame);
                 frames += 1;
             }
             // The last picture held to the minute's end, like the recorder.
-            if let Some(f) = &last {
+            if let (Some(f), false) = (&last, fragmented) {
                 writer.write(&gpu, f, 60.0 - interval, interval).unwrap();
+                frames += 1;
             }
             writer.finish().unwrap();
             drop(writer);
+            let path = if fragmented {
+                let regular = path.with_extension("regular.mp4");
+                crate::remux(&path, &regular).unwrap();
+                let _ = std::fs::remove_file(&path);
+                regular
+            } else {
+                path
+            };
             let bytes = std::fs::metadata(&path).unwrap().len();
-            let (_, _, _, end) = probe(&path).unwrap();
+            let (_, _, read, end) = probe(&path).unwrap();
+            assert_eq!(read, frames, "{name}: every frame is in the file");
+            assert!((end - (60.0 - interval)).abs() < 0.01, "{name}: ends at {end}");
             println!(
                 "{name}: {frames} frames, {:.1} s, {:.2} MB, encoded in {:.1} s",
                 end,
@@ -2298,6 +2664,7 @@ mod tests {
             window: Some(hwnd.0 as isize),
             effects: Default::default(),
             path: path.clone(),
+            recovery: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(500));
@@ -2365,6 +2732,7 @@ mod tests {
             window: None,
             effects: Default::default(),
             path: path.clone(),
+            recovery: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(2000));
@@ -2423,6 +2791,7 @@ mod tests {
             window: None,
             effects: Default::default(),
             path: path.clone(),
+            recovery: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -2505,6 +2874,7 @@ mod tests {
                 ..Default::default()
             },
             path: path.clone(),
+            recovery: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -2550,6 +2920,7 @@ mod tests {
                 window: None,
                 effects: Default::default(),
                 path: path.clone(),
+                recovery: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(2500));

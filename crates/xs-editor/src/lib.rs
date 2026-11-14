@@ -659,6 +659,7 @@ pub fn write_recovery_copies(core: &Core) {
             kind: snap.kind.as_str().to_string(),
             format: snap.format.ext().to_string(),
             saved_at: chrono::Utc::now(),
+            ..Default::default()
         };
         let dir = ed.recovery_dir();
         let written = write_snapshot(
@@ -5297,7 +5298,16 @@ pub fn extension() -> Extension {
         on!("editor.recovery_restore", |core, ctx, p| {
             let ids = p["ids"].as_array().cloned().unwrap_or_default();
             let mut opened = Vec::new();
+            let dir = editor(&core).recovery_dir();
             for rid in ids.iter().filter_map(Value::as_str) {
+                // A recording cut short (VID-022).
+                if let Some(entry) = recovery::list(&dir)
+                    .into_iter()
+                    .find(|e| e.id == rid && e.video.is_some())
+                {
+                    opened.extend(restore_video(&core, ctx.lang, &dir, &entry)?);
+                    continue;
+                }
                 let id = restore(&core, rid).ok_or_else(|| {
                     CommandError::new(
                         ErrorCode::NotFound,
@@ -5358,6 +5368,57 @@ fn recoverable(core: &Core) -> Vec<Value> {
         .filter(|e| !in_use.contains(&e.id))
         .map(|e| serde_json::to_value(e).unwrap_or_default())
         .collect()
+}
+
+/// A recording cut short (VID-022): an MP4 where it would have been saved (another
+/// name if that one is taken), in the library, opened if Open in said so. Returns
+/// the document opened.
+fn restore_video(
+    core: &Arc<Core>,
+    lang: Lang,
+    dir: &std::path::Path,
+    entry: &recovery::Entry,
+) -> Result<Option<String>, CommandError> {
+    let failed = |reason: &str| {
+        CommandError::new(
+            ErrorCode::Internal,
+            tr(lang, "errors.recover_video_failed", &[("reason", reason)]),
+        )
+    };
+    let video = entry.video.as_deref().ok_or_else(|| failed("no video"))?;
+    let library = xs_library::library(core);
+    let wanted = entry
+        .original_path
+        .clone()
+        .unwrap_or_else(|| library.root().join(format!("{}.mp4", entry.name)));
+    let folder = wanted
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| library.root().to_path_buf());
+    let _ = std::fs::create_dir_all(&folder);
+    let stem = wanted
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| entry.name.clone());
+    let dst = if wanted.exists() {
+        xs_library::unique(&folder, &stem, "mp4")
+    } else {
+        wanted
+    };
+    xs_video::recover(video, &dst).map_err(|e| failed(&e))?;
+    recovery::remove(dir, &entry.id);
+    library.scan();
+    tracing::info!("a recording cut short was recovered");
+    if entry.open == Some(false) {
+        return Ok(None);
+    }
+    let opened = core.call(
+        Source::Ui,
+        "document.open",
+        json!({ "path": dst, "show": true }),
+        Some(lang),
+    )?;
+    Ok(opened["documentId"].as_str().map(str::to_string))
 }
 
 /// Opens a recovery copy as the document it was, with its unsaved changes.

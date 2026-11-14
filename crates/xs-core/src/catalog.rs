@@ -2936,16 +2936,22 @@ fn specs_6(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("ai.cancel", &["SMT-040"])
             .scopes(UI_CLI)
             .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
-        B::new("editor.recovery_list", &["APP-047", "EDT-012"]).result(json!({
+        B::new("editor.recovery_list", &["APP-047", "EDT-012", "VID-022"]).result(json!({
             "type": "object",
-            "properties": {"items": {"type": "array", "items": {"type": "object"}}}
+            "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
+                "id": {"type": "string"}, "name": {"type": "string"},
+                "originalPath": {"type": ["string", "null"]}, "savedAt": {"type": "string"},
+                "kind": {"type": "string", "description": "library, external, or video: a recording cut short (VID-022)"},
+                "duration": {"type": "number", "description": "A video's length in seconds"},
+                "thumbnail": {"type": "string", "description": "A video's first frame, a PNG data URL"}
+            }}}}
         })),
-        B::new("editor.recovery_restore", &["APP-047", "EDT-012"])
+        B::new("editor.recovery_restore", &["APP-047", "EDT-012", "VID-022"])
             .scopes(UI_CLI)
             .mutates()
             .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"]))
             .result(json!({"type": "object", "properties": {"documents": {"type": "array"}}})),
-        B::new("editor.recovery_discard", &["APP-047", "EDT-012"])
+        B::new("editor.recovery_discard", &["APP-047", "EDT-012", "VID-022"])
             .scopes(UI_CLI)
             .destructive()
             .params(params(json!({"ids": {"type": "array", "items": {"type": "string"}}}), &["ids"])),

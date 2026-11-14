@@ -3616,6 +3616,20 @@ html.launcher-root #root {
   overflow-wrap: anywhere;
 }
 
+/* A recording cut short shows its first frame (VID-022). */
+.recover-list li:has(.recover-thumb) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.recover-thumb {
+  width: 96px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+}
+
 /* Typing a text box on the canvas (EDT-026). */
 .text-editor {
   position: absolute;

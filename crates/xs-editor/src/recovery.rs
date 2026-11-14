@@ -12,7 +12,7 @@ pub const INTERVAL_SECS: u64 = 30;
 const KEEP_DAYS: i64 = 30;
 
 /// `<id>.json`, next to `<id>.xshot` in the recovery folder.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
     pub id: String,
@@ -24,6 +24,17 @@ pub struct Entry {
     /// `xshot`, `png` or `jpg`.
     pub format: String,
     pub saved_at: chrono::DateTime<chrono::Utc>,
+    /// A recording cut short (VID-022): its fragmented file, which takes the place of
+    /// the document copy, its length (s), its first frame (a PNG data URL) and
+    /// whether it opens when recovered (Open in, VID-052).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub video: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumbnail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open: Option<bool>,
 }
 
 pub fn dir(local_dir: &Path) -> PathBuf {
@@ -50,6 +61,15 @@ pub fn write_entry(dir: &Path, entry: &Entry) -> std::io::Result<()> {
 }
 
 pub fn remove(dir: &Path, id: &str) {
+    // A recording cut short: its files go too (VID-022).
+    let video = std::fs::read(entry_path(dir, id))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Entry>(&b).ok())
+        .and_then(|e| e.video);
+    if let Some(v) = video {
+        let _ = std::fs::remove_file(xs_video::time_file(&v));
+        let _ = std::fs::remove_file(v);
+    }
     let _ = std::fs::remove_file(document_path(dir, id));
     let _ = std::fs::remove_file(entry_path(dir, id));
 }
@@ -74,7 +94,7 @@ pub fn list(dir: &Path) -> Vec<Entry> {
         };
         if entry.saved_at < cutoff {
             remove(dir, &entry.id);
-        } else if document_path(dir, &entry.id).exists() {
+        } else if document_path(dir, &entry.id).exists() || entry.video.as_ref().is_some_and(|v| v.exists()) {
             out.push(entry);
         }
     }
@@ -94,6 +114,7 @@ mod tests {
             kind: "external".into(),
             format: "png".into(),
             saved_at: chrono::Utc::now() - chrono::Duration::days(days_ago),
+            ..Default::default()
         }
     }
 

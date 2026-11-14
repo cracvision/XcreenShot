@@ -1832,7 +1832,8 @@
     "edit_text_none": "No se encontró texto para editar.",
     "separate_nothing": "No se encontró nada útil que separar. Funciona mejor con capturas de interfaces.",
     "separate_not_text": "Eso no es un trozo de texto separado.",
-    "qr_too_long": "Demasiado largo para un código QR: {{bytes}} bytes, como mucho {{max}} con esta corrección de errores."
+    "qr_too_long": "Demasiado largo para un código QR: {{bytes}} bytes, como mucho {{max}} con esta corrección de errores.",
+    "recover_video_failed": "No se pudo recuperar la grabación: {{reason}}"
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -3055,7 +3056,7 @@
       "flatten_body": "«{{name}}» es un archivo PNG o JPG. Al guardarlo, sus anotaciones pasan a formar parte de la imagen y ya no se podrán editar en ese archivo. Para conservarlas editables, usa Guardar como… y elige Documento de XcreenShot.",
       "dont_ask_again": "No volver a preguntar",
       "recover_title": "Recuperar trabajo",
-      "recover_body": "XcreenShot se cerró de forma inesperada. Estos documentos tenían cambios sin guardar:",
+      "recover_body": "XcreenShot se cerró de forma inesperada. Esto quedó sin guardar:",
       "recover": "Recuperar",
       "discard": "Descartar",
       "later": "Más tarde",
@@ -3947,7 +3948,8 @@
       "dest_file": "Archivo",
       "pending_share": "Pendiente de enviar a: {{destinations}}",
       "send": "Enviar",
-      "dont_send": "No enviar"
+      "dont_send": "No enviar",
+      "recover_video": "video, {{length}}"
     },
     "multi": {
       "title": "Multicaptura",

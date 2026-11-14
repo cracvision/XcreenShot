@@ -12,6 +12,7 @@ import { FileDialogs } from "../library/FileDialogs";
 import { ThemeConflict } from "./StylesTab";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
+import { clock } from "../windows/recClock";
 
 function Decision() {
   const { t } = useTranslation();
@@ -137,10 +138,14 @@ function Recovery() {
       <ul className="recover-list">
         {items.map((item) => (
           <li key={item.id}>
+            {item.thumbnail ? <img className="recover-thumb" src={item.thumbnail} alt="" /> : null}
             <div>
               <strong>{item.name}</strong>
               <div className="muted">
                 {new Date(item.savedAt).toLocaleString(i18n.language)}
+                {item.kind === "video" && item.duration != null
+                  ? ` · ${t("ui.editor.recover_video", { length: clock(item.duration) })}`
+                  : ""}
                 {item.originalPath ? ` · ${item.originalPath}` : ""}
               </div>
             </div>

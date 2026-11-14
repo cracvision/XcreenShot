@@ -1832,7 +1832,8 @@
     "edit_text_none": "No text to edit was found.",
     "separate_nothing": "Nothing useful to separate was found. It works best with screenshots of interfaces.",
     "separate_not_text": "That is not a separated piece of text.",
-    "qr_too_long": "Too long for a QR code: {{bytes}} bytes, at most {{max}} with this error correction."
+    "qr_too_long": "Too long for a QR code: {{bytes}} bytes, at most {{max}} with this error correction.",
+    "recover_video_failed": "The recording could not be recovered: {{reason}}"
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -3055,7 +3056,7 @@
       "flatten_body": "“{{name}}” is a PNG or JPG file. When saved, its annotations become part of the image and can no longer be edited in that file. To keep them editable, use Save as… and choose XcreenShot document.",
       "dont_ask_again": "Don't ask again",
       "recover_title": "Recover work",
-      "recover_body": "XcreenShot closed unexpectedly. These documents had unsaved changes:",
+      "recover_body": "XcreenShot closed unexpectedly. This was left unsaved:",
       "recover": "Recover",
       "discard": "Discard",
       "later": "Later",
@@ -3947,7 +3948,8 @@
       "dest_file": "File",
       "pending_share": "Waiting to send to: {{destinations}}",
       "send": "Send",
-      "dont_send": "Don’t send"
+      "dont_send": "Don’t send",
+      "recover_video": "video, {{length}}"
     },
     "multi": {
       "title": "Multi-capture",
