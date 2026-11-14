@@ -4340,7 +4340,8 @@
       "steps_badge_other": "{{count}} steps",
       "in_image": "in the image",
       "reading_one": "Reading the text of {{count}} image for the search…",
-      "reading_other": "Reading the text of {{count}} images for the search…"
+      "reading_other": "Reading the text of {{count}} images for the search…",
+      "step_of": "{{name}} · step {{n}} of {{count}}"
     },
     "files": {
       "deleted_one": "“{{name}}” moved to the trash",

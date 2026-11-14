@@ -85,7 +85,10 @@ pub fn recover_guide(core: &Arc<Core>, lang: Lang, g: GuideIn) -> Result<String,
     for (n, bytes) in &images {
         base.add_image(n, bytes)?;
     }
-    let thumb = xs_image::encode::thumbnail(&xs_image::render(&document, &base), THUMB_SIZE);
+    let thumb = xs_image::encode::thumbnail(
+        &crate::guide_export::thumb_picture(&document, &base, &meta),
+        THUMB_SIZE,
+    );
     let file = Xshot {
         manifest: Manifest::current(),
         document,
@@ -780,6 +783,21 @@ mod tests {
             json!({"path": path, "format": "md", "out": out}),
         );
         assert!(std::path::Path::new(r["paths"][0].as_str().unwrap()).is_file());
+
+        // LIB-019: its thumbnail is its first step (as wide as tall as the step, 3:2),
+        // and the quick view walks through its 7 steps.
+        let id = items[0]["id"].as_str().unwrap();
+        let thumb = image::load_from_memory(&lib.thumbnail(id).unwrap()).unwrap();
+        let ratio = thumb.width() as f64 / thumb.height() as f64;
+        assert!(
+            (ratio - 1.5).abs() < 0.05,
+            "thumbnail {}×{}",
+            thumb.width(),
+            thumb.height()
+        );
+        assert!(crate::quick_view::library_step(&core, id, 1).is_some());
+        assert!(crate::quick_view::library_step(&core, id, 7).is_some());
+        assert!(crate::quick_view::library_step(&core, id, 8).is_none());
     }
 
     /// SMT-026: the zone shows exactly the frame, whatever the monitor.

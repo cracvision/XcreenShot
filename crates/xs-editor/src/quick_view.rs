@@ -21,6 +21,31 @@ static CACHE: Mutex<Vec<(String, Preview)>> = Mutex::new(Vec::new());
 
 /// The image of library item `id` with its annotations, at most `max` pixels on its
 /// longest side (PNG), or a PNG or JPG file as it is.
+/// A step's picture of a library guide, for the quick view that walks through it
+/// (LIB-019): the guide read aside once, its steps kept for the next ones.
+pub fn library_step(core: &Arc<Core>, id: &str, n: usize) -> Option<Preview> {
+    static STEPS: std::sync::Mutex<Option<(String, Vec<Preview>)>> = std::sync::Mutex::new(None);
+    let lib = xs_library::library(core);
+    let item = lib.get(id)?;
+    let key = format!("{id}|{}", item.modified);
+    let mut kept = STEPS.lock().unwrap();
+    if kept.as_ref().is_none_or(|(k, _)| *k != key) {
+        let doc = DocStore::load(&lib.abs(&item.path), lib.root()).ok()?;
+        let snap = DocStore::snapshot_of(&doc).ok()?;
+        let guide = crate::guide_export::content_of(&snap, core.lang()).ok()?;
+        let pictures = guide
+            .items
+            .into_iter()
+            .filter_map(|i| match i {
+                crate::guide_out::Item::Step { pic: Some(p), .. } => Some((Arc::new(p.png), "image/png")),
+                _ => None,
+            })
+            .collect();
+        *kept = Some((key, pictures));
+    }
+    kept.as_ref()?.1.get(n.checked_sub(1)?).cloned()
+}
+
 pub fn library_preview(core: &Arc<Core>, id: &str, max: u32) -> Option<Preview> {
     let lib = xs_library::library(core);
     let item = lib.get(id)?;

@@ -30,7 +30,28 @@ fn rect(o: &Object) -> Option<[f64; 4]> {
 /// A section's picture with what is drawn on it: the guide's band drawn alone, cut to
 /// the picture's rectangle.
 fn picture_of(snap: &store::Snapshot, top: f64, height: f64, zone: [f64; 4]) -> Option<Pic> {
-    let mut doc = snap.document.clone();
+    let cut = image_of(snap, top, height, zone)?;
+    Some(Pic {
+        png: xs_image::encode::png(&cut, 0.0, true).ok()?,
+        width: cut.width(),
+        height: cut.height(),
+    })
+}
+
+/// [`picture_of`]'s pixels.
+fn image_of(snap: &store::Snapshot, top: f64, height: f64, zone: [f64; 4]) -> Option<image::RgbaImage> {
+    band_image(&snap.document, &snap.base, &snap.meta, top, height, zone)
+}
+
+fn band_image(
+    document: &Document,
+    base: &xs_image::render::Base,
+    meta: &Value,
+    top: f64,
+    height: f64,
+    zone: [f64; 4],
+) -> Option<image::RgbaImage> {
+    let mut doc = document.clone();
     let dpi = doc.dpi;
     doc.objects
         .retain(|o| xs_image::object_bounds(o, dpi).is_some_and(|b| b[3] > top && b[1] < top + height));
@@ -40,7 +61,7 @@ fn picture_of(snap: &store::Snapshot, top: f64, height: f64, zone: [f64; 4]) -> 
     let h = height.ceil().max(1.0) as u32;
     doc.canvas.height = h;
     doc.crop.height = h;
-    let (img, origin) = xs_image::render::render_final(&doc, &snap.base, &snap.meta);
+    let (img, origin) = xs_image::render::render_final(&doc, base, meta);
     let x = (zone[0] + origin[0] as f64).round().max(0.0) as u32;
     let y = (zone[1] - top + origin[1] as f64).round().max(0.0) as u32;
     let w = (zone[2].round() as u32).min(img.width().saturating_sub(x));
@@ -48,17 +69,47 @@ fn picture_of(snap: &store::Snapshot, top: f64, height: f64, zone: [f64; 4]) -> 
     if w == 0 || hh == 0 {
         return None;
     }
-    let cut = image::imageops::crop_imm(&img, x, y, w, hh).to_image();
-    Some(Pic {
-        png: xs_image::encode::png(&cut, 0.0, true).ok()?,
-        width: w,
-        height: hh,
+    Some(image::imageops::crop_imm(&img, x, y, w, hh).to_image())
+}
+
+/// The picture of a guide's first step with one (LIB-019: its thumbnail).
+pub(crate) fn first_step(snap: &store::Snapshot) -> Option<image::RgbaImage> {
+    first_step_of(&snap.document, &snap.base, &snap.meta)
+}
+
+/// What a document's thumbnail shows: a guide's first step (LIB-019), else its image.
+pub(crate) fn thumb_picture(
+    document: &Document,
+    base: &xs_image::render::Base,
+    meta: &Value,
+) -> image::RgbaImage {
+    first_step_of(document, base, meta)
+        .unwrap_or_else(|| xs_image::render::render_final(document, base, meta).0)
+}
+
+fn first_step_of(doc: &Document, base: &xs_image::render::Base, meta: &Value) -> Option<image::RgbaImage> {
+    let t = Template::of(doc).filter(|t| t.is_guide())?;
+    templates::bands(&t).into_iter().find_map(|(s, top)| {
+        if s.kind != "guideStep" {
+            return None;
+        }
+        let zone = doc.objects.iter().find(|o| {
+            o.kind == "zone"
+                && o.props.get("section").and_then(Value::as_str) == Some(&s.id)
+                && o.props.get("image").is_some_and(Value::is_string)
+        })?;
+        band_image(doc, base, meta, top, s.height, rect(zone)?)
     })
 }
 
 /// The content of an open guide (SMT-028), its pictures drawn.
 pub fn content(core: &Core, id: &str, lang: Lang) -> Result<Guide, String> {
     let snap = editor(core).store.snapshot(id)?;
+    content_of(&snap, lang)
+}
+
+/// The content of a guide's snapshot, open or read aside.
+pub fn content_of(snap: &store::Snapshot, lang: Lang) -> Result<Guide, String> {
     let doc = &snap.document;
     let t = Template::of(doc)
         .filter(|t| t.is_guide())
@@ -75,7 +126,7 @@ pub fn content(core: &Core, id: &str, lang: Lang) -> Result<Guide, String> {
         let pic = || {
             zone.filter(|_| filled)
                 .and_then(rect)
-                .and_then(|r| picture_of(&snap, top, s.height, r))
+                .and_then(|r| picture_of(snap, top, s.height, r))
         };
         match s.kind.as_str() {
             "guideHeader" => date = text_of(doc, &format!("date:{}", s.id)),

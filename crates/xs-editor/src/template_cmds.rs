@@ -205,7 +205,11 @@ pub(crate) fn create_document(
     for (name, bytes) in &images {
         base.add_image(name, bytes).map_err(fail)?;
     }
-    let thumb = xs_image::encode::thumbnail(&xs_image::render(&document, &base), THUMB_SIZE);
+    // A guide shows its first step (LIB-019).
+    let thumb = xs_image::encode::thumbnail(
+        &crate::guide_export::thumb_picture(&document, &base, &meta),
+        THUMB_SIZE,
+    );
     let file = Xshot {
         manifest: Manifest::current(),
         document: document.clone(),

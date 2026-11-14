@@ -4340,7 +4340,8 @@
       "steps_badge_other": "{{count}} pasos",
       "in_image": "en la imagen",
       "reading_one": "Leyendo el texto de {{count}} imagen para la búsqueda…",
-      "reading_other": "Leyendo el texto de {{count}} imágenes para la búsqueda…"
+      "reading_other": "Leyendo el texto de {{count}} imágenes para la búsqueda…",
+      "step_of": "{{name}} · paso {{n}} de {{count}}"
     },
     "files": {
       "deleted_one": "«{{name}}» se movió a la papelera",

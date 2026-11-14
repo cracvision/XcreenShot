@@ -335,7 +335,9 @@ impl Snapshot {
         } else {
             xs_image::encode::png(&self.base.to_image(), self.document.dpi, true)?
         };
-        let thumb = xs_image::encode::thumbnail(&self.render(), THUMB_SIZE);
+        // A guide shows its first step (LIB-019); the rest, their image.
+        let pictured = crate::guide_export::first_step(self).unwrap_or_else(|| self.render());
+        let thumb = xs_image::encode::thumbnail(&pictured, THUMB_SIZE);
         let mut manifest = Manifest::current();
         manifest.extra = self.manifest_extra.clone();
         // Pictures this build inserted that no object shows any more (an insertion
@@ -1064,6 +1066,33 @@ impl DocStore {
         let base = self.base(id)?;
         let inner = self.inner.lock().unwrap();
         let doc = inner.docs.iter().find(|d| d.id == id).ok_or("document closed")?;
+        Ok(Snapshot {
+            id: doc.id.clone(),
+            path: doc.path.clone(),
+            kind: doc.kind,
+            format: doc.format,
+            name: doc.name(),
+            document: doc.document.clone(),
+            meta: doc.meta.clone(),
+            base_source: doc.base_source.clone(),
+            base,
+            manifest_extra: doc.manifest_extra.clone(),
+            images: doc.images.clone(),
+            version: doc.version,
+        })
+    }
+
+    /// A snapshot of a document read aside (not in the store), its pixels decoded: what
+    /// the library shows of a guide's steps (LIB-019).
+    pub fn snapshot_of(doc: &Doc) -> Result<Snapshot, String> {
+        let source = match &doc.document.base_image {
+            Some(name) => doc.images.get(name).ok_or("the image's picture is missing")?,
+            None => doc.base_source.bytes.as_ref(),
+        };
+        let mut base = Base::from_image(xs_image::encode::decode(source)?);
+        for (name, bytes) in doc.images.iter() {
+            let _ = base.add_image(name, bytes);
+        }
         Ok(Snapshot {
             id: doc.id.clone(),
             path: doc.path.clone(),

@@ -305,7 +305,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | LIB-016 | Crear desde la biblioteca | M2 | Should | En curso (Windows: Crear ▾ en la barra y Crear ▸ en el menú contextual con Nuevo desde plantilla; Diapositivas narradas y Combinar videos aparecen desactivados hasta el video, M4) |
 | LIB-017 | Imprimir desde la biblioteca | M2 | Could | En curso (Windows: Imprimir… del menú contextual y Ctrl+P en la biblioteca, una imagen por página ajustada y girada como mejor cabe, vista previa de todas, sin abrirlas ni cambiar sus archivos; `document.print` y `print_pages` con `paths`) |
 | LIB-018 | Exportación por lotes desde la biblioteca | M2 | Should | En curso (Windows: Exportar… del menú contextual: uno con Guardar como, varios con la exportación por lotes de EDT-113 ya cargada; aviso si el destino está en la biblioteca. Videos, GIF y guías llegan con M3 y M4; el progreso va en el diálogo, no en la barra de estado de LIB-026) |
-| LIB-019 | Guías de pasos en la biblioteca | M5 | Should | — |
+| LIB-019 | Guías de pasos en la biblioteca | M5 | Should | En curso (Windows: tipo **Guías de pasos** en el filtro, insignia "N pasos", búsqueda por el texto de los pasos, clic derecho > **Exportar como** sin abrir el editor (SMT-035); su miniatura es el primer paso; la vista rápida la recorre paso a paso; se etiquetan, marcan como favoritas y eliminan como cualquier elemento. Falta: compartir (M6)) |
 | LIB-020 | Autoguardado de capturas | M1 | Must | En curso |
 | LIB-021 | Guardar como y copia editable | M1 | Must | En curso |
 | LIB-022 | Índice propio de la biblioteca | M1 | Must | En curso |

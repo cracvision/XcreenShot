@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closeQuickView,
   fitted,
+  guideEntries,
   previewSide,
   showQuickView,
   stepQuickView,
@@ -55,5 +56,29 @@ describe("quick view (LIB-013)", () => {
     expect(useQuickView.getState().view?.at).toBe(0);
     closeQuickView(true);
     expect(open).toHaveBeenCalledWith("a");
+  });
+});
+
+describe("a guide in the quick view (LIB-019)", () => {
+  it("walks through its steps, one picture each", () => {
+    const entries = guideEntries({
+      id: "g1",
+      name: "Pedido",
+      path: "C:/lib/pedido.xshot",
+      kind: "guide",
+      format: "xshot",
+      size: 1,
+      modified: "2026-11-14T09:00:00Z",
+      captured: "2026-11-14T09:00:00Z",
+      width: 900,
+      height: 3000,
+      app: null,
+      url: null,
+      favorite: false,
+      tags: [],
+      steps: 3,
+    });
+    expect(entries.map((e) => e.id)).toEqual(["g1#1", "g1#2", "g1#3"]);
+    expect(entries[1]?.src).toContain("library/g1/step/2");
   });
 });

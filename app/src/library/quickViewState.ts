@@ -1,6 +1,7 @@
 // The quick view (LIB-013): a large preview over the window, from the Library or the
 // recent tray, without opening the editor. ← and → go through the items (only the
 // selection when there are several); Space or Esc close it and Enter opens the item.
+import i18next from "i18next";
 import { create } from "zustand";
 import { xsdocUrl } from "../editor/state";
 import { openItems } from "./actions";
@@ -66,6 +67,23 @@ export function libraryThumb(item: LibraryItem): string {
   return xsdocUrl(`library/${item.id}/thumb?v=${encodeURIComponent(item.modified)}`);
 }
 
+/** The steps of a library guide, for the quick view (LIB-019). */
+export function guideEntries(item: LibraryItem): QuickEntry[] {
+  const n = item.steps ?? 0;
+  return Array.from({ length: n }, (_, i) => {
+    const src = xsdocUrl(`library/${item.id}/step/${i + 1}?v=${encodeURIComponent(item.modified)}`);
+    return {
+      id: `${item.id}#${i + 1}`,
+      name: i18next.t("ui.library.step_of", { name: item.name, n: i + 1, count: n }),
+      src,
+      thumb: src,
+      width: null,
+      height: null,
+      date: item.captured,
+    };
+  });
+}
+
 /** The entries of library items. */
 export function libraryEntries(items: LibraryItem[], side = previewSide()): QuickEntry[] {
   return items.map((item) => ({
@@ -101,6 +119,17 @@ export function openLibraryQuickView(): void {
   const { items, selection, focus } = useLibrary.getState();
   const chosen = new Set(selection);
   const several = selection.length > 1;
+  // A guide alone: its steps, one after the other (LIB-019).
+  const guide = !several ? items.find((i) => i.id === (focus ?? selection[0])) : undefined;
+  if (guide?.kind === "guide" && guide.steps) {
+    showQuickView({
+      entries: guideEntries(guide),
+      at: 0,
+      open: () => void openItems([guide]),
+      done: () => useLibrary.setState({ reveal: guide.id }),
+    });
+    return;
+  }
   const walk = several ? items.filter((i) => chosen.has(i.id)) : items;
   const start = focus ?? selection[0];
   const at = Math.max(
