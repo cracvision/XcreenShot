@@ -65,17 +65,18 @@
   --switch-off: #8a909c;
   --range-off: rgb(17 19 24 / 0.18);
 
-  /* Glass (general.glassIntensity): --glass goes from 0 (solid) to 1, set by theme.ts. The tint
-     never gets thinner than 75 % (light) or 80 % (dark), so text on it keeps its contrast over
-     any capture. */
+  /* Glass (general.glassIntensity): --glass goes from 0 (solid) to 1, set by theme.ts. Up to
+     0.6 (the default) the tint stays at 85 % or more (88 % dark), so text keeps its contrast
+     over any capture; above it, as Carlos asked (2026-11-14), it thins faster down to 50 %
+     (55 % dark) at 1, with more blur and shine: a style choice, clearer glass. */
   --glass: 0.6;
   --glass-tint: 250 251 253;
   --glass-edge: rgb(17 19 24 / 0.1);
   --glass-float: var(--shadow-pop);
-  --g-alpha: calc(1 - var(--glass) * 0.25);
-  --g-blur: calc(var(--glass) * 30px);
+  --g-alpha: min(calc(1 - var(--glass) * 0.25), calc(1.375 - var(--glass) * 0.875));
+  --g-blur: calc(var(--glass) * 30px + max(0px, (var(--glass) - 0.6) * 50px));
   --g-sat: calc(1 + var(--glass) * 0.9);
-  --g-sheen: calc(0.1 + var(--glass) * 0.45);
+  --g-sheen: calc(0.1 + var(--glass) * 0.45 + max(0, var(--glass) - 0.6) * 0.25);
   --g-spec: calc(0.35 + var(--glass) * 0.55);
   /* Where the canvas shows between floating panels. */
   --canvas-bg: #e5e7ed;
@@ -192,8 +193,8 @@
     --range-off: rgb(255 255 255 / 0.2);
     --glass-tint: 24 26 31;
     --glass-edge: rgb(255 255 255 / 0.1);
-    --g-alpha: calc(1 - var(--glass) * 0.2);
-    --g-sheen: 0;
+    --g-alpha: min(calc(1 - var(--glass) * 0.2), calc(1.375 - var(--glass) * 0.825));
+    --g-sheen: calc(max(0, var(--glass) - 0.6) * 0.15);
     --g-spec: calc(0.04 + var(--glass) * 0.14);
     --canvas-bg: #0d0e11;
     --canvas-dot: rgb(255 255 255 / 0.07);
@@ -240,8 +241,8 @@
   --range-off: rgb(255 255 255 / 0.2);
   --glass-tint: 24 26 31;
   --glass-edge: rgb(255 255 255 / 0.1);
-  --g-alpha: calc(1 - var(--glass) * 0.2);
-  --g-sheen: 0;
+  --g-alpha: min(calc(1 - var(--glass) * 0.2), calc(1.375 - var(--glass) * 0.825));
+  --g-sheen: calc(max(0, var(--glass) - 0.6) * 0.15);
   --g-spec: calc(0.04 + var(--glass) * 0.14);
   --canvas-bg: #0d0e11;
   --canvas-dot: rgb(255 255 255 / 0.07);
