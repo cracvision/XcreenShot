@@ -18,6 +18,8 @@ export interface MicLevel {
   missing: boolean;
   /** No input at all. */
   none: boolean;
+  /** The system's privacy settings do not let XcreenShot use it (VID-077). */
+  blocked?: boolean;
 }
 
 export interface SoundLevels {
@@ -57,13 +59,15 @@ export function meterFill(level: number): number {
   return Math.min(1, Math.max(0, (20 * Math.log10(level) + 60) / 60));
 }
 
-export type SoundWarning = "mic_none" | "mic_muted" | "mic_missing" | "mic_quiet";
+export type SoundWarning = "mic_blocked" | "mic_none" | "mic_muted" | "mic_missing" | "mic_quiet";
 
-/** The warning to show now, if any. Muted and silent follow the preference "Warn when
- * the microphone is muted" (VID-019); a missing device is said in Ready (VID-043). */
+/** The warning to show now, if any. Blocked by the system's privacy comes first
+ * (VID-077); muted and silent follow the preference "Warn when the microphone is
+ * muted" (VID-019); a missing device is said in Ready (VID-043). */
 export function soundWarning(l: SoundLevels | null, alerts: boolean): SoundWarning | null {
   const m = l?.microphone;
   if (!l || !m?.on) return null;
+  if (m.blocked) return "mic_blocked";
   if (m.none) return "mic_none";
   if (alerts && m.muted) return "mic_muted";
   if (m.missing && l.status === "ready") return "mic_missing";

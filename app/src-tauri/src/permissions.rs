@@ -153,11 +153,31 @@ pub fn all() -> Vec<PermissionStatus> {
     }
     #[cfg(windows)]
     {
-        vec![windows_notifications()]
+        vec![
+            windows_notifications(),
+            windows_device(Permission::Microphone, "microphone"),
+            windows_device(Permission::Camera, "webcam"),
+        ]
     }
     #[cfg(not(any(target_os = "macos", windows)))]
     {
         Vec::new()
+    }
+}
+
+/// Whether Windows' privacy settings let desktop apps use a device (VID-077): its
+/// page opens from Fix permissions; the system never asks by itself.
+#[cfg(windows)]
+fn windows_device(permission: Permission, capability: &str) -> PermissionStatus {
+    use xs_core::host::PermissionState;
+    PermissionStatus {
+        permission,
+        state: if xs_core::winreg::device_access_denied(capability) {
+            PermissionState::Denied
+        } else {
+            PermissionState::Granted
+        },
+        can_request: false,
     }
 }
 

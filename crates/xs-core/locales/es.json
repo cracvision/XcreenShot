@@ -4642,7 +4642,9 @@
       "open_sound_settings": "Abrir ajustes de sonido",
       "dismiss": "Cerrar",
       "mic_device_locked": "El micrófono se cambia en Lista o en pausa",
-      "no_track": "Actívalo antes de grabar para que el video tenga sonido"
+      "no_track": "Actívalo antes de grabar para que el video tenga sonido",
+      "mic_blocked": "El sistema no deja que XcreenShot use el micrófono",
+      "fix_permissions": "Reparar permisos"
     },
     "video": {
       "silent_suffix": "sin sonido",

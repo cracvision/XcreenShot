@@ -189,7 +189,8 @@ export function SoundStrip({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
-  const settings = warning !== "mic_missing";
+  const settings = warning !== "mic_missing" && warning !== "mic_blocked";
+  const privacy = warning === "mic_blocked";
   const esc = (e: React.KeyboardEvent) => {
     if (e.key !== "Escape") return;
     e.preventDefault();
@@ -208,6 +209,20 @@ export function SoundStrip({
           onClick={() => void run("record.sound_settings").catch(() => undefined)}
         >
           {t("ui.recbar.open_sound_settings")}
+        </button>
+      )}
+      {privacy && (
+        <button
+          type="button"
+          className="btn small"
+          onKeyDown={esc}
+          onClick={() =>
+            void run("app.open_permission_settings", { permission: "microphone" }).catch(
+              () => undefined,
+            )
+          }
+        >
+          {t("ui.recbar.fix_permissions")}
         </button>
       )}
       <button

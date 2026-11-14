@@ -281,7 +281,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | VID-074 | Tamaño y fondo del video de diapositivas | M4 | Should | — |
 | VID-075 | Atajos globales de video | M4 | Must | En curso (Windows: Captura de video `Ctrl+Alt+Mayús+V`, Grabar/Pausar/Reanudar `Ctrl+Mayús+F9` y Detener `Ctrl+Mayús+F10`; con Compatibilidad, `Mayús+F9` y `Mayús+F10`. Faltan Dibujo en vivo, Cambiar vista de cámara, Barra de grabación y Diapositivas, que llegan con su función) |
 | VID-076 | Teclas contextuales de video | M4 | Should | En curso (Windows: Lista (`Enter`, `I`, `Esc`), cuenta atrás (`Esc`), barra con el foco, Dibujo en vivo (`A`, `R`/`S`, `O`, `P`, `1`, `M`, `2`–`7`, deshacer, borrar, `Esc`) y el reproductor (`Espacio`, `←`/`→`, `Mayús+←/→` un segundo, `Inicio`/`Fin` y `Ctrl+Enter`/`Mayús+Ctrl+Enter`, `I`/`O`, `Esc`, `Supr`); la hoja de atajos los muestra. Menú Video: Guardar fotograma `Ctrl+Alt+F`, Crear GIF `Ctrl+Alt+G`, Información `Ctrl+Alt+I` (reasignables); Ir a… con `Ctrl+J` cuando se ve un video. Falta: las teclas de las Diapositivas narradas (llegan con ellas)) |
-| VID-077 | Permisos que necesita el video | M4 | Must | — |
+| VID-077 | Permisos que necesita el video | M4 | Must | En curso (Windows: Preferencias > General > Permisos muestra también el micrófono y la cámara, leídos de la privacidad de Windows (acceso del equipo, del usuario y de las apps de escritorio), con el botón que abre su página; con el micrófono bloqueado, la barra lo avisa en *Lista* y grabando con **Reparar permisos**, y se graba sin él. Falta la cámara (VID-031) y todo lo de macOS. `tests/manual/VID-039.md`) |
 
 ## 04-biblioteca-compartir.md
 

@@ -23,6 +23,7 @@ describe("the sound of the recording bar (VID-019, VID-039, VID-043)", () => {
     wireless: false,
     missing: false,
     none: false,
+    blocked: false,
   };
   const at = (patch: Partial<typeof mic>, status: "ready" | "recording" = "recording") => ({
     status,
@@ -44,6 +45,13 @@ describe("the sound of the recording bar (VID-019, VID-039, VID-043)", () => {
     expect(soundWarning(at({ missing: true }, "ready"), true)).toBe("mic_missing");
     expect(soundWarning(at({ missing: true }), true)).toBeNull();
     expect(soundWarning(at({ none: true }), false)).toBe("mic_none");
+  });
+
+  it("says first when the system's privacy blocks the microphone (VID-077)", () => {
+    expect(soundWarning(at({ blocked: true, quietSeconds: 30 }, "ready"), false)).toBe(
+      "mic_blocked",
+    );
+    expect(soundWarning(at({ blocked: true, on: false }), true)).toBeNull();
   });
 
   it("draws the meter in decibels", () => {

@@ -71,6 +71,8 @@ pub struct Recording {
     meter: Mutex<Option<xs_video::Meter>>,
     /// The inputs, looked at again every 2 s (VID-043).
     inputs: Mutex<Option<(Instant, Inputs)>>,
+    /// The system's privacy blocks the microphone (VID-077), looked at every 2 s.
+    mic_blocked: Mutex<Option<(Instant, bool)>>,
 }
 
 /// The sound inputs that are on, and the default one's id.
@@ -371,6 +373,23 @@ fn inputs(core: &Core) -> Inputs {
     }
 }
 
+/// Whether the system's privacy settings block the microphone (VID-077), at most 2 s old.
+fn mic_blocked(core: &Core) -> bool {
+    let svc = service(core);
+    let mut cache = svc.mic_blocked.lock().unwrap();
+    match *cache {
+        Some((at, blocked)) if at.elapsed() < Duration::from_secs(2) => blocked,
+        _ => {
+            let blocked = core.host().permissions().iter().any(|p| {
+                p.permission == xs_core::host::Permission::Microphone
+                    && p.state == xs_core::host::PermissionState::Denied
+            });
+            *cache = Some((Instant::now(), blocked));
+            blocked
+        }
+    }
+}
+
 /// The microphone a recording takes (VID-039): asked for in `p`, or as the settings
 /// say; its device and automatic level from the settings. A device that is not
 /// plugged in gives the system's default (VID-043).
@@ -418,6 +437,7 @@ fn levels_json(core: &Core, l: xs_video::mix::Levels, mic_on: bool, system_on: b
             "wireless": input.is_some_and(|i| i.wireless),
             "missing": missing,
             "none": list.is_empty(),
+            "blocked": mic_on && mic_blocked(core),
         },
         "systemAudio": { "on": system_on, "level": round(system.level), "clip": system.clip },
         "track": track,
