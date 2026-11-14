@@ -1786,7 +1786,8 @@
       "editor_shortcut_sheet": "Keyboard shortcuts sheet",
       "editor_move_computer": "Move XcreenShot to another computer",
       "smart_extract_text": "Extract text",
-      "editor_extract_text": "Extract text"
+      "editor_extract_text": "Extract text",
+      "editor_auto_redact": "Auto redact"
     }
   },
   "tray": {
@@ -1975,6 +1976,7 @@
     "video_gif": "Create animated GIF…",
     "video_combine": "Combine videos…",
     "extract_text": "Extract text",
+    "auto_redact": "Auto redact…",
     "extract_text_image": "Extract text from the image",
     "extract_text_selection": "Extract text from the selection",
     "extract_text_object": "Extract text"
@@ -4448,6 +4450,52 @@
       "undo": "Undo (Z)",
       "clear": "Clear all (Delete)",
       "exit": "Stop drawing (Esc)"
+    },
+    "redact": {
+      "title": "Auto redact",
+      "open": "Auto redact…",
+      "analyzing": "Looking for sensitive data…",
+      "faces_only": "No recognition language on this computer: only faces were looked for.",
+      "nothing": "No sensitive data found.",
+      "add_by_hand": "Add redactions by hand",
+      "categories": "Categories",
+      "cat": {
+        "email": "Emails",
+        "phone": "Phone numbers",
+        "card": "Card numbers",
+        "id": "ID numbers",
+        "address": "Postal addresses",
+        "ip": "IP addresses",
+        "url": "URLs",
+        "date": "Dates",
+        "face": "Faces"
+      },
+      "my_terms": "My terms",
+      "words": "Words",
+      "exact": "Exact match",
+      "pattern": "Pattern",
+      "add_words": "Word or phrase",
+      "pattern_name": "Pattern name",
+      "add_pattern": "Pattern (regular expression)",
+      "add": "Add",
+      "remove_term": "Remove {{name}}",
+      "invalid_pattern": "Invalid pattern",
+      "style": "Style",
+      "type": "Type",
+      "margin": "Margin",
+      "review": "Review the redactions",
+      "previous": "Previous",
+      "next": "Next",
+      "none": "No redactions",
+      "total_one": "{{count}} redaction",
+      "total_other": "{{count}} redactions",
+      "position": "{{n}} of {{count}}",
+      "remove_all": "Remove all",
+      "done": "Done",
+      "private": "Everything is read on this computer. The text found is not kept.",
+      "reminder_title": "Blur and pixelate can be undone",
+      "reminder_body": "Some tools can bring back what a blur or pixelation hides. For confidential data, a solid fill is safer.",
+      "use_solid": "Use solid fill"
     }
   },
   "history": {

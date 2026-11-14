@@ -2704,7 +2704,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 121] = [
+pub const EDITOR_ACTIONS: [&str; 122] = [
     "open",
     "save",
     "save_as",
@@ -2839,6 +2839,8 @@ pub const EDITOR_ACTIONS: [&str; 121] = [
     "video_info",
     // Extract text in the editor (SMT-007).
     "extract_text",
+    // Auto redact's panel (SMT-010).
+    "auto_redact",
 ];
 
 fn library_item() -> Value {

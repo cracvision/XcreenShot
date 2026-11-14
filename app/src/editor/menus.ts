@@ -544,6 +544,7 @@ export function useMenuBar(): void {
     enabled["editor.float_selection"] = pixelsOnImage;
     enabled["editor.crop_selection"] = pixelsOnImage;
     enabled["editor.extract_text"] = hasDoc && !isVideo;
+    enabled["editor.auto_redact"] = hasDoc && !isVideo;
     // The Video menu (VID-056 to VID-064): with a video shown.
     for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;
     enabled["editor.video_cut"] = hasDoc && isVideo && videoCuttable;

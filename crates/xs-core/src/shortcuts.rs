@@ -702,6 +702,12 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"extract_text"}"#,
         ),
+        // Auto redact (SMT-010): assignable, none by default.
+        editor(
+            "editor.auto_redact",
+            "editor.action",
+            r#"{"action":"auto_redact"}"#,
+        ),
         editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
         editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
         editor(

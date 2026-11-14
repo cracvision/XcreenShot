@@ -1786,7 +1786,8 @@
       "editor_shortcut_sheet": "Hoja de atajos de teclado",
       "editor_move_computer": "Mover XcreenShot a otro equipo",
       "smart_extract_text": "Extraer texto",
-      "editor_extract_text": "Extraer texto"
+      "editor_extract_text": "Extraer texto",
+      "editor_auto_redact": "Redacción automática"
     }
   },
   "tray": {
@@ -1975,6 +1976,7 @@
     "video_gif": "Crear GIF animado…",
     "video_combine": "Combinar videos…",
     "extract_text": "Extraer texto",
+    "auto_redact": "Redacción automática…",
     "extract_text_image": "Extraer texto de la imagen",
     "extract_text_selection": "Extraer texto de la selección",
     "extract_text_object": "Extraer texto"
@@ -4448,6 +4450,52 @@
       "undo": "Deshacer (Z)",
       "clear": "Borrar todo (Supr)",
       "exit": "Dejar de dibujar (Esc)"
+    },
+    "redact": {
+      "title": "Redacción automática",
+      "open": "Redacción automática…",
+      "analyzing": "Buscando datos sensibles…",
+      "faces_only": "No hay un idioma de reconocimiento en este equipo: solo se buscaron rostros.",
+      "nothing": "No se encontraron datos sensibles.",
+      "add_by_hand": "Añadir redacciones a mano",
+      "categories": "Categorías",
+      "cat": {
+        "email": "Correos electrónicos",
+        "phone": "Números de teléfono",
+        "card": "Números de tarjeta",
+        "id": "Números de identificación",
+        "address": "Direcciones postales",
+        "ip": "Direcciones IP",
+        "url": "URLs",
+        "date": "Fechas",
+        "face": "Rostros"
+      },
+      "my_terms": "Mis términos",
+      "words": "Palabras",
+      "exact": "Coincidencia exacta",
+      "pattern": "Patrón",
+      "add_words": "Palabra o frase",
+      "pattern_name": "Nombre del patrón",
+      "add_pattern": "Patrón (expresión regular)",
+      "add": "Añadir",
+      "remove_term": "Quitar {{name}}",
+      "invalid_pattern": "Patrón no válido",
+      "style": "Estilo",
+      "type": "Tipo",
+      "margin": "Margen",
+      "review": "Revisar las redacciones",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "none": "Sin redacciones",
+      "total_one": "{{count}} redacción",
+      "total_other": "{{count}} redacciones",
+      "position": "{{n}} de {{count}}",
+      "remove_all": "Quitar todas",
+      "done": "Listo",
+      "private": "Todo se lee en este equipo. El texto encontrado no se guarda.",
+      "reminder_title": "El desenfoque y el pixelado se pueden revertir",
+      "reminder_body": "Algunas herramientas pueden recuperar lo que oculta un desenfoque o un pixelado. Para datos confidenciales es más seguro el relleno sólido.",
+      "use_solid": "Usar relleno sólido"
     }
   },
   "history": {

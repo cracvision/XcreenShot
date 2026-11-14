@@ -240,6 +240,21 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Dudas del equipo de construcción (M5, entrega 2: redacción automática)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| SMT-011 | Los patrones de los datos sensibles necesitan expresiones regulares | Se añade el crate `regex` a `xs-ocr` (Rust puro, de la familia oficial de Rust). Garantiza tiempo lineal, así que un patrón nunca se cuelga | Provisional |
+| SMT-011 | ¿Con qué se detectan los rostros sin enviar nada fuera? | Con el detector de caras del propio Windows (`Windows.Media.FaceAnalysis`), en el equipo. Encuentra bien las caras de frente y de tres cuartos; **las de perfil puede no verlas**, así que el criterio de "5 personas, dos de perfil" puede quedarse corto. En macOS se usará Vision. Si hace falta más, se propondrá un modelo local aparte | Provisional |
+| SMT-011 | El reconocimiento de Windows no lee una línea de "4111 1111 1111 1111" (tantos unos parecen rayas) | Es un límite del motor del sistema, no de la detección: con otro número de tarjeta válido funciona. Queda anotado para el juego de prueba | Anotado |
+| SMT-011 | Direcciones "en varias líneas si hace falta" | Por ahora cada línea se examina sola: una dirección partida en dos líneas se cubre solo si cada parte parece una dirección | Provisional |
+| SMT-012 | "Un patrón que tarda más de 200 ms se detiene" | Con `regex` ningún patrón puede tardar de forma desmedida (tiempo lineal), así que no hace falta cortar. Un patrón no válido se marca en rojo y no se aplica | Provisional |
+| SMT-013 | Esquinas redondeadas (4 px por defecto) | El objeto Desenfocar solo tiene rectángulo y elipse, sin radio de esquinas. Por ahora las redacciones son rectángulos (y elipses los rostros); las esquinas llegarán cuando Desenfocar tenga radio | Pendiente |
+| SMT-017 | ¿Qué guarda cada redacción? | Solo su categoría y el rectángulo del dato (`autoRedact: {category, source}`), nunca el texto. Por eso el panel muestra cuántas hay y dónde están, no el texto | Provisional |
+| SMT-010 | Volver a analizar | Las redacciones que siguen haciendo falta se quedan como están (si se movieron o se cambiaron a mano, no se tocan); las que sobran se quitan; nunca se duplican. Una que se borró a mano vuelve al reabrir el panel, hasta que llegue "No volver a marcar en este documento" (SMT-014) | Provisional |
+| SMT-010 | ¿Dónde va el panel? | Ocupa el panel lateral mientras está abierto, en lugar de sus pestañas; Listo lo cierra. El recordatorio de seguridad usa los avisos de "No volver a mostrar", que Preferencias puede volver a mostrar | Provisional |
+| SMT-010 | `smart.redact` sobre un archivo | Con `path`, la imagen se abre aparte, se redacta y se escribe aplanada en `output` (por defecto, "<nombre> (redacted).<ext>" al lado); el archivo original no cambia. Con `flatten: true` sobre un documento abierto, las redacciones se aplanan | Provisional |
+
 ## Arreglos tras la caminata del 2026-11-12
 
 | ID | Duda | Propuesta | Estado |

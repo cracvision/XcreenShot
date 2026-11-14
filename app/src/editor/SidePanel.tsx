@@ -1,6 +1,8 @@
 // Side panel (EDT-005) with the Properties of the selected objects, of the text being
 // typed or of the active tool (EDT-014). Saved styles arrive in M2: the Styles tab says so.
 import { VideoPanel } from "./VideoPanel";
+import { RedactPanel } from "./RedactPanel";
+import { openRedact, useRedact } from "./redactState";
 import {
   CURSOR_HIGHLIGHTS,
   CURSOR_SHAPES,
@@ -483,6 +485,10 @@ function KindProperties({ target }: { target: Target }) {
           )}
           {shapeType}
           <p className="muted hint">{t("ui.editor.blur.security")}</p>
+          {/* Auto redact (SMT-010): finds what to cover and covers it. */}
+          <button type="button" className="btn" onClick={() => void openRedact()}>
+            {t("ui.redact.open")}
+          </button>
         </>
       );
     }
@@ -1521,6 +1527,7 @@ export function SidePanel() {
   const selection = useEditor((s) => s.selection);
   const editing = useEditor((s) => s.textEdit !== null);
   const target = useTarget();
+  const redactDoc = useRedact((s) => s.documentId);
 
   let title: string;
   let body: React.ReactNode;
@@ -1571,6 +1578,16 @@ export function SidePanel() {
   }
 
   if (!visible) return null;
+  // Auto redact (SMT-010): its panel takes the place of the tabs while it is open.
+  if (doc && redactDoc === doc.documentId && !doc.video)
+    return (
+      <aside className="side-panel" style={{ width }} aria-label={t("ui.editor.side_panel")}>
+        <ResizeEdge />
+        <div className="side-body">
+          <RedactPanel />
+        </div>
+      </aside>
+    );
   // A video: its information and actions; no tool tabs (VID-064, VID-065).
   if (doc?.video)
     return (

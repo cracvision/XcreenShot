@@ -472,6 +472,127 @@ h3 {
   font-weight: 600;
 }
 
+/* ---------- Auto redact panel (SMT-010 to SMT-013) ---------- */
+.redact-panel {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.redact-panel .side-subtitle {
+  margin: var(--space-3) 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.redact-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.redact-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+
+.redact-list .panel-check {
+  flex: 1;
+  min-width: 0;
+}
+
+.redact-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.redact-name small {
+  font-size: 11px;
+}
+
+.redact-count {
+  min-width: 24px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.redact-list li.invalid .redact-name,
+.redact-bad {
+  color: var(--danger);
+}
+
+.redact-bad {
+  font-size: 12px;
+}
+
+.redact-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.redact-add input[type="text"] {
+  min-height: 30px;
+}
+
+/* The words' Exact match, and a pattern's name, take the whole row. */
+.redact-add .panel-check,
+.redact-add .wide {
+  grid-column: 1 / -1;
+}
+
+.redact-add input.mono {
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.redact-progress {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.redact-progress progress {
+  width: 100%;
+}
+
+.redact-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.redact-empty p {
+  margin: 0;
+}
+
+.redact-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.redact-nav span {
+  white-space: nowrap;
+}
+
+.redact-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 .btn .chevron {
   transition: transform var(--dur-base) var(--ease-spring);
 }
