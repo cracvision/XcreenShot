@@ -1154,6 +1154,18 @@
     "slides_frame": {
       "title": "Slides frame on screen",
       "description": "Where the editor shows the slides video, for the camera preview."
+    },
+    "slides_annotate": {
+      "title": "Annotate a slide",
+      "description": "Draws on the slide showing while narrating; it stays in the image."
+    },
+    "slides_undo": {
+      "title": "Undo a narration annotation",
+      "description": "Removes the last annotation added while narrating."
+    },
+    "slides_annotations": {
+      "title": "Keep or remove narration annotations",
+      "description": "After narrating: keeps the annotations added, or removes them from all the images."
     }
   },
   "settings": {
@@ -5230,7 +5242,19 @@
       "strip": "Slides",
       "go_to": "Slide {{n}}: {{name}}",
       "remove": "Remove slide {{n}}",
-      "tray_create": "Narrated slides"
+      "tray_create": "Narrated slides",
+      "annotate": "Annotate",
+      "tool_arrow": "Arrow",
+      "tool_shape": "Rectangle",
+      "tool_highlight": "Highlight",
+      "tool_text": "Text",
+      "tool_step": "Step",
+      "undo": "Undo annotation",
+      "text_placeholder": "Type and press Enter",
+      "keep_title": "Annotations added while narrating",
+      "keep_body": "{{count}} annotations were added to the images while narrating.",
+      "keep": "Keep them",
+      "remove_annotations": "Remove the annotations added while narrating"
     }
   },
   "history": {

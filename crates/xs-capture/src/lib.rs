@@ -1786,6 +1786,18 @@ pub fn extension() -> Extension {
             slides_mode::frame(&*upgrade(&w)?, &p)
         });
         let w = weak.clone();
+        reg.handle("slides.annotate", move |ctx, p| {
+            slides_mode::annotate(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("slides.undo", move |ctx, _p| {
+            slides_mode::undo(&*upgrade(&w)?, ctx)
+        });
+        let w = weak.clone();
+        reg.handle("slides.annotations", move |ctx, p| {
+            slides_mode::annotations(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
         reg.handle("record.sound", move |ctx, p| {
             record::sound(&*upgrade(&w)?, ctx, &p)
         });

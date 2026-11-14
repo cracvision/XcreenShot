@@ -4,6 +4,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Dialog } from "../components/Dialog";
 import { run } from "../lib/commands";
 import { clock } from "../windows/recClock";
 import { CameraControl } from "../windows/RecordCamera";
@@ -12,20 +13,24 @@ import { useLevels } from "../windows/recSound";
 import {
   place,
   pollRecording,
+  settleAnnotations,
   SLIDE_SIZES,
+  SLIDE_TOOLS,
   slideKey,
+  slideObject,
   useSlides,
   type SlidesMode as Mode,
+  type SlideTool,
 } from "./slidesState";
 
 const images = new Map<string, Promise<string>>();
 
 /** A document's final image as a data URL, at most `max` pixels across (cached). */
-function useImage(documentId: string, max: number): string | null {
+function useImage(documentId: string, max: number, version = 0): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    const key = `${documentId}:${max}`;
+    const key = `${documentId}:${max}:${version}`;
     let p = images.get(key);
     if (!p) {
       p = run<{ image: { mimeType: string; data: string } }>("document.image", {
@@ -43,7 +48,7 @@ function useImage(documentId: string, max: number): string | null {
     return () => {
       alive = false;
     };
-  }, [documentId, max]);
+  }, [documentId, max, version]);
   return url;
 }
 
@@ -57,6 +62,9 @@ export function SlidesMode({ mode }: { mode: Mode }) {
   const since = useSlides((s) => s.since);
   const [now, setNow] = useState(() => Date.now());
   const [asking, setAsking] = useState(false);
+  // Annotating while narrating (VID-073): the tools shown, and the one chosen.
+  const [annotating, setAnnotating] = useState(false);
+  const [tool, setTool] = useState<SlideTool>("arrow");
   const recording = rec.status === "recording";
   const paused = rec.status === "paused";
   const busy = recording || paused || rec.status === "countdown" || rec.status === "finalizing";
@@ -80,6 +88,13 @@ export function SlidesMode({ mode }: { mode: Mode }) {
     const down = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest("input, select, textarea, [role=menu]")) return;
+      // Ctrl+Z takes back the last annotation added while narrating (VID-073).
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        e.stopPropagation();
+        act("slides.undo");
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
@@ -194,6 +209,38 @@ export function SlidesMode({ mode }: { mode: Mode }) {
         <span className="slides-gap" />
         <MicControl levels={levels} up={false} onMenu={() => undefined} />
         <CameraControl levels={levels} up={false} onMenu={() => undefined} />
+        <button
+          type="button"
+          className="btn small recbar-toggle"
+          aria-pressed={annotating}
+          onClick={() => setAnnotating((a) => !a)}
+        >
+          {t("ui.slides.annotate")}
+        </button>
+        {annotating && (
+          <span className="slides-tools" role="group" aria-label={t("ui.slides.annotate")}>
+            {SLIDE_TOOLS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className="btn small recbar-toggle"
+                aria-pressed={tool === k}
+                onClick={() => setTool(k)}
+              >
+                {t(`ui.slides.tool_${k}`)}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="btn icon small"
+              aria-label={t("ui.slides.undo")}
+              title={`${t("ui.slides.undo")} (Ctrl+Z)`}
+              onClick={() => act("slides.undo")}
+            >
+              ↶
+            </button>
+          </span>
+        )}
         <span className="slides-gap" />
         <button
           type="button"
@@ -282,6 +329,7 @@ export function SlidesMode({ mode }: { mode: Mode }) {
         <Stage
           mode={mode}
           slide={current}
+          tool={annotating ? tool : null}
           spaceHeld={() => space.current.down}
           onPan={() => {
             space.current.panned = true;
@@ -299,11 +347,14 @@ export function SlidesMode({ mode }: { mode: Mode }) {
 function Stage({
   mode,
   slide,
+  tool,
   spaceHeld,
   onPan,
 }: {
   mode: Mode;
   slide: Mode["slides"][number];
+  /** The annotation tool in use, or none (VID-073). */
+  tool: SlideTool | null;
   /** Space is held: a drag moves the slide. */
   spaceHeld: () => boolean;
   /** The slide was moved while Space was held. */
@@ -312,7 +363,7 @@ function Stage({
   const { t } = useTranslation();
   const host = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const url = useImage(slide.documentId, 2576);
+  const url = useImage(slide.documentId, 2576, slide.version);
   useEffect(() => {
     const el = host.current;
     if (!el) return;
@@ -411,6 +462,15 @@ function Stage({
             style={{ left: r.x * k, top: r.y * k, width: r.w * k, height: r.h * k }}
           />
         )}
+        {tool && k > 0 && (
+          <Annotator
+            tool={tool}
+            toImage={(x, y) => [
+              Math.round(((x / k - r.x) * slide.width) / r.w),
+              Math.round(((y / k - r.y) * slide.height) / r.h),
+            ]}
+          />
+        )}
       </div>
     </div>
   );
@@ -442,7 +502,7 @@ function Strip({ mode, locked }: { mode: Mode; locked: boolean }) {
             aria-label={t("ui.slides.go_to", { n: i + 1, name: s.name })}
             onClick={() => go(i)}
           >
-            <Thumb documentId={s.documentId} />
+            <Thumb documentId={s.documentId} version={s.version} />
             <span className="slides-num">{i + 1}</span>
           </button>
           {!locked && mode.count > 1 && (
@@ -462,7 +522,123 @@ function Strip({ mode, locked }: { mode: Mode; locked: boolean }) {
   );
 }
 
-function Thumb({ documentId }: { documentId: string }) {
-  const url = useImage(documentId, 160);
+function Thumb({ documentId, version }: { documentId: string; version: number }) {
+  const url = useImage(documentId, 160, version);
   return url ? <img src={url} alt="" draggable={false} /> : <span className="slides-thumb-empty" />;
+}
+
+/** Drawing on the slide (VID-073): a drag makes an arrow, a rectangle or a highlight;
+ * a click places a step, or text typed there. They go into the image and the video at
+ * once. Coordinates come in CSS pixels of the frame. */
+function Annotator({
+  tool,
+  toImage,
+}: {
+  tool: SlideTool;
+  toImage: (x: number, y: number) => [number, number];
+}) {
+  const { t } = useTranslation();
+  const [from, setFrom] = useState<{ x: number; y: number } | null>(null);
+  const [to, setTo] = useState<{ x: number; y: number } | null>(null);
+  const [typing, setTyping] = useState<{ x: number; y: number } | null>(null);
+  const local = (e: React.PointerEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const add = (object: Record<string, unknown> | null) => {
+    if (object) act("slides.annotate", { objects: [object] });
+  };
+  const box =
+    from && to
+      ? {
+          left: Math.min(from.x, to.x),
+          top: Math.min(from.y, to.y),
+          width: Math.abs(to.x - from.x),
+          height: Math.abs(to.y - from.y),
+        }
+      : null;
+  return (
+    <div
+      className="slides-annotator"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        const p = local(e);
+        if (tool === "text") {
+          setTyping(p);
+          return;
+        }
+        if (tool === "step") {
+          add(slideObject("step", toImage(p.x, p.y), toImage(p.x, p.y)));
+          return;
+        }
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setFrom(p);
+        setTo(p);
+      }}
+      onPointerMove={(e) => {
+        if (from) setTo(local(e));
+      }}
+      onPointerUp={(e) => {
+        if (!from) return;
+        const p = local(e);
+        add(slideObject(tool, toImage(from.x, from.y), toImage(p.x, p.y)));
+        setFrom(null);
+        setTo(null);
+      }}
+    >
+      {from && to && tool === "arrow" && (
+        <svg className="slides-sketch" aria-hidden="true">
+          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+        </svg>
+      )}
+      {box && tool !== "arrow" && <div className="slides-sketch-box" style={box} />}
+      {typing && (
+        <input
+          className="slides-typing"
+          autoFocus
+          placeholder={t("ui.slides.text_placeholder")}
+          style={{ left: typing.x, top: typing.y }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              add(slideObject("text", toImage(typing.x, typing.y), [0, 0], e.currentTarget.value));
+              setTyping(null);
+            } else if (e.key === "Escape") setTyping(null);
+          }}
+          onBlur={() => setTyping(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** After narrating with annotations (VID-073): keep them, or remove them from all the
+ * images at once. */
+export function NarrationNotice() {
+  const { t } = useTranslation();
+  const count = useSlides((s) => s.pendingAnnotations);
+  if (count === 0) return null;
+  return (
+    <Dialog
+      title={t("ui.slides.keep_title")}
+      onCancel={() => settleAnnotations(true)}
+      actions={
+        <>
+          <button type="button" className="btn" onClick={() => settleAnnotations(false)}>
+            {t("ui.slides.remove_annotations")}
+          </button>
+          <button
+            type="button"
+            className="btn primary"
+            autoFocus
+            onClick={() => settleAnnotations(true)}
+          >
+            {t("ui.slides.keep")}
+          </button>
+        </>
+      }
+    >
+      <p>{t("ui.slides.keep_body", { count })}</p>
+    </Dialog>
+  );
 }

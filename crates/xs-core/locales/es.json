@@ -1154,6 +1154,18 @@
     "slides_frame": {
       "title": "Marco de las diapositivas en pantalla",
       "description": "Dónde muestra el editor el video de diapositivas, para la vista previa de la cámara."
+    },
+    "slides_annotate": {
+      "title": "Anotar una diapositiva",
+      "description": "Dibuja sobre la diapositiva que se ve mientras se narra; se queda en la imagen."
+    },
+    "slides_undo": {
+      "title": "Deshacer una anotación de la narración",
+      "description": "Quita la última anotación añadida al narrar."
+    },
+    "slides_annotations": {
+      "title": "Conservar o quitar las anotaciones de la narración",
+      "description": "Después de narrar: conserva las anotaciones añadidas o las quita de todas las imágenes."
     }
   },
   "settings": {
@@ -5230,7 +5242,19 @@
       "strip": "Diapositivas",
       "go_to": "Diapositiva {{n}}: {{name}}",
       "remove": "Quitar la diapositiva {{n}}",
-      "tray_create": "Diapositivas narradas"
+      "tray_create": "Diapositivas narradas",
+      "annotate": "Anotar",
+      "tool_arrow": "Flecha",
+      "tool_shape": "Rectángulo",
+      "tool_highlight": "Resaltar",
+      "tool_text": "Texto",
+      "tool_step": "Paso",
+      "undo": "Deshacer la anotación",
+      "text_placeholder": "Escribe y pulsa Intro",
+      "keep_title": "Anotaciones añadidas al narrar",
+      "keep_body": "Se añadieron {{count}} anotaciones a las imágenes al narrar.",
+      "keep": "Conservarlas",
+      "remove_annotations": "Quitar las anotaciones añadidas al narrar"
     }
   },
   "history": {

@@ -38,6 +38,9 @@ pub struct SlidesService {
     /// Where the editor shows the video's frame, in screen pixels (for the camera's
     /// preview over it).
     frame: Mutex<Option<(i32, i32, i32, i32)>>,
+    /// The annotations added while narrating, in order: (document, object) (VID-073).
+    /// They stay listed after the mode closes, until they are kept or removed.
+    narration: Mutex<Vec<(String, String)>>,
 }
 
 fn service(core: &Core) -> Arc<SlidesService> {
@@ -169,11 +172,13 @@ pub fn state(core: &Core) -> Value {
         "enlarge": m.enlarge,
         // Where the editor shows the video on the screen (for the camera's preview).
         "frame": *svc.frame.lock().unwrap(),
+        "annotations": svc.narration.lock().unwrap().len(),
         "slides": m.items.iter().map(|i| json!({
             "documentId": i.document,
             "name": i.name,
             "width": i.width,
             "height": i.height,
+            "version": i.id,
             "zoom": i.view.zoom,
             "center": [i.view.center.0, i.view.center.1],
         })).collect::<Vec<_>>(),
@@ -406,12 +411,105 @@ pub fn close(core: &Core) {
     let svc = service(core);
     if svc.mode.lock().unwrap().take().is_some() {
         svc.frame.lock().unwrap().take();
-        core.host().editor_event("slides", json!({ "active": false }));
+        // Annotations added while narrating: the editor asks whether to keep them.
+        let annotations = svc.narration.lock().unwrap().len();
+        core.host()
+            .editor_event("slides", json!({ "active": false, "annotations": annotations }));
         // The camera goes with the mode, unless a recording still holds it.
         if !crate::record::running(core) {
             crate::rec_camera::sync(core, None);
         }
     }
+}
+
+/// The slide of `document` drawn again (its annotations changed): a cut in the video.
+fn redraw(core: &Core, svc: &SlidesService, document: &str) {
+    let Some(fresh) = item(core, svc, document) else {
+        return;
+    };
+    let mut mode = svc.mode.lock().unwrap();
+    if let Some(m) = mode.as_mut() {
+        for it in m.items.iter_mut().filter(|i| i.document == document) {
+            it.bgra = fresh.bgra.clone();
+            it.width = fresh.width;
+            it.height = fresh.height;
+            it.id = svc.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+        }
+    }
+}
+
+/// `slides.annotate` (VID-073): annotations drawn on the slide showing, in its image's
+/// pixels, as `document.annotate` takes them. They show in the video at once and stay
+/// in the image, listed as added while narrating.
+pub fn annotate(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let svc = service(core);
+    let document = with_mode(core, ctx.lang, |m| {
+        m.items.get(m.index).map(|i| i.document.clone())
+    })?
+    .ok_or_else(|| bad(ctx.lang, "errors.slides_off"))?;
+    let objects = p.get("objects").cloned().unwrap_or(json!([]));
+    let added = core.call(
+        ctx.source,
+        "document.annotate",
+        json!({ "documentId": document, "objects": objects }),
+        Some(ctx.lang),
+    )?;
+    let ids: Vec<String> = added["ids"]
+        .as_array()
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    svc.narration
+        .lock()
+        .unwrap()
+        .extend(ids.iter().map(|id| (document.clone(), id.clone())));
+    redraw(core, &svc, &document);
+    changed(core)?;
+    Ok(json!({ "ids": ids }))
+}
+
+/// `slides.undo` (VID-073): the last annotation added while narrating goes, also in
+/// the video.
+pub fn undo(core: &Core, ctx: &Context) -> CommandResult {
+    let svc = service(core);
+    let Some((document, id)) = svc.narration.lock().unwrap().pop() else {
+        return state_now(core);
+    };
+    core.call(
+        ctx.source,
+        "document.delete_object",
+        json!({ "documentId": document, "objectId": id }),
+        Some(ctx.lang),
+    )?;
+    redraw(core, &svc, &document);
+    changed(core)
+}
+
+fn state_now(core: &Core) -> CommandResult {
+    Ok(state(core))
+}
+
+/// `slides.annotations` (VID-073): after narrating, the annotations added are kept, or
+/// removed from all the images at once (`keep: false`).
+pub fn annotations(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let keep = p.get("keep").and_then(Value::as_bool).unwrap_or(true);
+    let list = std::mem::take(&mut *service(core).narration.lock().unwrap());
+    let count = list.len();
+    if !keep {
+        let mut by_doc: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+        for (d, id) in list {
+            by_doc.entry(d).or_default().push(id);
+        }
+        for (d, ids) in by_doc {
+            // A document closed meanwhile keeps them: nothing to do there.
+            let _ = core.call(
+                ctx.source,
+                "document.delete_object",
+                json!({ "documentId": d, "objectIds": ids }),
+                Some(ctx.lang),
+            );
+        }
+    }
+    Ok(json!({ "kept": keep, "count": count }))
 }
 
 #[cfg(test)]
@@ -478,8 +576,36 @@ mod mode_tests {
         assert_eq!(feed().unwrap().view.zoom, 2.0);
         call("slides.view", json!({"reset": true})).unwrap();
         assert_eq!(feed().unwrap().view.zoom, 1.0);
+        // Annotated while narrating (VID-073): on the slide showing, in the video at
+        // once; undone; and after leaving, removed from all the images.
+        let before = feed().unwrap().id;
+        let r = call(
+            "slides.annotate",
+            json!({"objects": [{"type": "shape", "rect": {"x": 10, "y": 10, "w": 100, "h": 50}}]}),
+        )
+        .unwrap();
+        assert_eq!(r["ids"].as_array().unwrap().len(), 1);
+        assert_ne!(feed().unwrap().id, before, "a new picture for the video");
+        let objects = |d: &str| {
+            call("document.info", json!({"documentId": d})).unwrap()["objects"]
+                .as_array()
+                .map_or(0, |a| a.len())
+        };
+        assert_eq!(objects(&blue), 1);
+        call("slides.undo", json!({})).unwrap();
+        assert_eq!(objects(&blue), 0);
+        call(
+            "slides.annotate",
+            json!({"objects": [{"type": "arrow", "from": [0, 0], "to": [50, 50]}]}),
+        )
+        .unwrap();
         // Left: closed, the images as they were.
         call("slides.exit", json!({})).unwrap();
+        assert_eq!(
+            call("slides.annotations", json!({"keep": false})).unwrap()["count"],
+            1
+        );
+        assert_eq!(objects(&blue), 0);
         assert_eq!(call("slides.state", json!({})).unwrap()["active"], false);
         assert!(super::feed(&core).is_none());
     }

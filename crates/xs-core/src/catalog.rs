@@ -1555,6 +1555,26 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &["x", "y", "width", "height"],
             ))
             .result(json!({"type": "object", "description": "Where the editor shows the video's frame, in screen pixels, for the camera's preview"})),
+        B::new("slides.annotate", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"objects": {"type": "array", "items": {"type": "object"}, "description": "As document.annotate takes them, in the slide image's pixels"}}),
+                &["objects"],
+            ))
+            .result(json!({"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "string"}}}})),
+        B::new("slides.undo", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .result(json!({"type": "object"})),
+        B::new("slides.annotations", &["VID-073"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({"keep": {"type": "boolean", "default": true, "description": "false: removed from all the images at once"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"kept": {"type": "boolean"}, "count": {"type": "integer"}}})),
         B::new("slides.exit", &["VID-071"])
             .scopes(ALL)
             .mutates()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { place, slideKey } from "./slidesState";
+import { place, slideKey, slideObject } from "./slidesState";
 
 describe("narrated slides (VID-072, VID-074)", () => {
   it("places a slide whole and centred, as the video does", () => {
@@ -9,6 +9,26 @@ describe("narrated slides (VID-072, VID-074)", () => {
     expect(place(1920, 1080, 800, 600, true).h).toBe(1080);
     const near = place(1920, 1080, 800, 600, false, 2, [0.25, 0.25]);
     expect([near.x + 0.25 * near.w, near.y + 0.25 * near.h]).toEqual([960, 540]);
+  });
+
+  it("makes annotations from gestures, in the image's pixels (VID-073)", () => {
+    expect(slideObject("arrow", [10, 10], [100, 50])).toEqual({
+      type: "arrow",
+      from: [10, 10],
+      to: [100, 50],
+    });
+    expect(slideObject("shape", [100, 80], [20, 10])).toEqual({
+      type: "shape",
+      rect: { x: 20, y: 10, w: 80, h: 70 },
+    });
+    expect(slideObject("highlight", [0, 0], [2, 2])).toBeNull();
+    expect(slideObject("step", [5, 6], [5, 6])).toEqual({ type: "step", at: [5, 6] });
+    expect(slideObject("text", [5, 6], [5, 6], "  Hola ")).toEqual({
+      type: "text",
+      at: [5, 6],
+      text: "Hola",
+    });
+    expect(slideObject("text", [5, 6], [5, 6], " ")).toBeNull();
   });
 
   it("goes through the slides with the keys of a presentation remote", () => {

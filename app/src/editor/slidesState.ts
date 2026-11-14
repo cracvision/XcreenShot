@@ -7,6 +7,8 @@ import { run } from "../lib/commands";
 
 export interface SlideInfo {
   documentId: string;
+  /** Changes when its picture does (an annotation, VID-073). */
+  version: number;
   name: string;
   width: number;
   height: number;
@@ -31,6 +33,9 @@ export interface RecState {
 
 interface Store {
   mode: SlidesMode | null;
+  /** Annotations added while narrating, to keep or remove once the mode closes
+   * (VID-073). */
+  pendingAnnotations: number;
   rec: RecState;
   /** When the recording's state arrived, to move the time on between updates. */
   since: number;
@@ -38,12 +43,52 @@ interface Store {
 
 export const useSlides = create<Store>(() => ({
   mode: null,
+  pendingAnnotations: 0,
   rec: { status: "idle", elapsed: 0 },
   since: 0,
 }));
 
-const take = (m: Partial<SlidesMode> & { active: boolean }) =>
-  useSlides.setState({ mode: m.active ? (m as SlidesMode) : null });
+const take = (m: Partial<SlidesMode> & { active: boolean; annotations?: number }) =>
+  useSlides.setState(
+    m.active ? { mode: m as SlidesMode } : { mode: null, pendingAnnotations: m.annotations ?? 0 },
+  );
+
+/** The annotations added while narrating: kept, or removed from all the images. */
+export function settleAnnotations(keep: boolean): void {
+  useSlides.setState({ pendingAnnotations: 0 });
+  void run("slides.annotations", { keep }).catch(() => undefined);
+}
+
+/** The annotation tools of the slides (VID-073). */
+export type SlideTool = "arrow" | "shape" | "highlight" | "text" | "step";
+export const SLIDE_TOOLS: SlideTool[] = ["arrow", "shape", "highlight", "text", "step"];
+
+/** The object a gesture makes, in the image's pixels: a drag from `a` to `b`, or a
+ * click at `a` (text and steps). Null when it is too small to be meant. */
+export function slideObject(
+  tool: SlideTool,
+  a: [number, number],
+  b: [number, number],
+  text = "",
+): Record<string, unknown> | null {
+  const rect = {
+    x: Math.min(a[0], b[0]),
+    y: Math.min(a[1], b[1]),
+    w: Math.abs(b[0] - a[0]),
+    h: Math.abs(b[1] - a[1]),
+  };
+  switch (tool) {
+    case "arrow":
+      return Math.hypot(b[0] - a[0], b[1] - a[1]) < 4 ? null : { type: "arrow", from: a, to: b };
+    case "shape":
+    case "highlight":
+      return rect.w < 4 || rect.h < 4 ? null : { type: tool, rect };
+    case "step":
+      return { type: "step", at: a };
+    case "text":
+      return text.trim() ? { type: "text", at: a, text: text.trim() } : null;
+  }
+}
 
 /** Follows the core: the mode's changes, and the recording while the mode is open. */
 export async function followSlides(): Promise<void> {

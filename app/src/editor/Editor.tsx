@@ -34,7 +34,7 @@ import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
 import { VideoStage } from "./VideoStage";
-import { SlidesMode } from "./SlidesMode";
+import { NarrationNotice, SlidesMode } from "./SlidesMode";
 import { followSlides, useSlides } from "./slidesState";
 import { GifDialog } from "./GifDialog";
 import { CombineDialog } from "./CombineDialog";
@@ -221,6 +221,7 @@ export function Editor() {
       <QrDialogs />
       <GifDialog />
       <CombineDialog />
+      <NarrationNotice />
       <TemplateDialogs />
       <QuickView />
       <TagDialogs />

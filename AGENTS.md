@@ -314,6 +314,9 @@ xcreenshot app ping --json
 | `slides.set` | `xcreenshot slides set --size 1280x720 --background "#FFFFFF"` | `size`; `background` string; `enlarge` boolean | The video's size (even, 320 to 3840; not while recording), its background and whether small images are enlarged (VID-074). They stay as the settings. _Changes data._ |
 | `slides.view` | `xcreenshot slides view --zoom 2 --center '[0.25,0.25]'` | `zoom` number; `center` array; `reset` boolean | Zooms the slide showing (1 to 8) with `center` of the image in the middle; `reset` goes back. In the video it glides there (VID-074). _Changes data._ |
 | `slides.frame` | (the app) | `x` number (required); `y` number (required); `width` number (required); `height` number (required) | Where the editor shows the video's frame on the screen, so the camera's preview goes over the slide at the video's scale (VID-072). _Changes data._ |
+| `slides.annotate` | `xcreenshot slides annotate --params '{"objects":[{"type":"arrow","from":[10,10],"to":[200,120]}]}'` | `objects` array (required) | Annotates the slide showing while narrating (VID-073), as `document.annotate` takes objects, in the image's pixels: it shows in the video at once and stays in the image, listed as added while narrating. _Changes data._ |
+| `slides.undo` | `xcreenshot slides undo` | — | Removes the last annotation added while narrating, also from the video. _Changes data._ |
+| `slides.annotations` | `xcreenshot slides annotations --keep false` | `keep` boolean | After narrating: keeps the annotations added (`keep`, default) or removes them from all the images at once; returns how many there were. _Changes data._ |
 | `slides.exit` | `xcreenshot slides exit` | — | Closes the mode without changing any image; not while recording. _Changes data._ |
 
 ### document
