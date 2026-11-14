@@ -3143,7 +3143,7 @@ pub const TOOLS: [&str; 22] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 123] = [
+pub const EDITOR_ACTIONS: [&str; 124] = [
     "open",
     "save",
     "save_as",
@@ -3282,6 +3282,8 @@ pub const EDITOR_ACTIONS: [&str; 123] = [
     "auto_redact",
     // Insert a QR code (SMT-036).
     "insert_qr",
+    // Narrated slides from the image shown (VID-071).
+    "slides",
 ];
 
 fn library_item() -> Value {

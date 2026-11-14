@@ -47,6 +47,7 @@ import { toggleFullscreen } from "./fullscreen";
 import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
 import { useZones } from "./templateUi";
 import { useVideoExport, videoAction } from "./videoState";
+import { startSlides } from "./slidesState";
 import { openRedact } from "./redactState";
 import { actionOff } from "../features";
 import { editText } from "./editText";
@@ -961,6 +962,10 @@ export function performAction(action: string): boolean {
     case "video_combine":
     case "video_info":
       return videoAction(action);
+    case "slides":
+      if (!doc) return false;
+      void startSlides([doc.documentId]).catch((e: unknown) => fail(e));
+      return true;
     case "ai_name":
       if (!doc) return false;
       void openAi("name");

@@ -8630,3 +8630,145 @@ button.lc-head:hover,
     background: rgb(20 24 28);
   }
 }
+
+/* ---------- Narrated slides (VID-071 to VID-074) ---------- */
+/* The slide as it will be in the video, a strip with all of them, and their bar
+   instead of the editor's toolbar. */
+.slides-mode {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-sunken, var(--surface));
+}
+
+.slides-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.slides-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+}
+
+.slides-field input[type="color"] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--control-line);
+  border-radius: 6px;
+}
+
+.slides-custom {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.slides-custom input {
+  width: 72px;
+}
+
+.slides-check {
+  margin: 0;
+}
+
+.slides-gap {
+  flex: 1;
+}
+
+.slides-count {
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.slides-ask {
+  color: var(--ink);
+}
+
+.slides-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* The video's edge: what is recorded is inside it. */
+.slides-frame {
+  position: relative;
+  overflow: hidden;
+  outline: 1px dashed var(--line-strong);
+  outline-offset: 2px;
+}
+
+.slides-frame img {
+  position: absolute;
+  max-width: none;
+}
+
+.slides-strip {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px 12px;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.slides-strip li {
+  position: relative;
+  flex: none;
+}
+
+.slides-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 72px;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.slides-strip li.current .slides-thumb {
+  border-color: var(--brand-ink);
+}
+
+.slides-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.slides-num {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.slides-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}

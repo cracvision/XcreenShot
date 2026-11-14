@@ -635,6 +635,9 @@ fn editor_menus() -> Vec<MenuEntry> {
                 ),
                 action("editor.video_combine", "menu.video_combine", "video_combine"),
                 action("editor.video_info", "menu.video_info", "video_info"),
+                Separator,
+                // Narrated slides (VID-071): from the image shown.
+                action("editor.slides", "menu.slides", "slides"),
             ],
         },
         // Cloud AI (SMT-040, SMT-041): always listed; without it set up they explain

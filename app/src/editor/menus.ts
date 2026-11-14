@@ -564,6 +564,8 @@ export function useMenuBar(): void {
     // video (VID-065).
     for (const a of IMAGE_ACTIONS) enabled[`editor.${a}`] = hasDoc && !isVideo;
     enabled["editor.snap"] = !inLibrary;
+    // Narrated slides (VID-071): from an image (not a video).
+    enabled["editor.slides"] = hasDoc && !isVideo;
     enabled["editor.new_image"] = true;
     enabled["editor.batch_export"] = true;
     enabled["editor.customize_toolbar"] = !inLibrary;

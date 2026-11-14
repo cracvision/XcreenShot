@@ -2378,7 +2378,8 @@
     "edit_text": "Edit text",
     "insert_qr": "Insert QR code…",
     "read_qr": "Read QR codes",
-    "read_qr_selection": "Read QR codes of the selection"
+    "read_qr_selection": "Read QR codes of the selection",
+    "slides": "Narrated slides…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -5206,6 +5207,25 @@
       "help_alt": "With an object selected, hold Alt and point at another: the space between them.",
       "help_drag": "Drag to lay a ruler: its length, angle and ΔX/ΔY. Shift keeps it straight or at 45°; Esc clears it.",
       "help_dimension": "Right-click the ruler > Make a dimension: a line with its length that stays in the image. The marks of Measure are never exported."
+    },
+    "slides": {
+      "title": "Narrated slides",
+      "background": "Background",
+      "size": "Video size",
+      "size_locked": "The size is chosen before recording",
+      "custom": "Custom…",
+      "width": "Width",
+      "height": "Height",
+      "enlarge": "Enlarge small images",
+      "prev": "Previous slide",
+      "next": "Next slide",
+      "count": "{{n}} / {{total}}",
+      "exit": "Exit",
+      "showing": "Slide: {{name}}",
+      "strip": "Slides",
+      "go_to": "Slide {{n}}: {{name}}",
+      "remove": "Remove slide {{n}}",
+      "tray_create": "Narrated slides"
     }
   },
   "history": {

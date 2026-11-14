@@ -19,10 +19,12 @@ import {
   closeDocuments,
   closeOthers,
   closeUnpinned,
+  fail,
   togglePin,
 } from "./actions";
 import { shortcutOf } from "./menus";
 import { startBatch } from "./redactBatchState";
+import { startSlides } from "./slidesState";
 import { docUrl, xsdocUrl, type DocSummary } from "./state";
 import {
   copyAllOf,
@@ -120,6 +122,8 @@ export function trayMenu(
         separator: true,
         onSelect: () => openPicker(docs.map((d) => ({ documentId: d.documentId }))),
       },
+      // VID-071: the selected images, in the tray's order, as narrated slides.
+      slidesItem(docs, t),
       // SMT-016: auto redact over the selected captures (unless off, SMT-002).
       ...(isOn("autoRedact")
         ? [
@@ -173,6 +177,7 @@ export function trayMenu(
     },
     { ...pin, separator: true },
     ...common,
+    slidesItem([doc], t),
     {
       id: "copy_all",
       label: t("menu.copy_all"),
@@ -233,4 +238,17 @@ export function trayMenu(
       onSelect: () => askDelete([file]),
     },
   ];
+}
+
+/** Create: Narrated slides (VID-071), with the images among `docs` (not videos). */
+function slidesItem(docs: DocSummary[], t: (k: string) => string): MenuItem {
+  const images = docs
+    .filter((d) => ["xshot", "png", "jpg"].includes(d.format) && !d.missing)
+    .map((d) => d.documentId);
+  return {
+    id: "slides",
+    label: `${t("menu.create")}: ${t("ui.slides.tray_create")}`,
+    disabled: images.length === 0,
+    onSelect: () => void startSlides(images).catch((e: unknown) => fail(e)),
+  };
 }

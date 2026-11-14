@@ -2378,7 +2378,8 @@
     "edit_text": "Editar texto",
     "insert_qr": "Insertar código QR…",
     "read_qr": "Leer códigos QR",
-    "read_qr_selection": "Leer códigos QR de la selección"
+    "read_qr_selection": "Leer códigos QR de la selección",
+    "slides": "Diapositivas narradas…"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -5206,6 +5207,25 @@
       "help_alt": "Con un objeto seleccionado, mantén Alt y señala otro: el espacio entre ambos.",
       "help_drag": "Arrastra para tender una regla: su longitud, su ángulo y ΔX/ΔY. Mayús la deja recta o a 45°; Esc la quita.",
       "help_dimension": "Clic derecho en la regla > Convertir en cota: una línea con su medida que queda en la imagen. Las marcas de Medir nunca se exportan."
+    },
+    "slides": {
+      "title": "Diapositivas narradas",
+      "background": "Fondo",
+      "size": "Tamaño del video",
+      "size_locked": "El tamaño se elige antes de grabar",
+      "custom": "Personalizado…",
+      "width": "Ancho",
+      "height": "Alto",
+      "enlarge": "Ampliar las imágenes pequeñas",
+      "prev": "Diapositiva anterior",
+      "next": "Diapositiva siguiente",
+      "count": "{{n}} / {{total}}",
+      "exit": "Salir",
+      "showing": "Diapositiva: {{name}}",
+      "strip": "Diapositivas",
+      "go_to": "Diapositiva {{n}}: {{name}}",
+      "remove": "Quitar la diapositiva {{n}}",
+      "tray_create": "Diapositivas narradas"
     }
   },
   "history": {

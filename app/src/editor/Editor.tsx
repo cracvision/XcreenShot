@@ -34,6 +34,8 @@ import { useMainView } from "../library/state";
 import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
 import { VideoStage } from "./VideoStage";
+import { SlidesMode } from "./SlidesMode";
+import { followSlides, useSlides } from "./slidesState";
 import { GifDialog } from "./GifDialog";
 import { CombineDialog } from "./CombineDialog";
 import { TemplateDialogs } from "./TemplatePicker";
@@ -111,9 +113,12 @@ export function Editor() {
   const view = useMainView((s) => s.view);
   const trayItems = useEditor((s) => s.documents.filter((d) => d.shown).length);
   const [dropping, setDropping] = useState(false);
+  const slides = useSlides((s) => s.mode);
 
   useEffect(() => {
     void useEditor.getState().boot();
+    // Narrated slides (VID-071): the mode follows the core.
+    void followSlides();
   }, []);
 
   // Themes and templates opened with XcreenShot start their import here (APP-001).
@@ -176,6 +181,9 @@ export function Editor() {
       {!IS_MAC && <MenuBar />}
       {view === "library" ? (
         <LibraryView />
+      ) : slides ? (
+        // Narrated slides (VID-071): their own bar and stage instead of the canvas.
+        <SlidesMode mode={slides} />
       ) : (
         // The canvas fills the workspace; the bars, the panel and the recent tray (which
         // belongs to the Editor view, LIB-001) float over it.
