@@ -1438,6 +1438,15 @@ export function Overlay() {
       } else if ((e.key === "Enter" || key === "i") && st.phase === "adjusting" && st.sel) {
         finish({ kind: "rect", rect: st.sel });
       } else if (
+        key === "v" &&
+        st.phase === "adjusting" &&
+        st.sel &&
+        start.request.mode === "universal" &&
+        !start.request.quickAnnotate
+      ) {
+        // Video (CAP-009, VID-002): the same area goes to the recording.
+        finish({ kind: "video", rect: st.sel });
+      } else if (
         ["s", "d", "r", "x"].includes(key) &&
         st.phase === "adjusting" &&
         scrollable(start, st.sel) &&
@@ -1600,6 +1609,7 @@ export function Overlay() {
           compatibility={start.request.compatibility === true}
           monitors={start.request.monitors.length}
           qr={start.request.qr === true}
+          video={start.request.mode === "universal" && !start.request.quickAnnotate}
         />
       )}
       {barHere && sel && monitor && start?.request.quickAnnotate && (
@@ -1678,6 +1688,11 @@ export function Overlay() {
             schedule();
           }}
           onImage={() => finish({ kind: "rect", rect: sel })}
+          onVideo={
+            start && start.request.mode === "universal" && !start.request.quickAnnotate
+              ? () => finish({ kind: "video", rect: sel })
+              : undefined
+          }
           onScroll={
             start && start.request.mode !== "window" && start.request.mode !== "scrolling"
               ? (direction) =>
@@ -1722,18 +1737,22 @@ function KeysHelp({
   compatibility,
   monitors,
   qr,
+  video,
 }: {
   phase: Phase;
   windowsOnly: boolean;
   compatibility: boolean;
   monitors: number;
   qr: boolean;
+  /** The universal capture offers Video (CAP-009). */
+  video: boolean;
 }) {
   const { t } = useTranslation();
   const rows: [string, string][] = [];
   const k = (keys: string, what: string) => rows.push([keys, t(`ui.overlay.keys.${what}`)]);
   if (phase === "adjusting") {
     k("Enter · I", "capture");
+    if (video) k("V", "video");
     k("S", "scroll");
     k("D · R · X", "scroll_auto");
     k("← ↑ → ↓", "move");
@@ -1833,6 +1852,8 @@ interface BarProps {
   clamped: boolean;
   onApply: (r: Rect) => void;
   onImage: () => void;
+  /** The universal capture's Video (CAP-009, VID-002). */
+  onVideo: (() => void) | undefined;
   /** Scrolling (CAP-034): by hand, or by itself in a direction (CAP-035). */
   onScroll: ((direction?: "vertical" | "horizontal" | "both") => void) | undefined;
   /** The selection is big enough to scroll. */
@@ -1852,6 +1873,7 @@ function CaptureBar({
   clamped,
   onApply,
   onImage,
+  onVideo,
   onScroll,
   scrollOk,
   qr,
@@ -1939,6 +1961,11 @@ function CaptureBar({
       <button className="overlay-btn primary" onClick={onImage} autoFocus>
         {t("ui.overlay.image")} <kbd>Enter</kbd>
       </button>
+      {onVideo && (
+        <button className="overlay-btn" onClick={onVideo} aria-keyshortcuts="V">
+          {t("ui.overlay.video")} <kbd>V</kbd>
+        </button>
+      )}
       {onScroll && (
         <span
           className="overlay-scroll"

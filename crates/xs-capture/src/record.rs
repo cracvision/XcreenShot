@@ -355,6 +355,47 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         tell(core, ctx.source, "record.ready", state.clone());
         return start_at_once(core, ctx, state);
     }
+    // An area already chosen (the universal capture's Video, VID-002): Ready at once.
+    if let Some(a) = p.get("area").filter(|a| a.is_object()) {
+        let num = |k: &str| a.get(k).and_then(Value::as_f64).map(|v| v.round());
+        let (Some(x), Some(y), Some(w), Some(h)) = (num("x"), num("y"), num("width"), num("height")) else {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "area"), ("reason", "x, y, width and height")],
+                ),
+            ));
+        };
+        let rect = Rect {
+            x: x as i32,
+            y: y as i32,
+            width: w.max(0.0) as u32,
+            height: h.max(0.0) as u32,
+        };
+        if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(ctx.lang, "errors.record_too_small", &[]),
+            ));
+        }
+        let scale = monitor_of(rect).map_or(1.0, |(_, s)| s);
+        let r = Ready {
+            rect,
+            scale,
+            source: json!({ "type": "region", "rect": rect }),
+            limit,
+            window: None,
+            open: opens_editor(core, ctx.source, p),
+        };
+        *svc.ready.lock().unwrap() = Some(r.clone());
+        warm(core, &r);
+        let state = ready_state(core, &r);
+        bar(core, Some(state.clone()));
+        tell(core, ctx.source, "record.ready", state.clone());
+        return start_at_once(core, ctx, state);
+    }
     if p.get("selection").and_then(Value::as_str) == Some("fullscreen") {
         let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": "pointer" }), ctx.lang)?;
         let r = Ready {
@@ -1715,6 +1756,30 @@ pub fn status(core: &Core) -> Value {
 mod tests {
     use super::*;
     use std::path::Path;
+
+    /// VID-002, CAP-009: an area already chosen (the universal capture's Video) is
+    /// Ready at once with that size; one too small is refused.
+    #[test]
+    fn an_area_already_chosen_is_ready() {
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        let call = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+        let small = call(
+            "record.video",
+            json!({"area": {"x": 0, "y": 0, "width": 10, "height": 10}}),
+        );
+        assert_eq!(small.unwrap_err().code, ErrorCode::InvalidParams);
+        let r = call(
+            "record.video",
+            json!({"area": {"x": 0, "y": 0, "width": 800, "height": 600}}),
+        )
+        .unwrap();
+        assert_eq!(r["status"], "ready");
+        assert_eq!(
+            (r["area"]["width"].clone(), r["area"]["height"].clone()),
+            (json!(800), json!(600))
+        );
+        assert_eq!(call("record.cancel", json!({})).unwrap()["status"], "cancelled");
+    }
 
     /// VID-015: the timer needs a recording ready or under way, from 5 s to 12 h.
     #[test]

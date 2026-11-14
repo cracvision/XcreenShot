@@ -462,6 +462,20 @@ pub fn run(core: &Core, ctx: &Context, opts: &Options, mode: &str, extra: Value)
         let place = place_of(core, area);
         return crate::scroll::run(core, ctx, opts, area, scroll_kind, place);
     }
+    // Video (CAP-009, VID-002): the area chosen goes to the recording, Ready, without
+    // choosing it again; the screens are no longer frozen.
+    if kind == Some("video") {
+        let area = outcome
+            .get("rect")
+            .and_then(rect_from)
+            .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "rect"))?;
+        return core.call(
+            ctx.source,
+            "record.video",
+            json!({ "area": { "x": area.x, "y": area.y, "width": area.width, "height": area.height } }),
+            Some(lang),
+        );
+    }
     // Freehand (CAP-032): the rectangle around the shape, transparent outside it.
     if kind == Some("shape") {
         let points: Vec<(f64, f64)> = outcome

@@ -2803,7 +2803,8 @@
         "add_area": "add an area (from Universal or Region)",
         "remove_last_area": "remove the last area",
         "finish_areas": "finish (with at least one area)",
-        "qr": "Read the QR codes in the selection"
+        "qr": "Read the QR codes in the selection",
+        "video": "Record the area as a video"
       },
       "fullscreen": "Full screen",
       "all_monitors": "All monitors",
@@ -2834,7 +2835,8 @@
       "qr_one": "QR",
       "qr_other": "QR ×{{count}}",
       "qr_title_one": "The QR code in the selection",
-      "qr_title_other": "The {{count}} QR codes in the selection"
+      "qr_title_other": "The {{count}} QR codes in the selection",
+      "video": "Video"
     },
     "panel": {
       "title": "XcreenShot · Capture",
