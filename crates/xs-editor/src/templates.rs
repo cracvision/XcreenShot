@@ -75,6 +75,9 @@ pub struct Section {
     /// Zones side by side (rows, timelines, columns).
     #[serde(default)]
     pub zones: usize,
+    /// A guide's step or image section: the size of its picture (SMT-028, ADR 0009).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<[f64; 2]>,
 }
 
 /// The `template` field of a document.
@@ -109,7 +112,97 @@ impl Template {
             kind: kind.to_string(),
             height: default_height(kind, zones),
             zones,
+            picture: None,
         }
+    }
+
+    /// A guide of steps (SMT-028, ADR 0009), not a template of the picker.
+    pub fn is_guide(&self) -> bool {
+        self.id == GUIDE
+    }
+}
+
+/// The template id of a guide of steps (ADR 0009).
+pub const GUIDE: &str = "guide";
+
+/// A guide (SMT-028): its header, one step section per picture (of the size given) and
+/// its footer "Created by". The texts are laid out with their placeholders; the
+/// recorder puts each step's own.
+pub fn guide(pictures: &[[f64; 2]]) -> Template {
+    let mut t = Template {
+        id: GUIDE.to_string(),
+        settings: Settings {
+            title: true,
+            captions: true,
+            footer: true,
+            numbering: true,
+            ..Settings::default()
+        },
+        sections: Vec::new(),
+        width: WIDTH,
+        hidden: Vec::new(),
+        next_section: 0,
+    };
+    let header = t.new_section("guideHeader", 0);
+    t.sections.push(header);
+    for p in pictures {
+        let mut s = t.new_section("guideStep", 1);
+        s.picture = Some(guide_picture(*p));
+        t.sections.push(s);
+    }
+    let footer = t.new_section("footer", 0);
+    t.sections.push(footer);
+    t
+}
+
+/// A step's picture on the guide: as wide as the column at most, never enlarged
+/// (SMT-028).
+pub fn guide_picture(size: [f64; 2]) -> [f64; 2] {
+    let inner = WIDTH - 2.0 * MARGIN;
+    let k = (inner / size[0].max(1.0)).min(1.0);
+    [(size[0] * k).round().max(1.0), (size[1] * k).round().max(1.0)]
+}
+
+/// Where a step's text and picture go in its section (SMT-028): the number on the
+/// left, the text beside it, the picture below. `text_h` is the text's height.
+pub fn guide_step_places(top: f64, text_h: f64, picture: [f64; 2]) -> GuidePlaces {
+    let m = MARGIN;
+    let inner = WIDTH - 2.0 * m;
+    let text_top = top + 24.0;
+    let pic_top = text_top + text_h.max(NUMBER_SIZE) + 18.0;
+    GuidePlaces {
+        number: [m + NUMBER_SIZE / 2.0, text_top + NUMBER_SIZE / 2.0],
+        text: [m + NUMBER_SIZE + 16.0, text_top, inner - NUMBER_SIZE - 16.0],
+        picture: [m, pic_top, picture[0], picture[1]],
+        height: pic_top + picture[1] + 36.0 - top,
+    }
+}
+
+/// The places of [`guide_step_places`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GuidePlaces {
+    /// The number's center.
+    pub number: [f64; 2],
+    /// `[x, y, width]` of the text.
+    pub text: [f64; 3],
+    pub picture: [f64; 4],
+    pub height: f64,
+}
+
+const NUMBER_SIZE: f64 = 40.0;
+/// The size of a step's text, points (SMT-028).
+pub const GUIDE_TEXT_SIZE: f64 = 18.0;
+
+/// The height of a guide text of `width` (SMT-028: it grows, never cut).
+fn text_height(text: &str, width: f64, font: Option<&str>, dpi: f64) -> f64 {
+    let mut style = json!({"size": GUIDE_TEXT_SIZE, "markup": true});
+    if let Some(f) = font {
+        style["font"] = json!(f);
+    }
+    let props = json!({"at": [0, 0], "width": width, "text": text, "style": style});
+    match xs_image::text::Text::from_props(props.as_object().expect("object")) {
+        Ok(t) => xs_image::text::layout(&t, dpi).height as f64,
+        Err(_) => 0.0,
     }
 }
 
@@ -344,6 +437,9 @@ struct Layout<'a> {
     /// Which zones have a picture, by slot: only those get a number (EDT-097).
     filled: &'a std::collections::HashSet<String>,
     numbered: usize,
+    /// A guide's texts as they are, by slot, and the document's dpi (SMT-028).
+    texts: &'a BTreeMap<String, String>,
+    dpi: f64,
 }
 
 impl Layout<'_> {
@@ -460,9 +556,73 @@ impl Layout<'_> {
                     self.caption(sid, i, [x, top + 30.0 + zh], zw, "left");
                 }
             }
+            "guideHeader" => {
+                let title = tr(self.lang, "steps.guide.title", &[]);
+                self.text(
+                    "title".into(),
+                    sid,
+                    [m, top + 36.0, inner],
+                    &title,
+                    (32.0, true, "left"),
+                );
+                let date = chrono::Local::now().format("%Y-%m-%d").to_string();
+                self.text(
+                    format!("date:{sid}"),
+                    sid,
+                    [m, top + 92.0, inner],
+                    &date,
+                    (15.0, false, "left"),
+                );
+            }
+            "guideStep" => {
+                let slot = format!("caption:{sid}:0");
+                let text = self
+                    .texts
+                    .get(&slot)
+                    .cloned()
+                    .unwrap_or_else(|| tr(self.lang, "editor.template.caption", &[]));
+                let picture = s.picture.unwrap_or([inner, 400.0]);
+                let probe = guide_step_places(top, 0.0, picture);
+                let text_h = text_height(&text, probe.text[2], self.look.font.as_deref(), self.dpi);
+                let p = guide_step_places(top, text_h, picture);
+                self.zone_count += 1;
+                let zone = format!("zone:{sid}:0");
+                if let Ok(props) = objects::zone_props(p.picture, None, true) {
+                    self.out.push(Placed {
+                        slot: zone.clone(),
+                        section: sid.to_string(),
+                        kind: "zone".into(),
+                        props,
+                    });
+                }
+                if self.settings.numbering && self.filled.contains(&zone) {
+                    self.numbered += 1;
+                    let style = json!({"fill": self.look.accent, "shape": self.settings.number_shape, "size": NUMBER_SIZE});
+                    self.push(
+                        format!("number:{sid}:0"),
+                        sid,
+                        json!({"type": "step", "at": p.number, "value": self.numbered.to_string(), "style": style}),
+                    );
+                }
+                let mut style = json!({"size": GUIDE_TEXT_SIZE, "color": self.look.text, "align": "left", "markup": true});
+                if let Some(f) = &self.look.font {
+                    style["font"] = json!(f);
+                }
+                self.push(
+                    slot,
+                    sid,
+                    json!({"type": "text", "at": [p.text[0], p.text[1]], "width": p.text[2], "text": text, "style": style}),
+                );
+            }
             "footer" => {
                 let date = chrono::Local::now().format("%Y-%m-%d").to_string();
-                let text = if author.is_empty() {
+                let text = if self.texts.contains_key("guide") {
+                    tr(
+                        self.lang,
+                        "steps.guide.footer",
+                        &[("author", author), ("date", &date)],
+                    )
+                } else if author.is_empty() {
                     date
                 } else {
                     format!("{author} · {date}")
@@ -620,6 +780,39 @@ pub fn layout(
     let old = std::mem::take(&mut doc.objects);
     let old_template = Template::of(doc);
     let by_slot = kept(&old);
+    // A guide's texts grow, never cut (SMT-028): each step's section takes its height
+    // from its text as it is now.
+    let mut texts: BTreeMap<String, String> = BTreeMap::new();
+    let mut grown;
+    let t = if t.is_guide() {
+        texts.insert("guide".into(), String::new());
+        for (slot, o) in &by_slot {
+            if let Some(text) = o.props.get("text").and_then(Value::as_str) {
+                texts.insert(slot.clone(), text.to_string());
+            }
+        }
+        grown = t.clone();
+        for s in grown.sections.iter_mut().filter(|s| s.kind == "guideStep") {
+            let text = texts
+                .get(&format!("caption:{}:0", s.id))
+                .cloned()
+                .unwrap_or_else(|| tr(lang, "editor.template.caption", &[]));
+            let picture = s.picture.unwrap_or([WIDTH - 2.0 * MARGIN, 400.0]);
+            let width = guide_step_places(0.0, 0.0, picture).text[2];
+            let h = text_height(&text, width, look.font.as_deref(), doc.dpi);
+            s.height = guide_step_places(0.0, h, picture).height;
+        }
+        for s in grown.sections.iter_mut() {
+            match s.kind.as_str() {
+                "guideHeader" => s.height = 140.0,
+                "footer" => s.height = 70.0,
+                _ => {}
+            }
+        }
+        &grown
+    } else {
+        t
+    };
     let filled: std::collections::HashSet<String> = old
         .iter()
         .filter(|o| o.kind == "zone" && o.props.get("image").is_some_and(|v| v.is_string()))
@@ -636,6 +829,8 @@ pub fn layout(
         zone_count: 0,
         filled: &filled,
         numbered: 0,
+        texts: &texts,
+        dpi: doc.dpi,
     };
     // Where each section was and now is, for the annotations.
     let mut tops: BTreeMap<String, (f64, f64)> = BTreeMap::new();

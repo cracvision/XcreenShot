@@ -1172,6 +1172,7 @@ pub fn draw(pm: &mut Pixmap, s: &StampObject, dpi: f64) {
                             color: format!("#{:02X}{:02X}{:02X}", color.r, color.g, color.b),
                             align: TextAlign::Center,
                             opacity: 100.0,
+                            markup: false,
                         },
                     };
                     if let Some((raster, _)) = text::rasterize(&text, dpi) {

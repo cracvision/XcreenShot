@@ -596,6 +596,71 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "textRead": {"type": "boolean", "description": "False without a recognition language: only faces"},
                 "output": {"type": "string"}
             }})),
+        B::new("smart.steps_start", &["SMT-022", "SMT-024", "SMT-026", "SMT-027"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "area": {"type": "string", "enum": ["all", "monitor", "window"], "default": "all", "description": "all screens; the monitor under the pointer; or the window of the first click"},
+                    "title": {"type": "string", "description": "The guide's title; default: \"Steps in <app most used>\""},
+                    "cursor": {"type": "boolean", "default": false, "description": "The pointer as an object in each step (CAP-047)"},
+                    "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "A countdown first (CAP-048)"},
+                    "effects": {"type": "array", "description": "Capture effects (CAP-051): Scale image applies to every step's picture"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "default": "editor", "description": "Open the guide when it is done"},
+                    "copy": {"type": "boolean", "default": false}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_pause", &["SMT-023"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_resume", &["SMT-023"]).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_toggle", &["SMT-023"]).scopes(ALL).assignable().mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_status", &["SMT-022"]).result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_undo", &["SMT-023"])
+            .mutates()
+            .result(json!({"type": "object", "properties": {"removed": {"type": "boolean"}, "steps": {"type": "integer"}}})),
+        B::new("smart.steps_stop", &["SMT-023", "SMT-028"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["done", "empty"]},
+                "documentId": {"type": "string"}, "steps": {"type": "integer"}, "path": {"type": "string"}
+            }})),
+        B::new("smart.steps_cancel", &["SMT-023"])
+            .mutates()
+            .params(params(
+                json!({"confirm": {"type": "boolean", "description": "Discard without asking (default from the CLI); from the bar, with steps, it asks first"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"status": {"type": "string", "enum": ["cancelled", "confirm"]}, "steps": {"type": "integer"}}})),
+        B::new("smart.steps_keep", &["SMT-023"]).scopes(UI).mutates().result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
+                "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
+                "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
+            }})),
+        B::new("smart.steps_notice_closed", &["SMT-022"]).scopes(UI).result(json!({"type": "object"})),
         B::new("smart.ocr_languages", &["SMT-004"])
             .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
         B::new("smart.language_settings", &["SMT-004"])

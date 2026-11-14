@@ -742,7 +742,7 @@ mod tests {
         call(&c, "preset.delete", json!({"ids": [id]}));
         assert_eq!(
             names(&c),
-            ["Extract text", "Scrolling"],
+            ["Extract text", "Scrolling", "Step recorder"],
             "it does not come back at the next load"
         );
         let r = call(&c, "preset.restore_builtins", json!({}));
@@ -860,6 +860,7 @@ mod tests {
                 "Region to clipboard",
                 "Extract text",
                 "Scrolling",
+                "Step recorder",
                 "Ventana",
                 "Ventana (copy)"
             ]
@@ -874,6 +875,7 @@ mod tests {
                 "Region to clipboard",
                 "Extract text",
                 "Scrolling",
+                "Step recorder",
                 "Ventana (copy)"
             ]
         );
@@ -884,6 +886,7 @@ mod tests {
                 "Region to clipboard",
                 "Extract text",
                 "Scrolling",
+                "Step recorder",
                 "Ventana",
                 "Ventana (copy)"
             ]
@@ -901,6 +904,7 @@ mod tests {
                 "Region to clipboard",
                 "Extract text",
                 "Scrolling",
+                "Step recorder",
                 "Ventana"
             ]
         );
@@ -928,7 +932,7 @@ mod tests {
         call(&a, "settings.export", json!({"out": file}));
         let text = std::fs::read_to_string(&file).unwrap();
         let exported: Value = serde_json::from_str(&text).unwrap();
-        assert_eq!(exported["groups"]["presets"]["presets"][3]["name"], "Uno");
+        assert_eq!(exported["groups"]["presets"]["presets"][4]["name"], "Uno");
         assert!(
             !exported["groups"]["shortcuts"]["overrides"]
                 .as_object()
@@ -952,7 +956,13 @@ mod tests {
         );
         assert_eq!(
             names(&b),
-            ["Region to clipboard", "Extract text", "Scrolling", "Uno"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Step recorder",
+                "Uno"
+            ]
         );
         let uno = by_name(&b, "Uno");
         assert_eq!(
@@ -987,13 +997,13 @@ mod tests {
             json!({"command": one["slot"], "shortcut": "Ctrl+Alt+Shift+I"}),
         );
         let r = call(&a, "preset.export", json!({"out": file}));
-        assert_eq!(r["count"], 5);
+        assert_eq!(r["count"], 6);
         let text = std::fs::read_to_string(&file).unwrap();
         assert!(text.contains("\"format\": \"xcreenshot-presets\""));
 
         let b = core();
         let dry = call(&b, "preset.import", json!({"paths": [file], "dryRun": true}));
-        assert_eq!(dry["presets"].as_array().unwrap().len(), 5);
+        assert_eq!(dry["presets"].as_array().unwrap().len(), 6);
         assert_eq!(
             dry["presets"][0]["exists"], true,
             "Region to clipboard is there already"
@@ -1005,7 +1015,14 @@ mod tests {
         );
         assert_eq!(
             names(&b),
-            ["Region to clipboard", "Extract text", "Scrolling", "Uno", "Dos"]
+            [
+                "Region to clipboard",
+                "Extract text",
+                "Scrolling",
+                "Step recorder",
+                "Uno",
+                "Dos"
+            ]
         );
         let uno = by_name(&b, "Uno");
         assert_eq!(uno.settings["selection"], "window");
@@ -1022,6 +1039,7 @@ mod tests {
                 "Region to clipboard",
                 "Extract text",
                 "Scrolling",
+                "Step recorder",
                 "Uno",
                 "Dos",
                 "Uno (2)"
@@ -1029,7 +1047,7 @@ mod tests {
         );
         // Replace changes the one there.
         let mut changed: Value = serde_json::from_str(&text).unwrap();
-        changed["presets"][3]["settings"]["selection"] = json!("fullscreen");
+        changed["presets"][4]["settings"]["selection"] = json!("fullscreen");
         std::fs::write(&file, serde_json::to_vec(&changed).unwrap()).unwrap();
         call(
             &b,

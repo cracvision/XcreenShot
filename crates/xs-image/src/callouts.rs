@@ -173,6 +173,7 @@ impl CalloutStyle {
             color: self.text_color.clone(),
             align: self.align,
             opacity: 100.0,
+            markup: false,
         }
     }
 }

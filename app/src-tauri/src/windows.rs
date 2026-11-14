@@ -21,6 +21,9 @@ pub const WEBPAGE: &str = "webpage";
 pub const WORKING: &str = "working";
 pub const ASK_TEXT: &str = "ask-text";
 pub const RECBAR: &str = "recbar";
+/// The step recorder's bar and its start notice (SMT-022, SMT-023).
+pub const STEPSBAR: &str = "stepsbar";
+pub const STEPSNOTE: &str = "stepsnote";
 pub const RECFRAME: &str = "recframe";
 /// Logical width of the capture panel; its height follows the content.
 const PANEL_WIDTH: f64 = 400.0;
@@ -551,6 +554,102 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
     Ok(())
 }
 
+/// The step recorder's bar (SMT-023): at the bottom left of the main monitor the first
+/// time, then where the user left it; `None` closes it. Never in the steps' pictures.
+pub fn steps_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
+    let core = app.state::<AppState>().core.clone();
+    let Some(state) = state else {
+        if let Some(bar) = app.get_webview_window(STEPSBAR) {
+            // Where the user left it is remembered (SMT-023).
+            if let Ok(p) = bar.outer_position() {
+                core.remember("steps.barPlace", serde_json::json!([p.x, p.y]));
+            }
+            bar.destroy()?;
+        }
+        return Ok(());
+    };
+    let _ = app.emit_to(STEPSBAR, "xs://steps", state.clone());
+    let _ = app.emit_to(STEPSNOTE, "xs://steps", state);
+    if app.get_webview_window(STEPSBAR).is_some() {
+        return Ok(());
+    }
+    let (bw, bh) = (560.0, 52.0);
+    let monitor = app.primary_monitor().ok().flatten();
+    let scale = monitor.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let (mut px, mut py) = (24.0, 24.0);
+    if let Some(m) = &monitor {
+        let a = m.work_area();
+        px = a.position.x as f64 + 24.0 * scale;
+        py = a.position.y as f64 + a.size.height as f64 - (bh + 24.0) * scale;
+    }
+    if let Some(place) = core.recall("steps.barPlace") {
+        let (ux, uy) = (place[0].as_f64().unwrap_or(px), place[1].as_f64().unwrap_or(py));
+        if app
+            .monitor_from_point(ux + 20.0, uy + 20.0)
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            px = ux;
+            py = uy;
+        }
+    }
+    let title = xs_core::i18n::tr(core.lang(), "ui.stepsbar.title", &[]);
+    let bar = WebviewWindowBuilder::new(app, STEPSBAR, WebviewUrl::App("index.html".into()))
+        .title(title)
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible(false)
+        .content_protected(true)
+        .inner_size(bw, bh)
+        .theme(theme(app))
+        .build()?;
+    bar.set_position(tauri::PhysicalPosition::new(px as i32, py as i32))?;
+    bar.show()?;
+    Ok(())
+}
+
+/// The notice that opens a step recording (SMT-022), centered on the main monitor.
+pub fn steps_notice(app: &AppHandle, show: bool) -> tauri::Result<()> {
+    if !show {
+        if let Some(w) = app.get_webview_window(STEPSNOTE) {
+            w.destroy()?;
+        }
+        return Ok(());
+    }
+    if app.get_webview_window(STEPSNOTE).is_some() {
+        return Ok(());
+    }
+    let (w, h) = (520.0, 96.0);
+    let monitor = app.primary_monitor().ok().flatten();
+    let note = WebviewWindowBuilder::new(app, STEPSNOTE, WebviewUrl::App("index.html".into()))
+        .title("XcreenShot")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focused(false)
+        .visible(false)
+        .content_protected(true)
+        .inner_size(w, h)
+        .theme(theme(app))
+        .build()?;
+    if let Some(m) = monitor {
+        let s = m.scale_factor();
+        let x = m.position().x as f64 + (m.size().width as f64 - w * s) / 2.0;
+        let y = m.position().y as f64 + (m.size().height as f64 - h * s) / 2.0;
+        note.set_position(tauri::PhysicalPosition::new(x as i32, y as i32))?;
+    }
+    note.show()?;
+    Ok(())
+}
+
 /// Import PDF (CAP-041): one window per file, centered, resizable. Its label carries
 /// the import's id.
 pub fn open_pdf(app: &AppHandle, id: &str) -> tauri::Result<()> {
@@ -885,6 +984,8 @@ pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
                 crate::countdown::LABEL,
                 RECBAR,
                 RECFRAME,
+                STEPSBAR,
+                STEPSNOTE,
                 WORKING,
                 LIVEDRAW,
                 DRAWBAR,

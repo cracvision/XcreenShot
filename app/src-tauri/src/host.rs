@@ -416,6 +416,26 @@ impl Host for TauriHost {
         });
     }
 
+    fn steps_bar(&self, state: Option<Value>) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::steps_bar(&app, state) {
+                tracing::warn!(error = %e, "step recorder bar");
+            }
+            // Pause, Resume and Finish in the icon's menu (SMT-023).
+            crate::tray::refresh(&app);
+        });
+    }
+
+    fn steps_notice(&self, show: bool) {
+        let app = self.app.clone();
+        let _ = self.app.run_on_main_thread(move || {
+            if let Err(e) = windows::steps_notice(&app, show) {
+                tracing::warn!(error = %e, "step recorder notice");
+            }
+        });
+    }
+
     fn live_draw(&self, area: Option<(i32, i32, u32, u32)>) {
         let app = self.app.clone();
         let _ = self.app.run_on_main_thread(move || {

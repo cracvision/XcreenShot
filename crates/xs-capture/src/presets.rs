@@ -58,8 +58,7 @@ pub struct Stored {
     pub builtins_seen: Vec<String>,
 }
 
-/// The presets that come with the app, in order (CAP-064). The step recorder arrives
-/// with its feature.
+/// The presets that come with the app, in order (CAP-064).
 pub fn builtins() -> Vec<(&'static str, &'static str, Value)> {
     vec![
         (
@@ -77,6 +76,13 @@ pub fn builtins() -> Vec<(&'static str, &'static str, Value)> {
             "image",
             json!({"selection": "scrolling", "open": "editor", "copy": true, "cursor": false, "timing": "none", "delay": 5,
                 "scroll": {"type": "auto", "direction": "vertical", "startFrom": "start", "wait": 0.3, "restore": true}}),
+        ),
+        // The step recorder (SMT-022).
+        (
+            "steps",
+            "image",
+            json!({"selection": "steps", "open": "editor", "copy": false, "cursor": true, "timing": "none", "delay": 5,
+                "steps": {"area": "all", "title": ""}}),
         ),
     ]
 }

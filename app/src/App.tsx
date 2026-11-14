@@ -14,6 +14,7 @@ import { Launcher } from "./windows/Launcher";
 import { WebpagePrompt } from "./windows/WebpagePrompt";
 import { AskText } from "./windows/AskText";
 import { RecordBar, RecordFrame } from "./windows/RecordBar";
+import { StepsBar, StepsNotice } from "./windows/StepsBar";
 import { LiveDrawBar, LiveDrawOverlay } from "./windows/LiveDraw";
 import { Working } from "./windows/Working";
 import { Welcome } from "./windows/Welcome";
@@ -47,6 +48,10 @@ export function App() {
       return <WebpagePrompt />;
     case "ask-text":
       return <AskText />;
+    case "stepsbar":
+      return <StepsBar />;
+    case "stepsnote":
+      return <StepsNotice />;
     case "recbar":
       return <RecordBar />;
     case "recframe":

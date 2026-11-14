@@ -39,6 +39,25 @@ impl Default for UniversalTab {
     }
 }
 
+/// The properties of Selection = Step recorder (SMT-022): the area and a fixed title.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct StepsTab {
+    /// `all`, `monitor` or `window`.
+    pub area: String,
+    /// Empty: proposed when it ends (SMT-028).
+    pub title: String,
+}
+
+impl Default for StepsTab {
+    fn default() -> Self {
+        StepsTab {
+            area: "all".into(),
+            title: String::new(),
+        }
+    }
+}
+
 /// The properties of Selection = Menu (CAP-031).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -190,6 +209,8 @@ pub struct ImageTab {
     pub areas: AreasTab,
     /// Selection = Menu (CAP-031).
     pub menu: MenuTab,
+    /// Selection = Step recorder (SMT-022).
+    pub steps: StepsTab,
     /// Effects applied to every capture, in order (CAP-051): the editor's effect
     /// entries (EDT-053), `{type, …settings}`.
     pub effects: Vec<Value>,
@@ -270,6 +291,7 @@ impl Default for ImageTab {
             region: RegionTab::default(),
             areas: AreasTab::default(),
             menu: MenuTab::default(),
+            steps: StepsTab::default(),
             effects: Vec::new(),
             share: Vec::new(),
             file: crate::filedest::FileDest::default(),
@@ -332,7 +354,7 @@ impl Default for PanelSettings {
 
 const SELECTIONS: [&str; 3] = ["region", "window", "fullscreen"];
 /// The Image tab also has Scrolling (CAP-034, CAP-035) and Extract text (SMT-005).
-const IMAGE_SELECTIONS: [&str; 13] = [
+const IMAGE_SELECTIONS: [&str; 14] = [
     "region",
     "window",
     "fullscreen",
@@ -346,6 +368,7 @@ const IMAGE_SELECTIONS: [&str; 13] = [
     "webpage",
     "freehand",
     "text",
+    "steps",
 ];
 
 impl PanelSettings {
@@ -515,6 +538,15 @@ impl PanelSettings {
                 params["extract"] = json!(true);
                 params["cursor"] = json!(false);
                 return ("capture.region", params, json!({}));
+            }
+            // The step recorder (SMT-022): its area and title; the pointer, the delay,
+            // the effects, Open in and Copy apply.
+            if self.image.selection == "steps" {
+                params["area"] = json!(self.image.steps.area);
+                if !self.image.steps.title.trim().is_empty() {
+                    params["title"] = json!(self.image.steps.title.trim());
+                }
+                return ("smart.steps_start", params, json!({}));
             }
             if self.image.selection == "clipboard" {
                 params["cursor"] = json!(false);

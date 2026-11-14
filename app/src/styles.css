@@ -2334,6 +2334,45 @@ html.launcher-root #root {
   background: var(--ink-muted);
 }
 
+/* The step recorder's count flashes when a step is added (SMT-023). */
+.stepsbar-count {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.stepsbar-count.flash {
+  animation: steps-flash var(--dur-slow) var(--ease-in) both;
+}
+
+@keyframes steps-flash {
+  from {
+    background: var(--brand-soft);
+    color: var(--brand-ink);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* The notice that opens a step recording (SMT-022): a click closes it. */
+.stepsnote {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  padding: 0 24px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  cursor: pointer;
+}
+
 .recbar-dot.on {
   background: var(--rec);
   animation: working-pulse 0.8s var(--ease-in) infinite alternate;
@@ -7780,6 +7819,10 @@ button.lc-head:hover,
   .recorder .dot,
   .recbar-dot.on {
     animation: none;
+  }
+
+  .stepsbar-count.flash {
+    animation: fade-in var(--dur-instant) linear both;
   }
 
   .working-dot {

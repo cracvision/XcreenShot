@@ -450,6 +450,10 @@ pub fn slots() -> Vec<Slot> {
         // No default: losing a recording by accident is worse (VID-075).
         capture("record.restart", "record.restart", ""),
         capture("record.cancel", "record.cancel", ""),
+        // The step recorder (SMT-022, SMT-023). No defaults.
+        capture("smart.steps_start", "smart.steps_start", ""),
+        capture("smart.steps_toggle", "smart.steps_toggle", ""),
+        capture("smart.steps_stop", "smart.steps_stop", ""),
         // The clipboard as a source (CAP-039). No default.
         capture("capture.clipboard", "capture.clipboard", ""),
         // Quick annotation (CAP-057): only while its trial feature is on (APP-034).

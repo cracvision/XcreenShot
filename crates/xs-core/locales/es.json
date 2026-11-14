@@ -723,6 +723,46 @@
       "title": "Redacción automática",
       "description": "Cubre los correos, teléfonos, tarjetas, documentos, direcciones, IP, rostros y tus propios términos que encuentra en una captura, en este equipo."
     },
+    "smart_steps_start": {
+      "title": "Grabar pasos",
+      "description": "Convierte tus clics en una guía paso a paso: una imagen y una frase por clic, en este equipo."
+    },
+    "smart_steps_pause": {
+      "title": "Pausar la grabación de pasos",
+      "description": "Los clics no crean pasos hasta reanudar."
+    },
+    "smart_steps_resume": {
+      "title": "Reanudar la grabación de pasos",
+      "description": "Los clics vuelven a crear pasos."
+    },
+    "smart_steps_toggle": {
+      "title": "Pausar o reanudar la grabación de pasos",
+      "description": "Pausa el grabador de pasos, o lo reanuda."
+    },
+    "smart_steps_status": {
+      "title": "Estado del grabador de pasos",
+      "description": "Si se están grabando pasos, y cuántos."
+    },
+    "smart_steps_undo": {
+      "title": "Deshacer último paso",
+      "description": "Quita el último paso grabado."
+    },
+    "smart_steps_stop": {
+      "title": "Terminar la grabación de pasos",
+      "description": "Crea la guía con los pasos grabados."
+    },
+    "smart_steps_cancel": {
+      "title": "Cancelar la grabación de pasos",
+      "description": "Descarta los pasos grabados."
+    },
+    "smart_steps_keep": {
+      "title": "Seguir grabando pasos",
+      "description": "Responde No a descartar los pasos."
+    },
+    "smart_steps_notice_closed": {
+      "title": "Cerrar el aviso del grabador de pasos",
+      "description": "El aviso se va y los clics cuentan."
+    },
     "smart_ocr_languages": {
       "title": "Idiomas del reconocimiento",
       "description": "Los idiomas que este equipo puede leer y cuáles de los obligatorios faltan."
@@ -1283,6 +1323,32 @@
       "label": "Redacción automática: estilo",
       "description": "Relleno sólido, desenfoque o pixelado, su color y el margen alrededor del dato."
     },
+    "smart_steps_cancelKey": {
+      "label": "Grabador de pasos: tecla para cancelar",
+      "description": "Mientras se graban pasos, esta tecla la recibe XcreenShot, no la app. Elige Mayús+Esc si necesitas Esc en la app.",
+      "options": {
+        "esc": "Esc",
+        "shiftEsc": "Mayús+Esc",
+        "none": "Ninguna"
+      }
+    },
+    "smart_steps_keyboard": {
+      "label": "Grabador de pasos: anotar el uso del teclado",
+      "description": "Los atajos crean un paso (\"Pulsar Ctrl+S\") y al escribir se añade \"y escribir en el campo…\". Lo que escribes nunca se guarda."
+    },
+    "smart_steps_framing": {
+      "label": "Grabador de pasos: encuadre del paso",
+      "description": "Lo que muestra la imagen de cada paso. Se guarda el monitor entero: el encuadre se puede cambiar después.",
+      "options": {
+        "zone": "Zona del clic",
+        "window": "Ventana",
+        "screen": "Pantalla completa"
+      }
+    },
+    "smart_steps_author": {
+      "label": "Grabador de pasos: autor de las guías",
+      "description": "El nombre de \"Creado por\". Vacío: el nombre de tu cuenta."
+    },
     "smart_extractText_showResults": {
       "label": "Mostrar la ventana de resultados",
       "description": "Tras Extraer texto, una ventana con el texto para revisarlo, copiarlo o guardarlo. Desactivado, el texto se copia directamente y una notificación lo dice."
@@ -1641,7 +1707,10 @@
     "livedraw_off": "Dibujo en vivo está desactivado en la pestaña Video del panel de captura.",
     "livedraw_not_recording": "Dibujo en vivo funciona al grabar. Para usarlo en cualquier momento, activa Preferencias > Video > Dibujo en vivo en cualquier momento.",
     "livedraw_inactive": "Dibujo en vivo no está activo.",
-    "video_codec": "{{name}} no se puede reproducir en este equipo: su códec ({{codec}}) no está instalado en Windows. ({{reason}})"
+    "video_codec": "{{name}} no se puede reproducir en este equipo: su códec ({{codec}}) no está instalado en Windows. ({{reason}})",
+    "steps_busy": "Ya hay una grabación de video o de pasos en curso.",
+    "steps_not_recording": "No se están grabando pasos.",
+    "steps_not_supported": "El grabador de pasos aún no está disponible en este sistema."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -1816,7 +1885,11 @@
     "tooltip_timer": "XcreenShot · capturando por intervalo",
     "stop_schedule": "Detener captura: {{name}} (próxima: {{when}})",
     "stop_recording": "Detener grabación",
-    "video_capture": "Captura de video"
+    "video_capture": "Captura de video",
+    "steps_pause": "Pausar grabación de pasos",
+    "steps_resume": "Reanudar grabación de pasos",
+    "steps_stop": "Terminar grabación de pasos",
+    "steps_record": "Grabar pasos"
   },
   "menu": {
     "flatten": "A&planar",
@@ -2026,7 +2099,8 @@
     "recording_saved_body": "{{seconds}} s grabados, en la biblioteca.",
     "recording_no_audio": "No se grabó el audio del sistema: no había ninguna salida de sonido activa.",
     "recording_low_disk": "Se detuvo sola porque quedaba menos de 1 GB libre en el disco.",
-    "recording_window_closed": "La ventana se cerró: la grabación se detuvo y se guardó."
+    "recording_window_closed": "La ventana se cerró: la grabación se detuvo y se guardó.",
+    "steps_disk_full": "El disco está lleno: la grabación de pasos se pausó. Los pasos grabados se conservan."
   },
   "source": {
     "ui": "la interfaz",
@@ -2622,7 +2696,14 @@
       "video_highlight": "Resaltar cursor",
       "video_clicks": "Animación de clic",
       "video_keys": "Mostrar teclas pulsadas",
-      "video_livedraw": "Dibujo en vivo (botón Dibujar)"
+      "video_livedraw": "Dibujo en vivo (botón Dibujar)",
+      "sel_steps": "Grabador de pasos",
+      "steps_area": "Área",
+      "steps_area_all": "Todas las pantallas",
+      "steps_area_monitor": "Un monitor",
+      "steps_area_window": "Una ventana (la del primer clic)",
+      "steps_title": "Título de la guía",
+      "steps_title_auto": "Se propone al terminar"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4496,6 +4577,25 @@
       "reminder_title": "El desenfoque y el pixelado se pueden revertir",
       "reminder_body": "Algunas herramientas pueden recuperar lo que oculta un desenfoque o un pixelado. Para datos confidenciales es más seguro el relleno sólido.",
       "use_solid": "Usar relleno sólido"
+    },
+    "stepsbar": {
+      "title": "Grabador de pasos",
+      "steps_one": "{{count}} paso",
+      "steps_other": "{{count}} pasos",
+      "paused": "En pausa",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "undo": "Deshacer último paso",
+      "finish": "Terminar",
+      "cancel": "Cancelar",
+      "confirm_one": "¿Descartar {{count}} paso?",
+      "confirm_other": "¿Descartar {{count}} pasos?",
+      "discard": "Descartar",
+      "keep": "Seguir grabando",
+      "many": "Las guías largas se leen mejor en varias partes.",
+      "disk_full": "Disco lleno: en pausa",
+      "notice": "Grabando pasos: cada clic crea un paso",
+      "notice_cancel": "{{key}} cancela"
     }
   },
   "history": {
@@ -4689,7 +4789,8 @@
     "builtin": {
       "region_clipboard": "Región al portapapeles",
       "extract_text": "Extraer texto",
-      "scrolling": "Desplazamiento"
+      "scrolling": "Desplazamiento",
+      "steps": "Grabador de pasos"
     },
     "selection": {
       "region": "Región",
@@ -4733,5 +4834,40 @@
   },
   "record": {
     "file_name": "Video"
+  },
+  "steps": {
+    "phrase": {
+      "in_app": "En {{app}}, {{rest}}",
+      "button": "Clic en el botón {{name}}",
+      "tab": "Seleccionar la pestaña {{name}}",
+      "menu": "Abrir el menú {{name}}",
+      "menu_item": "Elegir {{name}} en el menú",
+      "check": "Activar la casilla {{name}}",
+      "uncheck": "Desactivar la casilla {{name}}",
+      "radio": "Elegir la opción {{name}}",
+      "field": "Clic en el campo {{name}}",
+      "link": "Clic en el enlace {{name}}",
+      "list": "Clic en la lista {{name}}",
+      "item": "Seleccionar {{name}}",
+      "other": "Clic en {{name}}",
+      "text": "Clic en {{name}}",
+      "here": "Clic aquí",
+      "right": "Clic derecho en {{name}}",
+      "right_here": "Clic derecho aquí",
+      "double": "Doble clic en {{name}}",
+      "double_here": "Doble clic aquí",
+      "drag": "Arrastrar {{name}} hasta {{to}}",
+      "drag_from": "Arrastrar {{name}} hasta aquí",
+      "drag_here": "Arrastrar desde aquí hasta aquí",
+      "keys": "Pulsar unas teclas",
+      "press": "Pulsar {{keys}}",
+      "typed_in": " y escribir en el campo {{name}}",
+      "typed": " y escribir"
+    },
+    "guide": {
+      "title": "Pasos",
+      "footer": "Creado por {{author}} · {{date}}",
+      "title_in": "Pasos en {{app}}"
+    }
   }
 }

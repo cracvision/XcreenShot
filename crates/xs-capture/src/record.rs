@@ -223,6 +223,12 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     if running(core) {
         return stop(core, ctx);
     }
+    if crate::steps_rec::running(core) {
+        return Err(CommandError::new(
+            ErrorCode::Busy,
+            tr(ctx.lang, "errors.steps_busy", &[]),
+        ));
+    }
     let svc = service(core);
     if let Some(r) = svc.ready.lock().unwrap().clone() {
         // Already Ready: show its bar again.
@@ -571,7 +577,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
     let svc = service(core);
     let busy = || CommandError::new(ErrorCode::Busy, tr(lang, "errors.record_busy", &[]));
-    if running(core) {
+    // Video and steps never record at once (APP-028, SMT-022).
+    if running(core) || crate::steps_rec::running(core) {
         return Err(busy());
     }
     // Without an area in `p`, the one chosen on screen (Ready).

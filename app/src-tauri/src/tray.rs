@@ -45,6 +45,11 @@ fn tray_state(core: &Core) -> xs_core::menus::TrayState {
                     .into_iter()
                     .map(|(id, text)| (id, text, "record.stop")),
             )
+            .chain(
+                xs_capture::steps_rec::menu_items(core)
+                    .into_iter()
+                    .map(|(id, text, command)| (id, text, command)),
+            )
             .collect(),
     }
 }

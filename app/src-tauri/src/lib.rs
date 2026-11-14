@@ -373,6 +373,8 @@ pub fn run() {
                             countdown::LABEL,
                             windows::RECBAR,
                             windows::RECFRAME,
+                            windows::STEPSBAR,
+                            windows::STEPSNOTE,
                             windows::LIVEDRAW,
                             windows::DRAWBAR,
                             windows::WORKING,

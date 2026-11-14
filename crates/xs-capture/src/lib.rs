@@ -40,6 +40,12 @@ pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
 mod scroll_win;
+pub mod steps;
+pub mod steps_rec;
+#[cfg(windows)]
+mod steps_win;
+#[cfg(windows)]
+mod steps_work;
 pub mod stitch;
 pub mod svgsource;
 pub mod systemshots;
@@ -2069,6 +2075,7 @@ pub fn extension() -> Extension {
         // Extract text (SMT-003 to SMT-006).
         extract::register(reg, &weak);
         redact::register(reg, &weak);
+        steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();
             let rows = presets::load(&core)

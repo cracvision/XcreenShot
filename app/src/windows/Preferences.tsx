@@ -45,6 +45,12 @@ interface Navigation {
   key?: string | null;
 }
 
+/** Settings changed where they are used: auto redact's categories, terms and style
+ * in its panel (SMT-011 to SMT-013). They still travel with exported settings. */
+function editedElsewhere(key: string): boolean {
+  return key.startsWith("smart.autoRedact.");
+}
+
 export function Preferences() {
   const { t } = useTranslation();
   useAppShortcuts();
@@ -89,8 +95,10 @@ export function Preferences() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
-    return settings.filter((s) =>
-      [s.label, s.description, s.key].some((x) => x.toLowerCase().includes(q)),
+    return settings.filter(
+      (s) =>
+        !editedElsewhere(s.key) &&
+        [s.label, s.description, s.key].some((x) => x.toLowerCase().includes(q)),
     );
   }, [query, settings]);
 
@@ -121,6 +129,7 @@ export function Preferences() {
       (s) =>
         s.section === name &&
         s.key !== "shortcuts.profile" &&
+        !editedElsewhere(s.key) &&
         (quickOn || !s.key.startsWith("capture.quickAnnotate.")),
     );
 

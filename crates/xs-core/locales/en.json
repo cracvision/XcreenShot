@@ -723,6 +723,46 @@
       "title": "Auto redact",
       "description": "Covers the emails, phone numbers, cards, IDs, addresses, IPs, faces and your own terms found in a capture, on this computer."
     },
+    "smart_steps_start": {
+      "title": "Record steps",
+      "description": "Turns your clicks into a step-by-step guide: a picture and a sentence for each click, on this computer."
+    },
+    "smart_steps_pause": {
+      "title": "Pause recording steps",
+      "description": "Clicks make no steps until it resumes."
+    },
+    "smart_steps_resume": {
+      "title": "Resume recording steps",
+      "description": "Clicks make steps again."
+    },
+    "smart_steps_toggle": {
+      "title": "Pause or resume recording steps",
+      "description": "Pauses the step recorder, or resumes it."
+    },
+    "smart_steps_status": {
+      "title": "Step recorder status",
+      "description": "Whether steps are being recorded, and how many."
+    },
+    "smart_steps_undo": {
+      "title": "Undo last step",
+      "description": "Removes the last step recorded."
+    },
+    "smart_steps_stop": {
+      "title": "Finish recording steps",
+      "description": "Makes the guide with the steps recorded."
+    },
+    "smart_steps_cancel": {
+      "title": "Cancel recording steps",
+      "description": "Discards the steps recorded."
+    },
+    "smart_steps_keep": {
+      "title": "Keep recording steps",
+      "description": "Answers No to discarding the steps."
+    },
+    "smart_steps_notice_closed": {
+      "title": "Close the step recorder notice",
+      "description": "The notice goes and clicks count."
+    },
     "smart_ocr_languages": {
       "title": "Recognition languages",
       "description": "The languages this computer can read, and which required ones are missing."
@@ -1283,6 +1323,32 @@
       "label": "Auto redact: style",
       "description": "Solid fill, blur or pixelate, its color and the margin around the data."
     },
+    "smart_steps_cancelKey": {
+      "label": "Step recorder: key to cancel",
+      "description": "While steps are recorded, this key goes to XcreenShot, not to the app. Choose Shift+Esc if you need Esc in the app.",
+      "options": {
+        "esc": "Esc",
+        "shiftEsc": "Shift+Esc",
+        "none": "None"
+      }
+    },
+    "smart_steps_keyboard": {
+      "label": "Step recorder: note keyboard use",
+      "description": "Shortcuts make a step (\"Press Ctrl+S\") and typing adds \"and type in the field…\". What you type is never kept."
+    },
+    "smart_steps_framing": {
+      "label": "Step recorder: framing of each step",
+      "description": "What each step's picture shows. The whole monitor is kept: the framing can change later.",
+      "options": {
+        "zone": "Clicked zone",
+        "window": "Window",
+        "screen": "Full screen"
+      }
+    },
+    "smart_steps_author": {
+      "label": "Step recorder: author of the guides",
+      "description": "The name in \"Created by\". Empty: your account's name."
+    },
     "smart_extractText_showResults": {
       "label": "Show the results window",
       "description": "After Extract text, a window with the text to review, copy or save. Off, the text is copied at once and a notification says so."
@@ -1641,7 +1707,10 @@
     "livedraw_off": "Live drawing is off in the Video tab of the capture panel.",
     "livedraw_not_recording": "Live drawing works while recording. To use it at any time, turn on Preferences > Video > Live drawing at any time.",
     "livedraw_inactive": "Live drawing is not on.",
-    "video_codec": "{{name}} cannot be played on this computer: its codec ({{codec}}) is not installed in Windows. ({{reason}})"
+    "video_codec": "{{name}} cannot be played on this computer: its codec ({{codec}}) is not installed in Windows. ({{reason}})",
+    "steps_busy": "A video or step recording is already going on.",
+    "steps_not_recording": "No steps are being recorded.",
+    "steps_not_supported": "The step recorder is not available on this system yet."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1816,7 +1885,11 @@
     "tooltip_timer": "XcreenShot · capturing at intervals",
     "stop_schedule": "Stop capture: {{name}} (next: {{when}})",
     "stop_recording": "Stop recording",
-    "video_capture": "Video capture"
+    "video_capture": "Video capture",
+    "steps_pause": "Pause recording steps",
+    "steps_resume": "Resume recording steps",
+    "steps_stop": "Finish recording steps",
+    "steps_record": "Record steps"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -2026,7 +2099,8 @@
     "recording_saved_body": "{{seconds}} s recorded, in the library.",
     "recording_no_audio": "No system sound was recorded: no sound output was on.",
     "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk.",
-    "recording_window_closed": "The window closed: the recording stopped and was saved."
+    "recording_window_closed": "The window closed: the recording stopped and was saved.",
+    "steps_disk_full": "The disk is full: recording steps paused. The steps so far are kept."
   },
   "source": {
     "ui": "the interface",
@@ -2622,7 +2696,14 @@
       "video_highlight": "Highlight cursor",
       "video_clicks": "Click animation",
       "video_keys": "Show keys pressed",
-      "video_livedraw": "Live drawing (Draw button)"
+      "video_livedraw": "Live drawing (Draw button)",
+      "sel_steps": "Step recorder",
+      "steps_area": "Area",
+      "steps_area_all": "All screens",
+      "steps_area_monitor": "One monitor",
+      "steps_area_window": "One window (the first one clicked)",
+      "steps_title": "Guide title",
+      "steps_title_auto": "Proposed when it ends"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4496,6 +4577,25 @@
       "reminder_title": "Blur and pixelate can be undone",
       "reminder_body": "Some tools can bring back what a blur or pixelation hides. For confidential data, a solid fill is safer.",
       "use_solid": "Use solid fill"
+    },
+    "stepsbar": {
+      "title": "Step recorder",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps",
+      "paused": "Paused",
+      "pause": "Pause",
+      "resume": "Resume",
+      "undo": "Undo last step",
+      "finish": "Finish",
+      "cancel": "Cancel",
+      "confirm_one": "Discard {{count}} step?",
+      "confirm_other": "Discard {{count}} steps?",
+      "discard": "Discard",
+      "keep": "Keep recording",
+      "many": "Long guides read better split in parts.",
+      "disk_full": "Disk full: paused",
+      "notice": "Recording steps: every click makes a step",
+      "notice_cancel": "{{key}} cancels"
     }
   },
   "history": {
@@ -4689,7 +4789,8 @@
     "builtin": {
       "region_clipboard": "Region to clipboard",
       "extract_text": "Extract text",
-      "scrolling": "Scrolling"
+      "scrolling": "Scrolling",
+      "steps": "Step recorder"
     },
     "selection": {
       "region": "Region",
@@ -4733,5 +4834,40 @@
   },
   "record": {
     "file_name": "Video"
+  },
+  "steps": {
+    "phrase": {
+      "in_app": "In {{app}}, {{rest}}",
+      "button": "Click the {{name}} button",
+      "tab": "Select the {{name}} tab",
+      "menu": "Open the {{name}} menu",
+      "menu_item": "Choose {{name}} in the menu",
+      "check": "Select the {{name}} check box",
+      "uncheck": "Clear the {{name}} check box",
+      "radio": "Choose the {{name}} option",
+      "field": "Click the {{name}} field",
+      "link": "Click the {{name}} link",
+      "list": "Click the {{name}} list",
+      "item": "Select {{name}}",
+      "other": "Click {{name}}",
+      "text": "Click {{name}}",
+      "here": "Click here",
+      "right": "Right-click {{name}}",
+      "right_here": "Right-click here",
+      "double": "Double-click {{name}}",
+      "double_here": "Double-click here",
+      "drag": "Drag {{name}} to {{to}}",
+      "drag_from": "Drag {{name}} to here",
+      "drag_here": "Drag from here to here",
+      "keys": "Press some keys",
+      "press": "Press {{keys}}",
+      "typed_in": " and type in the {{name}} field",
+      "typed": " and type"
+    },
+    "guide": {
+      "title": "Steps",
+      "footer": "Created by {{author}} · {{date}}",
+      "title_in": "Steps in {{app}}"
+    }
   }
 }

@@ -240,6 +240,21 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | EDT-100 | Colores que el tema no tiene | Se usa el más parecido del tema nuevo; las sombras conservan su color. El número de un paso pasa a blanco o al color más oscuro del tema, según su relleno, para seguir legible | Provisional |
 | EDT-101 | Carpeta de plantillas propias | `%LOCALAPPDATA%\XcreenShot\data\templates` (macOS: `~/Library/Application Support/XcreenShot/templates`). El nombre de la plantilla es el del archivo; la familia va en su `meta.json`. Una plantilla propia guardada desde una incorporada sigue rehaciendo su diseño; una hecha a mano (zonas convertidas) mantiene sus zonas como están | Provisional |
 
+## Dudas del equipo de construcción (M5, entrega 5a: grabador de pasos)
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| SMT-022 a SMT-035 | ¿Qué es una guía por dentro? | [ADR 0009](../docs/adr/0009-guias-de-pasos.md): una plantilla (ADR 0007) con secciones de paso; cada imagen es el monitor entero dentro de una zona que la encuadra; los nombres en negrita se marcan con `**…**` | Propuesta: pendiente de Carlos |
+| SMT-022 | Área "Una ventana (se elige al empezar)" | La ventana del **primer clic** es la elegida; desde ahí solo cuentan los clics en ella. Así no hace falta un paso extra para elegirla | Provisional |
+| SMT-022 | Efectos al capturar en los pasos | Se aplica **Escalar imagen** (a la imagen y a las posiciones). Los demás efectos (bordes, sombras…) no encajan con un encuadre que se puede cambiar: se pueden añadir en la guía | Provisional |
+| SMT-022 | Abrir en = Anotación rápida | Se comporta como Editor, como dice el spec | Hecho |
+| SMT-024 | "La imagen justo antes del clic" | Se toma en cuanto llega la pulsación, sin retener el clic: casi siempre la app aún no ha redibujado. Retenerlo daría la imagen exacta, pero retrasaría el clic y Windows desactiva los ganchos lentos | Provisional |
+| SMT-025 | Plantillas de frase que el spec no da | Opción: "Elegir la opción **X**"; lista: "Clic en la lista **X**"; atajo: "Pulsar **Ctrl+S**" | Provisional |
+| SMT-026 | Colores del anillo "tomados del tema activo si los define" | Los temas aún no definen esos colores: naranja y violeta fijos | Provisional |
+| SMT-027 | Guías muy largas | Una guía de 300 pasos en 1080p ocupa más de 2 GB al abrirse, porque el editor carga todas las imágenes. Se resuelve en la entrega de edición de la guía (ADR 0009, punto 8) | Pendiente |
+| SMT-028 | Fecha del encabezado | En formato AAAA-MM-DD en los dos idiomas | Provisional |
+| SMT-028 | Textos en negrita mientras se editan | Al escribir se ven los asteriscos de `**…**`; al terminar, la negrita | Provisional |
+
 ## Dudas del equipo de construcción (M5, entrega 2: redacción automática)
 
 | ID | Duda | Propuesta | Estado |

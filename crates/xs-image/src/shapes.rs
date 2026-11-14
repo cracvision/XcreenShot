@@ -357,8 +357,9 @@ impl ZoneObject {
             other => return Err(format!("fit is fit or fill, not {other}")),
         };
         let zoom = props.get("zoom").and_then(Value::as_f64).unwrap_or(1.0);
-        if !(0.1..=10.0).contains(&zoom) {
-            return Err("zoom must be between 0.1 and 10".to_string());
+        // A guide frames a small part of a large monitor (SMT-026): up to 100.
+        if !(0.1..=100.0).contains(&zoom) {
+            return Err("zoom must be between 0.1 and 100".to_string());
         }
         let offset = props
             .get("offset")

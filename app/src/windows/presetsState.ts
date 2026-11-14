@@ -75,6 +75,7 @@ export const DEFAULTS: { universal: PanelSettings["universal"]; image: PanelSett
     region: { fixed: false, width: 800, height: 600, positioned: false, monitor: "", x: 0, y: 0 },
     areas: { composition: "original", gap: 10 },
     menu: { submenus: true, menubar: false },
+    steps: { area: "all", title: "" },
     effects: [],
     share: [],
     file: FILE_DEFAULTS,

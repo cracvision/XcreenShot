@@ -45,6 +45,10 @@ pub struct TextStyle {
     pub align: TextAlign,
     /// 0–100 %.
     pub opacity: f64,
+    /// `**…**` marks bold words (a step's text, SMT-025, ADR 0009); off, asterisks are
+    /// text like any other.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub markup: bool,
 }
 
 /// The system's interface font, the default of the Base theme (EDT-017).
@@ -67,6 +71,7 @@ impl Default for TextStyle {
             color: "#F2545B".to_string(),
             align: TextAlign::Left,
             opacity: 100.0,
+            markup: false,
         }
     }
 }
@@ -219,12 +224,25 @@ fn shape(system: &mut FontSystem, text: &Text, dpi: f64) -> (Buffer, Laid) {
         });
     buffer.set_wrap(Wrap::WordOrGlyph);
     buffer.set_size(text.width.map(|w| w as f32), None);
-    buffer.set_text(
-        &text.text,
-        &attrs,
-        Shaping::Advanced,
-        Some(align(text.style.align)),
-    );
+    if text.style.markup && text.text.contains("**") {
+        // Every other piece between `**` is bold; the marks are not drawn.
+        let strong = attrs.clone().weight(Weight::BOLD);
+        let spans: Vec<(&str, Attrs)> = text
+            .text
+            .split("**")
+            .enumerate()
+            .filter(|(_, piece)| !piece.is_empty())
+            .map(|(i, piece)| (piece, if i % 2 == 1 { strong.clone() } else { attrs.clone() }))
+            .collect();
+        buffer.set_rich_text(spans, &attrs, Shaping::Advanced, Some(align(text.style.align)));
+    } else {
+        buffer.set_text(
+            &text.text,
+            &attrs,
+            Shaping::Advanced,
+            Some(align(text.style.align)),
+        );
+    }
     buffer.shape_until_scroll(system, false);
     let widest = buffer.layout_runs().map(|r| r.line_w).fold(0.0f32, f32::max);
     let width = match text.width {

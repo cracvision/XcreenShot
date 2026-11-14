@@ -202,6 +202,11 @@ pub trait Host: Send + Sync {
     fn interval_event(&self, state: Value) {}
     /// A video recording started, paused, resumed or stopped (VID-020, VID-024).
     fn recording_event(&self, state: Value) {}
+    /// The step recorder's bar (SMT-023): shown with `Some(state)` (`status`, `steps`,
+    /// `confirm`…), closed with `None`. Never in the steps' pictures.
+    fn steps_bar(&self, state: Option<Value>) {}
+    /// The notice "Recording steps: every click makes a step" (SMT-022), for 2 s.
+    fn steps_notice(&self, show: bool) {}
     /// The recording bar and the border of the area (VID-011, VID-020): shown for
     /// `Some(state)` (`status`, `area`, `elapsed`, `width`, `height`), closed for `None`.
     fn recording_bar(&self, state: Option<Value>) {}

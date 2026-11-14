@@ -10,6 +10,7 @@ pub mod auto_redact;
 pub mod duplicate;
 pub mod fit;
 pub mod flatten;
+pub mod guide;
 pub mod image_ops;
 pub mod library_export;
 pub mod objects;

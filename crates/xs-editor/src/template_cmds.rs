@@ -70,7 +70,7 @@ fn id_of(path: &Path) -> String {
     )
 }
 
-fn active_theme(core: &Core) -> String {
+pub(crate) fn active_theme(core: &Core) -> String {
     editor(core).themes.lock().unwrap().active.clone()
 }
 
@@ -88,7 +88,7 @@ fn author_of(s: &templates::Settings) -> String {
 }
 
 /// Lays `t` out on `doc` again (ADR 0007).
-fn relayout(core: &Core, lang: Lang, doc: &mut Document, t: &Template, restyle: bool) {
+pub(crate) fn relayout(core: &Core, lang: Lang, doc: &mut Document, t: &Template, restyle: bool) {
     let look = look_of(core, &t.settings);
     templates::layout(
         doc,
@@ -183,7 +183,7 @@ fn put_picture(zone: &mut Object, name: Option<&str>) {
 
 /// A new document from `document` (EDT-095): written to the library (or kept unsaved,
 /// LIB-020) and opened.
-fn create_document(
+pub(crate) fn create_document(
     core: &Arc<Core>,
     lang: Lang,
     document: Document,
@@ -231,7 +231,7 @@ fn create_document(
     Ok((id, path))
 }
 
-fn transparent_pixel() -> Vec<u8> {
+pub(crate) fn transparent_pixel() -> Vec<u8> {
     xs_image::encode::png(&image::RgbaImage::new(1, 1), 96.0, true).unwrap_or_default()
 }
 

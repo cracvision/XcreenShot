@@ -36,6 +36,7 @@ const IMAGE_SELECTIONS = [
   "webpage",
   "freehand",
   "text",
+  "steps",
 ] as const;
 
 interface Common {
@@ -362,6 +363,40 @@ export function ImageOptions({
           </label>
         </fieldset>
       )}
+      {/* The step recorder's area and title (SMT-022). */}
+      {value.selection === "steps" && (
+        <fieldset className="panel-props">
+          <label className="panel-field" htmlFor={`${id}-steps-area`}>
+            <span>{t("ui.panel.steps_area")}</span>
+            <select
+              id={`${id}-steps-area`}
+              value={value.steps.area}
+              onChange={(e) =>
+                onChange({
+                  steps: {
+                    ...value.steps,
+                    area: e.target.value as PanelSettings["image"]["steps"]["area"],
+                  },
+                })
+              }
+            >
+              <option value="all">{t("ui.panel.steps_area_all")}</option>
+              <option value="monitor">{t("ui.panel.steps_area_monitor")}</option>
+              <option value="window">{t("ui.panel.steps_area_window")}</option>
+            </select>
+          </label>
+          <label className="panel-field" htmlFor={`${id}-steps-title`}>
+            <span>{t("ui.panel.steps_title")}</span>
+            <input
+              id={`${id}-steps-title`}
+              type="text"
+              value={value.steps.title}
+              placeholder={t("ui.panel.steps_title_auto")}
+              onChange={(e) => onChange({ steps: { ...value.steps, title: e.target.value } })}
+            />
+          </label>
+        </fieldset>
+      )}
       {value.selection === "multi" && (
         <AreasOptions
           value={value.areas}
@@ -386,8 +421,13 @@ export function ImageOptions({
           >
             <option value="none">{t("ui.panel.timing_none")}</option>
             <option value="delay">{t("ui.panel.timing_delay")}</option>
-            <option value="interval">{t("ui.panel.timing_interval")}</option>
-            <option value="scheduled">{t("ui.panel.timing_scheduled")}</option>
+            {/* Interval and Scheduled do not apply to the step recorder (SMT-022). */}
+            <option value="interval" disabled={value.selection === "steps"}>
+              {t("ui.panel.timing_interval")}
+            </option>
+            <option value="scheduled" disabled={value.selection === "steps"}>
+              {t("ui.panel.timing_scheduled")}
+            </option>
           </select>
         </label>
         {value.timing === "delay" && (

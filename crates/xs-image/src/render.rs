@@ -429,6 +429,7 @@ fn step_text(s: &StepObject, dpi: f64) -> Option<Pixmap> {
                 color: s.style.text_color.clone(),
                 align: TextAlign::Center,
                 opacity: 100.0,
+                markup: false,
             },
         };
         text::rasterize(&t, dpi)

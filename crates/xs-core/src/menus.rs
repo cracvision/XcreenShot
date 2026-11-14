@@ -156,6 +156,8 @@ fn tray_entries(presets: &[(String, String)]) -> Vec<MenuEntry> {
         cmd("capture_universal", "tray.capture_universal", "capture.universal"),
         cmd("capture_image", "tray.capture_image", "capture.image"),
         cmd("video_capture", "tray.video_capture", "record.video"),
+        // The step recorder (SMT-022), with the panel's pointer, effects and Open in.
+        cmd("steps_record", "tray.steps_record", "smart.steps_start"),
         MenuEntry::Command {
             id: "smart.extract_text",
             label: "tray.extract_text",
