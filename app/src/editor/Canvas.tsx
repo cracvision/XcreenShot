@@ -93,6 +93,7 @@ import {
   type DocObject,
   type ZoneObject,
 } from "./state";
+import { RedactOverlay } from "./RedactOverlay";
 import { TextEditor } from "./TextEditor";
 import { Icon } from "./icons";
 import { expand, unitOf } from "./groups";
@@ -3418,6 +3419,13 @@ export function Canvas({ doc, insets }: Props) {
                   })}
             </Layer>
           </Stage>
+          {/* Auto redact's panel is open: the words read can be clicked (SMT-014). */}
+          <RedactOverlay
+            documentId={doc.documentId}
+            toScreen={toScreen}
+            scale={scale}
+            insets={{ top: insetTop, right: insetRight, bottom: insetBottom, left: insetLeft }}
+          />
         </div>
       )}
       {/* The keyboard focus ring, around the part left visible: the edges of the canvas

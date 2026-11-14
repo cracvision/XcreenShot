@@ -42,6 +42,25 @@ export interface RedactItem {
   objectId: string;
   category: string;
   rect: [number, number, number, number];
+  /** The place found, without the margin. */
+  source?: [number, number, number, number];
+}
+
+/** A recognized word, in canvas pixels (SMT-014). */
+export interface Word {
+  text: string;
+  rect: [number, number, number, number];
+}
+
+export interface WordLine {
+  words: Word[];
+}
+
+/** What the last "all matches" did (SMT-015): it offers Undo and Add to My terms. */
+export interface MatchNotice {
+  text: string;
+  remove: boolean;
+  count: number;
 }
 
 export interface RedactResult {
@@ -52,6 +71,9 @@ export interface RedactResult {
   invalidPatterns: string[];
   textRead: boolean;
   items: RedactItem[];
+  added?: number;
+  removed?: number;
+  addedByHand?: number;
 }
 
 interface RedactState {
@@ -69,6 +91,9 @@ interface RedactState {
   /** Done waits for the security reminder (SMT-010). */
   reminder: boolean;
   error: string | null;
+  /** The words read, for redacting by hand (SMT-014). */
+  lines: WordLine[];
+  notice: MatchNotice | null;
 }
 
 export const DEFAULT_ON: string[] = ["email", "phone", "card", "id", "address", "ip", "face"];
@@ -84,6 +109,8 @@ export const useRedact = create<RedactState>(() => ({
   index: -1,
   reminder: false,
   error: null,
+  lines: [],
+  notice: null,
 }));
 
 /** The name a term shows and counts under: `term:<name>`. */
@@ -112,10 +139,21 @@ function remembered(): Pick<RedactState, "categories" | "terms" | "style"> {
 
 let seq = 0;
 
+/** Loads the words read in the panel's document: they move with a crop or a resize. */
+async function loadWords(documentId: string): Promise<void> {
+  try {
+    const r = await run<{ lines: WordLine[] }>("smart.redact_words", { documentId });
+    if (useRedact.getState().documentId === documentId) useRedact.setState({ lines: r.lines });
+  } catch {
+    // Without the words, the redactions can still be removed with a click.
+    if (useRedact.getState().documentId === documentId) useRedact.setState({ lines: [] });
+  }
+}
+
 /** Runs `smart.redact` on the panel's document with `params`. */
-async function analyze(params: Record<string, unknown>): Promise<void> {
+async function analyze(params: Record<string, unknown>): Promise<RedactResult | null> {
   const documentId = useRedact.getState().documentId;
-  if (!documentId) return;
+  if (!documentId) return null;
   const mine = ++seq;
   useRedact.setState({ busy: true, error: null });
   const timer = setTimeout(() => {
@@ -123,10 +161,13 @@ async function analyze(params: Record<string, unknown>): Promise<void> {
   }, 500);
   try {
     const result = await run<RedactResult>("smart.redact", { documentId, ...params });
-    if (mine !== seq || useRedact.getState().documentId !== documentId) return;
+    if (mine !== seq || useRedact.getState().documentId !== documentId) return null;
     useRedact.setState({ result, categories: result.categories, index: -1 });
+    void loadWords(documentId);
+    return result;
   } catch (e) {
     if (mine === seq) useEditor.getState().showError(e);
+    return null;
   } finally {
     clearTimeout(timer);
     if (mine === seq) useRedact.setState({ busy: false, slow: false });
@@ -145,36 +186,102 @@ export async function openRedact(): Promise<void> {
     result: null,
     index: -1,
     reminder: false,
+    lines: [],
+    notice: null,
   });
   await analyze({});
 }
 
 /** Switches a category on or off (SMT-011): its redactions go or come back. */
-export function toggleCategory(category: string): Promise<void> {
+export async function toggleCategory(category: string): Promise<void> {
   const now = useRedact.getState().categories;
   const categories = now.includes(category)
     ? now.filter((c) => c !== category)
     : CATEGORIES.filter((c) => c === category || now.includes(c));
   useRedact.setState({ categories });
-  return analyze({ categories });
+  await analyze({ categories });
 }
 
 /** Changes the user's terms (SMT-012): remembered, and applied at once. */
-export function setTerms(terms: Term[]): Promise<void> {
+export async function setTerms(terms: Term[]): Promise<void> {
   useRedact.setState({ terms });
-  return analyze({ terms });
+  await analyze({ terms });
 }
 
 /** Changes the style of all the managed redactions, in one undo step (SMT-013). */
-export function setStyle(changes: Partial<RedactStyle>): Promise<void> {
+export async function setStyle(changes: Partial<RedactStyle>): Promise<void> {
   const style = { ...useRedact.getState().style, ...changes };
   useRedact.setState({ style });
-  return analyze({ style });
+  await analyze({ style });
 }
 
-/** Removes the managed redactions. */
-export function clearRedactions(): Promise<void> {
-  return analyze({ clear: true });
+/** Removes the managed redactions, those added by hand too. */
+export async function clearRedactions(): Promise<void> {
+  useRedact.setState({ notice: null });
+  await analyze({ clear: true });
+}
+
+/** Redacts places by hand (SMT-014): `[x, y, w, h]` in canvas pixels each. They stay
+ * whatever the categories and terms. */
+export async function redactRects(rects: [number, number, number, number][]): Promise<void> {
+  if (rects.length === 0) return;
+  useRedact.setState({ notice: null });
+  await analyze({ add: rects });
+}
+
+/** Removes redactions with a click (SMT-014). An automatic one is not put back by the
+ * next change in this document. */
+export async function removeRedactions(objectIds: string[]): Promise<void> {
+  if (objectIds.length === 0) return;
+  useRedact.setState({ notice: null });
+  await analyze({ remove: objectIds });
+}
+
+/** Removes the redaction Next / Previous shows: the keyboard's way of a click on it. */
+export async function removeCurrent(): Promise<void> {
+  const { result, index } = useRedact.getState();
+  const item = index >= 0 ? result?.items[index] : undefined;
+  if (item) await removeRedactions([item.objectId]);
+}
+
+/** Redacts every place where `text` appears, or uncovers them with `remove` (SMT-015). */
+export async function redactMatches(text: string, remove: boolean): Promise<void> {
+  const clean = text.trim();
+  if (!clean) return;
+  const r = await analyze({ matches: { text: clean, remove } });
+  if (!r) return;
+  const count = remove ? (r.removed ?? 0) : (r.addedByHand ?? 0);
+  useRedact.setState({ notice: { text: clean, remove, count } });
+}
+
+/** Undoes the last "all matches" in one step. */
+export async function undoMatches(): Promise<void> {
+  const documentId = useRedact.getState().documentId;
+  if (!documentId) return;
+  useRedact.setState({ notice: null });
+  try {
+    await run("document.undo", { documentId });
+  } catch (e) {
+    useEditor.getState().showError(e);
+    return;
+  }
+  await analyze({});
+}
+
+/** Keeps the text of the last "all matches" in My terms, for the next captures. */
+export async function matchToTerms(): Promise<void> {
+  const { notice, terms } = useRedact.getState();
+  if (!notice || notice.remove) return;
+  useRedact.setState({ notice: null });
+  const known = terms.some(
+    (t) => !t.pattern && t.text?.toLowerCase() === notice.text.toLowerCase(),
+  );
+  if (known) return;
+  await setTerms([...terms, { text: notice.text, on: true }]);
+}
+
+export function dismissNotice(): void {
+  useRedact.setState({ notice: null });
 }
 
 /** Selects the next (`1`) or previous (`-1`) redaction and centers the view on it. */
@@ -245,5 +352,7 @@ export function closeRedact(): void {
     slow: false,
     index: -1,
     reminder: false,
+    lines: [],
+    notice: null,
   });
 }

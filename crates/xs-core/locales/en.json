@@ -723,6 +723,10 @@
       "title": "Auto redact",
       "description": "Covers the emails, phone numbers, cards, IDs, addresses, IPs, faces and your own terms found in a capture, on this computer."
     },
+    "smart_redact_words": {
+      "title": "Recognized words",
+      "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
+    },
     "smart_steps_start": {
       "title": "Record steps",
       "description": "Turns your clicks into a step-by-step guide: a picture and a sentence for each click, on this computer."
@@ -4557,7 +4561,8 @@
         "ip": "IP addresses",
         "url": "URLs",
         "date": "Dates",
-        "face": "Faces"
+        "face": "Faces",
+        "manual": "Manual"
       },
       "my_terms": "My terms",
       "words": "Words",
@@ -4584,7 +4589,23 @@
       "private": "Everything is read on this computer. The text found is not kept.",
       "reminder_title": "Blur and pixelate can be undone",
       "reminder_body": "Some tools can bring back what a blur or pixelation hides. For confidential data, a solid fill is safer.",
-      "use_solid": "Use solid fill"
+      "use_solid": "Use solid fill",
+      "click_hint": "Click a word on the canvas to redact it, or a redaction to remove it. Shift+click or drag covers several words; double-click covers the line. Right-click: all matches.",
+      "click_word": "Click: redact · Double-click: the whole line",
+      "click_box": "Click: remove this redaction",
+      "redact_word": "Redact",
+      "redact_all": "Redact all matches",
+      "remove": "Remove",
+      "remove_all_matches": "Remove all matches",
+      "matched_one": "{{count}} match redacted.",
+      "matched_other": "{{count}} matches redacted.",
+      "unmatched_one": "{{count}} match uncovered.",
+      "unmatched_other": "{{count}} matches uncovered.",
+      "no_matches": "No other matches to change.",
+      "undo": "Undo",
+      "to_terms": "Add to My terms",
+      "dismiss": "Close message",
+      "remove_current": "Remove the redaction shown"
     },
     "stepsbar": {
       "title": "Step recorder",

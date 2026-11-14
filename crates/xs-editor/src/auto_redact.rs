@@ -121,10 +121,14 @@ pub struct Outcome {
     pub restyled: usize,
 }
 
+/// The category of redactions made by hand (SMT-014): an analysis keeps them.
+pub const MANUAL: &str = "manual";
+
 /// Leaves the managed redactions of a document as `wanted` says, in one undo step
 /// (`history.auto_redact`), and none when nothing changes. Those that already cover a
-/// wanted thing stay (with their own changes); with `restyle`, they all take that
-/// style. New ones take `style` and go on top.
+/// wanted thing stay (with their own changes), and so do those made by hand unless
+/// `clear`; with `restyle`, they all take that style. New ones take `style` and go on
+/// top.
 pub fn reconcile(
     core: &Core,
     ctx: &Context,
@@ -132,6 +136,50 @@ pub fn reconcile(
     wanted: &[Wanted],
     style: &Map<String, Value>,
     restyle: bool,
+) -> Result<Outcome, String> {
+    change(core, ctx, id, wanted, &[], style, restyle, false)
+}
+
+/// Removes every managed redaction, those made by hand too.
+pub fn clear(core: &Core, ctx: &Context, id: &str) -> Result<Outcome, String> {
+    change(core, ctx, id, &[], &[], &Map::new(), false, true)
+}
+
+/// Adds redactions made by hand (`add`, category [`MANUAL`]) and removes managed ones
+/// (`remove`, object ids), in one undo step (SMT-014, SMT-015). The rest stay.
+pub fn edit(
+    core: &Core,
+    ctx: &Context,
+    id: &str,
+    add: &[Wanted],
+    remove: &[String],
+    style: &Map<String, Value>,
+) -> Result<Outcome, String> {
+    let existing = managed(core, id)?;
+    // What stays is wanted as it is, so nothing else changes.
+    let mut keep: Vec<Wanted> = existing
+        .iter()
+        .filter(|m| m.category != MANUAL && !remove.contains(&m.object_id))
+        .map(|m| Wanted {
+            category: m.category.clone(),
+            source: m.source,
+            rect: m.rect,
+        })
+        .collect();
+    keep.extend(add.iter().cloned());
+    change(core, ctx, id, &keep, remove, style, false, false)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn change(
+    core: &Core,
+    ctx: &Context,
+    id: &str,
+    wanted: &[Wanted],
+    remove: &[String],
+    style: &Map<String, Value>,
+    restyle: bool,
+    clear: bool,
 ) -> Result<Outcome, String> {
     let out = editor(core)
         .store
@@ -144,6 +192,15 @@ pub fn reconcile(
                     kept.push(o);
                     continue;
                 };
+                if remove.contains(&m.object_id) {
+                    outcome.removed += 1;
+                    continue;
+                }
+                // Made by hand: an analysis never takes it away (SMT-014).
+                if m.category == MANUAL && !clear {
+                    kept.push(o);
+                    continue;
+                }
                 let hit = wanted
                     .iter()
                     .enumerate()

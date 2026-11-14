@@ -723,6 +723,10 @@
       "title": "Redacción automática",
       "description": "Cubre los correos, teléfonos, tarjetas, documentos, direcciones, IP, rostros y tus propios términos que encuentra en una captura, en este equipo."
     },
+    "smart_redact_words": {
+      "title": "Palabras reconocidas",
+      "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
+    },
     "smart_steps_start": {
       "title": "Grabar pasos",
       "description": "Convierte tus clics en una guía paso a paso: una imagen y una frase por clic, en este equipo."
@@ -4557,7 +4561,8 @@
         "ip": "Direcciones IP",
         "url": "URLs",
         "date": "Fechas",
-        "face": "Rostros"
+        "face": "Rostros",
+        "manual": "Manual"
       },
       "my_terms": "Mis términos",
       "words": "Palabras",
@@ -4584,7 +4589,23 @@
       "private": "Todo se lee en este equipo. El texto encontrado no se guarda.",
       "reminder_title": "El desenfoque y el pixelado se pueden revertir",
       "reminder_body": "Algunas herramientas pueden recuperar lo que oculta un desenfoque o un pixelado. Para datos confidenciales es más seguro el relleno sólido.",
-      "use_solid": "Usar relleno sólido"
+      "use_solid": "Usar relleno sólido",
+      "click_hint": "Haz clic en una palabra del lienzo para redactarla, o en una redacción para quitarla. Mayús+clic o arrastrar cubre varias palabras; doble clic cubre la línea. Clic derecho: todas las coincidencias.",
+      "click_word": "Clic: redactar · Doble clic: la línea entera",
+      "click_box": "Clic: quitar esta redacción",
+      "redact_word": "Redactar",
+      "redact_all": "Redactar todas las coincidencias",
+      "remove": "Quitar",
+      "remove_all_matches": "Quitar todas las coincidencias",
+      "matched_one": "Se redactó {{count}} coincidencia.",
+      "matched_other": "Se redactaron {{count}} coincidencias.",
+      "unmatched_one": "Se quitó {{count}} coincidencia.",
+      "unmatched_other": "Se quitaron {{count}} coincidencias.",
+      "no_matches": "No hay más coincidencias que cambiar.",
+      "undo": "Deshacer",
+      "to_terms": "Añadir a Mis términos",
+      "dismiss": "Cerrar el mensaje",
+      "remove_current": "Quitar la redacción mostrada"
     },
     "stepsbar": {
       "title": "Grabador de pasos",

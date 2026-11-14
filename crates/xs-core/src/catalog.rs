@@ -582,7 +582,10 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "terms": {"type": "array", "items": {"type": "object"}, "description": "Your words and patterns: [{name, text, exact, on} | {name, pattern, on}]; default and remembered: smart.autoRedact.customTerms"},
                     "style": {"type": "object", "description": "{type: solid | blur | pixelate, color: #RRGGBB, intensity, margin: 0-10}; given, every managed redaction takes it; default and remembered: smart.autoRedact.style"},
                     "flatten": {"type": "boolean", "default": false, "description": "Merge the redactions into the image (cannot be undone with Unflatten)"},
-                    "clear": {"type": "boolean", "default": false, "description": "Remove the managed redactions"}
+                    "clear": {"type": "boolean", "default": false, "description": "Remove the managed redactions"},
+                    "add": {"type": "array", "items": {"type": "array"}, "description": "Redactions by hand (SMT-014): [x, y, w, h] in canvas pixels each; category manual, kept by every analysis"},
+                    "remove": {"type": "array", "items": {"type": "string"}, "description": "Managed redactions to remove (object ids); an automatic one is not put back in this document"},
+                    "matches": {"type": "object", "description": "{text, exact, remove}: redact every place where the text appears (SMT-015), or with remove, uncover them"}
                 }),
                 &[],
             ))
@@ -594,6 +597,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "items": {"type": "array", "description": "{objectId, category, rect: [x, y, w, h]} of each managed redaction"},
                 "invalidPatterns": {"type": "array", "items": {"type": "string"}},
                 "textRead": {"type": "boolean", "description": "False without a recognition language: only faces"},
+                "addedByHand": {"type": "integer", "description": "add or matches: how many were added"},
                 "output": {"type": "string"}
             }})),
         B::new("smart.steps_start", &["SMT-022", "SMT-024", "SMT-026", "SMT-027"])
@@ -680,6 +684,10 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
             }})),
         B::new("smart.steps_notice_closed", &["SMT-022"]).scopes(UI).result(json!({"type": "object"})),
+        B::new("smart.redact_words", &["SMT-014"])
+            .scopes(UI_CLI)
+            .params(params(json!({"documentId": {"type": "string"}}), &[]))
+            .result(json!({"type": "object", "properties": {"lines": {"type": "array", "description": "{words: [{text, rect: [x, y, w, h]}]} in canvas pixels"}}})),
         B::new("smart.ocr_languages", &["SMT-004"])
             .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
         B::new("smart.language_settings", &["SMT-004"])

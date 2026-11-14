@@ -181,15 +181,46 @@ pub fn command(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     redact(core, ctx, p, &id)
 }
 
+/// Redactions removed by hand in a document, by category and place: an analysis does
+/// not put them back while the app runs (SMT-014, provisional).
+static IGNORED: Mutex<Vec<(String, String, [f64; 4])>> = Mutex::new(Vec::new());
+
+fn ignored(id: &str, w: &Wanted) -> bool {
+    IGNORED.lock().unwrap().iter().any(|(doc, c, s)| {
+        doc == id && *c == w.category && s.iter().zip(w.source).all(|(a, b)| (a - b).abs() < 0.5)
+    })
+}
+
+/// A rectangle of the canvas with the redactions' margin.
+fn padded(s: [f64; 4], margin: f64) -> [f64; 4] {
+    let (x, y) = ((s[0] - margin).floor(), (s[1] - margin).floor());
+    let (right, bottom) = ((s[0] + s[2] + margin).ceil(), (s[1] + s[3] + margin).ceil());
+    [x, y, right - x, bottom - y]
+}
+
+fn contains(outer: [f64; 4], inner: [f64; 4]) -> bool {
+    inner[0] >= outer[0] - 1.0
+        && inner[1] >= outer[1] - 1.0
+        && inner[0] + inner[2] <= outer[0] + outer[2] + 1.0
+        && inner[1] + inner[3] <= outer[1] + outer[3] + 1.0
+}
+
+fn overlaps(a: [f64; 4], b: [f64; 4]) -> bool {
+    a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3]
+}
+
 fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
     let lang = ctx.lang;
     let internal = CommandError::internal;
     if p.get("clear").and_then(Value::as_bool) == Some(true) {
-        let out = auto_redact::reconcile(core, ctx, id, &[], &Map::new(), false).map_err(internal)?;
+        let out = auto_redact::clear(core, ctx, id).map_err(internal)?;
+        IGNORED.lock().unwrap().retain(|(doc, _, _)| doc != id);
         return Ok(
             json!({"documentId": id, "redactions": 0, "removed": out.removed, "counts": {}, "items": []}),
         );
     }
+    // Changes by hand (SMT-014, SMT-015): only those, then the panel's state.
+    let by_hand = p.get("add").is_some() || p.get("remove").is_some() || p.get("matches").is_some();
     let default_on = json!(DEFAULT_ON);
     let categories = strings(Some(&asked_or_kept(
         core,
@@ -254,12 +285,10 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
     let mut wanted: Vec<Wanted> = Vec::new();
     let mut push = |category: &str, r: &Rect| {
         let s = to_canvas(r);
-        let (x, y) = ((s[0] - margin).floor(), (s[1] - margin).floor());
-        let (right, bottom) = ((s[0] + s[2] + margin).ceil(), (s[1] + s[3] + margin).ceil());
         wanted.push(Wanted {
             category: category.to_string(),
             source: s.map(|v| (v * 10.0).round() / 10.0),
-            rect: [x, y, right - x, bottom - y],
+            rect: padded(s, margin),
         });
     };
     for f in &found {
@@ -272,7 +301,114 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
             push("face", r);
         }
     }
-    let outcome = auto_redact::reconcile(core, ctx, id, &wanted, &blur_style, restyle).map_err(internal)?;
+    // Those removed by hand stay away, unless they are back in the document (Undo).
+    let existing = auto_redact::managed(core, id).map_err(internal)?;
+    IGNORED.lock().unwrap().retain(|(doc, c, s)| {
+        doc != id
+            || !existing
+                .iter()
+                .any(|m| m.category == *c && m.source.iter().zip(s).all(|(a, b)| (a - b).abs() < 0.5))
+    });
+    let mut dropped: Vec<String> = Vec::new();
+    wanted.retain(|w| {
+        let keep = !ignored(id, w);
+        if !keep {
+            dropped.push(w.category.clone());
+        }
+        keep
+    });
+    // Its category counts one less (SMT-014).
+    for c in dropped {
+        match counts.get(&c).and_then(Value::as_u64) {
+            Some(n) if n > 1 => {
+                counts.insert(c, json!(n - 1));
+            }
+            Some(_) => {
+                counts.remove(&c);
+            }
+            None => {}
+        }
+    }
+    let mut added_by_hand = 0;
+    let outcome = if by_hand {
+        let mut add: Vec<Wanted> = Vec::new();
+        let mut remove: Vec<String> = p
+            .get("remove")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .unwrap_or_default();
+        // A rectangle of the canvas each (a word, or words of one line).
+        for r in p.get("add").and_then(Value::as_array).into_iter().flatten() {
+            let four = |k: usize| r.get(k).and_then(Value::as_f64);
+            if let (Some(x), Some(y), Some(w), Some(h)) = (four(0), four(1), four(2), four(3)) {
+                let s = [x, y, w, h].map(|v| (v * 10.0).round() / 10.0);
+                add.push(Wanted {
+                    category: auto_redact::MANUAL.into(),
+                    source: s,
+                    rect: padded(s, margin),
+                });
+            }
+        }
+        // Every place where a text appears (SMT-015), or none of them.
+        if let (Some(m), Some(rec)) = (p.get("matches"), reading.text.as_ref()) {
+            let text = m.get("text").and_then(Value::as_str).unwrap_or("").trim();
+            let term = Term {
+                name: "match".into(),
+                kind: TermKind::Words {
+                    text: text.to_string(),
+                    exact: m.get("exact").and_then(Value::as_bool).unwrap_or(false),
+                },
+            };
+            let places: Vec<[f64; 4]> = if text.is_empty() {
+                Vec::new()
+            } else {
+                sensitive::find(rec, &[], &[term])
+                    .iter()
+                    .flat_map(|f| f.rects.iter().map(&to_canvas))
+                    .collect()
+            };
+            if m.get("remove").and_then(Value::as_bool) == Some(true) {
+                for e in existing
+                    .iter()
+                    .filter(|e| places.iter().any(|pl| overlaps(*pl, e.source)))
+                {
+                    remove.push(e.object_id.clone());
+                }
+            } else {
+                for pl in places {
+                    // A place already covered whole needs nothing more.
+                    if !existing.iter().any(|e| contains(e.source, pl)) {
+                        let s = pl.map(|v| (v * 10.0).round() / 10.0);
+                        add.push(Wanted {
+                            category: auto_redact::MANUAL.into(),
+                            source: s,
+                            rect: padded(s, margin),
+                        });
+                    }
+                }
+            }
+        }
+        added_by_hand = add.len();
+        // One by hand that covers others by hand takes their place (a word, then Shift+click).
+        for e in existing.iter().filter(|e| e.category == auto_redact::MANUAL) {
+            if add.iter().any(|a| contains(a.source, e.source)) && !remove.contains(&e.object_id) {
+                remove.push(e.object_id.clone());
+            }
+        }
+        // An automatic redaction removed by hand is not put back (SMT-014).
+        {
+            let mut ign = IGNORED.lock().unwrap();
+            for e in existing
+                .iter()
+                .filter(|e| remove.contains(&e.object_id) && e.category != auto_redact::MANUAL)
+            {
+                ign.push((id.to_string(), e.category.clone(), e.source));
+            }
+        }
+        auto_redact::edit(core, ctx, id, &add, &remove, &blur_style).map_err(internal)?
+    } else {
+        auto_redact::reconcile(core, ctx, id, &wanted, &blur_style, restyle).map_err(internal)?
+    };
     // Counts only, never the text (SMT-017).
     tracing::info!(
         redactions = wanted.len(),
@@ -281,10 +417,17 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
         elapsed_ms = started.elapsed().as_millis() as u64,
         "auto redact"
     );
-    let items: Vec<Value> = auto_redact::managed(core, id)
-        .map_err(internal)?
+    let managed = auto_redact::managed(core, id).map_err(internal)?;
+    let manual = managed
+        .iter()
+        .filter(|m| m.category == auto_redact::MANUAL)
+        .count();
+    if manual > 0 {
+        counts.insert(auto_redact::MANUAL.into(), json!(manual));
+    }
+    let items: Vec<Value> = managed
         .into_iter()
-        .map(|m| json!({"objectId": m.object_id, "category": m.category, "rect": m.rect}))
+        .map(|m| json!({"objectId": m.object_id, "category": m.category, "rect": m.rect, "source": m.source}))
         .collect();
     let mut result = json!({
         "documentId": id,
@@ -292,6 +435,7 @@ fn redact(core: &Core, ctx: &Context, p: &Value, id: &str) -> CommandResult {
         "added": outcome.added,
         "removed": outcome.removed,
         "restyled": outcome.restyled,
+        "addedByHand": added_by_hand,
         "counts": counts,
         "categories": categories,
         "terms": user_terms.iter().map(|(t, _)| format!("term:{}", t.name)).collect::<Vec<_>>(),
@@ -392,6 +536,32 @@ fn on_file(core: &Arc<Core>, ctx: &Context, p: &Value, path: PathBuf) -> Command
     done
 }
 
+/// `smart.redact_words` (SMT-014): the words recognized in an open document, by line,
+/// in canvas pixels, so that the panel can highlight them and redact one with a click.
+/// The text goes back to the panel only; it is never kept.
+pub fn words(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let id = xs_editor::resolve_document(core, lang, p)?;
+    let (image, origin) = auto_redact::image_without(core, &id).map_err(CommandError::internal)?;
+    let languages = crate::extract::wanted(core, None);
+    let reading = read(&image, &languages, lang)?;
+    let (ox, oy) = (origin[0] as f64, origin[1] as f64);
+    let lines: Vec<Value> = reading
+        .text
+        .iter()
+        .flat_map(|r| r.blocks.iter().flat_map(|b| &b.lines))
+        .map(|l| {
+            let words: Vec<Value> = l
+                .words
+                .iter()
+                .map(|w| json!({"text": w.text, "rect": [w.rect[0] - ox, w.rect[1] - oy, w.rect[2], w.rect[3]]}))
+                .collect();
+            json!({"words": words})
+        })
+        .collect();
+    Ok(json!({"documentId": id, "lines": lines}))
+}
+
 /// Handlers of auto redact.
 pub fn register(reg: &mut xs_core::command::Registry, weak: &std::sync::Weak<Core>) {
     let w = weak.clone();
@@ -400,6 +570,13 @@ pub fn register(reg: &mut xs_core::command::Registry, weak: &std::sync::Weak<Cor
             .upgrade()
             .ok_or_else(|| CommandError::internal("shutting down"))?;
         command(&core, ctx, &p)
+    });
+    let w = weak.clone();
+    reg.handle("smart.redact_words", move |ctx, p| {
+        let core = w
+            .upgrade()
+            .ok_or_else(|| CommandError::internal("shutting down"))?;
+        words(&core, ctx, &p)
     });
 }
 
@@ -577,6 +754,105 @@ mod tests {
         let cleared = call("smart.redact", json!({"documentId": id, "clear": true})).unwrap();
         assert_eq!(cleared["removed"], 2);
         assert!(redactions(&core, &id).is_empty());
+    }
+
+    /// SMT-014, SMT-015: a word redacted by hand stays through a new analysis; all the
+    /// places of a name are redacted at once, and uncovered at once; an automatic
+    /// redaction removed by hand is not put back.
+    #[test]
+    fn redactions_by_hand() {
+        if xs_ocr::languages().is_empty() {
+            eprintln!("no recognition language on this computer: skipped");
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let (core, id) = core_with_form(
+            dir.path(),
+            &[
+                "Cliente: Marta Ruiz",
+                "Contacto: Marta Ruiz",
+                "Firma de Marta Ruiz",
+                "Correo: ana.ruiz@example.com",
+            ],
+        );
+        let call = |cmd: &str, p: Value| core.call(Source::Cli, cmd, p, Some(xs_core::Lang::Es)).unwrap();
+        let r = call("smart.redact", json!({"documentId": id, "categories": ["email"]}));
+        assert_eq!(r["redactions"], 1, "{r}");
+        // Click on a word: it is redacted, in Manual.
+        let words = call("smart.redact_words", json!({"documentId": id}));
+        let marta = words["lines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|l| l["words"].as_array().unwrap().iter())
+            .find(|w| w["text"] == "Marta")
+            .expect("the word Marta")
+            .clone();
+        let r = call("smart.redact", json!({"documentId": id, "add": [marta["rect"]]}));
+        assert_eq!(
+            (r["addedByHand"].as_u64(), r["counts"]["manual"].as_u64()),
+            (Some(1), Some(1)),
+            "{r}"
+        );
+        // A new analysis keeps it.
+        let r = call("smart.redact", json!({"documentId": id}));
+        assert_eq!(r["counts"]["manual"], 1, "{r}");
+        // Every place of the name: 3, the first one taking the place of the word's.
+        let r = call(
+            "smart.redact",
+            json!({"documentId": id, "matches": {"text": "Marta Ruiz"}}),
+        );
+        assert_eq!(
+            (r["addedByHand"].as_u64(), r["counts"]["manual"].as_u64()),
+            (Some(3), Some(3)),
+            "{r}"
+        );
+        // Uncovered at once.
+        let r = call(
+            "smart.redact",
+            json!({"documentId": id, "matches": {"text": "Marta Ruiz", "remove": true}}),
+        );
+        assert_eq!(r["counts"].get("manual"), None, "{r}");
+        call("document.undo", json!({"documentId": id}));
+        assert_eq!(
+            call("smart.redact", json!({"documentId": id}))["counts"]["manual"],
+            3
+        );
+        // The email's redaction removed by hand: not put back by an analysis.
+        let email = r["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["category"] == "email")
+            .unwrap()["objectId"]
+            .clone();
+        call("smart.redact", json!({"documentId": id, "remove": [email]}));
+        let r = call("smart.redact", json!({"documentId": id}));
+        assert!(
+            r["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|i| i["category"] != "email"),
+            "{r}"
+        );
+        assert_eq!(
+            r["counts"].get("email"),
+            None,
+            "its category counts one less: {r}"
+        );
+        // Undo puts it back, and the next analysis keeps it.
+        call("document.undo", json!({"documentId": id}));
+        let r = call("smart.redact", json!({"documentId": id}));
+        assert_eq!(r["counts"]["email"], 1, "{r}");
+        assert!(
+            r["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|i| i["category"] == "email"),
+            "{r}"
+        );
     }
 
     /// SMT-012: a word of the user's and a pattern count as categories of their own; an

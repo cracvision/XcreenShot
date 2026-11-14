@@ -1,23 +1,29 @@
-// The auto redact panel (SMT-010 to SMT-013): categories and the user's terms with how
-// many matches each has, the style of the redactions, Next / Previous and Done. It takes
-// the place of the side panel's tabs while it is open. Every control runs a command.
+// The auto redact panel (SMT-010 to SMT-015): categories and the user's terms with how
+// many matches each has, those redacted by hand, the style of the redactions, Next /
+// Previous and Done. It takes the place of the side panel's tabs while it is open. Every
+// control runs a command; the canvas's words are clicked in `RedactOverlay`.
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { useIndicator } from "../components/useIndicator";
 import { selectTool } from "./actions";
 import { ColorPicker } from "./ColorPicker";
+import { Icon } from "./icons";
 import { NumberField } from "./Fields";
 import {
   acknowledgeReminder,
   CATEGORIES,
   clearRedactions,
+  dismissNotice,
   finishRedact,
+  matchToTerms,
+  removeCurrent,
   setStyle,
   setTerms,
   stepRedaction,
   termName,
   toggleCategory,
+  undoMatches,
   useRedact,
   type RedactType,
   type Term,
@@ -27,6 +33,45 @@ const TYPES: RedactType[] = ["solid", "blur", "pixelate"];
 
 function Count({ n }: { n: number | undefined }) {
   return <span className="redact-count">{n ?? 0}</span>;
+}
+
+/** What "all matches" did, with Undo and Add to My terms (SMT-015). */
+function MatchNotice() {
+  const { t } = useTranslation();
+  const notice = useRedact((s) => s.notice);
+  if (!notice) return null;
+  const message =
+    notice.count === 0
+      ? t("ui.redact.no_matches")
+      : notice.remove
+        ? t("ui.redact.unmatched", { count: notice.count })
+        : t("ui.redact.matched", { count: notice.count });
+  return (
+    <div className="redact-notice" role="status">
+      <p>{message}</p>
+      <button
+        type="button"
+        className="btn icon small redact-notice-close"
+        aria-label={t("ui.redact.dismiss")}
+        title={t("ui.redact.dismiss")}
+        onClick={dismissNotice}
+      >
+        <Icon name="close" />
+      </button>
+      <div className="redact-notice-actions">
+        {notice.count > 0 && (
+          <button type="button" className="btn small" onClick={() => void undoMatches()}>
+            {t("ui.redact.undo")}
+          </button>
+        )}
+        {!notice.remove && (
+          <button type="button" className="btn small" onClick={() => void matchToTerms()}>
+            {t("ui.redact.to_terms")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function TermRows() {
@@ -255,11 +300,15 @@ export function RedactPanel() {
       {nothing && (
         <div className="redact-empty" role="status">
           <p>{t("ui.redact.nothing")}</p>
-          <button type="button" className="btn small" onClick={() => selectTool("blur")}>
-            {t("ui.redact.add_by_hand")}
-          </button>
+          {!result.textRead && (
+            <button type="button" className="btn small" onClick={() => selectTool("blur")}>
+              {t("ui.redact.add_by_hand")}
+            </button>
+          )}
         </div>
       )}
+      {result?.textRead && <p className="muted hint">{t("ui.redact.click_hint")}</p>}
+      <MatchNotice />
 
       <h3 className="side-subtitle">{t("ui.redact.categories")}</h3>
       <ul className="redact-list">
@@ -276,6 +325,12 @@ export function RedactPanel() {
             <Count n={result?.counts[c]} />
           </li>
         ))}
+        {(result?.counts.manual ?? 0) > 0 && (
+          <li className="redact-manual">
+            <span className="redact-name">{t("ui.redact.cat.manual")}</span>
+            <Count n={result?.counts.manual} />
+          </li>
+        )}
       </ul>
 
       <h3 className="side-subtitle">{t("ui.redact.my_terms")}</h3>
@@ -307,6 +362,16 @@ export function RedactPanel() {
           onClick={() => stepRedaction(1)}
         >
           {t("ui.redact.next")}
+        </button>
+        <button
+          type="button"
+          className="btn small redact-remove"
+          disabled={index < 0 || busy}
+          title={t("ui.redact.remove_current")}
+          aria-label={t("ui.redact.remove_current")}
+          onClick={() => void removeCurrent()}
+        >
+          {t("ui.redact.remove")}
         </button>
       </div>
       <div className="redact-actions">

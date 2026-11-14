@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { run } from "../lib/commands";
 import {
   closeRedact,
+  matchToTerms,
+  redactMatches,
+  removeCurrent,
   softRedactions,
   stepRedaction,
   termName,
@@ -54,15 +57,47 @@ describe("auto redact panel (SMT-010 to SMT-013)", () => {
     vi.mocked(run).mockResolvedValue(result({ categories: ["email", "card", "phone", "face"] }));
     useRedact.setState({ documentId: "d1", categories: ["email", "phone", "face"] });
     await toggleCategory("card");
-    expect(vi.mocked(run)).toHaveBeenLastCalledWith("smart.redact", {
+    expect(vi.mocked(run)).toHaveBeenCalledWith("smart.redact", {
       documentId: "d1",
       categories: ["email", "phone", "card", "face"],
     });
     useRedact.setState({ categories: ["email", "phone", "card", "face"] });
     await toggleCategory("phone");
-    expect(vi.mocked(run)).toHaveBeenLastCalledWith("smart.redact", {
+    expect(vi.mocked(run)).toHaveBeenCalledWith("smart.redact", {
       documentId: "d1",
       categories: ["email", "card", "face"],
+    });
+  });
+
+  it("all matches says how many, and its text can go to My terms (SMT-015)", async () => {
+    vi.mocked(run).mockImplementation((cmd: string) =>
+      Promise.resolve(cmd === "smart.redact_words" ? { lines: [] } : result({ addedByHand: 3 })),
+    );
+    useRedact.setState({ documentId: "d1", terms: [] });
+    await redactMatches(" Marta Ruiz ", false);
+    expect(vi.mocked(run)).toHaveBeenCalledWith("smart.redact", {
+      documentId: "d1",
+      matches: { text: "Marta Ruiz", remove: false },
+    });
+    expect(useRedact.getState().notice).toEqual({ text: "Marta Ruiz", remove: false, count: 3 });
+    await matchToTerms();
+    expect(useRedact.getState().terms).toEqual([{ text: "Marta Ruiz", on: true }]);
+    expect(vi.mocked(run)).toHaveBeenCalledWith("smart.redact", {
+      documentId: "d1",
+      terms: [{ text: "Marta Ruiz", on: true }],
+    });
+    expect(useRedact.getState().notice).toBeNull();
+  });
+
+  it("Remove takes away the redaction Next showed (SMT-014, from the keyboard)", async () => {
+    vi.mocked(run).mockResolvedValue(result());
+    useRedact.setState({ documentId: "d1", result: result() });
+    stepRedaction(1);
+    stepRedaction(1);
+    await removeCurrent();
+    expect(vi.mocked(run)).toHaveBeenCalledWith("smart.redact", {
+      documentId: "d1",
+      remove: ["o2"],
     });
   });
 
