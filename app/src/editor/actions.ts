@@ -49,6 +49,7 @@ import { useZones } from "./templateUi";
 import { videoAction } from "./videoState";
 import { openRedact } from "./redactState";
 import { actionOff } from "../features";
+import { editText } from "./editText";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -813,6 +814,11 @@ export function performAction(action: string): boolean {
     case "crop_selection":
       if (!pixels || pixels.target) return false;
       void selectionAction("crop");
+      return true;
+    // Edit text (SMT-009): of the selection on the image.
+    case "edit_text":
+      if (!pixels || pixels.target || actionOff(action)) return false;
+      void editText();
       return true;
     case "select_all":
       // With Selection or the Magic wand, every pixel (EDT-043).

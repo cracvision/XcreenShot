@@ -740,6 +740,25 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(UI_CLI)
             .params(params(json!({"jobId": {"type": "integer"}}), &["jobId"]))
             .result(json!({"type": "object", "description": "As smart.redact_batch, with closed: true"})),
+        B::new("smart.edit_text", &["SMT-009"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "rect": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "[x, y, w, h] in canvas pixels; default: the pixel selection"},
+                    "fit": {"type": "boolean", "default": false, "description": "Fit the place to the whole lines it touches"},
+                    "anyway": {"type": "boolean", "default": false, "description": "Go on although the place cuts letters"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "ids": {"type": "array", "description": "The new Text objects, one per paragraph"},
+                "lines": {"type": "integer"},
+                "rough": {"type": "boolean", "description": "A gradient or a photo below: the fill may leave marks"},
+                "cut": {"type": "boolean", "description": "Nothing changed: the place cuts letters or lines; fitRect is the place that would not"},
+                "fitRect": {"type": "array"}
+            }})),
         B::new("smart.simplify_auto", &["SMT-019"])
             .scopes(UI_CLI)
             .mutates()

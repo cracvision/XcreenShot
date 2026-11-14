@@ -39,6 +39,7 @@ import { CombineDialog } from "./CombineDialog";
 import { TemplateDialogs } from "./TemplatePicker";
 import { dropOnCanvas, dropOnZone } from "./templateActions";
 import { canvasPointAt, useDropPoint } from "./templateUi";
+import { EditTextDialog } from "./EditTextDialog";
 
 function Empty({ dropping }: { dropping: boolean }) {
   const { t } = useTranslation();
@@ -207,6 +208,7 @@ export function Editor() {
       )}
       <Dialogs />
       <RedactBatch />
+      <EditTextDialog />
       <GifDialog />
       <CombineDialog />
       <TemplateDialogs />

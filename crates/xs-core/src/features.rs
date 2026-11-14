@@ -5,7 +5,7 @@
 //! already left in documents (redactions, guides) still opens and edits as usual.
 //!
 //! A switch exists once its feature does (APP-008): extract text, auto redact, the
-//! step recorder, auto simplify and "only the text" for now; the others of SMT-002 join with their
+//! step recorder, edit text, auto simplify and "only the text" for now; the others of SMT-002 join with their
 //! milestone.
 
 use crate::menus::MenuEntry;
@@ -21,7 +21,7 @@ pub struct Feature {
     pub entries: &'static [&'static str],
 }
 
-pub const FEATURES: [Feature; 5] = [
+pub const FEATURES: [Feature; 6] = [
     Feature {
         name: "extractText",
         setting: "smart.extractText.enabled",
@@ -50,6 +50,12 @@ pub const FEATURES: [Feature; 5] = [
         setting: "smart.steps.enabled",
         commands: &["smart.steps_start", "smart.steps_toggle"],
         entries: &["steps_record", "smart.steps_start", "smart.steps_toggle"],
+    },
+    Feature {
+        name: "editText",
+        setting: "smart.editText.enabled",
+        commands: &["smart.edit_text"],
+        entries: &["edit_text"],
     },
     Feature {
         name: "autoSimplify",

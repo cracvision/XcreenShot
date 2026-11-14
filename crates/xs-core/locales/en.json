@@ -727,6 +727,10 @@
       "title": "Recognized words",
       "description": "The words read in an open document, by line, in canvas pixels: what auto redact's panel lets you click."
     },
+    "smart_edit_text": {
+      "title": "Edit text",
+      "description": "Replaces the text in a part of the image with a Text object of the same size and color, ready to type."
+    },
     "smart_simplify_auto": {
       "title": "Simplify automatically",
       "description": "Turns text lines into bars and buttons, fields and icons into simple shapes of the Simplify palette."
@@ -1638,6 +1642,10 @@
     "smart_autoSimplify_enabled": {
       "label": "Auto simplify",
       "description": "The Simplify tool can cover text and interface elements by itself."
+    },
+    "smart_editText_enabled": {
+      "label": "Edit text",
+      "description": "Text that is part of the image becomes a Text object you can change."
     }
   },
   "errors": {
@@ -1771,7 +1779,9 @@
     "redact_batch_not_found": "There is no auto redact of several captures with id {{id}}: it ended or was closed.",
     "redact_batch_empty": "No capture to redact: choose images or documents (videos are left out).",
     "feature_disabled": "The “{{feature}}” feature is switched off. Switch it on in Preferences > Editor > Smart features ({{setting}}).",
-    "simplify_nothing": "Nothing to simplify was found: no text and no interface elements. It works best with screenshots."
+    "simplify_nothing": "Nothing to simplify was found: no text and no interface elements. It works best with screenshots.",
+    "edit_text_select": "Select the text to edit first, with the Selection tool.",
+    "edit_text_none": "No text to edit was found."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2113,7 +2123,8 @@
     "auto_redact": "Auto redact…",
     "extract_text_image": "Extract text from the image",
     "extract_text_selection": "Extract text from the selection",
-    "extract_text_object": "Extract text"
+    "extract_text_object": "Extract text",
+    "edit_text": "Edit text"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -4772,7 +4783,17 @@
       "autoRedact": "Auto redact",
       "steps": "Step recorder",
       "textOnly": "Apply only to text",
-      "autoSimplify": "Auto simplify"
+      "autoSimplify": "Auto simplify",
+      "editText": "Edit text"
+    },
+    "edit_text": {
+      "title": "Edit text",
+      "menu": "Edit text",
+      "cut_title": "The selection cuts the text",
+      "cut_body": "Some letters or lines are only partly selected. Fit the selection to the whole lines to replace them cleanly.",
+      "fit": "Fit the selection to the text",
+      "anyway": "Edit as it is",
+      "rough": "The background is not flat: the fill may leave marks. A tighter selection helps."
     }
   },
   "history": {
@@ -4914,7 +4935,8 @@
     "auto_redact": "Auto redact",
     "duplicate_section": "Duplicate step",
     "add_steps": "Add steps",
-    "auto_simplify": "Auto simplify"
+    "auto_simplify": "Auto simplify",
+    "edit_text": "Edit text"
   },
   "editor": {
     "edited": "{{name}} — Edited",

@@ -19,6 +19,8 @@ import {
   type At,
   type Rect,
 } from "./redactWords";
+import { isOn } from "../features";
+import { editText } from "./editText";
 
 /** How long a click waits for a second one before redacting a single word. */
 const DOUBLE_CLICK_MS = 300;
@@ -180,6 +182,21 @@ export function RedactOverlay({
                 disabled: !text,
                 onSelect: () => void redactMatches(text, true),
               },
+              // The text below, no longer redacted, as a Text object (SMT-009).
+              ...(isOn("editText")
+                ? [
+                    {
+                      id: "edit_text",
+                      label: t("ui.edit_text.menu"),
+                      separator: true,
+                      disabled: !text,
+                      onSelect: () =>
+                        void removeRedactions([i.objectId]).then(() =>
+                          editText(i.source ?? i.rect, true),
+                        ),
+                    },
+                  ]
+                : []),
             ]);
           }}
         />

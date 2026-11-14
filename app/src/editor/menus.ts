@@ -29,6 +29,7 @@ import { useFullscreen } from "./fullscreen";
 import { captureIntoZone, replaceZoneImage, templateCommand } from "./templateActions";
 import { useZones } from "./templateUi";
 import { useVideo } from "./videoState";
+import { isOn } from "../features";
 
 interface Point {
   x: number;
@@ -165,6 +166,8 @@ export function selectionMenu(at: Point, onImage: boolean): void {
     entry("delete"),
     entry("invert_selection", true),
     ...(onImage ? [entry("float_selection"), entry("crop_selection")] : []),
+    // The text in the selection becomes a Text object (SMT-009).
+    ...(onImage && isOn("editText") ? [entry("edit_text", true)] : []),
     entry("deselect", true),
   ];
   useContextMenu.setState({ open: true, ...at, label: i18next.t("ui.editor.canvas_menu"), items });

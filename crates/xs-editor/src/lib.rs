@@ -2785,6 +2785,88 @@ fn selection_action(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     Ok(json!({ "changed": true, "ids": made }))
 }
 
+/// The image's pixels as they show now, in base pixels (with every patch): what Edit
+/// text reads (SMT-009).
+pub fn image_pixels(core: &Core, id: &str) -> Result<image::RgbaImage, String> {
+    let ed = editor(core);
+    let doc = ed
+        .store
+        .with(id, |d| d.document.clone())
+        .ok_or("document closed")?;
+    let base = ed.store.base(id)?;
+    pixels::target_pixels(&doc, &base, None, None).ok_or_else(|| "no pixels".to_string())
+}
+
+/// Edit text (SMT-009): the pixels of `mask` (base pixels, the text's) rebuilt from
+/// what is around them, and `texts` added as Text objects, all in one undo step. The
+/// pixel selection goes. Returns the new objects' IDs.
+pub fn replace_text(
+    core: &Core,
+    ctx: &Context,
+    id: &str,
+    mask: &xs_image::selection::Mask,
+    texts: &[Map<String, Value>],
+) -> Result<Vec<String>, CommandError> {
+    let lang = ctx.lang;
+    let ed = editor(core);
+    let pixels = image_pixels(core, id).map_err(|e| internal(lang, "", e))?;
+    if (pixels.width(), pixels.height()) != (mask.width, mask.height) {
+        return Err(CommandError::internal("the mask does not fit the image"));
+    }
+    let mut out = pixels.clone();
+    xs_image::selection::fill_gap_with(&mut out, mask, xs_image::selection::Gap::Smart, &mut |_| true);
+    let patch = match mask.bounds() {
+        Some(area) => Some((
+            store_picture(core, id, &pixels::cut_area(&out, area), lang)?,
+            pixels::rect_of(area),
+        )),
+        None => None,
+    };
+    let mut checked = Vec::with_capacity(texts.len());
+    for t in texts {
+        checked.push(objects::checked("text", t).map_err(invalid)?);
+    }
+    let made = ed
+        .store
+        .mutate(id, "history.edit_text", |doc| {
+            if let Some((name, rect)) = &patch {
+                pixels::add_patch(doc, *rect, name.clone());
+            }
+            let mut made = Vec::new();
+            for props in &checked {
+                let oid = doc.next_object_id();
+                doc.objects.push(Object {
+                    id: oid.clone(),
+                    kind: "text".to_string(),
+                    props: props.clone(),
+                });
+                made.push(oid);
+            }
+            Ok::<_, CommandError>(made)
+        })
+        .ok_or_else(|| CommandError::internal("document closed"))??;
+    ed.store.with(id, |d| d.pixel_selection = None);
+    changed(core, ctx, id);
+    Ok(made)
+}
+
+/// The pixel selection of the image (not of a floating image), in base pixels.
+pub fn image_selection(core: &Core, id: &str) -> Option<std::sync::Arc<xs_image::selection::Mask>> {
+    editor(core)
+        .store
+        .with(id, |d| d.pixel_selection.clone())
+        .flatten()
+        .filter(|s| s.target.is_none())
+        .map(|s| s.mask)
+}
+
+/// Where the canvas starts in base pixels (its crop).
+pub fn crop_origin(core: &Core, id: &str) -> Option<(i64, i64)> {
+    editor(core)
+        .store
+        .with(id, |d| (d.document.crop.x, d.document.crop.y))
+}
+
 /// Fill (`fill`) or Eraser on the image or on the floating image `objectId` (EDT-047,
 /// EDT-048): the new pixels become a patch or a new picture (ADR 0005).
 fn pixel_edit(core: &Core, ctx: &Context, p: &Value, fill: bool) -> CommandResult {

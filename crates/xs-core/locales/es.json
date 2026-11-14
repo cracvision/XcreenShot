@@ -727,6 +727,10 @@
       "title": "Palabras reconocidas",
       "description": "Las palabras leídas en un documento abierto, por línea, en píxeles del lienzo: lo que el panel de Redacción automática deja pulsar."
     },
+    "smart_edit_text": {
+      "title": "Editar texto",
+      "description": "Sustituye el texto de una parte de la imagen por un objeto Texto del mismo tamaño y color, listo para escribir."
+    },
     "smart_simplify_auto": {
       "title": "Simplificar automáticamente",
       "description": "Convierte las líneas de texto en barras y los botones, campos e íconos en formas sencillas de la paleta de Simplificar."
@@ -1638,6 +1642,10 @@
     "smart_autoSimplify_enabled": {
       "label": "Simplificar automático",
       "description": "La herramienta Simplificar puede tapar por sí sola el texto y los elementos de la interfaz."
+    },
+    "smart_editText_enabled": {
+      "label": "Editar texto",
+      "description": "El texto que forma parte de la imagen pasa a ser un objeto Texto que se puede cambiar."
     }
   },
   "errors": {
@@ -1771,7 +1779,9 @@
     "redact_batch_not_found": "No hay una redacción de varias capturas con id {{id}}: terminó o se cerró.",
     "redact_batch_empty": "No hay capturas que redactar: elige imágenes o documentos (los videos no se incluyen).",
     "feature_disabled": "La función «{{feature}}» está desactivada. Actívala en Preferencias > Editor > Funciones inteligentes ({{setting}}).",
-    "simplify_nothing": "No se encontró nada que simplificar: ni texto ni elementos de interfaz. Funciona mejor con capturas de pantalla."
+    "simplify_nothing": "No se encontró nada que simplificar: ni texto ni elementos de interfaz. Funciona mejor con capturas de pantalla.",
+    "edit_text_select": "Primero selecciona el texto que quieres editar, con la herramienta Selección.",
+    "edit_text_none": "No se encontró texto para editar."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2113,7 +2123,8 @@
     "auto_redact": "Redacción automática…",
     "extract_text_image": "Extraer texto de la imagen",
     "extract_text_selection": "Extraer texto de la selección",
-    "extract_text_object": "Extraer texto"
+    "extract_text_object": "Extraer texto",
+    "edit_text": "Editar texto"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -4772,7 +4783,17 @@
       "autoRedact": "Redacción automática",
       "steps": "Grabador de pasos",
       "textOnly": "Aplicar solo al texto",
-      "autoSimplify": "Simplificar automático"
+      "autoSimplify": "Simplificar automático",
+      "editText": "Editar texto"
+    },
+    "edit_text": {
+      "title": "Editar texto",
+      "menu": "Editar texto",
+      "cut_title": "La selección corta el texto",
+      "cut_body": "Algunas letras o líneas solo están seleccionadas en parte. Ajusta la selección a las líneas completas para sustituirlas limpiamente.",
+      "fit": "Ajustar la selección al texto",
+      "anyway": "Editar así",
+      "rough": "El fondo no es liso: el relleno puede dejar marcas. Una selección más ajustada ayuda."
     }
   },
   "history": {
@@ -4914,7 +4935,8 @@
     "auto_redact": "Redacción automática",
     "duplicate_section": "Duplicar paso",
     "add_steps": "Añadir pasos",
-    "auto_simplify": "Simplificar automático"
+    "auto_simplify": "Simplificar automático",
+    "edit_text": "Editar texto"
   },
   "editor": {
     "edited": "{{name}} — Editado",

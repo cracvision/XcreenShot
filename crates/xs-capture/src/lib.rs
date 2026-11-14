@@ -10,6 +10,7 @@ pub mod areas;
 pub mod asktext;
 pub mod clipsource;
 pub mod compose;
+pub mod edit_text;
 pub mod extract;
 pub mod feedback;
 pub mod filedest;
@@ -2083,6 +2084,7 @@ pub fn extension() -> Extension {
         redact_batch::register(reg, &weak);
         text_only::register(reg, &weak);
         simplify_auto::register(reg, &weak);
+        edit_text::register(reg, &weak);
         steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();
