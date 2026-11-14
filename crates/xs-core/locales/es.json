@@ -1082,6 +1082,10 @@
     "library_seen_status": {
       "title": "Texto de las imágenes: progreso",
       "description": "Cuántas imágenes de la biblioteca tienen su texto leído y cuántas esperan."
+    },
+    "video_export": {
+      "title": "Exportar el video como MP4 H.264",
+      "description": "El video abierto, con sus cortes, como MP4 H.264 en una ruta, sea cual sea su códec."
     }
   },
   "settings": {
@@ -4688,7 +4692,15 @@
         "remove": "Quitar",
         "result": "{{count}} videos · {{time}} · {{width}} × {{height}} px",
         "busy": "Combinando… {{percent}} %"
-      }
+      },
+      "export_title": "Exportar el video",
+      "export_mp4": "MP4",
+      "export_mp4_help": "El mismo códec ({{codec}}), con los cortes",
+      "export_h264": "MP4 H.264",
+      "export_h264_help": "Convertido a H.264: se reproduce en cualquier equipo y navegador",
+      "export_gif": "GIF animado…",
+      "export_gif_help": "Primero eliges su tamaño y fotogramas",
+      "exported": "Exportado como H.264"
     },
     "livedraw": {
       "title": "Dibujo en vivo",

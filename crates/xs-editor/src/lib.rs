@@ -3917,6 +3917,7 @@ pub fn extension() -> Extension {
         on!("video.extract_text", |core, ctx, p| video::extract_text(
             &core, ctx, &p
         ));
+        on!("video.export", |core, ctx, p| video::export(&core, ctx, &p));
         on!("video.silent_copy", |core, ctx, p| video::silent_copy(
             &core, ctx, &p
         ));

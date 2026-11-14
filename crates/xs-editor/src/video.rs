@@ -331,6 +331,30 @@ pub fn save_selection(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResu
     Ok(json!({ "documentId": id, "path": dst, "duration": timeline::length(&part) }))
 }
 
+/// `video.export` (VID-066): the video as it is now (its cuts) as an MP4 H.264 at
+/// `path`, whatever its codec was (an H.265 or other video becomes H.264). The video
+/// open does not change.
+pub fn export(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let o = open_video(core, lang, p)?;
+    let dst = p
+        .get("path")
+        .and_then(Value::as_str)
+        .map(PathBuf::from)
+        .filter(|d| d.extension().is_some_and(|e| e.eq_ignore_ascii_case("mp4")))
+        .ok_or_else(|| {
+            invalid(tr(
+                lang,
+                "errors.invalid_param",
+                &[("param", "path"), ("reason", "an .mp4 file")],
+            ))
+        })?;
+    write(core, &o.id, "export", &o.path, &dst, &o.kept, o.facts.sound)
+        .map_err(|e| failed(lang, &o.name, e))?;
+    xs_library::library(core).scan();
+    Ok(json!({ "path": dst, "duration": timeline::length(&o.kept), "codec": "H.264" }))
+}
+
 /// `video.silent_copy` (VID-063): the video as it is now, without any sound, as a new
 /// video in the library and the tray.
 pub fn silent_copy(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {

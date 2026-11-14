@@ -381,3 +381,6 @@ export function watchProgress(): () => void {
   });
   return () => void off.then((f) => f());
 }
+
+/** File > Export of a video: its choice of format is open (VID-066). */
+export const useVideoExport = create<{ open: boolean }>(() => ({ open: false }));

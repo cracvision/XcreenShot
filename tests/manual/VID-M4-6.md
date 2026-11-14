@@ -66,3 +66,14 @@ Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../
 27. [ ] **Combinar** con un video grande (1920 × 1080) y uno pequeño: el resultado se abre en el editor; el pequeño sale centrado con bandas negras, y los originales no cambian. Prueba también **Cancelar** a mitad: no queda ningún video nuevo.
 
 Todavía no: GIF desde Exportar, exportar a H.264, y Combinar desde la bandeja con varios elegidos.
+
+## Exportar un video (VID-066, 2026-11-14)
+
+- **Prueba automática (`xs-editor`):** `video.export` escribe el video cortado (2 s) como MP4 H.264 donde se pide; el video abierto no cambia, y un destino que no es `.mp4` da error.
+- **En la instancia aislada:** Archivo > Exportar con un video abre **Exportar el video** con MP4 (mismo códec) y GIF animado. Con un video H.264 no aparece la conversión. **GIF animado…** abre Crear GIF animado.
+
+### Para Carlos
+
+1. [ ] Abre un video y usa Archivo > **Exportar**: aparecen MP4 y GIF animado.
+2. [ ] Si tienes un video H.265 (por ejemplo, de un teléfono), impórtalo y expórtalo como **MP4 H.264**: el archivo se reproduce y dura lo mismo.
+

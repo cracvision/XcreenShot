@@ -46,7 +46,7 @@ import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
 import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
 import { useZones } from "./templateUi";
-import { videoAction } from "./videoState";
+import { useVideoExport, videoAction } from "./videoState";
 import { openRedact } from "./redactState";
 import { actionOff } from "../features";
 import { editText } from "./editText";
@@ -162,8 +162,11 @@ export async function saveAs(): Promise<void> {
  * options, then asks where. */
 export function exportImage(): Promise<void> {
   const { active, doc } = useEditor.getState();
-  // A video exports as MP4 for now (VID-066); GIF arrives with VID-068.
-  if (doc?.video) return saveAs();
+  // A video: MP4, MP4 H.264 or GIF (VID-066).
+  if (doc?.video) {
+    useVideoExport.setState({ open: true });
+    return Promise.resolve();
+  }
   if (active && doc) useExportDialog.setState({ ids: [active] });
   return Promise.resolve();
 }

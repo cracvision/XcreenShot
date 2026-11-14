@@ -5425,6 +5425,23 @@ fn a_video_in_the_editor() {
     assert_eq!(xs_video::audio_info(silent).unwrap(), None);
     assert!(silent.file_name().unwrap().to_string_lossy().contains("(silent)"));
 
+    // VID-066: exported as MP4 H.264 where asked, as long as the cut video; the open
+    // video does not change.
+    let to = e.outside.path().join("exported.mp4");
+    let x = cli(&e.core, "video.export", json!({"documentId": id, "path": to}));
+    assert_eq!(x["codec"], "H.264");
+    let exported = xs_video::info(&to).unwrap();
+    assert_eq!(exported.codec, "H.264");
+    assert!((exported.duration - 2.0).abs() < 0.15, "{}", exported.duration);
+    assert_eq!(info(&e.core)["dirty"], true);
+    let bad = e.core.call(
+        Source::Ui,
+        "video.export",
+        json!({"documentId": id, "path": e.outside.path().join("x.gif")}),
+        None,
+    );
+    assert!(bad.is_err());
+
     // VID-066: dragging it out or duplicating it gives the cut video (2 s), not a
     // picture; the original file is still 3 s until saved.
     let out = e.outside.path().join("drag");

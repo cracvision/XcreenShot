@@ -13,6 +13,7 @@ import { ThemeConflict } from "./StylesTab";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
 import { clock } from "../windows/recClock";
+import { VideoExportDialog } from "./VideoExportDialog";
 
 function Decision() {
   const { t } = useTranslation();
@@ -284,6 +285,7 @@ export function Dialogs() {
       <Decision />
       <Flatten />
       <Recovery />
+      <VideoExportDialog />
       <FlattenBlur />
       <StepValue />
       <ThemeConflict />

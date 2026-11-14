@@ -1082,6 +1082,10 @@
     "library_seen_status": {
       "title": "Text of the images: progress",
       "description": "How many library images have their text read, and how many wait."
+    },
+    "video_export": {
+      "title": "Export the video as MP4 H.264",
+      "description": "The open video, with its cuts, as an MP4 H.264 at a path, whatever its codec."
     }
   },
   "settings": {
@@ -4688,7 +4692,15 @@
         "remove": "Remove",
         "result": "{{count}} videos · {{time}} · {{width}} × {{height}} px",
         "busy": "Combining… {{percent}} %"
-      }
+      },
+      "export_title": "Export the video",
+      "export_mp4": "MP4",
+      "export_mp4_help": "The same codec ({{codec}}), with the cuts",
+      "export_h264": "MP4 H.264",
+      "export_h264_help": "Converted to H.264: plays on every computer and browser",
+      "export_gif": "Animated GIF…",
+      "export_gif_help": "Chooses its size and frames first",
+      "exported": "Exported as H.264"
     },
     "livedraw": {
       "title": "Live drawing",

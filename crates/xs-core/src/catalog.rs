@@ -1332,6 +1332,18 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
+        B::new("video.export", &["VID-066", "VID-027"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "path": {"type": "string", "description": "The .mp4 file to write"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "path": {"type": "string"}, "duration": {"type": "number"}, "codec": {"type": "string"}
+            }})),
         B::new("video.silent_copy", &["VID-063"])
             .mutates()
             .params(params(json!({"documentId": document_id()}), &[]))
