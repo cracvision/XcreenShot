@@ -866,12 +866,46 @@ pub fn toggle(core: &Arc<Core>, ctx: &Context) -> CommandResult {
 }
 
 /// The icon menu's entry while recording: (id, "Stop recording").
-pub fn menu_items(core: &Core) -> Vec<(String, String)> {
-    if running(core) {
-        vec![("recording".into(), tr(core.lang(), "tray.stop_recording", &[]))]
-    } else {
-        Vec::new()
+pub fn menu_items(core: &Core) -> Vec<(String, String, &'static str)> {
+    if !running(core) {
+        return Vec::new();
     }
+    let lang = core.lang();
+    // The clean desktop, switched from the icon's menu too (VID-018, VID-020).
+    let clean = if core.settings.get_bool("video.hideDesktopIcons") {
+        tr(lang, "tray.show_desktop_icons", &[])
+    } else {
+        tr(lang, "tray.hide_desktop_icons", &[])
+    };
+    vec![
+        (
+            "recording".into(),
+            tr(lang, "tray.stop_recording", &[]),
+            "record.stop",
+        ),
+        ("clean-desktop".into(), clean, "record.clean_desktop"),
+    ]
+}
+
+/// `record.clean_desktop` (VID-018): the desktop's icons hidden or shown, now if a
+/// recording is ready or under way, and for the next ones; without `on`, switches.
+pub fn clean_desktop(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let now = core.settings.get_bool("video.hideDesktopIcons");
+    let on = p.get("on").and_then(Value::as_bool).unwrap_or(!now);
+    store(core, ctx, "video.hideDesktopIcons", json!(on))?;
+    let active = service(core).ready.lock().unwrap().is_some() || running(core);
+    if active {
+        if on {
+            hide_icons(core);
+        } else {
+            restore_icons(core);
+        }
+    }
+    let state = status(core);
+    if state["status"] != "idle" {
+        bar(core, Some(state.clone()));
+    }
+    Ok(json!({ "cleanDesktop": on, "status": state["status"] }))
 }
 
 /// The monitor of the recording, or of the area waiting to be recorded: live drawing
@@ -1606,6 +1640,23 @@ pub fn status(core: &Core) -> Value {
 mod tests {
     use super::*;
     use std::path::Path;
+
+    /// VID-018: the clean desktop is switched for the next recordings; with none
+    /// ready or under way, the desktop is not touched.
+    #[test]
+    fn the_clean_desktop_switches() {
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        let call = |p: Value| {
+            core.call(Source::Cli, "record.clean_desktop", p, Some(Lang::En))
+                .unwrap()
+        };
+        assert!(!core.settings.get_bool("video.hideDesktopIcons"));
+        assert_eq!(call(json!({"on": true}))["cleanDesktop"], true);
+        assert!(core.settings.get_bool("video.hideDesktopIcons"));
+        assert!(core.recall(ICONS_KEY).is_none(), "no recording: the icons stay");
+        assert_eq!(call(json!({}))["cleanDesktop"], false);
+        assert!(!core.settings.get_bool("video.hideDesktopIcons"));
+    }
 
     /// VID-022: a recording the app did not finish (here the sample video stands for
     /// its file) is in Recover work with its length and first frame; Recover makes

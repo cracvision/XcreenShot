@@ -1170,6 +1170,10 @@
     "smart_remove_background": {
       "title": "Quitar fondo",
       "description": "Vuelve transparente el fondo de la imagen, o de una imagen flotante, y conserva el sujeto."
+    },
+    "record_clean_desktop": {
+      "title": "Escritorio limpio",
+      "description": "Oculta o muestra los íconos del escritorio mientras se graba, y para las siguientes grabaciones."
     }
   },
   "settings": {
@@ -2240,7 +2244,9 @@
     "steps_pause": "Pausar grabación de pasos",
     "steps_resume": "Reanudar grabación de pasos",
     "steps_stop": "Terminar grabación de pasos",
-    "steps_record": "Grabar pasos"
+    "steps_record": "Grabar pasos",
+    "hide_desktop_icons": "Ocultar los íconos del escritorio",
+    "show_desktop_icons": "Mostrar los íconos del escritorio"
   },
   "menu": {
     "flatten": "A&planar",
@@ -4863,7 +4869,11 @@
       "mic_talking": "Parece que hablas, pero el micrófono no graba",
       "mic_on": "Activar micrófono",
       "tracks_apart": "pistas de audio separadas",
-      "tracks_apart_hint": "El micrófono y el audio del sistema van en pistas separadas. Algunos reproductores solo reproducen la primera."
+      "tracks_apart_hint": "El micrófono y el audio del sistema van en pistas separadas. Algunos reproductores solo reproducen la primera.",
+      "more": "Más",
+      "clean_desktop": "Ocultar los íconos del escritorio",
+      "video_settings": "Ajustes de video…",
+      "capture_image": "Capturar imagen"
     },
     "video": {
       "silent_suffix": "sin sonido",

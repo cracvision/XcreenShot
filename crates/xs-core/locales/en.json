@@ -1170,6 +1170,10 @@
     "smart_remove_background": {
       "title": "Remove background",
       "description": "Makes the background of the image, or of a floating image, transparent and keeps the subject."
+    },
+    "record_clean_desktop": {
+      "title": "Clean desktop",
+      "description": "Hides or shows the desktop's icons while recording, and for the next recordings."
     }
   },
   "settings": {
@@ -2240,7 +2244,9 @@
     "steps_pause": "Pause recording steps",
     "steps_resume": "Resume recording steps",
     "steps_stop": "Finish recording steps",
-    "steps_record": "Record steps"
+    "steps_record": "Record steps",
+    "hide_desktop_icons": "Hide desktop icons",
+    "show_desktop_icons": "Show desktop icons"
   },
   "menu": {
     "flatten": "Fla&tten",
@@ -4863,7 +4869,11 @@
       "mic_talking": "You seem to be talking, but the microphone isn't recording",
       "mic_on": "Turn on microphone",
       "tracks_apart": "separate audio tracks",
-      "tracks_apart_hint": "The microphone and the system sound go in separate tracks. Some players only play the first one."
+      "tracks_apart_hint": "The microphone and the system sound go in separate tracks. Some players only play the first one.",
+      "more": "More",
+      "clean_desktop": "Hide desktop icons",
+      "video_settings": "Video settings…",
+      "capture_image": "Capture image"
     },
     "video": {
       "silent_suffix": "silent",

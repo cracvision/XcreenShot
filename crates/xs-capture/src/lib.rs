@@ -1827,6 +1827,11 @@ pub fn extension() -> Extension {
         reg.handle("record.cursor", move |ctx, p| {
             record::cursor(&*upgrade(&w)?, ctx, &p)
         });
+        // A clean desktop, switched while recording (VID-018).
+        let w = weak.clone();
+        reg.handle("record.clean_desktop", move |ctx, p| {
+            record::clean_desktop(&*upgrade(&w)?, ctx, &p)
+        });
         // What a video holds (VID-064).
         reg.handle("video.info", move |ctx, p| {
             let path = p.get("path").and_then(Value::as_str).unwrap_or_default();

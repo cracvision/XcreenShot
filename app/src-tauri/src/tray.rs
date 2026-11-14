@@ -40,11 +40,7 @@ fn tray_state(core: &Core) -> xs_core::menus::TrayState {
                     .into_iter()
                     .map(|(id, text)| (id, text, "capture.schedule_cancel")),
             )
-            .chain(
-                xs_capture::record::menu_items(core)
-                    .into_iter()
-                    .map(|(id, text)| (id, text, "record.stop")),
-            )
+            .chain(xs_capture::record::menu_items(core))
             .chain(xs_capture::steps_rec::menu_items(core))
             .collect(),
     }

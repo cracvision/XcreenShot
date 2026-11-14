@@ -1209,6 +1209,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
                 "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}
             }})),
+        B::new("record.clean_desktop", &["VID-018", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({"on": {"type": "boolean", "description": "Hide the desktop's icons; without it, switches"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"cleanDesktop": {"type": "boolean"}, "status": {"type": "string"}}})),
         B::new("record.cursor", &["VID-044", "VID-011"])
             .mutates()
             .params(params(

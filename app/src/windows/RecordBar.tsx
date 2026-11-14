@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Menu, type MenuItem } from "../components/Menu";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
 import { clock, longHint } from "./recClock";
@@ -103,7 +104,8 @@ export function RecordBar() {
 
   const elapsed =
     (state.elapsed ?? 0) + (state.status === "recording" ? Math.max(0, now - since) / 1000 : 0);
-  const act = (command: string) => void run(command).catch(() => undefined);
+  const act = (command: string, params: Record<string, unknown> = {}) =>
+    void run(command, params).catch(() => undefined);
   const recording = state.status === "recording";
   const paused = state.status === "paused";
   const ready = state.status === "ready";
@@ -122,6 +124,42 @@ export function RecordBar() {
           fps: state.fps ?? 0,
           codec: state.codec ?? "H.264",
         }) + (apartTracks ? ` · ${t("ui.recbar.tracks_apart")}` : "");
+
+  // The bar's More menu (VID-011).
+  const cleanDesktop = useSetting("video.hideDesktopIcons", false);
+  const moreItems: MenuItem[] = [
+    ...(recording || paused
+      ? [{ id: "restart", label: t("ui.recbar.restart"), onSelect: () => drop("restart") }]
+      : []),
+    {
+      id: "cancel",
+      label: t("ui.recbar.cancel"),
+      onSelect: () => (ready ? act("record.cancel") : drop("cancel")),
+    },
+    ...(ready || recording || paused
+      ? [
+          {
+            id: "image",
+            label: t("ui.recbar.capture_image"),
+            shortcut: "I",
+            separator: true,
+            onSelect: () => (ready ? act("record.image") : drop("image")),
+          },
+        ]
+      : []),
+    {
+      id: "clean",
+      label: t("ui.recbar.clean_desktop"),
+      checked: cleanDesktop,
+      separator: true,
+      onSelect: () => act("record.clean_desktop", { on: !cleanDesktop }),
+    },
+    {
+      id: "settings",
+      label: t("ui.recbar.video_settings"),
+      onSelect: () => act("settings.open", { section: "video" }),
+    },
+  ];
 
   const strip = warning && (
     <SoundStrip
@@ -322,36 +360,21 @@ export function RecordBar() {
           >
             {t("ui.recbar.stop")}
           </button>
-          <button
-            type="button"
-            className="btn icon small"
-            aria-label={t("ui.recbar.restart")}
-            title={t("ui.recbar.restart")}
-            onClick={() => drop("restart")}
-          >
-            ↺
-          </button>
         </>
       )}
-      {(ready || recording || paused) && (
-        <button
-          type="button"
-          className="btn small"
-          title={`${t("ui.recbar.image")} (I)`}
-          onClick={() => (ready ? act("record.image") : drop("image"))}
-        >
-          {t("ui.recbar.image")}
-        </button>
-      )}
-      <button
-        type="button"
-        className="btn icon small"
-        aria-label={t("ui.recbar.cancel")}
-        title={t("ui.recbar.cancel")}
-        onClick={() => (ready ? act("record.cancel") : drop("cancel"))}
-      >
-        ×
-      </button>
+      {/* More (VID-011): Restart and Cancel (VID-014), Capture image (VID-010), the
+          clean desktop (VID-018) and the video settings. */}
+      <Menu
+        label={<span aria-hidden="true">⋯</span>}
+        ariaLabel={t("ui.recbar.more")}
+        title={t("ui.recbar.more")}
+        triggerClass="btn small icon"
+        chevron={false}
+        align="end"
+        side={up ? "top" : "bottom"}
+        onShown={(shown) => setMenuRows(shown ? moreItems.length : 0)}
+        items={moreItems}
+      />
     </div>,
   );
 }
