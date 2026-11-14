@@ -93,6 +93,7 @@ pub fn stay_awake() -> Option<StayAwake> {
 pub fn watch_suspend(_f: impl Fn(bool) + Send + Sync + 'static) {}
 pub mod camlook;
 pub mod effects;
+pub mod slides;
 pub mod timeline;
 #[cfg(windows)]
 mod win;
@@ -408,6 +409,9 @@ pub struct Options {
     pub recovery: Option<PathBuf>,
     /// The microphone, when it records too (VID-039).
     pub microphone: Option<Microphone>,
+    /// Narrated slides (VID-071): the picture comes from them, at the size of `area`,
+    /// instead of the screen.
+    pub slides: Option<slides::Source>,
 }
 
 /// The microphone of a recording (VID-039).

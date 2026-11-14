@@ -1032,31 +1032,64 @@ pub(crate) fn record(
     let target = options.recovery.as_deref().unwrap_or(&options.path);
     let fragmented = options.recovery.is_some();
     let mut keeper = crate::Keeper::default();
+    let slides = options.slides.as_ref().map(|s| s.0.clone());
     let setup = (|| {
         let t0 = Instant::now();
-        let (adapter, output, mr) = find_output(options.area)?;
+        // Slides (VID-071) are drawn at the video's size, on the main GPU; the screen
+        // is duplicated from its monitor.
+        let (adapter, output, mr) = if slides.is_some() {
+            let (adapter, _, _) = find_output(Area {
+                x: 0,
+                y: 0,
+                width: 64,
+                height: 64,
+            })?;
+            let mr = RECT {
+                left: 0,
+                top: 0,
+                right: size.0 as i32,
+                bottom: size.1 as i32,
+            };
+            (adapter, None, mr)
+        } else {
+            let (adapter, output, mr) = find_output(options.area)?;
+            (adapter, Some(output), mr)
+        };
         // The first picture, read while the engine starts (VID-030).
-        let picture = std::thread::spawn(move || screen_bits(mr));
+        let picture = output
+            .is_some()
+            .then(|| std::thread::spawn(move || screen_bits(mr)));
         let gpu = take_gpu(&mut DEVICE.lock().unwrap(), &adapter)?;
         let t_device = t0.elapsed();
-        // SAFETY: duplication of the output on this device.
-        let dup = unsafe { output.DuplicateOutput(&gpu.device) }.map_err(|e| err("screen duplication", e))?;
         let monitor = ((mr.right - mr.left) as u32, (mr.bottom - mr.top) as u32);
-        // SAFETY: a plain query.
-        let mode = unsafe { dup.GetDesc() }.ModeDesc;
-        tracing::info!(
-            width = mode.Width,
-            height = mode.Height,
-            format = mode.Format.0,
-            "video: duplicating the screen"
-        );
-        // The area inside the monitor, clipped to it.
+        let dup = match &output {
+            Some(output) => {
+                // SAFETY: duplication of the output on this device.
+                let dup = unsafe { output.DuplicateOutput(&gpu.device) }
+                    .map_err(|e| err("screen duplication", e))?;
+                // SAFETY: a plain query.
+                let mode = unsafe { dup.GetDesc() }.ModeDesc;
+                tracing::info!(
+                    width = mode.Width,
+                    height = mode.Height,
+                    format = mode.Format.0,
+                    "video: duplicating the screen"
+                );
+                Some(dup)
+            }
+            None => None,
+        };
+        // The area inside the monitor, clipped to it (slides: the whole picture).
         let a = options.area;
-        let source = RECT {
-            left: (a.x - mr.left).clamp(0, monitor.0 as i32),
-            top: (a.y - mr.top).clamp(0, monitor.1 as i32),
-            right: (a.x - mr.left + a.width as i32).clamp(0, monitor.0 as i32),
-            bottom: (a.y - mr.top + a.height as i32).clamp(0, monitor.1 as i32),
+        let source = if slides.is_some() {
+            mr
+        } else {
+            RECT {
+                left: (a.x - mr.left).clamp(0, monitor.0 as i32),
+                top: (a.y - mr.top).clamp(0, monitor.1 as i32),
+                right: (a.x - mr.left + a.width as i32).clamp(0, monitor.0 as i32),
+                bottom: (a.y - mr.top + a.height as i32).clamp(0, monitor.1 as i32),
+            }
         };
         if source.right - source.left < 2 || source.bottom - source.top < 2 {
             return Err("the area is outside the monitor".to_string());
@@ -1068,7 +1101,11 @@ pub(crate) fn record(
             source,
             size,
             fps,
-            options.scale as f32,
+            if slides.is_some() {
+                1.0
+            } else {
+                options.scale as f32
+            },
         )?;
         let t_dup = t0.elapsed();
         let bitrate = options.quality.bitrate(size.0, size.1);
@@ -1113,11 +1150,13 @@ pub(crate) fn record(
         };
         let t_enc = t0.elapsed();
         // The first picture, whatever Desktop Duplication does.
-        let bits = picture.join().map_err(|_| "screen picture".to_string())??;
-        // SAFETY: the pixels are the monitor's size in BGRA, rows of width × 4 bytes.
-        unsafe {
-            gpu.context
-                .UpdateSubresource(&conv.frame, 0, None, bits.as_ptr() as _, monitor.0 * 4, 0);
+        if let Some(picture) = picture {
+            let bits = picture.join().map_err(|_| "screen picture".to_string())??;
+            // SAFETY: the pixels are the monitor's size in BGRA, rows of width × 4 bytes.
+            unsafe {
+                gpu.context
+                    .UpdateSubresource(&conv.frame, 0, None, bits.as_ptr() as _, monitor.0 * 4, 0);
+            }
         }
         tracing::info!(
             device_ms = t_device.as_millis() as u64,
@@ -1240,6 +1279,14 @@ pub(crate) fn record(
     };
     // The next turn of the grid (VID-022).
     let mut slot = 0u64;
+    // Slides (VID-071, VID-074): their painter, the one drawn and its view, gliding
+    // from one zoom to the next.
+    let mut slide_painter = match &slides {
+        Some(_) => Some(crate::win_fx::SlidePainter::new(&conv.frame)?),
+        None => None,
+    };
+    let mut drawn: Option<(u64, crate::slides::View, [u8; 3])> = None;
+    let mut glide: Option<(crate::slides::View, crate::slides::View, Instant)> = None;
 
     loop {
         if shared.stop.load(Ordering::Relaxed) {
@@ -1284,33 +1331,80 @@ pub(crate) fn record(
             Some(t) if dirty => (interval - t.elapsed().as_secs_f64()).max(0.0),
             _ => 0.1,
         };
-        match grab(
-            &gpu,
-            &dup,
-            &conv,
-            (due_in * 1000.0) as u32,
-            shared.cursor.load(Ordering::Relaxed),
-        ) {
-            Ok(true) => {
-                dirty = true;
-                changed_at = Some(Instant::now());
-            }
-            Ok(false) => {}
-            Err(e) if e.code() == DXGI_ERROR_ACCESS_LOST => {
-                // A mode change, or the secure desktop: duplicate again.
-                std::thread::sleep(Duration::from_millis(100));
-                // SAFETY: duplication of the output on this device.
-                match unsafe { output.DuplicateOutput(&gpu.device) } {
-                    Ok(d) => {
-                        dup = d;
-                        dirty = true;
+        if let (Some(feed), Some(painter)) = (&slides, slide_painter.as_mut()) {
+            // The slide now (VID-072): a new one is a cut; a new view glides (VID-074).
+            if let Some(slide) = feed() {
+                let now = Instant::now();
+                let same = drawn.is_some_and(|(id, _, _)| id == slide.id);
+                if same
+                    && drawn.is_some_and(|(_, v, _)| v != slide.view)
+                    && glide.is_none_or(|(_, to, _)| to != slide.view)
+                {
+                    let from = glide
+                        .map(|(a, b, at)| {
+                            crate::slides::glide(
+                                a,
+                                b,
+                                at.elapsed().as_secs_f32() / crate::slides::GLIDE.as_secs_f32(),
+                            )
+                        })
+                        .or(drawn.map(|(_, v, _)| v))
+                        .unwrap_or_default();
+                    glide = Some((from, slide.view, now));
+                }
+                if !same {
+                    glide = None;
+                }
+                let view = match glide {
+                    Some((a, b, at)) if at.elapsed() < crate::slides::GLIDE => crate::slides::glide(
+                        a,
+                        b,
+                        at.elapsed().as_secs_f32() / crate::slides::GLIDE.as_secs_f32(),
+                    ),
+                    _ => {
+                        glide = None;
+                        slide.view
                     }
-                    Err(_) => continue,
+                };
+                let changed = drawn != Some((slide.id, view, slide.background));
+                if changed {
+                    painter.draw(&slide, view, size);
+                    drawn = Some((slide.id, view, slide.background));
+                    dirty = true;
+                    changed_at = Some(now);
                 }
             }
-            Err(e) => {
-                failure = Some(err("screen", e));
-                break;
+            std::thread::sleep(Duration::from_secs_f64(due_in.min(0.01)));
+        } else if let Some(dup_now) = dup.as_ref() {
+            match grab(
+                &gpu,
+                dup_now,
+                &conv,
+                (due_in * 1000.0) as u32,
+                shared.cursor.load(Ordering::Relaxed),
+            ) {
+                Ok(true) => {
+                    dirty = true;
+                    changed_at = Some(Instant::now());
+                }
+                Ok(false) => {}
+                Err(e) if e.code() == DXGI_ERROR_ACCESS_LOST => {
+                    // A mode change, or the secure desktop: duplicate again.
+                    std::thread::sleep(Duration::from_millis(100));
+                    let Some(out) = output.as_ref() else { continue };
+                    // SAFETY: duplication of the output on this device.
+                    match unsafe { out.DuplicateOutput(&gpu.device) } {
+                        Ok(d) => {
+                            dup = Some(d);
+                            dirty = true;
+                        }
+                        Err(_) => continue,
+                    }
+                }
+                Err(e) => {
+                    failure = Some(err("screen", e));
+                    break;
+                }
             }
         }
         // The sound (VID-039, VID-040): each source placed at the moment it was heard;
@@ -2024,6 +2118,7 @@ mod tests {
                 path: path.clone(),
                 recovery: None,
                 microphone: None,
+                slides: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(700));
@@ -2351,6 +2446,7 @@ mod tests {
                 path: path.clone(),
                 recovery: None,
                 microphone: None,
+                slides: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(400));
@@ -2504,6 +2600,7 @@ mod tests {
             path: path.clone(),
             recovery: Some(recovery.clone()),
             microphone: None,
+            slides: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(1000));
@@ -2765,6 +2862,92 @@ mod tests {
         assert!(blue, "the click's wave");
     }
 
+    /// Narrated slides recorded without the screen (VID-071, VID-072, VID-074): a red
+    /// 800 × 600 slide for a second, then a blue one, on white, in a 1280 × 720 video:
+    /// each centred at its size, the cut where it happened.
+    #[test]
+    fn slides_are_recorded() {
+        let dir = tempfile_dir();
+        let path = dir.join("slides.mp4");
+        let solid = |b: u8, g: u8, r: u8| Arc::new([b, g, r, 255].repeat(800 * 600));
+        let (red, blue) = (solid(0, 0, 255), solid(255, 0, 0));
+        // The second slide when the test says, a second into the recording.
+        let next = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let shown = next.clone();
+        let feed: crate::slides::SlideFeed = Arc::new(move || {
+            let second = shown.load(Ordering::Relaxed);
+            Some(crate::slides::Slide {
+                id: second as u64,
+                width: 800,
+                height: 600,
+                bgra: if second { blue.clone() } else { red.clone() },
+                background: [255, 255, 255],
+                enlarge: false,
+                view: Default::default(),
+            })
+        });
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 1280,
+                height: 720,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: false,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: None,
+            microphone: None,
+            slides: Some(crate::slides::Source(feed)),
+        }) {
+            Ok(r) => r,
+            // No GPU here (a CI machine): nothing to test.
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(1000));
+        next.store(true, Ordering::Relaxed);
+        std::thread::sleep(Duration::from_millis(1000));
+        let s = r.stop().unwrap();
+        // A still slide writes a frame only when it changes.
+        assert!(s.frames >= 2 && (1.8..2.5).contains(&s.duration), "{s:?}");
+        let at = |t: f64| {
+            let (w, h, px) = crate::frame_at(&path, t).unwrap();
+            assert_eq!((w, h), (1280, 720));
+            move |x: usize, y: usize| {
+                let i = (y * w as usize + x) * 4;
+                [px[i + 2], px[i + 1], px[i]]
+            }
+        };
+        let near = |a: [u8; 3], b: [u8; 3]| a.iter().zip(b).all(|(x, y)| x.abs_diff(y) < 40);
+        let early = at(0.5);
+        assert!(
+            near(early(640, 360), [255, 0, 0]),
+            "red in the middle: {:?}",
+            early(640, 360)
+        );
+        assert!(
+            near(early(100, 100), [255, 255, 255]),
+            "white around: {:?}",
+            early(100, 100)
+        );
+        // The slide is 800 wide, from 240 to 1040: just outside it, white.
+        assert!(near(early(230, 360), [255, 255, 255]) && near(early(250, 360), [255, 0, 0]));
+        let late = at(1.7);
+        assert!(
+            near(late(640, 360), [0, 0, 255]),
+            "blue after the cut: {:?}",
+            late(640, 360)
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// The camera drawn on a grey picture in memory (no screen, no camera): in its
     /// corner with the margin, mirrored, in its shape, with its border (VID-032 to
     /// VID-036); and filling everything at full screen (VID-034).
@@ -2918,6 +3101,7 @@ mod tests {
             path: path.clone(),
             recovery: None,
             microphone: None,
+            slides: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(500));
@@ -2987,6 +3171,7 @@ mod tests {
             path: path.clone(),
             recovery: None,
             microphone: None,
+            slides: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(2000));
@@ -3047,6 +3232,7 @@ mod tests {
             path: path.clone(),
             recovery: None,
             microphone: None,
+            slides: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -3131,6 +3317,7 @@ mod tests {
             path: path.clone(),
             recovery: None,
             microphone: None,
+            slides: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -3178,6 +3365,7 @@ mod tests {
                 path: path.clone(),
                 recovery: None,
                 microphone: None,
+                slides: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(2500));

@@ -1197,6 +1197,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         path: path.clone(),
         recovery: Some(recovery_file.clone()),
         microphone: microphone_of(core, p),
+        slides: None,
     })
     .map_err(|e| {
         if hide {

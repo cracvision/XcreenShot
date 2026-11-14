@@ -248,6 +248,96 @@ impl Painter {
     }
 }
 
+/// Draws a slide on the video's picture (VID-071, VID-074): its background, then the
+/// image where its view puts it.
+pub struct SlidePainter {
+    target: ID2D1RenderTarget,
+    bitmap: Option<(u64, ID2D1Bitmap)>,
+}
+
+impl SlidePainter {
+    pub fn new(texture: &ID3D11Texture2D) -> Result<SlidePainter, String> {
+        let e = |c: &str, e: windows::core::Error| format!("{c}: {}", e.message());
+        // SAFETY: Direct2D creation on this thread's texture.
+        unsafe {
+            let factory: ID2D1Factory =
+                D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None).map_err(|x| e("Direct2D", x))?;
+            let surface: IDXGISurface = texture.cast().map_err(|x| e("surface", x))?;
+            let props = D2D1_RENDER_TARGET_PROPERTIES {
+                r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
+                pixelFormat: D2D1_PIXEL_FORMAT {
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                },
+                dpiX: 96.0,
+                dpiY: 96.0,
+                usage: D2D1_RENDER_TARGET_USAGE_NONE,
+                minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
+            };
+            let target = factory
+                .CreateDxgiSurfaceRenderTarget(&surface, &props)
+                .map_err(|x| e("Direct2D target", x))?;
+            Ok(SlidePainter { target, bitmap: None })
+        }
+    }
+
+    /// Draws `slide` framed by `view` on a `size` picture.
+    pub fn draw(&mut self, slide: &crate::slides::Slide, view: crate::slides::View, size: (u32, u32)) {
+        let t = &self.target;
+        let (iw, ih) = (slide.width, slide.height);
+        // SAFETY: Direct2D calls on this thread's target; the slide's pixels hold `ih`
+        // rows of `iw * 4` bytes and outlive the copy.
+        unsafe {
+            if self.bitmap.as_ref().is_none_or(|(id, _)| *id != slide.id)
+                && iw > 0
+                && ih > 0
+                && slide.bgra.len() >= (iw * ih * 4) as usize
+            {
+                let props = D2D1_BITMAP_PROPERTIES {
+                    pixelFormat: D2D1_PIXEL_FORMAT {
+                        format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                        alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                    },
+                    dpiX: 96.0,
+                    dpiY: 96.0,
+                };
+                self.bitmap = t
+                    .CreateBitmap(
+                        D2D_SIZE_U {
+                            width: iw,
+                            height: ih,
+                        },
+                        Some(slide.bgra.as_ptr().cast()),
+                        iw * 4,
+                        &props,
+                    )
+                    .ok()
+                    .map(|b| (slide.id, b));
+            }
+            t.BeginDraw();
+            t.Clear(Some(&color(slide.background, 1.0)));
+            if let Some((_, b)) = &self.bitmap {
+                let r = crate::slides::place(
+                    size.0 as f32,
+                    size.1 as f32,
+                    iw as f32,
+                    ih as f32,
+                    slide.enlarge,
+                    view,
+                );
+                let dest = D2D_RECT_F {
+                    left: r.x,
+                    top: r.y,
+                    right: r.x + r.w,
+                    bottom: r.y + r.h,
+                };
+                t.DrawBitmap(b, Some(&dest), 1.0, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, None);
+            }
+            let _ = t.EndDraw(None, None);
+        }
+    }
+}
+
 /// The camera's last frame on a Direct2D target, kept until a newer one comes.
 pub struct CameraBitmap {
     at: Instant,
