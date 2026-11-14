@@ -5537,3 +5537,23 @@ fn videos_combined_in_order() {
     assert!(call(&e.core, Source::Cli, "video.combine", json!({"paths": [a, gif]})).is_err());
     assert!(call(&e.core, Source::Cli, "video.combine", json!({"paths": [a]})).is_err());
 }
+
+/// VID-055: a video from outside the library is copied into it, as it is, and opened
+/// from there; opening it again uses the same copy.
+#[cfg(windows)]
+#[test]
+fn a_video_from_elsewhere_joins_the_library() {
+    let e = env();
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+    let outside = e.outside.path().join("from-phone.mp4");
+    std::fs::copy(&src, &outside).unwrap();
+    let first = cli(&e.core, "document.open", json!({"path": outside, "show": true}));
+    let path = PathBuf::from(first["path"].as_str().unwrap());
+    assert!(path.starts_with(e.library.path()), "{path:?}");
+    assert_eq!(path.file_name().unwrap(), "from-phone.mp4");
+    assert_eq!(first["kind"], "library");
+    assert!(outside.exists(), "the original stays");
+    cli(&e.core, "document.close", json!({"documentId": first["documentId"]}));
+    let again = cli(&e.core, "document.open", json!({"path": outside, "show": true}));
+    assert_eq!(again["path"], first["path"]);
+}

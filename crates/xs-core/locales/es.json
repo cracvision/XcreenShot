@@ -1624,7 +1624,8 @@
     "combine_cancelled": "Se canceló la combinación: no se guardó nada.",
     "livedraw_off": "Dibujo en vivo está desactivado en la pestaña Video del panel de captura.",
     "livedraw_not_recording": "Dibujo en vivo funciona al grabar. Para usarlo en cualquier momento, activa Preferencias > Video > Dibujo en vivo en cualquier momento.",
-    "livedraw_inactive": "Dibujo en vivo no está activo."
+    "livedraw_inactive": "Dibujo en vivo no está activo.",
+    "video_codec": "{{name}} no se puede reproducir en este equipo: su códec ({{codec}}) no está instalado en Windows. ({{reason}})"
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",

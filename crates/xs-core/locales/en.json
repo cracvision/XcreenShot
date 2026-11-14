@@ -1624,7 +1624,8 @@
     "combine_cancelled": "The combination was cancelled: nothing was saved.",
     "livedraw_off": "Live drawing is off in the Video tab of the capture panel.",
     "livedraw_not_recording": "Live drawing works while recording. To use it at any time, turn on Preferences > Video > Live drawing at any time.",
-    "livedraw_inactive": "Live drawing is not on."
+    "livedraw_inactive": "Live drawing is not on.",
+    "video_codec": "{{name}} cannot be played on this computer: its codec ({{codec}}) is not installed in Windows. ({{reason}})"
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",

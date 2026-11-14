@@ -359,6 +359,11 @@ pub fn facts(path: &Path) -> Result<crate::Facts, String> {
         let codec = match native.GetGUID(&MF_MT_SUBTYPE) {
             Ok(g) if g == MFVideoFormat_H264 => "H.264".to_string(),
             Ok(g) if g == MFVideoFormat_HEVC => "H.265".to_string(),
+            Ok(g) if g == MFVideoFormat_AV1 => "AV1".to_string(),
+            Ok(g) if g == MFVideoFormat_VP90 => "VP9".to_string(),
+            Ok(g) if g == MFVideoFormat_MP4V => "MPEG-4".to_string(),
+            Ok(g) if g == MFVideoFormat_MJPG => "Motion JPEG".to_string(),
+            Ok(g) if g == MFVideoFormat_WMV3 => "WMV".to_string(),
             Ok(g) => format!("{g:?}"),
             Err(_) => String::new(),
         };

@@ -382,6 +382,8 @@ pub enum OpenError {
     Unreadable(String),
     /// Beyond 32,000 px per side or 500 megapixels (APP-050).
     TooLarge(u32, u32),
+    /// A video whose codec the system cannot read (VID-055): the codec and why.
+    Codec(String, String),
 }
 
 #[derive(Default)]
@@ -514,7 +516,9 @@ impl DocStore {
             // strip; the canvas plays the file.
             Format::Video => {
                 let facts = xs_video::facts(path).map_err(|e| unreadable(&e))?;
-                let (w, h, bgra) = xs_video::frame_at(path, 0.0).map_err(|e| unreadable(&e))?;
+                // The header reads, the pictures do not: the system lacks the codec.
+                let (w, h, bgra) =
+                    xs_video::frame_at(path, 0.0).map_err(|e| OpenError::Codec(facts.codec.clone(), e))?;
                 let mut rgba = bgra;
                 for px in rgba.as_chunks_mut::<4>().0 {
                     px.swap(0, 2);

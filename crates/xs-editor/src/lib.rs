@@ -725,6 +725,13 @@ fn open_error(lang: Lang, path: &Path, e: OpenError) -> CommandError {
             ],
         ))
         .with_details(json!({"reason": "too_large", "width": w, "height": h})),
+        // A video the system cannot decode says which codec (VID-055).
+        OpenError::Codec(codec, reason) => invalid(tr(
+            lang,
+            "errors.video_codec",
+            &[("name", &name), ("codec", &codec), ("reason", &reason)],
+        ))
+        .with_details(json!({"reason": "codec", "codec": codec})),
     }
 }
 
@@ -751,6 +758,8 @@ fn remember_view(core: &Core, path: &Path, view: &Value) {
 /// Opens a file as a document (EDT-105). With `show`, it becomes the document shown.
 pub fn open(core: &Arc<Core>, lang: Lang, path: &Path, show: bool) -> Result<String, CommandError> {
     let ed = editor(core);
+    let imported = import_video(core, path);
+    let path = imported.as_deref().unwrap_or(path);
     let id = match ed.store.find_by_path(path) {
         Some(id) => id,
         None => {
@@ -765,6 +774,38 @@ pub fn open(core: &Arc<Core>, lang: Lang, path: &Path, show: bool) -> Result<Str
         emit_list(core);
     }
     Ok(id)
+}
+
+/// A video or GIF from outside the library goes into it, as it is (VID-055): copied to
+/// the folder of this month, keeping its format. The same file opened again uses the
+/// copy already there. `None`: open it where it is (in the library already, or it
+/// does not read).
+fn import_video(core: &Core, path: &Path) -> Option<PathBuf> {
+    let video = match crate::store::Format::from_path(path)? {
+        Format::Video => xs_video::facts(path).is_ok(),
+        Format::Gif => std::fs::read(path)
+            .ok()
+            .and_then(|b| xs_image::gif_anim::info(&b))
+            .is_some(),
+        _ => false,
+    };
+    let ed = editor(core);
+    if !video || xs_library::contains(&ed.library(), path) || !path.is_file() {
+        return None;
+    }
+    let dir = library_target(core).join(chrono::Local::now().format("%Y-%m").to_string());
+    let stem = path.file_stem()?.to_string_lossy().into_owned();
+    let ext = path.extension()?.to_string_lossy().to_ascii_lowercase();
+    let size = std::fs::metadata(path).ok()?.len();
+    let same = dir.join(format!("{stem}.{ext}"));
+    if std::fs::metadata(&same).is_ok_and(|m| m.len() == size) {
+        return Some(same);
+    }
+    std::fs::create_dir_all(&dir).ok()?;
+    let target = xs_library::unique(&dir, &stem, &ext);
+    std::fs::copy(path, &target).ok()?;
+    xs_library::library(core).scan();
+    Some(target)
 }
 
 // ---------------------------------------------------------------------------
