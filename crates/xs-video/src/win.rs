@@ -569,6 +569,8 @@ struct Writer {
     stream: u32,
     /// The sound's stream and its rate (VID-040).
     audio: Option<(u32, u32)>,
+    /// The system's sound's own stream, when kept apart from the microphone (VID-042).
+    system: Option<u32>,
     hardware: bool,
     /// The encoder, to ask for a key frame (VID-022: fragmented files).
     codec: Option<ICodecAPI>,
@@ -633,11 +635,12 @@ fn writer(
     hardware: bool,
     audio_rate: Option<u32>,
 ) -> Result<Writer, String> {
-    writer_in(gpu, path, size, fps, bitrate, hardware, audio_rate, false)
+    writer_in(gpu, path, size, fps, bitrate, hardware, audio_rate, 1, false)
 }
 
 /// A writer; `fragmented`, a fragmented MP4: what was written up to a second or two
-/// before stays readable if the app dies (VID-022).
+/// before stays readable if the app dies (VID-022). With sound, `tracks` of it: two
+/// keep the microphone and the system's sound apart (VID-042).
 #[allow(clippy::too_many_arguments)]
 fn writer_in(
     gpu: &Gpu,
@@ -647,6 +650,7 @@ fn writer_in(
     bitrate: u32,
     hardware: bool,
     audio_rate: Option<u32>,
+    tracks: usize,
     fragmented: bool,
 ) -> Result<Writer, String> {
     // SAFETY: Media Foundation calls with arguments that live through each call.
@@ -690,18 +694,20 @@ fn writer_in(
         let input = media_type(&MFVideoFormat_NV12, size, fps, None)?;
         sink.SetInputMediaType(stream, &input, encoder_settings().as_ref())
             .map_err(|e| err("video input type", e))?;
-        // The sound: 16-bit stereo PCM in, AAC at 128 kbps out (VID-026).
-        let audio = match audio_rate {
-            Some(rate) => {
-                let t = |subtype: &windows::core::GUID| -> windows::core::Result<IMFMediaType> {
-                    let t = MFCreateMediaType()?;
-                    t.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Audio)?;
-                    t.SetGUID(&MF_MT_SUBTYPE, subtype)?;
-                    t.SetUINT32(&MF_MT_AUDIO_BITS_PER_SAMPLE, 16)?;
-                    t.SetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND, rate)?;
-                    t.SetUINT32(&MF_MT_AUDIO_NUM_CHANNELS, 2)?;
-                    Ok(t)
-                };
+        // The sound: 16-bit stereo PCM in, AAC at 128 kbps out (VID-026); a second
+        // track for the system's sound when kept apart (VID-042).
+        let (mut audio, mut system) = (None, None);
+        if let Some(rate) = audio_rate {
+            let t = |subtype: &windows::core::GUID| -> windows::core::Result<IMFMediaType> {
+                let t = MFCreateMediaType()?;
+                t.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Audio)?;
+                t.SetGUID(&MF_MT_SUBTYPE, subtype)?;
+                t.SetUINT32(&MF_MT_AUDIO_BITS_PER_SAMPLE, 16)?;
+                t.SetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND, rate)?;
+                t.SetUINT32(&MF_MT_AUDIO_NUM_CHANNELS, 2)?;
+                Ok(t)
+            };
+            for track in 0..tracks.clamp(1, 2) {
                 let out = t(&MFAudioFormat_AAC).map_err(|e| err("audio type", e))?;
                 let _ = out.SetUINT32(&MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 16_000);
                 let index = sink.AddStream(&out).map_err(|e| err("audio stream", e))?;
@@ -710,10 +716,13 @@ fn writer_in(
                 let _ = input.SetUINT32(&MF_MT_AUDIO_AVG_BYTES_PER_SECOND, rate * 4);
                 sink.SetInputMediaType(index, &input, None)
                     .map_err(|e| err("audio input type", e))?;
-                Some((index, rate))
+                if track == 0 {
+                    audio = Some((index, rate));
+                } else {
+                    system = Some(index);
+                }
             }
-            None => None,
-        };
+        }
         sink.BeginWriting().map_err(|e| err("video writing", e))?;
         let codec = if fragmented {
             encoder_api(&sink, stream)
@@ -732,6 +741,7 @@ fn writer_in(
             sink,
             stream,
             audio,
+            system,
             hardware,
             codec,
             staging,
@@ -828,11 +838,24 @@ impl Writer {
         }
     }
 
-    /// Writes stereo 16-bit `samples` starting at `time` (seconds).
+    /// Writes stereo 16-bit `samples` starting at `time` (seconds), in the first
+    /// sound track.
     fn write_audio(&self, samples: &[i16], time: f64) -> Result<(), String> {
         let Some((stream, rate)) = self.audio else {
             return Ok(());
         };
+        self.write_pcm(stream, rate, samples, time)
+    }
+
+    /// The same, in the system's sound's own track (VID-042), or the first.
+    fn write_system_audio(&self, samples: &[i16], time: f64) -> Result<(), String> {
+        let Some((first, rate)) = self.audio else {
+            return Ok(());
+        };
+        self.write_pcm(self.system.unwrap_or(first), rate, samples, time)
+    }
+
+    fn write_pcm(&self, stream: u32, rate: u32, samples: &[i16], time: f64) -> Result<(), String> {
         if samples.is_empty() {
             return Ok(());
         }
@@ -1031,6 +1054,12 @@ pub(crate) fn record(
     // VID-022: written into the fragmented file while it records, when there is one.
     let target = options.recovery.as_deref().unwrap_or(&options.path);
     let fragmented = options.recovery.is_some();
+    // The microphone and the system's sound in tracks of their own (VID-042).
+    let tracks = if options.sound_tracks.is_some() && options.system_audio && options.microphone.is_some() {
+        2
+    } else {
+        1
+    };
     let mut keeper = crate::Keeper::default();
     let slides = options.slides.as_ref().map(|s| s.0.clone());
     let setup = (|| {
@@ -1137,14 +1166,20 @@ pub(crate) fn record(
             .then(|| loopback.as_ref().map_or(48_000, |l| l.rate));
         let _ = std::fs::remove_file(target);
         let w = if options.software_only {
-            writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, fragmented)?
+            writer_in(
+                &gpu, target, size, fps, bitrate, false, audio_rate, tracks, fragmented,
+            )?
         } else {
-            match writer_in(&gpu, target, size, fps, bitrate, true, audio_rate, fragmented) {
+            match writer_in(
+                &gpu, target, size, fps, bitrate, true, audio_rate, tracks, fragmented,
+            ) {
                 Ok(w) => w,
                 Err(e) => {
                     tracing::info!(error = %e, "video: no hardware encoder, software instead");
                     let _ = std::fs::remove_file(target);
-                    writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, fragmented)?
+                    writer_in(
+                        &gpu, target, size, fps, bitrate, false, audio_rate, tracks, fragmented,
+                    )?
                 }
             }
         };
@@ -1194,6 +1229,8 @@ pub(crate) fn record(
     // The sound, put together (VID-039, VID-040): the system's and the microphone's,
     // each at its moment; the microphone leveled.
     let mut mixer = audio_rate.map(crate::mix::Mixer::new);
+    // Kept apart (VID-042): the system's sound put together on its own.
+    let mut system_mixer = audio_rate.filter(|_| tracks == 2).map(crate::mix::Mixer::new);
     let (mut system_track, mut mic_track) = (crate::mix::Track::default(), crate::mix::Track::default());
     let mut agc = crate::mix::Agc::default();
     let mut had_mic = mic.is_some();
@@ -1422,7 +1459,11 @@ pub(crate) fn record(
                         system_gauge.feed(p, p, p >= 0.99, at_now);
                         if system_on && !paused && !samples.is_empty() {
                             let target = now_recorded() - samples.len() as f64 / 2.0 / rate;
-                            mx.place(&mut system_track, target, &samples);
+                            let into = match system_mixer.as_mut() {
+                                Some(own) => own,
+                                None => &mut *mx,
+                            };
+                            into.place(&mut system_track, target, &samples);
                         }
                     }
                     Err(e) if crate::audio::device_gone(&e) => {
@@ -1510,6 +1551,13 @@ pub(crate) fn record(
             let out = mx.take(upto);
             if !out.is_empty() {
                 let _ = w.write_audio(&out, at);
+            }
+            if let Some(own) = system_mixer.as_mut() {
+                let at = own.written() as f64 / rate;
+                let out = own.take(upto);
+                if !out.is_empty() {
+                    let _ = w.write_system_audio(&out, at);
+                }
             }
         }
         fx = shared.effects.lock().unwrap().clone();
@@ -1605,7 +1653,7 @@ pub(crate) fn record(
                         tracing::warn!(error = %e, "video: hardware encoder failed, software instead");
                         let _ = std::fs::remove_file(target);
                         let bitrate = options.quality.bitrate(size.0, size.1);
-                        match writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, true) {
+                        match writer_in(&gpu, target, size, fps, bitrate, false, audio_rate, tracks, true) {
                             Ok(sw) => w = sw,
                             Err(e) => {
                                 failure = Some(e);
@@ -1656,6 +1704,7 @@ pub(crate) fn record(
                         options.quality.bitrate(size.0, size.1),
                         false,
                         audio_rate,
+                        tracks,
                         fragmented,
                     ) {
                         Ok(sw) => w = sw,
@@ -1735,6 +1784,13 @@ pub(crate) fn record(
         if !out.is_empty() {
             let _ = w.write_audio(&out, at);
         }
+        if let Some(own) = system_mixer.as_mut() {
+            let at = own.written() as f64 / rate;
+            let out = own.take((duration * rate) as u64);
+            if !out.is_empty() {
+                let _ = w.write_system_audio(&out, at);
+            }
+        }
     }
     let encoder = if w.hardware { "hardware" } else { "software" };
     let finished = if frames > 0 {
@@ -1759,6 +1815,12 @@ pub(crate) fn record(
         }
         None => Ok(()),
     });
+    // The tracks kept apart get their names (VID-042).
+    if let (Ok(()), Some(names), 2) = (&finished, &options.sound_tracks, tracks) {
+        if let Err(e) = crate::mp4::name_sound_tracks(&options.path, names) {
+            tracing::warn!(error = %e, "video: the sound tracks keep no names");
+        }
+    }
     shared.set_state(State::Done);
     finished?;
     let bytes = std::fs::metadata(&options.path).map(|m| m.len()).unwrap_or(0);
@@ -2119,6 +2181,7 @@ mod tests {
                 recovery: None,
                 microphone: None,
                 slides: None,
+                sound_tracks: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(700));
@@ -2447,6 +2510,7 @@ mod tests {
                 recovery: None,
                 microphone: None,
                 slides: None,
+                sound_tracks: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(400));
@@ -2497,7 +2561,7 @@ mod tests {
         };
         let conv = converter(&gpu, (w, h), (0, 0), whole, (w, h), fps, 1.0).unwrap();
         let hardware = std::env::var("XS_CUT_SHORT_HW").is_ok_and(|v| v == "1");
-        let Ok(writer) = writer_in(&gpu, &path, (w, h), fps, 1_000_000, hardware, None, true) else {
+        let Ok(writer) = writer_in(&gpu, &path, (w, h), fps, 1_000_000, hardware, None, 1, true) else {
             return;
         };
         let mut demo = crate::demo::Demo::new(w, h);
@@ -2601,6 +2665,7 @@ mod tests {
             recovery: Some(recovery.clone()),
             microphone: None,
             slides: None,
+            sound_tracks: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(1000));
@@ -2673,6 +2738,7 @@ mod tests {
                 quality.bitrate(w, h),
                 hardware,
                 None,
+                1,
                 fragmented,
             ) else {
                 println!("{name}: no encoder");
@@ -2906,6 +2972,7 @@ mod tests {
             recovery: None,
             microphone: None,
             slides: Some(crate::slides::Source(feed)),
+            sound_tracks: None,
         }) {
             Ok(r) => r,
             // No GPU here (a CI machine): nothing to test.
@@ -2945,6 +3012,66 @@ mod tests {
             "blue after the cut: {:?}",
             late(640, 360)
         );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The microphone and the system's sound kept apart (VID-042): two named tracks,
+    /// also through the fragmented file. Slides, not the screen; a microphone that is
+    /// not there, so none is opened.
+    #[test]
+    fn sound_tracks_kept_apart() {
+        let dir = tempfile_dir();
+        let path = dir.join("tracks.mp4");
+        let fragmented = dir.join("tracks-rec.mp4");
+        let feed: crate::slides::SlideFeed = Arc::new(|| {
+            Some(crate::slides::Slide {
+                id: 1,
+                width: 320,
+                height: 240,
+                bgra: Arc::new([90, 90, 90, 255].repeat(320 * 240)),
+                background: [0, 0, 0],
+                enlarge: false,
+                view: Default::default(),
+            })
+        });
+        let names = ["Microphone".to_string(), "System audio".to_string()];
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 480,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: true,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: Some(fragmented.clone()),
+            microphone: Some(crate::Microphone {
+                device: Some("no-such-microphone".into()),
+                auto_level: true,
+                denoise: false,
+            }),
+            slides: Some(crate::slides::Source(feed)),
+            sound_tracks: Some(names.clone()),
+        }) {
+            Ok(r) => r,
+            // No GPU here (a CI machine): nothing to test.
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(1500));
+        let s = r.stop().unwrap();
+        assert!(s.audio, "{s:?}");
+        let f = crate::facts(&path).unwrap();
+        assert_eq!(f.sound_tracks, 2);
+        assert_eq!(crate::mp4::sound_track_names(&path).unwrap(), names);
+        assert!(!fragmented.exists());
         let _ = std::fs::remove_file(&path);
     }
 
@@ -3102,6 +3229,7 @@ mod tests {
             recovery: None,
             microphone: None,
             slides: None,
+            sound_tracks: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(500));
@@ -3172,6 +3300,7 @@ mod tests {
             recovery: None,
             microphone: None,
             slides: None,
+            sound_tracks: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(2000));
@@ -3233,6 +3362,7 @@ mod tests {
             recovery: None,
             microphone: None,
             slides: None,
+            sound_tracks: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -3318,6 +3448,7 @@ mod tests {
             recovery: None,
             microphone: None,
             slides: None,
+            sound_tracks: None,
         })
         .unwrap();
         std::thread::sleep(Duration::from_millis(600));
@@ -3366,6 +3497,7 @@ mod tests {
                 recovery: None,
                 microphone: None,
                 slides: None,
+                sound_tracks: None,
             })
             .unwrap();
             std::thread::sleep(Duration::from_millis(2500));

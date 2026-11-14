@@ -1892,6 +1892,10 @@
     "video_slidesEnlarge": {
       "label": "Ampliar las diapositivas pequeñas",
       "description": "Las imágenes más pequeñas que el video se amplían hasta llenarlo; desactivado, se ven a su tamaño para que no pierdan nitidez."
+    },
+    "video_combineAudioTracks": {
+      "label": "Combinar las pistas de audio",
+      "description": "El micrófono y el audio del sistema en una sola pista, lo más compatible. Desactivada: cada uno en su pista (cuando se graban los dos), para ajustarlos por separado en un editor de video. Algunos reproductores solo reproducen la primera pista."
     }
   },
   "errors": {
@@ -4847,7 +4851,9 @@
       "without_camera": "Grabar sin cámara",
       "mic_denoise": "Reducir ruido de fondo",
       "mic_talking": "Parece que hablas, pero el micrófono no graba",
-      "mic_on": "Activar micrófono"
+      "mic_on": "Activar micrófono",
+      "tracks_apart": "pistas de audio separadas",
+      "tracks_apart_hint": "El micrófono y el audio del sistema van en pistas separadas. Algunos reproductores solo reproducen la primera."
     },
     "video": {
       "silent_suffix": "sin sonido",
@@ -4964,7 +4970,10 @@
       "export_h264_help": "Convertido a H.264: se reproduce en cualquier equipo y navegador",
       "export_gif": "GIF animado…",
       "export_gif_help": "Primero eliges su tamaño y fotogramas",
-      "exported": "Exportado como H.264"
+      "exported": "Exportado como H.264",
+      "track_microphone": "Micrófono",
+      "track_system": "Audio del sistema",
+      "sound_tracks": "{{count}} pistas de audio"
     },
     "livedraw": {
       "title": "Dibujo en vivo",

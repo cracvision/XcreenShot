@@ -3,9 +3,10 @@
 //! new video (VID-060) and the silent copy (VID-063) write new files with
 //! `xs_video::export`; a frame becomes an image (VID-061) or its text (VID-062).
 
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde_json::{json, Value};
 use xs_core::i18n::tr;
@@ -83,6 +84,7 @@ pub fn timeline_json(f: &xs_video::Facts, cuts: &[[f64; 2]]) -> Value {
         "fps": f.fps,
         "codec": f.codec,
         "sound": f.sound,
+        "soundTracks": f.sound_tracks,
         "length": timeline::length(&kept),
         "kept": kept.iter().map(|k| [k.start, k.end]).collect::<Vec<_>>(),
         "marks": timeline::marks(f.duration, &cut),
@@ -753,6 +755,64 @@ pub fn gif(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
 // ---------------------------------------------------------------------------
 // Combine videos (VID-067)
 
+/// The file the player plays for a video (VID-042): the video itself, or for one
+/// with its sound tracks apart a copy where they are mixed, since players play only
+/// the first. The copy is made once (the first time it plays) and kept in the app's
+/// data folder with the last few; if it cannot be made, the video itself.
+pub fn playback_file(core: &Core, path: &Path, tracks: u32) -> PathBuf {
+    static MAKING: Mutex<()> = Mutex::new(());
+    if tracks < 2 {
+        return path.to_path_buf();
+    }
+    let Ok(meta) = std::fs::metadata(path) else {
+        return path.to_path_buf();
+    };
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    path.hash(&mut h);
+    meta.len().hash(&mut h);
+    meta.modified().ok().hash(&mut h);
+    let key = format!("{:016x}", h.finish());
+    let dir = core.paths.local_dir.join("playback");
+    let copy = dir.join(format!("{key}.mp4"));
+    let _making = MAKING.lock().unwrap_or_else(|e| e.into_inner());
+    if copy.exists() {
+        return copy;
+    }
+    let _ = std::fs::create_dir_all(&dir);
+    keep_newest(&dir, PLAYBACK_COPIES - 1);
+    let partial = dir.join(format!("{key}-making.mp4"));
+    match xs_video::playback_copy(path, &partial)
+        .and_then(|()| std::fs::rename(&partial, &copy).map_err(|e| e.to_string()))
+    {
+        Ok(()) => copy,
+        Err(e) => {
+            let _ = std::fs::remove_file(&partial);
+            tracing::warn!(error = %e, "video: no copy to play back; the first sound track plays");
+            path.to_path_buf()
+        }
+    }
+}
+
+/// How many playback copies are kept.
+const PLAYBACK_COPIES: usize = 4;
+
+/// Leaves the `keep` newest files of `dir`.
+fn keep_newest(dir: &Path, keep: usize) {
+    let Ok(read) = std::fs::read_dir(dir) else { return };
+    let mut files: Vec<(std::time::SystemTime, PathBuf)> = read
+        .flatten()
+        .filter_map(|e| {
+            let m = e.metadata().ok()?;
+            m.is_file()
+                .then(|| (m.modified().unwrap_or(std::time::UNIX_EPOCH), e.path()))
+        })
+        .collect();
+    files.sort_by_key(|f| std::cmp::Reverse(f.0));
+    for (_, p) in files.into_iter().skip(keep) {
+        let _ = std::fs::remove_file(p);
+    }
+}
+
 /// The job key of the combination being made (`video.cancel` with `job: combine`).
 const COMBINE: &str = "combine";
 
@@ -824,7 +884,9 @@ pub fn combine(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     let partial = xs_core::document::partial_path(&dst);
     let flag = job(COMBINE);
     let mut report = progress(core, COMBINE, "combine");
-    let result = xs_video::combine(&pieces, &partial, &mut report, &flag);
+    // The tracks kept apart only when the preference says so (VID-042).
+    let apart = !core.settings.get_bool("video.combineAudioTracks");
+    let result = xs_video::combine(&pieces, &partial, apart, &mut report, &flag);
     job_done(COMBINE);
     let (width, height) = match result {
         Ok(size) => size,
@@ -898,6 +960,7 @@ mod tests {
             fps: 30,
             codec: "H.264".into(),
             sound: true,
+            sound_tracks: 1,
         };
         let t = timeline_json(&f, &[[10.0, 20.0]]);
         assert_eq!(t["length"], 50.0);

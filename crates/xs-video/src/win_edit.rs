@@ -1,7 +1,10 @@
 //! Editing videos with Media Foundation (ADR 0008): the frame at a moment (VID-061,
 //! VID-062) and a new MP4 with only some parts of a file, with or without its sound
 //! (VID-059, VID-060, VID-063). It decodes and encodes again with the system's codecs.
+//! A file with several sound tracks keeps them apart (VID-042), or has them mixed into
+//! one where that is asked (combining, playing back).
 
+use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -11,6 +14,7 @@ use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
 use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
 use windows::Win32::System::Variant::VT_I8;
 
+use crate::mix::Merge;
 use crate::timeline::Span;
 use crate::win::{encoder_settings, err, media_type, HNS};
 
@@ -45,9 +49,9 @@ fn unreadable(path: &Path, e: windows::core::Error) -> String {
     err(&format!("reading {}", path.display()), e)
 }
 
-/// The stream numbers of the first picture and the first sound.
-fn streams(reader: &IMFSourceReader) -> (Option<u32>, Option<u32>) {
-    let (mut video, mut audio) = (None, None);
+/// The stream numbers of the first picture and of every sound track (VID-042).
+fn streams(reader: &IMFSourceReader) -> (Option<u32>, Vec<u32>) {
+    let (mut video, mut audio) = (None, Vec::new());
     for i in 0..32u32 {
         // SAFETY: asks for a stream's type; an error ends the list.
         let Ok(t) = (unsafe { reader.GetNativeMediaType(i, 0) }) else {
@@ -56,7 +60,7 @@ fn streams(reader: &IMFSourceReader) -> (Option<u32>, Option<u32>) {
         // SAFETY: attribute read.
         match unsafe { t.GetGUID(&MF_MT_MAJOR_TYPE) } {
             Ok(g) if g == MFMediaType_Video && video.is_none() => video = Some(i),
-            Ok(g) if g == MFMediaType_Audio && audio.is_none() => audio = Some(i),
+            Ok(g) if g == MFMediaType_Audio => audio.push(i),
             _ => {}
         }
     }
@@ -108,7 +112,7 @@ fn remux_until(src: &Path, dst: &Path, until: Option<f64>) -> Result<f64, String
             .map_err(|e| err("the video file", e))?;
         let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
         let mut map = Vec::new();
-        for stream in [Some(video), audio].into_iter().flatten() {
+        for stream in std::iter::once(video).chain(audio.iter().copied()) {
             let t = reader
                 .GetNativeMediaType(stream, 0)
                 .map_err(|e| err("stream type", e))?;
@@ -167,7 +171,21 @@ fn remux_until(src: &Path, dst: &Path, until: Option<f64>) -> Result<f64, String
             sink.WriteSample(out, &s).map_err(|e| err("writing", e))?;
         }
         sink.Finalize().map_err(|e| err("finishing the video", e))?;
+        if audio.len() > 1 {
+            same_names(src, dst);
+        }
         Ok(end)
+    }
+}
+
+/// The sound tracks of `dst` get the names of those of `src` (VID-042).
+fn same_names(src: &Path, dst: &Path) {
+    if let Ok(names) = crate::mp4::sound_track_names(src) {
+        if names.iter().any(|n| !n.is_empty()) {
+            if let Err(e) = crate::mp4::name_sound_tracks(dst, &names) {
+                tracing::warn!(error = %e, "video: the sound tracks keep no names");
+            }
+        }
     }
 }
 
@@ -334,10 +352,7 @@ pub fn frame_at(path: &Path, seconds: f64) -> Result<(u32, u32, Vec<u8>), String
 
 /// A reader that gives NV12 pictures: the reader, its picture and sound streams and
 /// the pictures' geometry.
-fn nv12_reader(
-    path: &Path,
-    processing: bool,
-) -> Result<(IMFSourceReader, u32, Option<u32>, Geometry), String> {
+fn nv12_reader(path: &Path, processing: bool) -> Result<(IMFSourceReader, u32, Vec<u32>, Geometry), String> {
     let reader = reader(path, processing)?;
     let (Some(video), audio) = streams(&reader) else {
         return Err("the file has no picture".into());
@@ -486,7 +501,8 @@ pub fn facts(path: &Path) -> Result<crate::Facts, String> {
             duration: (duration * 1000.0).round() / 1000.0,
             fps: nominal_fps(&reader, video),
             codec,
-            sound: audio.is_some(),
+            sound: !audio.is_empty(),
+            sound_tracks: audio.len() as u32,
         })
     }
 }
@@ -505,20 +521,24 @@ fn nominal_fps(reader: &IMFSourceReader, video: u32) -> u32 {
     }
 }
 
-/// The new file being written.
+/// The new file being written: its picture stream, and its sound tracks with what
+/// puts their sound together (VID-042).
 struct Out {
     sink: IMFSinkWriter,
     video: u32,
-    audio: Option<(u32, u32)>,
+    audio: Vec<u32>,
+    merge: RefCell<Merge>,
 }
 
-fn out(
-    path: &Path,
-    size: (u32, u32),
-    fps: u32,
-    audio_rate: Option<u32>,
-    hardware: bool,
-) -> Result<Out, String> {
+/// The sound of a new file: its rate, how many tracks and, for each stream read
+/// (of any of the files), the track it goes to.
+struct Sound {
+    rate: u32,
+    tracks: usize,
+    to: Vec<usize>,
+}
+
+fn out(path: &Path, size: (u32, u32), fps: u32, sound: Option<Sound>, hardware: bool) -> Result<Out, String> {
     // SAFETY: Media Foundation calls with arguments that live through each call.
     unsafe {
         let mut attrs = None;
@@ -545,23 +565,32 @@ fn out(
         let input = media_type(&MFVideoFormat_NV12, size, fps, None)?;
         sink.SetInputMediaType(video, &input, encoder_settings().as_ref())
             .map_err(|e| err("video input type", e))?;
-        let audio = match audio_rate {
-            Some(rate) => {
-                let index = sink
-                    .AddStream(&pcm(&MFAudioFormat_AAC, rate).map_err(|e| err("audio type", e))?)
-                    .map_err(|e| err("audio stream", e))?;
-                sink.SetInputMediaType(
-                    index,
-                    &pcm(&MFAudioFormat_PCM, rate).map_err(|e| err("audio type", e))?,
-                    None,
-                )
-                .map_err(|e| err("audio input type", e))?;
-                Some((index, rate))
+        let mut audio = Vec::new();
+        let merge = match sound {
+            Some(s) => {
+                for _ in 0..s.tracks {
+                    let index = sink
+                        .AddStream(&pcm(&MFAudioFormat_AAC, s.rate).map_err(|e| err("audio type", e))?)
+                        .map_err(|e| err("audio stream", e))?;
+                    sink.SetInputMediaType(
+                        index,
+                        &pcm(&MFAudioFormat_PCM, s.rate).map_err(|e| err("audio type", e))?,
+                        None,
+                    )
+                    .map_err(|e| err("audio input type", e))?;
+                    audio.push(index);
+                }
+                Merge::new(s.rate, s.tracks, &s.to)
             }
-            None => None,
+            None => Merge::new(48_000, 0, &[]),
         };
         sink.BeginWriting().map_err(|e| err("video writing", e))?;
-        Ok(Out { sink, video, audio })
+        Ok(Out {
+            sink,
+            video,
+            audio,
+            merge: RefCell::new(merge),
+        })
     }
 }
 
@@ -586,6 +615,49 @@ fn pcm(subtype: &GUID, rate: u32) -> windows::core::Result<IMFMediaType> {
 }
 
 impl Out {
+    /// Sound of the `stream`-th stream read (16-bit stereo) at `at` seconds of the new
+    /// file: written as soon as every stream sharing its track has reached it.
+    fn put_sound(&self, stream: usize, at: f64, samples: &[i16]) -> Result<(), String> {
+        let ready = {
+            let mut m = self.merge.borrow_mut();
+            let Some(track) = m.track_of(stream) else {
+                return Ok(());
+            };
+            m.put(stream, at, samples);
+            let from = m.written(track);
+            (track, from, m.ready(track))
+        };
+        self.write_sound(ready.0, ready.1, &ready.2)
+    }
+
+    /// Every track up to `upto` seconds, silence where nothing came.
+    fn flush_sound(&self, upto: f64) -> Result<(), String> {
+        let tracks = self.merge.borrow().tracks();
+        for track in 0..tracks {
+            let (from, samples) = {
+                let mut m = self.merge.borrow_mut();
+                let frames = (upto * m.rate as f64).round().max(0.0) as u64;
+                (m.written(track), m.flush(track, frames))
+            };
+            self.write_sound(track, from, &samples)?;
+        }
+        Ok(())
+    }
+
+    fn write_sound(&self, track: usize, from: u64, samples: &[i16]) -> Result<(), String> {
+        if samples.is_empty() {
+            return Ok(());
+        }
+        let rate = self.merge.borrow().rate as f64;
+        let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
+        self.write(
+            self.audio[track],
+            &bytes,
+            from as f64 / rate,
+            (samples.len() / 2) as f64 / rate,
+        )
+    }
+
     fn write(&self, stream: u32, bytes: &[u8], time: f64, length: f64) -> Result<(), String> {
         // SAFETY: the buffer is locked, filled within its size and unlocked.
         unsafe {
@@ -659,34 +731,21 @@ fn write_parts(
         Ok(r) => r,
         Err(_) => nv12_reader(src, true)?,
     };
-    let audio = audio.filter(|_| sound);
+    // Silent copy (VID-063): every sound track goes.
+    let audio = if sound { audio } else { Vec::new() };
     let fps = nominal_fps(&reader, video);
-    // SAFETY: Media Foundation calls with arguments that live through each call.
-    let rate = unsafe {
-        match audio {
-            Some(a) => {
-                let native = reader
-                    .GetNativeMediaType(a, 0)
-                    .and_then(|t| t.GetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND))
-                    .unwrap_or(48_000);
-                let rate = if native == 44_100 { 44_100 } else { 48_000 };
-                reader
-                    .SetCurrentMediaType(
-                        a,
-                        None,
-                        &pcm(&MFAudioFormat_PCM, rate).map_err(|e| err("audio type", e))?,
-                    )
-                    .map_err(|e| err("audio type", e))?;
-                Some(rate)
-            }
-            None => None,
-        }
-    };
+    let rate = pcm_streams(&reader, &audio, None)?;
     let size = (g.shown.0 & !1, g.shown.1 & !1);
     // The software encoder: fed from memory, the hardware ones mark SD pictures as
     // BT.709 and the colors shift (ADR 0008). Feeding them GPU surfaces, as the
     // recorder does, is a later improvement.
-    let out = out(dst, size, fps, rate, false)?;
+    // Each sound track stays its own (VID-042).
+    let sound = rate.map(|rate| Sound {
+        rate,
+        tracks: audio.len(),
+        to: (0..audio.len()).collect(),
+    });
+    let out = out(dst, size, fps, sound, false)?;
     let total: f64 = keep.iter().map(Span::len).sum();
     let same = |p: Vec<u8>| p;
     let input = Input {
@@ -703,8 +762,43 @@ fn write_parts(
         offset += span.len();
     }
     out.finish()?;
+    if input.audio.len() > 1 {
+        same_names(src, dst);
+    }
     progress(1.0);
     Ok(())
+}
+
+/// The sound `streams` of `reader` decoded as 16-bit stereo PCM at `rate`, or at the
+/// first one's rate (44.1 or 48 kHz). Returns the rate, or none without streams.
+fn pcm_streams(reader: &IMFSourceReader, streams: &[u32], rate: Option<u32>) -> Result<Option<u32>, String> {
+    let Some(first) = streams.first() else {
+        return Ok(None);
+    };
+    // SAFETY: Media Foundation calls with arguments that live through each call.
+    unsafe {
+        let rate = rate.unwrap_or_else(|| {
+            let native = reader
+                .GetNativeMediaType(*first, 0)
+                .and_then(|t| t.GetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND))
+                .unwrap_or(48_000);
+            if native == 44_100 {
+                44_100
+            } else {
+                48_000
+            }
+        });
+        for a in streams {
+            reader
+                .SetCurrentMediaType(
+                    *a,
+                    None,
+                    &pcm(&MFAudioFormat_PCM, rate).map_err(|e| err("audio type", e))?,
+                )
+                .map_err(|e| err("audio type", e))?;
+        }
+        Ok(Some(rate))
+    }
 }
 
 /// A file being read into a new video: its reader, streams and picture size, and how
@@ -713,7 +807,8 @@ struct Input<'a> {
     reader: &'a IMFSourceReader,
     g: Geometry,
     video: u32,
-    audio: Option<u32>,
+    /// Its sound streams, the `i`-th read as stream `i` of the new file's sound.
+    audio: Vec<u32>,
     /// The picture's size, even.
     size: (u32, u32),
     fit: &'a dyn Fn(Vec<u8>) -> Vec<u8>,
@@ -786,13 +881,18 @@ pub(crate) fn rematrix(picture: &mut [u8], size: (u32, u32), from_709: bool) {
 /// as wide and as tall as the largest, the smaller ones centered on black; the
 /// highest frame rate; sound when any has it (silence for the others). Returns its
 /// size. `cancel` stops it, leaving no file.
+///
+/// Its sound (VID-042): one track, unless `apart` and every video with sound has the
+/// same tracks apart (microphone and system's sound): then those tracks, each with
+/// its own.
 pub fn combine(
     pieces: &[Piece],
     dst: &Path,
+    apart: bool,
     progress: &mut dyn FnMut(f64),
     cancel: &AtomicBool,
 ) -> Result<(u32, u32), String> {
-    let result = combine_into(pieces, dst, progress, cancel);
+    let result = combine_into(pieces, dst, apart, progress, cancel);
     if result.is_err() {
         let _ = std::fs::remove_file(dst);
     }
@@ -802,6 +902,7 @@ pub fn combine(
 fn combine_into(
     pieces: &[Piece],
     dst: &Path,
+    apart: bool,
     progress: &mut dyn FnMut(f64),
     cancel: &AtomicBool,
 ) -> Result<(u32, u32), String> {
@@ -815,8 +916,19 @@ fn combine_into(
         facts.iter().map(|f| f.height).max().unwrap_or(2) & !1,
     );
     let fps = facts.iter().map(|f| f.fps).max().unwrap_or(30);
-    let rate = facts.iter().any(|f| f.sound).then_some(48_000);
-    let out = out(dst, frame, fps, rate, false)?;
+    let sounding: Vec<u32> = facts.iter().map(|f| f.sound_tracks).filter(|n| *n > 0).collect();
+    let most = sounding.iter().copied().max().unwrap_or(0) as usize;
+    let tracks = if apart && most > 1 && sounding.iter().all(|n| *n as usize == most) {
+        most
+    } else {
+        1
+    };
+    let sound = (!sounding.is_empty()).then(|| Sound {
+        rate: 48_000,
+        tracks,
+        to: (0..most).map(|i| if tracks == 1 { 0 } else { i }).collect(),
+    });
+    let out = out(dst, frame, fps, sound, false)?;
     let total: f64 = pieces.iter().flat_map(|p| p.keep.iter()).map(Span::len).sum();
     let hd = crate::win::is_hd(frame);
     let mut offset = 0.0;
@@ -825,18 +937,7 @@ fn combine_into(
             Ok(r) => r,
             Err(_) => nv12_reader(&piece.path, true)?,
         };
-        if let Some(a) = audio {
-            // SAFETY: Media Foundation call with a new media type.
-            unsafe {
-                reader
-                    .SetCurrentMediaType(
-                        a,
-                        None,
-                        &pcm(&MFAudioFormat_PCM, 48_000).map_err(|e| err("audio type", e))?,
-                    )
-                    .map_err(|e| err("audio type", e))?;
-            }
-        }
+        pcm_streams(&reader, &audio, Some(48_000))?;
         let size = (g.shown.0 & !1, g.shown.1 & !1);
         let convert = crate::win::is_hd(size) != hd;
         let place = move |mut p: Vec<u8>| {
@@ -858,28 +959,160 @@ fn combine_into(
             fit: &place,
         };
         for span in piece.keep.iter().filter(|s| !s.is_empty()) {
+            // A video without sound gets silence for its time (`part` fills it).
             part(&input, &out, *span, offset, total, progress, cancel)?;
-            // A video without sound: silence for its time, so the rest stays in step.
-            if let (Some((stream, rate)), None) = (out.audio, audio) {
-                let frames = (span.len() * rate as f64).round() as usize;
-                let mut done = 0;
-                while done < frames {
-                    let n = (frames - done).min(4800);
-                    out.write(
-                        stream,
-                        &vec![0u8; n * 4],
-                        offset + done as f64 / rate as f64,
-                        n as f64 / rate as f64,
-                    )?;
-                    done += n;
-                }
-            }
             offset += span.len();
         }
     }
     out.finish()?;
+    if tracks > 1 {
+        if let Some(p) = pieces.iter().zip(&facts).find(|(_, f)| f.sound_tracks > 1) {
+            same_names(&p.0.path, dst);
+        }
+    }
     progress(1.0);
     Ok(frame)
+}
+
+/// A copy of `src` to play back (VID-042): the same picture, not coded again, and its
+/// sound tracks mixed into one, since players play only the first. `dst` is left out
+/// on failure.
+pub fn playback_copy(src: &Path, dst: &Path) -> Result<(), String> {
+    let result = playback_into(src, dst);
+    if result.is_err() {
+        let _ = std::fs::remove_file(dst);
+    }
+    result
+}
+
+fn playback_into(src: &Path, dst: &Path) -> Result<(), String> {
+    start();
+    let reader = reader(src, false)?;
+    let (Some(video), audio) = streams(&reader) else {
+        return Err("the file has no picture".into());
+    };
+    // SAFETY: Media Foundation calls with arguments that live through each call;
+    // pictures go from the reader to the writer as they are.
+    unsafe {
+        let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
+        let native = reader
+            .GetNativeMediaType(video, 0)
+            .map_err(|e| err("video type", e))?;
+        reader
+            .SetCurrentMediaType(video, None, &native)
+            .map_err(|e| err("video type", e))?;
+        reader
+            .SetStreamSelection(video, true)
+            .map_err(|e| err("stream", e))?;
+        let rate = pcm_streams(&reader, &audio, None)?;
+        for a in &audio {
+            reader
+                .SetStreamSelection(*a, true)
+                .map_err(|e| err("stream", e))?;
+        }
+        let mut attrs = None;
+        MFCreateAttributes(&mut attrs, 1).map_err(|e| err("attributes", e))?;
+        let attrs: IMFAttributes = attrs.ok_or("no attributes")?;
+        attrs
+            .SetGUID(&MF_TRANSCODE_CONTAINERTYPE, &MFTranscodeContainerType_MPEG4)
+            .map_err(|e| err("attributes", e))?;
+        let _ = std::fs::remove_file(dst);
+        let sink = MFCreateSinkWriterFromURL(&HSTRING::from(dst.as_os_str()), None, &attrs)
+            .map_err(|e| err("the video file", e))?;
+        let picture = sink.AddStream(&native).map_err(|e| err("stream", e))?;
+        sink.SetInputMediaType(picture, &native, None)
+            .map_err(|e| err("stream type", e))?;
+        let mut sound = None;
+        if let Some(rate) = rate {
+            let index = sink
+                .AddStream(&pcm(&MFAudioFormat_AAC, rate).map_err(|e| err("audio type", e))?)
+                .map_err(|e| err("audio stream", e))?;
+            sink.SetInputMediaType(
+                index,
+                &pcm(&MFAudioFormat_PCM, rate).map_err(|e| err("audio type", e))?,
+                None,
+            )
+            .map_err(|e| err("audio input type", e))?;
+            sound = Some(index);
+        }
+        sink.BeginWriting().map_err(|e| err("video writing", e))?;
+        let out = Out {
+            sink,
+            video: picture,
+            audio: sound.into_iter().collect(),
+            merge: RefCell::new(Merge::new(
+                rate.unwrap_or(48_000),
+                sound.is_some() as usize,
+                &vec![0; audio.len()],
+            )),
+        };
+        let mut done = vec![false; audio.len() + 1];
+        while done.iter().any(|d| !d) {
+            let (mut actual, mut flags, mut time, mut sample) = (0u32, 0u32, 0i64, None);
+            reader
+                .ReadSample(
+                    MF_SOURCE_READER_ANY_STREAM.0 as u32,
+                    0,
+                    Some(&mut actual),
+                    Some(&mut flags),
+                    Some(&mut time),
+                    Some(&mut sample),
+                )
+                .map_err(|e| err("reading the video", e))?;
+            if flags & MF_SOURCE_READERF_ERROR.0 as u32 != 0 {
+                return Err("the video could not be read to the end".into());
+            }
+            let ended = flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0;
+            if actual == video {
+                if let Some(s) = sample {
+                    out.sink
+                        .WriteSample(out.video, &s)
+                        .map_err(|e| err("writing", e))?;
+                }
+                done[0] |= ended;
+            } else if let Some(i) = audio.iter().position(|a| *a == actual) {
+                if let Some(s) = sample {
+                    let samples = pcm_of(&s)?;
+                    out.put_sound(i, time as f64 / HNS, &samples)?;
+                }
+                if ended {
+                    done[i + 1] = true;
+                    out.merge.borrow_mut().close(i);
+                }
+            }
+        }
+        if !out.audio.is_empty() {
+            // Every stream closed: what is left of the track.
+            let (from, rest) = {
+                let mut m = out.merge.borrow_mut();
+                (m.written(0), m.ready(0))
+            };
+            out.write_sound(0, from, &rest)?;
+        }
+        out.finish()
+    }
+}
+
+/// A decoded sound sample's 16-bit samples.
+fn pcm_of(s: &IMFSample) -> Result<Vec<i16>, String> {
+    // SAFETY: the buffer is locked while copied and unlocked.
+    unsafe {
+        let buffer = s.ConvertToContiguousBuffer().map_err(|e| err("sound", e))?;
+        let mut data = std::ptr::null_mut();
+        let mut len = 0u32;
+        buffer
+            .Lock(&mut data, None, Some(&mut len))
+            .map_err(|e| err("sound", e))?;
+        let bytes = std::slice::from_raw_parts(data, len as usize);
+        let v = bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| i16::from_le_bytes(*b))
+            .collect();
+        let _ = buffer.Unlock();
+        Ok(v)
+    }
 }
 
 /// Writes one part of a file at `offset` of the new video.
@@ -896,7 +1129,7 @@ fn part(
         reader,
         g,
         video,
-        audio,
+        ref audio,
         size,
         fit,
     } = *input;
@@ -906,16 +1139,25 @@ fn part(
     unsafe {
         let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
         let _ = reader.SetStreamSelection(video, true);
-        if let Some(s) = audio {
-            let _ = reader.SetStreamSelection(s, true);
+        for s in audio {
+            let _ = reader.SetStreamSelection(*s, true);
         }
     }
     seek(reader, span.start)?;
+    {
+        // Streams this file does not have hold nothing back.
+        let mut m = out.merge.borrow_mut();
+        m.open();
+        for i in audio.len()..m.streams() {
+            m.close(i);
+        }
+    }
     // The last picture read, waiting to know how long it lasts: a picture from before
     // the part shows from its start.
     let mut held: Option<(Vec<u8>, i64)> = None;
-    let (mut video_done, mut audio_done) = (false, audio.is_none());
-    while !(video_done && audio_done) {
+    let mut video_done = false;
+    let mut audio_done = vec![false; audio.len()];
+    while !(video_done && audio_done.iter().all(|d| *d)) {
         if cancel.load(Ordering::Relaxed) {
             return Err("cancelled".into());
         }
@@ -961,16 +1203,17 @@ fn part(
                 // SAFETY: stops reading this stream.
                 let _ = unsafe { reader.SetStreamSelection(video, false) };
             }
-        } else if Some(stream) == audio {
-            if let Some(s) = sample.filter(|_| !audio_done) {
+        } else if let Some(i) = audio.iter().position(|s| *s == stream) {
+            if let Some(s) = sample.filter(|_| !audio_done[i]) {
                 if time >= b {
-                    audio_done = true;
+                    audio_done[i] = true;
                 } else {
-                    sound(out, &s, time, a, b, offset)?;
+                    sound(out, i, &s, time, a, b, offset)?;
                 }
             }
-            if ended || audio_done {
-                audio_done = true;
+            if ended || audio_done[i] {
+                audio_done[i] = true;
+                out.merge.borrow_mut().close(i);
                 // SAFETY: stops reading this stream.
                 let _ = unsafe { reader.SetStreamSelection(stream, false) };
             }
@@ -979,27 +1222,19 @@ fn part(
     if let Some((p, t)) = held {
         out.write(out.video, &p, at(t), ((b - t) as f64 / HNS).max(1.0 / 1000.0))?;
     }
-    Ok(())
+    // The sound up to the part's end, silence where there was none.
+    out.flush_sound(offset + (b - a) as f64 / HNS)
 }
 
-/// Writes the part of a sound sample that falls in `a..b`, at its place.
-fn sound(out: &Out, s: &IMFSample, time: i64, a: i64, b: i64, offset: f64) -> Result<(), String> {
-    let Some((stream, rate)) = out.audio else {
+/// Writes the part of the `i`-th sound stream's sample that falls in `a..b`, at its
+/// place.
+fn sound(out: &Out, i: usize, s: &IMFSample, time: i64, a: i64, b: i64, offset: f64) -> Result<(), String> {
+    if out.audio.is_empty() {
         return Ok(());
-    };
-    // SAFETY: the buffer is locked while copied and unlocked.
-    let bytes = unsafe {
-        let buffer = s.ConvertToContiguousBuffer().map_err(|e| err("sound", e))?;
-        let mut data = std::ptr::null_mut();
-        let mut len = 0u32;
-        buffer
-            .Lock(&mut data, None, Some(&mut len))
-            .map_err(|e| err("sound", e))?;
-        let v = std::slice::from_raw_parts(data, len as usize).to_vec();
-        let _ = buffer.Unlock();
-        v
-    };
-    let frames = bytes.len() / 4;
+    }
+    let rate = out.merge.borrow().rate;
+    let samples = pcm_of(s)?;
+    let frames = samples.len() / 2;
     let per = HNS / rate as f64;
     let first = (((a - time) as f64 / per).ceil().max(0.0) as usize).min(frames);
     let last = (((b - time) as f64 / per).ceil().max(0.0) as usize).min(frames);
@@ -1007,11 +1242,10 @@ fn sound(out: &Out, s: &IMFSample, time: i64, a: i64, b: i64, offset: f64) -> Re
         return Ok(());
     }
     let start = time as f64 + first as f64 * per;
-    out.write(
-        stream,
-        &bytes[first * 4..last * 4],
+    out.put_sound(
+        i,
         offset + (start - a as f64) / HNS,
-        (last - first) as f64 / rate as f64,
+        &samples[first * 2..last * 2],
     )
 }
 
@@ -1038,29 +1272,169 @@ mod tests {
 
     /// A test video: `frames` of (time, color), lasting until `end`, with a tone.
     fn make(path: &Path, frames: &[(f64, [f64; 3])], end: f64, tone: bool) {
+        let tones: &[(f64, f64)] = if tone { &[(0.0, 99.0)] } else { &[] };
+        make_tracks(path, frames, end, tones);
+    }
+
+    /// A test video with a sound track for each of `tones`: a 440 Hz tone from and
+    /// until those seconds, silence the rest.
+    fn make_tracks(path: &Path, frames: &[(f64, [f64; 3])], end: f64, tones: &[(f64, f64)]) {
         start();
         let _ = std::fs::remove_file(path);
-        let o = out(path, (W, H), 10, tone.then_some(48_000), false).unwrap();
+        let sound = (!tones.is_empty()).then(|| Sound {
+            rate: 48_000,
+            tracks: tones.len(),
+            to: (0..tones.len()).collect(),
+        });
+        let o = out(path, (W, H), 10, sound, false).unwrap();
         for (i, (t, c)) in frames.iter().enumerate() {
             let next = frames.get(i + 1).map(|f| f.0).unwrap_or(end);
             o.write(o.video, &solid(*c), *t, next - t).unwrap();
         }
-        if tone {
+        for (track, (from, until)) in tones.iter().enumerate() {
             let rate = 48_000.0;
             let mut at = 0.0;
             while at < end - 1e-9 {
                 let n = 4800usize.min(((end - at) * rate).round() as usize);
                 let mut pcm = Vec::with_capacity(n * 4);
                 for i in 0..n {
-                    let s = ((at + i as f64 / rate) * 440.0 * std::f64::consts::TAU).sin();
+                    let t = at + i as f64 / rate;
+                    let s = if (*from..*until).contains(&t) {
+                        (t * 440.0 * std::f64::consts::TAU).sin()
+                    } else {
+                        0.0
+                    };
                     let v = ((s * 8000.0) as i16).to_le_bytes();
                     pcm.extend_from_slice(&[v[0], v[1], v[0], v[1]]);
                 }
-                o.write(o.audio.unwrap().0, &pcm, at, n as f64 / rate).unwrap();
+                o.write(o.audio[track], &pcm, at, n as f64 / rate).unwrap();
                 at += n as f64 / rate;
             }
         }
         o.finish().unwrap();
+    }
+
+    /// How loud the first sound track of `path` is between two moments (0 to 1).
+    fn loudness(path: &Path, from: f64, to: f64) -> f64 {
+        start();
+        let reader = reader(path, false).unwrap();
+        let (_, audio) = streams(&reader);
+        let a = audio[0];
+        pcm_streams(&reader, &[a], Some(48_000)).unwrap();
+        // SAFETY: Media Foundation reading calls.
+        unsafe {
+            let _ = reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false);
+            reader.SetStreamSelection(a, true).unwrap();
+        }
+        let (mut sum, mut n) = (0.0f64, 0usize);
+        loop {
+            let (mut flags, mut time, mut sample) = (0u32, 0i64, None);
+            // SAFETY: a read from the selected stream.
+            unsafe {
+                reader
+                    .ReadSample(a, 0, None, Some(&mut flags), Some(&mut time), Some(&mut sample))
+                    .unwrap();
+            }
+            if let Some(s) = sample {
+                let samples = pcm_of(&s).unwrap();
+                for (i, f) in samples.as_chunks::<2>().0.iter().enumerate() {
+                    let t = time as f64 / HNS + i as f64 / 48_000.0;
+                    if (from..to).contains(&t) {
+                        let v = f[0] as f64 / 32768.0;
+                        sum += v * v;
+                        n += 1;
+                    }
+                }
+            }
+            if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
+                break;
+            }
+        }
+        (sum / n.max(1) as f64).sqrt()
+    }
+
+    /// Red, green and blue seconds, with a tone in the first track for the first
+    /// second and in the second for the last.
+    fn two_tracks(path: &Path) {
+        let mut frames = Vec::new();
+        for i in 0..30 {
+            frames.push((i as f64 / 10.0, [RED, GREEN, BLUE][i / 10]));
+        }
+        make_tracks(path, &frames, 3.0, &[(0.0, 1.0), (2.0, 3.0)]);
+        let names = ["Microphone".to_string(), "System audio".to_string()];
+        crate::mp4::name_sound_tracks(path, &names).unwrap();
+    }
+
+    /// VID-042: a cut keeps the tracks apart, with their names; a silent copy has none.
+    #[test]
+    fn tracks_kept_apart_when_cut() {
+        let src = dir().join("tracks-src.mp4");
+        let dst = dir().join("tracks-cut.mp4");
+        let silent = dir().join("tracks-silent.mp4");
+        two_tracks(&src);
+        assert_eq!(facts(&src).unwrap().sound_tracks, 2);
+        let keep = [Span::new(0.0, 1.0), Span::new(2.0, 3.0)];
+        export(&src, &dst, &keep, true, &mut |_| {}, &AtomicBool::new(false)).unwrap();
+        assert_eq!(facts(&dst).unwrap().sound_tracks, 2);
+        assert_eq!(
+            crate::mp4::sound_track_names(&dst).unwrap(),
+            ["Microphone", "System audio"]
+        );
+        // The first track still holds only the microphone's tone (its first second).
+        assert!(loudness(&dst, 0.2, 0.8) > 0.1);
+        assert!(loudness(&dst, 1.2, 1.8) < 0.02);
+        export(&src, &silent, &keep, false, &mut |_| {}, &AtomicBool::new(false)).unwrap();
+        let f = facts(&silent).unwrap();
+        assert_eq!((f.sound, f.sound_tracks), (false, 0));
+    }
+
+    /// VID-042: the copy played back has one track where both are heard.
+    #[test]
+    fn played_back_with_the_tracks_mixed() {
+        let src = dir().join("mixed-src.mp4");
+        let dst = dir().join("mixed.mp4");
+        two_tracks(&src);
+        playback_copy(&src, &dst).unwrap();
+        let f = facts(&dst).unwrap();
+        assert_eq!(f.sound_tracks, 1);
+        assert!((f.duration - 3.0).abs() < 0.15, "duration {}", f.duration);
+        assert!(near(color_at(&dst, 2.5), BLUE));
+        assert!(loudness(&dst, 0.2, 0.8) > 0.1, "the microphone");
+        assert!(loudness(&dst, 2.2, 2.8) > 0.1, "the system's sound");
+        assert!(loudness(&dst, 1.2, 1.8) < 0.02, "silence between");
+    }
+
+    /// VID-042: combined videos keep their tracks apart only when asked and when all
+    /// have them; otherwise one track with everything.
+    #[test]
+    fn combined_tracks() {
+        let a = dir().join("combine-tracks-a.mp4");
+        let b = dir().join("combine-tracks-b.mp4");
+        let one = dir().join("combine-tracks-one.mp4");
+        two_tracks(&a);
+        two_tracks(&b);
+        three(&one, true);
+        let piece = |p: &Path| Piece {
+            path: p.to_path_buf(),
+            keep: vec![Span::new(0.0, 3.0)],
+        };
+        let cancel = AtomicBool::new(false);
+        let apart = dir().join("combined-apart.mp4");
+        combine(&[piece(&a), piece(&b)], &apart, true, &mut |_| {}, &cancel).unwrap();
+        assert_eq!(facts(&apart).unwrap().sound_tracks, 2);
+        assert_eq!(
+            crate::mp4::sound_track_names(&apart).unwrap(),
+            ["Microphone", "System audio"]
+        );
+        let together = dir().join("combined-together.mp4");
+        combine(&[piece(&a), piece(&b)], &together, false, &mut |_| {}, &cancel).unwrap();
+        assert_eq!(facts(&together).unwrap().sound_tracks, 1);
+        // The second track's tone is in the one track now.
+        assert!(loudness(&together, 2.2, 2.8) > 0.1);
+        let mixed = dir().join("combined-mixed.mp4");
+        combine(&[piece(&a), piece(&one)], &mixed, true, &mut |_| {}, &cancel).unwrap();
+        assert_eq!(facts(&mixed).unwrap().sound_tracks, 1);
+        assert!(loudness(&mixed, 4.0, 5.0) > 0.1, "the second video's tone");
     }
 
     const RED: [f64; 3] = [200.0, 30.0, 30.0];
@@ -1255,7 +1629,7 @@ mod tests {
                 keep: vec![Span::new(0.0, 2.0)],
             },
         ];
-        let size = combine(&pieces, &dst, &mut |_| {}, &AtomicBool::new(false)).unwrap();
+        let size = combine(&pieces, &dst, false, &mut |_| {}, &AtomicBool::new(false)).unwrap();
         assert_eq!(size, (W, H));
         let info = crate::info(&dst).unwrap();
         assert!((info.duration - 3.0).abs() < 0.15, "duration {}", info.duration);

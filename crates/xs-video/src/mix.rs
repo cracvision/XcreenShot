@@ -143,6 +143,131 @@ impl Mixer {
     }
 }
 
+/// Sound read from a file's streams and written as one or more tracks (VID-042): each
+/// stream goes to one track, added to the others that share it; every sample at the
+/// frame its time says. Used when a video is edited or played back.
+#[derive(Debug)]
+pub struct Merge {
+    pub rate: u32,
+    tracks: Vec<Lane>,
+    /// For each stream: its track, where what it gave ends (frames) and whether it is
+    /// still giving.
+    streams: Vec<(usize, u64, bool)>,
+}
+
+#[derive(Debug, Default)]
+struct Lane {
+    base: u64,
+    frames: VecDeque<[i32; 2]>,
+}
+
+/// How far one stream may run ahead of another sharing its track before the slow one
+/// counts as silent: 10 s.
+const SLACK_SECONDS: f64 = 10.0;
+
+impl Merge {
+    /// `to[i]` is the track of stream `i`.
+    pub fn new(rate: u32, tracks: usize, to: &[usize]) -> Merge {
+        Merge {
+            rate,
+            tracks: (0..tracks).map(|_| Lane::default()).collect(),
+            streams: to.iter().map(|t| (*t, 0, true)).collect(),
+        }
+    }
+
+    pub fn tracks(&self) -> usize {
+        self.tracks.len()
+    }
+
+    /// How many streams it reads.
+    pub fn streams(&self) -> usize {
+        self.streams.len()
+    }
+
+    /// The track `stream` goes to.
+    pub fn track_of(&self, stream: usize) -> Option<usize> {
+        self.streams.get(stream).map(|s| s.0)
+    }
+
+    /// Puts `samples` (interleaved stereo) of `stream` at `at` seconds. What overlaps
+    /// sound this stream already gave, or sound already written, is left out.
+    pub fn put(&mut self, stream: usize, at: f64, samples: &[i16]) {
+        let Some(&(track, cursor, _)) = self.streams.get(stream) else {
+            return;
+        };
+        let start = (at * self.rate as f64).round().max(0.0) as u64;
+        let lane = &mut self.tracks[track];
+        let frames = samples.as_chunks::<2>().0;
+        let mut end = cursor;
+        for (i, f) in frames.iter().enumerate() {
+            let pos = start + i as u64;
+            if pos < cursor || pos < lane.base {
+                continue;
+            }
+            let k = (pos - lane.base) as usize;
+            while lane.frames.len() <= k {
+                lane.frames.push_back([0, 0]);
+            }
+            lane.frames[k][0] += f[0] as i32;
+            lane.frames[k][1] += f[1] as i32;
+            end = pos + 1;
+        }
+        self.streams[stream].1 = end.max(cursor);
+    }
+
+    /// `stream` gives nothing more until [`open`](Self::open): it no longer holds
+    /// back its track.
+    pub fn close(&mut self, stream: usize) {
+        if let Some(s) = self.streams.get_mut(stream) {
+            s.2 = false;
+        }
+    }
+
+    /// Every stream gives again (the next part of an edit).
+    pub fn open(&mut self) {
+        for s in &mut self.streams {
+            s.2 = true;
+        }
+    }
+
+    /// Where `track`'s written sound ends, in frames.
+    pub fn written(&self, track: usize) -> u64 {
+        self.tracks[track].base
+    }
+
+    /// The frames of `track` that every stream still giving to it has reached, from
+    /// [`written`](Self::written): the sum, held within 16 bits.
+    pub fn ready(&mut self, track: usize) -> Vec<i16> {
+        let cursors = || self.streams.iter().filter(|s| s.0 == track);
+        let furthest = cursors().map(|s| s.1).max().unwrap_or(0);
+        let reached = cursors().filter(|s| s.2).map(|s| s.1).min().unwrap_or(furthest);
+        let slack = (SLACK_SECONDS * self.rate as f64) as u64;
+        self.take(track, reached.max(furthest.saturating_sub(slack)))
+    }
+
+    /// All of `track` up to `upto` frames, silence where nothing came; the streams
+    /// that fed it start again from there.
+    pub fn flush(&mut self, track: usize, upto: u64) -> Vec<i16> {
+        for s in self.streams.iter_mut().filter(|s| s.0 == track) {
+            s.1 = s.1.max(upto);
+        }
+        self.take(track, upto)
+    }
+
+    fn take(&mut self, track: usize, upto: u64) -> Vec<i16> {
+        let lane = &mut self.tracks[track];
+        let n = upto.saturating_sub(lane.base) as usize;
+        let mut out = Vec::with_capacity(n * 2);
+        for _ in 0..n {
+            let f = lane.frames.pop_front().unwrap_or([0, 0]);
+            out.push(f[0].clamp(-32768, 32767) as i16);
+            out.push(f[1].clamp(-32768, 32767) as i16);
+        }
+        lane.base += n as u64;
+        out
+    }
+}
+
 /// The microphone's automatic level (VID-039): it follows the voice's loudness in
 /// short blocks and moves the gain slowly towards a steady level, faster down than
 /// up; it never raises background noise and never clips.
@@ -398,6 +523,37 @@ mod tests {
             / samples.len().max(1) as f32)
             .sqrt();
         20.0 * rms.max(1e-9).log10()
+    }
+
+    #[test]
+    fn streams_merged_into_tracks() {
+        // Two streams into one track: added, written once both have reached a frame.
+        let mut m = Merge::new(10, 1, &[0, 0]);
+        m.put(0, 0.0, &[100, 100, 100, 100, 100, 100]);
+        assert!(m.ready(0).is_empty());
+        m.put(1, 0.1, &[5, 5, 5, 5]);
+        assert_eq!(m.ready(0), [100, 100, 105, 105, 105, 105]);
+        // An overlap of the same stream is left out; a gap is silence.
+        m.put(0, 0.2, &[1, 1, 1, 1]);
+        m.put(1, 0.5, &[2, 2]);
+        assert_eq!(m.written(0), 3);
+        assert_eq!(m.ready(0), [1, 1]);
+        m.close(0);
+        assert_eq!(m.ready(0), [0, 0, 2, 2]);
+        assert_eq!(m.flush(0, 8), [0, 0, 0, 0]);
+        // Stays within 16 bits.
+        m.open();
+        m.put(0, 0.8, &[30000, -30000]);
+        m.put(1, 0.8, &[30000, -30000]);
+        assert_eq!(m.ready(0), [32767, -32768]);
+
+        // Two streams kept apart.
+        let mut m = Merge::new(10, 2, &[0, 1]);
+        m.put(0, 0.0, &[1, 1, 1, 1]);
+        m.put(1, 0.1, &[2, 2]);
+        assert_eq!(m.ready(0), [1, 1, 1, 1]);
+        assert_eq!(m.ready(1), [0, 0, 2, 2]);
+        assert!(m.flush(1, 2).is_empty());
     }
 
     #[test]

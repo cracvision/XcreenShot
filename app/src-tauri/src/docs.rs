@@ -38,12 +38,16 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let core = app.state::<AppState>().core.clone();
     let editor = xs_editor::editor(&core);
     if let [id, "video"] = parts.as_slice() {
-        let path = editor
+        let found = editor
             .store
-            .with(id, |d| d.path.clone().filter(|_| d.is_video()))
+            .with(id, |d| {
+                let tracks = d.video.as_ref().map_or(0, |f| f.sound_tracks);
+                d.path.clone().filter(|_| d.is_video()).map(|p| (p, tracks))
+            })
             .flatten();
-        return match path {
-            Some(p) => video(&p, request),
+        return match found {
+            // Sound tracks apart play mixed (VID-042).
+            Some((p, tracks)) => video(&xs_editor::video::playback_file(&core, &p, tracks), request),
             None => Response::builder()
                 .status(404)
                 .body(Vec::new())

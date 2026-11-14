@@ -556,6 +556,14 @@ pub fn level(core: &Core) -> Value {
     v
 }
 
+/// The names of the microphone's and the system's sound tracks (VID-042).
+pub fn track_names(lang: Lang) -> [String; 2] {
+    [
+        tr(lang, "ui.video.track_microphone", &[]),
+        tr(lang, "ui.video.track_system", &[]),
+    ]
+}
+
 /// `record.sound` (VID-011, VID-039, VID-040): the system's sound and the microphone
 /// (on or off, its device, its automatic level), as the settings for the next
 /// recordings and, while recording, from now on. The microphone's device changes
@@ -1230,6 +1238,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         recovery: Some(recovery_file.clone()),
         microphone: microphone_of(core, p),
         slides: slides.map(|(feed, _)| xs_video::slides::Source(feed)),
+        // Each in its own track, named in the app's language (VID-042).
+        sound_tracks: (!core.settings.get_bool("video.combineAudioTracks")).then(|| track_names(lang)),
     })
     .map_err(|e| {
         if hide {

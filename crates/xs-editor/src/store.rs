@@ -588,6 +588,7 @@ impl DocStore {
                     fps,
                     codec: "GIF".into(),
                     sound: false,
+                    sound_tracks: 0,
                 });
                 Ok(doc)
             }

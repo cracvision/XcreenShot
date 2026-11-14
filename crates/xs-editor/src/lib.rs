@@ -5425,6 +5425,16 @@ fn restore_video(
         wanted
     };
     xs_video::recover(video, &dst).map_err(|e| failed(&e))?;
+    // A recording with the microphone and the system's sound apart (VID-042).
+    if xs_video::facts(&dst).is_ok_and(|f| f.sound_tracks == 2) {
+        let names = [
+            tr(lang, "ui.video.track_microphone", &[]),
+            tr(lang, "ui.video.track_system", &[]),
+        ];
+        if let Err(e) = xs_video::mp4::name_sound_tracks(&dst, &names) {
+            tracing::warn!(error = %e, "video: the sound tracks keep no names");
+        }
+    }
     recovery::remove(dir, &entry.id);
     library.scan();
     tracing::info!("a recording cut short was recovered");

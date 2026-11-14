@@ -1212,7 +1212,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"},
                 "frames": {"type": "integer"}, "fpsAverage": {"type": "number"}, "fpsMax": {"type": "integer"},
                 "codec": {"type": "string"}, "bitrate": {"type": "integer"},
-                "audio": {"type": "array", "description": "{channels, rate} of each sound track"}
+                "audio": {"type": "array", "description": "{channels, rate} of each sound track, with its name when there are several (VID-042)"}
             }})),
         // Videos open in the editor (ADR 0008). Times are seconds of the video as it
         // is now, after its cuts.

@@ -739,6 +739,14 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(false),
             "VID-041",
         ),
+        // The microphone and the system's sound in one track, or each in its own (VID-042).
+        def(
+            "video.combineAudioTracks",
+            "video",
+            boolean(),
+            json!(true),
+            "VID-042",
+        ),
         // A warning in the bar when the microphone is muted or nothing comes from it.
         def("video.mutedMicAlert", "video", boolean(), json!(true), "VID-019"),
         // The camera (VID-031 to VID-036): allowed in videos at all, switched on (for

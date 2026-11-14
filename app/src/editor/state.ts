@@ -700,6 +700,8 @@ export interface VideoInfo {
   fps: number;
   codec: string;
   sound: boolean;
+  /** Two when the microphone and the system's sound are apart (VID-042). */
+  soundTracks?: number;
   /** After the cuts. */
   length: number;
   /** The parts of the file kept: [start, end]. */

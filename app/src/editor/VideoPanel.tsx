@@ -50,7 +50,14 @@ export function VideoPanel({ doc }: { doc: DocDetails }) {
     // A GIF's frames last what each needs: no single rate (VID-068).
     ...(gif ? [] : [[t("ui.video.info.fps"), `${v.fps}`] as [string, string]]),
     [t("ui.video.info.codec"), v.codec],
-    [t("ui.video.info.sound"), v.sound ? t("ui.video.info.yes") : t("ui.video.info.no")],
+    [
+      t("ui.video.info.sound"),
+      !v.sound
+        ? t("ui.video.info.no")
+        : (v.soundTracks ?? 1) > 1
+          ? t("ui.video.sound_tracks", { count: v.soundTracks })
+          : t("ui.video.info.yes"),
+    ],
   ];
   if (v.length < v.duration - 0.05)
     rows.splice(2, 0, [t("ui.video.info.file_duration"), formatTime(v.duration)]);

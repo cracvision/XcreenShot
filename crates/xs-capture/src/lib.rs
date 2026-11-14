@@ -1850,6 +1850,7 @@ pub fn extension() -> Extension {
                     "fps": f.fps,
                     "codec": f.codec,
                     "sound": f.sound,
+                    "soundTracks": f.sound_tracks,
                 }));
             }
             let i = xs_video::info(file).map_err(|e| {
@@ -1862,7 +1863,14 @@ pub fn extension() -> Extension {
                 .and_then(|m| m.created())
                 .ok()
                 .map(|t| chrono::DateTime::<chrono::Local>::from(t).to_rfc3339());
+            // Each sound track; with the microphone and the system's sound apart, two
+            // with their names (VID-042).
+            let names = xs_video::mp4::sound_track_names(file).unwrap_or_default();
             let audio = match i.audio {
+                Some((channels, rate)) if names.len() > 1 => json!(names
+                    .iter()
+                    .map(|n| json!({ "channels": channels, "rate": rate, "name": n }))
+                    .collect::<Vec<_>>()),
                 Some((channels, rate)) => json!([{ "channels": channels, "rate": rate }]),
                 None => json!([]),
             };

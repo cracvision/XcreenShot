@@ -61,6 +61,9 @@ export function RecordBar() {
   const active = ["ready", "recording", "paused"].includes(state.status);
   const levels = useLevels(active);
   const alerts = useSetting("video.mutedMicAlert", true);
+  // The microphone and the system's sound in tracks of their own (VID-042).
+  const combineTracks = useSetting("video.combineAudioTracks", true);
+  const micOn = useSetting("video.microphone", true);
   const [dismissed, setDismissed] = useState<Partial<Record<string, number>>>({});
   const [menuRows, setMenuRows] = useState(0);
   // Low on its monitor, the bar grows upwards (for the menu and the warning).
@@ -111,13 +114,14 @@ export function RecordBar() {
   };
   const fits = (m: number) => (m >= 120 ? `${Math.floor(m / 60)} h` : `${m} min`);
   // The Ready summary (VID-006): it gives way first when the bar is short of room.
+  const apartTracks = !combineTracks && micOn && state.systemAudio === true;
   const summary =
     state.minutesFree != null && state.minutesFree < 10
       ? t("ui.recbar.little_space", { minutes: state.minutesFree })
       : t(state.open === "none" ? "ui.recbar.summary_library" : "ui.recbar.summary_editor", {
           fps: state.fps ?? 0,
           codec: state.codec ?? "H.264",
-        });
+        }) + (apartTracks ? ` · ${t("ui.recbar.tracks_apart")}` : "");
 
   const strip = warning && (
     <SoundStrip
@@ -230,6 +234,7 @@ export function RecordBar() {
           title={[
             summary,
             state.minutesFree != null ? t("ui.recbar.fits", { time: fits(state.minutesFree) }) : "",
+            apartTracks ? t("ui.recbar.tracks_apart_hint") : "",
           ]
             .filter(Boolean)
             .join(" · ")}

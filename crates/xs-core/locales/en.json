@@ -1892,6 +1892,10 @@
     "video_slidesEnlarge": {
       "label": "Enlarge small slides",
       "description": "Images smaller than the video are enlarged to fill it; off, they show at their size so they stay sharp."
+    },
+    "video_combineAudioTracks": {
+      "label": "Combine audio tracks",
+      "description": "The microphone and the system sound in one track, the most compatible. Off: each in its own track (when both are recorded), to adjust them separately in a video editor. Some players only play the first track."
     }
   },
   "errors": {
@@ -4847,7 +4851,9 @@
       "without_camera": "Record without camera",
       "mic_denoise": "Reduce background noise",
       "mic_talking": "You seem to be talking, but the microphone isn't recording",
-      "mic_on": "Turn on microphone"
+      "mic_on": "Turn on microphone",
+      "tracks_apart": "separate audio tracks",
+      "tracks_apart_hint": "The microphone and the system sound go in separate tracks. Some players only play the first one."
     },
     "video": {
       "silent_suffix": "silent",
@@ -4964,7 +4970,10 @@
       "export_h264_help": "Converted to H.264: plays on every computer and browser",
       "export_gif": "Animated GIF…",
       "export_gif_help": "Chooses its size and frames first",
-      "exported": "Exported as H.264"
+      "exported": "Exported as H.264",
+      "track_microphone": "Microphone",
+      "track_system": "System audio",
+      "sound_tracks": "{{count}} audio tracks"
     },
     "livedraw": {
       "title": "Live drawing",

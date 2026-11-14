@@ -17,6 +17,7 @@ mod audio;
 #[cfg(test)]
 mod demo;
 pub mod mix;
+pub mod mp4;
 #[cfg(windows)]
 mod power;
 #[cfg(windows)]
@@ -108,7 +109,9 @@ pub use audio::{input_muted, inputs, Input};
 pub use win::{audio_info, first_frame, free_space, info, probe, size, warm_up};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
 #[cfg(windows)]
-pub use win_edit::{combine, export, facts, frame_at, frames, recover, recovered_length, remux, Piece};
+pub use win_edit::{
+    combine, export, facts, frame_at, frames, playback_copy, recover, recovered_length, remux, Piece,
+};
 
 /// Gets each frame of [`frames`]: its time in the result, width, height and BGRA
 /// pixels; returns false to stop.
@@ -125,6 +128,9 @@ pub struct Facts {
     pub fps: u32,
     pub codec: String,
     pub sound: bool,
+    /// How many sound tracks it has (VID-042): two when the microphone and the
+    /// system's sound were kept apart.
+    pub sound_tracks: u32,
 }
 
 /// What a video holds, quickly (not available on this platform yet).
@@ -152,6 +158,7 @@ pub struct Piece {
 pub fn combine(
     _pieces: &[Piece],
     _dst: &std::path::Path,
+    _apart: bool,
     _progress: &mut dyn FnMut(f64),
     _cancel: &AtomicBool,
 ) -> Result<(u32, u32), String> {
@@ -166,6 +173,12 @@ pub fn frames(
     _fps: f64,
     _each: &mut FrameSink,
 ) -> Result<(), String> {
+    Err("not available on this platform yet".into())
+}
+
+/// A copy to play back with its sound tracks mixed (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn playback_copy(_src: &std::path::Path, _dst: &std::path::Path) -> Result<(), String> {
     Err("not available on this platform yet".into())
 }
 
@@ -412,6 +425,9 @@ pub struct Options {
     /// Narrated slides (VID-071): the picture comes from them, at the size of `area`,
     /// instead of the screen.
     pub slides: Option<slides::Source>,
+    /// The microphone and the system's sound kept apart (VID-042): the names of their
+    /// tracks. Only when both are recorded; otherwise one track.
+    pub sound_tracks: Option<[String; 2]>,
 }
 
 /// The microphone of a recording (VID-039).
