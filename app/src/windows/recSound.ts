@@ -20,6 +20,8 @@ export interface MicLevel {
   none: boolean;
   /** The system's privacy settings do not let XcreenShot use it (VID-077). */
   blocked?: boolean;
+  /** Someone talks while it is off (VID-019). */
+  talking?: boolean;
 }
 
 /** The camera now (VID-031, VID-038). */
@@ -77,13 +79,16 @@ export function meterFill(level: number): number {
   return Math.min(1, Math.max(0, (20 * Math.log10(level) + 60) / 60));
 }
 
-export type SoundWarning = "mic_blocked" | "mic_none" | "mic_muted" | "mic_missing" | "mic_quiet";
+export type SoundWarning =
+  "mic_blocked" | "mic_none" | "mic_muted" | "mic_missing" | "mic_quiet" | "mic_talking";
 
 /** The warning to show now, if any. Blocked by the system's privacy comes first
  * (VID-077); muted and silent follow the preference "Warn when the microphone is
  * muted" (VID-019); a missing device is said in Ready (VID-043). */
 export function soundWarning(l: SoundLevels | null, alerts: boolean): SoundWarning | null {
   const m = l?.microphone;
+  // Off, and someone talks: it may have been forgotten (VID-019).
+  if (l && m && !m.on) return alerts && m.talking ? "mic_talking" : null;
   if (!l || !m?.on) return null;
   if (m.blocked) return "mic_blocked";
   if (m.none) return "mic_none";
@@ -151,6 +156,8 @@ export function warningActions(w: BarWarning): StripAction[] {
     case "mic_missing":
     case "camera_missing":
       return [];
+    case "mic_talking":
+      return [{ label: "mic_on", command: "record.sound", params: { microphone: true } }];
     default:
       return [{ label: "open_sound_settings", command: "record.sound_settings" }];
   }

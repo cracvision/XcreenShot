@@ -26,6 +26,8 @@ pub struct Levels {
     pub system: Option<Level>,
     /// The microphone is muted in the system, or its volume is at zero (VID-019).
     pub microphone_muted: bool,
+    /// Someone is talking into the microphone while it does not record (VID-019).
+    pub talking: bool,
 }
 
 /// Below this (about -80 dBFS) nothing came: a muted or dead microphone gives zeros,
@@ -228,9 +230,229 @@ impl Agc {
     }
 }
 
+/// The rate the microphone is read at: the one the noise reduction works at.
+pub const MIC_RATE: u32 = 48_000;
+
+/// The microphone cleaned of background noise (VID-041) and listened to for a voice
+/// (VID-019), in blocks of 10 ms. The noise reduction lowers the noise under the voice;
+/// between words a soft gate lowers what is left by 12 dB more, opening 30 ms before a
+/// voice (it looks ahead) and closing 200 ms after it. What comes out is what went in,
+/// [`DELAY`](Self::DELAY) later, cleaned when asked: always that late, on or off, so
+/// switching it never moves the voice.
+pub struct Clean {
+    state: Box<nnnoiseless::DenoiseState<'static>>,
+    pending: Vec<f32>,
+    /// Blocks cleaned, waiting for the ones after them (the look ahead).
+    blocks: VecDeque<(Vec<f32>, f32)>,
+    ready: VecDeque<[i16; 2]>,
+    /// Whether each of the last 2 s of blocks held a voice.
+    voiced: VecDeque<bool>,
+    /// Blocks since the last voice, and the gate's gain now.
+    since_voice: usize,
+    gain: f32,
+}
+
+/// A block of the noise reduction: 10 ms at 48 kHz.
+const BLOCK: usize = nnnoiseless::DenoiseState::FRAME_SIZE;
+/// Two seconds of blocks.
+const WINDOW: usize = 200;
+/// The gate looks 3 blocks ahead and stays open 20 blocks after a voice.
+const AHEAD: usize = 3;
+const HANGOVER: usize = 20;
+/// The gate, closed: -12 dB.
+const FLOOR: f32 = 0.25;
+
+impl Default for Clean {
+    fn default() -> Self {
+        Clean {
+            state: nnnoiseless::DenoiseState::new(),
+            pending: Vec::with_capacity(BLOCK * 2),
+            blocks: VecDeque::with_capacity(AHEAD + 1),
+            ready: std::iter::repeat_n([0, 0], BLOCK * (AHEAD + 1)).collect(),
+            voiced: VecDeque::with_capacity(WINDOW),
+            since_voice: HANGOVER + 1,
+            gain: 1.0,
+        }
+    }
+}
+
+impl Clean {
+    /// How late what comes out is, in seconds.
+    pub const DELAY: f64 = (BLOCK * (AHEAD + 1)) as f64 / MIC_RATE as f64;
+
+    /// Takes interleaved stereo samples at [`MIC_RATE`]; gives as many back, cleaned of
+    /// background noise when `on`.
+    pub fn process(&mut self, samples: &[i16], on: bool) -> Vec<i16> {
+        for f in samples.as_chunks::<2>().0 {
+            self.pending.push((f[0] as f32 + f[1] as f32) / 2.0);
+        }
+        let mut out = [0f32; BLOCK];
+        let mut start = 0;
+        while self.pending.len() - start >= BLOCK {
+            let input = &self.pending[start..start + BLOCK];
+            let voice = self.state.process_frame(&mut out, input);
+            if self.voiced.len() == WINDOW {
+                self.voiced.pop_front();
+            }
+            self.voiced.push_back(voice > 0.8);
+            let chosen = if on { out.to_vec() } else { input.to_vec() };
+            self.blocks.push_back((chosen, voice));
+            start += BLOCK;
+            if self.blocks.len() > AHEAD {
+                self.emit(on);
+            }
+        }
+        self.pending.drain(..start);
+        let n = samples.len() / 2;
+        let mut result = Vec::with_capacity(n * 2);
+        for _ in 0..n {
+            let f = self.ready.pop_front().unwrap_or([0, 0]);
+            result.extend_from_slice(&f);
+        }
+        result
+    }
+
+    /// Lets the oldest block out, through the gate when `on`.
+    fn emit(&mut self, on: bool) {
+        let voice_near = self.blocks.iter().any(|(_, v)| *v > 0.5);
+        let Some((block, _)) = self.blocks.pop_front() else {
+            return;
+        };
+        if voice_near {
+            self.since_voice = 0;
+        } else {
+            self.since_voice += 1;
+        }
+        let target = if !on || self.since_voice <= HANGOVER {
+            1.0
+        } else {
+            FLOOR
+        };
+        // A ramp over the block: no click when it opens or closes.
+        let from = if on { self.gain } else { 1.0 };
+        for (i, v) in block.iter().enumerate() {
+            let g = from + (target - from) * (i + 1) as f32 / BLOCK as f32;
+            let v = (v * g).clamp(-32768.0, 32767.0) as i16;
+            self.ready.push_back([v, v]);
+        }
+        self.gain = target;
+    }
+
+    /// Someone talks: a voice in at least 1.2 of the last 2 s. A fan, typing or music
+    /// alone do not count (VID-019).
+    pub fn talking(&self) -> bool {
+        self.voiced.iter().filter(|v| **v).count() >= WINDOW * 6 / 10
+    }
+}
+
+/// Sound from one rate to another, joining the samples in straight lines: for the
+/// microphone, read at 48 kHz, when the system's sound plays at 44.1 kHz.
+#[derive(Debug)]
+pub struct Resample {
+    /// Input frames for each output frame.
+    step: f64,
+    /// Where the next output frame falls, from the last input frame kept.
+    at: f64,
+    last: [i16; 2],
+}
+
+impl Resample {
+    pub fn new(from: u32, to: u32) -> Resample {
+        Resample {
+            step: from as f64 / to as f64,
+            at: 0.0,
+            last: [0, 0],
+        }
+    }
+
+    /// Interleaved stereo at the first rate, to the second.
+    pub fn process(&mut self, samples: &[i16]) -> Vec<i16> {
+        let frames = samples.as_chunks::<2>().0;
+        let mut out = Vec::with_capacity((frames.len() as f64 / self.step) as usize * 2 + 4);
+        // Positions count from the frame kept from before (index 0).
+        let total = frames.len() as f64;
+        let get = |i: usize| if i == 0 { self.last } else { frames[i - 1] };
+        while self.at < total {
+            let i = self.at.floor() as usize;
+            let t = (self.at - i as f64) as f32;
+            let (a, b) = (get(i), get(i + 1));
+            for c in 0..2 {
+                out.push((a[c] as f32 + (b[c] as f32 - a[c] as f32) * t) as i16);
+            }
+            self.at += self.step;
+        }
+        self.at -= total;
+        if let Some(l) = frames.last() {
+            self.last = *l;
+        }
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rms_db(samples: &[i16]) -> f32 {
+        let rms = (samples.iter().map(|s| (*s as f32 / 32768.0).powi(2)).sum::<f32>()
+            / samples.len().max(1) as f32)
+            .sqrt();
+        20.0 * rms.max(1e-9).log10()
+    }
+
+    #[test]
+    fn the_noise_goes_and_the_voice_keeps_its_place() {
+        // Noise like a fan's: white, steady, -30 dBFS, 4 s.
+        let mut seed = 12345u32;
+        let mut noise = Vec::new();
+        for _ in 0..48_000 * 4 {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let v = ((seed >> 16) as i32 - 32768) as f32 / 32768.0 * 0.055 * 32767.0;
+            noise.extend_from_slice(&[v as i16, v as i16]);
+        }
+        let mut clean = Clean::default();
+        let mut out = Vec::new();
+        for chunk in noise.chunks(960 * 3 + 2) {
+            out.extend(clean.process(chunk, true));
+        }
+        assert_eq!(out.len(), noise.len(), "as much comes out as went in");
+        let last = 48_000 * 2;
+        let (before, after) = (
+            rms_db(&noise[noise.len() - last..]),
+            rms_db(&out[out.len() - last..]),
+        );
+        println!("noise {before:.1} dB, cleaned {after:.1} dB");
+        assert!(before - after >= 20.0, "at least 20 dB less: {before} → {after}");
+        assert!(!clean.talking(), "a fan is not a voice");
+        // Off: the same sound, 10 ms later.
+        let mut off = Clean::default();
+        let tone: Vec<i16> = (0..4800)
+            .flat_map(|n| {
+                let v = ((n as f32 / 48.0).sin() * 8000.0) as i16;
+                [v, v]
+            })
+            .collect();
+        let out = off.process(&tone, false);
+        let late = (Clean::DELAY * 48_000.0) as usize;
+        assert_eq!(&out[late * 2..], &tone[..tone.len() - late * 2]);
+        assert!(out[..late * 2].iter().all(|s| *s == 0));
+    }
+
+    #[test]
+    fn sound_changes_rate_without_changing_length() {
+        let mut r = Resample::new(48_000, 44_100);
+        let mut total = 0;
+        for _ in 0..100 {
+            let block: Vec<i16> = (0..480).flat_map(|n| [n as i16, -(n as i16)]).collect();
+            total += r.process(&block).len() / 2;
+        }
+        // One second at 48 kHz is one second at 44.1 kHz.
+        assert!((total as i64 - 44_100).abs() <= 1, "{total}");
+        // A steady level stays.
+        let mut r = Resample::new(48_000, 44_100);
+        r.process(&[1000; 96]);
+        assert!(r.process(&[1000; 960]).iter().all(|s| *s == 1000));
+    }
 
     fn tone(frames: usize, amplitude: f32, rate: u32) -> Vec<i16> {
         (0..frames)

@@ -1824,6 +1824,10 @@
     "video_cameraBorderAngle": {
       "label": "Gradient direction",
       "description": "In degrees: 0 goes left to right, 90 top to bottom."
+    },
+    "video_noiseReduction": {
+      "label": "Reduce background noise",
+      "description": "Fans, air conditioning, typing and distant voices filtered out of the microphone while recording, on this computer. The voice stays clear."
     }
   },
   "errors": {
@@ -2997,7 +3001,8 @@
       "video_mic_auto": "Adjust the level automatically",
       "video_sound_settings": "System sound settings…",
       "video_camera": "Camera",
-      "video_camera_device": "Camera"
+      "video_camera_device": "Camera",
+      "video_mic_denoise": "Reduce background noise"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4766,7 +4771,10 @@
       "camera_failed": "The camera couldn't be opened",
       "camera_missing": "The chosen camera isn't connected: using another",
       "retry": "Retry",
-      "without_camera": "Record without camera"
+      "without_camera": "Record without camera",
+      "mic_denoise": "Reduce background noise",
+      "mic_talking": "You seem to be talking, but the microphone isn't recording",
+      "mic_on": "Turn on microphone"
     },
     "video": {
       "silent_suffix": "silent",

@@ -714,6 +714,14 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "VID-039",
         ),
+        // Background noise filtered out of the microphone, on the computer (VID-041).
+        def(
+            "video.noiseReduction",
+            "video",
+            boolean(),
+            json!(false),
+            "VID-041",
+        ),
         // A warning in the bar when the microphone is muted or nothing comes from it.
         def("video.mutedMicAlert", "video", boolean(), json!(true), "VID-019"),
         // The camera (VID-031 to VID-036): allowed in videos at all, switched on (for

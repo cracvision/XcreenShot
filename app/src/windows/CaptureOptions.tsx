@@ -189,6 +189,7 @@ export function VideoOptions({
   const mic = useSetting("video.microphone", true);
   const micDevice = useStringSetting("video.microphoneDevice", "");
   const micAuto = useSetting("video.microphoneAutoLevel", true);
+  const micDenoise = useSetting("video.noiseReduction", false);
   // Cursor and keyboard effects (VID-045 to VID-047): colours and sizes in Preferences.
   const highlight = useSetting("video.highlight", false);
   const clicks = useSetting("video.clicks", false);
@@ -281,6 +282,14 @@ export function VideoOptions({
                 )
               }
             />
+          </label>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={micDenoise}
+              onChange={(e) => set("video.noiseReduction", e.target.checked)}
+            />
+            {t("ui.panel.video_mic_denoise")}
           </label>
           <label className="panel-check">
             <input

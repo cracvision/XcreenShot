@@ -1459,7 +1459,7 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(ALL)
             .result(json!({"type": "object", "properties": {
                 "status": {"type": "string", "enum": ["ready", "recording", "paused", "idle"]},
-                "microphone": {"type": "object", "description": "on, level (0 to 1), clip, quietSeconds (how long nothing has come), muted (in the system), device (its name), wireless, missing (the chosen one is not plugged in: the default is used), none (no input at all)"},
+                "microphone": {"type": "object", "description": "on, level (0 to 1), clip, quietSeconds (how long nothing has come), muted (in the system), device (its name), wireless, missing (the chosen one is not plugged in: the default is used), none (no input at all), blocked (by the system's privacy), talking (someone talks while it is off)"},
                 "systemAudio": {"type": "object", "description": "on, level, clip"},
                 "track": {"type": "boolean", "description": "The video has a sound track"}
             }})),
@@ -1471,13 +1471,15 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "systemAudio": {"type": "boolean", "description": "What the computer plays (VID-040)"},
                     "microphone": {"type": "boolean", "description": "The microphone (VID-039)"},
                     "microphoneDevice": {"type": "string", "description": "An input's id from record.devices; empty: the system's default. Only in Ready or paused"},
-                    "microphoneAutoLevel": {"type": "boolean", "description": "The automatic level"}
+                    "microphoneAutoLevel": {"type": "boolean", "description": "The automatic level"},
+                    "noiseReduction": {"type": "boolean", "description": "Background noise filtered out of the microphone (VID-041)"}
                 }),
                 &[],
             ))
             .result(json!({"type": "object", "properties": {
                 "systemAudio": {"type": "boolean"}, "microphone": {"type": "boolean"},
-                "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"}
+                "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"},
+                "noiseReduction": {"type": "boolean"}
             }})),
         B::new("record.cameras", &["VID-031", "VID-043"])
             .scopes(ALL)

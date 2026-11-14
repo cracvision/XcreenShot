@@ -1084,10 +1084,9 @@ pub(crate) fn record(
         } else {
             None
         };
-        // The microphone (VID-039), at the system sound's rate so they add up.
+        // The microphone (VID-039), at the rate the noise reduction works at.
         let mic = options.microphone.as_ref().and_then(|m| {
-            let rate = loopback.as_ref().map_or(48_000, |l| l.rate);
-            match crate::audio::microphone(m.device.as_deref(), rate) {
+            match crate::audio::microphone(m.device.as_deref(), crate::mix::MIC_RATE) {
                 Ok(c) => Some(c),
                 Err(e) => {
                     tracing::warn!(error = %e, "video: no microphone");
@@ -1169,6 +1168,12 @@ pub(crate) fn record(
     let mut mic_seen = 0u32;
     let (mut mic_gauge, mut system_gauge) = (crate::mix::Gauge::default(), crate::mix::Gauge::default());
     let (mut mic_muted, mut last_mute): (bool, Option<Instant>) = (false, None);
+    // Background noise out (VID-041), and the microphone's 48 kHz to the mix's rate.
+    let mut clean = crate::mix::Clean::default();
+    let mut to_mix = mixer
+        .as_ref()
+        .filter(|mx| mx.rate != crate::mix::MIC_RATE)
+        .map(|mx| crate::mix::Resample::new(crate::mix::MIC_RATE, mx.rate));
     // Cursor and keyboard effects (VID-045 to VID-047): what shows, the hooks that
     // feed it while clicks or keys are wanted, and the password check.
     let mut live = Live::default();
@@ -1355,13 +1360,21 @@ pub(crate) fn record(
             }
             if let Some(m) = &mic {
                 match m.read() {
-                    Ok(mut samples) => {
+                    Ok(samples) => {
                         let raw = crate::mix::peak(&samples);
                         let auto_level = want_mic.as_ref().is_some_and(|m| m.auto_level);
-                        agc.process(&mut samples, mx.rate, auto_level);
+                        let denoise = want_mic.as_ref().is_some_and(|m| m.denoise);
+                        let mut samples = clean.process(&samples, denoise);
+                        agc.process(&mut samples, crate::mix::MIC_RATE, auto_level);
                         mic_gauge.feed(raw, agc.peak, agc.clipped, at_now);
+                        let samples = match to_mix.as_mut() {
+                            Some(r) => r.process(&samples),
+                            None => samples,
+                        };
                         if !paused && !samples.is_empty() {
-                            let target = now_recorded() - samples.len() as f64 / 2.0 / rate;
+                            // Heard 10 ms before it comes out of the noise reduction.
+                            let target =
+                                now_recorded() - crate::mix::Clean::DELAY - samples.len() as f64 / 2.0 / rate;
                             mx.place(&mut mic_track, target, &samples);
                         }
                     }
@@ -1378,7 +1391,7 @@ pub(crate) fn record(
                 // Plugged in again, or switched on: it comes (VID-043).
                 if last_mic_reopen.elapsed() > Duration::from_secs(1) {
                     last_mic_reopen = Instant::now();
-                    mic = crate::audio::microphone(want.device.as_deref(), mx.rate).ok();
+                    mic = crate::audio::microphone(want.device.as_deref(), crate::mix::MIC_RATE).ok();
                     if mic.is_some() {
                         mic_open_for = Some(want.device.clone());
                         had_mic = true;
@@ -1396,6 +1409,7 @@ pub(crate) fn record(
                 microphone: want_mic.is_some().then(|| mic_gauge.reading(at_now)),
                 system: system_on.then(|| system_gauge.reading(at_now)),
                 microphone_muted: want_mic.is_some() && mic_muted,
+                talking: false,
             };
             let upto = ((now_recorded() - 0.25).max(0.0) * rate) as u64;
             let at = mx.written() as f64 / rate;

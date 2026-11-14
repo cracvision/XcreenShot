@@ -57,14 +57,16 @@ pub use meter::Meter;
 pub struct Meter {
     pub microphone: Option<Microphone>,
     pub system_audio: bool,
+    pub listening: bool,
 }
 
 #[cfg(not(windows))]
 impl Meter {
-    pub fn start(microphone: Option<Microphone>, system_audio: bool) -> Meter {
+    pub fn start(microphone: Option<Microphone>, system_audio: bool, listening: bool) -> Meter {
         Meter {
             microphone,
             system_audio,
+            listening,
         }
     }
 
@@ -415,6 +417,8 @@ pub struct Microphone {
     pub device: Option<String>,
     /// The automatic level (on by default).
     pub auto_level: bool,
+    /// Background noise filtered out (VID-041).
+    pub denoise: bool,
 }
 
 /// How often a recording into a fragmented file gets a key frame while something

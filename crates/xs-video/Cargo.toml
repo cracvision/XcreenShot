@@ -8,6 +8,9 @@ publish.workspace = true
 [dependencies]
 serde = { workspace = true }
 tracing = { workspace = true }
+# Background noise out of the microphone, and telling a voice from noise (VID-041,
+# VID-019): RNNoise in Rust, local, BSD-3-Clause.
+nnnoiseless = { version = "0.5", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 windows-numerics = "0.3"

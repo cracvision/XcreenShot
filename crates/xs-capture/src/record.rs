@@ -444,8 +444,18 @@ fn microphone_of(core: &Core, p: &Value) -> Option<xs_video::Microphone> {
         xs_video::Microphone {
             device: Some(device).filter(|d| !d.is_empty() && list.iter().any(|i| &i.id == d)),
             auto_level: core.settings.get_bool("video.microphoneAutoLevel"),
+            denoise: core.settings.get_bool("video.noiseReduction"),
         }
     })
+}
+
+/// The microphone to listen to while it is off, for a voice (VID-019): only with the
+/// warning on, and never stored (APP-054).
+fn listened(core: &Core) -> Option<xs_video::Microphone> {
+    if !core.settings.get_bool("video.mutedMicAlert") || mic_blocked(core) {
+        return None;
+    }
+    microphone_of(core, &json!({ "microphone": true }))
 }
 
 /// The meters and what the warnings need (VID-011, VID-019, VID-043).
@@ -474,6 +484,8 @@ fn levels_json(core: &Core, l: xs_video::mix::Levels, mic_on: bool, system_on: b
             "missing": missing,
             "none": list.is_empty(),
             "blocked": mic_on && mic_blocked(core),
+            // Someone talks while it is off (VID-019).
+            "talking": !mic_on && l.talking,
         },
         "systemAudio": { "on": system_on, "level": round(system.level), "clip": system.clip },
         "track": track,
@@ -486,19 +498,34 @@ fn levels_json(core: &Core, l: xs_video::mix::Levels, mic_on: bool, system_on: b
 /// (the sound is measured to try it, never kept: APP-054) and while recording.
 pub fn level(core: &Core) -> Value {
     let svc = service(core);
-    if let Some(r) = svc.current.lock().unwrap().as_ref() {
-        let mut v = levels_json(
-            core,
+    let recording = svc.current.lock().unwrap().as_ref().map(|r| {
+        (
             r.recorder.levels(),
             r.recorder.microphone().is_some(),
             r.recorder.system_audio(),
             r.recorder.audio,
-        );
-        v["status"] = json!(if r.recorder.state() == State::Paused {
-            "paused"
-        } else {
-            "recording"
-        });
+            r.recorder.state() == State::Paused,
+        )
+    });
+    if let Some((mut l, mic_on, system_on, track, paused)) = recording {
+        // The microphone off: listened to for a voice, apart from the recording.
+        let listen = (!mic_on && track).then(|| listened(core)).flatten();
+        let mut meter = svc.meter.lock().unwrap();
+        match listen {
+            Some(m) => {
+                let stale = meter
+                    .as_ref()
+                    .is_none_or(|x| !x.running() || !x.listening || x.microphone.as_ref() != Some(&m));
+                if stale {
+                    *meter = Some(xs_video::Meter::start(Some(m), false, true));
+                }
+                l.talking = meter.as_ref().is_some_and(|x| x.levels().talking);
+            }
+            None => *meter = None,
+        }
+        drop(meter);
+        let mut v = levels_json(core, l, mic_on, system_on, track);
+        v["status"] = json!(if paused { "paused" } else { "recording" });
         return v;
     }
     let ready = svc.ready.lock().unwrap().is_some();
@@ -509,11 +536,17 @@ pub fn level(core: &Core) -> Value {
     }
     let mic = microphone_of(core, &json!({}));
     let system = core.settings.get_bool("video.systemAudio");
-    let stale = meter
-        .as_ref()
-        .is_none_or(|m| !m.running() || m.microphone != mic || m.system_audio != system);
+    // Off, the microphone is still listened to for a voice (VID-019).
+    let (measured, listening) = match &mic {
+        Some(m) => (Some(m.clone()), false),
+        None => (listened(core), true),
+    };
+    let stale = meter.as_ref().is_none_or(|m| {
+        !m.running() || m.microphone != measured || m.system_audio != system || m.listening != listening
+    });
     if stale {
-        *meter = (mic.is_some() || system).then(|| xs_video::Meter::start(mic.clone(), system));
+        *meter = (measured.is_some() || system)
+            .then(|| xs_video::Meter::start(measured.clone(), system, listening && measured.is_some()));
     }
     let l = meter.as_ref().map(|m| m.levels()).unwrap_or_default();
     drop(meter);
@@ -551,6 +584,7 @@ pub fn sound(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         ("systemAudio", "video.systemAudio"),
         ("microphone", "video.microphone"),
         ("microphoneAutoLevel", "video.microphoneAutoLevel"),
+        ("noiseReduction", "video.noiseReduction"),
     ] {
         if let Some(v) = p.get(param).and_then(Value::as_bool) {
             store(core, ctx, key, json!(v))?;
@@ -574,6 +608,7 @@ pub fn sound(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         "microphone": core.settings.get_bool("video.microphone"),
         "microphoneDevice": core.settings.get_str("video.microphoneDevice"),
         "microphoneAutoLevel": core.settings.get_bool("video.microphoneAutoLevel"),
+        "noiseReduction": core.settings.get_bool("video.noiseReduction"),
     }))
 }
 

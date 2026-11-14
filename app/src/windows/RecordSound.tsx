@@ -86,6 +86,7 @@ export function MicControl({
   const setting = useSetting("video.microphone", true);
   const chosen = useStringSetting("video.microphoneDevice", "");
   const auto = useSetting("video.microphoneAutoLevel", true);
+  const denoise = useSetting("video.noiseReduction", false);
   const [inputs, setInputs] = useState<{ inputs: Input[]; default: string | null } | null>(null);
   const [asked, setAsked] = useState(0);
   // The inputs, again each time the menu opens (VID-043: what is plugged in now).
@@ -129,10 +130,16 @@ export function MicControl({
       onSelect: () => sound({ microphone: true, microphoneDevice: i.id }),
     })),
     {
+      id: "denoise",
+      label: t("ui.recbar.mic_denoise"),
+      checked: denoise,
+      separator: true,
+      onSelect: () => sound({ noiseReduction: !denoise }),
+    },
+    {
       id: "auto",
       label: t("ui.recbar.mic_auto"),
       checked: auto,
-      separator: true,
       onSelect: () => sound({ microphoneAutoLevel: !auto }),
     },
     {

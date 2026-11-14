@@ -24,6 +24,7 @@ describe("the sound of the recording bar (VID-019, VID-039, VID-043)", () => {
     missing: false,
     none: false,
     blocked: false,
+    talking: false,
   };
   const at = (patch: Partial<typeof mic>, status: "ready" | "recording" = "recording") => ({
     status,
@@ -45,6 +46,13 @@ describe("the sound of the recording bar (VID-019, VID-039, VID-043)", () => {
     expect(soundWarning(at({ missing: true }, "ready"), true)).toBe("mic_missing");
     expect(soundWarning(at({ missing: true }), true)).toBeNull();
     expect(soundWarning(at({ none: true }), false)).toBe("mic_none");
+  });
+
+  it("warns when someone talks with the microphone off, if the warning is on", () => {
+    expect(soundWarning(at({ on: false, talking: true }), true)).toBe("mic_talking");
+    expect(soundWarning(at({ on: false, talking: true }), false)).toBeNull();
+    expect(soundWarning(at({ on: false }), true)).toBeNull();
+    expect(warningActions("mic_talking")[0]?.params).toEqual({ microphone: true });
   });
 
   it("says first when the system's privacy blocks the microphone (VID-077)", () => {

@@ -1824,6 +1824,10 @@
     "video_cameraBorderAngle": {
       "label": "Dirección del degradado",
       "description": "En grados: 0 va de izquierda a derecha y 90, de arriba abajo."
+    },
+    "video_noiseReduction": {
+      "label": "Reducir ruido de fondo",
+      "description": "Ventiladores, aire acondicionado, tecleo y voces lejanas se filtran del micrófono mientras se graba, en este equipo. La voz queda clara."
     }
   },
   "errors": {
@@ -2997,7 +3001,8 @@
       "video_mic_auto": "Ajustar el nivel automáticamente",
       "video_sound_settings": "Ajustes de sonido del sistema…",
       "video_camera": "Cámara",
-      "video_camera_device": "Cámara"
+      "video_camera_device": "Cámara",
+      "video_mic_denoise": "Reducir ruido de fondo"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4766,7 +4771,10 @@
       "camera_failed": "No se pudo abrir la cámara",
       "camera_missing": "La cámara elegida no está conectada: se usa otra",
       "retry": "Reintentar",
-      "without_camera": "Grabar sin cámara"
+      "without_camera": "Grabar sin cámara",
+      "mic_denoise": "Reducir ruido de fondo",
+      "mic_talking": "Parece que hablas, pero el micrófono no graba",
+      "mic_on": "Activar micrófono"
     },
     "video": {
       "silent_suffix": "sin sonido",

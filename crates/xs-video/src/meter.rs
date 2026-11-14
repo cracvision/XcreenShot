@@ -2,7 +2,7 @@
 //! to try the sound): the microphone and the system's sound are measured, never kept
 //! (APP-054). It stops by itself when nobody asks for the levels for a few seconds.
 
-use crate::mix::{peak, Agc, Gauge, Levels};
+use crate::mix::{peak, Agc, Clean, Gauge, Levels};
 use crate::Microphone;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -20,16 +20,19 @@ struct Shared {
     ended: AtomicBool,
 }
 
-/// Measures the microphone and the system's sound while Ready.
+/// Measures the microphone and the system's sound while Ready; or only listens to the
+/// microphone for a voice while it does not record (VID-019).
 pub struct Meter {
     shared: Arc<Shared>,
     /// What it measures.
     pub microphone: Option<Microphone>,
     pub system_audio: bool,
+    /// The microphone is only listened to, for a voice: it is off (VID-019).
+    pub listening: bool,
 }
 
 impl Meter {
-    pub fn start(microphone: Option<Microphone>, system_audio: bool) -> Meter {
+    pub fn start(microphone: Option<Microphone>, system_audio: bool, listening: bool) -> Meter {
         let shared = Arc::new(Shared {
             stop: AtomicBool::new(false),
             asked: Mutex::new(Instant::now()),
@@ -41,7 +44,7 @@ impl Meter {
         let spawned = std::thread::Builder::new()
             .name("xs-meter".into())
             .spawn(move || {
-                measure(&s, mic, system_audio);
+                measure(&s, mic, system_audio, listening);
                 s.ended.store(true, Ordering::Relaxed);
             });
         if spawned.is_err() {
@@ -51,6 +54,7 @@ impl Meter {
             shared,
             microphone,
             system_audio,
+            listening,
         }
     }
 
@@ -72,7 +76,7 @@ impl Drop for Meter {
     }
 }
 
-fn measure(s: &Shared, microphone: Option<Microphone>, system_audio: bool) {
+fn measure(s: &Shared, microphone: Option<Microphone>, system_audio: bool, listening: bool) {
     // SAFETY: COM for this thread's audio calls.
     unsafe {
         let _ = windows::Win32::System::Com::CoInitializeEx(
@@ -82,6 +86,8 @@ fn measure(s: &Shared, microphone: Option<Microphone>, system_audio: bool) {
     }
     let device = microphone.as_ref().and_then(|m| m.device.clone());
     let auto_level = microphone.as_ref().is_some_and(|m| m.auto_level);
+    let denoise = microphone.as_ref().is_some_and(|m| m.denoise);
+    let mut clean = Clean::default();
     let (mut mic, mut loopback) = (None, None);
     let (mut mic_tried, mut system_tried, mut mute_checked): (
         Option<Instant>,
@@ -109,8 +115,10 @@ fn measure(s: &Shared, microphone: Option<Microphone>, system_audio: bool) {
         }
         if let Some(m) = &mic {
             match m.read() {
-                Ok(mut samples) => {
+                Ok(samples) => {
                     let raw = peak(&samples);
+                    // The level shown is the one recorded: filtered (VID-041).
+                    let mut samples = clean.process(&samples, denoise);
                     agc.process(&mut samples, RATE, auto_level);
                     mic_gauge.feed(raw, agc.peak, agc.clipped, now);
                 }
@@ -131,9 +139,10 @@ fn measure(s: &Shared, microphone: Option<Microphone>, system_audio: bool) {
             }
         }
         *s.levels.lock().unwrap() = Levels {
-            microphone: microphone.is_some().then(|| mic_gauge.reading(now)),
+            microphone: (microphone.is_some() && !listening).then(|| mic_gauge.reading(now)),
             system: system_audio.then(|| system_gauge.reading(now)),
-            microphone_muted: microphone.is_some() && muted,
+            microphone_muted: microphone.is_some() && !listening && muted,
+            talking: listening && clean.talking(),
         };
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -152,8 +161,10 @@ mod tests {
             Some(Microphone {
                 device: None,
                 auto_level: true,
+                denoise: true,
             }),
             true,
+            false,
         );
         for _ in 0..10 {
             std::thread::sleep(Duration::from_millis(300));
