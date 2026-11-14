@@ -256,6 +256,10 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | SMT-029 | Candado de la imagen | La guía usa el de las zonas de imagen de las plantillas (EDT-098): zoom de 10 % en 10 % y ajuste; alejar el zoom recupera lo de alrededor del monitor | Provisional |
 | SMT-029 | Escala de las imágenes | Un control de la guía (10–100 %) que cambia el tamaño de todas las imágenes de paso sin tocar las originales; las anotaciones se escalan con su imagen | Provisional |
 | SMT-028 | Fecha del encabezado | En formato AAAA-MM-DD en los dos idiomas | Provisional |
+| SMT-030 a SMT-034 | Resolución de las imágenes exportadas | Al tamaño que tienen en la guía (hasta 1080 px de ancho, o el de la escala de la guía). La resolución completa del monitor queda para después | Provisional |
+| SMT-033 | Fuentes del PDF | Las estándar del PDF (Helvetica), sin incrustar: el texto se puede buscar y copiar y el archivo pesa poco. Cubren el español y el inglés; un carácter de otro alfabeto sale como "?" en el PDF (Word, HTML y Markdown no tienen ese límite) | Provisional |
+| SMT-033 | Tamaño del papel | El de la región de Windows (Carta o A4); `paper` lo fija | Provisional |
+| SMT-034 | Imágenes al copiar la guía | Van dentro del contenido copiado (como datos), para pegarlas en correo, wikis y documentos | Provisional |
 | SMT-028 | Textos en negrita mientras se editan | Al escribir se ven los asteriscos de `**…**`; al terminar, la negrita | Provisional |
 
 ## Dudas del equipo de construcción (M5, entrega 2: redacción automática)

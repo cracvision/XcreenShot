@@ -7224,6 +7224,7 @@ dependencies = [
  "arboard",
  "base64 0.22.1",
  "chrono",
+ "flate2",
  "image",
  "serde",
  "serde_json",
@@ -7233,6 +7234,7 @@ dependencies = [
  "xs-image",
  "xs-library",
  "xs-video",
+ "zip",
 ]
 
 [[package]]

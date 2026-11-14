@@ -727,6 +727,10 @@
       "title": "Record steps",
       "description": "Turns your clicks into a step-by-step guide: a picture and a sentence for each click, on this computer."
     },
+    "smart_guide_export": {
+      "title": "Export a guide",
+      "description": "A guide of steps in Word, PowerPoint, Markdown, HTML, PDF, pictures apart or the clipboard, written on this computer."
+    },
     "smart_steps_pause": {
       "title": "Pause recording steps",
       "description": "Clicks make no steps until it resumes."
@@ -4618,7 +4622,20 @@
       "help": "Click a step to see it; Ctrl+click picks several, and Delete removes them. Double-click a text on the guide to edit it; **like this** is bold.",
       "layout": "Layout",
       "scale": "Pictures' size",
-      "record_here": "Record more steps here"
+      "record_here": "Record more steps here",
+      "export_as": "Export as",
+      "copied": "Guide copied, with its text and pictures.",
+      "exported": "Saved in {{path}}",
+      "export": {
+        "docx": "Word document",
+        "pptx": "PowerPoint presentation",
+        "pdf": "PDF",
+        "md": "Markdown",
+        "html": "HTML page",
+        "html1": "HTML in a single file",
+        "images": "Pictures apart",
+        "clipboard": "Copy to the clipboard"
+      }
     }
   },
   "history": {
@@ -4893,6 +4910,12 @@
       "title": "Steps",
       "footer": "Created by {{author}} · {{date}}",
       "title_in": "Steps in {{app}}"
+    },
+    "export": {
+      "page": "Page",
+      "of": "of",
+      "step": "Step",
+      "text_file": "steps.txt"
     }
   }
 }

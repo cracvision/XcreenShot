@@ -618,6 +618,24 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},
                 "manySteps": {"type": "boolean", "description": "200 steps or more: several guides read better"}
             }})),
+        B::new("smart.guide_export", &["SMT-030", "SMT-032", "SMT-033", "SMT-034", "SMT-035"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": {"type": "string", "description": "An open guide; default: the one shown"},
+                    "path": {"type": "string", "description": "A guide file instead (it is opened apart and closed after)"},
+                    "format": {"type": "string", "enum": ["docx", "pptx", "md", "html", "pdf", "images", "clipboard"]},
+                    "out": {"type": "string", "description": "docx, pptx, pdf: the file; md, html, images: the folder where it goes"},
+                    "singleFile": {"type": "boolean", "default": false, "description": "html: the pictures inside the page"},
+                    "imageFormat": {"type": "string", "enum": ["png", "jpg"], "default": "png"},
+                    "withText": {"type": "boolean", "default": false, "description": "images: also a text file with each step"},
+                    "paper": {"type": "string", "enum": ["auto", "a4", "letter"], "default": "auto", "description": "pdf: auto is the system's"},
+                    "onConflict": {"type": "string", "enum": ["new", "replace"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced"}
+                }),
+                &["format"],
+            ))
+            .result(json!({"type": "object", "properties": {"format": {"type": "string"}, "paths": {"type": "array", "items": {"type": "string"}}}})),
         B::new("smart.steps_pause", &["SMT-023"]).mutates().result(json!({"type": "object", "properties": {
                 "status": {"type": "string", "enum": ["notice", "recording", "paused", "idle"]},
                 "steps": {"type": "integer"}, "confirm": {"type": "boolean"}, "diskFull": {"type": "boolean"},

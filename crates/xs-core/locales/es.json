@@ -727,6 +727,10 @@
       "title": "Grabar pasos",
       "description": "Convierte tus clics en una guía paso a paso: una imagen y una frase por clic, en este equipo."
     },
+    "smart_guide_export": {
+      "title": "Exportar una guía",
+      "description": "Una guía de pasos en Word, PowerPoint, Markdown, HTML, PDF, imágenes por separado o el portapapeles, escrita en este equipo."
+    },
     "smart_steps_pause": {
       "title": "Pausar la grabación de pasos",
       "description": "Los clics no crean pasos hasta reanudar."
@@ -4618,7 +4622,20 @@
       "help": "Haz clic en un paso para verlo; Ctrl+clic elige varios y Supr los elimina. Doble clic en un texto de la guía para editarlo; **así** va en negrita.",
       "layout": "Diseño",
       "scale": "Tamaño de las imágenes",
-      "record_here": "Grabar más pasos aquí"
+      "record_here": "Grabar más pasos aquí",
+      "export_as": "Exportar como",
+      "copied": "Guía copiada, con su texto y sus imágenes.",
+      "exported": "Guardado en {{path}}",
+      "export": {
+        "docx": "Documento de Word",
+        "pptx": "Presentación de PowerPoint",
+        "pdf": "PDF",
+        "md": "Markdown",
+        "html": "Página HTML",
+        "html1": "HTML en un solo archivo",
+        "images": "Imágenes por separado",
+        "clipboard": "Copiar al portapapeles"
+      }
     }
   },
   "history": {
@@ -4893,6 +4910,12 @@
       "title": "Pasos",
       "footer": "Creado por {{author}} · {{date}}",
       "title_in": "Pasos en {{app}}"
+    },
+    "export": {
+      "page": "Página",
+      "of": "de",
+      "step": "Paso",
+      "text_file": "pasos.txt"
     }
   }
 }

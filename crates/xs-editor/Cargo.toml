@@ -16,6 +16,9 @@ serde_json.workspace = true
 tracing.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 base64 = "0.22"
+# A guide in Word, PowerPoint and PDF (SMT-030, SMT-033): already in the app (xs-core, xs-image).
+zip = { version = "9.1.0", default-features = false, features = ["deflate"] }
+flate2 = "1"
 arboard = { version = "3", default-features = false, features = ["image-data"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 

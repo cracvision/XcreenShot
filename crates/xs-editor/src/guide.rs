@@ -656,6 +656,76 @@ mod tests {
         );
     }
 
+    /// SMT-030, SMT-032 to SMT-034: a guide of 3 steps in every format, from the editor.
+    #[test]
+    fn a_guide_exported() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let step = |n: u32| GuideStep {
+            text: format!("Clic en **Botón {n}**"),
+            png: png(640, 400),
+            size: [640, 400],
+            frame: [0.0, 0.0, 640.0, 400.0],
+            at: [100.0, 100.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, _) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Alta de cliente".into(),
+                steps: vec![step(1), step(2), step(3)],
+                meta: json!({}),
+            },
+        )
+        .unwrap();
+        let out = dir.path().join("out");
+        let export = |p: Value| {
+            let mut p = p;
+            p["documentId"] = json!(id);
+            core.call(xs_core::Source::Cli, "smart.guide_export", p, Some(Lang::Es))
+                .unwrap()
+        };
+        let docx = out.join("guia.docx");
+        export(json!({"format": "docx", "out": docx}));
+        let bytes = std::fs::read(&docx).unwrap();
+        assert!(bytes.starts_with(b"PK"));
+        let pdf = out.join("guia.pdf");
+        export(json!({"format": "pdf", "out": pdf, "paper": "a4"}));
+        let text = String::from_utf8_lossy(&std::fs::read(&pdf).unwrap()).into_owned();
+        assert_eq!(text.matches("/Dest [").count(), 3);
+        assert!(text.contains("Clic en "));
+        export(json!({"format": "pptx", "out": out.join("guia.pptx")}));
+        let r = export(json!({"format": "md", "out": out}));
+        let md = std::path::PathBuf::from(r["paths"][0].as_str().unwrap());
+        assert!(
+            md.file_name().unwrap() == "Alta de cliente.md"
+                && md.parent().unwrap().file_name().unwrap() == "Alta de cliente",
+            "{md:?}"
+        );
+        assert!(md.parent().unwrap().join("images/paso-03.png").is_file());
+        // Again: another folder, -2 (SMT-032).
+        let again = export(json!({"format": "md", "out": out}));
+        assert!(again["paths"][0].as_str().unwrap().contains("Alta de cliente-2"));
+        let r = export(json!({"format": "html", "out": out, "singleFile": true}));
+        let page = std::fs::read_to_string(r["paths"][0].as_str().unwrap()).unwrap();
+        assert_eq!(page.matches("src=\"data:image/png;base64,").count(), 3);
+        let r = export(json!({"format": "images", "out": out.join("sueltas"), "withText": true}));
+        let paths: Vec<&str> = r["paths"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(paths.len(), 4);
+        assert!(paths[0].ends_with("Alta_de_cliente-01.png"), "{paths:?}");
+        assert!(paths[3].ends_with("pasos.txt"));
+    }
+
     /// SMT-026: the zone shows exactly the frame, whatever the monitor.
     #[test]
     fn a_zone_frames_its_step() {

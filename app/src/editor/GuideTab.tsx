@@ -10,6 +10,7 @@ import { NumberField, SelectField } from "./Fields";
 import { Icon } from "./icons";
 import { imageUrl, useEditor, type DocDetails } from "./state";
 import { setTemplate, templateCommand } from "./templateActions";
+import { exportGuide, GUIDE_FORMATS } from "./guideExport";
 import { bands, plainText, templateOf, type TemplateSection } from "./templateUi";
 
 const ADD_KINDS = ["guideStep", "guideText", "guideImage"] as const;
@@ -202,6 +203,20 @@ export function GuideTab({ themes }: { themes: { id: string; name: string }[] })
         })}
       </ol>
       <p className="muted small">{t("ui.guide.help")}</p>
+
+      {/* Word, PowerPoint, PDF, Markdown, HTML, pictures, clipboard (SMT-030 to SMT-034). */}
+      <div className="row">
+        <Menu
+          label={t("ui.guide.export_as")}
+          triggerClass="btn"
+          items={GUIDE_FORMATS.map((f) => ({
+            id: f,
+            label: t(`ui.guide.export.${f}`),
+            separator: f === "md" || f === "clipboard",
+            onSelect: () => void exportGuide(f),
+          }))}
+        />
+      </div>
 
       <h3 className="side-subtitle">{t("ui.guide.layout")}</h3>
       <NumberField

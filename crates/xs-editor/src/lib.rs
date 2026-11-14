@@ -11,6 +11,8 @@ pub mod duplicate;
 pub mod fit;
 pub mod flatten;
 pub mod guide;
+pub mod guide_export;
+pub mod guide_out;
 pub mod image_ops;
 pub mod library_export;
 pub mod objects;
@@ -4579,6 +4581,19 @@ pub fn extension() -> Extension {
                     .map_err(|e| copy_failed(e.to_string()))?;
                 return Ok(json!({ "files": [file] }));
             }
+            // A guide: its text and pictures, with their format (SMT-034).
+            let guide = editor(&core)
+                .store
+                .with(&id, |d| {
+                    templates::Template::of(&d.document).is_some_and(|t| t.is_guide())
+                })
+                .unwrap_or(false);
+            if guide {
+                guide_export::copy(&core, &id, ctx.lang).map_err(|_| {
+                    CommandError::new(ErrorCode::Internal, tr(ctx.lang, "errors.copy_failed", &[]))
+                })?;
+                return Ok(json!({"guide": true}));
+            }
             let snap = editor(&core)
                 .store
                 .snapshot(&id)
@@ -4661,6 +4676,9 @@ pub fn extension() -> Extension {
         ));
         on!("document.print_pages", |core, ctx, p| print_pages(&core, ctx, &p));
         on!("document.print", |core, ctx, p| print_document(&core, ctx, &p));
+        on!("smart.guide_export", |core, ctx, p| guide_export::export_command(
+            &core, ctx, &p
+        ));
         on!("document.new_from_clipboard", |core, ctx, _p| new_from_clipboard(
             &core, ctx
         ));
@@ -5543,10 +5561,27 @@ fn print_pages(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
 /// only writes it.
 fn print_document(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
-    let (pages, name) = print_layout(core, ctx, p)?;
-    let count = pages.len();
-    let bytes =
-        xs_image::export::print_pdf(&pages, flatten_background(core)).map_err(|e| internal(lang, "", e))?;
+    // A guide prints as its PDF: steps never split, page numbers (SMT-033). Library
+    // files and other documents print as before.
+    let guide = resolve(core, lang, p).ok().filter(|id| {
+        editor(core)
+            .store
+            .with(id, |d| {
+                templates::Template::of(&d.document).is_some_and(|t| t.is_guide())
+            })
+            .unwrap_or(false)
+    });
+    let (bytes, count, name) = if let Some(id) = guide.filter(|_| p.get("paths").is_none()) {
+        let bytes = guide_export::pdf_bytes(core, &id, lang, "auto").map_err(|e| internal(lang, "", e))?;
+        let name = editor(core).store.with(&id, |d| d.name()).unwrap_or_default();
+        (bytes, 0, name)
+    } else {
+        let (pages, name) = print_layout(core, ctx, p)?;
+        let count = pages.len();
+        let bytes = xs_image::export::print_pdf(&pages, flatten_background(core))
+            .map_err(|e| internal(lang, "", e))?;
+        (bytes, count, name)
+    };
     let ed = editor(core);
     let dir = ed.unsaved_dir().with_file_name("print");
     let file = xs_library::file_name(&name).unwrap_or_else(|| "XcreenShot".to_string());
