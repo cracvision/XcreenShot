@@ -166,7 +166,10 @@ impl Host for TauriHost {
                 crate::rebuild_app_menu(&self.app);
                 tray::refresh(&self.app);
             }
-            "general.showIcon" | "general.monochromeIcon" => tray::refresh(&self.app),
+            // The clean desktop's entry says what it does now (VID-018).
+            "general.showIcon" | "general.monochromeIcon" | "video.hideDesktopIcons" => {
+                tray::refresh(&self.app)
+            }
             // Capture interface: the edge launcher comes or goes (CAP-004).
             "capture.interface" => {
                 let app = self.app.clone();

@@ -2252,7 +2252,9 @@
     "steps_stop": "Terminar grabación de pasos",
     "steps_record": "Grabar pasos",
     "hide_desktop_icons": "Ocultar los íconos del escritorio",
-    "show_desktop_icons": "Mostrar los íconos del escritorio"
+    "show_desktop_icons": "Mostrar los íconos del escritorio",
+    "pause_recording": "Pausar la grabación",
+    "resume_recording": "Reanudar la grabación"
   },
   "menu": {
     "flatten": "A&planar",

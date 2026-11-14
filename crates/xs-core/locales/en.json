@@ -2252,7 +2252,9 @@
     "steps_stop": "Finish recording steps",
     "steps_record": "Record steps",
     "hide_desktop_icons": "Hide desktop icons",
-    "show_desktop_icons": "Show desktop icons"
+    "show_desktop_icons": "Show desktop icons",
+    "pause_recording": "Pause recording",
+    "resume_recording": "Resume recording"
   },
   "menu": {
     "flatten": "Fla&tten",

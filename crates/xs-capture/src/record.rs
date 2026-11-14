@@ -878,12 +878,25 @@ pub fn menu_items(core: &Core) -> Vec<(String, String, &'static str)> {
     } else {
         tr(lang, "tray.hide_desktop_icons", &[])
     };
+    // Pause and resume from the icon's menu too (VID-012, VID-020).
+    let paused = service(core)
+        .current
+        .lock()
+        .unwrap()
+        .as_ref()
+        .is_some_and(|r| r.recorder.state() == State::Paused);
+    let pause = if paused {
+        tr(lang, "tray.resume_recording", &[])
+    } else {
+        tr(lang, "tray.pause_recording", &[])
+    };
     vec![
         (
             "recording".into(),
             tr(lang, "tray.stop_recording", &[]),
             "record.stop",
         ),
+        ("recording-pause".into(), pause, "record.toggle"),
         ("clean-desktop".into(), clean, "record.clean_desktop"),
     ]
 }
