@@ -454,7 +454,7 @@ fn most_used(steps: &[Step]) -> Option<String> {
     counts.into_iter().max_by_key(|(_, n)| *n).map(|(a, _)| a)
 }
 
-/// A guide from a recording's folder (SMT-028; also a recovered one, SMT-027).
+/// A guide from a recording's folder (SMT-028).
 pub fn guide_from(
     core: &Arc<Core>,
     lang: Lang,
@@ -463,9 +463,63 @@ pub fn guide_from(
     title: Option<String>,
     started: chrono::DateTime<chrono::Local>,
 ) -> Result<(String, PathBuf), CommandError> {
+    let g = guide_input(lang, folder, steps, title, started).map_err(CommandError::internal)?;
+    xs_editor::guide::create_guide(core, lang, g)
+}
+
+/// Recordings a crash cut short become guides in Recover work (SMT-027, APP-047); their
+/// folders go. The one recording now is left alone.
+pub fn recover_leftovers(core: &Arc<Core>) {
+    let current = session(core).map(|s| s.folder.clone());
+    let Ok(entries) = std::fs::read_dir(recovery_dir(core)) else {
+        return;
+    };
+    for dir in entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()) {
+        if current.as_ref() == Some(&dir) {
+            continue;
+        }
+        let Ok((steps, meta)) = read(&dir) else { continue };
+        if steps.is_empty() {
+            let _ = std::fs::remove_dir_all(&dir);
+            continue;
+        }
+        let lang = match meta["lang"].as_str() {
+            Some("es") => Lang::Es,
+            Some(_) => Lang::En,
+            None => core.lang(),
+        };
+        let started = meta["started"]
+            .as_str()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|d| d.with_timezone(&chrono::Local))
+            .unwrap_or_else(chrono::Local::now);
+        let title = meta["title"].as_str().map(str::to_string);
+        let made = guide_input(lang, &dir, &steps, title, started)
+            .and_then(|g| xs_editor::guide::recover_guide(core, lang, g));
+        match made {
+            Ok(_) => {
+                tracing::info!(
+                    steps = steps.len(),
+                    "a step recording cut short is in Recover work"
+                );
+                let _ = std::fs::remove_dir_all(&dir);
+            }
+            Err(e) => tracing::warn!(error = %e, "a step recording cut short could not be recovered"),
+        }
+    }
+}
+
+/// What the guide builder needs from a recording's folder (SMT-028).
+fn guide_input(
+    lang: Lang,
+    folder: &Path,
+    steps: &[Step],
+    title: Option<String>,
+    started: chrono::DateTime<chrono::Local>,
+) -> Result<xs_editor::guide::GuideIn, String> {
     let mut list = Vec::new();
     for st in steps {
-        let png = std::fs::read(folder.join(&st.image)).map_err(|e| CommandError::internal(e.to_string()))?;
+        let png = std::fs::read(folder.join(&st.image)).map_err(|e| e.to_string())?;
         let (w, h) = xs_image::encode::png_size(&png).unwrap_or((st.frame[2] as u32, st.frame[3] as u32));
         let pointer = st.pointer.as_ref().and_then(|p| {
             let bytes = std::fs::read(folder.join(&p.file)).ok()?;
@@ -505,15 +559,11 @@ pub fn guide_from(
         },
         "app": apps.first(),
     });
-    xs_editor::guide::create_guide(
-        core,
-        lang,
-        xs_editor::guide::GuideIn {
-            title,
-            steps: list,
-            meta,
-        },
-    )
+    Ok(xs_editor::guide::GuideIn {
+        title,
+        steps: list,
+        meta,
+    })
 }
 
 /// The icon menu's entries while recording steps (SMT-023): Pause or Resume, and
@@ -735,6 +785,59 @@ mod tests {
             xs_editor::final_image(&core, id).unwrap().save(out).unwrap();
         }
         assert_eq!(status(&core)["status"], "idle");
+    }
+
+    /// SMT-027: a recording a crash cut short (its folder, with 2 steps) is in Recover
+    /// work as a guide, its folder goes, and recovering it opens the guide.
+    #[test]
+    fn a_recording_cut_short_is_recovered() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![crate::extension(), xs_editor::extension()],
+        );
+        xs_editor::editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let folder = recovery_dir(&core).join("20261114-090000");
+        std::fs::create_dir_all(&folder).unwrap();
+        let img = image::RgbaImage::from_pixel(640, 400, image::Rgba([230, 230, 240, 255]));
+        let png = xs_image::encode::png(&img, 0.0, true).unwrap();
+        let mut steps = Vec::new();
+        for n in 1..=2u32 {
+            let image = format!("step-{n:03}.png");
+            std::fs::write(folder.join(&image), &png).unwrap();
+            steps.push(Step {
+                n,
+                kind: crate::steps::Kind::Click,
+                image,
+                at: [100.0, 100.0],
+                to: None,
+                frame: [0.0, 0.0, 640.0, 400.0],
+                text: format!("Clic en **Paso {n}**"),
+                app: "Bloc de notas".into(),
+                pointer: None,
+                time: String::new(),
+            });
+        }
+        save(
+            &folder,
+            &steps,
+            &json!({"started": "2026-11-14T09:00:00+00:00", "lang": "es"}),
+        )
+        .unwrap();
+        let call = |id: &str, p: Value| core.call(Source::Ui, id, p, Some(Lang::Es)).unwrap();
+        let list = call("editor.recovery_list", json!({}));
+        let items = list["items"].as_array().unwrap();
+        assert_eq!(items.len(), 1, "{list}");
+        assert_eq!(items[0]["name"], "Pasos en Bloc de notas");
+        assert!(!folder.exists(), "its folder goes");
+        let restored = call("editor.recovery_restore", json!({"ids": [items[0]["id"]]}));
+        let id = restored["documents"][0].as_str().unwrap();
+        let doc = xs_editor::editor(&core)
+            .store
+            .with(id, |d| d.document.clone())
+            .unwrap();
+        let t = xs_editor::templates::Template::of(&doc).unwrap();
+        assert_eq!(t.sections.iter().filter(|s| s.kind == "guideStep").count(), 2);
     }
 
     #[test]

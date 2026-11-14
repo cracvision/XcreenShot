@@ -1537,6 +1537,8 @@ pub fn extension() -> Extension {
         // Icons hidden by a recording that never ended (a crash) come back (VID-018).
         if let Some(core) = weak.upgrade() {
             record::restore_icons(&core);
+            // A step recording cut short is offered in Recover work (SMT-027).
+            xs_editor::add_recovery_preparer(&core, steps_rec::recover_leftovers);
         }
         reg.handle("capture.monitors", move |ctx, _p| {
             let list = monitors().map_err(|e| failed(ctx.lang, e))?;

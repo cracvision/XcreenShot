@@ -5011,9 +5011,15 @@ pub fn extension() -> Extension {
             }
             Ok(json!({}))
         });
-        on!("editor.recovery_list", |core, ctx, _p| Ok(
-            json!({ "items": recoverable(&core) })
-        ));
+        on!("editor.recovery_list", |core, ctx, _p| {
+            // Other parts of the app turn what they left behind into items first (a
+            // step recording cut short, SMT-027).
+            let preparers = core.service(RecoveryPreparers::default).0.lock().unwrap().clone();
+            for prepare in preparers {
+                prepare(&core);
+            }
+            Ok(json!({ "items": recoverable(&core) }))
+        });
         on!("editor.recovery_restore", |core, ctx, p| {
             let ids = p["ids"].as_array().cloned().unwrap_or_default();
             let mut opened = Vec::new();
@@ -5046,6 +5052,22 @@ pub fn extension() -> Extension {
             Ok(json!({}))
         });
     })
+}
+
+type Preparer = Arc<dyn Fn(&Arc<Core>) + Send + Sync>;
+
+/// Work that turns what other parts of the app left behind into recovery items, run
+/// before Recover work lists them (APP-047, SMT-027).
+#[derive(Default)]
+pub struct RecoveryPreparers(Mutex<Vec<Preparer>>);
+
+/// Adds work to run before Recover work lists its items.
+pub fn add_recovery_preparer(core: &Core, f: impl Fn(&Arc<Core>) + Send + Sync + 'static) {
+    core.service(RecoveryPreparers::default)
+        .0
+        .lock()
+        .unwrap()
+        .push(Arc::new(f));
 }
 
 /// Items of the recovery folder that no open document is using (APP-047).

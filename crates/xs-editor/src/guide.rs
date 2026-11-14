@@ -68,6 +68,52 @@ fn slot_of(o: &Object) -> Option<&str> {
 /// Creates the guide (SMT-028), writes it to the library and opens it in the store (not
 /// shown). Returns its id and file.
 pub fn create_guide(core: &Arc<Core>, lang: Lang, g: GuideIn) -> Result<(String, PathBuf), CommandError> {
+    let (doc, meta, images) = build(core, lang, g);
+    create_document(core, lang, doc, meta, transparent_pixel(), images)
+}
+
+/// Writes the guide as a recovery item (SMT-027, APP-047): a recording cut short by a
+/// crash is offered in Recover work like an unsaved document. Returns its id.
+pub fn recover_guide(core: &Arc<Core>, lang: Lang, g: GuideIn) -> Result<String, String> {
+    use xs_core::document::{Manifest, Xshot, THUMB_SIZE};
+    let name = g.title.clone();
+    let (document, meta, images) = build(core, lang, g);
+    let base_png = transparent_pixel();
+    let mut base = Base::from_image(xs_image::encode::decode(&base_png)?);
+    for (n, bytes) in &images {
+        base.add_image(n, bytes)?;
+    }
+    let thumb = xs_image::encode::thumbnail(&xs_image::render(&document, &base), THUMB_SIZE);
+    let file = Xshot {
+        manifest: Manifest::current(),
+        document,
+        base_png,
+        meta,
+        thumb_png: xs_image::encode::png(&thumb, 0.0, true)?,
+        images,
+    };
+    let dir = editor(core).recovery_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let id = recovery::new_id();
+    file.write(&recovery::document_path(&dir, &id))
+        .map_err(|e| e.to_string())?;
+    recovery::write_entry(
+        &dir,
+        &recovery::Entry {
+            id: id.clone(),
+            name,
+            original_path: None,
+            kind: "library".into(),
+            format: "xshot".into(),
+            saved_at: chrono::Utc::now(),
+        },
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+/// The guide's document, metadata and pictures (SMT-028).
+fn build(core: &Arc<Core>, lang: Lang, g: GuideIn) -> (Document, Value, BTreeMap<String, Vec<u8>>) {
     let pictures: Vec<[f64; 2]> = g
         .steps
         .iter()
@@ -179,7 +225,7 @@ pub fn create_guide(core: &Arc<Core>, lang: Lang, g: GuideIn) -> Result<(String,
     }
     let mut meta = g.meta;
     meta["name"] = json!(g.title);
-    create_document(core, lang, doc, meta, transparent_pixel(), images)
+    (doc, meta, images)
 }
 
 #[cfg(test)]
