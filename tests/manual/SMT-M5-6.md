@@ -30,3 +30,4 @@ IDs: SMT-036, SMT-038 (SMT-037 espera a M6).
    - `Esc` cierra el panel y otro `Esc` cancela la captura sin dejar nada en la biblioteca.
 9. [ ] En ese panel, **Abrir enlace** pide confirmación antes de abrir el navegador.
 10. [ ] **Extraer texto** de una zona con texto y un código QR: al final de la ventana aparecen los **Códigos QR** con **Copiar** y **Abrir enlace**.
+11. [ ] En la barra de herramientas, **Más > Imagen > Insertar código QR…** abre el mismo panel que el menú Imagen.

@@ -8,6 +8,7 @@ import { Menu, type MenuItem } from "../components/Menu";
 import { useIndicator } from "../components/useIndicator";
 import { useTooltipLevel } from "../components/tooltips";
 import { useSetting } from "../store";
+import { useFeature } from "../features";
 import { performAction, selectTool } from "./actions";
 import { Icon, type IconName } from "./icons";
 import { useEditor, type Tool } from "./state";
@@ -155,22 +156,35 @@ export function CustomBar({ hide = 0 }: { hide?: number }) {
     else blocks.push({ start: i, items: [item] });
   });
 
+  const qrOn = useFeature("qr");
   const more: MenuItem[] = [
     ...TOOL_GROUPS.map((g) => ({
       id: `more-${g.key}`,
       label: t(`ui.editor.more_group.${g.key}`),
       onSelect: () => undefined,
-      submenu: g.tools
-        .filter((id) => available.includes(id) && !onBar.has(`tool:${id}`))
-        .map((id) => ({
-          id: `more-${id}`,
-          label: t(`ui.editor.tool.${id}`),
-          checked: tool === id,
-          onSelect: () => {
-            useToolbar.setState({ temp: id });
-            selectTool(id);
-          },
-        })),
+      submenu: [
+        ...g.tools
+          .filter((id) => available.includes(id) && !onBar.has(`tool:${id}`))
+          .map((id): MenuItem => ({
+            id: `more-${id}`,
+            label: t(`ui.editor.tool.${id}`),
+            checked: tool === id,
+            onSelect: () => {
+              useToolbar.setState({ temp: id });
+              selectTool(id);
+            },
+          })),
+        // A QR code goes in from its panel (SMT-036).
+        ...(g.key === "image" && qrOn
+          ? [
+              {
+                id: "more-insert_qr",
+                label: t("menu.insert_qr"),
+                onSelect: () => performAction("insert_qr"),
+              },
+            ]
+          : []),
+      ],
     })).filter((g) => g.submenu.length > 0),
     // Commands that left a narrow bar wait here too.
     ...hiddenActions.map((item, i) => {
