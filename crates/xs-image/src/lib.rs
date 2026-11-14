@@ -23,6 +23,7 @@ pub mod inpaint;
 pub mod magnify;
 pub mod paint;
 pub mod pens;
+pub mod pictures;
 pub mod pixels;
 pub mod render;
 pub mod selection;

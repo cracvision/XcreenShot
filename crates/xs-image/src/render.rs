@@ -1,7 +1,6 @@
 //! Final image of a document (EDT-110): canvas color, the cropped base pixels and
 //! every object, flattened, without any interface element (handles, guides).
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use image::RgbaImage;
@@ -34,7 +33,8 @@ pub struct Base {
     pub width: u32,
     pub height: u32,
     pub rgba: Arc<Vec<u8>>,
-    pub images: Arc<BTreeMap<String, Arc<Pixmap>>>,
+    /// Kept compressed, decoded when drawn (ADR 0009).
+    pub images: Arc<crate::pictures::Pictures>,
 }
 
 impl Base {
@@ -53,14 +53,14 @@ impl Base {
 
     /// Adds the picture of a floating image, from its encoded file (PNG or JPG).
     pub fn add_image(&mut self, name: &str, bytes: &[u8]) -> Result<(), String> {
-        let picture = premultiplied(&crate::encode::decode(bytes)?).ok_or("empty image")?;
+        let picture = crate::pictures::Picture::new(bytes)?;
         Arc::make_mut(&mut self.images).insert(name.to_string(), Arc::new(picture));
         Ok(())
     }
 }
 
 /// `image` as a premultiplied pixmap, ready to draw.
-fn premultiplied(image: &RgbaImage) -> Option<Pixmap> {
+pub(crate) fn premultiplied(image: &RgbaImage) -> Option<Pixmap> {
     let mut pm = Pixmap::new(image.width(), image.height())?;
     for (d, s) in pm
         .data_mut()
@@ -569,7 +569,7 @@ fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
 
 /// Draws a template's zone (EDT-098): its picture cropped to its frame. An empty one
 /// draws nothing; the editor shows its placeholder.
-fn draw_zone(pm: &mut Pixmap, z: &ZoneObject, images: &BTreeMap<String, Arc<Pixmap>>) {
+fn draw_zone(pm: &mut Pixmap, z: &ZoneObject, images: &crate::pictures::Pictures) {
     let Some(picture) = z.image.as_ref().and_then(|n| images.get(n)) else {
         return;
     };
@@ -624,7 +624,7 @@ pub fn printed_objects(objects: &[Object]) -> std::borrow::Cow<'_, [Object]> {
 }
 
 /// Draws one object. Kinds this build does not know are skipped (a newer file).
-fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
+fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &crate::pictures::Pictures) {
     match object.kind.as_str() {
         "zone" => {
             if let Ok(z) = ZoneObject::from_props(&object.props) {
@@ -731,11 +731,11 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &BTreeMap<Str
                 .then(|| {
                     let k = (i.rect.w / original.width() as f64 + i.rect.h / original.height() as f64) / 2.0;
                     let img =
-                        crate::fx::round_corners(straight(original), i.style.corner_radius / k.max(1e-6));
+                        crate::fx::round_corners(straight(&original), i.style.corner_radius / k.max(1e-6));
                     premultiply(&img).map(Arc::new)
                 })
                 .flatten();
-            let original = rounded.as_ref().unwrap_or(original);
+            let original = rounded.as_ref().unwrap_or(&original);
             // Its own effects (EDT-053): the picture changes, and grows around the box.
             let stack: Vec<serde_json::Value> = object
                 .props
@@ -1001,7 +1001,7 @@ pub fn render_final(doc: &Document, base: &Base, meta: &serde_json::Value) -> (R
         };
         return (img, [0, 0]);
     }
-    let picture = |name: &str| base.images.get(name).map(|p| straight(p));
+    let picture = |name: &str| base.images.get(name).map(|p| straight(&p));
     let ctx = crate::fx::Ctx {
         canvas_color: doc.canvas.color.as_deref().and_then(Rgba::parse),
         dpi: doc.dpi,
@@ -1123,7 +1123,7 @@ pub fn image_in_base(doc: &Document, base: &Base) -> RgbaImage {
 
 /// Draws `objects` in order. Spotlights change the outside once, where the topmost of
 /// them is (EDT-039).
-fn draw_all(pm: &mut Pixmap, objects: &[Object], dpi: f64, images: &BTreeMap<String, Arc<Pixmap>>) {
+fn draw_all(pm: &mut Pixmap, objects: &[Object], dpi: f64, images: &crate::pictures::Pictures) {
     let top = objects.iter().rposition(|o| o.kind == "spotlight");
     for (i, object) in objects.iter().enumerate() {
         if Some(i) == top {
@@ -1146,11 +1146,7 @@ fn draw_all(pm: &mut Pixmap, objects: &[Object], dpi: f64, images: &BTreeMap<Str
 }
 
 /// The shadow of `object` and where it goes, in canvas pixels (EDT-021).
-fn shadow_layer(
-    object: &Object,
-    dpi: f64,
-    images: &BTreeMap<String, Arc<Pixmap>>,
-) -> Option<(Pixmap, i32, i32)> {
+fn shadow_layer(object: &Object, dpi: f64, images: &crate::pictures::Pictures) -> Option<(Pixmap, i32, i32)> {
     let shadow = crate::shadows::Shadow::of(object)?;
     let bounds = object_bounds(object, dpi)?;
     crate::shadows::layer(object, &shadow, bounds, |pm, o| draw_object(pm, o, dpi, images))
