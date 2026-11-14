@@ -331,6 +331,16 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         bar(core, Some(ready_state(core, &r)));
         return Ok(ready_state(core, &r));
     }
+    // Repeat last capture repeats this video capture with its settings (VID-002,
+    // CAP-007); an area chosen in the universal capture is chosen again.
+    let mut again = p.clone();
+    if let Some(o) = again.as_object_mut() {
+        o.remove("area");
+    }
+    core.remember(
+        crate::LAST_KEY,
+        json!({ "command": "record.video", "params": again }),
+    );
     let limit = p
         .get("limit")
         .and_then(Value::as_f64)
@@ -1779,6 +1789,10 @@ mod tests {
             (json!(800), json!(600))
         );
         assert_eq!(call("record.cancel", json!({})).unwrap()["status"], "cancelled");
+        // Repeat last capture repeats it, choosing the area again (CAP-007).
+        let last = core.recall(crate::LAST_KEY).unwrap();
+        assert_eq!(last["command"], "record.video");
+        assert!(last["params"].get("area").is_none());
     }
 
     /// VID-015: the timer needs a recording ready or under way, from 5 s to 12 h.

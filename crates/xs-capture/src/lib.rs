@@ -1031,7 +1031,7 @@ fn run_interactive(core: &Core, ctx: &Context, p: &Value, mode: &str, extra: Val
     interactive::run(core, ctx, &opts, mode, extra)
 }
 
-const LAST_KEY: &str = "capture.last";
+pub(crate) const LAST_KEY: &str = "capture.last";
 const LAST_AREA_KEY: &str = "capture.lastArea";
 
 /// Runs one capture command with resolved parameters, one at a time, and remembers
@@ -1614,6 +1614,10 @@ pub fn extension() -> Extension {
         reg.handle("capture.repeat_last", move |ctx, _p| {
             let core = upgrade(&w)?;
             match core.recall(LAST_KEY) {
+                // A video capture (VID-002): its settings again, the area chosen again.
+                Some(last) if last["command"] == "record.video" => {
+                    core.call(ctx.source, "record.video", last["params"].clone(), Some(ctx.lang))
+                }
                 Some(last) => {
                     let command = last["command"].as_str().unwrap_or_default().to_string();
                     dispatch(&core, ctx, &command, &last["params"], last["extra"].clone())
