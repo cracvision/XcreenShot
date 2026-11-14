@@ -11,7 +11,9 @@ import { clock } from "../windows/recClock";
 import { CameraControl } from "../windows/RecordCamera";
 import { MicControl } from "../windows/RecordSound";
 import { useLevels } from "../windows/recSound";
+import { Icon, type IconName } from "./icons";
 import { docUrl, useEditor } from "./state";
+import { sampleUrl } from "./themesUi";
 import {
   place,
   pollRecording,
@@ -70,7 +72,10 @@ export function SlidesMode({ mode }: { mode: Mode }) {
   const cursorOn = useSetting("video.cursor", true);
   // Annotating while narrating (VID-073): the tools shown, and the one chosen.
   const [annotating, setAnnotating] = useState(false);
+  // A tool with its current style, or one of the editor's Favorites (EDT-016).
   const [tool, setTool] = useState<SlideTool>("arrow");
+  const [favorite, setFavorite] = useState<Favorite | null>(null);
+  const favorites = useFavorites(annotating);
   const recording = rec.status === "recording";
   const paused = rec.status === "paused";
   const busy = recording || paused || rec.status === "countdown" || rec.status === "finalizing";
@@ -235,13 +240,35 @@ export function SlidesMode({ mode }: { mode: Mode }) {
         </button>
         {annotating && (
           <span className="slides-tools" role="group" aria-label={t("ui.slides.annotate")}>
+            {favorites.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className="btn small recbar-toggle slides-favorite"
+                aria-pressed={favorite?.id === f.id}
+                aria-label={t("ui.slides.favorite", { tool: t(`ui.slides.tool_${f.tool}`) })}
+                title={t("ui.slides.favorite", { tool: t(`ui.slides.tool_${f.tool}`) })}
+                onClick={() => {
+                  setTool(f.tool);
+                  setFavorite(f);
+                }}
+              >
+                <img src={sampleUrl(f.tool, f.id, f.style)} alt="" />
+                <span className="style-tool" aria-hidden="true">
+                  <Icon name={f.tool as IconName} />
+                </span>
+              </button>
+            ))}
             {SLIDE_TOOLS.map((k) => (
               <button
                 key={k}
                 type="button"
                 className="btn small recbar-toggle"
-                aria-pressed={tool === k}
-                onClick={() => setTool(k)}
+                aria-pressed={!favorite && tool === k}
+                onClick={() => {
+                  setTool(k);
+                  setFavorite(null);
+                }}
               >
                 {t(`ui.slides.tool_${k}`)}
               </button>
@@ -358,6 +385,7 @@ export function SlidesMode({ mode }: { mode: Mode }) {
           mode={mode}
           slide={current}
           tool={annotating ? tool : null}
+          style={favorite?.style ?? null}
           spaceHeld={() => space.current.down}
           onPan={() => {
             space.current.panned = true;
@@ -368,6 +396,38 @@ export function SlidesMode({ mode }: { mode: Mode }) {
       {!recording && <TrayPick mode={mode} />}
     </div>
   );
+}
+
+/** One of the editor's Favorites (EDT-016) that annotates slides. */
+interface Favorite {
+  id: string;
+  tool: SlideTool;
+  style: Record<string, unknown>;
+}
+
+/** The editor's Favorites of the slide tools (VID-073), while annotating; again when
+ * they change. */
+function useFavorites(on: boolean): Favorite[] {
+  const version = useEditor((s) => s.themesVersion);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    void run<{ favorites: { id: string; tool: string; style: Record<string, unknown> }[] }>(
+      "editor.styles",
+    )
+      .then((d) => {
+        if (!live) return;
+        setFavorites(
+          d.favorites.filter((f): f is Favorite => SLIDE_TOOLS.includes(f.tool as SlideTool)),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [on, version]);
+  return favorites;
 }
 
 /** What a tray item dragged onto the strip carries: its document (VID-071). */
@@ -428,6 +488,7 @@ function Stage({
   mode,
   slide,
   tool,
+  style,
   spaceHeld,
   onPan,
 }: {
@@ -435,6 +496,8 @@ function Stage({
   slide: Mode["slides"][number];
   /** The annotation tool in use, or none (VID-073). */
   tool: SlideTool | null;
+  /** A favorite's style for it, or the tool's current style (null). */
+  style: Record<string, unknown> | null;
   /** Space is held: a drag moves the slide. */
   spaceHeld: () => boolean;
   /** The slide was moved while Space was held. */
@@ -545,6 +608,7 @@ function Stage({
         {tool && k > 0 && (
           <Annotator
             tool={tool}
+            style={style}
             toImage={(x, y) => [
               Math.round(((x / k - r.x) * slide.width) / r.w),
               Math.round(((y / k - r.y) * slide.height) / r.h),
@@ -630,9 +694,11 @@ function Thumb({ documentId, version }: { documentId: string; version: number })
  * once. Coordinates come in CSS pixels of the frame. */
 function Annotator({
   tool,
+  style,
   toImage,
 }: {
   tool: SlideTool;
+  style: Record<string, unknown> | null;
   toImage: (x: number, y: number) => [number, number];
 }) {
   const { t } = useTranslation();
@@ -644,7 +710,7 @@ function Annotator({
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
   const add = (object: Record<string, unknown> | null) => {
-    if (object) act("slides.annotate", { objects: [object] });
+    if (object) act("slides.annotate", { objects: [style ? { ...object, style } : object] });
   };
   const box =
     from && to

@@ -8840,3 +8840,21 @@ button.lc-head:hover,
   color: var(--ink-muted);
   font-size: 12px;
 }
+
+/* A favorite among the slide tools (VID-073): its sample with its tool's icon. */
+.slides-favorite {
+  position: relative;
+  padding: 0 4px;
+}
+
+.slides-favorite img {
+  height: 22px;
+  width: auto;
+}
+
+.slides-favorite .style-tool {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  transform: scale(0.7);
+}

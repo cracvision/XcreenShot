@@ -632,7 +632,8 @@ mod mode_tests {
         let before = feed().unwrap().id;
         let r = call(
             "slides.annotate",
-            json!({"objects": [{"type": "shape", "rect": {"x": 10, "y": 10, "w": 100, "h": 50}}]}),
+            // With a favorite's style (EDT-016).
+            json!({"objects": [{"type": "shape", "rect": {"x": 10, "y": 10, "w": 100, "h": 50}, "style": {"shapeType": "ellipse"}}]}),
         )
         .unwrap();
         assert_eq!(r["ids"].as_array().unwrap().len(), 1);
@@ -643,6 +644,8 @@ mod mode_tests {
                 .map_or(0, |a| a.len())
         };
         assert_eq!(objects(&blue), 1);
+        let info = call("document.info", json!({"documentId": blue})).unwrap();
+        assert_eq!(info["objects"][0]["style"]["shapeType"], "ellipse");
         call("slides.undo", json!({})).unwrap();
         assert_eq!(objects(&blue), 0);
         call(

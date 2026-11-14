@@ -5268,7 +5268,8 @@
       "tray": "Tray",
       "tray_hint": "Drag it onto the strip, or double-click to add it at the end.",
       "tray_add": "Add {{name}}",
-      "count_total": "{{total}} slides"
+      "count_total": "{{total}} slides",
+      "favorite": "Favorite: {{tool}}"
     }
   },
   "history": {

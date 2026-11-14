@@ -5268,7 +5268,8 @@
       "tray": "Bandeja",
       "tray_hint": "Arrástrala a la tira o haz doble clic para añadirla al final.",
       "tray_add": "Añadir {{name}}",
-      "count_total": "{{total}} diapositivas"
+      "count_total": "{{total}} diapositivas",
+      "favorite": "Favorito: {{tool}}"
     }
   },
   "history": {
