@@ -1,6 +1,6 @@
 # ADR 0008 · Videos en el editor: un documento más, con cortes y un reproductor del sistema
 
-**Estado:** propuesta (pendiente de Carlos) · **Fecha:** 2026-11-13 · **IDs:** VID-052, VID-055 a VID-066
+**Estado:** aceptada (Carlos, 2026-11-14) · **Fecha:** 2026-11-13 · **IDs:** VID-052, VID-055 a VID-066
 
 ## Contexto
 

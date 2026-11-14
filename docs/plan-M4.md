@@ -1,6 +1,6 @@
-# Plan de M4: video y GIF (propuesta)
+# Plan de M4: video y GIF
 
-Propuesta de Claude del 2026-11-13, **provisional hasta que Carlos la apruebe**. M4 tiene 77 IDs (`VID-001` a `VID-077`, en `spec/03-video.md`). Cada entrega termina como las de M2 y M3: pruebas automáticas, `PARITY.md`, `QUESTIONS.md` con las decisiones provisionales y un instalador probado en su forma empaquetada.
+Propuesta de Claude del 2026-11-13, **aprobada por Carlos el 2026-11-14**. M4 tiene 77 IDs (`VID-001` a `VID-077`, en `spec/03-video.md`). Cada entrega termina como las de M2 y M3: pruebas automáticas, `PARITY.md`, `QUESTIONS.md` con las decisiones provisionales y un instalador probado en su forma empaquetada.
 
 | Entrega | Contenido | Estado |
 |---|---|---|

@@ -7,6 +7,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 **Decisión de Carlos (2026-11-12, tarde):** los instaladores intermedios son para **caminatas informales**; las pruebas formales (los guiones de `tests/manual/`) se hacen **cuando esté todo implementado**.
 
 **Decisiones de Carlos (2026-11-14):**
+- **Aprobados** los planes de M4 y M5 y los ADR 0008 (el video como documento del editor) y 0009 (guías de pasos). H.265 (VID-027) queda para más adelante. Quitar fondo (SMT-020): método clásico ahora y un modelo local después. Unir y dividir pasos (SMT-029): sí. **Permiso para el micrófono y la cámara** (M4.3, M4.5): concedido, con Carlos delante.
 - **La prueba completa (de extremo a extremo) va en dos etapas.** Primero **Windows**, cuando estén terminados M4 (con micrófono y cámara, cuando Carlos pueda estar delante), M5 y los flecos ("Falta") de los IDs ya hechos: captura, editor, biblioteca, video y funciones inteligentes. Después, en otra ronda, **Compartir (M6), las actualizaciones y macOS**.
 - **XcreenShot se va a comercializar** (Microsoft Store y tiendas de Apple y Google); Carlos lo trata en un chat aparte. Riesgos que se le señalaron:
   - Google Play es de Android y XcreenShot es de escritorio; el spec no tiene Android.

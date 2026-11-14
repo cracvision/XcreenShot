@@ -1,6 +1,6 @@
 # ADR 0009 · Grabador de pasos y guías
 
-**Estado:** propuesta (pendiente de Carlos) · **Fecha:** 2026-11-14 · **IDs:** SMT-022 a SMT-035
+**Estado:** aceptada (Carlos, 2026-11-14) · **Fecha:** 2026-11-14 · **IDs:** SMT-022 a SMT-035
 
 ## Contexto
 

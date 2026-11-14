@@ -1,6 +1,6 @@
-# Plan de M5: funciones inteligentes (propuesta)
+# Plan de M5: funciones inteligentes
 
-Propuesta de Claude del 2026-11-13 (noche), **provisional hasta que Carlos la apruebe**. M5 tiene 38 IDs (`SMT-001` a `SMT-038`, en `spec/06-inteligentes.md`); la IA en la nube (`SMT-039` a `SMT-043`) ya está hecha. Como en M2 a M4, cada entrega termina con pruebas automáticas, `PARITY.md`, `QUESTIONS.md` con las decisiones provisionales y un instalador probado en su forma empaquetada. Todo es local: el reconocimiento de texto es el del sistema (SMT-001).
+Propuesta de Claude del 2026-11-13 (noche), **aprobada por Carlos el 2026-11-14**. M5 tiene 38 IDs (`SMT-001` a `SMT-038`, en `spec/06-inteligentes.md`); la IA en la nube (`SMT-039` a `SMT-043`) ya está hecha. Como en M2 a M4, cada entrega termina con pruebas automáticas, `PARITY.md`, `QUESTIONS.md` con las decisiones provisionales y un instalador probado en su forma empaquetada. Todo es local: el reconocimiento de texto es el del sistema (SMT-001).
 
 | Entrega | Contenido | Estado |
 |---|---|---|
