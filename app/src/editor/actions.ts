@@ -52,6 +52,7 @@ import { openRedact } from "./redactState";
 import { actionOff } from "../features";
 import { editText } from "./editText";
 import { openQr } from "./qrState";
+import { removeBackground } from "./removeBg";
 
 const t = (key: string, options: Record<string, unknown> = {}) => i18next.t(key, options);
 const LAST_FORMAT = "xs.editor.lastFormat";
@@ -826,6 +827,11 @@ export function performAction(action: string): boolean {
     case "insert_qr":
       if (!doc || doc.video || actionOff(action)) return false;
       openQr();
+      return true;
+    // Remove background (SMT-020): of the image.
+    case "remove_background":
+      if (!doc || doc.video || actionOff(action)) return false;
+      void removeBackground();
       return true;
     // Edit text (SMT-009): of the selection on the image.
     case "edit_text":

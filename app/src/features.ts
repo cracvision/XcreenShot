@@ -12,6 +12,7 @@ export type FeatureName =
   | "autoSimplify"
   | "editText"
   | "separate"
+  | "removeBackground"
   | "qr";
 
 export const FEATURE_SETTINGS: Record<FeatureName, string> = {
@@ -22,6 +23,7 @@ export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   autoSimplify: "smart.autoSimplify.enabled",
   editText: "smart.editText.enabled",
   separate: "smart.separate.enabled",
+  removeBackground: "smart.removeBackground.enabled",
   qr: "smart.qr.enabled",
 };
 
@@ -32,6 +34,7 @@ const ACTIONS: Record<string, FeatureName> = {
   auto_redact: "autoRedact",
   edit_text: "editText",
   insert_qr: "qr",
+  remove_background: "removeBackground",
 };
 
 /** On unless switched off; on too before the settings arrive. */

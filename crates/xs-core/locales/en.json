@@ -1166,6 +1166,10 @@
     "slides_annotations": {
       "title": "Keep or remove narration annotations",
       "description": "After narrating: keeps the annotations added, or removes them from all the images."
+    },
+    "smart_remove_background": {
+      "title": "Remove background",
+      "description": "Makes the background of the image, or of a floating image, transparent and keeps the subject."
     }
   },
   "settings": {
@@ -1896,6 +1900,10 @@
     "video_combineAudioTracks": {
       "label": "Combine audio tracks",
       "description": "The microphone and the system sound in one track, the most compatible. Off: each in its own track (when both are recorded), to adjust them separately in a video editor. Some players only play the first track."
+    },
+    "smart_removeBackground_enabled": {
+      "label": "Remove background",
+      "description": "Image > Remove background makes a plain or gradient background transparent."
     }
   },
   "errors": {
@@ -2046,7 +2054,8 @@
     "slides_size_recording": "The video size is chosen before recording.",
     "slides_size": "The size is width x height, even, from 320 to 3840.",
     "slides_color": "The colour is #RRGGBB.",
-    "slides_recording": "Stop or cancel the recording first."
+    "slides_recording": "Stop or cancel the recording first.",
+    "no_subject": "No clear subject was found: the background is not plain enough. Nothing changed. For a background of one color, the Magic wand selects it precisely."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2399,7 +2408,8 @@
     "insert_qr": "Insert QR code…",
     "read_qr": "Read QR codes",
     "read_qr_selection": "Read QR codes of the selection",
-    "slides": "Narrated slides…"
+    "slides": "Narrated slides…",
+    "remove_background": "Remove background"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -5164,7 +5174,8 @@
       "autoSimplify": "Auto simplify",
       "editText": "Edit text",
       "separate": "Separate elements",
-      "qr": "QR codes"
+      "qr": "QR codes",
+      "removeBackground": "Remove background"
     },
     "edit_text": {
       "title": "Edit text",
@@ -5272,6 +5283,12 @@
       "tray_add": "Add {{name}}",
       "count_total": "{{total}} slides",
       "favorite": "Favorite: {{tool}}"
+    },
+    "remove_bg": {
+      "removed": "Background removed.",
+      "invert": "Invert",
+      "floating": "As a floating image",
+      "menu_object": "Remove background"
     }
   },
   "history": {
@@ -5417,7 +5434,8 @@
     "edit_text": "Edit text",
     "separate": "Separate elements",
     "merge_sections": "Merge steps",
-    "split_section": "Split step"
+    "split_section": "Split step",
+    "remove_background": "Remove background"
   },
   "editor": {
     "edited": "{{name}} — Edited",

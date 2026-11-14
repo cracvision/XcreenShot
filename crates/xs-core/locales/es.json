@@ -1166,6 +1166,10 @@
     "slides_annotations": {
       "title": "Conservar o quitar las anotaciones de la narración",
       "description": "Después de narrar: conserva las anotaciones añadidas o las quita de todas las imágenes."
+    },
+    "smart_remove_background": {
+      "title": "Quitar fondo",
+      "description": "Vuelve transparente el fondo de la imagen, o de una imagen flotante, y conserva el sujeto."
     }
   },
   "settings": {
@@ -1896,6 +1900,10 @@
     "video_combineAudioTracks": {
       "label": "Combinar las pistas de audio",
       "description": "El micrófono y el audio del sistema en una sola pista, lo más compatible. Desactivada: cada uno en su pista (cuando se graban los dos), para ajustarlos por separado en un editor de video. Algunos reproductores solo reproducen la primera pista."
+    },
+    "smart_removeBackground_enabled": {
+      "label": "Quitar fondo",
+      "description": "Imagen > Quitar fondo vuelve transparente un fondo liso o en degradado."
     }
   },
   "errors": {
@@ -2046,7 +2054,8 @@
     "slides_size_recording": "El tamaño del video se elige antes de grabar.",
     "slides_size": "El tamaño es ancho x alto, par, de 320 a 3840.",
     "slides_color": "El color es #RRGGBB.",
-    "slides_recording": "Detén o cancela antes la grabación."
+    "slides_recording": "Detén o cancela antes la grabación.",
+    "no_subject": "No se encontró un sujeto claro: el fondo no es lo bastante uniforme. No se cambió nada. Para un fondo de un solo color, la Varita mágica lo selecciona con precisión."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2399,7 +2408,8 @@
     "insert_qr": "Insertar código QR…",
     "read_qr": "Leer códigos QR",
     "read_qr_selection": "Leer códigos QR de la selección",
-    "slides": "Diapositivas narradas…"
+    "slides": "Diapositivas narradas…",
+    "remove_background": "Quitar fondo"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",
@@ -5164,7 +5174,8 @@
       "autoSimplify": "Simplificar automático",
       "editText": "Editar texto",
       "separate": "Separar elementos",
-      "qr": "Códigos QR"
+      "qr": "Códigos QR",
+      "removeBackground": "Quitar fondo"
     },
     "edit_text": {
       "title": "Editar texto",
@@ -5272,6 +5283,12 @@
       "tray_add": "Añadir {{name}}",
       "count_total": "{{total}} diapositivas",
       "favorite": "Favorito: {{tool}}"
+    },
+    "remove_bg": {
+      "removed": "Fondo quitado.",
+      "invert": "Invertir",
+      "floating": "Como imagen flotante",
+      "menu_object": "Quitar fondo"
     }
   },
   "history": {
@@ -5417,7 +5434,8 @@
     "edit_text": "Editar texto",
     "separate": "Separar elementos",
     "merge_sections": "Unir pasos",
-    "split_section": "Dividir paso"
+    "split_section": "Dividir paso",
+    "remove_background": "Quitar fondo"
   },
   "editor": {
     "edited": "{{name}} — Editado",

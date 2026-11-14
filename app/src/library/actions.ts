@@ -35,6 +35,8 @@ export interface UndoNotice {
   text: string;
   seq: number;
   action?: { label: string; run: () => Promise<void> };
+  /** More buttons after the first (SMT-020: Invert, As a floating image). */
+  more?: { label: string; run: () => Promise<void> }[];
 }
 
 export const useFiles = create<{
@@ -52,10 +54,16 @@ export function offerUndo(text: string, undo: () => Promise<void>): void {
 }
 
 /** Shows a notice; returns its number, for `dismissNotice`. */
-export function notify(text: string, action?: UndoNotice["action"]): number {
+export function notify(
+  text: string,
+  action?: UndoNotice["action"],
+  more?: UndoNotice["more"],
+): number {
   clearTimeout(noticeTimer);
   const seq = ++noticeSeq;
-  useFiles.setState({ notice: action ? { text, seq, action } : { text, seq } });
+  useFiles.setState({
+    notice: { text, seq, ...(action ? { action } : {}), ...(more?.length ? { more } : {}) },
+  });
   noticeTimer = setTimeout(() => {
     if (useFiles.getState().notice?.seq === seq) useFiles.setState({ notice: null });
   }, UNDO_MS);

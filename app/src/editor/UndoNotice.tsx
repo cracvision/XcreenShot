@@ -16,6 +16,11 @@ export function UndoNotice() {
           {notice.action.label}
         </button>
       )}
+      {notice.more?.map((m) => (
+        <button key={m.label} type="button" className="btn small" onClick={() => void m.run()}>
+          {m.label}
+        </button>
+      ))}
       <button
         type="button"
         className="btn icon small"

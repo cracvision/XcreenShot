@@ -380,6 +380,12 @@ fn editor_menus() -> Vec<MenuEntry> {
                 action("editor.crop_to_canvas", "menu.crop_to_canvas", "crop_to_canvas"),
                 action("editor.fit_canvas", "menu.fit_canvas", "fit_canvas"),
                 action("editor.trim", "menu.trim", "trim"),
+                // SMT-020.
+                action(
+                    "editor.remove_background",
+                    "menu.remove_background",
+                    "remove_background",
+                ),
                 Separator,
                 action("editor.corners", "menu.corners", "corners"),
                 action("editor.resolution", "menu.resolution", "resolution"),

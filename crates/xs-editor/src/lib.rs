@@ -19,6 +19,7 @@ pub mod objects;
 pub mod pixels;
 pub mod quick_view;
 pub mod recovery;
+pub mod remove_bg;
 pub mod samples;
 pub mod sheet_pdf;
 pub mod steps;
@@ -4558,6 +4559,10 @@ pub fn extension() -> Extension {
         ));
         on!("document.cut_out", |core, ctx, p| image_command(
             &core, ctx, &p, "cut_out"
+        ));
+        // Remove background (SMT-020).
+        on!("smart.remove_background", |core, ctx, p| remove_bg::command(
+            &core, ctx, &p
         ));
         on!("document.fit_canvas", |core, ctx, p| image_command(
             &core,

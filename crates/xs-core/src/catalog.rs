@@ -813,6 +813,24 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .scopes(UI_CLI)
             .params(params(json!({"url": {"type": "string", "description": "An http or https link, after the user said yes"}}), &["url"]))
             .result(json!({"type": "object", "properties": {"opened": {"type": "boolean"}}})),
+        B::new("smart.remove_background", &["SMT-020"])
+            .scopes(UI_CLI)
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "objectId": {"type": "string", "description": "A floating image instead of the image"},
+                    "invert": {"type": "boolean", "default": false, "description": "Keep the background and remove the subject"},
+                    "floating": {"type": "boolean", "default": false, "description": "Leave the original as it is and add the subject on top as a floating image"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "objectId": {"type": ["string", "null"], "description": "The floating image changed or added"},
+                "subject": {"type": "number", "description": "Share of the picture kept, 0 to 1"},
+                "inverted": {"type": "boolean"},
+                "floating": {"type": "boolean"}
+            }})),
         B::new("smart.separate", &["SMT-018"])
             .scopes(UI_CLI)
             .mutates()
@@ -3177,7 +3195,7 @@ pub const TOOLS: [&str; 22] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 124] = [
+pub const EDITOR_ACTIONS: [&str; 125] = [
     "open",
     "save",
     "save_as",
@@ -3256,6 +3274,8 @@ pub const EDITOR_ACTIONS: [&str; 124] = [
     "crop_to_canvas",
     "fit_canvas",
     "trim",
+    // Image > Remove background (SMT-020).
+    "remove_background",
     // Image > Snapping (EDT-084).
     "snap",
     // File > New image and New from clipboard (EDT-103, EDT-104).

@@ -45,7 +45,7 @@ describe("editor right-click menus (EDT-002)", () => {
     expect(last?.title).toBeTruthy();
   });
 
-  it("on the image: paste, paste in place, copy all, read QR codes and extract text", () => {
+  it("on the image: paste, paste in place, copy all, read QR codes, remove background and extract text", () => {
     canvasMenu(false, { x: 0, y: 0 });
     expect(useContextMenu.getState().items.map((i) => i.id)).toEqual([
       "editor.paste",
@@ -53,6 +53,8 @@ describe("editor right-click menus (EDT-002)", () => {
       "editor.copy_all",
       // SMT-038.
       "read_qr",
+      // SMT-020.
+      "editor.remove_background",
       // SMT-007.
       "editor.extract_text",
     ]);

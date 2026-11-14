@@ -31,6 +31,7 @@ import { useZones } from "./templateUi";
 import { useVideo } from "./videoState";
 import { isOn } from "../features";
 import { startSeparate } from "./separateState";
+import { removeBackground } from "./removeBg";
 import { readQr } from "./qrState";
 
 interface Point {
@@ -246,6 +247,15 @@ export function canvasMenu(
       label: i18next.t("menu.read_qr"),
       separator: true,
       onSelect: () => void readQr(),
+    });
+  }
+  // Remove background (SMT-020): of the image, or of a floating image.
+  if ((!onObject || image) && isOn("removeBackground") && !useEditor.getState().doc?.video) {
+    items.push({
+      id: "editor.remove_background",
+      label: i18next.t(image ? "ui.remove_bg.menu_object" : "menu.remove_background"),
+      separator: true,
+      onSelect: () => void removeBackground(image),
     });
   }
   // Separate elements of a floating image (SMT-018).

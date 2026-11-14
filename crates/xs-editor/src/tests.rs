@@ -5578,3 +5578,90 @@ fn a_video_from_elsewhere_joins_the_library() {
     let again = cli(&e.core, "document.open", json!({"path": outside, "show": true}));
     assert_eq!(again["path"], first["path"]);
 }
+
+/// SMT-020: Remove background on the image (transparent canvas, one undo step),
+/// inverted, as a floating image, on a floating image; no clear subject changes
+/// nothing.
+#[test]
+fn remove_background() {
+    let e = env();
+    let disc = image::RgbaImage::from_fn(200, 120, |x, y| {
+        let (dx, dy) = (x as f32 - 100.0, y as f32 - 60.0);
+        if dx * dx + dy * dy <= 40.0 * 40.0 {
+            image::Rgba([200, 30, 30, 255])
+        } else {
+            image::Rgba([255, 255, 255, 255])
+        }
+    });
+    let (doc, _) = add_capture(&e.core, &disc, json!({"mode": "region"}), 1.0, Some("Disc")).unwrap();
+    let out = e.outside.path().join("out.png");
+    // Each export goes to a new name: the one it says.
+    let export = || {
+        let r = cli(
+            &e.core,
+            "document.export",
+            json!({"documentId": doc, "format": "png", "path": out}),
+        );
+        image::open(r["path"].as_str().unwrap()).unwrap().to_rgba8()
+    };
+    let r = cli(&e.core, "smart.remove_background", json!({"documentId": doc}));
+    assert!(r["subject"].as_f64().unwrap() > 0.2, "{r}");
+    let png = export();
+    assert_eq!(png.get_pixel(5, 5)[3], 0, "the background is transparent");
+    assert_eq!(png.get_pixel(100, 60).0, [200, 30, 30, 255]);
+    // One undo step brings it back.
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    assert_eq!(export().get_pixel(5, 5).0, [255, 255, 255, 255]);
+    // Inverted: the disc goes.
+    cli(
+        &e.core,
+        "smart.remove_background",
+        json!({"documentId": doc, "invert": true}),
+    );
+    let png = export();
+    assert_eq!(png.get_pixel(100, 60)[3], 0);
+    assert_eq!(png.get_pixel(5, 5)[3], 255);
+    cli(&e.core, "document.undo", json!({"documentId": doc}));
+    // As a floating image: the original stays, the disc on top where it was.
+    let r = cli(
+        &e.core,
+        "smart.remove_background",
+        json!({"documentId": doc, "floating": true}),
+    );
+    let oid = r["objectId"].as_str().unwrap().to_string();
+    assert_eq!(export().get_pixel(5, 5).0, [255, 255, 255, 255]);
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    let obj = info["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["id"] == oid.as_str())
+        .unwrap()
+        .clone();
+    let x = obj["rect"]["x"].as_f64().unwrap();
+    assert!((58.0..=61.0).contains(&x), "{obj}");
+    // On that floating image (whose picture has no background left): nothing to find.
+    let again = call(
+        &e.core,
+        Source::Cli,
+        "smart.remove_background",
+        json!({"documentId": doc, "objectId": oid}),
+    );
+    assert!(again.is_err());
+    // Noise: no clear subject, nothing changes.
+    let mut seed = 3u32;
+    let noise = image::RgbaImage::from_fn(80, 60, |_, _| {
+        seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+        let v = seed.to_le_bytes();
+        image::Rgba([v[1], v[2], v[3], 255])
+    });
+    let (busy, _) = add_capture(&e.core, &noise, json!({"mode": "region"}), 1.0, Some("Noise")).unwrap();
+    let err = call(
+        &e.core,
+        Source::Cli,
+        "smart.remove_background",
+        json!({"documentId": busy}),
+    )
+    .unwrap_err();
+    assert_eq!(err.code, xs_core::ErrorCode::NotFound);
+}

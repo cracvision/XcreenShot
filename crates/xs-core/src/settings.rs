@@ -355,6 +355,13 @@ pub fn definitions() -> Vec<SettingDef> {
             "SMT-002",
         ),
         def(
+            "smart.removeBackground.enabled",
+            "editor",
+            boolean(),
+            json!(true),
+            "SMT-002",
+        ),
+        def(
             "smart.editText.enabled",
             "editor",
             boolean(),
