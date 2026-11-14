@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ColorPicker } from "./ColorPicker";
 import { NumberField, SelectField } from "./Fields";
 import { change, FIELDS, read, type Effect, type Field } from "./effectOptions";
+import { DEFAULTS } from "./effects";
 
 /** The fields of `effect`; each change is the top-level change to apply. `capture`:
  * among the effects on capture, with the options that only exist there (CAP-051). */
@@ -20,7 +21,9 @@ export function EffectFields({
   const fieldNode = (f: Field) => {
     const e = effect;
     const type = effect.type;
-    const v = read(e, f.k);
+    // A value not set (an effect added by a command) is the effect's default, not the
+    // field's minimum.
+    const v = read(e, f.k) ?? read(DEFAULTS[type] as Effect | undefined, f.k);
     const set = (value: unknown) => onChange(change(e, f.k, value));
     const lbl = t(`ui.editor.fx.${type}.${f.k.replaceAll(".", "_")}`);
     switch (f.kind) {

@@ -33,32 +33,42 @@ export function useFinalPreview(doc: DocDetails): FinalView | null {
   useEffect(() => {
     if (!active) return;
     let alive = true;
+    let timer = 0;
+    // Asked again if it fails (up to 3 times, a second apart); meanwhile the canvas
+    // keeps showing the editable layers.
+    const load = async (attempt: number) => {
+      const again = () => {
+        if (alive && attempt < 3) timer = window.setTimeout(() => void load(attempt + 1), 1000);
+        else if (alive) console.warn("the image with its effects could not be shown");
+      };
+      try {
+        const r = await fetch(xsdocUrl(`${doc.documentId}/final?v=${doc.version}`));
+        if (!r.ok) return again();
+        const [x, y] = (r.headers.get("X-Origin") ?? "0,0").split(",").map(Number);
+        const url = URL.createObjectURL(await r.blob());
+        const img = new Image();
+        img.onload = () => {
+          if (!alive) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          if (lastUrl.current) URL.revokeObjectURL(lastUrl.current);
+          lastUrl.current = url;
+          setView({ doc: doc.documentId, v: { image: img, origin: [x || 0, y || 0] } });
+          // The size with effects, for the status bar.
+          useEditor.setState({ fxSize: [img.naturalWidth, img.naturalHeight] });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          again();
+        };
+        img.src = url;
+      } catch {
+        again();
+      }
+    };
     // A short wait: a burst of changes loads once.
-    const timer = setTimeout(() => {
-      void (async () => {
-        try {
-          const r = await fetch(xsdocUrl(`${doc.documentId}/final?v=${doc.version}`));
-          if (!r.ok) return;
-          const [x, y] = (r.headers.get("X-Origin") ?? "0,0").split(",").map(Number);
-          const url = URL.createObjectURL(await r.blob());
-          const img = new Image();
-          img.onload = () => {
-            if (!alive) {
-              URL.revokeObjectURL(url);
-              return;
-            }
-            if (lastUrl.current) URL.revokeObjectURL(lastUrl.current);
-            lastUrl.current = url;
-            setView({ doc: doc.documentId, v: { image: img, origin: [x || 0, y || 0] } });
-            // The size with effects, for the status bar.
-            useEditor.setState({ fxSize: [img.naturalWidth, img.naturalHeight] });
-          };
-          img.src = url;
-        } catch {
-          // The canvas keeps showing the editable layers.
-        }
-      })();
-    }, 120);
+    timer = window.setTimeout(() => void load(1), 120);
     return () => {
       alive = false;
       clearTimeout(timer);

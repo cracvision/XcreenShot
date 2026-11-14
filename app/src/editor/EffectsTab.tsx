@@ -276,12 +276,17 @@ export function EffectsTab() {
             <li
               key={type}
               className="fx-item"
-              draggable={index >= 0}
-              onDragStart={() => setDragged(index)}
               onDragOver={(ev) => index >= 0 && dragged !== null && ev.preventDefault()}
               onDrop={onDrop(index)}
             >
-              <div className="fx-row">
+              {/* Dragged by its row only: a drag on its sliders moves them, not the
+                  effect (a draggable item cancels the slider's gesture). */}
+              <div
+                className="fx-row"
+                draggable={index >= 0}
+                onDragStart={() => setDragged(index)}
+                onDragEnd={() => setDragged(null)}
+              >
                 <input
                   type="checkbox"
                   role="switch"
