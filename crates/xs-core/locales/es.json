@@ -1769,7 +1769,8 @@
       "editor_duplicate_item": "Duplicar el elemento",
       "editor_shortcut_sheet": "Hoja de atajos de teclado",
       "editor_move_computer": "Mover XcreenShot a otro equipo",
-      "smart_extract_text": "Extraer texto"
+      "smart_extract_text": "Extraer texto",
+      "editor_extract_text": "Extraer texto"
     }
   },
   "tray": {
@@ -1956,7 +1957,11 @@
     "video_silent_copy": "Copia sin sonido",
     "video_info": "Información",
     "video_gif": "Crear GIF animado…",
-    "video_combine": "Combinar videos…"
+    "video_combine": "Combinar videos…",
+    "extract_text": "Extraer texto",
+    "extract_text_image": "Extraer texto de la imagen",
+    "extract_text_selection": "Extraer texto de la selección",
+    "extract_text_object": "Extraer texto"
   },
   "notify": {
     "ping_title": "XcreenShot funciona",

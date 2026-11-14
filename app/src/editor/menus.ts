@@ -13,6 +13,7 @@ import { display } from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp, useSetting } from "../store";
 import {
+  extractTextOf,
   performAction,
   setLocked,
   stepSequence,
@@ -219,6 +220,32 @@ export function canvasMenu(
     );
     const first = items[2];
     if (first) items[2] = { ...first, separator: true };
+  }
+  // Extract text (SMT-007): of the image, of the selection or of a floating image.
+  {
+    const doc = useEditor.getState().doc;
+    const sel = doc?.pixelSelection;
+    const obj = image ? doc?.objects.find((o) => o.id === image) : undefined;
+    const rect =
+      obj && obj.type === "image"
+        ? { x: obj.rect.x, y: obj.rect.y, width: obj.rect.w, height: obj.rect.h }
+        : !onObject && sel && !sel.target
+          ? { x: sel.bounds.x, y: sel.bounds.y, width: sel.bounds.w, height: sel.bounds.h }
+          : null;
+    if (!onObject || obj) {
+      items.push({
+        id: "editor.extract_text",
+        label: i18next.t(
+          obj
+            ? "menu.extract_text_object"
+            : rect
+              ? "menu.extract_text_selection"
+              : "menu.extract_text_image",
+        ),
+        separator: true,
+        onSelect: () => void extractTextOf(rect),
+      });
+    }
   }
   if (image) {
     // A floating image becomes a template's zone (EDT-101).
@@ -516,6 +543,7 @@ export function useMenuBar(): void {
     enabled["editor.invert_selection"] = hasPixels;
     enabled["editor.float_selection"] = pixelsOnImage;
     enabled["editor.crop_selection"] = pixelsOnImage;
+    enabled["editor.extract_text"] = hasDoc && !isVideo;
     // The Video menu (VID-056 to VID-064): with a video shown.
     for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;
     enabled["editor.video_cut"] = hasDoc && isVideo && videoCuttable;

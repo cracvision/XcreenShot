@@ -343,6 +343,8 @@ fn editor_menus() -> Vec<MenuEntry> {
             items: vec![
                 action("editor.resize_image", "menu.resize_image", "resize_image"),
                 action("editor.canvas_size", "menu.canvas_size", "canvas_size"),
+                // Extract text of what the canvas shows (SMT-007).
+                action("editor.extract_text", "menu.extract_text", "extract_text"),
                 action("editor.canvas_color", "menu.canvas_color", "canvas_color"),
                 Separator,
                 Submenu {

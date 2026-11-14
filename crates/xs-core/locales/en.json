@@ -1769,7 +1769,8 @@
       "editor_duplicate_item": "Duplicate the item",
       "editor_shortcut_sheet": "Keyboard shortcuts sheet",
       "editor_move_computer": "Move XcreenShot to another computer",
-      "smart_extract_text": "Extract text"
+      "smart_extract_text": "Extract text",
+      "editor_extract_text": "Extract text"
     }
   },
   "tray": {
@@ -1956,7 +1957,11 @@
     "video_silent_copy": "Make a silent copy",
     "video_info": "Information",
     "video_gif": "Create animated GIF…",
-    "video_combine": "Combine videos…"
+    "video_combine": "Combine videos…",
+    "extract_text": "Extract text",
+    "extract_text_image": "Extract text from the image",
+    "extract_text_selection": "Extract text from the selection",
+    "extract_text_object": "Extract text"
   },
   "notify": {
     "ping_title": "XcreenShot is working",

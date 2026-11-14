@@ -697,6 +697,11 @@ pub fn slots() -> Vec<Slot> {
         editor("editor.zoom_fit", "editor.zoom", r#"{"mode":"fit"}"#),
         editor("editor.zoom_original", "editor.zoom", r#"{"mode":"original"}"#),
         editor("editor.side_panel", "editor.action", r#"{"action":"side_panel"}"#),
+        editor(
+            "editor.extract_text",
+            "editor.action",
+            r#"{"action":"extract_text"}"#,
+        ),
         editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
         editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
         editor(
@@ -913,6 +918,8 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
         _ => {
             let windows = match id {
                 "editor.open" => "Ctrl+KeyO",
+                // Extract text (SMT-007): Shift+Cmd+O on macOS.
+                "editor.extract_text" => "Ctrl+Shift+KeyO",
                 "editor.new_image" => "Ctrl+KeyN",
                 "editor.new_from_template" => "Ctrl+Shift+KeyT",
                 "editor.print" => "Ctrl+KeyP",

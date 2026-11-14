@@ -45,12 +45,14 @@ describe("editor right-click menus (EDT-002)", () => {
     expect(last?.title).toBeTruthy();
   });
 
-  it("on the image: paste, paste in place and copy all", () => {
+  it("on the image: paste, paste in place, copy all and extract text", () => {
     canvasMenu(false, { x: 0, y: 0 });
     expect(useContextMenu.getState().items.map((i) => i.id)).toEqual([
       "editor.paste",
       "editor.paste_in_place",
       "editor.copy_all",
+      // SMT-007.
+      "editor.extract_text",
     ]);
   });
 

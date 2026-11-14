@@ -553,9 +553,10 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .positional(&["source"])
             .params(params(
                 json!({
-                    "source": {"type": "string", "enum": ["screen", "file"], "default": "screen", "description": "screen: the user selects a zone (or rect); file: an image file"},
+                    "source": {"type": "string", "enum": ["screen", "file", "document"], "default": "screen", "description": "screen: the user selects a zone (or rect); file: an image file; document: what the editor shows of an open document (SMT-007)"},
                     "path": {"type": "string", "description": "The image file, with source file"},
-                    "rect": {"type": "object", "description": "A rectangle of the desktop in physical pixels, without selecting on screen"},
+                    "documentId": {"type": "string", "description": "With source document; default: the document shown in the editor"},
+                    "rect": {"type": "object", "description": "screen: a rectangle of the desktop in physical pixels, without selecting on screen; document: a part of the canvas, in its pixels"},
                     "language": {"type": ["string", "array"], "items": {"type": "string"}, "description": "auto, or up to 3 languages (es, en, pt, fr, de, ja, zh-Hans…); default: the setting"},
                     "copy": {"type": "boolean", "description": "Copy the text (default: yes from the app; no from the CLI)"},
                     "show": {"type": "boolean", "description": "Open the results window (default: the setting; no from the CLI)"},
@@ -2676,7 +2677,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 120] = [
+pub const EDITOR_ACTIONS: [&str; 121] = [
     "open",
     "save",
     "save_as",
@@ -2809,6 +2810,8 @@ pub const EDITOR_ACTIONS: [&str; 120] = [
     "video_silent_copy",
     "video_combine",
     "video_info",
+    // Extract text in the editor (SMT-007).
+    "extract_text",
 ];
 
 fn library_item() -> Value {

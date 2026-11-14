@@ -164,6 +164,25 @@ export function exportImage(): Promise<void> {
   return Promise.resolve();
 }
 
+/** Extract text (SMT-007) of the open document, or of a part of its canvas; the
+ * results window shows it and the document does not change. */
+export async function extractTextOf(
+  rect: { x: number; y: number; width: number; height: number } | null,
+): Promise<void> {
+  const id = useEditor.getState().active;
+  if (!id) return;
+  try {
+    await run("smart.extract_text", {
+      source: "document",
+      documentId: id,
+      ...(rect ? { rect } : {}),
+      show: true,
+    });
+  } catch (e) {
+    fail(e);
+  }
+}
+
 export async function copyAll(): Promise<void> {
   const id = useEditor.getState().active;
   if (!id) return;
@@ -894,6 +913,14 @@ export function performAction(action: string): boolean {
       if (!doc) return false;
       void openAi("ask");
       return true;
+    // Extract text of what the canvas shows, or of the selection (SMT-007).
+    case "extract_text": {
+      if (!doc || doc.video) return false;
+      const sel = doc.pixelSelection;
+      const b = sel && !sel.target ? sel.bounds : null;
+      void extractTextOf(b ? { x: b.x, y: b.y, width: b.w, height: b.h } : null);
+      return true;
+    }
     // The Video menu (VID-056 to VID-064, ADR 0008).
     case "video_play":
     case "video_prev_frame":

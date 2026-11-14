@@ -231,6 +231,12 @@ pub fn resolve_document(core: &Core, lang: Lang, p: &Value) -> Result<String, Co
     resolve(core, lang, p)
 }
 
+/// The final image of an open document and where the canvas's top left is in it (its
+/// effects can make it larger) (SMT-007).
+pub fn final_image_with_origin(core: &Core, id: &str) -> Result<(image::RgbaImage, [i64; 2]), String> {
+    Ok(editor(core).store.snapshot(id)?.render_with_origin())
+}
+
 /// The final image of an open document, with its objects (EDT-110, SMT-040).
 pub fn final_image(core: &Core, id: &str) -> Result<image::RgbaImage, String> {
     Ok(editor(core).store.snapshot(id)?.render())

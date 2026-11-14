@@ -325,6 +325,27 @@ fn extract_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     let copy = p.get("copy").and_then(Value::as_bool).unwrap_or(true);
     let show = p.get("show").and_then(Value::as_bool);
     match p.get("source").and_then(Value::as_str).unwrap_or("screen") {
+        // What the canvas shows of an open document (SMT-007): its objects and effects
+        // too, a redaction never gives text; `rect` in canvas pixels limits it.
+        "document" => {
+            let id = xs_editor::resolve_document(core, lang, p)?;
+            let (image, origin) =
+                xs_editor::final_image_with_origin(core, &id).map_err(CommandError::internal)?;
+            let image = match p.get("rect") {
+                Some(r) => {
+                    let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
+                    let x = (n("x") + origin[0] as f64).max(0.0) as u32;
+                    let y = (n("y") + origin[1] as f64).max(0.0) as u32;
+                    let w = (n("width").max(n("w"))).max(1.0) as u32;
+                    let h = (n("height").max(n("h"))).max(1.0) as u32;
+                    let (x, y) = (x.min(image.width() - 1), y.min(image.height() - 1));
+                    let (w, h) = (w.min(image.width() - x), h.min(image.height() - y));
+                    image::imageops::crop_imm(&image, x, y, w, h).to_image()
+                }
+                None => image,
+            };
+            deliver(core, ctx, image, copy, show, None)
+        }
         "file" => {
             let path = p.get("path").and_then(Value::as_str).unwrap_or_default();
             let image = image::open(path)
@@ -457,6 +478,42 @@ mod tests {
         let path = dir.join("texto.png");
         xs_image::render::render(&doc, &base).save(&path).unwrap();
         path
+    }
+
+    /// SMT-007: the text of what the editor shows of a document, or of a part of its
+    /// canvas; the document does not change.
+    #[test]
+    fn text_of_an_open_document() {
+        if xs_ocr::languages().is_empty() {
+            eprintln!("no recognition language on this computer: skipped");
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let image = image::open(text_png(dir.path())).unwrap().to_rgba8();
+        let core = Core::for_tests_with(
+            Platform::Windows,
+            vec![crate::extension(), xs_editor::extension()],
+        );
+        let (lib, rec) = (dir.path().join("lib"), dir.path().join("rec"));
+        xs_editor::editor(&core).set_folders(lib, rec);
+        let (id, _) = xs_editor::add_capture(&core, &image, json!({}), 1.0, None).unwrap();
+        let call = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::Es));
+        let all = call(
+            "smart.extract_text",
+            json!({"source": "document", "documentId": id, "copy": false, "language": "es"}),
+        )
+        .unwrap();
+        let text = all["text"].as_str().unwrap();
+        assert!(text.contains("Primer") && text.contains("Segundo"), "{text}");
+        // Only the lower half of the canvas: the second paragraph.
+        let part = call(
+            "smart.extract_text",
+            json!({"source": "document", "documentId": id, "copy": false, "language": "es",
+                   "rect": {"x": 0, "y": 100, "width": 800, "height": 120}}),
+        )
+        .unwrap();
+        let text = part["text"].as_str().unwrap();
+        assert!(text.contains("Segundo") && !text.contains("Primer"), "{text}");
     }
 
     /// SMT-005, SMT-006: an image file's text comes back to automation without any
