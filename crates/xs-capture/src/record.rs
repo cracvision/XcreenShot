@@ -62,6 +62,9 @@ pub struct Recording {
     ready: Mutex<Option<Ready>>,
     /// The countdown runs (VID-008).
     counting: std::sync::atomic::AtomicBool,
+    /// Recordings being written in the recovery folder, from before their engine
+    /// starts until they end: Recover work leaves them alone (VID-022).
+    live: Mutex<Vec<String>>,
 }
 
 fn service(core: &Core) -> Arc<Recording> {
@@ -308,6 +311,11 @@ pub fn recovery_dir(core: &Core) -> PathBuf {
     core.paths.local_dir.join("recovery").join("video")
 }
 
+/// Recording `rid` ended: Recover work may look at what it left.
+fn ended(core: &Core, rid: &str) {
+    service(core).live.lock().unwrap().retain(|r| r != rid);
+}
+
 /// The files of recording `rid` in the recovery folder go.
 fn forget_recovery(core: &Core, rid: &str) {
     let dir = recovery_dir(core);
@@ -318,30 +326,27 @@ fn forget_recovery(core: &Core, rid: &str) {
 }
 
 /// Recordings the app did not finish (VID-022): each becomes an item of Recover
-/// work, with its date, length and first frame. One with nothing readable goes.
+/// work, with its date, length and first frame. One with nothing readable goes. A
+/// recording under way, or one already offered, is left alone.
 pub fn recover_leftovers(core: &Arc<Core>) {
-    let current = service(core)
-        .current
-        .lock()
-        .unwrap()
-        .as_ref()
-        .map(|r| r.rid.clone());
+    let live = service(core).live.lock().unwrap().clone();
     let dir = recovery_dir(core);
     let Ok(entries) = std::fs::read_dir(&dir) else {
         return;
     };
     let items = xs_editor::editor(core).recovery_dir();
-    for meta_file in entries.flatten().map(|e| e.path()) {
-        if meta_file.extension().is_none_or(|x| x != "json") {
-            continue;
-        }
-        let Some(rid) = meta_file.file_stem().map(|s| s.to_string_lossy().into_owned()) else {
+    let files: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+    for path in &files {
+        let ext = path.extension().and_then(|x| x.to_str()).unwrap_or_default();
+        let Some(rid) = path.file_stem().map(|s| s.to_string_lossy().into_owned()) else {
             continue;
         };
-        if current.as_deref() == Some(rid.as_str()) {
+        let video = dir.join(format!("{rid}.mp4"));
+        // Once per recording: by its video, or by its notes when it has none.
+        let by_notes = ext == "json" && !video.exists();
+        if !(ext == "mp4" || by_notes) || live.contains(&rid) || items.join(format!("{rid}.json")).exists() {
             continue;
         }
-        let video = dir.join(format!("{rid}.mp4"));
         let length = video
             .exists()
             .then(|| xs_video::recovered_length(&video))
@@ -351,21 +356,29 @@ pub fn recover_leftovers(core: &Arc<Core>) {
             forget_recovery(core, &rid);
             continue;
         };
+        let meta_file = dir.join(format!("{rid}.json"));
         let meta: Value = std::fs::read(&meta_file)
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
             .unwrap_or_default();
+        let modified = std::fs::metadata(&video)
+            .and_then(|m| m.modified())
+            .map(chrono::DateTime::<chrono::Utc>::from)
+            .unwrap_or_else(|_| chrono::Utc::now());
+        let saved_at = meta["started"]
+            .as_str()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or(modified);
         let target = meta["path"].as_str().map(PathBuf::from);
         let name = target
             .as_ref()
             .and_then(|p| p.file_stem())
             .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Video".into());
-        let saved_at = meta["started"]
-            .as_str()
-            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(chrono::Utc::now);
+            .unwrap_or_else(|| {
+                let local = saved_at.with_timezone(&chrono::Local);
+                format!("Video {}", local.format("%Y-%m-%d %H.%M.%S"))
+            });
         let entry = xs_editor::recovery::Entry {
             id: rid.clone(),
             name,
@@ -793,6 +806,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     // VID-022: written into the recovery folder while it records, with what Recover
     // work needs if the app dies.
     let rid = xs_editor::recovery::new_id();
+    svc.live.lock().unwrap().push(rid.clone());
     let rdir = recovery_dir(core);
     let _ = std::fs::create_dir_all(&rdir);
     let recovery_file = rdir.join(format!("{rid}.mp4"));
@@ -841,6 +855,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             core.host().hide_for_capture(false);
         }
         forget_recovery(core, &rid);
+        ended(core, &rid);
         // From the bar: it stays Ready, to try again or cancel.
         if let Some(r) = &again_of {
             *svc.ready.lock().unwrap() = Some(r.clone());
@@ -880,7 +895,10 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         if current.is_some() {
             // Another one started meanwhile: this one goes.
             drop(current);
+            let rid = running.rid.clone();
             let _ = running.recorder.cancel();
+            forget_recovery(core, &rid);
+            ended(core, &rid);
             return Err(busy());
         }
         *current = Some(running);
@@ -947,6 +965,7 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     if summary.is_ok() || !recovery_dir(core).join(format!("{rid}.mp4")).exists() {
         forget_recovery(core, &rid);
     }
+    ended(core, &rid);
     let result = match summary {
         Ok(s) if s.cancelled => {
             tell(core, source, "record.cancelled", json!({ "status": "cancelled" }));
@@ -1086,7 +1105,10 @@ pub fn cancel(core: &Core, ctx: &Context) -> CommandResult {
 pub fn restart(core: &Core, ctx: &Context) -> CommandResult {
     let r = take(core, ctx.lang)?;
     let again = r.again.clone();
+    let rid = r.rid.clone();
     let _ = r.recorder.cancel();
+    forget_recovery(core, &rid);
+    ended(core, &rid);
     if core.settings.get_bool("capture.hideOnCapture") {
         core.host().hide_for_capture(false);
     }
@@ -1109,7 +1131,10 @@ pub fn image(core: &Core, ctx: &Context) -> CommandResult {
         None => {
             let r = take(core, ctx.lang)?;
             let rect = r.rect;
+            let rid = r.rid.clone();
             let _ = r.recorder.cancel();
+            forget_recovery(core, &rid);
+            ended(core, &rid);
             if core.settings.get_bool("capture.hideOnCapture") {
                 core.host().hide_for_capture(false);
             }
@@ -1205,11 +1230,23 @@ mod tests {
         // Nothing readable: not offered, and its files go.
         std::fs::write(rdir.join("c.json"), "{}").unwrap();
         std::fs::write(rdir.join("c.mp4"), b"not a video").unwrap();
+        // A recording under way (its file still empty) is left alone.
+        service(&core).live.lock().unwrap().push("d".into());
+        std::fs::write(rdir.join("d.json"), "{}").unwrap();
+        std::fs::write(rdir.join("d.mp4"), b"").unwrap();
+        // A video without its notes is offered too, named by its time.
+        std::fs::copy(&sample, rdir.join("e.mp4")).unwrap();
 
         let call = |id: &str, p: Value| core.call(Source::Ui, id, p, Some(Lang::Es));
         let list = call("editor.recovery_list", json!({})).unwrap();
         let items = list["items"].as_array().unwrap();
-        assert_eq!(items.len(), 2, "{list}");
+        assert_eq!(items.len(), 3, "{list}");
+        assert!(rdir.join("d.json").exists() && rdir.join("d.mp4").exists());
+        let e = items.iter().find(|i| i["id"] == "e").unwrap();
+        assert!(e["name"].as_str().unwrap().starts_with("Video "), "{e}");
+        // Asked again: the same items, not twice.
+        let again = call("editor.recovery_list", json!({})).unwrap();
+        assert_eq!(again["items"].as_array().unwrap().len(), 3);
         let a = items.iter().find(|i| i["id"] == "a").unwrap();
         assert_eq!(a["kind"], "video");
         assert_eq!(a["name"], "Video 2026-11-14 09.00.00");
@@ -1227,8 +1264,8 @@ mod tests {
         assert!(restored["documents"][0].is_string(), "{restored}");
         assert!(!rdir.join("a.mp4").exists());
         // Discard: its files go.
-        call("editor.recovery_discard", json!({"ids": ["b"]})).unwrap();
-        assert!(!rdir.join("b.mp4").exists());
+        call("editor.recovery_discard", json!({"ids": ["b", "e"]})).unwrap();
+        assert!(!rdir.join("b.mp4").exists() && !rdir.join("e.mp4").exists());
         assert!(call("editor.recovery_list", json!({})).unwrap()["items"]
             .as_array()
             .unwrap()
