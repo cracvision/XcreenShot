@@ -2233,7 +2233,8 @@
     "recording_no_audio": "No se grabó el audio del sistema: no había ninguna salida de sonido activa.",
     "recording_low_disk": "Se detuvo sola porque quedaba menos de 1 GB libre en el disco.",
     "recording_window_closed": "La ventana se cerró: la grabación se detuvo y se guardó.",
-    "steps_disk_full": "El disco está lleno: la grabación de pasos se pausó. Los pasos grabados se conservan."
+    "steps_disk_full": "El disco está lleno: la grabación de pasos se pausó. Los pasos grabados se conservan.",
+    "recording_slept": "La grabación se pausó porque el equipo se suspendió. Reanúdala o detenla desde su barra."
   },
   "source": {
     "ui": "la interfaz",

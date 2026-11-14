@@ -108,10 +108,25 @@ export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets })
       frame = el.requestVideoFrameCallback(loop);
     };
     frame = el.requestVideoFrameCallback(loop);
-    const onPlay = () => useVideo.setState({ playing: true });
+    // While it plays, the screen stays on (VID-021).
+    let lock: WakeLockSentinel | null = null;
+    const release = () => {
+      void lock?.release().catch(() => undefined);
+      lock = null;
+    };
+    const onPlay = () => {
+      useVideo.setState({ playing: true });
+      void navigator.wakeLock
+        ?.request("screen")
+        .then((l) => {
+          lock = l;
+        })
+        .catch(() => undefined);
+    };
     const onPause = () => {
       tick();
       useVideo.setState({ playing: false });
+      release();
     };
     el.addEventListener("play", onPlay);
     el.addEventListener("pause", onPause);
@@ -122,6 +137,7 @@ export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets })
       el.removeEventListener("pause", onPause);
       el.removeEventListener("seeked", tick);
       el.pause();
+      release();
     };
   }, [doc.documentId]);
 

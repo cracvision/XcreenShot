@@ -1553,6 +1553,13 @@ pub fn extension() -> Extension {
             xs_editor::add_recovery_preparer(&core, steps_rec::recover_leftovers);
             // And a video recording (VID-022).
             xs_editor::add_recovery_preparer(&core, record::recover_leftovers);
+            // A recording pauses when the computer goes to sleep (VID-021).
+            let weak = std::sync::Arc::downgrade(&core);
+            xs_video::watch_suspend(move |resumed| {
+                if let Some(core) = weak.upgrade() {
+                    record::power_changed(&core, resumed);
+                }
+            });
         }
         reg.handle("capture.monitors", move |ctx, _p| {
             let list = monitors().map_err(|e| failed(ctx.lang, e))?;

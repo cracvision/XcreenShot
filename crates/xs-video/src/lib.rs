@@ -16,6 +16,23 @@ use serde::Serialize;
 mod audio;
 #[cfg(test)]
 mod demo;
+#[cfg(windows)]
+mod power;
+#[cfg(windows)]
+pub use power::{stay_awake, watch_suspend, StayAwake};
+
+/// Keeps the computer awake (nothing to do on this platform yet).
+#[cfg(not(windows))]
+pub struct StayAwake;
+
+#[cfg(not(windows))]
+pub fn stay_awake() -> Option<StayAwake> {
+    None
+}
+
+/// Sleep and wake (not watched on this platform yet).
+#[cfg(not(windows))]
+pub fn watch_suspend(_f: impl Fn(bool) + Send + Sync + 'static) {}
 pub mod effects;
 pub mod timeline;
 #[cfg(windows)]

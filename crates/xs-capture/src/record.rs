@@ -65,6 +65,10 @@ pub struct Recording {
     /// Recordings being written in the recovery folder, from before their engine
     /// starts until they end: Recover work leaves them alone (VID-022).
     live: Mutex<Vec<String>>,
+    /// The computer kept awake while the bar shows (VID-021).
+    awake: Mutex<Option<xs_video::StayAwake>>,
+    /// The recording paused because the computer went to sleep (VID-021).
+    slept: std::sync::atomic::AtomicBool,
 }
 
 fn service(core: &Core) -> Arc<Recording> {
@@ -84,7 +88,49 @@ pub fn running(core: &Core) -> bool {
 /// The recording bar and the area's border: shown with `Some(state)`, gone with
 /// `None` (VID-011, VID-020).
 fn bar(core: &Core, state: Option<Value>) {
+    // VID-021: awake while the bar shows: Ready, the countdown, recording, paused.
+    {
+        let svc = service(core);
+        let mut awake = svc.awake.lock().unwrap();
+        if state.is_none() {
+            *awake = None;
+        } else if awake.is_none() {
+            *awake = xs_video::stay_awake();
+        }
+    }
     core.host().recording_bar(state);
+}
+
+/// The computer goes to sleep, or wakes, during a recording (VID-021): it pauses; on
+/// waking the bar shows it paused, and a notice says why.
+pub fn power_changed(core: &Core, resumed: bool) {
+    use std::sync::atomic::Ordering;
+    let svc = service(core);
+    if !resumed {
+        let current = svc.current.lock().unwrap();
+        if let Some(r) = current
+            .as_ref()
+            .filter(|r| r.recorder.state() == State::Recording)
+        {
+            r.recorder.pause();
+            svc.slept.store(true, Ordering::SeqCst);
+            tracing::info!("recording paused: the computer is going to sleep");
+        }
+        return;
+    }
+    if !svc.slept.swap(false, Ordering::SeqCst) {
+        return;
+    }
+    let status = svc.current.lock().unwrap().as_ref().map(status_of);
+    if let Some(status) = status {
+        bar(core, Some(status));
+        let lang = core.lang();
+        core.host().notify(
+            "problems",
+            &tr(lang, "app.name", &[]),
+            &tr(lang, "notify.recording_slept", &[]),
+        );
+    }
 }
 
 /// The cursor and keyboard effects as the settings say (VID-045 to VID-047).

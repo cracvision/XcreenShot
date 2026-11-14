@@ -2233,7 +2233,8 @@
     "recording_no_audio": "No system sound was recorded: no sound output was on.",
     "recording_low_disk": "It stopped by itself because less than 1 GB was left on the disk.",
     "recording_window_closed": "The window closed: the recording stopped and was saved.",
-    "steps_disk_full": "The disk is full: recording steps paused. The steps so far are kept."
+    "steps_disk_full": "The disk is full: recording steps paused. The steps so far are kept.",
+    "recording_slept": "The recording was paused because the computer went to sleep. Resume or stop it from its bar."
   },
   "source": {
     "ui": "the interface",
