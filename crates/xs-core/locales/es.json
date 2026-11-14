@@ -719,6 +719,10 @@
       "title": "Extraer texto",
       "description": "Lee el texto de una zona de la pantalla o de un archivo de imagen, en este equipo, y lo copia."
     },
+    "smart_redact": {
+      "title": "Redacción automática",
+      "description": "Cubre los correos, teléfonos, tarjetas, documentos, direcciones, IP, rostros y tus propios términos que encuentra en una captura, en este equipo."
+    },
     "smart_ocr_languages": {
       "title": "Idiomas del reconocimiento",
       "description": "Los idiomas que este equipo puede leer y cuáles de los obligatorios faltan."
@@ -1266,6 +1270,18 @@
     "smart_ocr_languages": {
       "label": "Idioma del reconocimiento",
       "description": "Automático usa el idioma de la interfaz y los del sistema, y se queda con la mejor lectura."
+    },
+    "smart_autoRedact_categories": {
+      "label": "Redacción automática: categorías",
+      "description": "Lo que cubre la redacción automática. Se cambian en su panel."
+    },
+    "smart_autoRedact_customTerms": {
+      "label": "Redacción automática: mis términos",
+      "description": "Palabras y patrones que siempre se cubren. Viajan con los ajustes exportados."
+    },
+    "smart_autoRedact_style": {
+      "label": "Redacción automática: estilo",
+      "description": "Relleno sólido, desenfoque o pixelado, su color y el margen alrededor del dato."
     },
     "smart_extractText_showResults": {
       "label": "Mostrar la ventana de resultados",
@@ -4569,7 +4585,8 @@
     "remove_caption": "Quitar leyenda",
     "convert_zone": "Convertir en zona de imagen",
     "apply_theme": "Aplicar tema",
-    "cut_video": "Cortar"
+    "cut_video": "Cortar",
+    "auto_redact": "Redacción automática"
   },
   "editor": {
     "edited": "{{name}} — Editado",

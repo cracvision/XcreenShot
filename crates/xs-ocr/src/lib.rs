@@ -212,6 +212,37 @@ pub fn tiles(height: u32, max_side: u32, overlap: u32) -> Vec<(u32, u32, u32, u3
 /// Recognizes the text of an image (SMT-003) with up to 3 languages: tags, or `auto`
 /// for the system's preferred ones (empty means `auto`). The reading with more letters
 /// wins; on a tie, the first.
+/// The faces in an image (SMT-011), each as a rectangle of its pixels; none where the
+/// system has no detector.
+pub fn faces(image: &RgbaImage) -> Result<Vec<Rect>, OcrError> {
+    #[cfg(not(windows))]
+    {
+        let _ = image;
+        Ok(Vec::new())
+    }
+    #[cfg(windows)]
+    {
+        // The detector reads gray pictures; a very large one is read smaller.
+        let side = image.width().max(image.height());
+        let k = if side > 4096 { 4096.0 / side as f64 } else { 1.0 };
+        let gray = image::DynamicImage::ImageRgba8(image.clone()).to_luma8();
+        let gray = if k < 1.0 {
+            image::imageops::resize(
+                &gray,
+                (image.width() as f64 * k).round() as u32,
+                (image.height() as f64 * k).round() as u32,
+                image::imageops::FilterType::Triangle,
+            )
+        } else {
+            gray
+        };
+        Ok(win::faces(&gray)?
+            .into_iter()
+            .map(|r| [r[0] / k, r[1] / k, r[2] / k, r[3] / k])
+            .collect())
+    }
+}
+
 pub fn recognize(
     image: &RgbaImage,
     languages: &[String],

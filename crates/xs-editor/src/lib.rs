@@ -6,6 +6,7 @@
 //! close, unsaved changes and recovery copies (ADR 0004). Each capture is saved in
 //! the library as `.xshot` (LIB-020).
 
+pub mod auto_redact;
 pub mod duplicate;
 pub mod fit;
 pub mod flatten;

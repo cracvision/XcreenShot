@@ -107,7 +107,7 @@ pub fn wanted(core: &Core, asked: Option<&Value>) -> Vec<String> {
     out
 }
 
-fn ocr_error(lang: Lang, e: xs_ocr::OcrError) -> CommandError {
+pub(crate) fn ocr_error(lang: Lang, e: xs_ocr::OcrError) -> CommandError {
     match e {
         xs_ocr::OcrError::Cancelled => {
             CommandError::new(ErrorCode::Cancelled, tr(lang, "errors.text_cancelled", &[]))

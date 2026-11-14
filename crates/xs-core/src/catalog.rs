@@ -569,6 +569,33 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "language": {"type": "string"}, "text": {"type": "string"}, "html": {"type": "string"},
                 "copied": {"type": "boolean"}
             }})),
+        B::new("smart.redact", &["SMT-010", "SMT-011", "SMT-012", "SMT-013", "SMT-017"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": {"type": "string", "description": "An open document; default: the one shown in the editor"},
+                    "path": {"type": "string", "description": "An image file instead: it is redacted apart and written to output, flat; the file itself never changes"},
+                    "output": {"type": "string", "description": "With path: where the redacted image goes (default: next to it, \"<name> (redacted)\")"},
+                    "categories": {"type": "array", "items": {"type": "string", "enum": ["email", "phone", "card", "id", "address", "ip", "url", "date", "face"]}, "description": "What to cover; default and remembered: smart.autoRedact.categories"},
+                    "terms": {"type": "array", "items": {"type": "object"}, "description": "Your words and patterns: [{name, text, exact, on} | {name, pattern, on}]; default and remembered: smart.autoRedact.customTerms"},
+                    "style": {"type": "object", "description": "{type: solid | blur | pixelate, color: #RRGGBB, intensity, margin: 0-10}; given, every managed redaction takes it; default and remembered: smart.autoRedact.style"},
+                    "flatten": {"type": "boolean", "default": false, "description": "Merge the redactions into the image (cannot be undone with Unflatten)"},
+                    "clear": {"type": "boolean", "default": false, "description": "Remove the managed redactions"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"},
+                "redactions": {"type": "integer", "description": "Managed redactions in the document"},
+                "added": {"type": "integer"}, "removed": {"type": "integer"}, "restyled": {"type": "integer"},
+                "counts": {"type": "object", "description": "Matches per category (term:<name> for your terms), also of those switched off"},
+                "items": {"type": "array", "description": "{objectId, category, rect: [x, y, w, h]} of each managed redaction"},
+                "invalidPatterns": {"type": "array", "items": {"type": "string"}},
+                "textRead": {"type": "boolean", "description": "False without a recognition language: only faces"},
+                "output": {"type": "string"}
+            }})),
         B::new("smart.ocr_languages", &["SMT-004"])
             .result(json!({"type": "object", "properties": {"languages": {"type": "array"}, "installed": {"type": "array"}, "settingsUri": {"type": "string"}}})),
         B::new("smart.language_settings", &["SMT-004"])

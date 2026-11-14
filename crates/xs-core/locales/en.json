@@ -719,6 +719,10 @@
       "title": "Extract text",
       "description": "Reads the text of a zone of the screen or of an image file, on this computer, and copies it."
     },
+    "smart_redact": {
+      "title": "Auto redact",
+      "description": "Covers the emails, phone numbers, cards, IDs, addresses, IPs, faces and your own terms found in a capture, on this computer."
+    },
     "smart_ocr_languages": {
       "title": "Recognition languages",
       "description": "The languages this computer can read, and which required ones are missing."
@@ -1266,6 +1270,18 @@
     "smart_ocr_languages": {
       "label": "Recognition language",
       "description": "Automatic uses the language of the interface and those of the system, and keeps the best reading."
+    },
+    "smart_autoRedact_categories": {
+      "label": "Auto redact: categories",
+      "description": "What auto redact covers. Change them in its panel."
+    },
+    "smart_autoRedact_customTerms": {
+      "label": "Auto redact: my terms",
+      "description": "Words and patterns that are always covered. They travel with exported settings."
+    },
+    "smart_autoRedact_style": {
+      "label": "Auto redact: style",
+      "description": "Solid fill, blur or pixelate, its color and the margin around the data."
     },
     "smart_extractText_showResults": {
       "label": "Show the results window",
@@ -4569,7 +4585,8 @@
     "remove_caption": "Remove caption",
     "convert_zone": "Convert to image zone",
     "apply_theme": "Apply theme",
-    "cut_video": "Cut"
+    "cut_video": "Cut",
+    "auto_redact": "Auto redact"
   },
   "editor": {
     "edited": "{{name}} — Edited",

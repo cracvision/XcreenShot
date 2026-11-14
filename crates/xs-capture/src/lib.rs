@@ -35,6 +35,7 @@ pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
 pub mod record;
+pub mod redact;
 pub mod schedule;
 pub mod scroll;
 #[cfg(windows)]
@@ -2067,6 +2068,7 @@ pub fn extension() -> Extension {
         preset_cmds::register(reg, &weak);
         // Extract text (SMT-003 to SMT-006).
         extract::register(reg, &weak);
+        redact::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();
             let rows = presets::load(&core)

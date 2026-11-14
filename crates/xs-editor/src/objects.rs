@@ -548,6 +548,12 @@ fn canonical(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value
     Ok(value.as_object().cloned().unwrap_or_default())
 }
 
+/// `props` of an object of `kind` checked and in canonical form; unknown properties
+/// are dropped (auto redact, SMT-010).
+pub(crate) fn checked(kind: &str, props: &Map<String, Value>) -> Result<Map<String, Value>, String> {
+    canonical(kind, props)
+}
+
 /// The props of a template's image zone (EDT-098), checked.
 pub fn zone_props(rect: [f64; 4], image: Option<&str>, fill: bool) -> Result<Map<String, Value>, String> {
     let [x, y, w, h] = rect;

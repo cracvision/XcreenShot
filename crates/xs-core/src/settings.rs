@@ -209,6 +209,35 @@ pub fn definitions() -> Vec<SettingDef> {
             "SMT-004",
         ),
         def(
+            "smart.autoRedact.categories",
+            "capture",
+            json!({"type": "array", "items": {"type": "string", "enum": ["email", "phone", "card", "id", "address", "ip", "url", "date", "face"]}, "uniqueItems": true}),
+            json!(["email", "phone", "card", "id", "address", "ip", "face"]),
+            "SMT-011",
+        ),
+        def(
+            "smart.autoRedact.customTerms",
+            "capture",
+            json!({"type": "array", "maxItems": 200, "items": {"type": "object", "properties": {
+                "name": {"type": "string"}, "text": {"type": "string"}, "pattern": {"type": "string"},
+                "exact": {"type": "boolean"}, "on": {"type": "boolean"}
+            }}}),
+            json!([]),
+            "SMT-012",
+        ),
+        def(
+            "smart.autoRedact.style",
+            "capture",
+            json!({"type": "object", "properties": {
+                "type": {"type": "string", "enum": ["solid", "blur", "pixelate"]},
+                "color": {"type": "string"},
+                "intensity": {"type": "number", "minimum": 1, "maximum": 100},
+                "margin": {"type": "number", "minimum": 0, "maximum": 10}
+            }}),
+            json!({"type": "solid", "color": "#000000", "margin": 2}),
+            "SMT-013",
+        ),
+        def(
             "smart.extractText.showResults",
             "capture",
             boolean(),

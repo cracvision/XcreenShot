@@ -85,3 +85,38 @@ pub fn recognize(image: &GrayImage, tag: Option<&str>) -> Result<(Vec<RawLine>, 
     }
     Ok((out, used))
 }
+
+/// The faces in a gray image (SMT-011), with the system's detector: front, profile
+/// and three-quarter faces; nobody is recognized or compared. One rectangle per face.
+pub fn faces(image: &GrayImage) -> Result<Vec<crate::Rect>, OcrError> {
+    use windows::Media::FaceAnalysis::FaceDetector;
+    let detector = FaceDetector::CreateAsync()
+        .map_err(engine_error)?
+        .join()
+        .map_err(engine_error)?;
+    let writer = DataWriter::new().map_err(engine_error)?;
+    writer.WriteBytes(image.as_raw()).map_err(engine_error)?;
+    let buffer = writer.DetachBuffer().map_err(engine_error)?;
+    let bitmap = SoftwareBitmap::CreateCopyFromBuffer(
+        &buffer,
+        BitmapPixelFormat::Gray8,
+        image.width() as i32,
+        image.height() as i32,
+    )
+    .map_err(engine_error)?;
+    let found = detector
+        .DetectFacesAsync(&bitmap)
+        .map_err(engine_error)?
+        .join()
+        .map_err(engine_error)?;
+    let mut out = Vec::new();
+    for i in 0..found.Size().map_err(engine_error)? {
+        let b = found
+            .GetAt(i)
+            .map_err(engine_error)?
+            .FaceBox()
+            .map_err(engine_error)?;
+        out.push([b.X as f64, b.Y as f64, b.Width as f64, b.Height as f64]);
+    }
+    Ok(out)
+}

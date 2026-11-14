@@ -5553,7 +5553,11 @@ fn a_video_from_elsewhere_joins_the_library() {
     assert_eq!(path.file_name().unwrap(), "from-phone.mp4");
     assert_eq!(first["kind"], "library");
     assert!(outside.exists(), "the original stays");
-    cli(&e.core, "document.close", json!({"documentId": first["documentId"]}));
+    cli(
+        &e.core,
+        "document.close",
+        json!({"documentId": first["documentId"]}),
+    );
     let again = cli(&e.core, "document.open", json!({"path": outside, "show": true}));
     assert_eq!(again["path"], first["path"]);
 }
