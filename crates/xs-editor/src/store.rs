@@ -877,6 +877,24 @@ impl DocStore {
         Some(out)
     }
 
+    /// Changes a document without an undo step of its own: what follows from the last
+    /// change, found afterwards (SMT-021's bands, after an object moved). `f` says how
+    /// many things it changed; nothing changed leaves the document as it was.
+    pub fn amend(&self, id: &str, f: impl FnOnce(&mut Document) -> usize) -> Option<usize> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.clock += 1;
+        let clock = inner.clock;
+        let doc = inner.get_mut(id)?;
+        let mut next = doc.document.clone();
+        let n = f(&mut next);
+        if n > 0 {
+            doc.document = next;
+            doc.version = clock;
+            doc.last_used = clock;
+        }
+        Some(n)
+    }
+
     /// Undoes (`redo == false`) or redoes the last step. Returns its label.
     pub fn step(&self, id: &str, redo: bool) -> Option<Option<String>> {
         let mut inner = self.inner.lock().unwrap();

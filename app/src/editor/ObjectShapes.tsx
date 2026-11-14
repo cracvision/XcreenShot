@@ -24,6 +24,7 @@ import type {
   ZoneObject,
 } from "./state";
 import { placement } from "./templateUi";
+import { textBands } from "./textBands";
 
 /** Draws its children whole and blends them once when translucent, like the export. */
 function Translucent({
@@ -377,6 +378,17 @@ export function BlurShape(props: {
 }) {
   const { o, image, committed, canvas } = props;
   const { rect, style } = o;
+  const bands = textBands(o);
+  if (style.blurType === "solid" && bands) {
+    // Only the text: a solid band per line (SMT-021).
+    return (
+      <Group listening={false}>
+        {bands.map(([x, y, w, h], i) => (
+          <Rect key={i} x={x} y={y} width={w} height={h} fill={style.color} />
+        ))}
+      </Group>
+    );
+  }
   if (style.blurType === "solid") {
     return (
       <Group
@@ -486,6 +498,25 @@ export function HighlightShape({ o }: { o: HighlightObject }) {
     globalCompositeOperation: "multiply" as const,
     listening: false,
   };
+  const bands = textBands(o);
+  if (bands) {
+    // Only the text: a band per line, like a real highlighter (SMT-021).
+    return (
+      <Group listening={false}>
+        {bands.map(([x, y, w, h], i) => (
+          <Rect
+            key={i}
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            cornerRadius={style.shape === "roundedRectangle" ? 0.25 * Math.min(w, h) : 0}
+            {...common}
+          />
+        ))}
+      </Group>
+    );
+  }
   return (
     <Group x={rect.x + rect.w / 2} y={rect.y + rect.h / 2} rotation={o.rotation} listening={false}>
       {style.shape === "ellipse" ? (

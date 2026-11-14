@@ -106,9 +106,9 @@ fn style(v: &Value) -> (Map<String, Value>, f64) {
 }
 
 /// One reading of an image: its text (none without a recognition language) and faces.
-struct Reading {
+pub(crate) struct Reading {
     key: u64,
-    text: Option<Recognized>,
+    pub(crate) text: Option<Recognized>,
     faces: Vec<Rect>,
 }
 
@@ -124,7 +124,7 @@ fn key_of(image: &image::RgbaImage, languages: &[String]) -> u64 {
     h.finish()
 }
 
-fn read(
+pub(crate) fn read(
     image: &image::RgbaImage,
     languages: &[String],
     lang: xs_core::Lang,

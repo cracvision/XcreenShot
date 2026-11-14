@@ -31,6 +31,9 @@ pub struct SpotlightStyle {
     pub blur: f64,
     /// 0–50 px of soft edge.
     pub feather: f64,
+    /// Only the text inside the area, one band per line (SMT-021).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub text_only: bool,
 }
 
 impl Default for SpotlightStyle {
@@ -41,6 +44,7 @@ impl Default for SpotlightStyle {
             opacity: 60.0,
             blur: 0.0,
             feather: 0.0,
+            text_only: false,
         }
     }
 }

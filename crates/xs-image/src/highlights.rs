@@ -24,6 +24,9 @@ pub struct HighlightStyle {
     /// 0–100 %.
     pub opacity: f64,
     pub shape: HighlightShape,
+    /// Only the text inside the area, one band per line (SMT-021).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub text_only: bool,
 }
 
 impl Default for HighlightStyle {
@@ -33,6 +36,7 @@ impl Default for HighlightStyle {
             color: "#FFE14D".to_string(),
             opacity: 50.0,
             shape: HighlightShape::Rectangle,
+            text_only: false,
         }
     }
 }

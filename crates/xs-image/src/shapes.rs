@@ -210,6 +210,9 @@ pub struct BlurStyle {
     /// 1–100.
     pub intensity: f64,
     pub shape_type: ShapeKind,
+    /// Only the text inside the area, one band per line (SMT-021).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub text_only: bool,
 }
 
 impl Default for BlurStyle {
@@ -219,6 +222,7 @@ impl Default for BlurStyle {
             color: "#000000".to_string(),
             intensity: 60.0,
             shape_type: ShapeKind::Rectangle,
+            text_only: false,
         }
     }
 }

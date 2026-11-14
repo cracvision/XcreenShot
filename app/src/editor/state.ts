@@ -264,6 +264,8 @@ export interface SpotlightStyle {
   opacity: number;
   blur: number;
   feather: number;
+  /** Only the text inside the area (SMT-021). */
+  textOnly?: boolean;
 }
 
 export interface SpotlightObject {
@@ -272,6 +274,10 @@ export interface SpotlightObject {
   rect: Rect;
   rotation: number;
   style: SpotlightStyle;
+  /** Only the text (SMT-021): one band per line, relative to the rect's corner, as the
+   * core found them for `bandsFor`; empty when there is no text inside. */
+  bands?: [number, number, number, number][];
+  bandsFor?: [number, number, number, number];
 }
 
 /** Magnify (EDT-038). */
@@ -334,6 +340,8 @@ export interface HighlightStyle {
   color: string;
   opacity: number;
   shape: HighlightShapeKind;
+  /** Only the text inside the area (SMT-021). */
+  textOnly?: boolean;
 }
 
 export interface HighlightObject {
@@ -342,6 +350,10 @@ export interface HighlightObject {
   rect: Rect;
   rotation: number;
   style: HighlightStyle;
+  /** Only the text (SMT-021): one band per line, relative to the rect's corner, as the
+   * core found them for `bandsFor`; empty when there is no text inside. */
+  bands?: [number, number, number, number][];
+  bandsFor?: [number, number, number, number];
 }
 
 /** Callouts (EDT-028). */
@@ -449,6 +461,8 @@ export interface BlurStyle {
   color: string;
   intensity: number;
   shapeType: ShapeKind;
+  /** Only the text inside the area (SMT-021). */
+  textOnly?: boolean;
 }
 
 export interface BlurObject {
@@ -457,6 +471,10 @@ export interface BlurObject {
   rect: Rect;
   rotation: number;
   style: BlurStyle;
+  /** Only the text (SMT-021): one band per line, relative to the rect's corner, as the
+   * core found them for `bandsFor`; empty when there is no text inside. */
+  bands?: [number, number, number, number][];
+  bandsFor?: [number, number, number, number];
 }
 
 /** Floating image properties of M1 (EDT-078). */

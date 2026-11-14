@@ -511,6 +511,21 @@ fn draw_shape(pm: &mut Pixmap, s: &ShapeObject) {
 
 /// The blur, pixelation or solid cover of `b` over what `below` shows, transparent
 /// outside its shape, with where it goes: `(patch, x, y)`.
+/// A blur, or with "only the text" one upright blur per band (SMT-021).
+fn blur_parts(props: &serde_json::Map<String, serde_json::Value>, b: BlurObject) -> Vec<BlurObject> {
+    match crate::text_bands::bands(props) {
+        Some(bands) => bands
+            .into_iter()
+            .map(|rect| BlurObject {
+                rect,
+                rotation: 0.0,
+                style: b.style.clone(),
+            })
+            .collect(),
+        None => vec![b],
+    }
+}
+
 fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
     let [x, y, w, h] = pixel_bounds(b.rect, b.rotation, below.width(), below.height())?;
     let (x, y, w, h) = (x as i32, y as i32, w as u32, h as u32);
@@ -677,7 +692,22 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &crate::pictu
         }
         "highlight" => {
             if let Ok(h) = HighlightObject::from_props(&object.props) {
-                highlights::draw(pm, &h);
+                // Only the text: a band per line, upright (SMT-021).
+                match crate::text_bands::bands(&object.props) {
+                    Some(bands) => {
+                        for rect in bands {
+                            highlights::draw(
+                                pm,
+                                &HighlightObject {
+                                    rect,
+                                    rotation: 0.0,
+                                    style: h.style.clone(),
+                                },
+                            );
+                        }
+                    }
+                    None => highlights::draw(pm, &h),
+                }
             }
         }
         "stamp" => {
@@ -785,15 +815,17 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &crate::pictu
             let Ok(b) = BlurObject::from_props(&object.props) else {
                 return;
             };
-            if let Some((patch, x, y)) = blur_patch(pm, &b) {
-                pm.draw_pixmap(
-                    x,
-                    y,
-                    patch.as_ref(),
-                    &PixmapPaint::default(),
-                    Transform::identity(),
-                    None,
-                );
+            for part in blur_parts(&object.props, b) {
+                if let Some((patch, x, y)) = blur_patch(pm, &part) {
+                    pm.draw_pixmap(
+                        x,
+                        y,
+                        patch.as_ref(),
+                        &PixmapPaint::default(),
+                        Transform::identity(),
+                        None,
+                    );
+                }
             }
         }
         _ => {}
@@ -1171,7 +1203,19 @@ fn draw_spotlights(pm: &mut Pixmap, objects: &[Object]) {
     let spots: Vec<SpotlightObject> = objects
         .iter()
         .filter(|o| o.kind == "spotlight")
-        .filter_map(|o| SpotlightObject::from_props(&o.props).ok())
+        .filter_map(|o| Some((o, SpotlightObject::from_props(&o.props).ok()?)))
+        // Only the text: each line of it is lit (SMT-021).
+        .flat_map(|(o, s)| match crate::text_bands::bands(&o.props) {
+            Some(bands) => bands
+                .into_iter()
+                .map(|rect| SpotlightObject {
+                    rect,
+                    rotation: 0.0,
+                    style: s.style.clone(),
+                })
+                .collect(),
+            None => vec![s],
+        })
         .collect();
     if let Some(top) = spots.last() {
         let style = top.style.clone();
@@ -1325,8 +1369,27 @@ pub fn object_image(doc: &Document, base: &Base, id: &str) -> Option<(RgbaImage,
             }
             let mut pm = image_layer(doc, base);
             draw_all(&mut pm, &doc.objects[..index], doc.dpi, &base.images);
-            let (patch, x, y) = blur_patch(&pm, &b)?;
-            Some((straight(&patch), x, y))
+            if crate::text_bands::bands(&object.props).is_none() {
+                let (patch, x, y) = blur_patch(&pm, &b)?;
+                return Some((straight(&patch), x, y));
+            }
+            // Only the text: the bands in a picture of the whole area (SMT-021).
+            let [x, y, w, h] = pixel_bounds(b.rect, b.rotation, pm.width(), pm.height())?;
+            let (x, y) = (x as i32, y as i32);
+            let mut out = Pixmap::new(w as u32, h as u32)?;
+            for part in blur_parts(&object.props, b) {
+                if let Some((patch, px, py)) = blur_patch(&pm, &part) {
+                    out.draw_pixmap(
+                        px - x,
+                        py - y,
+                        patch.as_ref(),
+                        &PixmapPaint::default(),
+                        Transform::identity(),
+                        None,
+                    );
+                }
+            }
+            Some((straight(&out), x, y))
         }
         // A template's zone with its picture, cropped to it (EDT-098), from its corner.
         "zone" => {

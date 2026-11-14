@@ -4,8 +4,9 @@
 //! commands that start it fail with `feature_disabled`, naming the setting. What it
 //! already left in documents (redactions, guides) still opens and edits as usual.
 //!
-//! A switch exists once its feature does (APP-008): extract text, auto redact and the
-//! step recorder for now; the others of SMT-002 join with their milestone.
+//! A switch exists once its feature does (APP-008): extract text, auto redact, the
+//! step recorder and "only the text" for now; the others of SMT-002 join with their
+//! milestone.
 
 use crate::menus::MenuEntry;
 use crate::settings::SettingsStore;
@@ -20,7 +21,7 @@ pub struct Feature {
     pub entries: &'static [&'static str],
 }
 
-pub const FEATURES: [Feature; 3] = [
+pub const FEATURES: [Feature; 4] = [
     Feature {
         name: "extractText",
         setting: "smart.extractText.enabled",
@@ -49,6 +50,13 @@ pub const FEATURES: [Feature; 3] = [
         setting: "smart.steps.enabled",
         commands: &["smart.steps_start", "smart.steps_toggle"],
         entries: &["steps_record", "smart.steps_start", "smart.steps_toggle"],
+    },
+    // A checkbox of three tools (SMT-021): no command or menu entry of its own.
+    Feature {
+        name: "textOnly",
+        setting: "smart.textOnly.enabled",
+        commands: &[],
+        entries: &[],
     },
 ];
 

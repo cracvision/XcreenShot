@@ -1626,6 +1626,10 @@
     "smart_steps_enabled": {
       "label": "Grabador de pasos",
       "description": "Graba cada clic como un paso de una guía."
+    },
+    "smart_textOnly_enabled": {
+      "label": "Aplicar solo al texto",
+      "description": "Resaltador, Desenfocar y Foco pueden cubrir solo las líneas de texto de su área."
     }
   },
   "errors": {
@@ -2912,7 +2916,10 @@
         "simple_kind": "Forma",
         "background": "Fondo",
         "text_height": "Altura del texto",
-        "line_spacing": "Interlineado"
+        "line_spacing": "Interlineado",
+        "text_only": "Solo el texto",
+        "text_only_help": "Cubre solo las líneas de texto del área, una banda por línea. Se ajustan de nuevo al mover el objeto.",
+        "text_only_none": "No hay texto en el área: cubre toda la zona."
       },
       "cap": {
         "none": "Ninguno",
@@ -4744,7 +4751,8 @@
       "hint": "Una función desactivada deja sin sus botones, menús y atajos. Los documentos que ya tienen sus resultados se siguen abriendo y editando igual.",
       "extractText": "Extraer texto",
       "autoRedact": "Redacción automática",
-      "steps": "Grabador de pasos"
+      "steps": "Grabador de pasos",
+      "textOnly": "Aplicar solo al texto"
     }
   },
   "history": {

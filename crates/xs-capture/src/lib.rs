@@ -50,6 +50,7 @@ mod steps_work;
 pub mod stitch;
 pub mod svgsource;
 pub mod systemshots;
+pub mod text_only;
 pub mod wallpaper;
 pub mod webcap;
 
@@ -2079,6 +2080,7 @@ pub fn extension() -> Extension {
         extract::register(reg, &weak);
         redact::register(reg, &weak);
         redact_batch::register(reg, &weak);
+        text_only::register(reg, &weak);
         steps_rec::register(reg, &weak);
         if let Some(core) = weak.upgrade() {
             let lang = core.lang();

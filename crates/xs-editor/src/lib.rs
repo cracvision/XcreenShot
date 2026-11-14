@@ -407,6 +407,11 @@ fn info(core: &Core, id: &str, lang: Lang) -> Option<Value> {
     editor(core).store.info(id).map(|i| translate_labels(i, lang))
 }
 
+/// Tells the editor view about a document another crate changed (SMT-021).
+pub fn document_changed(core: &Core, id: &str) {
+    emit_document(core, id);
+}
+
 /// Tells the editor view about a document that changed (whoever changed it).
 fn emit_document(core: &Core, id: &str) {
     if let Some(i) = info(core, id, core.lang()) {

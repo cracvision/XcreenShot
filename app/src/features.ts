@@ -4,12 +4,13 @@
 import type { SettingEntry } from "./lib/commands";
 import { settingValue, useApp } from "./store";
 
-export type FeatureName = "extractText" | "autoRedact" | "steps";
+export type FeatureName = "extractText" | "autoRedact" | "steps" | "textOnly";
 
 export const FEATURE_SETTINGS: Record<FeatureName, string> = {
   extractText: "smart.extractText.enabled",
   autoRedact: "smart.autoRedact.enabled",
   steps: "smart.steps.enabled",
+  textOnly: "smart.textOnly.enabled",
 };
 
 /** The editor actions of each feature. */

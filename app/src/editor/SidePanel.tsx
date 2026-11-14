@@ -64,6 +64,7 @@ import { EffectsTab } from "./EffectsTab";
 import { TemplateTab } from "./TemplateTab";
 import { templateOf } from "./templateUi";
 import { useFeature } from "../features";
+import { noTextIn } from "./textBands";
 
 /** Slider with its number field. The value is committed when the gesture ends, so a
  * drag is one undo step (EDT-092). Arrow keys step 1, Shift+arrows 10 (EDT-013). */
@@ -250,6 +251,26 @@ function KindProperties({ target }: { target: Target }) {
   const { kind, styles, commit } = target;
   const v = <T,>(key: string) => common<T>(styles, key);
   const num = (key: string) => v<number>(key);
+  // Only the text (SMT-021): the area covers the lines of text inside it.
+  const textOnlyOn = useFeature("textOnly");
+  const noText = useEditor((s) =>
+    noTextIn(s.doc?.objects.filter((o) => s.selection.includes(o.id)) ?? []),
+  );
+  const textOnly = textOnlyOn ? (
+    <>
+      <label className="panel-check" title={t("ui.editor.prop.text_only_help")}>
+        <input
+          type="checkbox"
+          checked={v<boolean>("textOnly") === true}
+          onChange={(e) => commit({ textOnly: e.target.checked })}
+        />
+        {t("ui.editor.prop.text_only")}
+      </label>
+      {v<boolean>("textOnly") === true && noText && (
+        <p className="muted hint">{t("ui.editor.prop.text_only_none")}</p>
+      )}
+    </>
+  ) : null;
   const opacity = (
     <NumberField
       label={t("ui.editor.prop.opacity")}
@@ -487,6 +508,7 @@ function KindProperties({ target }: { target: Target }) {
           )}
           {shapeType}
           <p className="muted hint">{t("ui.editor.blur.security")}</p>
+          {textOnly}
           {/* Auto redact (SMT-010): finds what to cover and covers it (unless off, SMT-002). */}
           {redactOn && (
             <button type="button" className="btn" onClick={() => void openRedact()}>
@@ -540,6 +562,7 @@ function KindProperties({ target }: { target: Target }) {
       // Spotlight (EDT-039): the outside's color, opacity, blur and soft edge, shared.
       return (
         <>
+          {textOnly}
           <SelectField
             label={t("ui.editor.prop.spot_shape")}
             value={v<SpotShape>("shape")}
@@ -691,6 +714,7 @@ function KindProperties({ target }: { target: Target }) {
             onCommit={(color) => color && commit({ color })}
           />
           {opacity}
+          {textOnly}
         </>
       );
     case "step":

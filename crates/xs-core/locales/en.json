@@ -1626,6 +1626,10 @@
     "smart_steps_enabled": {
       "label": "Step recorder",
       "description": "Records each click as a step of a guide."
+    },
+    "smart_textOnly_enabled": {
+      "label": "Apply only to text",
+      "description": "Highlighter, Blur and Spotlight can cover just the lines of text in their area."
     }
   },
   "errors": {
@@ -2912,7 +2916,10 @@
         "simple_kind": "Shape",
         "background": "Background",
         "text_height": "Text height",
-        "line_spacing": "Line spacing"
+        "line_spacing": "Line spacing",
+        "text_only": "Only the text",
+        "text_only_help": "Covers just the lines of text inside the area, one band per line. They fit the text again when the object moves.",
+        "text_only_none": "No text in the area: it covers the whole area."
       },
       "cap": {
         "none": "None",
@@ -4744,7 +4751,8 @@
       "hint": "A feature switched off leaves its buttons, menus and shortcuts. Documents that already have its results still open and edit as usual.",
       "extractText": "Extract text",
       "autoRedact": "Auto redact",
-      "steps": "Step recorder"
+      "steps": "Step recorder",
+      "textOnly": "Apply only to text"
     }
   },
   "history": {
