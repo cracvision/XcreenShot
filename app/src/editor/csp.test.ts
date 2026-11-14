@@ -26,6 +26,14 @@ describe("content security policy of the installed app", () => {
     expect(media).toContain("xsdoc:");
   });
 
+  // The image with its effects is fetched (EDT-053, EDT-094): without this the canvas
+  // stayed without the effects while the tray's thumbnail had them (2026-11-14).
+  it("lets the editor fetch the image with its effects", () => {
+    const connect = directive(conf.app.security.csp, "connect-src");
+    expect(connect).toContain("http://xsdoc.localhost");
+    expect(connect).toContain("xsdoc:");
+  });
+
   it("lets the on-screen selection load frozen frames", () => {
     const connect = directive(conf.app.security.csp, "connect-src");
     expect(connect).toContain("http://xsframe.localhost");
