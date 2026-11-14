@@ -61,6 +61,11 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-14 (tarde, después del instalador `85f13f9`; van en el siguiente):**
+  - **Lupa de Dibujo en vivo (VID-049):** `M` muestra una lente redonda ×2 que sigue al puntero. Se ve en pantalla y en el video, y con ella los clics llegan a las apps.
+  - **Exportar un video (VID-066):** Archivo > **Exportar** pregunta el formato: MP4 (mismo códec), MP4 H.264 (si el video tiene otro códec, como H.265) o GIF animado.
+  - Guías: [`tests/manual/VID-M4-8.md`](../tests/manual/VID-M4-8.md) (Lupa) y [`tests/manual/VID-M4-6.md`](../tests/manual/VID-M4-6.md) (Exportar un video).
+
 - **2026-11-14 (tarde): Medición en vivo, mantener despierto y el resumen de la barra (EDT-094, VID-021, VID-023, VID-028, VID-052, SMT-036).** Hecho en Windows, con sus pruebas automáticas, visto en la instancia de desarrollo aislada y en la compilación empaquetada del **instalador `85f13f9`** (11:30).
   - **Medición en vivo (EDT-094):** herramienta **Medir** en **Más > Imagen**.
     - Bajo el puntero muestra cuánto se extiende lo que hay debajo hacia cada lado, y su tamaño.
