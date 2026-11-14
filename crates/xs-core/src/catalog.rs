@@ -1479,6 +1479,41 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "systemAudio": {"type": "boolean"}, "microphone": {"type": "boolean"},
                 "microphoneDevice": {"type": "string"}, "microphoneAutoLevel": {"type": "boolean"}
             }})),
+        B::new("record.cameras", &["VID-031", "VID-043"])
+            .scopes(ALL)
+            .result(json!({"type": "object", "properties": {
+                "cameras": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}}}},
+                "chosen": {"type": "string", "description": "The setting video.cameraDevice; empty: the first camera"}
+            }})),
+        B::new("record.camera", &["VID-031", "VID-032", "VID-033", "VID-034", "VID-036", "VID-038"])
+            .scopes(ALL)
+            .mutates()
+            .params(params(
+                json!({
+                    "on": {"type": "boolean", "description": "The camera in the video (VID-031)"},
+                    "enabled": {"type": "boolean", "description": "Use the camera in videos at all; off, it is never opened"},
+                    "device": {"type": "string", "description": "A camera's id from record.cameras; empty: the first. Only in Ready or paused"},
+                    "placement": {"type": "string", "enum": ["pip", "fullscreen"], "description": "In a corner, or filling the video (VID-034)"},
+                    "corner": {"type": "string", "enum": ["topLeft", "topRight", "bottomLeft", "bottomRight"]},
+                    "size": {"type": "number", "minimum": 0.1, "maximum": 0.5, "description": "Its shorter side, as a share of the area's shorter side (Small 0.15, Medium 0.25, Large 0.4)"},
+                    "shape": {"type": "string", "enum": ["circle", "roundedRect", "rect", "square", "roundedSquare"]},
+                    "aspect": {"type": "string", "enum": ["16:9", "4:3"], "description": "For the rectangles"},
+                    "mirror": {"type": "boolean"},
+                    "border": {"type": "string", "enum": ["none", "solid", "gradient"]},
+                    "borderColor": {"type": "string", "format": "color"},
+                    "borderColor2": {"type": "string", "format": "color", "description": "The gradient's second colour"},
+                    "borderWidth": {"type": "integer", "minimum": 2, "maximum": 16},
+                    "borderAngle": {"type": "integer", "minimum": 0, "maximum": 359, "description": "The gradient's direction in degrees (0: left to right)"},
+                    "retry": {"type": "boolean", "description": "Opens the camera again after a problem (VID-038)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The camera now: on, enabled, available, open, device, missing, trouble (blocked, in_use, gone, black, failed) and placement"})),
+        B::new("record.camera_swap", &["VID-035", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .mutates()
+            .result(json!({"type": "object"})),
         B::new("record.sound_settings", &["VID-039", "VID-019"])
             .mutates()
             .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),

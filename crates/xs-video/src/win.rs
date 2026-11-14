@@ -244,6 +244,10 @@ struct Converter {
     scale: f32,
     /// Draws the cursor and keyboard effects (VID-045 to VID-047).
     painter: Option<crate::win_fx::Painter>,
+    /// The camera's frame and look for the next picture (VID-032 to VID-036), and its
+    /// frame as a bitmap of the painter.
+    camera: std::cell::RefCell<Option<(Arc<crate::camlook::Frame>, crate::camlook::Look)>>,
+    camera_bitmap: std::cell::RefCell<Option<crate::win_fx::CameraBitmap>>,
     width: u32,
     height: u32,
 }
@@ -374,6 +378,8 @@ fn converter(
             area: std::cell::Cell::new(source),
             scale,
             painter,
+            camera: std::cell::RefCell::new(None),
+            camera_bitmap: std::cell::RefCell::new(None),
             width: size.0,
             height: size.1,
         })
@@ -424,6 +430,27 @@ impl Converter {
         // released at once; the icon's bitmaps from GetIconInfo are deleted.
         unsafe {
             gpu.context.CopyResource(&self.composite, &self.frame);
+            // The camera over the screen (VID-032); filling it, nothing goes over it
+            // (VID-034: no pointer, effects or keys).
+            let a = self.area.get();
+            let area = (
+                a.left as f32,
+                a.top as f32,
+                (a.right - a.left) as f32,
+                (a.bottom - a.top) as f32,
+            );
+            if let (Some(p), Some((frame, look))) = (&self.painter, self.camera.borrow().as_ref()) {
+                p.draw_camera(
+                    &mut self.camera_bitmap.borrow_mut(),
+                    frame,
+                    look,
+                    area,
+                    self.scale,
+                );
+                if look.placement == crate::camlook::Placement::Fullscreen {
+                    return;
+                }
+            }
             let mut info = CURSORINFO {
                 cbSize: std::mem::size_of::<CURSORINFO>() as u32,
                 ..Default::default()
@@ -1409,8 +1436,17 @@ pub(crate) fn record(
                 }
             }
         }
-        // Waves, a drag or labels showing: frames keep coming.
-        let animating = live.tick(Instant::now());
+        // The camera's latest frame, while it shows (VID-031).
+        let camera = if shared.camera_on.load(Ordering::Relaxed) {
+            shared.camera_feed.lock().unwrap().as_ref().and_then(|f| f())
+        } else {
+            None
+        };
+        let filming = camera.is_some();
+        conv.camera
+            .replace(camera.map(|f| (f, shared.camera_look.lock().unwrap().clone())));
+        // Waves, a drag, labels or the camera showing: frames keep coming.
+        let animating = live.tick(Instant::now()) || filming;
         if animating {
             dirty = true;
         }
@@ -2713,6 +2749,120 @@ mod tests {
             })
         });
         assert!(blue, "the click's wave");
+    }
+
+    /// The camera drawn on a grey picture in memory (no screen, no camera): in its
+    /// corner with the margin, mirrored, in its shape, with its border (VID-032 to
+    /// VID-036); and filling everything at full screen (VID-034).
+    #[test]
+    fn the_camera_is_drawn() {
+        use crate::camlook::*;
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        }
+        let Ok((adapter, _, _)) = find_output(Area {
+            x: 0,
+            y: 0,
+            width: 64,
+            height: 64,
+        }) else {
+            return;
+        };
+        let Ok(gpu) = gpu(&adapter) else { return };
+        let (w, h) = (400u32, 300u32);
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: w,
+            Height: h,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: D3D11_USAGE_DEFAULT,
+            BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+            CPUAccessFlags: 0,
+            MiscFlags: D3D11_RESOURCE_MISC_GDI_COMPATIBLE.0 as u32,
+        };
+        // A camera picture: its left half red, its right half blue (BGRA).
+        let (cw, ch) = (160u32, 90u32);
+        let mut cam = Vec::with_capacity((cw * ch * 4) as usize);
+        for _ in 0..ch {
+            for x in 0..cw {
+                cam.extend_from_slice(if x < cw / 2 {
+                    &[0, 0, 255, 255]
+                } else {
+                    &[255, 0, 0, 255]
+                });
+            }
+        }
+        let frame = Frame {
+            width: cw,
+            height: ch,
+            bgra: cam,
+            at: std::time::Instant::now(),
+        };
+        let draw = |look: &Look| {
+            let grey = vec![128u8; (w * h * 4) as usize];
+            let data = D3D11_SUBRESOURCE_DATA {
+                pSysMem: grey.as_ptr() as *const _,
+                SysMemPitch: w * 4,
+                SysMemSlicePitch: 0,
+            };
+            let mut tex = None;
+            unsafe { gpu.device.CreateTexture2D(&desc, Some(&data), Some(&mut tex)) }.unwrap();
+            let tex = tex.unwrap();
+            let painter = crate::win_fx::Painter::new(&tex).unwrap();
+            painter.draw_camera(&mut None, &frame, look, (0.0, 0.0, w as f32, h as f32), 1.0);
+            let staging = texture(&gpu, w, h, DXGI_FORMAT_B8G8R8A8_UNORM, 0, true).unwrap();
+            unsafe {
+                gpu.context.CopyResource(&staging, &tex);
+                let mut m = D3D11_MAPPED_SUBRESOURCE::default();
+                gpu.context
+                    .Map(&staging, 0, D3D11_MAP_READ, 0, Some(&mut m))
+                    .unwrap();
+                let pitch = m.RowPitch as usize;
+                let src = std::slice::from_raw_parts(m.pData as *const u8, pitch * h as usize).to_vec();
+                gpu.context.Unmap(&staging, 0);
+                move |x: usize, y: usize| {
+                    let i = y * pitch + x * 4;
+                    [src[i + 2], src[i + 1], src[i]]
+                }
+            }
+        };
+        let red = |p: [u8; 3]| p[0] > 200 && p[2] < 60;
+        let blue = |p: [u8; 3]| p[2] > 200 && p[0] < 60;
+        // 16:9, a quarter of 300 high, bottom right with 24 px of margin: from
+        // (242.7, 201) to (376, 276). Mirrored: blue on the left, red on the right.
+        let px = draw(&Look::default());
+        assert!(blue(px(260, 240)), "{:?}", px(260, 240));
+        assert!(red(px(360, 240)), "{:?}", px(360, 240));
+        assert_eq!(px(230, 240), [128, 128, 128], "the margin");
+        assert_eq!(px(300, 190), [128, 128, 128], "above it");
+        // Without the mirror, as the camera gives it.
+        let px = draw(&Look {
+            mirror: false,
+            ..Look::default()
+        });
+        assert!(red(px(260, 240)) && blue(px(360, 240)));
+        // A circle with an 8 px white border: the box's corner stays grey; a ring
+        // round it.
+        let px = draw(&Look {
+            shape: Shape::Circle,
+            border: Border::Solid,
+            border_colors: ([255, 255, 255], [0, 0, 0]),
+            border_width: 8.0,
+            ..Look::default()
+        });
+        // A circle of 75 px, its centre at (338.5, 238.5).
+        assert_eq!(px(303, 203), [128, 128, 128], "outside the circle");
+        let ring = px(338, 238 - 37 - 4);
+        assert!(ring.iter().all(|c| *c > 230), "the ring: {ring:?}");
+        // Full screen: the camera everywhere, cut to fill 4:3 from 16:9.
+        let px = draw(&Look {
+            placement: Placement::Fullscreen,
+            mirror: false,
+            ..Look::default()
+        });
+        assert!(red(px(5, 5)) && blue(px(395, 295)));
     }
 
     fn tempfile_dir() -> std::path::PathBuf {

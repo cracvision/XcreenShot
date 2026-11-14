@@ -38,6 +38,7 @@ pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
 pub mod qr_cmds;
+pub mod rec_camera;
 pub mod record;
 pub mod redact;
 pub mod redact_batch;
@@ -1551,6 +1552,8 @@ pub fn extension() -> Extension {
         // Icons hidden by a recording that never ended (a crash) come back (VID-018).
         if let Some(core) = weak.upgrade() {
             record::restore_icons(&core);
+            // The camera's own threads reach the app through this (VID-031).
+            rec_camera::init(&core);
             // A step recording cut short is offered in Recover work (SMT-027).
             xs_editor::add_recovery_preparer(&core, steps_rec::recover_leftovers);
             // And a video recording (VID-022).
@@ -1728,6 +1731,18 @@ pub fn extension() -> Extension {
         });
         let w = weak.clone();
         reg.handle("record.level", move |_ctx, _p| Ok(record::level(&*upgrade(&w)?)));
+        let w = weak.clone();
+        reg.handle("record.cameras", move |_ctx, _p| {
+            rec_camera::list_cmd(&*upgrade(&w)?)
+        });
+        let w = weak.clone();
+        reg.handle("record.camera", move |ctx, p| {
+            rec_camera::set(&*upgrade(&w)?, ctx, &p)
+        });
+        let w = weak.clone();
+        reg.handle("record.camera_swap", move |ctx, _p| {
+            rec_camera::swap(&*upgrade(&w)?, ctx)
+        });
         let w = weak.clone();
         reg.handle("record.sound", move |ctx, p| {
             record::sound(&*upgrade(&w)?, ctx, &p)

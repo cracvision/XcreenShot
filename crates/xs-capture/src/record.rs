@@ -105,7 +105,43 @@ fn bar(core: &Core, state: Option<Value>) {
             *awake = xs_video::stay_awake();
         }
     }
+    // The camera follows the bar (VID-031): open while it shows, let go when it closes.
+    crate::rec_camera::sync(core, state.as_ref());
     core.host().recording_bar(state);
+}
+
+/// Runs `f` on the recording under way, if any.
+pub(crate) fn with_recorder(core: &Core, f: impl FnOnce(&Recorder)) {
+    if let Some(r) = service(core).current.lock().unwrap().as_ref() {
+        f(&r.recorder);
+    }
+}
+
+/// It is recording now (not paused): devices are not changed then (VID-011).
+pub(crate) fn recording_now(core: &Core) -> bool {
+    service(core)
+        .current
+        .lock()
+        .unwrap()
+        .as_ref()
+        .is_some_and(|r| r.recorder.state() == State::Recording)
+}
+
+/// The scale of the area's monitor, Ready's or the recording's.
+pub(crate) fn area_scale(core: &Core) -> f64 {
+    let svc = service(core);
+    let ready = svc.ready.lock().unwrap().as_ref().map(|r| r.scale);
+    ready
+        .or_else(|| svc.current.lock().unwrap().as_ref().map(|r| r.again.scale))
+        .unwrap_or(1.0)
+}
+
+/// The bar and the camera again, after a change of the settings that show there.
+pub(crate) fn refresh(core: &Core) {
+    let state = status(core);
+    if state["status"] != "idle" {
+        bar(core, Some(state));
+    }
 }
 
 /// The computer goes to sleep, or wakes, during a recording (VID-021): it pauses; on
@@ -441,6 +477,8 @@ fn levels_json(core: &Core, l: xs_video::mix::Levels, mic_on: bool, system_on: b
         },
         "systemAudio": { "on": system_on, "level": round(system.level), "clip": system.clip },
         "track": track,
+        // The camera (VID-011, VID-038).
+        "camera": crate::rec_camera::status(core),
     })
 }
 

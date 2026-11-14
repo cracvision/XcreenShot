@@ -181,6 +181,10 @@ export function VideoOptions({
   const id = useId();
   const cursor = useSetting("video.cursor", true);
   const sound = useSetting("video.systemAudio", false);
+  // The camera (VID-031): when videos may use it, on with the first camera.
+  const camAllowed = useSetting("video.cameraEnabled", true);
+  const cam = useSetting("video.camera", true);
+  const camDevice = useStringSetting("video.cameraDevice", "");
   // The microphone (VID-039): on with the system's default, its device and level.
   const mic = useSetting("video.microphone", true);
   const micDevice = useStringSetting("video.microphoneDevice", "");
@@ -229,6 +233,33 @@ export function VideoOptions({
         />
         {t("ui.panel.video_sound")}
       </label>
+      {camAllowed && (
+        <>
+          <label className="panel-check">
+            <input
+              type="checkbox"
+              checked={cam}
+              onChange={(e) => set("video.camera", e.target.checked)}
+            />
+            {t("ui.panel.video_camera")}
+          </label>
+          {cam && (
+            <label className="panel-field" htmlFor={`${id}-vcam`}>
+              <span>{t("ui.panel.video_camera_device")}</span>
+              <MicDeviceSelect
+                id={`${id}-vcam`}
+                kind="camera"
+                value={camDevice}
+                onChange={(v) =>
+                  void run("settings.set", { key: "video.cameraDevice", value: v }).catch(
+                    () => undefined,
+                  )
+                }
+              />
+            </label>
+          )}
+        </>
+      )}
       <label className="panel-check">
         <input
           type="checkbox"

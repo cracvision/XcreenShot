@@ -1102,6 +1102,18 @@
     "record_sound_settings": {
       "title": "Abrir los ajustes de sonido",
       "description": "Los ajustes de sonido del sistema, para el silencio y el volumen del micrófono."
+    },
+    "record_cameras": {
+      "title": "Listar las cámaras",
+      "description": "Las cámaras conectadas y la elegida."
+    },
+    "record_camera": {
+      "title": "Opciones de la cámara",
+      "description": "La cámara activada o no, su dispositivo y cómo se ve en el video."
+    },
+    "record_camera_swap": {
+      "title": "Cambiar vista de cámara",
+      "description": "Imagen en imagen o cámara a pantalla completa, también durante la grabación."
     }
   },
   "settings": {
@@ -1730,6 +1742,88 @@
     "video_mutedMicAlert": {
       "label": "Avisar si el micrófono está silenciado",
       "description": "Durante la grabación, un aviso en la barra si el micrófono está silenciado en el sistema o no llega sonido de él."
+    },
+    "video_cameraEnabled": {
+      "label": "Usar la cámara en videos",
+      "description": "Desactivado, desaparece el interruptor de la cámara y XcreenShot nunca la abre."
+    },
+    "video_camera": {
+      "label": "Cámara activada en videos nuevos",
+      "description": "Tu cámara en una esquina del video. Activada por defecto si el equipo tiene una."
+    },
+    "video_cameraDevice": {
+      "label": "Cámara",
+      "description": "Qué cámara graba; vacío: la primera."
+    },
+    "video_cameraPlacement": {
+      "label": "Colocación de la cámara",
+      "description": "En una esquina sobre la pantalla, o llenando el video.",
+      "options": {
+        "pip": "Imagen en imagen",
+        "fullscreen": "Pantalla completa"
+      }
+    },
+    "video_cameraCorner": {
+      "label": "Esquina de la cámara",
+      "description": "Dónde va la cámara; al arrastrarla se ajusta a una esquina.",
+      "options": {
+        "topLeft": "Arriba izquierda",
+        "topRight": "Arriba derecha",
+        "bottomLeft": "Abajo izquierda",
+        "bottomRight": "Abajo derecha"
+      }
+    },
+    "video_cameraSize": {
+      "label": "Tamaño de la cámara",
+      "description": "Su lado menor como parte del lado menor del área (de 0,1 a 0,5)."
+    },
+    "video_cameraShape": {
+      "label": "Forma de la cámara",
+      "description": "La imagen se recorta por el centro para llenar la forma, sin deformarse.",
+      "options": {
+        "circle": "Círculo",
+        "roundedRect": "Rectángulo redondeado",
+        "rect": "Rectángulo",
+        "square": "Cuadrado",
+        "roundedSquare": "Cuadrado redondeado"
+      }
+    },
+    "video_cameraAspect": {
+      "label": "Proporción de la cámara",
+      "description": "Para los rectángulos.",
+      "options": {
+        "16:9": "16:9",
+        "4:3": "4:3"
+      }
+    },
+    "video_cameraMirror": {
+      "label": "Cámara en espejo",
+      "description": "Izquierda y derecha invertidas, como en un espejo, en la vista previa y en el video. Desactivado, el texto que se muestre a la cámara se lee bien."
+    },
+    "video_cameraBorder": {
+      "label": "Borde de la cámara",
+      "description": "Solo en imagen en imagen; sigue la forma.",
+      "options": {
+        "none": "Ninguno",
+        "solid": "Color sólido",
+        "gradient": "Degradado"
+      }
+    },
+    "video_cameraBorderColor": {
+      "label": "Color del borde",
+      "description": "El borde, o el primer color del degradado."
+    },
+    "video_cameraBorderColor2": {
+      "label": "Segundo color del borde",
+      "description": "El segundo color del degradado."
+    },
+    "video_cameraBorderWidth": {
+      "label": "Grosor del borde",
+      "description": "De 2 a 16 px."
+    },
+    "video_cameraBorderAngle": {
+      "label": "Dirección del degradado",
+      "description": "En grados: 0 va de izquierda a derecha y 90, de arriba abajo."
     }
   },
   "errors": {
@@ -1871,7 +1965,9 @@
     "qr_too_long": "Demasiado largo para un código QR: {{bytes}} bytes, como mucho {{max}} con esta corrección de errores.",
     "recover_video_failed": "No se pudo recuperar la grabación: {{reason}}",
     "mic_device_recording": "El micrófono se cambia en Lista o en pausa, para no cortar la voz.",
-    "no_sound_track": "Esta grabación empezó sin sonido: activa el micrófono o el audio del sistema antes de grabar."
+    "no_sound_track": "Esta grabación empezó sin sonido: activa el micrófono o el audio del sistema antes de grabar.",
+    "camera_device_recording": "La cámara se cambia en Lista o en pausa, para no cortar el video.",
+    "camera_off": "La cámara está desactivada."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -2899,7 +2995,9 @@
       "video_mic_device": "Micrófono",
       "video_mic_default": "Predeterminado del sistema",
       "video_mic_auto": "Ajustar el nivel automáticamente",
-      "video_sound_settings": "Ajustes de sonido del sistema…"
+      "video_sound_settings": "Ajustes de sonido del sistema…",
+      "video_camera": "Cámara",
+      "video_camera_device": "Cámara"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4644,7 +4742,31 @@
       "mic_device_locked": "El micrófono se cambia en Lista o en pausa",
       "no_track": "Actívalo antes de grabar para que el video tenga sonido",
       "mic_blocked": "El sistema no deja que XcreenShot use el micrófono",
-      "fix_permissions": "Reparar permisos"
+      "fix_permissions": "Reparar permisos",
+      "camera": "Cámara",
+      "camera_options": "Opciones de la cámara",
+      "camera_default": "Primera cámara",
+      "camera_none": "No hay ninguna cámara conectada",
+      "camera_locked": "La cámara se cambia en Lista o en pausa",
+      "camera_pip": "Imagen en imagen",
+      "camera_fullscreen": "Pantalla completa",
+      "camera_corner": "Esquina",
+      "camera_size": "Tamaño",
+      "size_small": "Pequeño",
+      "size_medium": "Mediano",
+      "size_large": "Grande",
+      "camera_shape": "Forma",
+      "camera_border": "Borde",
+      "camera_mirror": "Espejo",
+      "camera_swap": "Cambiar vista de cámara",
+      "camera_blocked": "El sistema no deja que XcreenShot use la cámara",
+      "camera_in_use": "La cámara está en uso por otra aplicación",
+      "camera_gone": "La cámara se desconectó",
+      "camera_black": "La cámara no envía imagen",
+      "camera_failed": "No se pudo abrir la cámara",
+      "camera_missing": "La cámara elegida no está conectada: se usa otra",
+      "retry": "Reintentar",
+      "without_camera": "Grabar sin cámara"
     },
     "video": {
       "silent_suffix": "sin sonido",

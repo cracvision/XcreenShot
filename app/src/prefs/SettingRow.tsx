@@ -29,11 +29,12 @@ export function SettingRow({ setting, highlighted }: Props) {
   };
 
   let control;
-  if (setting.key === "video.microphoneDevice") {
-    // An input chosen from those plugged in, not its id typed (VID-039).
+  if (setting.key === "video.microphoneDevice" || setting.key === "video.cameraDevice") {
+    // A device chosen from those plugged in, not its id typed (VID-031, VID-039).
     control = (
       <MicDeviceSelect
         id={id}
+        kind={setting.key === "video.cameraDevice" ? "camera" : "microphone"}
         value={String(setting.value ?? "")}
         disabled={setting.locked}
         describedBy={`${id}-desc`}

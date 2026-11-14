@@ -336,6 +336,11 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | VID-019 | Primer aviso: hablar con el micrófono apagado | Queda para la entrega de reducción de ruido (VID-041): distinguir voz de ruido (ventilador, teclado, música) necesita un detector de voz, que es la misma pieza | Provisional |
 | VID-011 | La barra no tenía fondo: la clase `glass` no tenía estilo, y sobre una pantalla clara u oscura los controles se leían mal | La barra de grabación, la del grabador de pasos y la franja de avisos usan ahora el material de cristal de los paneles flotantes | Provisional |
 | VID-011 | La barra crece para el menú del micrófono y para los avisos | La ventana crece hacia abajo, o hacia arriba si la barra está en la mitad de abajo de su monitor, y vuelve a su tamaño al cerrarse. Mientras está crecida, la parte transparente no deja pasar los clics | Provisional |
+| VID-031 | "Cámara activada por defecto en videos nuevos" y el interruptor | Son el mismo ajuste (`video.camera`, activado): el interruptor se recuerda, así que lo que quede elegido vale para el siguiente video. "Usar la cámara en videos" (`video.cameraEnabled`) es aparte y la quita del todo | Provisional |
+| VID-031 / VID-038 | El equipo de Carlos no tiene cámara | La cámara se construyó y se probó en memoria con una cámara inventada (posición, espejo, formas, borde, pantalla completa) y con la vista previa en pantalla. Falta la prueba con una webcam real (`tests/manual/VID-031.md`) | Abierta |
+| VID-034 | ¿Qué se ve en pantalla con la cámara a pantalla completa? | La vista previa sigue en su esquina: el video solo muestra la cámara, pero tapar toda la pantalla dejaría al usuario sin ver lo que hace | Provisional |
+| VID-034 | Selección = Solo cámara | Queda para una entrega siguiente: es otra fuente de imagen (sin pantalla) y otra ventana de vista previa | Provisional |
+| VID-037 | Fondo de la cámara (desenfocar, imagen) | Necesita separar a la persona del fondo en el equipo, en tiempo real; queda para una entrega propia, con un modelo local (como el de Quitar fondo, SMT-020) | Provisional |
 
 ## Dudas del equipo de construcción (M4, entrega 8: Dibujo en vivo)
 

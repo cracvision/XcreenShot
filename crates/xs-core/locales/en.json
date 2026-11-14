@@ -1102,6 +1102,18 @@
     "record_sound_settings": {
       "title": "Open the sound settings",
       "description": "The system's sound settings, for the microphone's mute and volume."
+    },
+    "record_cameras": {
+      "title": "List the cameras",
+      "description": "The cameras plugged in and the one chosen."
+    },
+    "record_camera": {
+      "title": "Camera options",
+      "description": "The camera on or off, its device and how it shows in the video."
+    },
+    "record_camera_swap": {
+      "title": "Switch the camera view",
+      "description": "Picture in picture or full screen camera, also while recording."
     }
   },
   "settings": {
@@ -1730,6 +1742,88 @@
     "video_mutedMicAlert": {
       "label": "Warn when the microphone is muted",
       "description": "While recording, a warning in the bar if the microphone is muted in the system or no sound comes from it."
+    },
+    "video_cameraEnabled": {
+      "label": "Use the camera in videos",
+      "description": "Off, the camera switch goes away and XcreenShot never opens the camera."
+    },
+    "video_camera": {
+      "label": "Camera on in new videos",
+      "description": "Your camera in a corner of the video. On by default when the computer has one."
+    },
+    "video_cameraDevice": {
+      "label": "Camera",
+      "description": "Which camera records; empty: the first one."
+    },
+    "video_cameraPlacement": {
+      "label": "Camera placement",
+      "description": "In a corner over the screen, or filling the video.",
+      "options": {
+        "pip": "Picture in picture",
+        "fullscreen": "Full screen"
+      }
+    },
+    "video_cameraCorner": {
+      "label": "Camera corner",
+      "description": "Where the camera sits; dragging it snaps it to a corner.",
+      "options": {
+        "topLeft": "Top left",
+        "topRight": "Top right",
+        "bottomLeft": "Bottom left",
+        "bottomRight": "Bottom right"
+      }
+    },
+    "video_cameraSize": {
+      "label": "Camera size",
+      "description": "Its shorter side as a share of the area’s shorter side (0.1 to 0.5)."
+    },
+    "video_cameraShape": {
+      "label": "Camera shape",
+      "description": "The picture is cut from its middle to fill the shape, never stretched.",
+      "options": {
+        "circle": "Circle",
+        "roundedRect": "Rounded rectangle",
+        "rect": "Rectangle",
+        "square": "Square",
+        "roundedSquare": "Rounded square"
+      }
+    },
+    "video_cameraAspect": {
+      "label": "Camera proportion",
+      "description": "For the rectangles.",
+      "options": {
+        "16:9": "16:9",
+        "4:3": "4:3"
+      }
+    },
+    "video_cameraMirror": {
+      "label": "Mirror the camera",
+      "description": "Left and right swapped, as in a mirror, in the preview and in the video. Off, text shown to the camera reads right."
+    },
+    "video_cameraBorder": {
+      "label": "Camera border",
+      "description": "Only in picture in picture; it follows the shape.",
+      "options": {
+        "none": "None",
+        "solid": "Solid colour",
+        "gradient": "Gradient"
+      }
+    },
+    "video_cameraBorderColor": {
+      "label": "Border colour",
+      "description": "The border, or the gradient’s first colour."
+    },
+    "video_cameraBorderColor2": {
+      "label": "Border second colour",
+      "description": "The gradient’s second colour."
+    },
+    "video_cameraBorderWidth": {
+      "label": "Border width",
+      "description": "From 2 to 16 px."
+    },
+    "video_cameraBorderAngle": {
+      "label": "Gradient direction",
+      "description": "In degrees: 0 goes left to right, 90 top to bottom."
     }
   },
   "errors": {
@@ -1871,7 +1965,9 @@
     "qr_too_long": "Too long for a QR code: {{bytes}} bytes, at most {{max}} with this error correction.",
     "recover_video_failed": "The recording could not be recovered: {{reason}}",
     "mic_device_recording": "The microphone can be changed while ready or paused, so the voice isn't cut.",
-    "no_sound_track": "This recording started without sound: turn on the microphone or the system sound before recording."
+    "no_sound_track": "This recording started without sound: turn on the microphone or the system sound before recording.",
+    "camera_device_recording": "The camera can be changed while ready or paused, so the video isn't cut.",
+    "camera_off": "The camera is off."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -2899,7 +2995,9 @@
       "video_mic_device": "Microphone",
       "video_mic_default": "System default",
       "video_mic_auto": "Adjust the level automatically",
-      "video_sound_settings": "System sound settings…"
+      "video_sound_settings": "System sound settings…",
+      "video_camera": "Camera",
+      "video_camera_device": "Camera"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4644,7 +4742,31 @@
       "mic_device_locked": "Change the microphone while ready or paused",
       "no_track": "Turn it on before recording so the video has sound",
       "mic_blocked": "The system doesn't let XcreenShot use the microphone",
-      "fix_permissions": "Fix permissions"
+      "fix_permissions": "Fix permissions",
+      "camera": "Camera",
+      "camera_options": "Camera options",
+      "camera_default": "First camera",
+      "camera_none": "No camera is connected",
+      "camera_locked": "Change the camera while ready or paused",
+      "camera_pip": "Picture in picture",
+      "camera_fullscreen": "Full screen",
+      "camera_corner": "Corner",
+      "camera_size": "Size",
+      "size_small": "Small",
+      "size_medium": "Medium",
+      "size_large": "Large",
+      "camera_shape": "Shape",
+      "camera_border": "Border",
+      "camera_mirror": "Mirror",
+      "camera_swap": "Switch camera view",
+      "camera_blocked": "The system doesn't let XcreenShot use the camera",
+      "camera_in_use": "The camera is in use by another app",
+      "camera_gone": "The camera was disconnected",
+      "camera_black": "The camera isn't sending a picture",
+      "camera_failed": "The camera couldn't be opened",
+      "camera_missing": "The chosen camera isn't connected: using another",
+      "retry": "Retry",
+      "without_camera": "Record without camera"
     },
     "video": {
       "silent_suffix": "silent",

@@ -44,6 +44,10 @@ pub fn input_muted(_device: Option<&str>) -> Option<bool> {
 }
 
 #[cfg(windows)]
+pub mod camera;
+#[cfg(windows)]
+pub mod campreview;
+#[cfg(windows)]
 mod meter;
 #[cfg(windows)]
 pub use meter::Meter;
@@ -85,6 +89,7 @@ pub fn stay_awake() -> Option<StayAwake> {
 /// Sleep and wake (not watched on this platform yet).
 #[cfg(not(windows))]
 pub fn watch_suspend(_f: impl Fn(bool) + Send + Sync + 'static) {}
+pub mod camlook;
 pub mod effects;
 pub mod timeline;
 #[cfg(windows)]
@@ -554,6 +559,11 @@ pub(crate) struct Shared {
     pub microphone_changed: std::sync::atomic::AtomicU32,
     /// The system's sound is kept (VID-011: switched off, the rest is silent).
     pub system_audio: AtomicBool,
+    /// The camera (VID-031 to VID-036): where its frames come from, whether it shows
+    /// and how; each can change while recording.
+    pub camera_feed: Mutex<Option<camlook::Feed>>,
+    pub camera_on: AtomicBool,
+    pub camera_look: Mutex<camlook::Look>,
 }
 
 #[derive(Default)]
@@ -634,6 +644,9 @@ impl Recorder {
             microphone: Mutex::new(options.microphone.clone()),
             microphone_changed: std::sync::atomic::AtomicU32::new(0),
             system_audio: AtomicBool::new(options.system_audio),
+            camera_feed: Mutex::new(None),
+            camera_on: AtomicBool::new(false),
+            camera_look: Mutex::new(camlook::Look::default()),
         });
         // A sound track when some sound was asked for, so either can be switched on later.
         let audio = options.system_audio || options.microphone.is_some();
@@ -726,6 +739,25 @@ impl Recorder {
 
     pub fn microphone(&self) -> Option<Microphone> {
         self.shared.microphone.lock().unwrap().clone()
+    }
+
+    /// The camera's frames (VID-031): from the camera the preview reads, or none.
+    pub fn set_camera(&self, feed: Option<camlook::Feed>) {
+        *self.shared.camera_feed.lock().unwrap() = feed;
+    }
+
+    /// The camera shows from now on, or not (VID-011, VID-031).
+    pub fn set_camera_on(&self, on: bool) {
+        self.shared.camera_on.store(on, Ordering::Relaxed);
+    }
+
+    pub fn camera_on(&self) -> bool {
+        self.shared.camera_on.load(Ordering::Relaxed)
+    }
+
+    /// Where and how the camera shows from now on (VID-032 to VID-036).
+    pub fn set_camera_look(&self, look: camlook::Look) {
+        *self.shared.camera_look.lock().unwrap() = look;
     }
 
     /// The system's sound from now on (VID-011).

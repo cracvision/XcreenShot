@@ -22,8 +22,26 @@ export interface MicLevel {
   blocked?: boolean;
 }
 
+/** The camera now (VID-031, VID-038). */
+export interface CameraState {
+  /** Switched on and allowed in videos. */
+  on: boolean;
+  /** Use the camera in videos at all: off, its switch goes away. */
+  enabled: boolean;
+  /** Some camera is plugged in. */
+  available: boolean;
+  open: boolean;
+  device: string | null;
+  /** The chosen one is not plugged in: another is used (VID-043). */
+  missing: boolean;
+  /** Why it gives no picture. */
+  trouble: "blocked" | "in_use" | "gone" | "black" | "failed" | null;
+  placement: string;
+}
+
 export interface SoundLevels {
   status: "ready" | "recording" | "paused" | "idle";
+  camera?: CameraState;
   microphone?: MicLevel;
   systemAudio?: { on: boolean; level: number; clip: boolean };
   /** The video has a sound track: the sounds can be switched while it records. */
@@ -73,6 +91,69 @@ export function soundWarning(l: SoundLevels | null, alerts: boolean): SoundWarni
   if (m.missing && l.status === "ready") return "mic_missing";
   if (alerts && m.quietSeconds >= 10) return "mic_quiet";
   return null;
+}
+
+export type CameraWarning =
+  | "camera_blocked"
+  | "camera_in_use"
+  | "camera_gone"
+  | "camera_black"
+  | "camera_failed"
+  | "camera_missing";
+
+export type BarWarning = SoundWarning | CameraWarning;
+
+/** The camera's warning now, if any (VID-038, VID-043). */
+export function cameraWarning(l: SoundLevels | null): CameraWarning | null {
+  const c = l?.camera;
+  if (!l || !c?.on || !c.enabled || !c.available) return null;
+  if (c.trouble) return `camera_${c.trouble}`;
+  if (c.missing && l.status === "ready") return "camera_missing";
+  return null;
+}
+
+/** The warning under the bar: the camera's first, then the sound's. */
+export function barWarning(l: SoundLevels | null, alerts: boolean): BarWarning | null {
+  return cameraWarning(l) ?? soundWarning(l, alerts);
+}
+
+/** A way out of a warning: a button that runs a command. */
+export interface StripAction {
+  label: string;
+  command: string;
+  params?: Record<string, unknown>;
+}
+
+const RETRY: StripAction = { label: "retry", command: "record.camera", params: { retry: true } };
+const WITHOUT_CAMERA: StripAction = {
+  label: "without_camera",
+  command: "record.camera",
+  params: { on: false },
+};
+
+/** The buttons of each warning (VID-019, VID-038, VID-077). */
+export function warningActions(w: BarWarning): StripAction[] {
+  switch (w) {
+    case "mic_blocked":
+    case "camera_blocked":
+      return [
+        {
+          label: "fix_permissions",
+          command: "app.open_permission_settings",
+          params: { permission: w === "mic_blocked" ? "microphone" : "camera" },
+        },
+      ];
+    case "camera_in_use":
+    case "camera_gone":
+    case "camera_black":
+    case "camera_failed":
+      return [RETRY, WITHOUT_CAMERA];
+    case "mic_missing":
+    case "camera_missing":
+      return [];
+    default:
+      return [{ label: "open_sound_settings", command: "record.sound_settings" }];
+  }
 }
 
 /** A warning closed stays away for 2 minutes (VID-019). */

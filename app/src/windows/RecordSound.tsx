@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Menu, type MenuItem } from "../components/Menu";
 import { run } from "../lib/commands";
 import { useSetting, useStringSetting } from "../store";
-import { meterFill, type SoundLevels, type SoundWarning } from "./recSound";
+import { meterFill, warningActions, type BarWarning, type SoundLevels } from "./recSound";
 
 /** A level meter (VID-011): it fills as the sound gets louder and turns red at the top. */
 export function LevelMeter({
@@ -180,17 +180,10 @@ export function MicControl({
   );
 }
 
-/** A warning under the bar (VID-019, VID-043), with its way out; Esc or × closes it. */
-export function SoundStrip({
-  warning,
-  onDismiss,
-}: {
-  warning: SoundWarning;
-  onDismiss: () => void;
-}) {
+/** A warning under the bar (VID-019, VID-038, VID-043, VID-077), with its ways out;
+ * Esc or × closes it. */
+export function SoundStrip({ warning, onDismiss }: { warning: BarWarning; onDismiss: () => void }) {
   const { t } = useTranslation();
-  const settings = warning !== "mic_missing" && warning !== "mic_blocked";
-  const privacy = warning === "mic_blocked";
   const esc = (e: React.KeyboardEvent) => {
     if (e.key !== "Escape") return;
     e.preventDefault();
@@ -201,30 +194,17 @@ export function SoundStrip({
     <div className="recbar-strip" role="alert">
       <span className="recbar-strip-dot" aria-hidden="true" />
       <span className="recbar-strip-text">{t(`ui.recbar.${warning}`)}</span>
-      {settings && (
+      {warningActions(warning).map((a) => (
         <button
+          key={a.label}
           type="button"
           className="btn small"
           onKeyDown={esc}
-          onClick={() => void run("record.sound_settings").catch(() => undefined)}
+          onClick={() => void run(a.command, a.params ?? {}).catch(() => undefined)}
         >
-          {t("ui.recbar.open_sound_settings")}
+          {t(`ui.recbar.${a.label}`)}
         </button>
-      )}
-      {privacy && (
-        <button
-          type="button"
-          className="btn small"
-          onKeyDown={esc}
-          onClick={() =>
-            void run("app.open_permission_settings", { permission: "microphone" }).catch(
-              () => undefined,
-            )
-          }
-        >
-          {t("ui.recbar.fix_permissions")}
-        </button>
-      )}
+      ))}
       <button
         type="button"
         className="btn icon small"

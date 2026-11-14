@@ -1,5 +1,5 @@
-// The microphone to record (VID-039): the system's default or one of the inputs that
-// are plugged in; a chosen one that is not plugged in stays listed as such (VID-043).
+// The microphone or camera to record (VID-031, VID-039): the default or one of those
+// plugged in; a chosen one that is not plugged in stays listed as such (VID-043).
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
@@ -16,8 +16,10 @@ export function MicDeviceSelect({
   disabled,
   describedBy,
   onChange,
+  kind = "microphone",
 }: {
   id: string;
+  kind?: "microphone" | "camera";
   /** The input's id; empty: the system's default. */
   value: string;
   disabled?: boolean;
@@ -29,9 +31,13 @@ export function MicDeviceSelect({
   useEffect(() => {
     let alive = true;
     const load = () =>
-      void run<{ inputs: Input[] }>("record.devices")
-        .then((r) => {
-          if (alive) setInputs(r.inputs);
+      void (
+        kind === "camera"
+          ? run<{ cameras: Input[] }>("record.cameras").then((r) => r.cameras)
+          : run<{ inputs: Input[] }>("record.devices").then((r) => r.inputs)
+      )
+        .then((list) => {
+          if (alive) setInputs(list);
         })
         .catch(() => undefined);
     load();
@@ -41,7 +47,7 @@ export function MicDeviceSelect({
       alive = false;
       window.removeEventListener("focus", load);
     };
-  }, []);
+  }, [kind]);
   const missing = value !== "" && inputs !== null && !inputs.some((i) => i.id === value);
   return (
     <select
@@ -51,7 +57,9 @@ export function MicDeviceSelect({
       aria-describedby={describedBy}
       onChange={(e) => onChange(e.target.value)}
     >
-      <option value="">{t("ui.recbar.mic_default")}</option>
+      <option value="">
+        {t(kind === "camera" ? "ui.recbar.camera_default" : "ui.recbar.mic_default")}
+      </option>
       {(inputs ?? []).map((i) => (
         <option key={i.id} value={i.id}>
           {i.wireless ? `${i.name} — ${t("ui.recbar.mic_wireless")}` : i.name}

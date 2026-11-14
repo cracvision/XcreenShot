@@ -512,7 +512,7 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
     }
     if app.get_webview_window(RECBAR).is_none() {
         // Wide enough for the sound's switches and meters (VID-011).
-        let (bw, bh) = (840.0, 52.0);
+        let (bw, bh) = (960.0, 52.0);
         let gap = 10.0 * scale;
         let mut px = x + w / 2.0 - bw * scale / 2.0;
         // Under the area; above it when there is no room; inside it at the bottom when

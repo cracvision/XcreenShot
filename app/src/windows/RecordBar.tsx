@@ -8,8 +8,9 @@ import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
 import { clock, longHint } from "./recClock";
+import { CameraControl } from "./RecordCamera";
 import { MicControl, SoundStrip, SystemAudioControl } from "./RecordSound";
-import { DISMISS_MS, soundWarning, useLevels } from "./recSound";
+import { barWarning, DISMISS_MS, useLevels } from "./recSound";
 
 /** The bar's height, a warning's under it and a menu entry's, in CSS px. */
 const BAR_H = 52;
@@ -67,7 +68,7 @@ export function RecordBar() {
     const s = window.screen as Screen & { availTop?: number };
     return window.screenY - (s.availTop ?? 0) + BAR_H / 2 > s.availHeight / 2;
   });
-  const raw = soundWarning(levels, alerts);
+  const raw = barWarning(levels, alerts);
   const closedAt = raw ? dismissed[raw] : undefined;
   const warning = raw && !(closedAt !== undefined && now - closedAt < DISMISS_MS) ? raw : null;
   const height = BAR_H + (warning ? STRIP_H : 0) + (menuRows ? menuRows * ROW_H + 24 : 0);
@@ -279,6 +280,7 @@ export function RecordBar() {
           {t("ui.livedraw.button")}
         </button>
       )}
+      {active && <CameraControl levels={levels} up={up} onMenu={setMenuRows} />}
       {active && <SystemAudioControl levels={levels} />}
       {active && <MicControl levels={levels} up={up} onMenu={setMenuRows} />}
       {state.status === "countdown" && (

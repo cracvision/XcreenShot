@@ -160,7 +160,10 @@ mod tests {
         use super::consent_denied;
         assert!(!consent_denied([None, None, None]));
         assert!(!consent_denied([Some("Allow"), Some("Allow"), Some("Allow")]));
-        assert!(consent_denied([Some("Deny"), Some("Allow"), None]), "the whole computer");
+        assert!(
+            consent_denied([Some("Deny"), Some("Allow"), None]),
+            "the whole computer"
+        );
         assert!(consent_denied([None, None, Some("Deny")]), "desktop apps");
         // This computer as it is: it can be read, whatever it says.
         let _ = super::device_access_denied("microphone");

@@ -19,6 +19,7 @@ use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
 use windows::Win32::UI::Accessibility::{CUIAutomation, IUIAutomation};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
+use crate::camlook::{cover, Border, Frame, Look};
 use crate::effects::{wave_progress, Effects, KeyPlace, Live, Rgb, WAVE};
 
 fn color(c: Rgb, a: f32) -> D2D1_COLOR_F {
@@ -231,6 +232,188 @@ impl Painter {
             }
             let _ = t.EndDraw(None, None);
         }
+    }
+
+    /// Draws the camera (VID-032 to VID-036) in `area` (the texture's pixels): in its
+    /// corner or filling it, in its shape, mirrored if asked, with its border.
+    pub fn draw_camera(
+        &self,
+        cache: &mut Option<CameraBitmap>,
+        frame: &Frame,
+        look: &Look,
+        area: (f32, f32, f32, f32),
+        scale: f32,
+    ) {
+        draw_camera(&self.target, cache, frame, look, area, scale);
+    }
+}
+
+/// The camera's last frame on a Direct2D target, kept until a newer one comes.
+pub struct CameraBitmap {
+    at: Instant,
+    size: (u32, u32),
+    bitmap: ID2D1Bitmap,
+}
+
+/// Draws the camera on `t` in `area`, where its look places it.
+pub fn draw_camera(
+    t: &ID2D1RenderTarget,
+    cache: &mut Option<CameraBitmap>,
+    frame: &Frame,
+    look: &Look,
+    area: (f32, f32, f32, f32),
+    scale: f32,
+) {
+    let r = look.rect(area.2, area.3, scale);
+    let r = crate::camlook::Rect {
+        x: area.0 + r.x,
+        y: area.1 + r.y,
+        ..r
+    };
+    draw_camera_at(t, cache, frame, look, r, scale);
+}
+
+/// Draws the camera on `t` in the box `r`, in its shape, mirrored if asked, with its
+/// border around (shared by the video and the preview, so both look alike).
+pub fn draw_camera_at(
+    t: &ID2D1RenderTarget,
+    cache: &mut Option<CameraBitmap>,
+    frame: &Frame,
+    look: &Look,
+    r: crate::camlook::Rect,
+    scale: f32,
+) {
+    let (fw, fh) = (frame.width, frame.height);
+    if fw == 0 || fh == 0 || frame.bgra.len() < (fw * fh * 4) as usize {
+        return;
+    }
+    // SAFETY: Direct2D calls on this thread's target; the frame's pixels outlive the
+    // copy, which reads `fh` rows of `fw * 4` bytes.
+    unsafe {
+        let fresh = cache.as_ref().is_none_or(|c| c.at != frame.at);
+        if cache.as_ref().is_some_and(|c| c.size != (fw, fh)) {
+            *cache = None;
+        }
+        if cache.is_none() {
+            let props = D2D1_BITMAP_PROPERTIES {
+                pixelFormat: D2D1_PIXEL_FORMAT {
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                },
+                dpiX: 96.0,
+                dpiY: 96.0,
+            };
+            let Ok(bitmap) = t.CreateBitmap(
+                D2D_SIZE_U {
+                    width: fw,
+                    height: fh,
+                },
+                Some(frame.bgra.as_ptr().cast()),
+                fw * 4,
+                &props,
+            ) else {
+                return;
+            };
+            *cache = Some(CameraBitmap {
+                at: frame.at,
+                size: (fw, fh),
+                bitmap,
+            });
+        } else if fresh {
+            if let Some(c) = cache.as_mut() {
+                let _ = c.bitmap.CopyFromMemory(None, frame.bgra.as_ptr().cast(), fw * 4);
+                c.at = frame.at;
+            }
+        }
+        let Some(c) = cache.as_ref() else { return };
+        let (x, y) = (r.x, r.y);
+        let src = cover(fw as f32, fh as f32, r.w, r.h);
+        let k = r.w / src.w;
+        let props = D2D1_BITMAP_BRUSH_PROPERTIES {
+            extendModeX: D2D1_EXTEND_MODE_CLAMP,
+            extendModeY: D2D1_EXTEND_MODE_CLAMP,
+            interpolationMode: D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+        };
+        let Ok(brush) = t.CreateBitmapBrush(&c.bitmap, Some(&props), None) else {
+            return;
+        };
+        // The cut of the picture onto the box; the mirror turns it around its middle.
+        let m = if look.mirror {
+            windows_numerics::Matrix3x2 {
+                M11: -k,
+                M12: 0.0,
+                M21: 0.0,
+                M22: k,
+                M31: x + r.w + src.x * k,
+                M32: y - src.y * k,
+            }
+        } else {
+            windows_numerics::Matrix3x2 {
+                M11: k,
+                M12: 0.0,
+                M21: 0.0,
+                M22: k,
+                M31: x - src.x * k,
+                M32: y - src.y * k,
+            }
+        };
+        brush.SetTransform(&m);
+        let radius = look.radius(r);
+        let rounded = |grow: f32| D2D1_ROUNDED_RECT {
+            rect: D2D_RECT_F {
+                left: x - grow,
+                top: y - grow,
+                right: x + r.w + grow,
+                bottom: y + r.h + grow,
+            },
+            radiusX: (radius + grow).max(0.0),
+            radiusY: (radius + grow).max(0.0),
+        };
+        t.BeginDraw();
+        t.FillRoundedRectangle(&rounded(0.0), &brush);
+        if look.has_border() {
+            let width = look.border_width.clamp(2.0, 16.0) * scale;
+            let ring = rounded(width / 2.0);
+            let (a, b) = look.border_colors;
+            if look.border == Border::Gradient {
+                let stops = [
+                    D2D1_GRADIENT_STOP {
+                        position: 0.0,
+                        color: color(a, 1.0),
+                    },
+                    D2D1_GRADIENT_STOP {
+                        position: 1.0,
+                        color: color(b, 1.0),
+                    },
+                ];
+                let (cx, cy) = (x + r.w / 2.0, y + r.h / 2.0);
+                let (dx, dy) = (
+                    look.border_angle.to_radians().cos(),
+                    look.border_angle.to_radians().sin(),
+                );
+                let reach = (r.w.abs() * dx.abs() + r.h.abs() * dy.abs()) / 2.0 + width;
+                if let Ok(collection) =
+                    t.CreateGradientStopCollection(&stops, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP)
+                {
+                    let line = D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES {
+                        startPoint: windows_numerics::Vector2 {
+                            X: cx - dx * reach,
+                            Y: cy - dy * reach,
+                        },
+                        endPoint: windows_numerics::Vector2 {
+                            X: cx + dx * reach,
+                            Y: cy + dy * reach,
+                        },
+                    };
+                    if let Ok(g) = t.CreateLinearGradientBrush(&line, None, &collection) {
+                        t.DrawRoundedRectangle(&ring, &g, width, None);
+                    }
+                }
+            } else if let Ok(s) = t.CreateSolidColorBrush(&color(a, 1.0), None) {
+                t.DrawRoundedRectangle(&ring, &s, width, None);
+            }
+        }
+        let _ = t.EndDraw(None, None);
     }
 }
 
