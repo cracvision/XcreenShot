@@ -434,9 +434,13 @@ fn job_done(id: &str) {
     }
 }
 
-/// `video.cancel`: stops the GIF being made from a video; nothing is left behind.
+/// `video.cancel`: stops the GIF being made from a video, or with `job: combine` the
+/// videos being combined; nothing is left behind.
 pub fn cancel(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
-    let id = resolve(core, ctx.lang, p)?;
+    let id = match p.get("job").and_then(Value::as_str) {
+        Some("combine") => COMBINE.to_string(),
+        _ => resolve(core, ctx.lang, p)?,
+    };
     let flag = JOBS.lock().unwrap().as_ref().and_then(|m| m.get(&id).cloned());
     if let Some(f) = &flag {
         f.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -719,6 +723,113 @@ pub fn gif(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         "fps": s.fps,
         "duration": (timeline::length(&parts) * 10.0).round() / 10.0,
         "bytes": bytes.len(),
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Combine videos (VID-067)
+
+/// The job key of the combination being made (`video.cancel` with `job: combine`).
+const COMBINE: &str = "combine";
+
+/// `video.combine` (VID-067): videos one after the other as a new video in the
+/// library, opened in the editor; an open video goes with its cuts not saved yet. The
+/// originals do not change; `video.cancel` with `job: combine` leaves no file.
+pub fn combine(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let paths: Vec<PathBuf> = p
+        .get("paths")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(PathBuf::from)
+        .collect();
+    if paths.len() < 2 {
+        return Err(invalid(tr(lang, "errors.combine_two", &[])));
+    }
+    let ed = editor(core);
+    let mut pieces = Vec::new();
+    for path in &paths {
+        if Format::from_path(path) != Some(Format::Video) {
+            return Err(invalid(tr(
+                lang,
+                "errors.combine_not_video",
+                &[(
+                    "name",
+                    &path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default(),
+                )],
+            )));
+        }
+        // Open: as it is now, with its cuts; else the whole file.
+        let open = ed.store.find_by_path(path).and_then(|id| {
+            ed.store
+                .with(&id, |d| {
+                    d.video
+                        .as_ref()
+                        .map(|f| timeline::kept(f.duration, &spans(&d.document.cuts)))
+                })
+                .flatten()
+        });
+        let keep = match open {
+            Some(k) => k,
+            None => {
+                let f = xs_video::facts(path).map_err(|e| failed(lang, &path.display().to_string(), e))?;
+                vec![Span::new(0.0, f.duration)]
+            }
+        };
+        pieces.push(xs_video::Piece {
+            path: path.clone(),
+            keep,
+        });
+    }
+    let first = paths[0]
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Video".into());
+    let dir = library_target(core).join(chrono::Local::now().format("%Y-%m").to_string());
+    std::fs::create_dir_all(&dir).map_err(|e| failed(lang, &first, e))?;
+    let dst = xs_library::unique(
+        &dir,
+        &format!("{first} ({})", tr(lang, "ui.video.combined_suffix", &[])),
+        "mp4",
+    );
+    let partial = xs_core::document::partial_path(&dst);
+    let flag = job(COMBINE);
+    let mut report = progress(core, COMBINE, "combine");
+    let result = xs_video::combine(&pieces, &partial, &mut report, &flag);
+    job_done(COMBINE);
+    let (width, height) = match result {
+        Ok(size) => size,
+        Err(e) if e == "cancelled" => {
+            return Err(CommandError::new(
+                ErrorCode::Cancelled,
+                tr(lang, "errors.combine_cancelled", &[]),
+            ));
+        }
+        Err(e) => return Err(failed(lang, &first, e)),
+    };
+    std::fs::rename(&partial, &dst).map_err(|e| {
+        let _ = std::fs::remove_file(&partial);
+        failed(lang, &first, e)
+    })?;
+    xs_library::library(core).scan();
+    let open = p.get("open").and_then(Value::as_str).unwrap_or("editor") == "editor";
+    let id = if open {
+        crate::open(core, lang, &dst, true)?
+    } else {
+        new_video(core, &dst).map_err(|e| failed(lang, &first, e))?
+    };
+    let duration: f64 = pieces.iter().map(|p| timeline::length(&p.keep)).sum();
+    Ok(json!({
+        "documentId": id,
+        "path": dst,
+        "width": width,
+        "height": height,
+        "duration": (duration * 100.0).round() / 100.0,
     }))
 }
 

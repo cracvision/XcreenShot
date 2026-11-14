@@ -954,6 +954,10 @@
     "video_cancel": {
       "title": "Cancel the GIF",
       "description": "Stops the GIF being made from a video; nothing is left behind."
+    },
+    "video_combine": {
+      "title": "Combine videos",
+      "description": "Videos one after the other as a new video in the library: as large as the largest, the smaller ones centered on black."
     }
   },
   "settings": {
@@ -1562,7 +1566,10 @@
     "video_cut_all": "The whole video cannot be cut: leave at least one frame.",
     "video_no_sound": "This video has no sound.",
     "gif_no_edit": "A GIF is not cut or turned into a GIF again: use the video it came from.",
-    "gif_cancelled": "The GIF was cancelled: nothing was saved."
+    "gif_cancelled": "The GIF was cancelled: nothing was saved.",
+    "combine_two": "Choose at least two videos to combine.",
+    "combine_not_video": "{{name}} is not a video: GIFs and images cannot be combined.",
+    "combine_cancelled": "The combination was cancelled: nothing was saved."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -1892,7 +1899,8 @@
     "video_extract_text": "Extract text from frame",
     "video_silent_copy": "Make a silent copy",
     "video_info": "Information",
-    "video_gif": "Create animated GIF…"
+    "video_gif": "Create animated GIF…",
+    "video_combine": "Combine videos…"
   },
   "notify": {
     "ping_title": "XcreenShot is working",
@@ -4320,7 +4328,28 @@
         "estimating": "Estimating…",
         "guide": "This GIF will be long or heavy: many services limit GIFs, and a GIF weighs much more than the video. Select a shorter part or choose a smaller size."
       },
-      "busy_gif": "Creating the GIF… {{percent}} %"
+      "busy_gif": "Creating the GIF… {{percent}} %",
+      "combined_suffix": "combined",
+      "combine": {
+        "title": "Combine videos",
+        "button": "Combine",
+        "add_videos": "Add videos (combine them)",
+        "filter": "Filter videos",
+        "sort": "Order",
+        "sort_modified": "Date modified",
+        "sort_captured": "Date created",
+        "sort_name": "Name",
+        "sort_size": "Size",
+        "library": "Videos of the library",
+        "add": "Add to the end",
+        "none": "No videos in the library.",
+        "order": "In this order",
+        "earlier": "Earlier",
+        "later": "Later",
+        "remove": "Remove",
+        "result": "{{count}} videos · {{time}} · {{width}} × {{height}} px",
+        "busy": "Combining… {{percent}} %"
+      }
     }
   },
   "history": {

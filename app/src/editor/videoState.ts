@@ -40,6 +40,8 @@ interface VideoState {
   goTo: boolean;
   /** The Create GIF dialog is open (VID-068). */
   gifDialog: boolean;
+  /** The Combine videos window is open (VID-067). */
+  combineDialog: boolean;
 }
 
 export const useVideo = create<VideoState>(() => ({
@@ -57,6 +59,7 @@ export const useVideo = create<VideoState>(() => ({
   previewing: false,
   goTo: false,
   gifDialog: false,
+  combineDialog: false,
 }));
 
 function video(): DocDetails["video"] {
@@ -301,6 +304,12 @@ export function setPlayback(change: { muted?: boolean; volume?: number; speed?: 
 
 /** The Video menu (VID-056 to VID-064): with a video shown. */
 export function videoAction(action: string): boolean {
+  // Combine videos opens also without a video shown (VID-067).
+  if (action === "video_combine") {
+    useVideo.getState().element?.pause();
+    useVideo.setState({ combineDialog: true, playing: false });
+    return true;
+  }
   const v = video();
   if (!v) return false;
   switch (action) {

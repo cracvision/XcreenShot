@@ -254,12 +254,7 @@ fn nv12_reader(
 /// The frames of `spans` of a video at `fps` (an animated GIF, VID-068): calls `each`
 /// with the time in the result, the size and the BGRA pixels of the picture shown then;
 /// `each` returns false to stop.
-pub fn frames(
-    path: &Path,
-    spans: &[Span],
-    fps: f64,
-    each: &mut crate::FrameSink,
-) -> Result<(), String> {
+pub fn frames(path: &Path, spans: &[Span], fps: f64, each: &mut crate::FrameSink) -> Result<(), String> {
     start();
     let reader = reader(path, true)?;
     let (Some(video), _) = streams(&reader) else {
@@ -402,7 +397,6 @@ struct Out {
     sink: IMFSinkWriter,
     video: u32,
     audio: Option<(u32, u32)>,
-    size: (u32, u32),
 }
 
 fn out(
@@ -454,12 +448,7 @@ fn out(
             None => None,
         };
         sink.BeginWriting().map_err(|e| err("video writing", e))?;
-        Ok(Out {
-            sink,
-            video,
-            audio,
-            size,
-        })
+        Ok(Out { sink, video, audio })
     }
 }
 
@@ -586,11 +575,18 @@ fn write_parts(
     // recorder does, is a later improvement.
     let out = out(dst, size, fps, rate, false)?;
     let total: f64 = keep.iter().map(Span::len).sum();
+    let same = |p: Vec<u8>| p;
+    let input = Input {
+        reader: &reader,
+        g,
+        video,
+        audio,
+        size,
+        fit: &same,
+    };
     let mut offset = 0.0;
     for span in &keep {
-        part(
-            &reader, &out, g, video, audio, *span, offset, total, progress, cancel,
-        )?;
+        part(&input, &out, *span, offset, total, progress, cancel)?;
         offset += span.len();
     }
     out.finish()?;
@@ -598,20 +594,199 @@ fn write_parts(
     Ok(())
 }
 
-/// Writes one part of the file at `offset` of the new video.
-#[allow(clippy::too_many_arguments)]
-fn part(
-    reader: &IMFSourceReader,
-    out: &Out,
+/// A file being read into a new video: its reader, streams and picture size, and how
+/// a picture goes onto the new video's frame.
+struct Input<'a> {
+    reader: &'a IMFSourceReader,
     g: Geometry,
     video: u32,
     audio: Option<u32>,
+    /// The picture's size, even.
+    size: (u32, u32),
+    fit: &'a dyn Fn(Vec<u8>) -> Vec<u8>,
+}
+
+/// One video of a combination (VID-067): its file and the parts kept.
+#[derive(Debug, Clone)]
+pub struct Piece {
+    pub path: std::path::PathBuf,
+    pub keep: Vec<Span>,
+}
+
+/// NV12 black: luma 16, chroma 128.
+fn black(size: (u32, u32)) -> Vec<u8> {
+    let (w, h) = (size.0 as usize, size.1 as usize);
+    let mut v = vec![16u8; w * h];
+    v.resize(w * h * 3 / 2, 128);
+    v
+}
+
+/// Puts an NV12 picture of `size` in the middle of a black frame of `frame` (both even).
+fn centered(picture: &[u8], size: (u32, u32), frame: (u32, u32)) -> Vec<u8> {
+    let (w, h) = (size.0 as usize, size.1 as usize);
+    let (fw, fh) = (frame.0 as usize, frame.1 as usize);
+    let (x, y) = (((fw - w) / 2) & !1, ((fh - h) / 2) & !1);
+    let mut out = black(frame);
+    for row in 0..h {
+        out[(y + row) * fw + x..(y + row) * fw + x + w].copy_from_slice(&picture[row * w..row * w + w]);
+    }
+    let (luma, frame_luma) = (w * h, fw * fh);
+    for row in 0..h / 2 {
+        let to = frame_luma + (y / 2 + row) * fw + x;
+        out[to..to + w].copy_from_slice(&picture[luma + row * w..luma + row * w + w]);
+    }
+    out
+}
+
+/// Re-codes an NV12 picture from one color matrix to the other (BT.601 and BT.709,
+/// limited range), so a small video keeps its colors in a large one (VID-067).
+pub(crate) fn rematrix(picture: &mut [u8], size: (u32, u32), from_709: bool) {
+    let (w, h) = (size.0 as usize, size.1 as usize);
+    let coef = |hd: bool| if hd { (0.2126, 0.0722) } else { (0.299, 0.114) };
+    let ((kr0, kb0), (kr1, kb1)) = (coef(from_709), coef(!from_709));
+    let (kg0, kg1) = (1.0 - kr0 - kb0, 1.0 - kr1 - kb1);
+    let luma = w * h;
+    for by in 0..h / 2 {
+        for bx in 0..w / 2 {
+            let c = luma + by * w + bx * 2;
+            let u = (picture[c] as f64 - 128.0) / 224.0;
+            let v = (picture[c + 1] as f64 - 128.0) / 224.0;
+            let (mut su, mut sv) = (0.0, 0.0);
+            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                let i = (by * 2 + dy) * w + bx * 2 + dx;
+                let y = (picture[i] as f64 - 16.0) / 219.0;
+                let r = y + 2.0 * (1.0 - kr0) * v;
+                let b = y + 2.0 * (1.0 - kb0) * u;
+                let g = (y - kr0 * r - kb0 * b) / kg0;
+                let y1 = kr1 * r + kg1 * g + kb1 * b;
+                su += (b - y1) / (2.0 * (1.0 - kb1));
+                sv += (r - y1) / (2.0 * (1.0 - kr1));
+                picture[i] = (16.0 + 219.0 * y1).round().clamp(0.0, 255.0) as u8;
+            }
+            picture[c] = (128.0 + 224.0 * su / 4.0).round().clamp(0.0, 255.0) as u8;
+            picture[c + 1] = (128.0 + 224.0 * sv / 4.0).round().clamp(0.0, 255.0) as u8;
+        }
+    }
+}
+
+/// Writes the videos of `pieces`, one after the other, as a new MP4 at `dst` (VID-067):
+/// as wide and as tall as the largest, the smaller ones centered on black; the
+/// highest frame rate; sound when any has it (silence for the others). Returns its
+/// size. `cancel` stops it, leaving no file.
+pub fn combine(
+    pieces: &[Piece],
+    dst: &Path,
+    progress: &mut dyn FnMut(f64),
+    cancel: &AtomicBool,
+) -> Result<(u32, u32), String> {
+    let result = combine_into(pieces, dst, progress, cancel);
+    if result.is_err() {
+        let _ = std::fs::remove_file(dst);
+    }
+    result
+}
+
+fn combine_into(
+    pieces: &[Piece],
+    dst: &Path,
+    progress: &mut dyn FnMut(f64),
+    cancel: &AtomicBool,
+) -> Result<(u32, u32), String> {
+    start();
+    if pieces.len() < 2 {
+        return Err("at least two videos".into());
+    }
+    let facts: Vec<crate::Facts> = pieces.iter().map(|p| facts(&p.path)).collect::<Result<_, _>>()?;
+    let frame = (
+        facts.iter().map(|f| f.width).max().unwrap_or(2) & !1,
+        facts.iter().map(|f| f.height).max().unwrap_or(2) & !1,
+    );
+    let fps = facts.iter().map(|f| f.fps).max().unwrap_or(30);
+    let rate = facts.iter().any(|f| f.sound).then_some(48_000);
+    let out = out(dst, frame, fps, rate, false)?;
+    let total: f64 = pieces.iter().flat_map(|p| p.keep.iter()).map(Span::len).sum();
+    let hd = crate::win::is_hd(frame);
+    let mut offset = 0.0;
+    for piece in pieces {
+        let (reader, video, audio, g) = match nv12_reader(&piece.path, false) {
+            Ok(r) => r,
+            Err(_) => nv12_reader(&piece.path, true)?,
+        };
+        if let Some(a) = audio {
+            // SAFETY: Media Foundation call with a new media type.
+            unsafe {
+                reader
+                    .SetCurrentMediaType(
+                        a,
+                        None,
+                        &pcm(&MFAudioFormat_PCM, 48_000).map_err(|e| err("audio type", e))?,
+                    )
+                    .map_err(|e| err("audio type", e))?;
+            }
+        }
+        let size = (g.shown.0 & !1, g.shown.1 & !1);
+        let convert = crate::win::is_hd(size) != hd;
+        let place = move |mut p: Vec<u8>| {
+            if convert {
+                rematrix(&mut p, size, !hd);
+            }
+            if size == frame {
+                p
+            } else {
+                centered(&p, size, frame)
+            }
+        };
+        let input = Input {
+            reader: &reader,
+            g,
+            video,
+            audio,
+            size,
+            fit: &place,
+        };
+        for span in piece.keep.iter().filter(|s| !s.is_empty()) {
+            part(&input, &out, *span, offset, total, progress, cancel)?;
+            // A video without sound: silence for its time, so the rest stays in step.
+            if let (Some((stream, rate)), None) = (out.audio, audio) {
+                let frames = (span.len() * rate as f64).round() as usize;
+                let mut done = 0;
+                while done < frames {
+                    let n = (frames - done).min(4800);
+                    out.write(
+                        stream,
+                        &vec![0u8; n * 4],
+                        offset + done as f64 / rate as f64,
+                        n as f64 / rate as f64,
+                    )?;
+                    done += n;
+                }
+            }
+            offset += span.len();
+        }
+    }
+    out.finish()?;
+    progress(1.0);
+    Ok(frame)
+}
+
+/// Writes one part of a file at `offset` of the new video.
+fn part(
+    input: &Input,
+    out: &Out,
     span: Span,
     offset: f64,
     total: f64,
     progress: &mut dyn FnMut(f64),
     cancel: &AtomicBool,
 ) -> Result<(), String> {
+    let Input {
+        reader,
+        g,
+        video,
+        audio,
+        size,
+        fit,
+    } = *input;
     let (a, b) = ((span.start * HNS) as i64, (span.end * HNS) as i64);
     let at = |t: i64| offset + (t - a) as f64 / HNS;
     // SAFETY: Media Foundation reading calls.
@@ -657,7 +832,7 @@ fn part(
                 if time >= b {
                     video_done = true;
                 } else {
-                    let picture = nv12(&s, g, out.size)?;
+                    let picture = fit(nv12(&s, g, size)?);
                     let start = time.max(a);
                     if let Some((p, t)) = held.take() {
                         if start > t {
@@ -929,6 +1104,78 @@ mod tests {
             return;
         };
         three(Path::new(&path), true);
+    }
+
+    /// VID-067: a 320 × 240 video with sound and a 160 × 120 one without, one after the
+    /// other: 320 × 240, the small one centered on black, sound all along.
+    #[test]
+    fn videos_combined() {
+        let big = dir().join("combine-big.mp4");
+        let small = dir().join("combine-small.mp4");
+        let dst = dir().join("combined.mp4");
+        three(&big, true);
+        start();
+        let _ = std::fs::remove_file(&small);
+        let o = out(&small, (160, 120), 10, None, false).unwrap();
+        let green = {
+            let [r, g, b] = GREEN;
+            let y = (0.257 * r + 0.504 * g + 0.098 * b + 16.0).round() as u8;
+            let u = (-0.148 * r - 0.291 * g + 0.439 * b + 128.0).round() as u8;
+            let v = (0.439 * r - 0.368 * g - 0.071 * b + 128.0).round() as u8;
+            let mut p = vec![y; 160 * 120];
+            for _ in 0..(160 * 120 / 4) {
+                p.extend_from_slice(&[u, v]);
+            }
+            p
+        };
+        for i in 0..20 {
+            o.write(o.video, &green, i as f64 / 10.0, 0.1).unwrap();
+        }
+        o.finish().unwrap();
+        let pieces = [
+            Piece {
+                path: big.clone(),
+                keep: vec![Span::new(0.0, 1.0)],
+            },
+            Piece {
+                path: small.clone(),
+                keep: vec![Span::new(0.0, 2.0)],
+            },
+        ];
+        let size = combine(&pieces, &dst, &mut |_| {}, &AtomicBool::new(false)).unwrap();
+        assert_eq!(size, (W, H));
+        let info = crate::info(&dst).unwrap();
+        assert!((info.duration - 3.0).abs() < 0.15, "duration {}", info.duration);
+        assert!(near(color_at(&dst, 0.5), RED));
+        let (w, h, px) = frame_at(&dst, 2.0).unwrap();
+        let at = |x: u32, y: u32| {
+            let i = ((y * w + x) * 4) as usize;
+            [px[i + 2], px[i + 1], px[i]]
+        };
+        assert!(near(at(w / 2, h / 2), GREEN), "{:?}", at(w / 2, h / 2));
+        assert!(at(5, 5).iter().all(|c| *c < 30), "black band: {:?}", at(5, 5));
+        let (_, _, sound_end) = crate::audio_info(&dst).unwrap().expect("sound");
+        assert!((sound_end - 3.0).abs() < 0.15, "sound until {sound_end}");
+    }
+
+    /// BT.601 to BT.709 and back leaves a picture as it was (±2).
+    #[test]
+    fn colors_change_matrix_and_back() {
+        let mut p = vec![0u8; 4 * 4 * 3 / 2];
+        for (i, v) in p.iter_mut().enumerate() {
+            *v = if i < 16 {
+                40 + (i as u8) * 10
+            } else {
+                100 + (i as u8) * 3
+            };
+        }
+        let before = p.clone();
+        rematrix(&mut p, (4, 4), false);
+        assert_ne!(p, before);
+        rematrix(&mut p, (4, 4), true);
+        for (a, b) in p.iter().zip(&before) {
+            assert!((*a as i32 - *b as i32).abs() <= 3, "{p:?} vs {before:?}");
+        }
     }
 
     /// VID-067: cancelling leaves no file.

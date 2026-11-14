@@ -1701,6 +1701,27 @@ pub fn extension() -> Extension {
         reg.handle("video.info", move |ctx, p| {
             let path = p.get("path").and_then(Value::as_str).unwrap_or_default();
             let file = std::path::Path::new(path);
+            // Quick (VID-067): size, length, frame rate, codec and sound from the
+            // header, without reading every frame.
+            if p.get("quick").and_then(Value::as_bool).unwrap_or(false) {
+                let f = xs_video::facts(file).map_err(|e| {
+                    CommandError::new(
+                        ErrorCode::NotFound,
+                        tr(ctx.lang, "errors.video_unreadable", &[("reason", &e)]),
+                    )
+                })?;
+                return Ok(json!({
+                    "name": file.file_name().map(|n| n.to_string_lossy().into_owned()),
+                    "path": path,
+                    "bytes": std::fs::metadata(file).map(|m| m.len()).unwrap_or(0),
+                    "width": f.width,
+                    "height": f.height,
+                    "duration": f.duration,
+                    "fps": f.fps,
+                    "codec": f.codec,
+                    "sound": f.sound,
+                }));
+            }
             let i = xs_video::info(file).map_err(|e| {
                 CommandError::new(
                     ErrorCode::NotFound,

@@ -34,6 +34,7 @@ import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
 import { VideoStage } from "./VideoStage";
 import { GifDialog } from "./GifDialog";
+import { CombineDialog } from "./CombineDialog";
 import { TemplateDialogs } from "./TemplatePicker";
 import { dropOnCanvas, dropOnZone } from "./templateActions";
 import { canvasPointAt, useDropPoint } from "./templateUi";
@@ -205,6 +206,7 @@ export function Editor() {
       )}
       <Dialogs />
       <GifDialog />
+      <CombineDialog />
       <TemplateDialogs />
       <QuickView />
       <TagDialogs />

@@ -3599,6 +3599,7 @@ pub fn extension() -> Extension {
         on!("document.list", |core, ctx, _p| Ok(list(&core)));
         // Videos in the editor (ADR 0008, VID-059 to VID-063).
         on!("video.cut", |core, ctx, p| video::cut(&core, ctx, &p));
+        on!("video.combine", |core, ctx, p| video::combine(&core, ctx, &p));
         on!("video.gif", |core, ctx, p| video::gif(&core, ctx, &p));
         on!("video.gif_estimate", |core, ctx, p| video::gif_estimate(
             &core, ctx, &p

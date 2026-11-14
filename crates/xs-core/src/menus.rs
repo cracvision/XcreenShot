@@ -625,6 +625,7 @@ fn editor_menus() -> Vec<MenuEntry> {
                     "menu.video_silent_copy",
                     "video_silent_copy",
                 ),
+                action("editor.video_combine", "menu.video_combine", "video_combine"),
                 action("editor.video_info", "menu.video_info", "video_info"),
             ],
         },

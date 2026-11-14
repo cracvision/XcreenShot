@@ -7455,6 +7455,92 @@ button.lc-head:hover,
   box-shadow: var(--shadow-card);
 }
 
+/* Combine videos (VID-067). */
+.backdrop .dialog:has(.combine) {
+  width: min(640px, 100%);
+}
+
+.combine {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.combine-tools {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.combine-tools input {
+  flex: 1;
+}
+
+.combine-list,
+.combine-strip {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combine-list {
+  display: grid;
+  gap: var(--space-1);
+  max-height: 260px;
+  overflow: auto;
+}
+
+.combine-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.combine-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.combine-item img {
+  width: 64px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  background: var(--surface-sunken);
+}
+
+.combine-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.combine-strip {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.combine-strip li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.combine-strip li:focus-visible {
+  outline: 2px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
 /* The side panel of a video (VID-064). */
 .video-info {
   display: grid;

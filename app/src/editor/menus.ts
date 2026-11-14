@@ -354,6 +354,7 @@ const VIDEO_ACTIONS = [
   "video_gif",
   "video_extract_text",
   "video_silent_copy",
+  "video_combine",
   "video_info",
 ];
 
@@ -519,8 +520,12 @@ export function useMenuBar(): void {
     for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;
     enabled["editor.video_cut"] = hasDoc && isVideo && videoCuttable;
     enabled["editor.video_silent_copy"] = hasDoc && isVideo && videoSound;
+    // Combine videos works also without a video shown (VID-067).
+    enabled["editor.video_combine"] = !inLibrary;
     // A GIF plays and shows its information; it is not edited (VID-068).
-    if (isGif) for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = a === "video_info";
+    if (isGif)
+      for (const a of VIDEO_ACTIONS)
+        enabled[`editor.${a}`] = a === "video_info" || a === "video_combine";
     // Image things a video does not have (VID-065).
     if (isVideo)
       for (const a of [

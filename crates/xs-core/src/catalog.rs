@@ -898,7 +898,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .result(json!({"type": "object", "properties": {"cursor": {"type": "boolean"}, "status": {"type": "string"}}})),
         B::new("video.info", &["VID-064", "VID-024"])
             .positional(&["path"])
-            .params(params(json!({"path": {"type": "string", "description": "An MP4 file"}}), &["path"]))
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "An MP4 file"},
+                    "quick": {"type": "boolean", "description": "Only what its header says: size, duration, fps, codec and sound (fast)"}
+                }),
+                &["path"],
+            ))
             .result(json!({"type": "object", "properties": {
                 "name": {"type": "string"}, "path": {"type": "string"}, "bytes": {"type": "integer"}, "created": {"type": "string"},
                 "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"},
@@ -1003,9 +1009,28 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "heavy": {"type": "boolean", "description": "More than 10 MB"},
                 "preview": {"type": "string", "description": "The first seconds as a GIF data URL"}
             }})),
-        B::new("video.cancel", &["VID-068"])
+        B::new("video.combine", &["VID-067"])
             .mutates()
-            .params(params(json!({"documentId": document_id()}), &[]))
+            .params(params(
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}, "minItems": 2, "description": "Videos in order; an open one goes with its cuts"},
+                    "open": {"type": "string", "enum": ["editor", "none"], "description": "Open the result in the editor (default) or leave it in the tray"}
+                }),
+                &["paths"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "documentId": {"type": "string"}, "path": {"type": "string"},
+                "width": {"type": "integer"}, "height": {"type": "integer"}, "duration": {"type": "number"}
+            }})),
+        B::new("video.cancel", &["VID-068", "VID-067"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "job": {"type": "string", "enum": ["gif", "combine"], "description": "combine: the videos being combined; default: the GIF of the document"}
+                }),
+                &[],
+            ))
             .result(json!({"type": "object", "properties": {"cancelled": {"type": "boolean"}}})),
         B::new("video.silent_copy", &["VID-063"])
             .mutates()
@@ -2619,7 +2644,7 @@ pub const TOOLS: [&str; 21] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 119] = [
+pub const EDITOR_ACTIONS: [&str; 120] = [
     "open",
     "save",
     "save_as",
@@ -2750,6 +2775,7 @@ pub const EDITOR_ACTIONS: [&str; 119] = [
     "video_gif",
     "video_extract_text",
     "video_silent_copy",
+    "video_combine",
     "video_info",
 ];
 

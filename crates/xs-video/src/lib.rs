@@ -27,7 +27,7 @@ mod win_fx;
 pub use win::{audio_info, first_frame, free_space, info, probe, size};
 /// Editing (ADR 0008): the frame at a moment and a new MP4 from parts of a file.
 #[cfg(windows)]
-pub use win_edit::{export, facts, frame_at, frames};
+pub use win_edit::{combine, export, facts, frame_at, frames, Piece};
 
 /// Gets each frame of [`frames`]: its time in the result, width, height and BGRA
 /// pixels; returns false to stop.
@@ -55,6 +55,25 @@ pub fn facts(_path: &std::path::Path) -> Result<Facts, String> {
 /// The frame at a moment of a video (not available on this platform yet).
 #[cfg(not(windows))]
 pub fn frame_at(_path: &std::path::Path, _seconds: f64) -> Result<(u32, u32, Vec<u8>), String> {
+    Err("not available on this platform yet".into())
+}
+
+/// One video of a combination (VID-067): its file and the parts kept.
+#[cfg(not(windows))]
+#[derive(Debug, Clone)]
+pub struct Piece {
+    pub path: std::path::PathBuf,
+    pub keep: Vec<timeline::Span>,
+}
+
+/// Videos one after the other (not available on this platform yet).
+#[cfg(not(windows))]
+pub fn combine(
+    _pieces: &[Piece],
+    _dst: &std::path::Path,
+    _progress: &mut dyn FnMut(f64),
+    _cancel: &AtomicBool,
+) -> Result<(u32, u32), String> {
     Err("not available on this platform yet".into())
 }
 

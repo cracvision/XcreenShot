@@ -5500,3 +5500,40 @@ fn a_gif_from_a_video() {
     .unwrap_err();
     assert!(err.message.contains("GIF"), "{}", err.message);
 }
+
+/// VID-067: an open video with a cut (2 s) and a whole copy (3 s) make a 5 s video,
+/// opened in the editor; the originals do not change. A GIF is not combined.
+#[cfg(windows)]
+#[test]
+fn videos_combined_in_order() {
+    let e = env();
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+    let a = e.library.path().join("a.mp4");
+    let b = e.library.path().join("b.mp4");
+    std::fs::copy(&src, &a).unwrap();
+    std::fs::copy(&src, &b).unwrap();
+    let doc = cli(&e.core, "document.open", json!({"path": a, "show": true}));
+    let id = doc["documentId"].as_str().unwrap().to_string();
+    cli(
+        &e.core,
+        "video.cut",
+        json!({"documentId": id, "start": 1.0, "end": 2.0}),
+    );
+    let r = cli(&e.core, "video.combine", json!({"paths": [a, b]}));
+    let out = PathBuf::from(r["path"].as_str().unwrap());
+    assert!(out.file_name().unwrap().to_string_lossy().contains("(combined)"));
+    let info = xs_video::info(&out).unwrap();
+    assert!((info.duration - 5.0).abs() < 0.2, "duration {}", info.duration);
+    assert_eq!((info.width, info.height), (320, 240));
+    assert_eq!(
+        cli(&e.core, "document.info", json!({}))["documentId"],
+        r["documentId"]
+    );
+    assert!((xs_video::info(&a).unwrap().duration - 3.0).abs() < 0.15);
+    let quick = xs_video::facts(&b).unwrap();
+    assert_eq!((quick.width, quick.sound), (320, true));
+    let gif = e.library.path().join("x.gif");
+    std::fs::write(&gif, b"GIF89a").unwrap();
+    assert!(call(&e.core, Source::Cli, "video.combine", json!({"paths": [a, gif]})).is_err());
+    assert!(call(&e.core, Source::Cli, "video.combine", json!({"paths": [a]})).is_err());
+}

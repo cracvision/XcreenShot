@@ -907,6 +907,7 @@ export function performAction(action: string): boolean {
     case "video_gif":
     case "video_extract_text":
     case "video_silent_copy":
+    case "video_combine":
     case "video_info":
       return videoAction(action);
     case "ai_name":

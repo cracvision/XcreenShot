@@ -1,6 +1,6 @@
 # El video en el editor (M4.6)
 
-Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../docs/adr/0008-video-en-el-editor.md)). IDs: VID-052, VID-056 a VID-066 y VID-068 a VID-070.
+Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../docs/adr/0008-video-en-el-editor.md)). IDs: VID-052 y VID-056 a VID-070.
 
 ## Visto en la instancia de desarrollo (2026-11-13, tarde)
 
@@ -59,4 +59,10 @@ Reproducir, seleccionar, cortar y guardar videos en el editor ([ADR 0008](../../
 23. [ ] Repite y pulsa **Cancelar** a mitad: no aparece ningún GIF en la biblioteca.
 24. [ ] Con el GIF abierto, el botón GIF y el menú Video (salvo Información) están apagados; arrástralo a un chat o a una carpeta.
 
-Todavía no: GIF desde Exportar, exportar a H.264 y Combinar videos.
+### Combinar videos (VID-067)
+
+25. [ ] Con un video abierto, botón **+** de la barra (o Video > Combinar videos…): arriba, los videos de la biblioteca; abajo, el abierto como 1. Filtra escribiendo parte de un nombre y cambia el orden.
+26. [ ] Haz clic en otro video para añadirlo; reordénalos con ← → (o `Ctrl+←/→` con uno elegido) y quita uno con ✕. Abajo se ven la duración total y el tamaño del resultado.
+27. [ ] **Combinar** con un video grande (1920 × 1080) y uno pequeño: el resultado se abre en el editor; el pequeño sale centrado con bandas negras, y los originales no cambian. Prueba también **Cancelar** a mitad: no queda ningún video nuevo.
+
+Todavía no: GIF desde Exportar, exportar a H.264, y Combinar desde la bandeja con varios elegidos.

@@ -142,6 +142,11 @@ fn texture(
 
 /// HD video is BT.709; smaller video BT.601, which is what players assume when the
 /// file does not say.
+/// HD pictures (720p and up) are BT.709; smaller ones BT.601.
+pub(crate) fn is_hd(size: (u32, u32)) -> bool {
+    hd(size)
+}
+
 fn hd(size: (u32, u32)) -> bool {
     size.0 >= 1280 || size.1 >= 720
 }

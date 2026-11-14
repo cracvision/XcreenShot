@@ -330,6 +330,16 @@ export function VideoBar() {
         >
           <span className="tb-label">{t("ui.video.gif.button")}</span>
         </button>
+        <button
+          type="button"
+          className="btn icon-btn"
+          disabled={busy !== null}
+          title={t("ui.video.combine.add_videos")}
+          aria-label={t("ui.video.combine.add_videos")}
+          onClick={() => videoAction("video_combine")}
+        >
+          <Icon name="plus" />
+        </button>
         <Menu
           label={<Icon name="more" />}
           ariaLabel={t("ui.video.more")}
