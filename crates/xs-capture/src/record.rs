@@ -842,6 +842,7 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "systemAudio": core.settings.get_bool("video.systemAudio"),
         "microphone": core.settings.get_bool("video.microphone"),
         "audio": true,
+        "limit": r.limit.map(|l| l.as_secs_f64()),
     })
 }
 
@@ -1068,7 +1069,68 @@ fn status_of(r: &Running) -> Value {
         "microphone": r.recorder.microphone().is_some(),
         "systemAudio": r.recorder.system_audio(),
         "audio": r.recorder.audio,
+        // The timer (VID-015), in seconds of recording.
+        "limit": r.recorder.limit().map(|l| l.as_secs_f64()),
     })
+}
+
+/// The shortest and the longest timer (VID-015).
+const TIMER_RANGE: std::ops::RangeInclusive<f64> = 5.0..=12.0 * 3600.0;
+
+/// `record.timer` (VID-015): the time it stops by itself, in seconds of recording
+/// (pauses do not count), or none; while Ready or recording. During the recording it
+/// must be more than what is recorded already.
+pub fn timer(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let seconds = p.get("seconds").and_then(Value::as_f64).filter(|s| *s > 0.0);
+    if let Some(s) = seconds {
+        if !TIMER_RANGE.contains(&s) {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(lang, "errors.timer_range", &[]),
+            ));
+        }
+    }
+    let limit = seconds.map(Duration::from_secs_f64);
+    let svc = service(core);
+    let current = svc.current.lock().unwrap();
+    if let Some(r) = current.as_ref() {
+        let recorded = r.recorder.recorded().as_secs_f64();
+        if seconds.is_some_and(|s| s <= recorded) {
+            return Err(CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    lang,
+                    "errors.timer_too_short",
+                    &[("recorded", &clock_text(recorded))],
+                ),
+            ));
+        }
+        r.recorder.set_limit(limit);
+        let state = status_of(r);
+        drop(current);
+        bar(core, Some(state.clone()));
+        return Ok(state);
+    }
+    drop(current);
+    let mut ready = svc.ready.lock().unwrap();
+    let r = ready.as_mut().ok_or_else(|| not_recording(lang))?;
+    r.limit = limit;
+    let r = r.clone();
+    drop(ready);
+    let state = ready_state(core, &r);
+    bar(core, Some(state.clone()));
+    Ok(state)
+}
+
+/// `h:mm:ss`, or `m:ss` under an hour.
+fn clock_text(seconds: f64) -> String {
+    let s = seconds.floor() as u64;
+    if s >= 3600 {
+        format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
+    } else {
+        format!("{}:{:02}", s / 60, s % 60)
+    }
 }
 
 /// `record.cursor` (VID-044): shows or hides the pointer from now on; without `on`,
@@ -1640,6 +1702,27 @@ pub fn status(core: &Core) -> Value {
 mod tests {
     use super::*;
     use std::path::Path;
+
+    /// VID-015: the timer needs a recording ready or under way, from 5 s to 12 h.
+    #[test]
+    fn the_timer_is_checked() {
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        let call = |p: Value| core.call(Source::Cli, "record.timer", p, Some(Lang::En));
+        assert_eq!(
+            call(json!({"seconds": 2})).unwrap_err().code,
+            ErrorCode::InvalidParams
+        );
+        assert_eq!(
+            call(json!({"seconds": 50000})).unwrap_err().code,
+            ErrorCode::InvalidParams
+        );
+        assert_eq!(
+            call(json!({"seconds": 60})).unwrap_err().code,
+            ErrorCode::NotFound
+        );
+        assert_eq!(clock_text(75.0), "1:15");
+        assert_eq!(clock_text(3725.0), "1:02:05");
+    }
 
     /// VID-018: the clean desktop is switched for the next recordings; with none
     /// ready or under way, the desktop is not touched.

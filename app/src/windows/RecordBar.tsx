@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Menu, type MenuItem } from "../components/Menu";
 import { run } from "../lib/commands";
 import { useSetting } from "../store";
-import { clock, longHint } from "./recClock";
+import { clock, longHint, timeLeft, TIMER_CHOICES } from "./recClock";
 import { CameraControl } from "./RecordCamera";
 import { MicControl, SoundStrip, SystemAudioControl } from "./RecordSound";
 import { barWarning, DISMISS_MS, useLevels } from "./recSound";
@@ -41,6 +41,8 @@ interface RecState {
   areaHeight?: number;
   /** Open in (VID-052): the editor, or only the library. */
   open?: "editor" | "none";
+  /** The timer (VID-015): seconds of recording, or none. */
+  limit?: number | null;
 }
 
 export function RecordBar() {
@@ -124,6 +126,29 @@ export function RecordBar() {
           fps: state.fps ?? 0,
           codec: state.codec ?? "H.264",
         }) + (apartTracks ? ` · ${t("ui.recbar.tracks_apart")}` : "");
+
+  // The timer (VID-015): no limit or a quick choice; during the recording, not less
+  // than what is recorded already.
+  const left = timeLeft(state.limit, elapsed);
+  const timerItems: MenuItem[] = [
+    {
+      id: "none",
+      label: t("ui.recbar.timer_none"),
+      checked: !state.limit,
+      onSelect: () => act("record.timer", { seconds: null }),
+    },
+    ...TIMER_CHOICES.map((s) => {
+      const short = (recording || paused) && s <= elapsed;
+      return {
+        id: `t${s}`,
+        label: clock(s),
+        checked: state.limit === s,
+        disabled: short,
+        ...(short ? { title: t("ui.recbar.timer_short") } : {}),
+        onSelect: () => act("record.timer", { seconds: s }),
+      };
+    }),
+  ];
 
   // The bar's More menu (VID-011).
   const cleanDesktop = useSetting("video.hideDesktopIcons", false);
@@ -240,6 +265,12 @@ export function RecordBar() {
       <span className="recbar-time" aria-live="off">
         {clock(elapsed)}
       </span>
+      {left !== null && (recording || paused) && (
+        // The time left, the last 10 s marked (VID-015).
+        <span className={`recbar-left${left <= 10 ? " last" : ""}`} aria-live="off">
+          {t("ui.recbar.timer_left", { time: clock(left) })}
+        </span>
+      )}
       {longHint(elapsed, recording || paused) ? (
         // An hour: stop and go on in another clip, they combine later (VID-023).
         <span className="recbar-size recbar-hint" role="status">
@@ -361,6 +392,18 @@ export function RecordBar() {
             {t("ui.recbar.stop")}
           </button>
         </>
+      )}
+      {(ready || recording || paused) && (
+        <Menu
+          label={state.limit ? `⏱ ${clock(state.limit)}` : t("ui.recbar.timer")}
+          ariaLabel={t("ui.recbar.timer")}
+          title={t("ui.recbar.timer")}
+          triggerClass={`btn small recbar-toggle${state.limit ? " on" : ""}`}
+          align="end"
+          side={up ? "top" : "bottom"}
+          onShown={(shown) => setMenuRows(shown ? timerItems.length : 0)}
+          items={timerItems}
+        />
       )}
       {/* More (VID-011): Restart and Cancel (VID-014), Capture image (VID-010), the
           clean desktop (VID-018) and the video settings. */}

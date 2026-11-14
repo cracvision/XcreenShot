@@ -8858,3 +8858,15 @@ button.lc-head:hover,
   bottom: -4px;
   transform: scale(0.7);
 }
+
+/* The time left of the timer (VID-015); the last 10 s stand out. */
+.recbar-left {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.recbar-left.last {
+  color: var(--rec);
+  font-weight: 600;
+}

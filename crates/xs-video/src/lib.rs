@@ -570,6 +570,8 @@ pub(crate) struct Shared {
     pub effects: Mutex<effects::Effects>,
     /// The pointer is drawn (VID-044); it can change while recording.
     pub cursor: AtomicBool,
+    /// Stops by itself when this much is recorded (VID-015); it can change too.
+    pub limit: Mutex<Option<Duration>>,
     pub stop: AtomicBool,
     pub cancel: AtomicBool,
     pub state: AtomicU8,
@@ -660,6 +662,7 @@ impl Recorder {
             paused: AtomicBool::new(false),
             effects: Mutex::new(options.effects.clone()),
             cursor: AtomicBool::new(options.cursor),
+            limit: Mutex::new(options.limit),
             stop: AtomicBool::new(false),
             cancel: AtomicBool::new(false),
             state: AtomicU8::new(0),
@@ -744,6 +747,16 @@ impl Recorder {
     /// Time recorded so far, pauses left out.
     pub fn recorded(&self) -> Duration {
         self.shared.clock.lock().unwrap().recorded(Instant::now())
+    }
+
+    /// The time limit from now on (VID-015): it stops by itself when that much is
+    /// recorded; `None`, no limit.
+    pub fn set_limit(&self, limit: Option<Duration>) {
+        *self.shared.limit.lock().unwrap() = limit;
+    }
+
+    pub fn limit(&self) -> Option<Duration> {
+        *self.shared.limit.lock().unwrap()
     }
 
     /// The meters now (VID-011, VID-039, VID-040).

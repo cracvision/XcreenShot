@@ -1827,6 +1827,11 @@ pub fn extension() -> Extension {
         reg.handle("record.cursor", move |ctx, p| {
             record::cursor(&*upgrade(&w)?, ctx, &p)
         });
+        // The timer of the bar (VID-015).
+        let w = weak.clone();
+        reg.handle("record.timer", move |ctx, p| {
+            record::timer(&*upgrade(&w)?, ctx, &p)
+        });
         // A clean desktop, switched while recording (VID-018).
         let w = weak.clone();
         reg.handle("record.clean_desktop", move |ctx, p| {

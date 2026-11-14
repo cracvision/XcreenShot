@@ -1366,7 +1366,12 @@ pub(crate) fn record(
         if shared.stop.load(Ordering::Relaxed) {
             break;
         }
-        if options.limit.is_some_and(|l| now_recorded() >= l.as_secs_f64()) {
+        if shared
+            .limit
+            .lock()
+            .unwrap()
+            .is_some_and(|l| now_recorded() >= l.as_secs_f64())
+        {
             break;
         }
         if let Some(hwnd) = options.window {
@@ -3130,6 +3135,59 @@ mod tests {
             assert!(before > 30, "drawn at the slide's scale");
             assert_eq!(marked(1.4), 0, "gone once it left the slide");
         }
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The timer changed while recording (VID-015): set to 1.2 s after half a second,
+    /// the recording stops by itself there. Slides, not the screen.
+    #[test]
+    fn a_timer_set_while_recording() {
+        let path = tempfile_dir().join("timer.mp4");
+        let feed: crate::slides::SlideFeed = Arc::new(|| {
+            Some(crate::slides::Slide {
+                id: 1,
+                width: 320,
+                height: 240,
+                bgra: Arc::new([60, 60, 60, 255].repeat(320 * 240)),
+                background: [0, 0, 0],
+                enlarge: false,
+                view: Default::default(),
+                pointer: None,
+            })
+        });
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 480,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: false,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: None,
+            microphone: None,
+            slides: Some(crate::slides::Source(feed)),
+            sound_tracks: None,
+        }) {
+            Ok(r) => r,
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(500));
+        assert!(!r.finished());
+        r.set_limit(Some(Duration::from_secs_f64(1.2)));
+        assert_eq!(r.limit(), Some(Duration::from_secs_f64(1.2)));
+        std::thread::sleep(Duration::from_millis(1400));
+        assert!(r.finished(), "stopped by itself");
+        let s = r.stop().unwrap();
+        assert!((1.1..1.45).contains(&s.duration), "{s:?}");
         let _ = std::fs::remove_file(&path);
     }
 

@@ -1174,6 +1174,10 @@
     "record_clean_desktop": {
       "title": "Escritorio limpio",
       "description": "Oculta o muestra los íconos del escritorio mientras se graba, y para las siguientes grabaciones."
+    },
+    "record_timer": {
+      "title": "Temporizador de la grabación",
+      "description": "Detiene la grabación sola tras un tiempo grabado; las pausas no cuentan."
     }
   },
   "settings": {
@@ -2059,7 +2063,9 @@
     "slides_size": "El tamaño es ancho x alto, par, de 320 a 3840.",
     "slides_color": "El color es #RRGGBB.",
     "slides_recording": "Detén o cancela antes la grabación.",
-    "no_subject": "No se encontró un sujeto claro: el fondo no es lo bastante uniforme. No se cambió nada. Para un fondo de un solo color, la Varita mágica lo selecciona con precisión."
+    "no_subject": "No se encontró un sujeto claro: el fondo no es lo bastante uniforme. No se cambió nada. Para un fondo de un solo color, la Varita mágica lo selecciona con precisión.",
+    "timer_range": "El temporizador va de 5 segundos a 12 horas.",
+    "timer_too_short": "Ya hay {{recorded}} grabados: elige un tiempo mayor."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4873,7 +4879,11 @@
       "more": "Más",
       "clean_desktop": "Ocultar los íconos del escritorio",
       "video_settings": "Ajustes de video…",
-      "capture_image": "Capturar imagen"
+      "capture_image": "Capturar imagen",
+      "timer": "Temporizador",
+      "timer_none": "Sin límite",
+      "timer_left": "quedan {{time}}",
+      "timer_short": "Ya se grabó más que esto"
     },
     "video": {
       "silent_suffix": "sin sonido",

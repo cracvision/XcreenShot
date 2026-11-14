@@ -1209,6 +1209,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "description": "ready (the area chosen, waiting for Record) or done (it stopped a recording)"},
                 "area": {"type": "object"}, "width": {"type": "integer"}, "height": {"type": "integer"}
             }})),
+        B::new("record.timer", &["VID-015", "VID-011"])
+            .mutates()
+            .params(params(
+                json!({"seconds": {"type": ["number", "null"], "minimum": 0, "maximum": 43200, "description": "Seconds of recording (pauses do not count), 5 s to 12 h; 0 or null: no limit"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"status": {"type": "string"}, "limit": {"type": ["number", "null"]}}})),
         B::new("record.clean_desktop", &["VID-018", "VID-011"])
             .mutates()
             .params(params(

@@ -1174,6 +1174,10 @@
     "record_clean_desktop": {
       "title": "Clean desktop",
       "description": "Hides or shows the desktop's icons while recording, and for the next recordings."
+    },
+    "record_timer": {
+      "title": "Recording timer",
+      "description": "Stops the recording by itself after a time recorded; pauses do not count."
     }
   },
   "settings": {
@@ -2059,7 +2063,9 @@
     "slides_size": "The size is width x height, even, from 320 to 3840.",
     "slides_color": "The colour is #RRGGBB.",
     "slides_recording": "Stop or cancel the recording first.",
-    "no_subject": "No clear subject was found: the background is not plain enough. Nothing changed. For a background of one color, the Magic wand selects it precisely."
+    "no_subject": "No clear subject was found: the background is not plain enough. Nothing changed. For a background of one color, the Magic wand selects it precisely.",
+    "timer_range": "The timer goes from 5 seconds to 12 hours.",
+    "timer_too_short": "{{recorded}} are already recorded: choose a longer time."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4873,7 +4879,11 @@
       "more": "More",
       "clean_desktop": "Hide desktop icons",
       "video_settings": "Video settings…",
-      "capture_image": "Capture image"
+      "capture_image": "Capture image",
+      "timer": "Timer",
+      "timer_none": "No limit",
+      "timer_left": "{{time}} left",
+      "timer_short": "Already recorded: longer than this"
     },
     "video": {
       "silent_suffix": "silent",
