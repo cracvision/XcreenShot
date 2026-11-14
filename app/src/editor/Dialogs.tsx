@@ -146,7 +146,7 @@ function Recovery() {
                 {item.kind === "video" && item.duration != null
                   ? ` · ${t("ui.editor.recover_video", { length: clock(item.duration) })}`
                   : ""}
-                {item.originalPath ? ` · ${item.originalPath}` : ""}
+                {item.originalPath && item.kind !== "video" ? ` · ${item.originalPath}` : ""}
               </div>
             </div>
             <button
