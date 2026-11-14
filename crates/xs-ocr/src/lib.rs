@@ -6,6 +6,8 @@
 //! The result is blocks (paragraphs) of lines of words, each with its rectangle in
 //! image pixels, in reading order: top to bottom, a whole column before the next.
 
+pub mod sensitive;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use image::{GrayImage, RgbaImage};
