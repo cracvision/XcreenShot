@@ -60,6 +60,23 @@ export const CONTEXTUAL: { id: string; rows: { keys: string; label: string }[] }
       { keys: `${MOD}+/`, label: "ui.shortcuts.k_sheet" },
     ],
   },
+  // Recording, live draw and the player (VID-076): the same on both systems.
+  {
+    id: "video",
+    rows: [
+      { keys: "Enter · I · Esc", label: "ui.shortcuts.k_rec_ready" },
+      { keys: "Esc", label: "ui.shortcuts.k_rec_countdown" },
+      { keys: "A · R/S · O · P · 1 · M", label: "ui.shortcuts.k_draw_tools" },
+      { keys: "2…7", label: "ui.shortcuts.k_draw_colors" },
+      { keys: `${MOD}+Z/Z · Delete · Esc`, label: "ui.shortcuts.k_draw_undo" },
+      { keys: "Space", label: "ui.shortcuts.k_play" },
+      { keys: "← · →", label: "ui.shortcuts.k_frame" },
+      { keys: "Shift + ← · →", label: "ui.shortcuts.k_second" },
+      { keys: `Home · End · ${MOD}+Enter · Shift+${MOD}+Enter`, label: "ui.shortcuts.k_ends" },
+      { keys: "I · O", label: "ui.shortcuts.k_inout" },
+      { keys: "Esc · Delete", label: "ui.shortcuts.k_play_all" },
+    ],
+  },
 ];
 
 /** Without accents or case, the row's name or keys contain the search. */

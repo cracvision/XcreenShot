@@ -1979,7 +1979,11 @@
       "smart_extract_text": "Extraer texto",
       "editor_extract_text": "Extraer texto",
       "editor_auto_redact": "Redacción automática",
-      "editor_insert_qr": "Insertar código QR"
+      "editor_insert_qr": "Insertar código QR",
+      "editor_video_go_to": "Ir a… (video)",
+      "editor_video_save_frame": "Guardar fotograma",
+      "editor_video_gif": "Crear GIF",
+      "editor_video_info": "Información del video"
     }
   },
   "tray": {
@@ -2505,7 +2509,19 @@
       "k_quick": "Vista rápida (biblioteca y bandeja)",
       "k_details": "Detalles (biblioteca)",
       "k_sheet": "Esta hoja",
-      "sheet_group_presets": "Presets (globales)"
+      "sheet_group_presets": "Presets (globales)",
+      "k_rec_ready": "Lista: grabar · imagen · cancelar",
+      "k_rec_countdown": "Cuenta atrás: volver a Lista",
+      "k_draw_tools": "Dibujo en vivo: flecha · rectángulo · óvalo · lápiz · paso · lupa",
+      "k_draw_colors": "Dibujo en vivo: colores",
+      "k_draw_undo": "Dibujo en vivo: deshacer · borrar todo · salir",
+      "k_play": "Reproductor: reproducir o pausar",
+      "k_frame": "Reproductor: fotograma anterior o siguiente",
+      "k_second": "Reproductor: un segundo atrás o adelante",
+      "k_ends": "Reproductor: al inicio o al final",
+      "k_inout": "Reproductor: inicio y fin de la selección",
+      "k_play_all": "Reproductor: seleccionar todo · cortar la selección",
+      "sheet_group_video": "Grabación, Dibujo en vivo y el reproductor de video"
     },
     "common": {
       "on": "Activado",

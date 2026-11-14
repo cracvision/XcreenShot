@@ -714,6 +714,19 @@ pub fn slots() -> Vec<Slot> {
         ),
         // Insert a QR code (SMT-036): assignable, none by default.
         editor("editor.insert_qr", "editor.action", r#"{"action":"insert_qr"}"#),
+        // The Video menu (VID-076): they act only while a video is shown.
+        editor(
+            "editor.video_go_to",
+            "editor.action",
+            r#"{"action":"video_go_to"}"#,
+        ),
+        editor(
+            "editor.video_save_frame",
+            "editor.action",
+            r#"{"action":"video_save_frame"}"#,
+        ),
+        editor("editor.video_gif", "editor.action", r#"{"action":"video_gif"}"#),
+        editor("editor.video_info", "editor.action", r#"{"action":"video_info"}"#),
         editor("editor.ai_ask", "editor.action", r#"{"action":"ai_ask"}"#),
         editor("editor.ai_name", "editor.action", r#"{"action":"ai_name"}"#),
         editor(
@@ -953,6 +966,11 @@ fn editor_default(id: &str, profile: Profile, platform: Platform) -> Option<Acce
                 "editor.copy_all" => "Ctrl+Shift+KeyC",
                 "editor.select_all" => "Ctrl+KeyA",
                 "editor.duplicate" => "Ctrl+KeyJ",
+                // VID-076. Go to… has no own default: Ctrl+J is Duplicate's, and with
+                // a video shown Duplicate goes to Go to… (QUESTIONS.md).
+                "editor.video_save_frame" => "Ctrl+Alt+KeyF",
+                "editor.video_gif" => "Ctrl+Alt+KeyG",
+                "editor.video_info" => "Ctrl+Alt+KeyI",
                 "editor.lock" => "Ctrl+KeyL",
                 "editor.group" => "Ctrl+KeyG",
                 "editor.flatten" => "Ctrl+KeyE",
@@ -1748,6 +1766,21 @@ mod tests {
             Some(acc("Control+C"))
         );
         assert_eq!(mac.binding(&slot("editor.redo_alt"), Profile::Coexistence), None);
+        // The Video menu (VID-076): Option+Cmd on macOS, Ctrl+Alt on Windows.
+        assert_eq!(
+            mac.binding(&slot("editor.video_gif"), Profile::Coexistence),
+            Some(acc("Option+Cmd+G"))
+        );
+        let win = ShortcutStore::in_memory(Platform::Windows);
+        let wslot = |id| win.find_slot(id, ShortcutScope::Editor).unwrap();
+        assert_eq!(
+            win.binding(&wslot("editor.video_save_frame"), Profile::Coexistence),
+            Some(acc("Ctrl+Alt+F"))
+        );
+        assert_eq!(
+            win.binding(&wslot("editor.video_info"), Profile::Coexistence),
+            Some(acc("Ctrl+Alt+I"))
+        );
     }
 
     #[test]

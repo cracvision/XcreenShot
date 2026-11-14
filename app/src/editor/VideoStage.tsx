@@ -28,8 +28,16 @@ function useVideoKeys() {
       const target = e.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true'], [role='dialog']"))
         return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const { time, start, end } = useVideo.getState();
+      const mod = e.ctrlKey || e.metaKey;
+      // Ctrl/Cmd+Enter: to the start; with Shift, to the end (VID-076).
+      if (mod && !e.altKey && e.key === "Enter") {
+        seek(e.shiftKey ? Number.MAX_SAFE_INTEGER : 0);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (mod || e.altKey) return;
       let handled = true;
       switch (e.key) {
         case " ":
@@ -37,10 +45,12 @@ function useVideoKeys() {
           playPause();
           break;
         case "ArrowLeft":
-          stepFrame(-1);
+          if (e.shiftKey) seek(Math.max(0, time - 1));
+          else stepFrame(-1);
           break;
         case "ArrowRight":
-          stepFrame(1);
+          if (e.shiftKey) seek(time + 1);
+          else stepFrame(1);
           break;
         case "Home":
           seek(0);

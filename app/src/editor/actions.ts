@@ -744,6 +744,8 @@ export function performAction(action: string): boolean {
       deleteSelection();
       return true;
     case "duplicate":
+      // With a video shown, Ctrl+J is Go to… (VID-076).
+      if (doc?.video) return videoAction("video_go_to");
       if (!selected) return false;
       void duplicateSelection();
       return true;

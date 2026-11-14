@@ -1979,7 +1979,11 @@
       "smart_extract_text": "Extract text",
       "editor_extract_text": "Extract text",
       "editor_auto_redact": "Auto redact",
-      "editor_insert_qr": "Insert QR code"
+      "editor_insert_qr": "Insert QR code",
+      "editor_video_go_to": "Go to… (video)",
+      "editor_video_save_frame": "Save frame",
+      "editor_video_gif": "Create GIF",
+      "editor_video_info": "Video information"
     }
   },
   "tray": {
@@ -2505,7 +2509,19 @@
       "k_quick": "Quick view (library and tray)",
       "k_details": "Details (library)",
       "k_sheet": "This sheet",
-      "sheet_group_presets": "Presets (global)"
+      "sheet_group_presets": "Presets (global)",
+      "k_rec_ready": "Ready: record · image · cancel",
+      "k_rec_countdown": "Countdown: back to Ready",
+      "k_draw_tools": "Live draw: arrow · rectangle · oval · pen · step · magnifier",
+      "k_draw_colors": "Live draw: colors",
+      "k_draw_undo": "Live draw: undo · clear all · leave",
+      "k_play": "Player: play or pause",
+      "k_frame": "Player: previous or next frame",
+      "k_second": "Player: one second back or ahead",
+      "k_ends": "Player: to the start or the end",
+      "k_inout": "Player: start and end of the selection",
+      "k_play_all": "Player: select all · cut the selection",
+      "sheet_group_video": "Recording, live draw and the video player"
     },
     "common": {
       "on": "On",
