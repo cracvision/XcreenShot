@@ -272,7 +272,8 @@ export function LiveDrawBar() {
         aria-label={t("ui.livedraw.exit")}
         onClick={() => set({ on: false })}
       >
-        ✕
+        {/* The way out, always in sight: while drawing, clicks and keys stay here. */}
+        <span aria-hidden="true">✕</span> <kbd className="drawbar-esc">Esc</kbd>
       </button>
     </div>
   );

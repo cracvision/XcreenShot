@@ -402,7 +402,7 @@ pub fn live_draw(app: &AppHandle, area: Option<(i32, i32, u32, u32)>) -> tauri::
         overlay.show()?;
     }
     if app.get_webview_window(DRAWBAR).is_none() {
-        let (bw, bh) = (470.0, 46.0);
+        let (bw, bh) = (510.0, 46.0);
         // Above the recording bar; at the top of the monitor without one.
         let (px, py) = match app
             .get_webview_window(RECBAR)

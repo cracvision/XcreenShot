@@ -8697,6 +8697,17 @@ button.lc-head:hover,
   background: var(--line);
 }
 
+/* The way out of live drawing, always in sight (VID-048). */
+.drawbar-esc {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border: 1px solid var(--control-line);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
 .drawbar select {
   min-height: 30px;
 }
