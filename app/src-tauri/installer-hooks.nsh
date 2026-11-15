@@ -32,6 +32,18 @@
   Pop $0
 !macroend
 
+; PDF in "Open with" (CAP-041): XcreenShot can open them, but never becomes their
+; default app, so it only adds itself to the list of apps that open them.
+!macro NSIS_HOOK_POSTINSTALL
+  WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf" "" "PDF (XcreenShot)"
+  WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf\DefaultIcon" "" "$INSTDIR\xcreenshot-app.exe,0"
+  WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf\shell\open\command" "" '"$INSTDIR\xcreenshot-app.exe" "%1"'
+  WriteRegStr SHCTX "Software\Classes\.pdf\OpenWithProgids" "XcreenShot.Pdf" ""
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+!macroend
+
 !macro NSIS_HOOK_PREUNINSTALL
   Delete "$INSTDIR\xcreenshot.exe.*.old"
+  DeleteRegValue SHCTX "Software\Classes\.pdf\OpenWithProgids" "XcreenShot.Pdf"
+  DeleteRegKey SHCTX "Software\Classes\XcreenShot.Pdf"
 !macroend

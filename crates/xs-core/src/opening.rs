@@ -2,7 +2,8 @@
 //! line, also when XcreenShot is already running. Captures, images, videos and GIF open
 //! in the editor; `.xtheme` and `.xtemplate` start their import in the editor (EDT-018,
 //! EDT-101); `.xpreset` starts the presets import in the capture panel (CAP-063);
-//! `.xsettings` starts the settings import in Preferences > Advanced (APP-011).
+//! `.xsettings` starts the settings import in Preferences > Advanced (APP-011); a PDF
+//! opens the Import PDF window (CAP-041).
 //! Imports need their window's dialog, so their paths wait here until the window
 //! takes them (`app.take_opening`).
 
@@ -25,6 +26,8 @@ pub enum Kind {
     Presets,
     /// Its import starts in Preferences > Advanced (APP-011).
     Settings,
+    /// A PDF: the Import PDF window (CAP-041).
+    Pdf,
 }
 
 /// The kind of `path`, by its extension; `None`: XcreenShot does not open it.
@@ -39,6 +42,7 @@ pub fn kind(path: &str) -> Option<Kind> {
         "xtheme" | "xtemplate" => Some(Kind::EditorImport),
         "xpreset" => Some(Kind::Presets),
         "xsettings" => Some(Kind::Settings),
+        "pdf" => Some(Kind::Pdf),
         _ => None,
     }
 }
@@ -90,6 +94,15 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             Some(Kind::EditorImport) => editor.push(path),
             Some(Kind::Presets) => presets.push(path),
             Some(Kind::Settings) => settings.push(path),
+            Some(Kind::Pdf) => match core.call(
+                ctx.source,
+                "capture.pdf",
+                json!({ "path": path, "dialog": true }),
+                Some(ctx.lang),
+            ) {
+                Ok(_) => opened.push(json!(path)),
+                Err(e) => skipped.push(json!({ "path": path, "reason": e.message })),
+            },
             None => skipped.push(json!({
                 "path": path,
                 "reason": tr(ctx.lang, "errors.cannot_open_file", &[]),
@@ -151,6 +164,7 @@ mod tests {
         assert_eq!(kind("demo.MP4"), Some(Kind::Document));
         assert_eq!(kind("loop.gif"), Some(Kind::Document));
         assert_eq!(kind("work.xsettings"), Some(Kind::Settings));
+        assert_eq!(kind("Informe.PDF"), Some(Kind::Pdf));
         assert_eq!(kind("notes.txt"), None);
         assert_eq!(kind("no_extension"), None);
     }

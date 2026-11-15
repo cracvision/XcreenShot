@@ -221,7 +221,7 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("app.open_files", &["APP-001", "CAP-063"])
             .mutates()
             .params(params(
-                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG, JPG, MP4 and GIF open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel; .xsettings in Preferences > Advanced"}}),
+                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG, JPG, MP4 and GIF open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel; .xsettings in Preferences > Advanced; a PDF opens the Import PDF window"}}),
                 &["paths"],
             ))
             .result(json!({"type": "object", "properties": {
