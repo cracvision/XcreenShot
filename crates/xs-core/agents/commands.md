@@ -42,7 +42,7 @@ exists fails a test.
 | `settings.schema` | `xcreenshot settings schema --json` | Setting definitions. |
 | `shortcuts.list` | `xcreenshot shortcuts list --json` | Every assignable shortcut, its combination and status. |
 | `shortcuts.export` | `xcreenshot shortcuts export --format pdf --out D:/atajos.pdf` · `--format html` · `--format json` | The shortcut sheet (APP-023): every current shortcut (profile and own changes), grouped by area, inactive ones marked; a PDF of one or two A4 pages, a printable HTML page or JSON, in the app's language. Without `out`, returns the `sheet` as data. |
-| `shortcuts.set` | `xcreenshot shortcuts set <command> <combination> [--scope global\|app\|editor] [--reassign]` | Assigns a shortcut; an empty combination removes it. Editor shortcuts (`editor.*` rows) work in the editor window and win there over an app shortcut with the same keys. |
+| `shortcuts.set` | `xcreenshot shortcuts set <command> <combination> [--scope global\|app\|editor] [--reassign]` | Assigns a shortcut; an empty combination removes it (Windows PowerShell 5.1 drops an empty argument: write `'""'` there, or `--params '{"command":"…","shortcut":null}'`). Editor shortcuts (`editor.*` rows) work in the editor window and win there over an app shortcut with the same keys. |
 | `shortcuts.reset` | `xcreenshot shortcuts reset [<command>] [--scope …] --yes` | Restores one or all shortcuts to the profile default. |
 | `shortcuts.pause` | `xcreenshot shortcuts pause [--paused true\|false]` | Pauses or resumes global shortcuts (toggles without a value). |
 | `shortcuts.set_profile` | `xcreenshot shortcuts set-profile <coexistence\|compatibility> [--reset-custom] [--dry-run]` | Switches the shortcut profile; `--dry-run` lists the changes. |
