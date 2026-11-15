@@ -14,9 +14,14 @@ param(
   [int] $TimeoutSec = 600
 )
 $ErrorActionPreference = 'Stop'
-if (Get-Process WindowsSandbox* -ErrorAction SilentlyContinue) {
+if (Get-Process WindowsSandbox, WindowsSandboxServer -ErrorAction SilentlyContinue) {
   throw 'A Sandbox is already running: wait for it to end.'
 }
+# A Sandbox that shut down may leave its remote session behind for a while; alone,
+# without the Sandbox, it is a leftover.
+$t = 0
+while ((Get-Process WindowsSandboxRemoteSession -ErrorAction SilentlyContinue) -and $t -lt 60) { Start-Sleep 2; $t += 2 }
+Get-Process WindowsSandboxRemoteSession -ErrorAction SilentlyContinue | Stop-Process -Force
 $dir = Join-Path $env:TEMP ("xs-sandbox-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force $dir | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'sandbox\common.ps1') $dir
