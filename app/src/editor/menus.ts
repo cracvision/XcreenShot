@@ -75,11 +75,14 @@ export function menuItems(
       continue;
     }
     if (node.kind === "submenu") {
+      const submenu = menuItems(node.items, t, state);
       out.push({
         id: node.label,
         label: mnemonic(t(node.label)).text,
         separator,
-        submenu: menuItems(node.items, t, state),
+        submenu,
+        // Nothing in it applies now (a video, VID-065): it is off too.
+        disabled: submenu.length > 0 && submenu.every((i) => i.disabled),
         onSelect: () => undefined,
       });
     } else if (node.kind === "placeholder") {
@@ -532,8 +535,9 @@ export function useMenuBar(): void {
       "editor.duplicate_item": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.show_in_folder": inLibrary ? picked > 0 : hasDoc && hasFile,
       "editor.delete_item": inLibrary ? picked > 0 : hasDoc && hasFile,
-      "editor.paste": !inLibrary,
-      "editor.paste_in_place": !inLibrary,
+      // Nothing is pasted on a video (VID-065).
+      "editor.paste": !inLibrary && !isVideo,
+      "editor.paste_in_place": !inLibrary && !isVideo,
     };
     for (const a of onDoc) enabled[`editor.${a}`] = hasDoc;
     for (const a of [
@@ -595,6 +599,9 @@ export function useMenuBar(): void {
     enabled["editor.float_selection"] = pixelsOnImage;
     enabled["editor.crop_selection"] = pixelsOnImage;
     enabled["editor.extract_text"] = hasDoc && !isVideo;
+    // Nothing goes on a video, nor comes off it (VID-065).
+    enabled["editor.insert_qr"] = hasDoc && !isVideo;
+    enabled["editor.remove_background"] = hasDoc && !isVideo;
     enabled["editor.auto_redact"] = hasDoc && !isVideo;
     // The Video menu (VID-056 to VID-064): with a video shown.
     for (const a of VIDEO_ACTIONS) enabled[`editor.${a}`] = hasDoc && isVideo;

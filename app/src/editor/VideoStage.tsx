@@ -5,7 +5,8 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { Insets } from "./insets";
-import { xsdocUrl, type DocDetails } from "./state";
+import { requestZoom, takeZoomRequest, useEditor, xsdocUrl, type DocDetails } from "./state";
+import { shownZoom, useVideoZoom, zoomAfter } from "./videoZoom";
 import {
   attach,
   canCut,
@@ -89,9 +90,36 @@ function useVideoKeys() {
 
 export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets }) {
   const { t } = useTranslation();
-  const ref = useRef<HTMLVideoElement>(null);
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const pictureRef = useRef<HTMLElement | null>(null);
   useVideoKeys();
   useEffect(watchProgress, []);
+
+  // The editor's zoom (VID-056): fitted, or a percent of the video's pixels.
+  const zoomed = useVideoZoom((s) => (s.documentId === doc.documentId ? s.zoom : null));
+  const request = useEditor((s) => s.zoomRequest);
+  useEffect(() => {
+    if (useVideoZoom.getState().documentId !== doc.documentId)
+      useVideoZoom.setState({ documentId: doc.documentId, zoom: null });
+  }, [doc.documentId]);
+  useEffect(() => {
+    if (!request) return;
+    const r = takeZoomRequest(doc.documentId);
+    if (!r) return;
+    useVideoZoom.setState((z) => ({ zoom: zoomAfter(r.mode, r.value, z.shown) }));
+  }, [request, doc.documentId]);
+  // What is shown, fitted or not, for the status bar.
+  useEffect(() => {
+    const el = pictureRef.current;
+    const width = doc.video?.width ?? 0;
+    if (!el || !width) return;
+    const say = () =>
+      useVideoZoom.setState({ shown: shownZoom(el.clientWidth, width, window.devicePixelRatio) });
+    say();
+    const watch = new ResizeObserver(say);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [doc.documentId, doc.video?.width]);
 
   // New video, new cuts or a saved file: the player takes it and stays where it was.
   useEffect(() => {
@@ -142,35 +170,56 @@ export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets })
   }, [doc.documentId]);
 
   const v = doc.video;
+  // Zoomed, the picture takes its size and the stage scrolls.
+  const size =
+    zoomed != null && v
+      ? {
+          width: (v.width * zoomed) / 100 / window.devicePixelRatio,
+          maxWidth: "none",
+          maxHeight: "none",
+        }
+      : {};
   return (
     <div className="canvas-area video-area">
       <div
-        className="video-stage"
+        className={`video-stage${zoomed != null ? " zoomed" : ""}`}
         style={{
           top: insets.top,
           right: insets.right,
           bottom: insets.bottom,
           left: insets.left,
         }}
+        onWheel={(e) => {
+          // Ctrl+wheel zooms, as on the canvas (EDT-007).
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          requestZoom(e.deltaY < 0 ? "in" : "out");
+        }}
       >
         {v?.codec === "GIF" ? (
           <img
+            ref={(el) => {
+              pictureRef.current = el;
+            }}
             className="video-picture"
             src={xsdocUrl(`${doc.documentId}/video?v=${doc.version}`)}
             alt={t("ui.video.picture", { name: doc.name })}
-            style={{ aspectRatio: `${v.width} / ${v.height}` }}
+            style={{ aspectRatio: `${v.width} / ${v.height}`, ...size }}
             draggable={false}
           />
         ) : (
           <video
-            ref={ref}
+            ref={(el) => {
+              ref.current = el;
+              pictureRef.current = el;
+            }}
             className="video-picture"
             // The version changes when the file does (saved with its cuts).
             src={xsdocUrl(`${doc.documentId}/video?v=${doc.version}`)}
             preload="auto"
             playsInline
             aria-label={t("ui.video.picture", { name: doc.name })}
-            style={{ aspectRatio: v ? `${v.width} / ${v.height}` : undefined }}
+            style={{ aspectRatio: v ? `${v.width} / ${v.height}` : undefined, ...size }}
             onClick={playPause}
             onError={() => useVideo.setState({ playing: false })}
           />

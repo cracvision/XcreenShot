@@ -11,6 +11,7 @@ import { useDraft } from "./useDraft";
 import { hasEffects } from "./finalPreview";
 import { parseZoom, ZOOM_STEPS } from "./view";
 import { openImageDialog } from "./imageMenu";
+import { useVideoZoom } from "./videoZoom";
 
 function PointerPosition({ width, height }: { width: number; height: number }) {
   const point = usePointer((s) => s.point);
@@ -23,6 +24,63 @@ function PointerPosition({ width, height }: { width: number; height: number }) {
     <span className="status-item" title={t("ui.editor.pointer")}>
       {x}, {y}
     </span>
+  );
+}
+
+/** A video's zoom (VID-056): out, what is shown (or Fit), in, and the usual steps. */
+function VideoZoomControl() {
+  const { t } = useTranslation();
+  const zoom = useVideoZoom((s) => s.zoom);
+  const shown = useVideoZoom((s) => s.shown);
+  return (
+    <div className="zoom-control" role="group" aria-label={t("ui.editor.zoom")}>
+      <button
+        type="button"
+        className="btn icon small"
+        aria-label={t("ui.editor.zoom_out")}
+        title={t("ui.editor.zoom_out")}
+        onClick={() => requestZoom("out")}
+      >
+        <Icon name="minus" />
+      </button>
+      <span className="status-item" aria-live="polite">
+        {zoom == null
+          ? `${t("ui.editor.zoom_fit")} · ${Math.round(shown)} %`
+          : `${Math.round(shown)} %`}
+      </span>
+      <button
+        type="button"
+        className="btn icon small"
+        aria-label={t("ui.editor.zoom_in")}
+        title={t("ui.editor.zoom_in")}
+        onClick={() => requestZoom("in")}
+      >
+        <Icon name="plus" />
+      </button>
+      <Menu
+        triggerClass="btn icon small"
+        ariaLabel={t("ui.editor.zoom_menu")}
+        title={t("ui.editor.zoom_menu")}
+        side="top"
+        align="end"
+        label={<Icon name="chevron" />}
+        chevron={false}
+        items={[
+          { id: "fit", label: t("ui.editor.zoom_fit"), onSelect: () => requestZoom("fit") },
+          {
+            id: "actual",
+            label: t("ui.editor.zoom_actual"),
+            onSelect: () => requestZoom("percent", 100),
+          },
+          ...[50, 200, 400].map((z, i) => ({
+            id: `z${z}`,
+            label: `${z} %`,
+            onSelect: () => requestZoom("percent", z),
+            separator: i === 0,
+          })),
+        ]}
+      />
+    </div>
   );
 }
 
@@ -84,7 +142,8 @@ export function StatusBar() {
       </footer>
     );
 
-  // A video: what it is, without the image's size, resolution or zoom (VID-065).
+  // A video: what it is, without the image's resolution (VID-065), and its zoom
+  // (VID-056).
   if (doc.video)
     return (
       <footer className="status-bar">
@@ -93,6 +152,8 @@ export function StatusBar() {
           {doc.video.width} × {doc.video.height} px · {doc.video.codec}
           {doc.video.codec !== "GIF" && ` · ${t("ui.video.fps", { fps: doc.video.fps })}`}
         </span>
+        <span className="grow" />
+        <VideoZoomControl />
       </footer>
     );
 

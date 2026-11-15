@@ -77,3 +77,7 @@ Todavía no: GIF desde Exportar, exportar a H.264, y Combinar desde la bandeja c
 1. [ ] Abre un video y usa Archivo > **Exportar**: aparecen MP4 y GIF animado.
 2. [ ] Si tienes un video H.265 (por ejemplo, de un teléfono), impórtalo y expórtalo como **MP4 H.264**: el archivo se reproduce y dura lo mismo.
 
+## Zoom y menús con un video (2026-11-14)
+
+1. [ ] Con un video abierto, en la barra de estado, pulsa **+** dos veces: el video se ve más grande y, si no cabe, se desplaza con la rueda. `Ctrl` + rueda también acerca y aleja; el menú ⌄ tiene **Ajustar a la ventana** y **Tamaño real**.
+2. [ ] Con el video a la vista, abre los menús **Imagen** y **Objeto**: todo aparece desactivado. En **Edición**, Pegar también.

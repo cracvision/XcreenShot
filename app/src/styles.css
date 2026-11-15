@@ -8122,6 +8122,12 @@ button.lc-head:hover,
   min-height: 0;
 }
 
+/* Zoomed (VID-056): the picture takes its size and the stage scrolls. */
+.video-stage.zoomed {
+  overflow: auto;
+  place-items: safe center;
+}
+
 .video-picture {
   display: block;
   max-width: 100%;
