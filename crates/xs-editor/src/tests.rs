@@ -5357,6 +5357,8 @@ fn a_video_in_the_editor() {
     let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
     let path = e.library.path().join("clip.mp4");
     std::fs::copy(&src, &path).unwrap();
+    // Its recording details (VID-054): a clip of it keeps them (VID-060).
+    xs_library::xmeta::set_capture(&path, json!({"source": "region", "app": {"name": "Chrome"}})).unwrap();
     let doc = cli(&e.core, "document.open", json!({"path": path, "show": true}));
     let id = doc["documentId"].as_str().unwrap().to_string();
     assert_eq!(doc["format"], "mp4");
@@ -5417,6 +5419,9 @@ fn a_video_in_the_editor() {
     );
     let part = xs_video::info(Path::new(s["path"].as_str().unwrap())).unwrap();
     assert!((part.duration - 1.0).abs() < 0.15, "part of {}", part.duration);
+    let details = xs_library::xmeta::capture(Path::new(s["path"].as_str().unwrap())).unwrap();
+    assert_eq!(details["app"]["name"], "Chrome");
+    assert_eq!(details["clipOf"]["end"], 1.0);
     assert!(near(&info(&e.core)["video"]["length"], 2.0));
 
     // VID-063: no sound, as long as the cut video.

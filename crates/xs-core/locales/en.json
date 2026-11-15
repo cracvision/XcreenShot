@@ -5048,7 +5048,8 @@
       "exported": "Exported as H.264",
       "track_microphone": "Microphone",
       "track_system": "System audio",
-      "sound_tracks": "{{count}} audio tracks"
+      "sound_tracks": "{{count}} audio tracks",
+      "select_all": "Select the whole video"
     },
     "livedraw": {
       "title": "Live drawing",

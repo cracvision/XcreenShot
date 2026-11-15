@@ -329,8 +329,27 @@ pub fn save_selection(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResu
     let dst = new_path(core, &o, &format!("{}-{}", stamp(start), stamp(end)));
     write(core, &o.id, "selection", &o.path, &dst, &part, o.facts.sound)
         .map_err(|e| failed(lang, &o.name, e))?;
+    // The original's recording details, and the part it comes from (VID-060).
+    keep_details(
+        &o.path,
+        &dst,
+        json!({ "clipOf": { "name": o.name, "start": start, "end": end } }),
+    );
     let id = new_video(core, &dst).map_err(|e| failed(lang, &o.name, e))?;
     Ok(json!({ "documentId": id, "path": dst, "duration": timeline::length(&part) }))
+}
+
+/// A video made from another keeps its recording details (VID-054), with `more`.
+fn keep_details(from: &Path, to: &Path, more: Value) {
+    let Some(mut capture) = xs_library::xmeta::capture(from) else {
+        return;
+    };
+    if let (Some(c), Some(m)) = (capture.as_object_mut(), more.as_object()) {
+        c.extend(m.clone());
+    }
+    if let Err(e) = xs_library::xmeta::set_capture(to, capture) {
+        tracing::warn!(error = %e, "the new video's details were not kept");
+    }
 }
 
 /// `video.export` (VID-066): the video as it is now (its cuts) as an MP4 H.264 at
@@ -370,6 +389,7 @@ pub fn silent_copy(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult 
     }
     let dst = new_path(core, &o, &tr(lang, "ui.video.silent_suffix", &[]));
     write(core, &o.id, "silent", &o.path, &dst, &o.kept, false).map_err(|e| failed(lang, &o.name, e))?;
+    keep_details(&o.path, &dst, json!({ "silentCopyOf": o.name }));
     let id = new_video(core, &dst).map_err(|e| failed(lang, &o.name, e))?;
     Ok(json!({ "documentId": id, "path": dst }))
 }

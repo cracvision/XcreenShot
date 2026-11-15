@@ -16,6 +16,8 @@ import {
   wholeSelected,
 } from "./videoTimeline";
 import { actionOff } from "../features";
+import type { MenuItem } from "../components/Menu";
+import { mnemonic } from "./menus";
 
 /** Speeds offered (VID-057). */
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -366,6 +368,40 @@ export function videoAction(action: string): boolean {
       return false;
   }
   return true;
+}
+
+/** The right-click menu of a video (VID-062, VID-060): on its picture, what the Video
+ * menu does with the frame shown; on its timeline, what it does with the selection. */
+export function videoMenu(t: (key: string) => string, where: "picture" | "timeline"): MenuItem[] {
+  const v = video();
+  if (!v) return [];
+  const item = (id: string, disabled = false, separator = false): MenuItem => ({
+    id,
+    label: mnemonic(t(`menu.${id}`)).text,
+    disabled,
+    separator,
+    onSelect: () => void videoAction(id),
+  });
+  if (where === "timeline")
+    return [
+      item("video_save_selection"),
+      item("video_cut", !canCut()),
+      {
+        id: "select_all",
+        label: t("ui.video.select_all"),
+        separator: true,
+        onSelect: () => void selectAll(),
+      },
+    ];
+  const gif = v.codec === "GIF";
+  return [
+    item("video_play"),
+    item("video_save_frame", false, true),
+    item("video_extract_text", gif || actionOff("video_extract_text")),
+    item("video_gif", gif),
+    item("video_silent_copy", !v.sound),
+    item("video_info", false, true),
+  ];
 }
 
 /** Saving a video with cuts encodes it again: its progress shows on the bar. */

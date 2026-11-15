@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { Insets } from "./insets";
 import { requestZoom, takeZoomRequest, useEditor, xsdocUrl, type DocDetails } from "./state";
 import { shownZoom, useVideoZoom, zoomAfter } from "./videoZoom";
+import { menuPoint, mnemonic, useContextMenu } from "./menus";
 import {
   attach,
   canCut,
@@ -19,6 +20,7 @@ import {
   tick,
   useVideo,
   watchProgress,
+  videoMenu,
 } from "./videoState";
 
 /** The keys of the player (VID-076): only while a video is shown and no field has the
@@ -188,6 +190,16 @@ export function VideoStage({ doc, insets }: { doc: DocDetails; insets: Insets })
           right: insets.right,
           bottom: insets.bottom,
           left: insets.left,
+        }}
+        onContextMenu={(e) => {
+          // What the Video menu does with the frame shown (VID-062).
+          e.preventDefault();
+          useContextMenu.setState({
+            open: true,
+            ...menuPoint(e),
+            label: mnemonic(t("menu.video")).text,
+            items: videoMenu(t, "picture"),
+          });
         }}
         onWheel={(e) => {
           // Ctrl+wheel zooms, as on the canvas (EDT-007).

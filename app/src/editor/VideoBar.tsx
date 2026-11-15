@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Menu } from "../components/Menu";
 import { Icon } from "./icons";
 import { useEditor } from "./state";
+import { menuPoint, mnemonic, useContextMenu } from "./menus";
 import {
   cancelGif,
   canCut,
@@ -25,6 +26,7 @@ import {
   stepFrame,
   useVideo,
   videoAction,
+  videoMenu,
 } from "./videoState";
 import { formatTime, parseTime, snap } from "./videoTimeline";
 import { useFeature } from "../features";
@@ -133,6 +135,16 @@ function Timeline() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onContextMenu={(e) => {
+          // What the Video menu does with the selection (VID-060).
+          e.preventDefault();
+          useContextMenu.setState({
+            open: true,
+            ...menuPoint(e),
+            label: mnemonic(t("menu.video")).text,
+            items: videoMenu(t, "timeline"),
+          });
+        }}
       >
         <div className="vb-rail" />
         <div className="vb-range" style={{ left: pct(start), width: pct(end - start) }} />

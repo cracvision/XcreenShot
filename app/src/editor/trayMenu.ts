@@ -12,6 +12,7 @@ import {
 } from "../library/actions";
 import { exportItems } from "../library/exportState";
 import { showQuickView } from "../library/quickViewState";
+import { run } from "../lib/commands";
 import { exportGuideFile, GUIDE_FORMATS } from "./guideExport";
 import { openPicker } from "./templateUi";
 import {
@@ -111,6 +112,15 @@ export function trayMenu(
       onSelect: () => void exportItems(docs.map((d) => ({ name: d.name, path: d.path ?? "" }))),
     },
   ];
+  // A video: a copy without its sound (VID-063).
+  if (!several && (doc.format === "mp4" || doc.format === "m4v" || doc.format === "mov")) {
+    common.push({
+      id: "video_silent_copy",
+      label: t("menu.video_silent_copy"),
+      onSelect: () =>
+        void run("video.silent_copy", { documentId: doc.documentId }).catch(() => undefined),
+    });
+  }
   // A guide of steps: in another format, without opening it (SMT-035).
   const guide = !several && doc.guide && doc.path ? doc : null;
   if (guide) {

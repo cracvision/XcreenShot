@@ -5048,7 +5048,8 @@
       "exported": "Exportado como H.264",
       "track_microphone": "Micrófono",
       "track_system": "Audio del sistema",
-      "sound_tracks": "{{count}} pistas de audio"
+      "sound_tracks": "{{count}} pistas de audio",
+      "select_all": "Seleccionar todo el video"
     },
     "livedraw": {
       "title": "Dibujo en vivo",

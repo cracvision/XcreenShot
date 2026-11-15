@@ -944,7 +944,9 @@ export function performAction(action: string): boolean {
       return true;
     // Extract text of what the canvas shows, or of the selection (SMT-007).
     case "extract_text": {
-      if (!doc || doc.video || actionOff(action)) return false;
+      // On a video, the frame under the playhead (VID-062).
+      if (doc?.video) return videoAction("video_extract_text");
+      if (!doc || actionOff(action)) return false;
       const sel = doc.pixelSelection;
       const b = sel && !sel.target ? sel.bounds : null;
       void extractTextOf(b ? { x: b.x, y: b.y, width: b.w, height: b.h } : null);
