@@ -120,7 +120,12 @@ pub fn memory_target(w: &WebviewWindow, low: bool) {
 /// Title of the main window: the document shown and its unsaved state (EDT-012).
 pub fn set_main_title(app: &AppHandle, title: &str) {
     if let Some(w) = app.get_webview_window(MAIN) {
-        let _ = w.set_title(title);
+        // Portable mode says so (APP-038).
+        if xs_core::paths::portable_dir().is_some() {
+            let _ = w.set_title(&format!("{title} (portable)"));
+        } else {
+            let _ = w.set_title(title);
+        }
     }
 }
 

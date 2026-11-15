@@ -160,6 +160,12 @@ pub fn location() -> PathBuf {
     if let Some(dir) = std::env::var_os("XCREENSHOT_LIBRARY_DIR") {
         return PathBuf::from(dir);
     }
+    // Portable mode (APP-038): `library` next to the executable.
+    if let Some(dir) = xs_core::paths::portable_dir() {
+        if !xs_core::paths::portable_read_only() {
+            return dir.join("library");
+        }
+    }
     let dirs = directories::UserDirs::new();
     let base = if cfg!(target_os = "macos") {
         dirs.as_ref().and_then(|d| d.picture_dir().map(Path::to_path_buf))

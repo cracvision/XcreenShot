@@ -289,6 +289,7 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             "version": {"type": "string"}, "build": {"type": "string"}, "date": {"type": "string"},
             "platform": {"type": "string"}, "arch": {"type": "string"}, "channel": {"type": "string"},
             "dataDir": {"type": "string"}, "configDir": {"type": "string"}, "managed": {"type": "string"},
+            "portable": {"type": "boolean", "description": "Portable mode (APP-038)"}, "portableReadOnly": {"type": "boolean"},
             "network": {"type": "array", "items": {"type": "string"}}
         }})),
         B::new("app.feedback", &["APP-015"])

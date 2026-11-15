@@ -310,6 +310,11 @@ pub fn run() {
     let started = std::time::Instant::now();
     let background = std::env::args().any(|a| a == "--background");
     let paths = Paths::standard();
+    // Portable mode (APP-038): the web engine's data stay in the folder too, not in the
+    // user's profile.
+    if xs_core::paths::portable_dir().is_some() && std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").is_none() {
+        std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", paths.local_dir.join("webview"));
+    }
     let log = logging::init(&paths.logs_dir(), false);
     let endpoint = ipc::endpoint();
 
@@ -465,8 +470,10 @@ pub fn run() {
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
             let first_run = !first_run_marker.exists();
             if first_run {
+                // Not for a portable copy: it may be on a USB stick (APP-038).
                 if !cfg!(debug_assertions)
                     && !xs_core::paths::isolated()
+                    && xs_core::paths::portable_dir().is_none()
                     && core.settings.get_bool("general.launchAtLogin")
                 {
                     let _ = handle.autolaunch().enable();

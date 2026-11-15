@@ -67,6 +67,8 @@ interface AboutInfo {
   platform: string;
   arch: string;
   channel: "development" | "stable";
+  /** Portable mode (APP-038). */
+  portable?: boolean;
   dataDir: string;
   configDir: string;
   managed: string;
@@ -102,7 +104,10 @@ function About() {
       {info && (
         <dl className="about-facts">
           <dt>{t("ui.help.version")}</dt>
-          <dd>{info.version}</dd>
+          <dd>
+            {info.version}
+            {info.portable && ` (${t("ui.help.portable")})`}
+          </dd>
           <dt>{t("ui.help.build")}</dt>
           <dd>
             {info.build}

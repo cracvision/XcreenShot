@@ -130,7 +130,10 @@ impl Core {
             managed: RwLock::new(crate::managed::Managed::inactive(Default::default())),
         });
         // Before anything reads a setting (APP-035).
-        let managed = crate::managed::load(&crate::managed::location(None), core.settings.defs());
+        let managed = crate::managed::load(
+            &crate::managed::location(crate::paths::portable_dir().as_deref()),
+            core.settings.defs(),
+        );
         core.set_managed(managed);
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -731,6 +734,9 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         "channel": if cfg!(debug_assertions) { "development" } else { "stable" },
         "dataDir": core.paths.local_dir,
         "configDir": core.paths.config_dir,
+        // Portable mode (APP-038), and on a read-only folder.
+        "portable": crate::paths::portable_dir().is_some(),
+        "portableReadOnly": crate::paths::portable_read_only(),
         // Managed configuration (APP-035): inactive, active or errors.
         "managed": core.managed().status_str(),
         // The only network connections the app makes (APP-054).
