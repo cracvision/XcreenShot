@@ -7,11 +7,13 @@ import { run } from "../lib/commands";
 import { Icon } from "./icons";
 import type { DocDetails } from "./state";
 import { extractText, saveFrame, saveSelection, silentCopy, useVideo } from "./videoState";
+import { captureRows, type CaptureDetails } from "./videoInfo";
 import { formatTime } from "./videoTimeline";
 
 interface FullInfo {
   bytes?: number;
   created?: string;
+  capture?: CaptureDetails | null;
   frames?: number;
   fpsAverage?: number;
   fpsMax?: number;
@@ -77,6 +79,7 @@ export function VideoPanel({ doc }: { doc: DocDetails }) {
     if (full.bytes) rows.push([t("ui.video.info.file_size"), megabytes(full.bytes)]);
     if (full.created)
       rows.push([t("ui.video.info.created"), new Date(full.created).toLocaleString()]);
+    rows.push(...captureRows(full.capture, (k) => t(k)));
   }
   if (doc.path) rows.push([t("ui.video.info.location"), doc.path]);
 

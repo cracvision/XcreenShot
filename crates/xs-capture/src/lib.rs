@@ -1914,6 +1914,9 @@ pub fn extension() -> Extension {
                 "path": path,
                 "bytes": std::fs::metadata(file).map(|m| m.len()).unwrap_or(0),
                 "created": created,
+                // How it was captured (VID-054): the app in front, the others, the source
+                // and the devices; none for a video from elsewhere.
+                "capture": xs_library::xmeta::capture(file),
                 "width": i.width,
                 "height": i.height,
                 "duration": i.duration,
