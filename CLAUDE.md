@@ -42,7 +42,7 @@ Construyes **únicamente** a partir de `spec/`.
 |---|---|
 | `SPEC.md`, `01-captura.md`, `03-video.md`, `05-app.md`, `06-inteligentes.md` | Completos |
 | `02-editor.md` | Completo (herramientas, efectos, plantillas, exportación y atajos) |
-| `04-biblioteca-compartir.md` | Biblioteca y bandeja completas (M1 y M2). Compartir (`SHR-`) solo tiene lo de M1: se completa antes de M6 |
+| `04-biblioteca-compartir.md` | Biblioteca y bandeja completas (M1 y M2). Compartir (`SHR-`) tiene lo de M1 y la red local con otros usuarios (SHR-042 a SHR-044, IDEA-005, M6); el resto se completa antes de M6 |
 | `IDEAS.md` | Ideas de Carlos sin aprobar. **No se construyen** hasta que tengan su bloque con ID |
 
 Si un ID que necesitas no existe todavía, para y pregunta.
@@ -147,7 +147,7 @@ La interfaz usa el sistema **Cristal** (aprobado por Carlos el 2026-11-12; susti
 
 ## Privacidad
 
-- Sin telemetría. La única red es compartir (cuando el usuario lo elige), las actualizaciones y la IA en la nube (SMT-039 a SMT-043: solo si el usuario la activa y la pide sobre una imagen).
+- Sin telemetría. La única red es compartir (cuando el usuario lo elige), las actualizaciones, la IA en la nube (SMT-039 a SMT-043: solo si el usuario la activa y la pide sobre una imagen) y la red local para compartir con otros usuarios de XcreenShot (SHR-042 a SHR-044: solo con su preferencia activada; nada sale de la red local).
 - Las credenciales van en el llavero del sistema, nunca en archivos ni en logs.
 - El procesamiento inteligente es siempre local, salvo esa IA en la nube, aprobada por Carlos el 2026-11-01. Nunca se registran la imagen, la petición, la respuesta ni la clave.
 - MCP solo por stdio.

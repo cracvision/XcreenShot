@@ -150,7 +150,7 @@ Formato de cada idea:
 
 ## IDEA-005 · Compartir capturas y videos con otros usuarios por la red (2026-11-13)
 
-> **Sin aprobar.** Carlos la dejó anotada para no olvidarla; no se construye hasta que conteste las preguntas y elija el hito.
+> **Aprobada por Carlos el 2026-11-14:** aceptó las cinco propuestas de abajo. Pasa al spec como **SHR-042 a SHR-044** (`04-biblioteca-compartir.md` §12), en M6: misma red, sin servidor; el envío espera en el equipo de quien envía; emparejar la primera vez; aceptar cada envío, o siempre de un contacto de confianza. Por internet queda fuera.
 
 **Lo que propone Carlos:**
 - Desde la biblioteca, buscar a otro usuario de XcreenShot y enviarle una captura o un video.

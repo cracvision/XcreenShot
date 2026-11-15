@@ -29,7 +29,8 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
 9. **Compartir: marco común** — SHR-001 Zona de compartir · SHR-002 Menú Compartir · SHR-003 Gestión de destinos · SHR-004 Instancias con nombre y atajos por destino · SHR-005 Opciones comunes de los destinos · SHR-006 Nombres de archivo y títulos · SHR-007 Formato al compartir y al guardar como · SHR-008 Reducir imágenes de alta densidad · SHR-009 Compartir varios elementos y a varios destinos · SHR-010 Progreso, estado y cancelación · SHR-011 Resultado: avisos, errores y reintento · SHR-012 Historial de envíos · SHR-013 Destinos en la barra de herramientas · SHR-014 Cuentas conectadas y credenciales · SHR-015 Copiar todo desde la biblioteca y la bandeja · SHR-016 Arrastrar y soltar · SHR-017 Comandos de compartir (CLI y MCP)
 10. **Compartir: destinos** — SHR-018 Archivo · SHR-019 Portapapeles · SHR-020 Correo · SHR-021 Aplicación · SHR-022 Impresora · SHR-023 FTP y SFTP · SHR-024 Word · SHR-025 PowerPoint · SHR-026 Excel · SHR-027 OneNote · SHR-028 Evernote · SHR-029 OneDrive y SharePoint · SHR-030 Microsoft Teams · SHR-031 Slack · SHR-032 Google Drive · SHR-033 Dropbox · SHR-034 Box · SHR-035 YouTube · SHR-036 Pages, Keynote y Numbers · SHR-037 AirDrop y Compartir del sistema
 11. **Enlace para compartir** — SHR-038 Enlace para compartir · SHR-039 Proveedores del Enlace para compartir · SHR-040 Proveedor: carpeta sincronizada · SHR-041 Proveedor: almacenamiento compatible con S3
-12. [Atajos por defecto](#12-atajos-por-defecto-de-este-archivo) · [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
+12. **Compartir con otros usuarios de XcreenShot en la red local** — SHR-042 Red local: activar y ver quién está · SHR-043 Red local: emparejar y contactos · SHR-044 Red local: enviar, pendientes y recibir
+13. [Atajos por defecto](#12-atajos-por-defecto-de-este-archivo) · [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
 
 ---
 
@@ -1054,3 +1055,79 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
 - **Fuentes:** research/04-biblioteca-compartir.md §3.2 (Clipboard), §6
 
 > **Pendiente.** SHR-020 a SHR-041 (correo, aplicaciones, nube, Office y Enlace para compartir) se redactan antes de M6, siguiendo el índice de arriba.
+
+## 12. Compartir con otros usuarios de XcreenShot en la red local
+
+Función propia, aprobada por Carlos el 2026-11-14 (IDEA-005, con sus propuestas). Se envía de un equipo a otro **dentro de la misma red** (oficina, casa o VPN), sin servidor ni servicio de terceros. Por internet haría falta un servidor que guarde los envíos: queda fuera de este alcance (IDEA-005).
+
+### SHR-042 · Red local: activar y ver quién está
+- **Hito:** M6 · **Prioridad:** Should
+- **Plataformas:** Ambas (Windows y macOS se ven y se envían entre sí)
+- **Paridad con Snagit:** — (función propia; IDEA-005)
+- **Comportamiento:**
+  - Preferencia **Compartir en la red local** (Preferencias > Compartir; por defecto: **desactivada**). Mientras está desactivada, XcreenShot no anuncia nada, no busca a nadie y no abre ningún puerto (APP-054).
+  - Al activarla:
+    - el equipo genera su par de claves, que se guarda en el llavero del sistema (nunca en archivos ni en logs);
+    - pide el **nombre visible** (por defecto, el nombre del usuario del sistema) y lo muestra junto al nombre del equipo;
+    - el sistema puede preguntar por el firewall la primera vez; XcreenShot explica antes por qué lo necesita.
+  - **Descubrimiento:** los equipos con la preferencia activada se anuncian y se encuentran solos en la red local (DNS-SD/mDNS), sin configurar nada. Cada uno aparece con su nombre visible, su equipo, si ya es contacto (SHR-043) y si está **en línea**.
+  - La lista de **Personas en la red** está en el menú Compartir (destino **Red local**), en la biblioteca y en Preferencias > Compartir. Se actualiza sola: quien se va desaparece o pasa a "sin conexión" (sus contactos siguen en la lista).
+  - El anuncio solo dice el nombre visible, el equipo y una huella de su clave pública: nunca qué capturas hay ni ningún otro dato.
+- **Criterios de aceptación:**
+  - [ ] Con la preferencia desactivada, un monitor de red no ve ningún paquete mDNS de XcreenShot ni ningún puerto abierto por la app.
+  - [ ] Dos equipos en la misma red, con la preferencia activada, se ven en la lista en menos de 5 s.
+  - [ ] Al cerrar XcreenShot en uno, el otro lo muestra como sin conexión en menos de 30 s.
+  - [ ] Un Windows y un Mac en la misma red se ven entre sí.
+- **Mejora sobre Snagit:** función propia.
+- **Fuentes:** IDEA-005 (spec/IDEAS.md), decisión de Carlos del 2026-11-14
+
+### SHR-043 · Red local: emparejar y contactos
+- **Hito:** M6 · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia; IDEA-005)
+- **Comportamiento:**
+  - **Emparejar la primera vez**, como un dispositivo:
+    - quien envía elige a alguien de la lista que todavía no es contacto, y el otro recibe un aviso "Carlos (PC-OFICINA) quiere añadirte como contacto";
+    - los dos ven el mismo **código de verificación** de 6 dígitos, derivado de las claves de ambos, y aceptan solo si coincide;
+    - aceptado por los dos, cada uno guarda la clave pública del otro: a partir de ahí cada envío comprueba que el otro es quien dice ser.
+  - Sin emparejar no se envía nada: un desconocido de la red no puede mandar capturas.
+  - **Contactos** (Preferencias > Compartir > Red local):
+    - lista con nombre visible, equipo, última vez visto y la opción **Aceptar siempre sus envíos** (desactivada por defecto);
+    - se pueden renombrar y quitar; quitar un contacto borra su clave y hay que volver a emparejar;
+    - **Bloquear** a alguien hace que sus peticiones de contacto y sus envíos se ignoren sin aviso.
+  - Si un contacto reinstala o cambia de equipo, su clave cambia: aparece como desconocido y hay que emparejar de nuevo, con un aviso de que la clave ya no es la misma (decisión de diseño: nunca se acepta una clave distinta en silencio).
+- **Criterios de aceptación:**
+  - [ ] Emparejar muestra el mismo código en los dos equipos; si uno rechaza, ninguno queda como contacto del otro.
+  - [ ] Un equipo no emparejado no puede enviar: su intento no llega al otro.
+  - [ ] Tras quitar un contacto, enviarle vuelve a pedir el emparejamiento.
+  - [ ] Si el otro reinstala XcreenShot, el envío no sale hasta emparejar de nuevo, y el aviso lo explica.
+- **Mejora sobre Snagit:** función propia.
+- **Fuentes:** IDEA-005 (spec/IDEAS.md), decisión de Carlos del 2026-11-14
+
+### SHR-044 · Red local: enviar, pendientes y recibir
+- **Hito:** M6 · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia; IDEA-005)
+- **Comportamiento:**
+  - **Enviar:** desde el menú Compartir (destino **Red local**) del editor, de la bandeja o de la biblioteca, y desde el menú contextual de un elemento. Se eligen uno o varios contactos y uno o varios elementos: imagen (`.xshot` editable, o PNG si se elige), video, GIF o guía.
+  - El envío va **directo** del equipo de quien envía al del otro, **cifrado de extremo a extremo** con las claves del emparejamiento; nada pasa por un servidor.
+  - **Si el otro no está en línea:**
+    - el envío queda **pendiente** en el equipo de quien envía, en el historial de envíos (SHR-012), y sale solo cuando el otro aparece en la red, mientras XcreenShot esté abierto (también en segundo plano);
+    - un pendiente se puede cancelar;
+    - caduca a los **7 días**, con un aviso (decisión de diseño).
+  - **Recibir:**
+    - llega un aviso "Carlos te envía 2 capturas (3,4 MB)" con **Aceptar** y **Rechazar**; de un contacto con **Aceptar siempre** se recibe sin preguntar, con un aviso al terminar;
+    - lo aceptado llega a la **biblioteca**, como la carpeta de recepción (CAP-043), con la etiqueta "De: <nombre visible>", y aparece en la bandeja;
+    - lo rechazado no deja nada.
+  - **Estados**, en el historial de envíos (SHR-012): Pendiente, Enviando (con progreso), Entregado, Rechazado, Caducado, Cancelado. Quien envía ve "Entregado" o "Rechazado" cuando el otro decide.
+  - **Límites:** sin límite de tamaño en la red local; un envío grande muestra el progreso y se puede cancelar en los dos lados (SHR-010).
+  - **Automatización:** comandos para listar a las personas de la red, emparejar, enviar, ver los pendientes y aceptar o rechazar lo recibido (SHR-017). Aceptar un emparejamiento o un envío por automatización exige que la preferencia **Permitir por automatización** esté activada (desactivada por defecto), para que un agente no acepte capturas en nombre del usuario sin que lo sepa (decisión de diseño).
+- **Criterios de aceptación:**
+  - [ ] Enviar una captura `.xshot` a un contacto en línea, que la acepta, la deja en su biblioteca idéntica (mismo contenido, comprobado por hash) y editable.
+  - [ ] Con el otro equipo apagado, el envío queda Pendiente y sale solo, sin intervenir, cuando el otro vuelve a la red: quien envía ve "Entregado".
+  - [ ] Rechazar un envío no deja ningún archivo en el equipo que lo rechaza.
+  - [ ] Con **Aceptar siempre**, el envío llega sin preguntar y avisa al terminar.
+  - [ ] Capturar el tráfico de red durante un envío no permite ver el contenido de la captura.
+  - [ ] Un video de 500 MB llega completo, con progreso en los dos lados, y se puede cancelar a la mitad sin dejar archivos a medias.
+- **Mejora sobre Snagit:** función propia.
+- **Fuentes:** IDEA-005 (spec/IDEAS.md), decisión de Carlos del 2026-11-14

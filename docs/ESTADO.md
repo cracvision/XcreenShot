@@ -597,7 +597,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 ## Pendiente inmediato
 
-0. **Decisión pendiente de Carlos: IDEA-005, compartir capturas y videos con otros usuarios por la red** (Carlos la recordó el 2026-11-14: es grande y no hay que perderla). Está en [`spec/IDEAS.md`](../spec/IDEAS.md) con cinco preguntas y una propuesta para cada una: misma red primero, sin servidor (los equipos se descubren solos y se envía directo); si el otro no está conectado, el envío espera en el equipo de quien envía; emparejar la primera vez; aceptar cada envío (o siempre, de un contacto de confianza); hito M6, con Compartir. Cuando Carlos conteste (o diga "acepto las propuestas"), escribir su bloque de spec con ID (`SHR-`) y planificarla.
+0. **IDEA-005 aprobada (2026-11-14):** Carlos aceptó las cinco propuestas. Ya es spec: **SHR-042 a SHR-044** (`spec/04-biblioteca-compartir.md` §12), en **M6**: compartir con otros usuarios de XcreenShot en la misma red, sin servidor, emparejando la primera vez, con cola si el otro no está y aceptando cada envío (o siempre, de un contacto de confianza). Viene desactivado. Las decisiones añadidas y las dependencias que hará falta proponer están en `spec/QUESTIONS.md`. APP-054 y `CLAUDE.md` (Privacidad) ya lo incluyen.
 1. **Pruebas de Carlos con el instalador `c97ce05`** (entrega 3, [`tests/manual/CAP-panel.md`](../tests/manual/CAP-panel.md)):
    - grabar otra vez `Ctrl+Shift+PrtScn` en el campo Atajo del panel;
    - cambiar de pestaña con las flechas sin que asome el turquesa en la pestaña vecina;

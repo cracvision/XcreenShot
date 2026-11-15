@@ -340,6 +340,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | En curso (Windows: `tray.list`, `tray.open`, `tray.activate`, `tray.pin`, `tray.unpin`, `tray.move`, `tray.close`) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |
+| SHR-042 | Red local: activar y ver quién está | M6 | Should | — (IDEA-005, aprobada el 2026-11-14) |
+| SHR-043 | Red local: emparejar y contactos | M6 | Should | — |
+| SHR-044 | Red local: enviar, pendientes y recibir | M6 | Should | — |
 
 ## 05-app.md
 

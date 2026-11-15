@@ -331,6 +331,19 @@ Formato: ID afectado · pregunta · propuesta · estado. Carlos decide; el equip
 | APP-012 | ¿Ventana translúcida (Mica de Windows, vibrancia de macOS) detrás de la app? | Tauri 2 ya trae los efectos de ventana (Mica y Acrylic en Windows 11, vibrancia en macOS) sin paquetes nuevos. Se propone como opción aparte, apagada por defecto: cambia cómo se pintan las ventanas en cada sistema y hay que probarla en los dos | Propuesta: pendiente de Carlos |
 | EDT-001 | Arreglo de paso: en el instalador `2f8ca52` la barra del editor recortaba sus menús desplegables (Más, Compartir, ⋯) a su propia altura | La barra ya no recorta: mide su contenido por sus propios elementos, así que un menú abierto no cuenta | Arreglado |
 
+## Compartir con otros usuarios por la red local (SHR-042 a SHR-044, IDEA-005)
+
+Carlos aceptó las cinco propuestas de IDEA-005 el 2026-11-14. Lo de abajo son las decisiones que el spec añade para poder construirlo; se revisan al empezar M6.
+
+| ID | Duda | Propuesta | Estado |
+|---|---|---|---|
+| SHR-042 | ¿Activado por defecto? | No: la preferencia **Compartir en la red local** viene desactivada. Mientras lo está, la app no anuncia nada ni abre puertos (APP-054 añade esta conexión, solo con la preferencia) | Provisional |
+| SHR-042 | Dependencias nuevas para cuando se construya | Para el descubrimiento, un crate de DNS-SD/mDNS en Rust puro (por ejemplo `mdns-sd`, licencia MIT o Apache). Para el cifrado entre equipos, TLS con claves fijadas en el emparejamiento (`rustls`, ya muy usado) o el protocolo Noise (`snow`). Se elige y se propone aquí antes de añadirlas | Provisional |
+| SHR-043 | ¿Cómo se comprueba que el otro es quien dice ser? | Un código de 6 dígitos derivado de las dos claves públicas, que ven los dos y aceptan si coincide (como emparejar un dispositivo Bluetooth). Una clave distinta nunca se acepta en silencio | Provisional |
+| SHR-044 | ¿Cuánto espera un envío pendiente? | 7 días, mientras XcreenShot esté abierto en el equipo de quien envía (también en segundo plano); después caduca con un aviso | Provisional |
+| SHR-044 | ¿Puede un agente aceptar envíos por automatización? | Solo con la preferencia **Permitir por automatización** (desactivada por defecto), para que nadie acepte capturas en nombre del usuario sin que lo sepa | Provisional |
+| SHR-044 | ¿Y por internet? | Fuera de este alcance: haría falta un servidor que guarde los envíos (alguien lo mantiene, lo paga y lo protege, y por él pasarían las capturas). Si se quiere más adelante, es otra idea con su propio bloque | Provisional |
+
 ## Dudas del equipo de construcción (M4, entrega 9: micrófono y sonido)
 
 | ID | Duda | Propuesta | Estado |
