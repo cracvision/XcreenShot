@@ -316,7 +316,54 @@ pub struct VideoTab {
     pub limit: u32,
     /// Open in (VID-052): `editor` or `none` (only the library and the tray).
     pub open: String,
+    /// A preset's own recording settings (VID-009): pointer, effects, keys, live
+    /// drawing, system sound, microphone and camera, by setting key ([`PRESET_VIDEO_KEYS`]).
+    /// Empty in the panel, whose are the settings themselves.
+    #[serde(skip_serializing_if = "serde_json::Map::is_empty")]
+    pub with: serde_json::Map<String, Value>,
 }
+
+/// The recording settings a video preset keeps (VID-009); not the general ones
+/// (quality, size, countdown, tracks).
+pub const PRESET_VIDEO_KEYS: [&str; 37] = [
+    "video.cursor",
+    "video.highlight",
+    "video.highlightColor",
+    "video.highlightSize",
+    "video.highlightOpacity",
+    "video.highlightShape",
+    "video.clicks",
+    "video.clickColor",
+    "video.clickColorSecondary",
+    "video.clickSameColor",
+    "video.clickSize",
+    "video.keys",
+    "video.keysWhich",
+    "video.keysPlace",
+    "video.keysSize",
+    "video.liveDraw",
+    "video.drawTool",
+    "video.drawColor",
+    "video.drawWidth",
+    "video.drawFade",
+    "video.systemAudio",
+    "video.microphone",
+    "video.microphoneDevice",
+    "video.microphoneAutoLevel",
+    "video.noiseReduction",
+    "video.camera",
+    "video.cameraDevice",
+    "video.cameraPlacement",
+    "video.cameraCorner",
+    "video.cameraSize",
+    "video.cameraShape",
+    "video.cameraAspect",
+    "video.cameraMirror",
+    "video.cameraBorder",
+    "video.cameraBorderColor",
+    "video.cameraBorderWidth",
+    "video.cameraBorderAngle",
+];
 
 impl Default for VideoTab {
     fn default() -> Self {
@@ -324,6 +371,7 @@ impl Default for VideoTab {
             selection: "region".into(),
             limit: 0,
             open: "editor".into(),
+            with: serde_json::Map::new(),
         }
     }
 }

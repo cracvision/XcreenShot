@@ -90,12 +90,20 @@ fn settings_from(
                 "the panel's active tab is of another kind",
             ));
         }
-        let tab = match kind {
+        let mut tab = match kind {
             "universal" => serde_json::to_value(&panel.universal),
             "video" => serde_json::to_value(&panel.video),
             _ => serde_json::to_value(&panel.image),
         }
         .unwrap_or_default();
+        // A video preset keeps the recording settings of now (VID-009).
+        if kind == "video" {
+            let with: serde_json::Map<String, Value> = panel::PRESET_VIDEO_KEYS
+                .iter()
+                .filter_map(|k| core.settings.get(k).map(|v| (k.to_string(), v)))
+                .collect();
+            tab["with"] = Value::Object(with);
+        }
         return presets::checked_settings(kind, &tab).map_err(|e| bad(lang, "settings", &e));
     }
     let mut merged = base.clone();
@@ -341,6 +349,26 @@ fn run(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         }
         let name = presets::display_name(preset, lang);
         return crate::start_schedule(core, ctx, &params, Some(name), Some(preset.id.clone()));
+    }
+    // A video preset records with its own settings (VID-009): its devices and effects
+    // become the Video tab's, then it records.
+    if preset.kind == "video" {
+        if let Some(with) = preset.settings.get("with").and_then(Value::as_object) {
+            for (key, value) in with
+                .iter()
+                .filter(|(k, _)| panel::PRESET_VIDEO_KEYS.contains(&k.as_str()))
+            {
+                let set = core.call(
+                    xs_core::Source::Ui,
+                    "settings.set",
+                    json!({ "key": key, "value": value }),
+                    Some(lang),
+                );
+                if let Err(e) = set {
+                    tracing::warn!(key, error = %e.message, "a video preset's setting was not applied");
+                }
+            }
+        }
     }
     // A video preset records (VID-009); a step recorder preset records steps (SMT-022).
     if command.starts_with("record.") || command.starts_with("smart.") {
@@ -696,6 +724,32 @@ mod tests {
     fn call(core: &Core, id: &str, p: Value) -> Value {
         core.call(Source::Cli, id, p, Some(Lang::En))
             .unwrap_or_else(|e| panic!("{id}: {e:?}"))
+    }
+
+    /// VID-009: a video preset keeps the recording settings of when it was made, and
+    /// running it makes them the Video tab's again before recording.
+    #[test]
+    fn a_video_preset_keeps_its_recording_settings() {
+        let c = core();
+        c.call(Source::Ui, "capture.configure", json!({"tab": "video"}), None)
+            .unwrap();
+        call(&c, "settings.set", json!({"key": "video.cursor", "value": false}));
+        call(&c, "settings.set", json!({"key": "video.keys", "value": true}));
+        call(&c, "settings.set", json!({"key": "video.camera", "value": false}));
+        let p = call(&c, "preset.create", json!({"fromCurrent": true, "name": "Demo"}));
+        assert_eq!(p["settings"]["with"]["video.cursor"], false, "{p}");
+        assert_eq!(p["settings"]["with"]["video.keys"], true);
+        assert!(
+            p["settings"]["with"].get("video.quality").is_none(),
+            "not the general ones"
+        );
+        call(&c, "settings.set", json!({"key": "video.cursor", "value": true}));
+        call(&c, "settings.set", json!({"key": "video.keys", "value": false}));
+        // Running it (choosing the area fails here, without a screen to choose on).
+        let _ = c.call(Source::Cli, "preset.run", json!({"name": "Demo"}), Some(Lang::En));
+        assert_eq!(c.settings.get("video.cursor"), Some(json!(false)));
+        assert_eq!(c.settings.get("video.keys"), Some(json!(true)));
+        let _ = c.call(Source::Cli, "record.cancel", json!({}), Some(Lang::En));
     }
 
     fn by_name(core: &Core, name: &str) -> Preset {
