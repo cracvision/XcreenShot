@@ -98,6 +98,18 @@
     "originalChanged": {
       "type": "boolean",
       "description": "base.png is no longer the image as captured or opened: a save merged edits into it or left out cropped pixels (EDT-050, EDT-076). Absent means false."
+    },
+    "autoRedactRemoved": {
+      "type": "array",
+      "description": "Automatic redactions the user removed by hand (SMT-014): an analysis does not put them back. Their category and the rectangle of the data they covered, in canvas pixels; never the text (SMT-017). Absent: none.",
+      "items": {
+        "type": "object",
+        "required": ["category", "source"],
+        "properties": {
+          "category": { "type": "string" },
+          "source": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+        }
+      }
     }
   },
   "$defs": {

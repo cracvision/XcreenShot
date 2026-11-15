@@ -3,16 +3,22 @@
 //! the data they cover, in canvas pixels. Never the text (SMT-017). An analysis replaces
 //! the managed redactions in one undo step, keeping those that still cover something
 //! wanted (moved or restyled by hand, they stay as they are) so that nothing is doubled.
+//! The automatic ones removed by hand are listed in the document itself
+//! ([`REMOVED`]): saved with it, and undone with the removal (SMT-014).
 
 use image::RgbaImage;
 use serde_json::{json, Map, Value};
-use xs_core::document::Object;
+use xs_core::document::{Document, Object};
 use xs_core::{Context, Core};
 
 use crate::{changed, editor, objects};
 
 /// The property that marks a managed redaction.
 pub const MARK: &str = "autoRedact";
+
+/// The document's list of automatic redactions removed by hand, `{category, source}`
+/// each (SMT-014): an analysis does not put them back. Never the text (SMT-017).
+pub const REMOVED: &str = "autoRedactRemoved";
 
 /// A redaction an analysis wants: its category, the data's rectangle and the object's
 /// rectangle (the data plus the margin), in canvas pixels.
@@ -79,6 +85,25 @@ pub fn managed(core: &Core, id: &str) -> Result<Vec<Managed>, String> {
         .ok_or_else(|| "document closed".to_string())
 }
 
+fn removed_of(doc: &Document) -> Vec<(String, [f64; 4])> {
+    doc.extra
+        .get(REMOVED)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|r| Some((r.get("category")?.as_str()?.to_string(), four(r.get("source"))?)))
+        .collect()
+}
+
+/// The automatic redactions removed by hand in a document (SMT-014): their category
+/// and the data's rectangle, in canvas pixels.
+pub fn removed(core: &Core, id: &str) -> Result<Vec<(String, [f64; 4])>, String> {
+    editor(core)
+        .store
+        .with(id, |d| removed_of(&d.document))
+        .ok_or_else(|| "document closed".to_string())
+}
+
 /// The blur style of a managed redaction of `category`: faces as ellipses (SMT-013).
 fn style_for(category: &str, style: &Map<String, Value>) -> Map<String, Value> {
     let mut s = style.clone();
@@ -140,13 +165,15 @@ pub fn reconcile(
     change(core, ctx, id, wanted, &[], style, restyle, false)
 }
 
-/// Removes every managed redaction, those made by hand too.
+/// Removes every managed redaction, those made by hand too, and forgets those removed
+/// by hand.
 pub fn clear(core: &Core, ctx: &Context, id: &str) -> Result<Outcome, String> {
     change(core, ctx, id, &[], &[], &Map::new(), false, true)
 }
 
 /// Adds redactions made by hand (`add`, category [`MANUAL`]) and removes managed ones
-/// (`remove`, object ids), in one undo step (SMT-014, SMT-015). The rest stay.
+/// (`remove`, object ids), in one undo step (SMT-014, SMT-015). The rest stay. The
+/// automatic ones removed go on the document's [`REMOVED`] list, in that same step.
 pub fn edit(
     core: &Core,
     ctx: &Context,
@@ -185,6 +212,7 @@ fn change(
         .store
         .mutate(id, "history.auto_redact", |doc| {
             let mut outcome = Outcome::default();
+            let mut gone: Vec<(String, [f64; 4])> = Vec::new();
             let mut matched = vec![false; wanted.len()];
             let mut kept = Vec::with_capacity(doc.objects.len());
             for mut o in std::mem::take(&mut doc.objects) {
@@ -194,6 +222,9 @@ fn change(
                 };
                 if remove.contains(&m.object_id) {
                     outcome.removed += 1;
+                    if m.category != MANUAL {
+                        gone.push((m.category, m.source));
+                    }
                     continue;
                 }
                 // Made by hand: an analysis never takes it away (SMT-014).
@@ -232,7 +263,25 @@ fn change(
                 doc.objects.push(new_object(oid, w, style)?);
                 outcome.added += 1;
             }
-            if outcome == Outcome::default() {
+            // The list of those removed by hand (SMT-014): emptied by `clear`.
+            let before = removed_of(doc);
+            let mut list = if clear { Vec::new() } else { before.clone() };
+            for g in gone {
+                if !list.iter().any(|(c, s)| *c == g.0 && same(*s, g.1)) {
+                    list.push(g);
+                }
+            }
+            if list != before {
+                if list.is_empty() {
+                    doc.extra.remove(REMOVED);
+                } else {
+                    let rows: Vec<Value> = list
+                        .iter()
+                        .map(|(c, s)| json!({"category": c, "source": s}))
+                        .collect();
+                    doc.extra.insert(REMOVED.into(), Value::Array(rows));
+                }
+            } else if outcome == Outcome::default() {
                 // Nothing to undo: the store keeps the document as it was.
                 return Err(String::new());
             }
