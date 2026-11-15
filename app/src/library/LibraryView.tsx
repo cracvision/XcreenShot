@@ -551,6 +551,7 @@ function Item({
             {/* A guide of steps: how many (SMT-035). */}
             {item.kind === "guide" && item.steps != null && (
               <span className="lib-badge guide">
+                <Icon name="step" />
                 {t("ui.library.steps_badge", { count: item.steps })}
               </span>
             )}

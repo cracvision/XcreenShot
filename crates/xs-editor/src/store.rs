@@ -257,6 +257,8 @@ impl Doc {
             "shown": self.shown,
             "pinned": self.pinned,
             "version": self.version,
+            // A guide of steps: its tray menu exports it (SMT-035).
+            "guide": crate::templates::Template::of(&self.document).is_some_and(|t| t.is_guide()),
         })
     }
 }

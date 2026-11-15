@@ -53,6 +53,8 @@ export interface DocSummary {
   missing: boolean;
   /** Pinned at the left of the tray (TRY-004). */
   pinned?: boolean;
+  /** A guide of steps (SMT-035). */
+  guide?: boolean;
 }
 
 export interface ArrowObject {

@@ -5760,6 +5760,15 @@ html.launcher-root #root {
 .lib-badge.guide {
   left: 6px;
   right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The guide's icon in its badge (SMT-035). */
+.lib-badge.guide svg {
+  width: 11px;
+  height: 11px;
 }
 
 /* Found by the words inside the image (LIB-008). */

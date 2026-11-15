@@ -12,6 +12,7 @@ import {
 } from "../library/actions";
 import { exportItems } from "../library/exportState";
 import { showQuickView } from "../library/quickViewState";
+import { exportGuideFile, GUIDE_FORMATS } from "./guideExport";
 import { openPicker } from "./templateUi";
 import {
   closeAll,
@@ -110,6 +111,21 @@ export function trayMenu(
       onSelect: () => void exportItems(docs.map((d) => ({ name: d.name, path: d.path ?? "" }))),
     },
   ];
+  // A guide of steps: in another format, without opening it (SMT-035).
+  const guide = !several && doc.guide && doc.path ? doc : null;
+  if (guide) {
+    common.push({
+      id: "export_guide",
+      label: t("ui.guide.export_as"),
+      onSelect: () => undefined,
+      submenu: GUIDE_FORMATS.map((f) => ({
+        id: `guide_${f}`,
+        label: t(`ui.guide.export.${f}`),
+        separator: f === "md" || f === "clipboard",
+        onSelect: () => void exportGuideFile(guide.path ?? "", guide.name, f),
+      })),
+    });
+  }
   if (several) {
     return [
       pin,
