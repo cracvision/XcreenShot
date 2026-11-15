@@ -62,6 +62,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (tarde, segunda parte): XcreenShot 0.2.1 publicada.** Con los destinos estándar de Compartir; Carlos vio la ventana Compartir de Windows. Publicada en https://github.com/cracvision/xcreenshot-releases (con su permiso). Las copias con la 0.2.0 la reciben por Buscar actualizaciones; las anteriores a la 0.2.0 (sin actualizador) se instalan a mano una vez. Carlos guarda una copia de `updater.key`. Clang de Visual Studio instalado para ARM64. GoPro cargando para probarla como webcam (falta saber el modelo y la app GoPro Webcam).
+
 - **2026-11-15 (tarde): destinos estándar de Compartir.** Va en el **instalador `e3343c4`** (local; la versión publicada sigue siendo la 0.2.0: publicar la 0.2.1 se pregunta antes a Carlos).
   - Compartir en el editor y **Compartir en** del clic derecho de la biblioteca: **Correo** (la app de correo, por MAPI o con un borrador `.eml`; aviso por encima de 20 MB), **Otra aplicación…** (elige un `.exe` y lo recuerda), **Imprimir…**, **Word**, **PowerPoint**, **Excel** (automatización de Office por PowerShell, probada con PowerPoint y Excel ocultos; Word no se probó porque Carlos lo tenía abierto) y **Compartir de Windows…** (la ventana Compartir del sistema, con Uso compartido en proximidad: lo más parecido a AirDrop en Windows). `share.destinations` y `share.send`. Guía: [`tests/manual/SHR-020-026.md`](../tests/manual/SHR-020-026.md).
   - **ARM64:** la app aún no compila porque `ring` necesita Clang para ARM64; se instala el componente "Clang" de Visual Studio con Carlos aceptando el aviso de administrador.
@@ -729,7 +731,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
 1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `e3343c4`.** La 0.2.0 publicada más los destinos estándar de Compartir (SHR-020 a SHR-026 y SHR-037). Es el que hay que usar para las pruebas de punta a punta.
-1. Versión publicada (2026-11-15): XcreenShot 0.2.0, compilación `7035804`, en https://github.com/cracvision/xcreenshot-releases.
+1. **Versión publicada (2026-11-15): XcreenShot 0.2.1**, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
