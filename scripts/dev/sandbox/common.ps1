@@ -15,7 +15,8 @@ function Shot($name) {
     $r = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
     $bmp = New-Object System.Drawing.Bitmap $r.Width, $r.Height
     $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.CopyFromScreen($r.Location, [System.Drawing.Point]::Empty, $r.Size)
+    # CaptureBlt: with the layered (transparent) windows, such as live drawing's overlay.
+    $g.CopyFromScreen($r.Location, [System.Drawing.Point]::Empty, $r.Size, [System.Drawing.CopyPixelOperation]'SourceCopy, CaptureBlt')
     $bmp.Save("$out\$name.png", [System.Drawing.Imaging.ImageFormat]::Png)
     $g.Dispose(); $bmp.Dispose()
   } catch { Log "shot failed: $_" }
