@@ -338,8 +338,47 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-015 | Arrastrar a otras aplicaciones | M1 | Must | En curso |
 | TRY-016 | Detalles, etiquetas y otras acciones | M2 | Should | En curso (Windows: Detalles, Etiquetas…, Favorito, Vista rápida, Mostrar en la biblioteca, Mostrar en el Explorador, Copiar ruta, Copiar todo y Exportar… desde la bandeja; Compartir y Enlace llegan con SHR-) |
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | En curso (Windows: `tray.list`, `tray.open`, `tray.activate`, `tray.pin`, `tray.unpin`, `tray.move`, `tray.close`) |
+| SHR-001 | Zona de compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-002 | Menú Compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-003 | Gestión de destinos | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-004 | Instancias con nombre y atajos por destino | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-005 | Opciones comunes de los destinos | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-006 | Nombres de archivo y títulos | M1 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-007 | Formato al compartir y al guardar como | M1 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-008 | Reducir imágenes de alta densidad | M2 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-009 | Compartir varios elementos y a varios destinos | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-010 | Progreso, estado y cancelación | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-011 | Resultado: avisos, errores y reintento | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-012 | Historial de envíos | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-013 | Destinos en la barra de herramientas | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-014 | Cuentas conectadas y credenciales | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-015 | Copiar todo desde la biblioteca y la bandeja | M2 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-016 | Arrastrar y soltar | M1 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-017 | Comandos de compartir (CLI y MCP) | M6 | Should | — (borrador del spec, pendiente de aprobación) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |
+| SHR-020 | Correo | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-021 | Aplicación | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-022 | Impresora | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-023 | FTP y SFTP | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-024 | Word | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-025 | PowerPoint | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-026 | Excel | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-027 | OneNote | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-028 | Evernote | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-029 | OneDrive y SharePoint | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-030 | Microsoft Teams | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-031 | Slack | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-032 | Google Drive | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-033 | Dropbox | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-034 | Box | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-035 | YouTube | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-036 | Pages, Keynote y Numbers | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-037 | AirDrop y Compartir del sistema | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-038 | Enlace para compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-039 | Proveedores del Enlace para compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-040 | Proveedor: carpeta sincronizada | M6 | Must | — (borrador del spec, pendiente de aprobación) |
+| SHR-041 | Proveedor: almacenamiento compatible con S3 | M6 | Should | — (borrador del spec, pendiente de aprobación) |
 | SHR-042 | Red local: activar y ver quién está | M6 | Should | En curso (Windows, 2026-11-15: Preferencias > Compartir > **Compartir en la red local** (desactivado por defecto: sin anuncio ni puerto), **Nombre visible**, la clave Ed25519 en el llavero, descubrimiento mDNS `_xcreenshot._tcp`, Personas en la red, sin conexión en menos de 30 s (comprobación cada 10 s). Probado entre dos instancias del mismo equipo; falta entre dos equipos y con un Mac. Guía: `tests/manual/SHR-042-044.md`) |
 | SHR-043 | Red local: emparejar y contactos | M6 | Should | En curso (Windows, 2026-11-15: **Emparejar** con un código de 6 dígitos que ven los dos; si uno no acepta, ninguno queda como contacto; contactos con nombre propio, **Aceptar siempre sus envíos**, Quitar y Bloquear; una clave distinta nunca se acepta: hay que emparejar de nuevo) |
 | SHR-044 | Red local: enviar, pendientes y recibir | M6 | Should | En curso (Windows, 2026-11-15: **Compartir > Red local…** en el editor y **Enviar por la red local…** en la biblioteca; TLS 1.3 con las claves del emparejamiento, sin servidor; pendiente hasta que el otro esté en línea (7 días); Aceptar o Rechazar, o sin preguntar con Aceptar siempre; llega a la biblioteca con la etiqueta "De: <nombre>" comprobado por SHA-256; estados en Preferencias > Compartir > Envíos; cancelar en los dos lados; `share.lan_*`, aceptar por automatización solo con su preferencia. Falta: enviar como PNG en vez de `.xshot`) |
@@ -383,7 +422,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-033 | `AGENTS.md` | M2 | Should | En curso (Windows: se genera del registro de comandos más un texto escrito a mano; `xcreenshot agents-md`, recurso MCP `xcreenshot://agents` y en la carpeta de instalación; una prueba falla si el del repositorio no está al día; faltan las recetas de grabar y extraer texto, que llegan con `VID-` y `SMT-`) |
 | APP-034 | Funciones en prueba | M1 | Should | En curso |
 | APP-035 | Configuración administrada | M6 | Should | En curso (Windows, 2026-11-15: `managed.json` en `%ProgramData%\XcreenShot`, leído al arrancar; `defaults` y `locked` sobre cualquier ajuste (Preferencias con candado; `settings set` falla con `disabled_by_policy`, código 6); directivas aplicadas: `disableVideoCapture` (sin pestaña Video, sin sección Video, `record.*` rechazados), `hideExperimental`, `disabledDestinations` (Archivo, Portapapeles y Red local), `automation.enabled`, `skipFirstRun`; un archivo con errores aplica lo válido y Avanzado > **Configuración administrada** > Ver lo muestra; `app.managed`. Faltan las directivas de lo que aún no existe: actualizaciones, Enlace para compartir, `presets` y `themes` al primer arranque y `feedback`. Guía: `tests/manual/APP-035.md`) |
-| APP-036 | Actualizaciones | M6 | Must | — |
+| APP-036 | Actualizaciones | M6 | Must | En curso (Windows, 2026-11-15: Preferencias > General con Buscar automáticamente, Frecuencia, Descargar e instalar automáticamente y Canal (Estable o Diferido); Ayuda > Buscar actualizaciones…; ventana con la versión, las novedades en el idioma de la app y Instalar y reiniciar, Instalar al salir o Ahora no; firma propia del paquete comprobada antes de instalar; nunca durante una grabación; `app.check_update` y `app.install_update`; la configuración administrada puede desactivarlas o apuntar a otro servidor; `npm run release` firma y escribe el manifiesto. Falta: crear el repositorio público y publicar la primera versión (con Carlos), Novedades en el menú Ayuda, la firma de plataforma (D-06) y la actualización de la versión portable) |
 | APP-037 | Instalador de Windows | M6 | Must | En curso (Windows, 2026-11-15: instalador `.exe` por usuario, sin privilegios; inglés o español según el sistema; añade `xcreenshot` al PATH del usuario (salvo `/nopath`); `/nolaunchatlogin`; desatendido con `/S` de NSIS; registra `.xshot`, `.xpreset`, `.xtheme`, `.xstamps`, `.xtemplate` y `.xsettings`; si la app está abierta, pide cerrarla. Faltan: la firma con certificado (D-06), las casillas de PATH y de inicio en el asistente (hoy son opciones de la línea de comandos), `/silent` como nombre y `/allusers`, y el instalador de ARM64. Guía: `tests/manual/APP-037-042.md`) |
 | APP-038 | Modo portable (Windows) | M6 | Could | En curso (Windows, 2026-11-15: con `portable.flag` junto al ejecutable, ajustes, registros, datos del motor web y la biblioteca (`library`) quedan en la carpeta; `managed.json` junto al ejecutable; "(portable)" en el título y en Acerca de; en una carpeta de solo lectura, los datos van a una carpeta temporal; `npm run package` deja también `XcreenShot_<versión>_x64-portable.zip`. Faltan: el aviso de "ya hay otra instancia" cuando la instalada y la portable se abren a la vez (hoy la segunda le pasa el control a la primera) y la actualización en la misma carpeta (APP-036)) |
 | APP-039 | Paquete de macOS | M6 | Must | — |
