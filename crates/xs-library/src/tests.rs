@@ -83,6 +83,48 @@ fn indexes_the_items_of_the_folder_and_nothing_else() {
     assert!(!lib.scan(), "a second scan finds nothing new");
 }
 
+/// VID-054: a video's recording details, kept in its sidecar, give the library its app
+/// and its date; written after the video was listed, reading it again takes them, with
+/// the same ID.
+#[test]
+fn a_video_with_its_capture_details() {
+    let e = env();
+    let video = e.path("2026-11/Video 2026-11-14 22.00.00.mp4");
+    std::fs::create_dir_all(video.parent().unwrap()).unwrap();
+    let sample =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+    std::fs::copy(&sample, &video).unwrap();
+    let lib = e.open();
+    lib.scan();
+    let before = lib.list().into_iter().find(|i| i.format == "mp4").unwrap();
+    assert_eq!(before.app, None);
+    xmeta::set_capture(
+        &video,
+        json!({"capturedAt": "2026-11-14T22:00:00+00:00", "app": {"name": "Chrome"}, "source": "region", "duration": 3.0}),
+    )
+    .unwrap();
+    assert_eq!(
+        xmeta::read(&video).unwrap().id,
+        before.id,
+        "the same sidecar, the same ID"
+    );
+    assert!(lib.reread(&video));
+    let after = lib.list().into_iter().find(|i| i.format == "mp4").unwrap();
+    assert_eq!(after.id, before.id);
+    assert_eq!(after.app.as_deref(), Some("Chrome"));
+    assert_eq!(
+        after.captured,
+        chrono::DateTime::parse_from_rfc3339("2026-11-14T22:00:00+00:00")
+            .unwrap()
+            .timestamp_millis()
+    );
+    // A rebuild of the index keeps them (APP-052): they live beside the video.
+    let again = Library::open(e.root.path().to_path_buf(), tempfile::tempdir().unwrap().path());
+    again.scan();
+    let rebuilt = again.list().into_iter().find(|i| i.format == "mp4").unwrap();
+    assert_eq!((rebuilt.id, rebuilt.app.as_deref()), (before.id, Some("Chrome")));
+}
+
 #[test]
 fn newest_capture_comes_first() {
     let e = env();

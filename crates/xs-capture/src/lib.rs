@@ -38,6 +38,7 @@ pub mod pointer;
 pub mod preset_cmds;
 pub mod presets;
 pub mod qr_cmds;
+mod rec_apps;
 pub mod rec_camera;
 pub mod record;
 pub mod redact;

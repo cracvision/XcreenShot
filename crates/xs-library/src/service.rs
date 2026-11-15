@@ -697,6 +697,31 @@ impl Library {
 
     /// Follows changes made outside XcreenShot (Explorer, Finder, sync services):
     /// `on_change` runs after each scan that changed something.
+    /// Reads one item's file again, with its ID, tags and favorite (VID-054: a video's
+    /// capture details were just written in its sidecar). Returns whether it changed.
+    pub fn reread(&self, file: &Path) -> bool {
+        let Some(rel) = scan::relative(&self.root, file) else {
+            return false;
+        };
+        let Ok(meta) = std::fs::metadata(file) else {
+            return false;
+        };
+        let f = scan::Found {
+            rel: rel.clone(),
+            abs: file.to_path_buf(),
+            size: meta.len(),
+            modified: scan::millis(meta.modified()),
+            cloud: scan::cloud_only(&meta),
+        };
+        let index = self.index.lock().unwrap();
+        let Ok(Some(item)) = index.by_path(&rel) else {
+            return false;
+        };
+        index
+            .upsert(&build(&f, item.id.clone(), item.favorite, item.tags.clone()))
+            .is_ok()
+    }
+
     /// Takes the tags and favorite of sidecars changed elsewhere (another computer of a
     /// synced library, LIB-029): the last change wins. Returns whether any changed.
     pub fn refresh_marks(&self, sidecars: &[PathBuf]) -> bool {

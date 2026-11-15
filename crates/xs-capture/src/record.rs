@@ -29,6 +29,10 @@ struct Running {
     pressed: std::time::Instant,
     /// Its name in the recovery folder (VID-022).
     rid: String,
+    /// When it started, for its capture details (VID-054).
+    started_at: chrono::DateTime<chrono::Local>,
+    /// The apps in front while it records (VID-054).
+    apps: crate::rec_apps::AppWatch,
 }
 
 /// Open in (VID-052): `open` is `editor` or `none`; without it, the Video tab says, and
@@ -1436,6 +1440,8 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         again,
         pressed,
         rid,
+        started_at: chrono::Local::now(),
+        apps: crate::rec_apps::AppWatch::start(),
     };
     let status = status_of(&running);
     {
@@ -1502,6 +1508,10 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     let pressed = r.pressed;
     let rid = r.rid.clone();
     let was_slides = r.source["type"] == "slides";
+    // What it was (VID-054): the source, when and the apps in front.
+    let source_kind = r.source["type"].as_str().unwrap_or("region").to_string();
+    let started_at = r.started_at;
+    let (first_app, apps) = r.apps.finish();
     let summary = if cancel {
         r.recorder.cancel()
     } else {
@@ -1553,8 +1563,32 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
             ));
         }
     };
-    // The library picks the file up (VID-054).
-    xs_library::library(core).scan();
+    // Its capture details beside it (VID-054): what the library shows and filters by.
+    // Never the windows' titles nor anything said or shown.
+    let capture = json!({
+        "capturedAt": started_at.to_rfc3339(),
+        "duration": (result.duration * 100.0).round() / 100.0,
+        "width": result.width,
+        "height": result.height,
+        "fps": result.fps,
+        "codec": "H.264",
+        "encoder": result.encoder,
+        "source": source_kind,
+        "devices": {
+            "microphone": result.microphone,
+            "systemAudio": result.system_audio,
+        },
+        "app": first_app,
+        "apps": apps,
+        "url": null,
+    });
+    if let Err(e) = xs_library::xmeta::set_capture(&result.path, capture) {
+        tracing::warn!(error = %e, "the video's capture details were not kept");
+    }
+    // The library picks the file up (VID-054), with those details.
+    let library = xs_library::library(core);
+    library.scan();
+    library.reread(&result.path);
     let value = json!({
         "status": "done",
         "path": result.path,
@@ -1906,6 +1940,11 @@ mod tests {
         assert_eq!(pending[0]["kind"], "recording");
         call("app.quit", json!({"force": true})).unwrap();
         assert!(std::fs::metadata(&kept).is_ok_and(|m| m.len() > 0));
+        // Its recording details beside it (VID-054).
+        let capture = xs_library::xmeta::capture(&kept).expect("capture details");
+        assert_eq!(capture["source"], "region", "{capture}");
+        assert!(capture["duration"].as_f64().unwrap() >= 1.0, "{capture}");
+        assert_eq!(capture["devices"]["microphone"], false);
         assert_eq!(call("record.status", json!({})).unwrap()["status"], "idle");
     }
 

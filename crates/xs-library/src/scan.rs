@@ -194,6 +194,20 @@ pub fn info(found: &Found) -> Info {
             info.width = Some(w);
             info.height = Some(h);
         }
+        // And the details of its recording, kept in its sidecar: the app and when.
+        if let Some(c) = crate::xmeta::capture(&found.abs) {
+            info.app = c["app"]["name"]
+                .as_str()
+                .filter(|s| !s.trim().is_empty())
+                .map(str::to_string);
+            info.url = c["url"].as_str().filter(|s| !s.is_empty()).map(str::to_string);
+            if let Some(t) = c["capturedAt"]
+                .as_str()
+                .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+            {
+                info.captured = t.timestamp_millis();
+            }
+        }
     } else if format == "gif" {
         // An animated GIF (VID-068): its size from its header.
         if let Some(i) = std::fs::read(&found.abs)

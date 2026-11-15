@@ -49,6 +49,23 @@ pub fn write(file: &Path, meta: &Xmeta) -> std::io::Result<()> {
     options.open(path)?.write_all(&bytes)
 }
 
+/// Keeps a capture's details in its sidecar (VID-054): what a video's own file does not
+/// say to the library (the app in front, the source, the devices). The sidecar is made,
+/// with its ID, if there is none yet.
+pub fn set_capture(file: &Path, capture: Value) -> std::io::Result<()> {
+    let mut meta = read(file).unwrap_or_else(|| Xmeta {
+        id: new_id(),
+        ..Xmeta::default()
+    });
+    meta.extra.insert("capture".into(), capture);
+    write(file, &meta)
+}
+
+/// A file's capture details kept in its sidecar, if any (VID-054).
+pub fn capture(file: &Path) -> Option<Value> {
+    read(file)?.extra.get("capture").cloned()
+}
+
 /// Moves a sidecar along with its file (renamed or moved in the library).
 pub fn follow(from: &Path, to: &Path) {
     let (old, new) = (path_of(from), path_of(to));
