@@ -865,6 +865,66 @@ fn start_at_once(core: &Arc<Core>, ctx: &Context, ready: Value) -> CommandResult
     start(core, ctx, &json!({}))
 }
 
+/// `record.area` (VID-003): while Ready, the area's width and height (and place) as
+/// written, or chosen again on screen with the current one selected (`adjust`); inside
+/// its monitor and at least 64 × 64. A window's area follows the window instead.
+pub fn set_area(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let lang = ctx.lang;
+    let svc = service(core);
+    let Some(mut r) = svc.ready.lock().unwrap().clone() else {
+        return Err(CommandError::new(
+            ErrorCode::NotRunning,
+            tr(lang, "errors.record_not_ready", &[]),
+        ));
+    };
+    if r.window.is_some() {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.record_area_window", &[]),
+        ));
+    }
+    let wanted = if p.get("adjust").and_then(Value::as_bool) == Some(true) {
+        // The screen stays live, as when it was chosen (VID-002).
+        let (_, rect) = crate::interactive::pick_area_from(core, ctx, true, Some(r.rect))?;
+        rect
+    } else {
+        let num = |k: &str, d: f64| p.get(k).and_then(Value::as_f64).map(f64::round).unwrap_or(d);
+        Rect {
+            x: num("x", r.rect.x as f64) as i32,
+            y: num("y", r.rect.y as f64) as i32,
+            width: num("width", r.rect.width as f64).max(0.0) as u32,
+            height: num("height", r.rect.height as f64).max(0.0) as u32,
+        }
+    };
+    // Inside the monitor it is on (or was on, when what was written sends it off).
+    let home = monitor_of(wanted).or_else(|| monitor_of(r.rect)).map(|(m, _)| m);
+    let rect = home.map_or(wanted, |m| inside(wanted, m));
+    if rect.width < xs_video::MIN_AREA || rect.height < xs_video::MIN_AREA {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.record_too_small", &[]),
+        ));
+    }
+    r.scale = monitor_of(rect).map_or(r.scale, |(_, s)| s);
+    r.rect = rect;
+    r.source = json!({ "type": "region", "rect": rect });
+    *svc.ready.lock().unwrap() = Some(r.clone());
+    let state = ready_state(core, &r);
+    bar(core, Some(state.clone()));
+    tell(core, ctx.source, "record.ready", state.clone());
+    Ok(state)
+}
+
+/// `r` inside the monitor `m`: as large as it at the most, moved back in when it sticks
+/// out.
+fn inside(r: Rect, m: Rect) -> Rect {
+    let width = r.width.min(m.width);
+    let height = r.height.min(m.height);
+    let x = r.x.clamp(m.x, m.x + (m.width - width) as i32);
+    let y = r.y.clamp(m.y, m.y + (m.height - height) as i32);
+    Rect { x, y, width, height }
+}
+
 fn ready_state(core: &Core, r: &Ready) -> Value {
     let (width, height) = planned(core, r.rect, r.scale);
     // The summary (VID-006): frames, codec and how long fits on the disk (VID-023),
@@ -1988,6 +2048,46 @@ mod tests {
         assert!(capture["duration"].as_f64().unwrap() >= 1.0, "{capture}");
         assert_eq!(capture["devices"]["microphone"], false);
         assert_eq!(call("record.status", json!({})).unwrap()["status"], "idle");
+    }
+
+    /// VID-003: while Ready, the area takes the width and height written, inside its
+    /// monitor; under 64 × 64 it is refused; without Ready, it says so.
+    #[test]
+    fn the_ready_area_changes() {
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        let call = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+        assert_eq!(
+            call("record.area", json!({"width": 640})).unwrap_err().code,
+            ErrorCode::NotRunning
+        );
+        let Some((m, _)) = monitor_of(Rect {
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 2,
+        }) else {
+            eprintln!("no monitor at 0,0: skipped");
+            return;
+        };
+        call(
+            "record.video",
+            json!({"area": {"x": m.x, "y": m.y, "width": 800, "height": 600}}),
+        )
+        .unwrap();
+        let r = call("record.area", json!({"width": 1280, "height": 720})).unwrap();
+        assert_eq!(
+            (r["area"]["width"].as_u64(), r["area"]["height"].as_u64()),
+            (Some(1280.min(m.width as u64)), Some(720.min(m.height as u64)))
+        );
+        // Larger than the monitor: as large as it, and inside it.
+        let r = call("record.area", json!({"width": 100000, "x": m.x + 50})).unwrap();
+        assert_eq!(r["area"]["width"].as_u64(), Some(m.width as u64));
+        assert_eq!(r["area"]["x"].as_i64(), Some(m.x as i64));
+        assert_eq!(
+            call("record.area", json!({"width": 40})).unwrap_err().code,
+            ErrorCode::InvalidParams
+        );
+        call("record.cancel", json!({})).unwrap();
     }
 
     /// VID-015: the timer needs a recording ready or under way, from 5 s to 12 h.

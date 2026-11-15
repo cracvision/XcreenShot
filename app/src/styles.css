@@ -2901,6 +2901,34 @@ html.launcher-root #root {
   padding-left: 8px;
 }
 
+/* While Ready (VID-003): the area's width and height, and Adjust area. */
+.recbar-area {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.recbar-number {
+  width: 64px;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  text-align: right;
+}
+
+.recbar-number:focus-visible {
+  outline: 0;
+  border-color: var(--focus);
+  box-shadow:
+    0 0 0 1px var(--focus),
+    0 0 0 4px var(--brand-soft);
+}
+
 /* A timer of one's own (VID-015): hours, minutes and seconds in the bar. */
 .recbar-timing {
   display: flex;

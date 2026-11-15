@@ -1178,6 +1178,10 @@
     "record_timer": {
       "title": "Recording timer",
       "description": "Stops the recording by itself after a time recorded; pauses do not count."
+    },
+    "record_area": {
+      "title": "Change the recording area",
+      "description": "While Ready, the area's width and height (and place), or chosen again on screen with the current one selected."
     }
   },
   "settings": {
@@ -2070,7 +2074,9 @@
     "no_subject": "No clear subject was found: the background is not plain enough. Nothing changed. For a background of one color, the Magic wand selects it precisely.",
     "timer_range": "The timer goes from 5 seconds to 12 hours.",
     "timer_too_short": "{{recorded}} are already recorded: choose a longer time.",
-    "guide_exists": "{{name}} already exists."
+    "guide_exists": "{{name}} already exists.",
+    "record_not_ready": "No recording is ready: choose its area first.",
+    "record_area_window": "A window's area follows the window: choose another area for a region."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -4910,7 +4916,11 @@
       "timer_left": "{{time}} left",
       "timer_short": "Already recorded: longer than this",
       "timer_own": "Custom…",
-      "timer_apply": "Set"
+      "timer_apply": "Set",
+      "width": "Width",
+      "height": "Height",
+      "adjust_area": "Adjust area",
+      "adjust_area_help": "Move or resize the area on screen"
     },
     "video": {
       "silent_suffix": "silent",

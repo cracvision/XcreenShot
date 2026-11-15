@@ -505,6 +505,14 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         .core
         .settings
         .get_bool("video.showBorder");
+    // Already there: it follows the area (changed while Ready, VID-003).
+    if let Some(frame) = app.get_webview_window(RECFRAME).filter(|_| w > 0.0) {
+        let _ = frame.set_position(tauri::PhysicalPosition::new((x - edge) as i32, (y - edge) as i32));
+        let _ = frame.set_size(tauri::PhysicalSize::new(
+            (w + 2.0 * edge) as u32,
+            (h + 2.0 * edge) as u32,
+        ));
+    }
     if show_border && app.get_webview_window(RECFRAME).is_none() && w > 0.0 {
         let frame = WebviewWindowBuilder::new(app, RECFRAME, WebviewUrl::App("index.html".into()))
             .title("XcreenShot")

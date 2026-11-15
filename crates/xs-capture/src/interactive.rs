@@ -205,9 +205,21 @@ pub fn pick(core: &Core, ctx: &Context) -> CommandResult {
 /// inside it (virtual-screen pixels). The area to record a video (VID-002, VID-003):
 /// `live`, the screen is not frozen, to see what will be recorded (no magnifier then).
 pub fn pick_area(core: &Core, ctx: &Context, live: bool) -> Result<(MonitorInfo, Rect), CommandError> {
+    pick_area_from(core, ctx, live, None)
+}
+
+/// As [`pick_area`], starting from `initial` already selected, to adjust it (a video's
+/// area while Ready, VID-003).
+pub fn pick_area_from(
+    core: &Core,
+    ctx: &Context,
+    live: bool,
+    initial: Option<Rect>,
+) -> Result<(MonitorInfo, Rect), CommandError> {
     let lang = ctx.lang;
     let frozen = freeze(lang)?;
     let request = json!({
+        "initial": initial,
         "mode": "region",
         "monitors": frozen.monitors,
         "windows": frozen.windows,

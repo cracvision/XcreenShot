@@ -78,6 +78,8 @@ interface Start {
     showMagnifier: boolean;
     /** Choosing a video's area: the screen is not frozen (VID-002). */
     live?: boolean;
+    /** An area already chosen, to adjust: it starts selected (a video's, VID-003). */
+    initial?: Rect | null;
     magnifierZoom: number;
     /** Universal with Selection = Window: windows only, no dragging (CAP-010). */
     windowsOnly?: boolean;
@@ -874,6 +876,14 @@ export function Overlay() {
           setSel(target.rect);
           setPhase("adjusting");
         }
+      }
+      // An area already chosen, to move or resize (a video's while Ready, VID-003).
+      const initial = payload.request.initial;
+      if (initial) {
+        st.sel = initial;
+        st.phase = "adjusting";
+        setSel(initial);
+        setPhase("adjusting");
       }
       const m = payload.request.monitors[payload.index];
       const canvas = bg.current;

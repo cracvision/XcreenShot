@@ -1462,6 +1462,19 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "startupMs": {"type": "integer", "description": "From Record (or the countdown's end) to the first frame (VID-030)"},
                 "lateFrames": {"type": "integer", "description": "Frames lost: changes that waited past their frame's turn (VID-030)"}
             }})),
+        B::new("record.area", &["VID-003"])
+            .mutates()
+            .params(params(
+                json!({
+                    "x": {"type": "integer", "description": "Physical pixels of the virtual screen"},
+                    "y": {"type": "integer"},
+                    "width": {"type": "integer", "minimum": 1},
+                    "height": {"type": "integer", "minimum": 1},
+                    "adjust": {"type": "boolean", "description": "Choose it again on screen, with the current area selected (the user moves or resizes it)"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "description": "The Ready state, as record.status"})),
         B::new("record.restart", &["VID-014", "VID-024"])
             .scopes(ALL)
             .assignable()

@@ -1178,6 +1178,10 @@
     "record_timer": {
       "title": "Temporizador de la grabación",
       "description": "Detiene la grabación sola tras un tiempo grabado; las pausas no cuentan."
+    },
+    "record_area": {
+      "title": "Cambiar el área de grabación",
+      "description": "En Lista, el ancho y el alto del área (y su lugar), o elegirla de nuevo en pantalla con la actual seleccionada."
     }
   },
   "settings": {
@@ -2070,7 +2074,9 @@
     "no_subject": "No se encontró un sujeto claro: el fondo no es lo bastante uniforme. No se cambió nada. Para un fondo de un solo color, la Varita mágica lo selecciona con precisión.",
     "timer_range": "El temporizador va de 5 segundos a 12 horas.",
     "timer_too_short": "Ya hay {{recorded}} grabados: elige un tiempo mayor.",
-    "guide_exists": "{{name}} ya existe."
+    "guide_exists": "{{name}} ya existe.",
+    "record_not_ready": "No hay ninguna grabación lista: elige antes su área.",
+    "record_area_window": "El área de una ventana sigue a la ventana: elige otra área para grabar una región."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -4910,7 +4916,11 @@
       "timer_left": "quedan {{time}}",
       "timer_short": "Ya se grabó más que esto",
       "timer_own": "A medida…",
-      "timer_apply": "Aplicar"
+      "timer_apply": "Aplicar",
+      "width": "Ancho",
+      "height": "Alto",
+      "adjust_area": "Ajustar área",
+      "adjust_area_help": "Mover o cambiar el tamaño del área en pantalla"
     },
     "video": {
       "silent_suffix": "sin sonido",

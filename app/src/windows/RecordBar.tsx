@@ -45,6 +45,59 @@ interface RecState {
   open?: "editor" | "none";
   /** The timer (VID-015): seconds of recording, or none. */
   limit?: number | null;
+  /** What is recorded: `region`, `window`, `screen`, `slides` (VID-003). */
+  source?: { type?: string };
+}
+
+/** While Ready (VID-003): the area's width and height, written, and Adjust area to move
+ * or resize it on screen. The sizes shown are the even ones the video will have. */
+function AreaFields({ width, height }: { width: number; height: number }) {
+  const { t } = useTranslation();
+  const [w, setW] = useState(String(width));
+  const [h, setH] = useState(String(height));
+  const commit = () => {
+    const nw = Math.round(Number(w));
+    const nh = Math.round(Number(h));
+    if (!Number.isFinite(nw) || !Number.isFinite(nh) || (nw === width && nh === height)) return;
+    void run("record.area", { width: nw, height: nh }).catch(() => {
+      setW(String(width));
+      setH(String(height));
+    });
+  };
+  const field = (value: string, set: (v: string) => void, label: string) => (
+    <input
+      className="recbar-number"
+      type="number"
+      min={64}
+      step={2}
+      value={value}
+      aria-label={label}
+      title={label}
+      onChange={(e) => set(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+  return (
+    <span className="recbar-area">
+      {field(w, setW, t("ui.recbar.width"))}
+      <span aria-hidden="true">×</span>
+      {field(h, setH, t("ui.recbar.height"))}
+      <button
+        type="button"
+        className="btn small"
+        title={t("ui.recbar.adjust_area_help")}
+        onClick={() => void run("record.area", { adjust: true }).catch(() => undefined)}
+      >
+        {t("ui.recbar.adjust_area")}
+      </button>
+    </span>
+  );
 }
 
 export function RecordBar() {
@@ -375,6 +428,13 @@ export function RecordBar() {
         <span className="recbar-size recbar-hint" role="status">
           {t("ui.recbar.long")}
         </span>
+      ) : ready && state.source?.type === "region" && state.areaWidth && state.areaHeight ? (
+        // Ready with a region: its size can be written, or the area adjusted (VID-003).
+        <AreaFields
+          key={`${state.areaWidth}x${state.areaHeight}`}
+          width={state.areaWidth - (state.areaWidth % 2)}
+          height={state.areaHeight - (state.areaHeight % 2)}
+        />
       ) : (
         state.width &&
         state.height && (
