@@ -62,6 +62,12 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (mediodía): actualizaciones y borrador de Compartir.** Va en el **instalador `81f669a`**.
+  - **Decisiones de Carlos (2026-11-15):** que el equipo redacte las fichas de Compartir para que él las apruebe; las versiones se publican en un repositorio público solo de versiones; sí a instalar las herramientas ARM64.
+  - **Actualizaciones** (APP-036): ajustes en Preferencias > General, Ayuda > Buscar actualizaciones…, ventana con novedades y Instalar y reiniciar / Instalar al salir / Ahora no, firma comprobada, nunca durante una grabación, `app.check_update` y `app.install_update`, `npm run release` (con `--publish` y `--promote`). La clave privada está en `%USERPROFILE%\.xcreenshot-release\updater.key` (fuera del repositorio): **Carlos debe guardar una copia**. Falta crear `cracvision/xcreenshot-releases` y publicar (con su permiso explícito).
+  - **Borrador de Compartir:** fichas SHR-001 a SHR-041 en `spec/04-biblioteca-compartir.md`, pendientes de aprobación. Puntos que revisar: D-02 (una carpeta sincronizada sola no da enlace), registrar la app en cada servicio, riesgos de Evernote, YouTube, Teams y Slack, y las dependencias nuevas (OAuth, S3, FTP/SFTP) que hay que proponer en QUESTIONS antes de construir.
+  - **ARM64:** el objetivo de Rust ya está instalado; las herramientas C++ de ARM64 de Visual Studio no, porque el instalador se canceló al no aceptarse el aviso de administrador. Relanzarlo con Carlos delante.
+
 - **2026-11-15 (mañana, segunda parte): M6 empezado.** Va en el **instalador `f7e51d4`** (y en el `.zip` portable).
   - **Red local** (SHR-042 a SHR-044): Preferencias > Compartir > Compartir en la red local (desactivado por defecto), personas en la red (mDNS), emparejar con código de 6 dígitos, contactos (renombrar, Aceptar siempre, Quitar, Bloquear), enviar desde Compartir > Red local… y desde la biblioteca, cifrado TLS 1.3 con las claves del emparejamiento, pendientes 7 días, Aceptar o Rechazar, llega a la biblioteca con "De: <nombre>". Probado entre dos instancias de este equipo (con `XCREENSHOT_LAN_DIR`, sin abrir puertos a la red); falta entre dos equipos. La clave vive en el llavero; el módulo del llavero pasó a `xs-core`.
   - **Configuración administrada** (APP-035): `managed.json` en `%ProgramData%\XcreenShot`; ajustes bloqueados o con valor inicial; directivas sin video, sin funciones en prueba, destinos desactivados, sin automatización, sin bienvenida; Avanzado > Configuración administrada > Ver.
@@ -712,7 +718,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `f7e51d4`.** El `fab4041` más la red local (SHR-042 a SHR-044), la configuración administrada (APP-035), el modo portable (APP-038, con su `.zip` en `target\release\bundle\portable`) y el PATH del instalador (APP-037, APP-042). Es el que hay que usar para las pruebas de punta a punta. Sustituye al `fab4041`.
+1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `81f669a`.** El `f7e51d4` más las actualizaciones (APP-036; sin servidor todavía, Buscar actualizaciones dice que no pudo consultarlo). Es el que hay que usar para las pruebas de punta a punta. Sustituye al `f7e51d4`.
+1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
 1. Instalador anterior (2026-11-14, noche), compilación `dc6ef49`: el `309fb47` más VID-073 (Dibujo en vivo en las diapositivas).
 1. Instalador anterior (2026-11-14, noche), compilación `309fb47`. El `12c5d36` más VID-006, VID-045, VID-046, VID-072, VID-029, VID-067, LIB-026, APP-001 y CAP-041 (ver "Cambios de la última sesión"). Para la caminata: [`tests/manual/VID-006.md`](../tests/manual/VID-006.md) y [`tests/manual/APP-001.md`](../tests/manual/APP-001.md). Sustituye al `12c5d36`.
