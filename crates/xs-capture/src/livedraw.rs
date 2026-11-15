@@ -322,6 +322,8 @@ struct Active {
     session: crate::livedraw_win::Session,
     /// Started without a recording (VID-051): it does not end with one.
     standalone: bool,
+    /// The monitor drawn on: its top left on the screen.
+    origin: (i32, i32),
 }
 
 #[derive(Default)]
@@ -329,7 +331,36 @@ pub struct LiveDraw {
     active: Mutex<Option<Active>>,
 }
 
-fn service(core: &Core) -> Arc<LiveDraw> {
+impl LiveDraw {
+    /// What live drawing shows now (VID-073), for the narrated slides' video: each
+    /// shape with its points on the screen and how opaque it is, and the monitor's
+    /// scale. Nothing while it is off.
+    pub fn marks(&self) -> (Vec<(Shape, f64)>, f64) {
+        let active = self.active.lock().unwrap();
+        let Some(a) = active.as_ref() else {
+            return (Vec::new(), 1.0);
+        };
+        let now = a.clock.elapsed().as_secs_f64();
+        let m = a.model.lock().unwrap();
+        let (ox, oy) = (a.origin.0 as f64, a.origin.1 as f64);
+        let shapes = m
+            .shapes()
+            .iter()
+            .map(|s| {
+                let mut s = s.clone();
+                for p in s.points.iter_mut() {
+                    *p = [p[0] + ox, p[1] + oy];
+                }
+                let o = Model::opacity(&s, now);
+                (s, o)
+            })
+            .filter(|(_, o)| *o > 0.0)
+            .collect();
+        (shapes, m.scale)
+    }
+}
+
+pub(crate) fn service(core: &Core) -> Arc<LiveDraw> {
     core.service(LiveDraw::default)
 }
 
@@ -552,6 +583,7 @@ fn start(core: &Arc<Core>, ctx: &Context) -> Result<(), CommandError> {
         #[cfg(windows)]
         session,
         standalone,
+        origin: (monitor.x, monitor.y),
     });
     core.host().live_draw_state(state(core));
     tell(core, true);

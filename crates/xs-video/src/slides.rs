@@ -43,6 +43,36 @@ pub struct Slide {
     /// how many of them a pixel of the screen is (the pointer's size); none when it is
     /// elsewhere.
     pub pointer: Option<(f32, f32, f32)>,
+    /// Live drawing over the slide (VID-073): in the video, never in the image.
+    pub marks: Vec<Mark>,
+}
+
+/// A live drawing shape (VID-048, VID-073).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MarkKind {
+    Arrow,
+    Rect,
+    Oval,
+    Pen,
+    /// A numbered step.
+    Step(u32),
+}
+
+/// A live drawing shape over a slide, in the video's pixels (VID-073).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mark {
+    pub kind: MarkKind,
+    pub points: Vec<(f32, f32)>,
+    pub color: Rgb,
+    /// The line's width.
+    pub width: f32,
+    /// 1 drawn; less while it fades (VID-050).
+    pub opacity: f32,
+    /// Rect and oval: square or circle.
+    pub even: bool,
+    /// The video's pixels in a logical pixel of the screen: an arrow's head and a
+    /// step's circle are sized in those.
+    pub unit: f32,
 }
 
 impl std::fmt::Debug for Slide {

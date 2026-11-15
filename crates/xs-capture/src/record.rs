@@ -1129,6 +1129,10 @@ pub fn clean_desktop(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
 /// covers it (VID-048).
 pub(crate) fn drawing_monitor(core: &Core) -> Option<(Rect, f64)> {
     let svc = service(core);
+    // Narrated slides (VID-073): the monitor where the editor shows them.
+    if let Some(r) = crate::slides_mode::frame_rect(core) {
+        return monitor_of(r);
+    }
     let current = svc.current.lock().unwrap().as_ref().map(|r| r.rect);
     let rect = current.or_else(|| svc.ready.lock().unwrap().as_ref().map(|r| r.rect))?;
     monitor_of(rect)

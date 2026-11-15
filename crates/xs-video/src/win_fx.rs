@@ -259,6 +259,9 @@ impl Painter {
 pub struct SlidePainter {
     target: ID2D1RenderTarget,
     bitmap: Option<(u64, ID2D1Bitmap)>,
+    /// For live drawing's lines and steps (VID-073).
+    factory: ID2D1Factory,
+    write: IDWriteFactory,
 }
 
 impl SlidePainter {
@@ -283,7 +286,14 @@ impl SlidePainter {
             let target = factory
                 .CreateDxgiSurfaceRenderTarget(&surface, &props)
                 .map_err(|x| e("Direct2D target", x))?;
-            Ok(SlidePainter { target, bitmap: None })
+            let write: IDWriteFactory =
+                DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).map_err(|x| e("DirectWrite", x))?;
+            Ok(SlidePainter {
+                target,
+                bitmap: None,
+                factory,
+                write,
+            })
         }
     }
 
@@ -338,6 +348,180 @@ impl SlidePainter {
                     bottom: r.y + r.h,
                 };
                 t.DrawBitmap(b, Some(&dest), 1.0, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, None);
+            }
+            let _ = t.EndDraw(None, None);
+        }
+    }
+
+    /// Live drawing's shapes over the slide drawn last (VID-073), as the overlay draws
+    /// them on the screen.
+    pub fn draw_marks(&self, marks: &[crate::slides::Mark]) {
+        use crate::slides::MarkKind;
+        if marks.is_empty() {
+            return;
+        }
+        let t = &self.target;
+        // SAFETY: Direct2D and DirectWrite calls on this thread's target, between
+        // BeginDraw and EndDraw.
+        unsafe {
+            let round = D2D1_STROKE_STYLE_PROPERTIES {
+                startCap: D2D1_CAP_STYLE_ROUND,
+                endCap: D2D1_CAP_STYLE_ROUND,
+                dashCap: D2D1_CAP_STYLE_ROUND,
+                lineJoin: D2D1_LINE_JOIN_ROUND,
+                miterLimit: 10.0,
+                dashStyle: D2D1_DASH_STYLE_SOLID,
+                dashOffset: 0.0,
+            };
+            let style = self.factory.CreateStrokeStyle(&round, None).ok();
+            let style = style.as_ref();
+            t.BeginDraw();
+            for m in marks {
+                let Ok(brush) = t.CreateSolidColorBrush(&color(m.color, m.opacity), None) else {
+                    continue;
+                };
+                let first = m.points.first().copied().unwrap_or((0.0, 0.0));
+                let last = m.points.last().copied().unwrap_or(first);
+                let w = m.width;
+                let corners = || {
+                    let (mut bw, mut bh) = (last.0 - first.0, last.1 - first.1);
+                    if m.even {
+                        let side = bw.abs().max(bh.abs());
+                        bw = side * if bw < 0.0 { -1.0 } else { 1.0 };
+                        bh = side * if bh < 0.0 { -1.0 } else { 1.0 };
+                    }
+                    D2D_RECT_F {
+                        left: first.0.min(first.0 + bw),
+                        top: first.1.min(first.1 + bh),
+                        right: first.0.max(first.0 + bw),
+                        bottom: first.1.max(first.1 + bh),
+                    }
+                };
+                match m.kind {
+                    MarkKind::Arrow => {
+                        let len = ((last.0 - first.0).powi(2) + (last.1 - first.1).powi(2))
+                            .sqrt()
+                            .max(1.0);
+                        let (ux, uy) = ((last.0 - first.0) / len, (last.1 - first.1) / len);
+                        let head = (len * 0.6).min(w * 3.5 + 8.0 * m.unit);
+                        let half = head * 0.55;
+                        let (bx, by) = (last.0 - ux * head, last.1 - uy * head);
+                        t.DrawLine(
+                            windows_numerics::Vector2 {
+                                X: first.0,
+                                Y: first.1,
+                            },
+                            windows_numerics::Vector2 {
+                                X: bx + ux,
+                                Y: by + uy,
+                            },
+                            &brush,
+                            w,
+                            style,
+                        );
+                        if let Ok(path) = self.factory.CreatePathGeometry() {
+                            if let Ok(sink) = path.Open() {
+                                sink.BeginFigure(
+                                    windows_numerics::Vector2 { X: last.0, Y: last.1 },
+                                    D2D1_FIGURE_BEGIN_FILLED,
+                                );
+                                sink.AddLine(windows_numerics::Vector2 {
+                                    X: bx - uy * half,
+                                    Y: by + ux * half,
+                                });
+                                sink.AddLine(windows_numerics::Vector2 {
+                                    X: bx + uy * half,
+                                    Y: by - ux * half,
+                                });
+                                sink.EndFigure(D2D1_FIGURE_END_CLOSED);
+                                let _ = sink.Close();
+                                t.FillGeometry(&path, &brush, None);
+                            }
+                        }
+                    }
+                    MarkKind::Rect => {
+                        t.DrawRoundedRectangle(
+                            &D2D1_ROUNDED_RECT {
+                                rect: corners(),
+                                radiusX: w,
+                                radiusY: w,
+                            },
+                            &brush,
+                            w,
+                            style,
+                        );
+                    }
+                    MarkKind::Oval => {
+                        let r = corners();
+                        t.DrawEllipse(
+                            &D2D1_ELLIPSE {
+                                point: windows_numerics::Vector2 {
+                                    X: (r.left + r.right) / 2.0,
+                                    Y: (r.top + r.bottom) / 2.0,
+                                },
+                                radiusX: (r.right - r.left) / 2.0,
+                                radiusY: (r.bottom - r.top) / 2.0,
+                            },
+                            &brush,
+                            w,
+                            style,
+                        );
+                    }
+                    MarkKind::Pen => {
+                        if let Ok(path) = self.factory.CreatePathGeometry() {
+                            if let Ok(sink) = path.Open() {
+                                sink.BeginFigure(
+                                    windows_numerics::Vector2 {
+                                        X: first.0,
+                                        Y: first.1,
+                                    },
+                                    D2D1_FIGURE_BEGIN_HOLLOW,
+                                );
+                                for p in m.points.iter().skip(1) {
+                                    sink.AddLine(windows_numerics::Vector2 { X: p.0, Y: p.1 });
+                                }
+                                sink.EndFigure(D2D1_FIGURE_END_OPEN);
+                                let _ = sink.Close();
+                                t.DrawGeometry(&path, &brush, w, style);
+                            }
+                        }
+                    }
+                    MarkKind::Step(n) => {
+                        let r = 14.0 * m.unit + w;
+                        t.FillEllipse(&ellipse(first.0, first.1, r), &brush);
+                        let size = r * 1.15;
+                        let text: Vec<u16> = n.to_string().encode_utf16().collect();
+                        if let Ok(format) = self.write.CreateTextFormat(
+                            w!("Segoe UI"),
+                            None,
+                            DWRITE_FONT_WEIGHT_BOLD,
+                            DWRITE_FONT_STYLE_NORMAL,
+                            DWRITE_FONT_STRETCH_NORMAL,
+                            size,
+                            w!(""),
+                        ) {
+                            let _ = format.SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+                            let _ = format.SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+                            if let Ok(white) =
+                                t.CreateSolidColorBrush(&color([255, 255, 255], m.opacity), None)
+                            {
+                                t.DrawText(
+                                    &text,
+                                    &format,
+                                    &D2D_RECT_F {
+                                        left: first.0 - r,
+                                        top: first.1 - r,
+                                        right: first.0 + r,
+                                        bottom: first.1 + r,
+                                    },
+                                    &white,
+                                    D2D1_DRAW_TEXT_OPTIONS_NONE,
+                                    DWRITE_MEASURING_MODE_NATURAL,
+                                );
+                            }
+                        }
+                    }
+                }
             }
             let _ = t.EndDraw(None, None);
         }

@@ -1403,6 +1403,7 @@ pub(crate) fn record(
         None => None,
     };
     let mut drawn: Option<(u64, crate::slides::View, [u8; 3])> = None;
+    let mut drawn_marks: Vec<crate::slides::Mark> = Vec::new();
     let mut glide: Option<(crate::slides::View, crate::slides::View, Instant)> = None;
 
     loop {
@@ -1489,10 +1490,13 @@ pub(crate) fn record(
                         slide.view
                     }
                 };
-                let changed = drawn != Some((slide.id, view, slide.background));
+                // Live drawing over it (VID-073): drawn again whenever it changes.
+                let changed = drawn != Some((slide.id, view, slide.background)) || drawn_marks != slide.marks;
                 if changed {
                     painter.draw(&slide, view, size);
+                    painter.draw_marks(&slide.marks);
                     drawn = Some((slide.id, view, slide.background));
+                    drawn_marks = slide.marks.clone();
                     dirty = true;
                     changed_at = Some(now);
                 }
@@ -3077,6 +3081,7 @@ mod tests {
                 enlarge: false,
                 view: Default::default(),
                 pointer: None,
+                marks: Vec::new(),
             })
         });
         let r = match Recorder::start(Options {
@@ -3160,6 +3165,7 @@ mod tests {
                 enlarge: false,
                 view: Default::default(),
                 pointer: shown.load(Ordering::Relaxed).then_some((300.0, 200.0, 2.0)),
+                marks: Vec::new(),
             })
         });
         let r = match Recorder::start(Options {
@@ -3231,6 +3237,7 @@ mod tests {
                 enlarge: false,
                 view: Default::default(),
                 pointer: Some((300.0, 200.0, 2.0)),
+                marks: Vec::new(),
             })
         });
         let r = match Recorder::start(Options {
@@ -3293,6 +3300,85 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    /// Live drawing over a slide (VID-073): a rectangle drawn on the grey slide shows in
+    /// the video, in its colour, where it is. Slides, not the screen.
+    #[test]
+    fn live_drawing_over_a_slide() {
+        use crate::slides::{Mark, MarkKind};
+        let path = tempfile_dir().join("slide-marks.mp4");
+        let feed: crate::slides::SlideFeed = Arc::new(|| {
+            Some(crate::slides::Slide {
+                id: 1,
+                width: 640,
+                height: 480,
+                bgra: Arc::new([128, 128, 128, 255].repeat(640 * 480)),
+                background: [128, 128, 128],
+                enlarge: false,
+                view: Default::default(),
+                pointer: None,
+                marks: vec![
+                    Mark {
+                        kind: MarkKind::Rect,
+                        points: vec![(100.0, 100.0), (300.0, 200.0)],
+                        color: [230, 30, 30],
+                        width: 8.0,
+                        opacity: 1.0,
+                        even: false,
+                        unit: 1.0,
+                    },
+                    Mark {
+                        kind: MarkKind::Step(2),
+                        points: vec![(500.0, 300.0)],
+                        color: [30, 30, 230],
+                        width: 6.0,
+                        opacity: 1.0,
+                        even: false,
+                        unit: 1.0,
+                    },
+                ],
+            })
+        });
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 480,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: false,
+            system_audio: false,
+            window: None,
+            effects: Default::default(),
+            path: path.clone(),
+            recovery: None,
+            microphone: None,
+            slides: Some(crate::slides::Source(feed)),
+            sound_tracks: None,
+        }) {
+            Ok(r) => r,
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(700));
+        r.stop().unwrap();
+        let (w, _, px) = crate::frame_at(&path, 0.3).unwrap();
+        let at = |x: usize, y: usize| {
+            let i = (y * w as usize + x) * 4;
+            (px[i + 2], px[i + 1], px[i])
+        };
+        let red = |(r, g, b): (u8, u8, u8)| r > 170 && g < 90 && b < 90;
+        let blue = |(r, g, b): (u8, u8, u8)| b > 170 && r < 90 && g < 90;
+        assert!(red(at(200, 100)), "the top edge: {:?}", at(200, 100));
+        assert!(red(at(100, 150)), "the left edge: {:?}", at(100, 150));
+        assert!(!red(at(200, 150)), "not inside: {:?}", at(200, 150));
+        assert!(blue(at(500, 288)), "the step's circle: {:?}", at(500, 288));
+        let _ = std::fs::remove_file(&path);
+    }
+
     /// A recording that came out black is told apart from one that did not (VID-029).
     /// Slides, not the screen.
     #[test]
@@ -3309,6 +3395,7 @@ mod tests {
                     enlarge: false,
                     view: Default::default(),
                     pointer: None,
+                    marks: Vec::new(),
                 })
             });
             let r = Recorder::start(Options {
@@ -3366,6 +3453,7 @@ mod tests {
                 enlarge: false,
                 view: Default::default(),
                 pointer: None,
+                marks: Vec::new(),
             })
         });
         let r = match Recorder::start(Options {
@@ -3422,6 +3510,7 @@ mod tests {
                 enlarge: false,
                 view: Default::default(),
                 pointer: None,
+                marks: Vec::new(),
             })
         });
         let names = ["Microphone".to_string(), "System audio".to_string()];

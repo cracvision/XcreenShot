@@ -111,6 +111,7 @@ pub fn feed(core: &Core) -> Option<SlideFeed> {
         return None;
     }
     let s = svc.clone();
+    let draw = crate::livedraw::service(core);
     Some(Arc::new(move || {
         let mode = s.mode.lock().unwrap();
         let m = mode.as_ref()?;
@@ -129,8 +130,70 @@ pub fn feed(core: &Core) -> Option<SlideFeed> {
             enlarge: m.enlarge,
             view: item.view,
             pointer,
+            // Live drawing over the slide (VID-073): in the video, never in the image.
+            marks: frame
+                .map(|f| marks_in(&draw.marks(), f, m.size.0))
+                .unwrap_or_default(),
         })
     }))
+}
+
+/// Live drawing's shapes (screen pixels, with their opacity, and the monitor's scale)
+/// over the frame `f` on the screen of a video `video` pixels wide: in the video's
+/// pixels (VID-073).
+fn marks_in(
+    (shapes, scale): &(Vec<(crate::livedraw::Shape, f64)>, f64),
+    f: (i32, i32, i32, i32),
+    video: u32,
+) -> Vec<xs_video::slides::Mark> {
+    use crate::livedraw::Tool;
+    use xs_video::slides::{Mark, MarkKind};
+    if f.2 < 2 {
+        return Vec::new();
+    }
+    let k = video as f32 / f.2 as f32;
+    shapes
+        .iter()
+        .filter_map(|(s, opacity)| {
+            let kind = match s.tool {
+                Tool::Arrow => MarkKind::Arrow,
+                Tool::Rect => MarkKind::Rect,
+                Tool::Oval => MarkKind::Oval,
+                Tool::Pen => MarkKind::Pen,
+                Tool::Step => MarkKind::Step(s.number.unwrap_or(1)),
+                Tool::Magnifier => return None,
+            };
+            let color = xs_video::effects::parse_color(&s.color).unwrap_or([230, 50, 50]);
+            Some(Mark {
+                kind,
+                points: s
+                    .points
+                    .iter()
+                    .map(|p| ((p[0] as f32 - f.0 as f32) * k, (p[1] as f32 - f.1 as f32) * k))
+                    .collect(),
+                color,
+                width: s.width as f32 * k,
+                opacity: *opacity as f32,
+                even: s.even,
+                unit: *scale as f32 * k,
+            })
+        })
+        .collect()
+}
+
+/// Where the editor shows the video's frame while the mode is on (screen pixels).
+pub fn frame_rect(core: &Core) -> Option<crate::Rect> {
+    let svc = service(core);
+    if svc.mode.lock().unwrap().is_none() {
+        return None;
+    }
+    let f = (*svc.frame.lock().unwrap())?;
+    (f.2 > 0 && f.3 > 0).then_some(crate::Rect {
+        x: f.0,
+        y: f.1,
+        width: f.2 as u32,
+        height: f.3 as u32,
+    })
 }
 
 /// The pointer at `at` (screen pixels) over the frame `f` (x, y, width, height on the
@@ -546,6 +609,40 @@ pub fn annotations(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// VID-073: live drawing's shapes, on the screen over the editor's frame, in the
+    /// video's pixels; the magnifier draws nothing.
+    #[test]
+    fn live_drawing_over_the_frame() {
+        use crate::livedraw::{Shape, Tool};
+        let shape = |tool, points: Vec<[f64; 2]>| Shape {
+            id: 1,
+            tool,
+            color: "#FF0000".into(),
+            width: 6.0,
+            points,
+            even: false,
+            number: Some(3),
+            done: None,
+            fade_at: None,
+        };
+        let shapes = vec![
+            (shape(Tool::Rect, vec![[200.0, 150.0], [300.0, 250.0]]), 1.0),
+            (shape(Tool::Step, vec![[100.0, 50.0]]), 0.5),
+            (shape(Tool::Magnifier, vec![[150.0, 100.0]]), 1.0),
+        ];
+        // The frame: 960 px wide at (100, 50) on the screen; the video, 1920: × 2.
+        let marks = marks_in(&(shapes, 1.5), (100, 50, 960, 540), 1920);
+        assert_eq!(marks.len(), 2);
+        assert_eq!(marks[0].points, vec![(200.0, 200.0), (400.0, 400.0)]);
+        assert_eq!(marks[0].color, [255, 0, 0]);
+        assert_eq!(marks[0].width, 12.0);
+        assert_eq!(marks[0].unit, 3.0);
+        assert_eq!(marks[1].kind, xs_video::slides::MarkKind::Step(3));
+        assert_eq!(marks[1].points, vec![(0.0, 0.0)]);
+        assert_eq!(marks[1].opacity, 0.5);
+        assert!(marks_in(&(Vec::new(), 1.0), (0, 0, 1, 1), 1920).is_empty());
+    }
 
     #[test]
     fn the_pointer_over_the_frame() {
