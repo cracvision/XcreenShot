@@ -135,6 +135,7 @@ impl Painter {
         pointer: Option<(f32, f32)>,
         area: (f32, f32, f32, f32),
         origin: (f32, f32),
+        zoom: f32,
         scale: f32,
         now: Instant,
     ) {
@@ -162,7 +163,12 @@ impl Painter {
                     let p = wave_progress(age);
                     let col = if wave.secondary { c.secondary } else { c.primary };
                     let r = (c.diameter * scale / 2.0) * (0.25 + 0.75 * p);
-                    let (x, y) = (wave.x as f32 - origin.0, wave.y as f32 - origin.1);
+                    // A click on the screen, in the picture: over a slide, at its zoom
+                    // (VID-072).
+                    let (x, y) = (
+                        (wave.x as f32 - origin.0) * zoom,
+                        (wave.y as f32 - origin.1) * zoom,
+                    );
                     b.SetColor(&color(col, 0.25 * (1.0 - p)));
                     t.FillEllipse(&ellipse(x, y, r), b);
                     b.SetColor(&color(col, 0.9 * (1.0 - p)));

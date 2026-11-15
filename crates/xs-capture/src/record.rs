@@ -180,6 +180,22 @@ pub fn power_changed(core: &Core, resumed: bool) {
     }
 }
 
+/// Over narrated slides only the pointer's effects (VID-072): the keys would show the
+/// slides' own keys (→, Page Down…).
+fn pointer_only(mut fx: xs_video::effects::Effects) -> xs_video::effects::Effects {
+    fx.keys = None;
+    fx
+}
+
+/// The effects of a recording: of the screen, all; of slides, the pointer's.
+fn effects_for(core: &Core, slides: bool) -> xs_video::effects::Effects {
+    if slides {
+        pointer_only(effects(core))
+    } else {
+        effects(core)
+    }
+}
+
 /// The cursor and keyboard effects as the settings say (VID-045 to VID-047).
 pub fn effects(core: &Core) -> xs_video::effects::Effects {
     use xs_video::effects::*;
@@ -291,7 +307,12 @@ pub fn set_effects(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         }
     }
     if let Some(r) = current.as_ref() {
-        r.recorder.set_effects(fx.clone());
+        let slides = r.source["type"] == "slides";
+        r.recorder.set_effects(if slides {
+            pointer_only(fx.clone())
+        } else {
+            fx.clone()
+        });
     }
     drop(current);
     let state = status(core);
@@ -1602,11 +1623,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
             .and_then(Value::as_bool)
             .unwrap_or_else(|| core.settings.get_bool("video.systemAudio")),
         window: window.map(|w| w as isize),
-        effects: if slides.is_some() {
-            Default::default()
-        } else {
-            effects(core)
-        },
+        effects: effects_for(core, slides.is_some()),
         path: path.clone(),
         recovery: Some(recovery_file.clone()),
         microphone: microphone_of(core, p),

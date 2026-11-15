@@ -269,6 +269,9 @@ struct Converter {
     /// Slides (VID-072): the pointer is where the slide says, in the video's pixels,
     /// with its scale; `None` for the screen, where it is where the system says.
     slide_pointer: std::cell::Cell<Option<Option<(f32, f32, f32)>>>,
+    /// Over a slide, where the slide's frame starts on the screen and its zoom, last
+    /// seen with the pointer on it: the clicks go there (VID-072).
+    slide_map: std::cell::Cell<Option<(f32, f32, f32)>>,
     width: u32,
     height: u32,
 }
@@ -402,6 +405,7 @@ fn converter(
             camera: std::cell::RefCell::new(None),
             camera_bitmap: std::cell::RefCell::new(None),
             slide_pointer: std::cell::Cell::new(None),
+            slide_map: std::cell::Cell::new(None),
             width: size.0,
             height: size.1,
         })
@@ -498,6 +502,21 @@ impl Converter {
                 shown.highlight = None;
                 shown.clicks = None;
             }
+            // Over a slide (VID-072), the clicks and sizes at the slide's zoom: where its
+            // frame starts on the screen, from the pointer on it.
+            let (origin, zoom) = match self.slide_pointer.get() {
+                None => ((self.origin.0 as f32, self.origin.1 as f32), 1.0f32),
+                Some(on) => {
+                    if let (Some((sx, sy, z)), true) = (on, shows) {
+                        let (cx, cy) = (info.ptScreenPos.x as f32, info.ptScreenPos.y as f32);
+                        self.slide_map.set(Some((cx - sx / z, cy - sy / z, z)));
+                    }
+                    match self.slide_map.get() {
+                        Some((ox, oy, z)) => ((ox, oy), z),
+                        None => ((0.0, 0.0), k),
+                    }
+                }
+            };
             if let (Some(p), true) = (&self.painter, shown.any()) {
                 let a = self.area.get();
                 let pointer = visible.then_some((px, py));
@@ -511,8 +530,9 @@ impl Converter {
                         (a.right - a.left) as f32,
                         (a.bottom - a.top) as f32,
                     ),
-                    (self.origin.0 as f32, self.origin.1 as f32),
-                    self.scale,
+                    origin,
+                    zoom,
+                    self.scale * zoom,
                     now,
                 );
             }
@@ -2985,6 +3005,7 @@ mod tests {
             (0.0, 0.0, w as f32, h as f32),
             (0.0, 0.0),
             1.0,
+            1.0,
             now,
         );
         // Read it back.
@@ -3190,6 +3211,84 @@ mod tests {
         if before > 0 {
             assert!(before > 30, "drawn at the slide's scale");
             assert_eq!(marked(1.4), 0, "gone once it left the slide");
+        }
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The pointer's highlight over a slide (VID-072): around the pointer, at the
+    /// slide's zoom (20 px wide on the screen, 40 in the video). Slides, not the screen.
+    #[test]
+    fn the_highlight_over_a_slide() {
+        use crate::effects::{Effects, Highlight};
+        let path = tempfile_dir().join("slide-highlight.mp4");
+        let feed: crate::slides::SlideFeed = Arc::new(|| {
+            Some(crate::slides::Slide {
+                id: 1,
+                width: 640,
+                height: 480,
+                bgra: Arc::new([128, 128, 128, 255].repeat(640 * 480)),
+                background: [128, 128, 128],
+                enlarge: false,
+                view: Default::default(),
+                pointer: Some((300.0, 200.0, 2.0)),
+            })
+        });
+        let r = match Recorder::start(Options {
+            area: Area {
+                x: 0,
+                y: 0,
+                width: 640,
+                height: 480,
+            },
+            scale: 1.0,
+            quality: Quality::High,
+            max_size: MaxSize::Original,
+            limit: None,
+            software_only: false,
+            cursor: true,
+            system_audio: false,
+            window: None,
+            effects: Effects {
+                highlight: Some(Highlight {
+                    color: [230, 30, 30],
+                    diameter: 20.0,
+                    opacity: 1.0,
+                    ring: false,
+                }),
+                ..Default::default()
+            },
+            path: path.clone(),
+            recovery: None,
+            microphone: None,
+            slides: Some(crate::slides::Source(feed)),
+            sound_tracks: None,
+        }) {
+            Ok(r) => r,
+            Err(e) => return println!("{e}"),
+        };
+        std::thread::sleep(Duration::from_millis(800));
+        r.stop().unwrap();
+        let (w, _, px) = crate::frame_at(&path, 0.4).unwrap();
+        // Red pixels left of the pointer (its arrow goes right and down).
+        let red = |x0: usize, x1: usize| {
+            let mut n = 0;
+            for y in 185..215usize {
+                for x in x0..x1 {
+                    let i = (y * w as usize + x) * 4;
+                    let (b, g, r) = (px[i], px[i + 1], px[i + 2]);
+                    if r > 170 && g < 90 && b < 90 {
+                        n += 1;
+                    }
+                }
+            }
+            n
+        };
+        let near = red(270, 298);
+        println!("highlight pixels near: {near}, far: {}", red(330, 358));
+        // No pointer showing (a session without one): nothing drawn, nothing to check.
+        if near > 0 {
+            assert!(near > 300, "a circle about 40 px wide around the pointer");
+            assert_eq!(red(330, 358), 0, "not beyond it");
         }
         let _ = std::fs::remove_file(&path);
     }
