@@ -1,7 +1,9 @@
-//! The names of a video's sound tracks (VID-042), read and written in the MP4 itself:
-//! the name in each track's handler box (`trak/mdia/hdlr`), which editors and players
-//! show. Only the movie box changes; when it comes before the media data, the chunk
-//! offsets move with it. Plain file work, the same on every platform.
+//! What XcreenShot writes in an MP4 itself, after the system's writer made it: the
+//! names of its sound tracks (VID-042), in each track's handler box (`trak/mdia/hdlr`),
+//! and its creation date and title (VID-026), in the movie header (`mvhd`) and in the
+//! `©nam` and `©day` items players and Explorer show. Only the movie box changes; when
+//! it comes before the media data, the chunk offsets move with it. Plain file work,
+//! the same on every platform.
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -238,6 +240,13 @@ pub fn name_sound_tracks(path: &Path, names: &[String]) -> Result<(), String> {
     if n == 0 {
         return Ok(());
     }
+    write_moov(file, path, &tops, i, new_body)
+}
+
+/// Puts `new_body` in place of the movie box `i` of `tops`: in place when it is last,
+/// else through a new file; the chunk offsets follow media data that moves.
+fn write_moov(mut file: File, path: &Path, tops: &[Top], i: usize, new_body: Vec<u8>) -> Result<(), String> {
+    let io = |e: std::io::Error| e.to_string();
     let m = &tops[i];
     let old_size = m.size;
     // The media data after the movie box moves by the size it gains or loses.
@@ -277,6 +286,99 @@ pub fn name_sound_tracks(path: &Path, names: &[String]) -> Result<(), String> {
         let _ = std::fs::remove_file(&tmp);
         e.to_string()
     })
+}
+
+/// Seconds from 1904-01-01 (the MP4 epoch) to 1970-01-01.
+const MP4_EPOCH: u64 = 2_082_844_800;
+
+/// An iTunes-style item (`©nam`, `©day`): a `data` box with UTF-8 text.
+fn text_item(kind: &[u8; 4], text: &str) -> Vec<u8> {
+    let mut data = vec![0, 0, 0, 1, 0, 0, 0, 0];
+    data.extend_from_slice(text.as_bytes());
+    wrap(kind, &wrap(b"data", &data))
+}
+
+/// The `udta` with the title and date, keeping whatever else it had.
+fn user_data(old: Option<&[u8]>, title: &str, day: &str) -> Vec<u8> {
+    let mut hdlr = vec![0u8; 8];
+    hdlr.extend_from_slice(b"mdir");
+    hdlr.extend_from_slice(b"appl");
+    hdlr.extend_from_slice(&[0u8; 9]);
+    let mut ilst = text_item(b"\xa9nam", title);
+    ilst.extend_from_slice(&text_item(b"\xa9day", day));
+    let mut meta = vec![0u8; 4];
+    meta.extend_from_slice(&wrap(b"hdlr", &hdlr));
+    meta.extend_from_slice(&wrap(b"ilst", &ilst));
+    let mut out = Vec::new();
+    // Another `meta` (a writer's own) goes: ours says the title and date.
+    if let Some(old) = old {
+        for b in boxes(old).iter().filter(|b| &b.kind != b"meta") {
+            out.extend_from_slice(&old[b.at..b.at + b.size]);
+        }
+    }
+    out.extend_from_slice(&wrap(b"meta", &meta));
+    out
+}
+
+/// Writes the file's creation date (`created`, seconds since 1970, UTC) and `title`
+/// (VID-026): in the movie header, and as the title and date items players show.
+pub fn set_title_and_date(path: &Path, title: &str, created: u64) -> Result<(), String> {
+    let io = |e: std::io::Error| e.to_string();
+    let mut file = File::options().read(true).write(true).open(path).map_err(io)?;
+    let Some((tops, i, moov)) = read_moov(&mut file).map_err(io)? else {
+        return Err("no movie box".into());
+    };
+    let when = created + MP4_EPOCH;
+    let day = chrono::DateTime::from_timestamp(created as i64, 0)
+        .map(|d| d.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+        .unwrap_or_default();
+    let mut had_udta = false;
+    let mut body = rebuild(&moov, &mut |kind, b| match kind {
+        b"mvhd" if b.len() >= 20 => {
+            let mut b = b.to_vec();
+            if b[0] == 1 && b.len() >= 20 {
+                b[4..12].copy_from_slice(&when.to_be_bytes());
+                b[12..20].copy_from_slice(&when.to_be_bytes());
+            } else {
+                b[4..8].copy_from_slice(&(when as u32).to_be_bytes());
+                b[8..12].copy_from_slice(&(when as u32).to_be_bytes());
+            }
+            Some(b)
+        }
+        b"udta" => {
+            had_udta = true;
+            Some(user_data(Some(b), title, &day))
+        }
+        _ => None,
+    });
+    if !had_udta {
+        body.extend_from_slice(&wrap(b"udta", &user_data(None, title, &day)));
+    }
+    write_moov(file, path, &tops, i, body)
+}
+
+/// The title and creation date (seconds since 1970) written in the file, if any.
+pub fn title_and_date(path: &Path) -> Result<(Option<String>, Option<u64>), String> {
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    let Some((_, _, moov)) = read_moov(&mut file).map_err(|e| e.to_string())? else {
+        return Ok((None, None));
+    };
+    let created = child(&moov, b"mvhd").and_then(|b| {
+        let secs = if b.first() == Some(&1) {
+            u64::from_be_bytes(b.get(4..12)?.try_into().ok()?)
+        } else {
+            u32::from_be_bytes(b.get(4..8)?.try_into().ok()?) as u64
+        };
+        secs.checked_sub(MP4_EPOCH)
+    });
+    let title = child(&moov, b"udta")
+        .and_then(|u| child(u, b"meta"))
+        .and_then(|m| child(m.get(4..)?, b"ilst"))
+        .and_then(|l| child(l, b"\xa9nam"))
+        .and_then(|n| child(n, b"data"))
+        .and_then(|d| d.get(8..))
+        .map(|t| String::from_utf8_lossy(t).into_owned());
+    Ok((title, created))
 }
 
 #[cfg(test)]
@@ -383,6 +485,36 @@ mod tests {
         assert!(moved > data_at as usize);
         assert!(offsets(&path).iter().all(|o| *o as usize == moved));
         assert_eq!(&after[moved..moved + 50], &[9u8; 50]);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// VID-026: the title and date go in the file, read back, the media data in place;
+    /// writing them again replaces them.
+    #[test]
+    fn title_and_date_written() {
+        let path = dir().join("meta.mp4");
+        let mut file = wrap(b"ftyp", b"isom\0\0\0\0");
+        let mdat = wrap(b"mdat", &[5u8; 64]);
+        let data_at = (file.len() + 8) as u32;
+        file.extend_from_slice(&mdat);
+        let mut mvhd = vec![0u8; 100];
+        mvhd[12..16].copy_from_slice(&1000u32.to_be_bytes());
+        let mut body = wrap(b"mvhd", &mvhd);
+        body.extend_from_slice(&trak(b"soun", "SoundHandler", data_at));
+        file.extend_from_slice(&wrap(b"moov", &body));
+        std::fs::write(&path, &file).unwrap();
+        assert_eq!(title_and_date(&path).unwrap(), (None, None));
+        set_title_and_date(&path, "Video 2026-11-14 19.39.00", 1_794_700_000).unwrap();
+        assert_eq!(
+            title_and_date(&path).unwrap(),
+            (Some("Video 2026-11-14 19.39.00".into()), Some(1_794_700_000))
+        );
+        set_title_and_date(&path, "Otro título", 1_794_700_100).unwrap();
+        let (title, _) = title_and_date(&path).unwrap();
+        assert_eq!(title.as_deref(), Some("Otro título"));
+        // The sound track and the media data are where they were.
+        assert_eq!(sound_track_names(&path).unwrap(), ["SoundHandler"]);
+        assert_eq!(offsets(&path), [data_at]);
         let _ = std::fs::remove_file(&path);
     }
 

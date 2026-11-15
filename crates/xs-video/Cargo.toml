@@ -6,6 +6,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 serde = { workspace = true }
 tracing = { workspace = true }
 # Background noise out of the microphone, and telling a voice from noise (VID-041,

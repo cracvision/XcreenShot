@@ -1864,6 +1864,23 @@ pub(crate) fn record(
         }
         None => Ok(()),
     });
+    // Its creation date and title in the file itself (VID-026): when it started, and
+    // its name.
+    if finished.is_ok() {
+        let title = options
+            .path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let started = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs_f64() - duration)
+            .unwrap_or(0.0)
+            .max(0.0) as u64;
+        if let Err(e) = crate::mp4::set_title_and_date(&options.path, &title, started) {
+            tracing::warn!(error = %e, "video: no title and date in the file");
+        }
+    }
     // The tracks kept apart get their names (VID-042).
     if let (Ok(()), Some(names), 2) = (&finished, &options.sound_tracks, tracks) {
         if let Err(e) = crate::mp4::name_sound_tracks(&options.path, names) {
@@ -3248,6 +3265,15 @@ mod tests {
         let f = crate::facts(&path).unwrap();
         assert_eq!(f.sound_tracks, 2);
         assert_eq!(crate::mp4::sound_track_names(&path).unwrap(), names);
+        // Its title and creation date (VID-026), and still readable.
+        let (title, created) = crate::mp4::title_and_date(&path).unwrap();
+        assert_eq!(title.as_deref(), Some("tracks"));
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        assert!(created.is_some_and(|c| now - c < 60), "{created:?}");
+        assert!((crate::info(&path).unwrap().duration - s.duration).abs() < 0.3);
         assert!(!fragmented.exists());
         let _ = std::fs::remove_file(&path);
     }
