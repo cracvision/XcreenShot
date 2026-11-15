@@ -38,6 +38,8 @@ pub struct Guide {
     pub page: String,
     pub of: String,
     pub step: String,
+    /// The guide's language (`es`, `en`), for the PDF's readers (SMT-033).
+    pub lang: String,
 }
 
 /// A text in pieces, each bold or not (`**…**`, SMT-025).
@@ -532,6 +534,12 @@ fn pdf_string(s: &str) -> Vec<u8> {
     out
 }
 
+/// A PDF text string in UTF-16 (any character), for what readers say aloud.
+fn pdf_text(s: &str) -> String {
+    let hex: String = s.encode_utf16().map(|u| format!("{u:04X}")).collect();
+    format!("<FEFF{hex}>")
+}
+
 /// A text's width in points at `size`: the font's widths, measured once.
 pub type Measure<'a> = &'a dyn Fn(&str, bool, f64) -> f64;
 
@@ -576,28 +584,36 @@ struct Block {
     pic: Option<(usize, f64, f64)>,
     /// A step's bookmark.
     mark: Option<String>,
+    /// What its picture shows, for screen readers (SMT-033).
+    alt: String,
 }
 
 /// A PDF of the guide: text that can be selected and searched (Helvetica), a bookmark
 /// per step, pictures that fit the page, a step never split between two pages, the
 /// header on the first page only and "title — Page N of M" at the foot of each page.
+/// It is tagged (SMT-033): the title, the paragraphs and the pictures with their
+/// alternative text are in reading order for screen readers, the foot is set aside as
+/// page furniture, and the document says its language.
 pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, String> {
     let margin = 15.0 * 72.0 / 25.4;
     let (pw, ph) = page;
     let (aw, ah) = (pw - 2.0 * margin, ph - 2.0 * margin - 20.0);
     let line_h = |size: f64| size * 1.3;
     let mut pics: Vec<&Pic> = Vec::new();
+    let title = plain(&g.title);
     let mut blocks: Vec<Block> = vec![Block {
         lines: wrap(&format!("**{}**", g.title.replace("**", "")), 22.0, aw, measure),
         size: 22.0,
         pic: None,
         mark: None,
+        alt: String::new(),
     }];
     blocks.push(Block {
         lines: wrap(&g.date, 10.0, aw, measure),
         size: 10.0,
         pic: None,
         mark: None,
+        alt: String::new(),
     });
     let fit = |p: &Pic, room: f64| {
         let (w, h) = (p.width as f64 * 0.75, p.height as f64 * 0.75);
@@ -619,6 +635,7 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
                     size: 12.0,
                     pic: p,
                     mark: Some(format!("{n}. {}", plain(text))),
+                    alt: format!("{} {n}: {}", g.step, plain(text)),
                 });
             }
             Item::Text(t) => blocks.push(Block {
@@ -626,6 +643,7 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
                 size: 12.0,
                 pic: None,
                 mark: None,
+                alt: String::new(),
             }),
             Item::Picture(p) => {
                 pics.push(p);
@@ -635,6 +653,7 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
                     size: 12.0,
                     pic: Some((pics.len() - 1, w, h)),
                     mark: None,
+                    alt: title.clone(),
                 });
             }
         }
@@ -670,7 +689,17 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
     let kids: Vec<String> = (0..total)
         .map(|i| format!("{} 0 R", first_page + 2 * i))
         .collect();
-    objects.push(b"<< /Type /Catalog /Pages 2 0 R /Outlines 5 0 R /PageMode /UseOutlines >>".to_vec());
+    // The structure (SMT-033): its root, the document, then one element per tagged
+    // piece of content, after the bookmarks.
+    let struct_root = first_mark + marks.len();
+    let doc_elem = struct_root + 1;
+    let mut catalog = format!(
+        "<< /Type /Catalog /Pages 2 0 R /Outlines 5 0 R /PageMode /UseOutlines /MarkInfo << /Marked true >> /StructTreeRoot {struct_root} 0 R /ViewerPreferences << /DisplayDocTitle true >> /Lang "
+    )
+    .into_bytes();
+    catalog.extend_from_slice(&pdf_string(if g.lang.is_empty() { "en" } else { &g.lang }));
+    catalog.extend_from_slice(b" >>");
+    objects.push(catalog);
     objects.push(format!("<< /Type /Pages /Kids [{}] /Count {total} >>", kids.join(" ")).into_bytes());
     objects
         .push(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".to_vec());
@@ -713,11 +742,20 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
         objects.push(body);
     }
     let top = ph - margin;
+    // The tagged pieces, in reading order: (role, page, its number on the page, alt).
+    let mut tagged: Vec<(&str, usize, usize, String)> = Vec::new();
     for (pi, list) in pages.iter().enumerate() {
         let mut content: Vec<u8> = Vec::new();
+        let mut mcid = 0;
         for (bi, y0) in list {
             let b = &blocks[*bi];
             let mut y = top - y0;
+            if !b.lines.is_empty() {
+                let role = if *bi == 0 { "H1" } else { "P" };
+                content.extend_from_slice(format!("/{role} << /MCID {mcid} >> BDC\n").as_bytes());
+                tagged.push((role, pi, mcid, String::new()));
+                mcid += 1;
+            }
             for line in &b.lines {
                 y -= line_h(b.size);
                 content.extend_from_slice(format!("BT {margin:.2} {:.2} Td ", y + b.size * 0.25).as_bytes());
@@ -730,11 +768,18 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
                 }
                 content.extend_from_slice(b"ET\n");
             }
+            if !b.lines.is_empty() {
+                content.extend_from_slice(b"EMC\n");
+            }
             if let Some((k, w, h)) = b.pic {
                 y -= h + 6.0;
+                content.extend_from_slice(format!("/Figure << /MCID {mcid} >> BDC\n").as_bytes());
                 content.extend_from_slice(
                     format!("q {w:.2} 0 0 {h:.2} {margin:.2} {y:.2} cm /Im{k} Do Q\n").as_bytes(),
                 );
+                content.extend_from_slice(b"EMC\n");
+                tagged.push(("Figure", pi, mcid, b.alt.clone()));
+                mcid += 1;
             }
         }
         // The foot of the page.
@@ -746,15 +791,17 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
             g.of,
             total
         );
+        // Page furniture: readers skip it.
+        content.extend_from_slice(b"/Artifact << /Type /Pagination >> BDC\n");
         content.extend_from_slice(format!("BT /F1 9 Tf {margin:.2} {:.2} Td ", margin - 4.0).as_bytes());
         content.extend_from_slice(&pdf_string(&foot));
-        content.extend_from_slice(b" Tj ET\n");
+        content.extend_from_slice(b" Tj ET\nEMC\n");
         let xobjects: String = (0..pics.len())
             .map(|k| format!("/Im{k} {} 0 R ", first_pic + k))
             .collect();
         objects.push(
             format!(
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {pw:.2} {ph:.2}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << {xobjects}>> >> /Contents {} 0 R >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {pw:.2} {ph:.2}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << {xobjects}>> >> /Contents {} 0 R /StructParents {pi} /Tabs /S >>",
                 first_page + 2 * pi + 1
             )
             .into_bytes(),
@@ -789,6 +836,49 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
         );
         objects.push(body);
     }
+    // The structure tree: the root with the parent tree (each page's tagged pieces by
+    // their number), the document, and its elements in reading order.
+    let elem = |k: usize| doc_elem + 1 + k;
+    let nums: String = (0..total)
+        .map(|pi| {
+            let refs: Vec<String> = tagged
+                .iter()
+                .enumerate()
+                .filter(|(_, t)| t.1 == pi)
+                .map(|(k, _)| format!("{} 0 R", elem(k)))
+                .collect();
+            format!("{pi} [{}]", refs.join(" "))
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    objects.push(
+        format!(
+            "<< /Type /StructTreeRoot /K {doc_elem} 0 R /ParentTree << /Nums [{nums}] >> /ParentTreeNextKey {total} >>"
+        )
+        .into_bytes(),
+    );
+    let children: Vec<String> = (0..tagged.len()).map(|k| format!("{} 0 R", elem(k))).collect();
+    let mut doc = format!(
+        "<< /Type /StructElem /S /Document /P {struct_root} 0 R /K [{}] /T ",
+        children.join(" ")
+    )
+    .into_bytes();
+    doc.extend_from_slice(pdf_text(&title).as_bytes());
+    doc.extend_from_slice(b" >>");
+    objects.push(doc);
+    for (role, pi, mcid, alt) in &tagged {
+        let mut body = format!(
+            "<< /Type /StructElem /S /{role} /P {doc_elem} 0 R /Pg {} 0 R /K {mcid}",
+            first_page + 2 * pi
+        )
+        .into_bytes();
+        if *role == "Figure" {
+            body.extend_from_slice(b" /Alt ");
+            body.extend_from_slice(pdf_text(alt).as_bytes());
+        }
+        body.extend_from_slice(b" >>");
+        objects.push(body);
+    }
     let mut out: Vec<u8> = b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec();
     let mut offsets = Vec::new();
     for (i, body) in objects.iter().enumerate() {
@@ -804,8 +894,9 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
     }
     out.extend_from_slice(
         format!(
-            "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n",
-            offsets.len() + 1
+            "trailer\n<< /Size {} /Root 1 0 R /Info << /Title {} >> >>\nstartxref\n{xref}\n%%EOF\n",
+            offsets.len() + 1,
+            pdf_text(&title)
         )
         .as_bytes(),
     );
@@ -842,6 +933,7 @@ mod tests {
             page: "Página".into(),
             of: "de".into(),
             step: "Paso".into(),
+            lang: "es".into(),
         }
     }
 
@@ -924,5 +1016,30 @@ mod tests {
         assert!(text.contains(&format!("de {pages})")), "Page N of M");
         // Each picture is drawn exactly once: no step was cut.
         assert_eq!(text.matches(" Do Q").count(), 12);
+        // Tagged (SMT-033): a title, the paragraphs, a figure per picture with its
+        // alternative text, the foot as page furniture, and the language.
+        assert!(text.contains("/MarkInfo << /Marked true >>"));
+        assert!(text.contains("/Lang (es)"));
+        assert_eq!(text.matches("/S /H1").count(), 1);
+        assert_eq!(text.matches("/S /Figure").count(), 12);
+        assert_eq!(text.matches("/Alt <FEFF").count(), 12);
+        assert_eq!(
+            text.matches("/Artifact << /Type /Pagination >> BDC").count(),
+            pages
+        );
+        assert_eq!(text.matches("BDC\n").count(), text.matches("EMC\n").count());
+        // The alternative text says the step: "Paso 1: Clic en el botón …".
+        let alt = pdf_text(&format!("{} 1: ", g.step));
+        assert!(text.contains(&alt[..alt.len() - 1]), "{alt}");
+    }
+
+    /// SMT-033: across the page (landscape), the page is wider than tall.
+    #[test]
+    fn a_pdf_across_the_page() {
+        let g = sample(3);
+        let measure = |s: &str, _: bool, size: f64| s.chars().count() as f64 * size * 0.5;
+        let (w, h) = paper("a4");
+        let bytes = pdf(&g, (h, w), &measure).unwrap();
+        assert!(String::from_utf8_lossy(&bytes).contains("/MediaBox [0 0 841.89 595.28]"));
     }
 }

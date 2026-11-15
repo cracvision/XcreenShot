@@ -1,14 +1,74 @@
-// A guide's pictures one by one (SMT-034): the format, the size, a saved effect and
-// the names, as the batch export (EDT-113); then the folder.
+// The options of a guide's export before choosing where it goes: its pictures one by
+// one (SMT-034: the format, the size, a saved effect and the names, as the batch
+// export, EDT-113) and the PDF (SMT-033: the paper and the orientation).
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { run } from "../lib/commands";
-import { exportGuideImages, useGuideImages, type GuideImagesOptions } from "./guideExport";
+import {
+  exportGuideImages,
+  exportGuidePdf,
+  useGuideImages,
+  useGuidePdf,
+  type GuideImagesOptions,
+  type GuidePdfOptions,
+} from "./guideExport";
 
 interface SavedEffect {
   id: string;
   name: string;
+}
+
+/** The PDF's paper and orientation (SMT-033). */
+export function GuidePdfDialog() {
+  const { t } = useTranslation();
+  const ask = useGuidePdf((s) => s.ask);
+  const [o, setO] = useState<GuidePdfOptions>({ paper: "auto", orientation: "portrait" });
+  if (!ask) return null;
+  const close = () => useGuidePdf.setState({ ask: null });
+  return (
+    <Dialog
+      title={t("ui.guide.pdf.title")}
+      onCancel={close}
+      actions={
+        <>
+          <button type="button" className="btn primary" onClick={() => void exportGuidePdf(o)}>
+            {t("ui.guide.images.export")}
+          </button>
+          <button type="button" className="btn" onClick={close}>
+            {t("ui.common.cancel")}
+          </button>
+        </>
+      }
+    >
+      <div className="prop-field">
+        <label htmlFor="guide-pdf-paper">{t("ui.guide.pdf.paper")}</label>
+        <select
+          id="guide-pdf-paper"
+          data-autofocus
+          value={o.paper}
+          onChange={(e) => setO({ ...o, paper: e.target.value as GuidePdfOptions["paper"] })}
+        >
+          <option value="auto">{t("ui.guide.pdf.paper_auto")}</option>
+          <option value="a4">A4</option>
+          <option value="letter">{t("ui.guide.pdf.paper_letter")}</option>
+        </select>
+      </div>
+      <div className="prop-field">
+        <label htmlFor="guide-pdf-orientation">{t("ui.guide.pdf.orientation")}</label>
+        <select
+          id="guide-pdf-orientation"
+          value={o.orientation}
+          onChange={(e) =>
+            setO({ ...o, orientation: e.target.value as GuidePdfOptions["orientation"] })
+          }
+        >
+          <option value="portrait">{t("ui.guide.pdf.portrait")}</option>
+          <option value="landscape">{t("ui.guide.pdf.landscape")}</option>
+        </select>
+      </div>
+    </Dialog>
+  );
 }
 
 export function GuideImagesDialog() {

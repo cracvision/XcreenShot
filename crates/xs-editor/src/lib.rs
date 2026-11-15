@@ -5924,7 +5924,8 @@ fn print_document(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             .unwrap_or(false)
     });
     let (bytes, count, name) = if let Some(id) = guide.filter(|_| p.get("paths").is_none()) {
-        let bytes = guide_export::pdf_bytes(core, &id, lang, "auto").map_err(|e| internal(lang, "", e))?;
+        let bytes =
+            guide_export::pdf_bytes(core, &id, lang, "auto", false).map_err(|e| internal(lang, "", e))?;
         let name = editor(core).store.with(&id, |d| d.name()).unwrap_or_default();
         (bytes, 0, name)
     } else {

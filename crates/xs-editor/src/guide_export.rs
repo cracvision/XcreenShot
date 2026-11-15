@@ -167,6 +167,7 @@ pub fn content_of(snap: &store::Snapshot, lang: Lang) -> Result<Guide, String> {
         page: tr(lang, "steps.export.page", &[]),
         of: tr(lang, "steps.export.of", &[]),
         step: tr(lang, "steps.export.step", &[]),
+        lang: lang.code().to_string(),
     })
 }
 
@@ -201,14 +202,17 @@ fn system_paper() -> &'static str {
 }
 
 /// The guide as a PDF (SMT-033).
-pub fn pdf_bytes(core: &Core, id: &str, lang: Lang, paper: &str) -> Result<Vec<u8>, String> {
+pub fn pdf_bytes(core: &Core, id: &str, lang: Lang, paper: &str, across: bool) -> Result<Vec<u8>, String> {
     let g = content(core, id, lang)?;
     let paper = if paper == "auto" || paper.is_empty() {
         system_paper()
     } else {
         paper
     };
-    guide_out::pdf(&g, guide_out::paper(paper), &measure)
+    let (w, h) = guide_out::paper(paper);
+    // Landscape (SMT-033): the page turned.
+    let page = if across { (h, w) } else { (w, h) };
+    guide_out::pdf(&g, page, &measure)
 }
 
 /// A free folder `parent/name`, or `name-2`, `name-3`… (SMT-032), unless `replace`.
@@ -435,7 +439,8 @@ pub fn export_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResu
             }
             "pdf" => {
                 let paper = p.get("paper").and_then(Value::as_str).unwrap_or("auto");
-                write(&out, &pdf_bytes(core, &id, lang, paper).map_err(fail)?)?;
+                let across = p.get("orientation").and_then(Value::as_str) == Some("landscape");
+                write(&out, &pdf_bytes(core, &id, lang, paper, across).map_err(fail)?)?;
                 vec![out]
             }
             "md" => {

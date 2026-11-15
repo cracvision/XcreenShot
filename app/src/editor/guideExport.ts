@@ -59,9 +59,13 @@ async function exportTo(
       ed.showToast(t("ui.guide.copied"));
       return;
     }
-    // Pictures one by one: their options first (SMT-034).
+    // Pictures one by one, and the PDF: their options first (SMT-033, SMT-034).
     if (format === "images") {
       useGuideImages.setState({ ask: { target, name } });
+      return;
+    }
+    if (format === "pdf") {
+      useGuidePdf.setState({ ask: { target, name } });
       return;
     }
     const ext = FILE_EXT[format];
@@ -127,6 +131,42 @@ export async function exportGuideImages(o: GuideImagesOptions): Promise<void> {
       withText: o.withText,
       ...(o.effects ? { effects: o.effects } : {}),
       naming: { base: o.base.trim() || ask.name, start: o.start },
+    });
+  } catch (e) {
+    ed.showError(e);
+  }
+}
+
+/** The PDF's paper and orientation (SMT-033). */
+export interface GuidePdfOptions {
+  /** `auto`: the system's (A4 or Letter by the region). */
+  paper: "auto" | "a4" | "letter";
+  orientation: "portrait" | "landscape";
+}
+
+/** A guide waiting for its PDF's options (SMT-033). */
+export const useGuidePdf = create<{
+  ask: { target: { documentId: string } | { path: string }; name: string } | null;
+}>(() => ({ ask: null }));
+
+/** Exports the PDF with `o`, asking where. */
+export async function exportGuidePdf(o: GuidePdfOptions): Promise<void> {
+  const ask = useGuidePdf.getState().ask;
+  if (!ask) return;
+  const ed = useEditor.getState();
+  try {
+    const path = await save({
+      defaultPath: `${ask.name}.pdf`,
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+    });
+    if (!path) return;
+    useGuidePdf.setState({ ask: null });
+    await finishExport({
+      ...ask.target,
+      format: "pdf",
+      out: path,
+      paper: o.paper,
+      orientation: o.orientation,
     });
   } catch (e) {
     ed.showError(e);

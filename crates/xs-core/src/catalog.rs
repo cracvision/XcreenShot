@@ -641,6 +641,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "effects": {"type": ["string", "array", "null"], "description": "images: a saved effect's id (EDT-054) or a stack, on each picture"},
                     "naming": {"type": "object", "description": "images: {base, start (1), digits, prefix, suffix} as document.batch_export; default <guide>_01, _02…"},
                     "paper": {"type": "string", "enum": ["auto", "a4", "letter"], "default": "auto", "description": "pdf: auto is the system's"},
+                    "orientation": {"type": "string", "enum": ["portrait", "landscape"], "default": "portrait", "description": "pdf: the page upright or turned"},
                     "onConflict": {"type": "string", "enum": ["new", "replace", "ask"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced; ask: fails with details.conflict (its path) so the user chooses"}
                 }),
                 &["format"],

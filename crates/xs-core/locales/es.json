@@ -5215,6 +5215,15 @@
         "example": "Por ejemplo: {{name}}",
         "with_text": "Incluir también el texto (pasos.txt)",
         "export": "Exportar…"
+      },
+      "pdf": {
+        "title": "Exportar como PDF",
+        "paper": "Papel",
+        "paper_auto": "El del sistema",
+        "paper_letter": "Carta",
+        "orientation": "Orientación",
+        "portrait": "Vertical",
+        "landscape": "Horizontal"
       }
     },
     "features": {
