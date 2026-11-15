@@ -4602,7 +4602,10 @@
         "merging": "Fusionando otra biblioteca",
         "merge_done": "Fusión terminada.",
         "unavailable_help": "Ahora no se llega a {{path}} (una carpeta de red desconectada o un disco quitado). Puedes seguir buscando y viendo lo que este equipo sabe de ella.",
-        "unavailable_note": "Las capturas nuevas esperan en este equipo y pasan a la biblioteca cuando vuelva."
+        "unavailable_note": "Las capturas nuevas esperan en este equipo y pasan a la biblioteca cuando vuelva.",
+        "autosave_failed": "No se pudo guardar «{{name}}»: {{reason}}",
+        "autosave_open": "Abrir para guardarla",
+        "dismiss": "Quitar el aviso"
       },
       "columns": "Columnas",
       "column_resize": "Ancho de {{column}}",

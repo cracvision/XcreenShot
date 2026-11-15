@@ -4602,7 +4602,10 @@
         "merging": "Merging another library",
         "merge_done": "Merge finished.",
         "unavailable_help": "{{path}} cannot be reached now (a network folder disconnected or a disk unplugged). You can still search and see what this computer knows of it.",
-        "unavailable_note": "New captures wait on this computer and go into the library when it is back."
+        "unavailable_note": "New captures wait on this computer and go into the library when it is back.",
+        "autosave_failed": "“{{name}}” could not be saved: {{reason}}",
+        "autosave_open": "Open to save it",
+        "dismiss": "Remove the notice"
       },
       "columns": "Columns",
       "column_resize": "Width of {{column}}",

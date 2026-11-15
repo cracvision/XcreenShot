@@ -629,6 +629,11 @@ fn autosave(core: &Core, id: &str) {
                     &tr(lang, "app.name", &[]),
                     &tr(lang, "errors.save_failed", &[("name", &name), ("reason", &e)]),
                 );
+                // Also in the library's status bar, with a way to it (LIB-026).
+                core.host().editor_event(
+                    "autosave_failed",
+                    json!({ "documentId": id, "name": name, "reason": e.to_string() }),
+                );
             }
         }
     }

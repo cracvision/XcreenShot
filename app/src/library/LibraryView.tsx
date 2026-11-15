@@ -54,7 +54,7 @@ import { languageItems } from "../components/languageItems";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
 import { boxOf, clickSelection, moveFocus, overlaps, range } from "./selection";
-import { selectedItems, useLibrary, type LibraryItem } from "./state";
+import { selectedItems, useLibrary, useMainView, type LibraryItem } from "./state";
 import { ViewSwitch } from "./ViewSwitch";
 import { columnsFor, scrollToRow, visibleSpan } from "./virtual";
 
@@ -1128,6 +1128,23 @@ function LibraryStatus() {
   const tasks = useLibraryTasks((s) => s.tasks);
   const said = useLibraryTasks((s) => s.said);
   const [expanded, setExpanded] = useState(statusExpanded);
+  // Library documents that could not be saved by themselves (LIB-026, EDT-012): each
+  // with a way to it, where Save as… resolves it.
+  const [unsaved, setUnsaved] = useState<{ documentId: string; name: string; reason: string }[]>(
+    [],
+  );
+  useEffect(() => {
+    const off = listen<{
+      kind: string;
+      payload: { documentId: string; name: string; reason: string };
+    }>("xs://editor", (e) => {
+      if (e.payload.kind !== "autosave_failed") return;
+      const p = e.payload.payload;
+      setUnsaved((list) => [...list.filter((u) => u.documentId !== p.documentId), p]);
+    });
+    return () => void off.then((f) => f());
+  }, []);
+  const forget = (id: string) => setUnsaved((list) => list.filter((u) => u.documentId !== id));
   // The text of the images being read for the search (LIB-008).
   const [reading, setReading] = useState(0);
   useEffect(() => {
@@ -1262,6 +1279,34 @@ function LibraryStatus() {
             )}
           </div>
         ))}
+      {unsaved.map((u) => (
+        <div key={u.documentId} className="lib-status-row lib-warning" role="alert">
+          <span className="lib-warning-text" title={u.reason}>
+            {t("ui.library.status.autosave_failed", { name: u.name, reason: u.reason })}
+          </span>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => {
+              forget(u.documentId);
+              void run("tray.activate", { documentId: u.documentId })
+                .then(() => useMainView.getState().setView("editor"))
+                .catch(() => undefined);
+            }}
+          >
+            {t("ui.library.status.autosave_open")}
+          </button>
+          <button
+            type="button"
+            className="btn icon small"
+            aria-label={t("ui.library.status.dismiss")}
+            title={t("ui.library.status.dismiss")}
+            onClick={() => forget(u.documentId)}
+          >
+            ×
+          </button>
+        </div>
+      ))}
       <div className="sr-only" role="status" aria-live="polite">
         {said}
       </div>

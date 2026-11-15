@@ -5810,6 +5810,15 @@ html.launcher-root #root {
   max-width: 320px;
 }
 
+/* A library document that could not save itself (LIB-026). */
+.lib-warning-text {
+  color: var(--warning);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .lib-place {
   white-space: nowrap;
 }
