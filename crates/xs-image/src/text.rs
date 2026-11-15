@@ -224,15 +224,30 @@ fn shape(system: &mut FontSystem, text: &Text, dpi: f64) -> (Buffer, Laid) {
         });
     buffer.set_wrap(Wrap::WordOrGlyph);
     buffer.set_size(text.width.map(|w| w as f32), None);
-    if text.style.markup && text.text.contains("**") {
-        // Every other piece between `**` is bold; the marks are not drawn.
-        let strong = attrs.clone().weight(Weight::BOLD);
-        let spans: Vec<(&str, Attrs)> = text
-            .text
-            .split("**")
-            .enumerate()
-            .filter(|(_, piece)| !piece.is_empty())
-            .map(|(i, piece)| (piece, if i % 2 == 1 { strong.clone() } else { attrs.clone() }))
+    if text.style.markup && crate::markup::has_marks(&text.text) {
+        // Bold, italic, links and bullets (SMT-025, SMT-029); the marks are not drawn and
+        // a link shows its label, in a link's blue.
+        let runs = crate::markup::parse(&text.text);
+        let looks: Vec<Attrs> = runs
+            .iter()
+            .map(|r| {
+                let mut a = attrs.clone();
+                if r.bold {
+                    a = a.weight(Weight::BOLD);
+                }
+                if r.italic {
+                    a = a.style(Style::Italic);
+                }
+                if r.link.is_some() {
+                    a = a.color(Color::rgb(0x1A, 0x66, 0xD9));
+                }
+                a
+            })
+            .collect();
+        let spans: Vec<(&str, Attrs)> = runs
+            .iter()
+            .zip(&looks)
+            .map(|(r, a)| (r.text.as_str(), a.clone()))
             .collect();
         buffer.set_rich_text(spans, &attrs, Shaping::Advanced, Some(align(text.style.align)));
     } else {

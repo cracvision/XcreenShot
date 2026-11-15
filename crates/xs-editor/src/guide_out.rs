@@ -44,18 +44,28 @@ pub struct Guide {
     pub description: String,
 }
 
-/// A text in pieces, each bold or not (`**…**`, SMT-025).
-pub fn runs(text: &str) -> Vec<(String, bool)> {
-    text.split("**")
-        .enumerate()
-        .filter(|(_, p)| !p.is_empty())
-        .map(|(i, p)| (p.to_string(), i % 2 == 1))
-        .collect()
+/// A text in pieces, each with its look: bold, italic, a link (SMT-025, SMT-029), and
+/// its bullets drawn.
+pub fn runs(text: &str) -> Vec<xs_image::markup::Run> {
+    xs_image::markup::parse(text)
 }
 
-/// The text without its marks.
+/// The text without its marks; a link as its label.
 pub fn plain(text: &str) -> String {
-    text.replace("**", "")
+    xs_image::markup::plain(text)
+}
+
+/// Each piece's text, a link's with its address after it (for formats without links).
+fn spelled(runs: Vec<xs_image::markup::Run>) -> Vec<(String, bool, bool)> {
+    let mut out = Vec::new();
+    for r in runs {
+        let link = r.link.clone();
+        out.push((r.text, r.bold, r.italic));
+        if let Some(url) = link {
+            out.push((format!(" ({url})"), false, false));
+        }
+    }
+    out
 }
 
 fn xml(s: &str) -> String {
@@ -90,8 +100,28 @@ pub fn markdown(g: &Guide, names: &[String]) -> String {
     let md = |t: &str| {
         runs(t)
             .into_iter()
-            .map(|(s, b)| if b { format!("**{}**", s.trim()) } else { s })
+            .map(|r| {
+                let mut s = match &r.link {
+                    Some(url) => format!("[{}]({url})", r.text),
+                    None => r.text.clone(),
+                };
+                if r.italic {
+                    s = format!("*{}*", s.trim());
+                }
+                if r.bold {
+                    s = format!("**{}**", s.trim());
+                }
+                s
+            })
             .collect::<String>()
+            // Its bullets as Markdown's.
+            .split('\n')
+            .map(|l| match l.trim_start().strip_prefix("• ") {
+                Some(rest) => format!("{}- {rest}", &l[..l.len() - l.trim_start().len()]),
+                None => l.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     };
     let mut out = format!("# {}\n\n{}\n\n", g.title.replace('\n', " "), g.date);
     if !g.description.trim().is_empty() {
@@ -131,12 +161,18 @@ pub fn html(g: &Guide, srcs: &[String], lang: &str) -> String {
     let rich = |t: &str| {
         runs(t)
             .into_iter()
-            .map(|(s, b)| {
-                if b {
-                    format!("<strong>{}</strong>", xml(&s))
-                } else {
-                    xml(&s)
+            .map(|r| {
+                let mut s = xml(&r.text);
+                if let Some(url) = &r.link {
+                    s = format!("<a href=\"{}\">{s}</a>", xml(url));
                 }
+                if r.italic {
+                    s = format!("<em>{s}</em>");
+                }
+                if r.bold {
+                    s = format!("<strong>{s}</strong>");
+                }
+                s
             })
             .collect::<String>()
             .replace('\n', "<br>")
@@ -234,10 +270,15 @@ fn zip_file(files: &[(&str, Vec<u8>)]) -> Result<Vec<u8>, String> {
 }
 
 fn w_runs(text: &str) -> String {
-    runs(text)
+    spelled(runs(text))
         .into_iter()
-        .map(|(s, b)| {
-            let props = if b { "<w:rPr><w:b/></w:rPr>" } else { "" };
+        .map(|(s, b, i)| {
+            let props = match (b, i) {
+                (true, true) => "<w:rPr><w:b/><w:i/></w:rPr>",
+                (true, false) => "<w:rPr><w:b/></w:rPr>",
+                (false, true) => "<w:rPr><w:i/></w:rPr>",
+                _ => "",
+            };
             format!("<w:r>{props}<w:t xml:space=\"preserve\">{}</w:t></w:r>", xml(&s))
         })
         .collect()
@@ -340,12 +381,13 @@ const SLIDE_W: u64 = 12_192_000;
 const SLIDE_H: u64 = 6_858_000;
 
 fn a_runs(text: &str, size: u32) -> String {
-    runs(text)
+    spelled(runs(text))
         .into_iter()
-        .map(|(s, b)| {
+        .map(|(s, b, i)| {
             format!(
-                "<a:r><a:rPr lang=\"es-ES\" sz=\"{size}\" b=\"{}\" dirty=\"0\"/><a:t>{}</a:t></a:r>",
+                "<a:r><a:rPr lang=\"es-ES\" sz=\"{size}\" b=\"{}\" i=\"{}\" dirty=\"0\"/><a:t>{}</a:t></a:r>",
                 u8::from(b),
+                u8::from(i),
                 xml(&s)
             )
         })
@@ -560,13 +602,16 @@ fn pdf_text(s: &str) -> String {
 /// A text's width in points at `size`: the font's widths, measured once.
 pub type Measure<'a> = &'a dyn Fn(&str, bool, f64) -> f64;
 
-/// Lines of `(text, bold)` pieces that fit in `width` points.
-fn wrap(text: &str, size: f64, width: f64, measure: Measure) -> Vec<Vec<(String, bool)>> {
-    let mut lines: Vec<Vec<(String, bool)>> = Vec::new();
+/// Lines of `(text, look)` pieces that fit in `width` points; the look is 1 for bold,
+/// 2 for italic, 3 for both (SMT-029).
+fn wrap(text: &str, size: f64, width: f64, measure: Measure) -> Vec<Vec<(String, u8)>> {
+    let mut lines: Vec<Vec<(String, u8)>> = Vec::new();
     for paragraph in text.split('\n') {
-        let mut line: Vec<(String, bool)> = Vec::new();
+        let mut line: Vec<(String, u8)> = Vec::new();
         let mut used = 0.0;
-        for (piece, bold) in runs(paragraph) {
+        for (piece, b, i) in spelled(runs(paragraph)) {
+            let look = u8::from(b) | (u8::from(i) << 1);
+            let bold = b;
             for (i, word) in piece.split(' ').enumerate() {
                 let token = if i == 0 {
                     word.to_string()
@@ -579,12 +624,12 @@ fn wrap(text: &str, size: f64, width: f64, measure: Measure) -> Vec<Vec<(String,
                     used = 0.0;
                     let t = token.trim_start().to_string();
                     used += measure(&t, bold, size);
-                    line.push((t, bold));
+                    line.push((t, look));
                 } else {
                     used += w;
                     match line.last_mut() {
-                        Some((s, b)) if *b == bold => s.push_str(&token),
-                        _ => line.push((token, bold)),
+                        Some((s, l)) if *l == look => s.push_str(&token),
+                        _ => line.push((token, look)),
                     }
                 }
             }
@@ -596,7 +641,7 @@ fn wrap(text: &str, size: f64, width: f64, measure: Measure) -> Vec<Vec<(String,
 
 /// A block of the PDF: lines of text, then maybe a picture, kept on one page.
 struct Block {
-    lines: Vec<Vec<(String, bool)>>,
+    lines: Vec<Vec<(String, u8)>>,
     size: f64,
     pic: Option<(usize, f64, f64)>,
     /// A step's bookmark.
@@ -718,7 +763,9 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
         .collect();
     // The structure (SMT-033): its root, the document, then one element per tagged
     // piece of content, after the bookmarks.
-    let struct_root = first_mark + marks.len();
+    // Helvetica in italic, plain and bold (SMT-029), after the bookmarks.
+    let (f3, f4) = (first_mark + marks.len(), first_mark + marks.len() + 1);
+    let struct_root = f4 + 1;
     let doc_elem = struct_root + 1;
     let mut catalog = format!(
         "<< /Type /Catalog /Pages 2 0 R /Outlines 5 0 R /PageMode /UseOutlines /MarkInfo << /Marked true >> /StructTreeRoot {struct_root} 0 R /ViewerPreferences << /DisplayDocTitle true >> /Lang "
@@ -786,10 +833,8 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
             for line in &b.lines {
                 y -= line_h(b.size);
                 content.extend_from_slice(format!("BT {margin:.2} {:.2} Td ", y + b.size * 0.25).as_bytes());
-                for (s, bold) in line {
-                    content.extend_from_slice(
-                        format!("/{} {:.1} Tf ", if *bold { "F2" } else { "F1" }, b.size).as_bytes(),
-                    );
+                for (s, look) in line {
+                    content.extend_from_slice(format!("/F{} {:.1} Tf ", look + 1, b.size).as_bytes());
                     content.extend_from_slice(&pdf_string(s));
                     content.extend_from_slice(b" Tj ");
                 }
@@ -828,7 +873,7 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
             .collect();
         objects.push(
             format!(
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {pw:.2} {ph:.2}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << {xobjects}>> >> /Contents {} 0 R /StructParents {pi} /Tabs /S >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {pw:.2} {ph:.2}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 {f3} 0 R /F4 {f4} 0 R >> /XObject << {xobjects}>> >> /Contents {} 0 R /StructParents {pi} /Tabs /S >>",
                 first_page + 2 * pi + 1
             )
             .into_bytes(),
@@ -863,6 +908,13 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
         );
         objects.push(body);
     }
+    objects.push(
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>".to_vec(),
+    );
+    objects.push(
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>"
+            .to_vec(),
+    );
     // The structure tree: the root with the parent tree (each page's tagged pieces by
     // their number), the document, and its elements in reading order.
     let elem = |k: usize| doc_elem + 1 + k;
@@ -963,6 +1015,40 @@ mod tests {
             lang: "es".into(),
             description: String::new(),
         }
+    }
+
+    /// SMT-029: italics, links and bullets in a step's text reach every format.
+    #[test]
+    fn italics_links_and_bullets_in_the_exports() {
+        let mut g = sample(1);
+        g.items[0] = Item::Step {
+            n: 1,
+            text: "Clic en **Guardar** y *luego* ver [la ayuda](https://example.com/a)
+- uno"
+                .into(),
+            pic: Some(pic()),
+        };
+        let md = markdown(&g, &["a.png".into()]);
+        assert!(
+            md.contains("*luego*") && md.contains("[la ayuda](https://example.com/a)"),
+            "{md}"
+        );
+        assert!(md.contains("- uno"), "{md}");
+        let page = html(&g, &["a.png".into()], "es");
+        assert!(page.contains("<em>luego</em>"), "{page}");
+        assert!(
+            page.contains("<a href=\"https://example.com/a\">la ayuda</a>"),
+            "{page}"
+        );
+        assert!(page.contains("• uno"));
+        let files = unzip(&docx(&g).unwrap());
+        assert!(files["word/document.xml"].contains("<w:i/>"));
+        assert!(files["word/document.xml"].contains("(https://example.com/a)"));
+        let measure = |s: &str, _: bool, size: f64| s.chars().count() as f64 * size * 0.5;
+        let bytes = pdf(&g, paper("a4"), &measure).unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(text.contains("/Helvetica-Oblique") && text.contains("/F3 12.0 Tf"));
+        assert_eq!(plain(&"*luego* [ayuda](https://x.y)".to_string()), "luego ayuda");
     }
 
     fn unzip(bytes: &[u8]) -> std::collections::BTreeMap<String, String> {

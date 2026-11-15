@@ -22,6 +22,7 @@ pub mod gif_anim;
 pub mod highlights;
 pub mod inpaint;
 pub mod magnify;
+pub mod markup;
 pub mod paint;
 pub mod pens;
 pub mod pictures;
