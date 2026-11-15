@@ -103,15 +103,31 @@ function Overlay({ view }: { view: View }) {
           className="qv-frame"
           style={size ? { width: size.width, height: size.height } : undefined}
         >
-          {!sharp && <img className="qv-thumb" src={entry.thumb} alt="" draggable={false} />}
-          <img
-            key={entry.src}
-            className={`qv-image${sharp ? " ready" : ""}`}
-            src={entry.src}
-            alt={entry.name}
-            draggable={false}
-            onLoad={() => setReady(entry.src)}
-          />
+          {entry.video ? (
+            // A video plays, with its own controls (LIB-013).
+            <video
+              key={entry.video}
+              className="qv-image ready"
+              src={entry.video}
+              poster={entry.thumb}
+              controls
+              autoPlay
+              muted
+              aria-label={entry.name}
+            />
+          ) : (
+            <>
+              {!sharp && <img className="qv-thumb" src={entry.thumb} alt="" draggable={false} />}
+              <img
+                key={entry.src}
+                className={`qv-image${sharp ? " ready" : ""}`}
+                src={entry.src}
+                alt={entry.name}
+                draggable={false}
+                onLoad={() => setReady(entry.src)}
+              />
+            </>
+          )}
         </div>
       </div>
       <div className="qv-bar">

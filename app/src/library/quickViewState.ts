@@ -18,6 +18,8 @@ export interface QuickEntry {
   height: number | null;
   /** When it was captured (ISO), when known. */
   date: string | null;
+  /** A video, played in the view (LIB-013): its file. An animated GIF is `src`. */
+  video?: string;
 }
 
 export interface QuickView {
@@ -89,7 +91,14 @@ export function libraryEntries(items: LibraryItem[], side = previewSide()): Quic
   return items.map((item) => ({
     id: item.id,
     name: item.name,
-    src: xsdocUrl(`library/${item.id}/view/${side}?v=${encodeURIComponent(item.modified)}`),
+    // An animated GIF plays as it is; a video, in a player (LIB-013).
+    src:
+      item.kind === "gif" && !item.cloud
+        ? xsdocUrl(`library/${item.id}/media?v=${encodeURIComponent(item.modified)}`)
+        : xsdocUrl(`library/${item.id}/view/${side}?v=${encodeURIComponent(item.modified)}`),
+    ...(item.kind === "video" && !item.cloud
+      ? { video: xsdocUrl(`library/${item.id}/media?v=${encodeURIComponent(item.modified)}`) }
+      : {}),
     thumb: libraryThumb(item),
     width: item.width,
     height: item.height,

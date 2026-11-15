@@ -54,6 +54,21 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                 .unwrap_or_default(),
         };
     }
+    // A library's video or animated GIF, as it is, for the quick view (LIB-013).
+    if let ["library", item, "media"] = parts.as_slice() {
+        let lib = xs_library::library(&core);
+        let found = lib
+            .get(item)
+            .filter(|i| matches!(i.format.as_str(), "mp4" | "m4v" | "mov" | "gif") && !i.cloud)
+            .map(|i| lib.abs(&i.path));
+        return match found {
+            Some(p) => video(&p, request),
+            None => Response::builder()
+                .status(404)
+                .body(Vec::new())
+                .unwrap_or_default(),
+        };
+    }
     let body = match parts.as_slice() {
         ["library", item, "thumb"] => xs_library::library(&core)
             .thumbnail(item)
