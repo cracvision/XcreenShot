@@ -8,11 +8,17 @@
 //!   global shortcuts still work (Ctrl+Z is undo).
 //! - A worker sends the model's view to the overlay when it changes, at most at 60 Hz,
 //!   and forgets the shapes that have faded.
+//! - The hook can never keep the mouse and keyboard: `Esc` removes it at once on its own
+//!   thread, without waiting for the rest of the app; it never waits for a lock (a busy
+//!   model lets the event through); and when the worker stops answering for 2 s (the app
+//!   hangs), the hook removes itself. `XS_LIVEDRAW_RELEASE_SECS` also removes it after
+//!   that many seconds (supervised tests).
 
 use std::cell::RefCell;
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{LPARAM, LRESULT, POINT, WPARAM};
@@ -24,10 +30,11 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetAncestor, GetCursorPos, GetMessageW, GetWindowLongPtrW,
-    GetWindowThreadProcessId, PostThreadMessageW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx,
-    WindowFromPoint, GA_ROOT, GWL_EXSTYLE, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MSG,
-    MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEMOVE, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_EX_TRANSPARENT,
+    GetWindowThreadProcessId, KillTimer, PostQuitMessage, PostThreadMessageW, SetTimer, SetWindowsHookExW,
+    TranslateMessage, UnhookWindowsHookEx, WindowFromPoint, GA_ROOT, GWL_EXSTYLE, HC_ACTION, HHOOK,
+    KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP,
+    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
+    WM_SYSKEYUP, WM_TIMER, WS_EX_TRANSPARENT,
 };
 
 use crate::lens_win::Lens;
@@ -41,36 +48,77 @@ pub enum Note {
     Quit,
 }
 
+/// Without news from the worker for this long, the hook removes itself.
+const STALE_MS: u64 = 2000;
+
+/// Milliseconds since `clock`.
+fn ms(clock: Instant) -> u64 {
+    clock.elapsed().as_millis() as u64
+}
+
 pub struct Session {
-    hook_thread: u32,
+    /// The hook's thread; `None` without a hook (an isolated test copy: only automation
+    /// draws, the mouse and keyboard are never touched).
+    hook_thread: Option<u32>,
     notes: Sender<Note>,
 }
 
 impl Session {
     /// Starts the hook over the monitor whose top left is `origin`, of `size` physical
-    /// pixels. `push` gets the model's view; `exit` runs when `Esc` ends the mode.
+    /// pixels. `push` gets the model's view; `exit` runs when `Esc` ends the mode (or
+    /// the hook removed itself). Without `hook`, nothing listens to the mouse and
+    /// keyboard.
     pub fn start(
         model: Arc<Mutex<Model>>,
         origin: (i32, i32),
         size: (u32, u32),
         clock: Instant,
+        hook: bool,
         push: Box<dyn Fn(serde_json::Value) + Send>,
         exit: Box<dyn Fn() + Send>,
     ) -> Result<Session, String> {
         let (notes, inbox) = mpsc::channel::<Note>();
-        let (ready_tx, ready_rx) = mpsc::channel();
-        let hook_notes = notes.clone();
-        let hook_model = model.clone();
-        std::thread::Builder::new()
-            .name("livedraw-hook".into())
-            .spawn(move || hook_thread(hook_model, origin, size, clock, hook_notes, ready_tx))
-            .map_err(|e| e.to_string())?;
-        let hook_thread = ready_rx
-            .recv_timeout(Duration::from_secs(3))
-            .map_err(|_| "the input hook did not start".to_string())??;
+        let alive = Arc::new(AtomicU64::new(ms(clock)));
+        let hook_thread = if hook {
+            let (ready_tx, ready_rx) = mpsc::channel();
+            let (hook_model, hook_notes, hook_alive) = (model.clone(), notes.clone(), alive.clone());
+            let limit = std::env::var("XS_LIVEDRAW_RELEASE_SECS")
+                .ok()
+                .and_then(|v| v.parse::<f64>().ok())
+                .filter(|s| *s > 0.0);
+            std::thread::Builder::new()
+                .name("livedraw-hook".into())
+                .spawn(move || {
+                    // Made on its thread: the magnifier's window belongs to it.
+                    let state = HookState {
+                        model: hook_model,
+                        origin,
+                        size,
+                        clock,
+                        notes: hook_notes,
+                        alive: hook_alive,
+                        limit,
+                        released: false,
+                        drawing: false,
+                        right: false,
+                        held: HashSet::new(),
+                        ours: 0,
+                        lens: None,
+                    };
+                    hook_thread(state, ready_tx)
+                })
+                .map_err(|e| e.to_string())?;
+            Some(
+                ready_rx
+                    .recv_timeout(Duration::from_secs(3))
+                    .map_err(|_| "the input hook did not start".to_string())??,
+            )
+        } else {
+            None
+        };
         std::thread::Builder::new()
             .name("livedraw-worker".into())
-            .spawn(move || worker(model, clock, inbox, push, exit))
+            .spawn(move || worker(model, clock, alive, inbox, push, exit))
             .map_err(|e| e.to_string())?;
         Ok(Session { hook_thread, notes })
     }
@@ -83,8 +131,10 @@ impl Session {
     /// Ends the hook at once (the mouse and keyboard go back to the apps); the worker
     /// keeps the overlay up to date while the shapes fade.
     pub fn stop(self) {
-        // SAFETY: posting to a thread id; harmless if that thread already ended.
-        unsafe { PostThreadMessageW(self.hook_thread, WM_QUIT, 0, 0) };
+        if let Some(thread) = self.hook_thread {
+            // SAFETY: posting to a thread id; harmless if that thread already ended.
+            unsafe { PostThreadMessageW(thread, WM_QUIT, 0, 0) };
+        }
         let _ = self.notes.send(Note::Changed);
         let notes = self.notes;
         // The worker ends once the fading is over.
@@ -99,6 +149,7 @@ impl Session {
 fn worker(
     model: Arc<Mutex<Model>>,
     clock: Instant,
+    alive: Arc<AtomicU64>,
     inbox: Receiver<Note>,
     push: Box<dyn Fn(serde_json::Value) + Send>,
     exit: Box<dyn Fn() + Send>,
@@ -106,6 +157,8 @@ fn worker(
     let mut last_push = Instant::now() - Duration::from_secs(1);
     let mut dirty = true;
     loop {
+        // The hook's sign that the app still answers.
+        alive.store(ms(clock), Ordering::Relaxed);
         match inbox.recv_timeout(Duration::from_millis(250)) {
             Ok(Note::Changed) => dirty = true,
             Ok(Note::Exit) => exit(),
@@ -136,6 +189,12 @@ struct HookState {
     size: (u32, u32),
     clock: Instant,
     notes: Sender<Note>,
+    /// When the worker last showed it is alive (ms of `clock`).
+    alive: Arc<AtomicU64>,
+    /// Seconds after which the hook removes itself (`XS_LIVEDRAW_RELEASE_SECS`).
+    limit: Option<f64>,
+    /// The hook gave the mouse and keyboard back: every event passes until it is gone.
+    released: bool,
     /// The left button went down on the drawing.
     drawing: bool,
     /// The right button went down and was kept: keep its release too.
@@ -151,30 +210,11 @@ thread_local! {
     static STATE: RefCell<Option<HookState>> = const { RefCell::new(None) };
 }
 
-fn hook_thread(
-    model: Arc<Mutex<Model>>,
-    origin: (i32, i32),
-    size: (u32, u32),
-    clock: Instant,
-    notes: Sender<Note>,
-    ready: Sender<Result<u32, String>>,
-) {
+fn hook_thread(mut state: HookState, ready: Sender<Result<u32, String>>) {
     // SAFETY: plain Win32 calls on this thread; the hooks are removed before it ends.
     unsafe {
-        STATE.with(|s| {
-            *s.borrow_mut() = Some(HookState {
-                model,
-                origin,
-                size,
-                clock,
-                notes,
-                drawing: false,
-                right: false,
-                held: HashSet::new(),
-                ours: GetCurrentProcessId(),
-                lens: None,
-            })
-        });
+        state.ours = GetCurrentProcessId();
+        STATE.with(|s| *s.borrow_mut() = Some(state));
         let module = GetModuleHandleW(std::ptr::null());
         let mouse = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), module, 0);
         let keys = SetWindowsHookExW(WH_KEYBOARD_LL, Some(key_proc), module, 0);
@@ -186,13 +226,31 @@ fn hook_thread(
             return;
         }
         let _ = ready.send(Ok(GetCurrentThreadId()));
+        // A beat to notice, even without input, that the app stopped answering.
+        let timer = SetTimer(std::ptr::null_mut(), 0, 250, None);
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+            if msg.message == WM_TIMER {
+                if with_state(|s| s.should_release()).unwrap_or(false) {
+                    break;
+                }
+                continue;
+            }
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
+        // The input goes back to the apps before anything else.
         unhook(mouse);
         unhook(keys);
+        if timer != 0 {
+            KillTimer(std::ptr::null_mut(), timer);
+        }
+        // Gone on its own (Esc, stale or time limit): the mode ends too.
+        STATE.with(|s| {
+            if let Some(s) = s.borrow().as_ref() {
+                let _ = s.notes.send(Note::Exit);
+            }
+        });
         STATE.with(|s| s.borrow_mut().take());
     }
 }
@@ -275,9 +333,8 @@ impl HookState {
     /// The magnifier follows the pointer while it is the tool (VID-049), on this
     /// monitor; otherwise it goes away.
     fn follow_lens(&mut self, x: i32, y: i32) {
-        let (wanted, scale) = {
-            let m = self.model.lock().unwrap();
-            (m.tool == Tool::Magnifier, m.scale)
+        let Some((wanted, scale)) = self.model().map(|m| (m.tool == Tool::Magnifier, m.scale)) else {
+            return;
         };
         if !wanted || !self.on_monitor(x, y) {
             self.lens = None;
@@ -291,8 +348,36 @@ impl HookState {
         }
     }
 
+    /// The model, unless someone else has it now: the hook never waits.
+    fn model(&self) -> Option<MutexGuard<'_, Model>> {
+        self.model.try_lock().ok()
+    }
+
+    /// Whether the hook must give the input back: after `Esc`, when the worker stopped
+    /// answering (the app hangs) or after the time limit.
+    fn should_release(&self) -> bool {
+        self.released
+            || ms(self.clock).saturating_sub(self.alive.load(Ordering::Relaxed)) > STALE_MS
+            || self.limit.is_some_and(|l| self.now() >= l)
+    }
+
+    /// Gives the mouse and keyboard back at once: the hook's loop ends and removes the
+    /// hooks; until then every event passes.
+    fn release(&mut self) {
+        if !self.released {
+            self.released = true;
+            self.lens = None;
+            // SAFETY: ends this thread's message loop.
+            unsafe { PostQuitMessage(0) };
+        }
+    }
+
     /// Returns whether the event is kept from the apps.
     fn mouse(&mut self, message: u32, info: &MSLLHOOKSTRUCT) -> bool {
+        if self.should_release() {
+            self.release();
+            return false;
+        }
         let (x, y) = (info.pt.x, info.pt.y);
         let even = held(VK_SHIFT);
         self.follow_lens(x, y);
@@ -307,7 +392,11 @@ impl HookState {
                 }
                 let (lx, ly) = self.local(x, y);
                 let now = self.now();
-                self.model.lock().unwrap().press(lx, ly, now);
+                let Some(mut m) = self.model() else {
+                    return false;
+                };
+                m.press(lx, ly, now);
+                drop(m);
                 self.drawing = true;
                 self.changed();
                 true
@@ -315,8 +404,11 @@ impl HookState {
             WM_MOUSEMOVE => {
                 if self.drawing {
                     let (lx, ly) = self.local(x, y);
-                    self.model.lock().unwrap().drag(lx, ly, even);
-                    self.changed();
+                    if let Some(mut m) = self.model() {
+                        m.drag(lx, ly, even);
+                        drop(m);
+                        self.changed();
+                    }
                 }
                 // The pointer always moves.
                 false
@@ -325,7 +417,9 @@ impl HookState {
                 self.drawing = false;
                 let (lx, ly) = self.local(x, y);
                 let now = self.now();
-                self.model.lock().unwrap().release(lx, ly, even, now);
+                if let Some(mut m) = self.model() {
+                    m.release(lx, ly, even, now);
+                }
                 self.changed();
                 true
             }
@@ -344,6 +438,10 @@ impl HookState {
 
     /// Returns whether the key is kept from the apps.
     fn key(&mut self, message: u32, info: &KBDLLHOOKSTRUCT) -> bool {
+        if self.should_release() {
+            self.release();
+            return false;
+        }
         let vk = info.vkCode;
         match message {
             WM_KEYDOWN | WM_SYSKEYDOWN => {
@@ -374,7 +472,10 @@ impl HookState {
                     // The global shortcuts.
                     return false;
                 } else if vk == VK_ESCAPE as u32 {
-                    Some(Key::Escape)
+                    // Out at once, here: nothing else has to answer first (the mode
+                    // ends when the hook's loop does).
+                    self.release();
+                    return true;
                 } else if vk == VK_DELETE as u32 || vk == VK_BACK as u32 {
                     Some(Key::Delete)
                 } else if (b'A' as u32..=b'Z' as u32).contains(&vk)
@@ -386,7 +487,7 @@ impl HookState {
                 };
                 let now = self.now();
                 let result = match key {
-                    Some(k) => self.model.lock().unwrap().key(k, now),
+                    Some(k) => self.model().map_or(KeyResult::Ignored, |mut m| m.key(k, now)),
                     None => KeyResult::Ignored,
                 };
                 match result {
@@ -411,5 +512,93 @@ impl HookState {
             WM_KEYUP | WM_SYSKEYUP => self.held.remove(&vk),
             _ => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A hook's state without the hook: nothing here listens to the real input.
+    fn state(clock: Instant) -> (HookState, Receiver<Note>) {
+        let (notes, inbox) = mpsc::channel();
+        let s = HookState {
+            model: Arc::new(Mutex::new(Model::default())),
+            origin: (-100_000, -100_000),
+            size: (1000, 1000),
+            clock,
+            notes,
+            alive: Arc::new(AtomicU64::new(ms(clock))),
+            limit: None,
+            released: false,
+            drawing: false,
+            right: false,
+            held: HashSet::new(),
+            ours: 0,
+            lens: None,
+        };
+        (s, inbox)
+    }
+
+    fn key(vk: u16) -> KBDLLHOOKSTRUCT {
+        KBDLLHOOKSTRUCT {
+            vkCode: vk as u32,
+            scanCode: 0,
+            flags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        }
+    }
+
+    fn click(x: i32, y: i32) -> MSLLHOOKSTRUCT {
+        MSLLHOOKSTRUCT {
+            pt: POINT { x, y },
+            mouseData: 0,
+            flags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        }
+    }
+
+    /// `Esc` gives the input back at once, without the model; after it everything passes.
+    #[test]
+    fn escape_releases_at_once() {
+        let (mut s, _inbox) = state(Instant::now());
+        // Even with the model busy elsewhere.
+        let model = s.model.clone();
+        let _busy = model.lock().unwrap();
+        assert!(s.key(WM_KEYDOWN, &key(VK_ESCAPE)));
+        assert!(s.released);
+        assert!(!s.key(WM_KEYDOWN, &key(b'A' as u16)));
+        assert!(!s.mouse(WM_LBUTTONDOWN, &click(-99_500, -99_500)));
+    }
+
+    /// A busy model never makes the hook wait: the click reaches the apps.
+    #[test]
+    fn a_busy_model_lets_the_input_through() {
+        let (mut s, _inbox) = state(Instant::now());
+        let model = s.model.clone();
+        let busy = model.lock().unwrap();
+        assert!(!s.mouse(WM_LBUTTONDOWN, &click(-99_500, -99_500)));
+        assert!(!s.drawing);
+        drop(busy);
+        assert!(s.mouse(WM_LBUTTONDOWN, &click(-99_500, -99_500)));
+        assert!(s.drawing);
+    }
+
+    /// When the app stops answering for 2 s, or after the time limit, the hook lets go.
+    #[test]
+    fn a_hung_app_or_the_limit_releases() {
+        let started = Instant::now() - Duration::from_secs(5);
+        let (mut s, _inbox) = state(started);
+        s.alive.store(0, Ordering::Relaxed);
+        assert!(s.should_release());
+        assert!(!s.key(WM_KEYDOWN, &key(b'A' as u16)));
+        assert!(s.released);
+
+        let (mut s, _inbox) = state(started);
+        assert!(!s.should_release());
+        s.limit = Some(4.0);
+        assert!(s.should_release());
     }
 }

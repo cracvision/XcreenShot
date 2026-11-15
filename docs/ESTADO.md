@@ -62,6 +62,18 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (tarde, tercera parte): edición de la Microsoft Store y arreglo de seguridad de Dibujo en vivo.**
+  - **Microsoft Store (APP-003, APP-036):** Carlos eligió vender en Windows por la Store (firma gratis de Microsoft). `npm run msix` en `app/` hace el paquete MSIX con identidad de prueba (`XcreenShot.Test`; la real sale de Partner Center). Probado en el equipo de Carlos con el Modo de desarrollador: About dice `store: true`, el alias `xcreenshot` funciona, Buscar actualizaciones remite a la Store, la tarea de inicio aparece en el Administrador de tareas y la captura funciona. Paquete de prueba desinstalado después. Pendiente de Carlos: decidir si vende como persona o empresa (y país), abrir la cuenta de Partner Center, reservar el nombre y la página de privacidad (Claude redacta el texto).
+  - **Dibujo en vivo dejó a Carlos sin ratón ni teclado dos veces** (su app normal `5a060fa` y la de la Store), y tuvo que apagar el equipo con el botón. Se activó desde el CLI sin grabar (`video.liveDrawAnytime`), y Carlos no tenía cómo avisar. **Regla nueva: nunca se activa en su pantalla nada que tome el ratón o el teclado.** Arreglo (VID-048):
+    - `Esc` suelta el ratón y el teclado al instante, en el propio hilo del gancho, sin esperar al resto de la app;
+    - el gancho nunca espera un bloqueo (si el modelo está ocupado, el evento llega a la app);
+    - si la app deja de responder 2 s, el gancho se quita solo;
+    - `XS_LIVEDRAW_RELEASE_SECS` lo quita a los N segundos (para una prueba supervisada);
+    - en una copia aislada (`XCREENSHOT_DATA_DIR`) no hay gancho: solo dibuja `record.draw_shape` (`XS_LIVEDRAW_HOOK=1` lo permite).
+    - Pruebas automáticas sin gancho real. Sin causa raíz confirmada: el registro termina justo al activarlo. Guía: [`tests/manual/VID-048.md`](../tests/manual/VID-048.md).
+  - **Hasta instalar una versión con el arreglo, Carlos no debe usar Dibujo en vivo** (ni al grabar). `video.liveDrawAnytime` quedó en `false` en su perfil.
+  - Revisar después con el mismo criterio la multicaptura (CAP-067), que también se queda clics y teclas.
+
 - **2026-11-15 (tarde, segunda parte): XcreenShot 0.2.1 publicada.** Con los destinos estándar de Compartir; Carlos vio la ventana Compartir de Windows. Publicada en https://github.com/cracvision/xcreenshot-releases (con su permiso). Las copias con la 0.2.0 la reciben por Buscar actualizaciones; las anteriores a la 0.2.0 (sin actualizador) se instalan a mano una vez. Carlos guarda una copia de `updater.key`. Clang de Visual Studio instalado: **la app ya compila como ARM64 nativo** (`cargo build --release --target aarch64-pc-windows-msvc` con `VC\Tools\Llvmdin` en el PATH); falta el instalador ARM64 y un equipo ARM para probarla. GoPro cargando para probarla como webcam (falta saber el modelo y la app GoPro Webcam).
 
 - **2026-11-15 (tarde): destinos estándar de Compartir.** Va en el **instalador `e3343c4`** (local; la versión publicada sigue siendo la 0.2.0: publicar la 0.2.1 se pregunta antes a Carlos).

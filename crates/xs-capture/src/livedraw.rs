@@ -530,6 +530,13 @@ fn state(core: &Core) -> Value {
     }
 }
 
+/// Whether live drawing takes the mouse and keyboard. Never in an isolated test copy
+/// (`XCREENSHOT_DATA_DIR`), where only `record.draw_shape` draws, so that a test never
+/// holds the input of the person at the computer; `XS_LIVEDRAW_HOOK=1` allows it there.
+fn takes_input() -> bool {
+    !xs_core::paths::isolated() || std::env::var("XS_LIVEDRAW_HOOK").as_deref() == Ok("1")
+}
+
 fn start(core: &Arc<Core>, ctx: &Context) -> Result<(), CommandError> {
     let recording = crate::record::drawing_monitor(core).is_some();
     // VID-051: the Video tab's switch, and Live drawing at any time.
@@ -561,6 +568,7 @@ fn start(core: &Arc<Core>, ctx: &Context) -> Result<(), CommandError> {
             (monitor.x, monitor.y),
             (monitor.width, monitor.height),
             clock,
+            takes_input(),
             Box::new(move |view| {
                 if let Some(c) = push_core.upgrade() {
                     let mut v = view;
