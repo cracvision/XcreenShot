@@ -374,7 +374,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | SHR-034 | Box | M6 | Could | — (borrador del spec, pendiente de aprobación) |
 | SHR-035 | YouTube | M6 | Could | — (borrador del spec, pendiente de aprobación) |
 | SHR-036 | Pages, Keynote y Numbers | M6 | Could | — (borrador del spec, pendiente de aprobación) |
-| SHR-037 | AirDrop y Compartir del sistema | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-037 | AirDrop y Compartir del sistema | M6 | Should | En curso (Windows, 2026-11-15: Compartir > Compartir de Windows… abre la ventana Compartir del sistema con lo compartido (Uso compartido en proximidad y las apps que aceptan archivos). AirDrop y el menú de macOS, en su etapa) |
 | SHR-038 | Enlace para compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
 | SHR-039 | Proveedores del Enlace para compartir | M6 | Must | — (borrador del spec, pendiente de aprobación) |
 | SHR-040 | Proveedor: carpeta sincronizada | M6 | Must | — (borrador del spec, pendiente de aprobación) |

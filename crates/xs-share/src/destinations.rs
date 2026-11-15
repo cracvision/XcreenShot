@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 use xs_core::{CommandError, Core, ErrorCode, Lang, Source};
 
 /// The destinations of this module.
-pub const IDS: &[&str] = &["email", "app", "printer", "word", "powerpoint", "excel"];
+pub const IDS: &[&str] = &["email", "app", "printer", "word", "powerpoint", "excel", "system"];
 /// Attachments over this ask before the message opens (SHR-020).
 pub const EMAIL_LIMIT: u64 = 20 << 20;
 
@@ -28,6 +28,14 @@ pub fn available(id: &str) -> Result<(), &'static str> {
         "powerpoint" => office("PowerPoint.Application"),
         "excel" => office("Excel.Application"),
         "email" | "app" | "printer" => Ok(()),
+        // The Windows Share window (SHR-037); on macOS it arrives with its stage.
+        "system" => {
+            if cfg!(windows) {
+                Ok(())
+            } else {
+                Err("not_supported")
+            }
+        }
         _ => Err("unknown"),
     }
 }
@@ -683,6 +691,16 @@ pub fn send(core: &Core, lang: Lang, p: &Value) -> Result<Value, CommandError> {
                 // Still open in the mail app: it is there for the person.
                 Err(_) => Ok(json!({"status": "opened", "how": "mail_app", "files": prepared.files})),
             }
+        }
+        "system" => {
+            let title = prepared
+                .files
+                .first()
+                .and_then(|f| f.file_stem())
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "XcreenShot".into());
+            core.host().share_system(&prepared.files, &title)?;
+            Ok(json!({"status": "opened", "files": prepared.files}))
         }
         "app" => {
             let program = o["program"].as_str().unwrap_or_default();

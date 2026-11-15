@@ -1982,13 +1982,13 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         // The standard destinations (SHR-020 to SHR-026).
         B::new("share.destinations", &["SHR-002", "SHR-003"])
             .params(params(json!({}), &[]))
-            .result(json!({"type": "object", "properties": {"destinations": {"type": "array", "description": "id (email, app, printer, word, powerpoint, excel), name, available, reason (not_installed…)"}}})),
-        B::new("share.send", &["SHR-020", "SHR-021", "SHR-022", "SHR-024", "SHR-025", "SHR-026"])
+            .result(json!({"type": "object", "properties": {"destinations": {"type": "array", "description": "id (email, app, printer, word, powerpoint, excel, system), name, available, reason (not_installed…)"}}})),
+        B::new("share.send", &["SHR-020", "SHR-021", "SHR-022", "SHR-024", "SHR-025", "SHR-026", "SHR-037"])
             .mutates()
             .positional(&["destination"])
             .params(params(
                 json!({
-                    "destination": {"type": "string", "enum": ["email", "app", "printer", "word", "powerpoint", "excel"]},
+                    "destination": {"type": "string", "enum": ["email", "app", "printer", "word", "powerpoint", "excel", "system"], "description": "system: the Windows Share window (Nearby sharing and the apps that take files)"},
                     "documentId": document_id(),
                     "documentIds": {"type": "array", "items": {"type": "string"}},
                     "paths": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Files instead of open documents: .xshot (with its annotations), images, videos, GIF"},

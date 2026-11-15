@@ -122,6 +122,11 @@ pub trait Host: Send + Sync {
         let _ = when;
         Err(unsupported())
     }
+    /// The system's Share window for these files (SHR-037).
+    fn share_system(&self, files: &[std::path::PathBuf], title: &str) -> Result<(), CommandError> {
+        let _ = (files, title);
+        Err(unsupported())
+    }
     /// The welcome window of the first run (APP-005).
     fn open_welcome(&self) -> Result<(), CommandError> {
         Err(unsupported())

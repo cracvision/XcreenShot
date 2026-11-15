@@ -13,6 +13,7 @@ mod overlay;
 mod permissions;
 #[cfg(windows)]
 mod session_end;
+mod system_share;
 mod tray;
 mod updates;
 mod webpage;

@@ -2705,6 +2705,7 @@
       "word": "Word",
       "powerpoint": "PowerPoint",
       "excel": "Excel",
+      "system": "Compartir de Windows…",
       "opened": "Abierto en {{name}}.",
       "inserted": "Insertado en {{name}}.",
       "too_large_title": "Adjunto grande",
@@ -5956,6 +5957,7 @@
     "dest_word": "Word",
     "dest_powerpoint": "PowerPoint",
     "dest_excel": "Excel",
+    "dest_system": "Compartir de Windows",
     "lan_from": "De: {{name}}"
   },
   "presets": {

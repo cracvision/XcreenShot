@@ -2705,6 +2705,7 @@
       "word": "Word",
       "powerpoint": "PowerPoint",
       "excel": "Excel",
+      "system": "Windows Share…",
       "opened": "Opened in {{name}}.",
       "inserted": "Inserted in {{name}}.",
       "too_large_title": "Large attachment",
@@ -5956,6 +5957,7 @@
     "dest_word": "Word",
     "dest_powerpoint": "PowerPoint",
     "dest_excel": "Excel",
+    "dest_system": "Windows Share",
     "lan_from": "From: {{name}}"
   },
   "presets": {

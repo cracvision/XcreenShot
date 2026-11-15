@@ -160,6 +160,19 @@ impl Host for TauriHost {
         });
     }
 
+    fn share_system(&self, files: &[std::path::PathBuf], title: &str) -> Result<(), CommandError> {
+        crate::system_share::show(&self.app, files.to_vec(), title.to_string()).map_err(|reason| {
+            CommandError::new(
+                xs_core::ErrorCode::Internal,
+                xs_core::i18n::tr(
+                    self.app.state::<crate::AppState>().core.settings.lang(),
+                    "errors.share_failed",
+                    &[("reason", &reason)],
+                ),
+            )
+        })
+    }
+
     fn check_update(&self, endpoint: &str) -> Result<Value, CommandError> {
         crate::updates::check(&self.app, endpoint).map_err(|reason| {
             CommandError::new(
