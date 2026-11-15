@@ -20,6 +20,7 @@ use xs_core::settings::SettingsStore;
 use xs_core::{CommandError, CommandSpec, ErrorCode, Lang, Source};
 
 mod mcp;
+mod user_path;
 
 /// `camelCase` / `snake_case` parameter name to `--kebab-case`.
 fn kebab(name: &str) -> String {
@@ -205,6 +206,13 @@ fn build_cli(lang: Lang, specs: &[CommandSpec]) -> Command {
     )
     .subcommand(Command::new("mcp").about(tr(lang, "cli.mcp_about", &[])))
     .subcommand(Command::new("agents-md").about(tr(lang, "cli.agents_md_about", &[])))
+    // The installer's own (APP-037, APP-042): not shown in the help.
+    .subcommand(
+        Command::new("setup")
+            .hide(true)
+            .arg(Arg::new("add_path").long("add-path").value_name("DIR"))
+            .arg(Arg::new("remove_path").long("remove-path").value_name("DIR")),
+    )
     .subcommand(
         Command::new("help")
             .about(tr(lang, "cli.help_about", &[]))
@@ -430,6 +438,23 @@ fn main() -> ExitCode {
 
     let (spec, params, yes) = match matches.subcommand() {
         Some(("mcp", _)) => return mcp::serve(&specs, no_launch, lang),
+        Some(("setup", m)) => {
+            let r = match (
+                m.get_one::<String>("add_path"),
+                m.get_one::<String>("remove_path"),
+            ) {
+                (Some(dir), _) => user_path::change(dir, true),
+                (_, Some(dir)) => user_path::change(dir, false),
+                _ => Ok(()),
+            };
+            return match r {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("{e}");
+                    ExitCode::from(1)
+                }
+            };
+        }
         // APP-033: the guide for agents, built from this build's registry.
         Some(("agents-md", _)) => {
             // A reader that stops early (`| head`) is not an error.

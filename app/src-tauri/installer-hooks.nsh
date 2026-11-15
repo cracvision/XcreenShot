@@ -35,6 +35,22 @@
 ; PDF in "Open with" (CAP-041): XcreenShot can open them, but never becomes their
 ; default app, so it only adds itself to the list of apps that open them.
 !macro NSIS_HOOK_POSTINSTALL
+  ; `xcreenshot` in new terminals (APP-037), unless /nopath. The CLI edits the PATH:
+  ; this script's strings are cut at 1024 characters and would damage a long one.
+  ClearErrors
+  ${GetOptions} $CMDLINE "/nopath" $0
+  ${If} ${Errors}
+    nsExec::Exec '"$INSTDIR\xcreenshot.exe" setup --add-path "$INSTDIR"'
+    Pop $0
+  ${EndIf}
+  ; /nolaunchatlogin: the app does not turn on starting with Windows (APP-037).
+  ClearErrors
+  ${GetOptions} $CMDLINE "/nolaunchatlogin" $0
+  ${IfNot} ${Errors}
+    FileOpen $0 "$INSTDIR\no-launch-at-login" w
+    FileClose $0
+  ${EndIf}
+  ClearErrors
   WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf" "" "PDF (XcreenShot)"
   WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf\DefaultIcon" "" "$INSTDIR\xcreenshot-app.exe,0"
   WriteRegStr SHCTX "Software\Classes\XcreenShot.Pdf\shell\open\command" "" '"$INSTDIR\xcreenshot-app.exe" "%1"'
@@ -43,7 +59,36 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
+  ; Out of the PATH (APP-042), not when this is an update.
+  ${If} $UpdateMode <> 1
+    nsExec::Exec '"$INSTDIR\xcreenshot.exe" setup --remove-path "$INSTDIR"'
+    Pop $0
+  ${EndIf}
+  Delete "$INSTDIR\no-launch-at-login"
   Delete "$INSTDIR\xcreenshot.exe.*.old"
   DeleteRegValue SHCTX "Software\Classes\.pdf\OpenWithProgids" "XcreenShot.Pdf"
   DeleteRegKey SHCTX "Software\Classes\XcreenShot.Pdf"
+!macroend
+
+; Deleting the settings and data when the person ticks the box (APP-042): XcreenShot's
+; own folders, never the library. If a library was put inside them (a library.db is
+; there), they stay as they are.
+Var XsLibraryInside
+Function un.XsFoundLibrary
+  StrCpy $XsLibraryInside 1
+  Push "StopLocate"
+FunctionEnd
+
+!macro NSIS_HOOK_POSTUNINSTALL
+  ${If} $DeleteAppDataCheckboxState = 1
+  ${AndIf} $UpdateMode <> 1
+    SetShellVarContext current
+    StrCpy $XsLibraryInside 0
+    ${Locate} "$APPDATA\XcreenShot" "/L=F /M=library.db" "un.XsFoundLibrary"
+    ${Locate} "$LOCALAPPDATA\XcreenShot" "/L=F /M=library.db" "un.XsFoundLibrary"
+    ${If} $XsLibraryInside = 0
+      RMDir /r "$APPDATA\XcreenShot"
+      RMDir /r "$LOCALAPPDATA\XcreenShot"
+    ${EndIf}
+  ${EndIf}
 !macroend

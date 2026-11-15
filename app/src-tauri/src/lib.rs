@@ -470,6 +470,14 @@ pub fn run() {
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
             let first_run = !first_run_marker.exists();
             if first_run {
+                // Installed with /nolaunchatlogin (APP-037): it does not start with Windows.
+                let no_login = std::env::current_exe()
+                    .ok()
+                    .and_then(|e| e.parent().map(|d| d.join("no-launch-at-login")))
+                    .is_some_and(|f| f.exists());
+                if no_login {
+                    core.settings.sync_external("general.launchAtLogin", json!(false));
+                }
                 // Not for a portable copy: it may be on a USB stick (APP-038).
                 if !cfg!(debug_assertions)
                     && !xs_core::paths::isolated()
