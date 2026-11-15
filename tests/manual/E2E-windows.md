@@ -3,6 +3,7 @@
 Una sola guía para recorrer XcreenShot de principio a fin, como se usa de verdad, en tres sesiones. Cada bloque dice qué comprobar y enlaza la guía detallada: ábrela solo si algo falla o si te sobra tiempo.
 
 - **Versión:** 0.2.4 (o posterior). Si tienes otra: **Ayuda > Buscar actualizaciones…**, o descarga el instalador de https://github.com/cracvision/xcreenshot-releases. **Ayuda > Acerca de** debe decir 0.2.4.
+- **Registro oficial:** el protocolo OQ en Excel [`XcreenShot_OQ_Windows_v1_0.xlsx`](XcreenShot_OQ_Windows_v1_0.xlsx) (mismos casos, con acción, resultado esperado, PASS/FAIL/N/A, evidencia y desviaciones). Se regenera con `python scripts/make-oq.py tests/manual/E2E-windows-steps.json <salida.xlsx>`. Esta guía queda como versión de lectura.
 - **Cómo marcar:** `[x]` si pasa. Si falla, deja `[ ]` y escribe debajo **FALLA:** qué pasó, con una captura si ayuda.
 
 > **Seguridad: Esc siempre devuelve el ratón y el teclado**
