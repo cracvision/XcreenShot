@@ -1115,6 +1115,10 @@
       "title": "Switch the camera view",
       "description": "Picture in picture or full screen camera, also while recording."
     },
+    "record_focus_bar": {
+      "title": "Recording bar",
+      "description": "Takes the keyboard to the recording bar without stopping the recording; Esc gives it back."
+    },
     "slides_start": {
       "title": "Narrated slides",
       "description": "Images become slides to narrate, recorded instead of the screen."

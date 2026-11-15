@@ -100,6 +100,7 @@ exists fails a test.
 | `slides.exit` | `xcreenshot slides exit` | Closes the mode without changing any image; not while recording. |
 | `record.cameras` | `xcreenshot record cameras --json` | The cameras plugged in (`id`, `name`) and the one chosen (VID-031). |
 | `record.camera` | `xcreenshot record camera --shape circle --corner topLeft --json` | Switches the camera and sets how it shows: `placement` (`pip` or `fullscreen`), `corner`, `size` (0.1 to 0.5 of the area's shorter side), `shape`, `aspect`, `mirror`, `border` and its colours and width. They stay as the settings and, while recording, change it from now on; the `device` changes only in Ready or paused. `retry` opens the camera again after a problem. Returns the camera's state, with `trouble` (`blocked`, `in_use`, `gone`, `black`) when it gives no picture (VID-038). |
+| `record.focus_bar` | `xcreenshot record focus-bar` | The recording bar takes the keyboard without stopping anything; `back` gives it back to the app that had it (VID-011, VID-075). |
 | `record.camera_swap` | `xcreenshot record camera-swap` | Picture in picture ⇄ full screen camera, also while recording; the corner and size come back with picture in picture (VID-035). |
 | `record.sound_settings` | `xcreenshot record sound-settings` | Opens the system's sound settings, where the microphone is unmuted and its volume set (VID-019). |
 | `record.status` | `xcreenshot record status --json` | `status` (recording, paused, finalizing or idle), `elapsed` seconds, `source`, `path` and the video's size and fps. |

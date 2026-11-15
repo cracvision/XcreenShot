@@ -1763,6 +1763,12 @@ pub fn extension() -> Extension {
         reg.handle("record.camera_swap", move |ctx, _p| {
             rec_camera::swap(&*upgrade(&w)?, ctx)
         });
+        // The bar takes the keyboard, or gives it back (VID-011, VID-075).
+        let w = weak.clone();
+        reg.handle("record.focus_bar", move |_ctx, p| {
+            let back = p.get("back").and_then(Value::as_bool).unwrap_or(false);
+            Ok(json!({ "focused": upgrade(&w)?.host().focus_recording_bar(back) }))
+        });
         // Narrated slides (VID-071 to VID-074).
         let w = weak.clone();
         reg.handle("slides.start", move |ctx, p| {

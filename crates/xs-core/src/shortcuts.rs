@@ -447,6 +447,10 @@ pub fn slots() -> Vec<Slot> {
         capture("record.stop", "record.stop", ""),
         // Live drawing on and off (VID-048, VID-075).
         capture("record.draw", "record.draw", ""),
+        // Switch the camera view (VID-035) and take the recording bar to the keyboard
+        // (VID-011), both VID-075.
+        capture("record.camera_swap", "record.camera_swap", ""),
+        capture("record.focus_bar", "record.focus_bar", ""),
         // No default: losing a recording by accident is worse (VID-075).
         capture("record.restart", "record.restart", ""),
         capture("record.cancel", "record.cancel", ""),
@@ -468,6 +472,8 @@ pub fn slots() -> Vec<Slot> {
         s("app.help", App),
         s("shortcuts.pause", Global),
         s("app.close_window", App),
+        // Narrated slides (VID-071, VID-075), from the app.
+        s("slides.start", App),
         s("app.quit", Global),
         s("app.quit", App),
         // Editor: file, edit and view (EDT-116), in the spec's order.
@@ -843,6 +849,13 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         // Ctrl+Shift+D is Duplicate of the editor (Compatibility, Windows).
         ("record.draw", Global, Compatibility, Macos) => "Ctrl+Shift+KeyD",
         ("record.draw", Global, _, _) => "Ctrl+Alt+Shift+KeyD",
+        ("record.camera_swap", Global, Compatibility, Windows) => return None,
+        ("record.camera_swap", Global, Compatibility, Macos) => "Ctrl+Shift+KeyF",
+        ("record.camera_swap", Global, _, _) => "Ctrl+Alt+Shift+KeyF",
+        ("record.focus_bar", Global, _, _) => "Ctrl+Alt+Shift+KeyB",
+        ("slides.start", App, _, Windows) => "Ctrl+Alt+KeyV",
+        ("slides.start", App, Coexistence, Macos) => "Alt+Super+KeyV",
+        ("slides.start", App, Compatibility, Macos) => "Alt+KeyV",
         ("capture.repeat_last", Global, Compatibility, Macos) => "Ctrl+Shift+KeyR",
         ("capture.repeat_last", Global, _, _) => "Ctrl+Alt+Shift+KeyR",
         ("capture.panel", Global, _, _) => "Ctrl+Alt+Shift+KeyP",
@@ -1844,9 +1857,9 @@ mod tests {
             Some(acc("Ctrl+Alt+Shift+J"))
         );
         let preview = store.preview_profile(Profile::Coexistence, Profile::Compatibility, false);
-        // Only the defaults that differ (Capture, the three of video, Quit, and Trim
+        // Only the defaults that differ (Capture, the four of video, Quit, and Trim
         // edges, which gives Ctrl+Shift+X to Quit); the custom one stays.
-        assert_eq!(preview["changes"].as_array().unwrap().len(), 6);
+        assert_eq!(preview["changes"].as_array().unwrap().len(), 7);
         store.reset(None);
         assert_eq!(
             store.binding(&ping, Profile::Compatibility),

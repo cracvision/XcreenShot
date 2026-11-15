@@ -470,6 +470,91 @@ pub fn fit_recording_bar(app: &AppHandle, height: f64, up: bool, width: Option<f
     bar.set_size(tauri::PhysicalSize::new(size.width, new_h))
 }
 
+/// The bar's last status, to see a recording start (VID-011).
+static BAR_STATUS: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+/// What is recorded: its window, if one, and the center of the area (VID-011).
+type Target = (Option<isize>, i32, i32);
+static BAR_TARGET: std::sync::Mutex<Option<Target>> = std::sync::Mutex::new(None);
+
+/// The keyboard to what is recorded (VID-011): the recorded window, or the one at
+/// `(x, y)` (physical pixels), unless it is one of XcreenShot's.
+#[cfg(windows)]
+fn give_keyboard_to(window: Option<isize>, x: i32, y: i32) {
+    use windows_sys::Win32::Foundation::POINT;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetAncestor, GetWindowThreadProcessId, SetForegroundWindow, WindowFromPoint, GA_ROOT,
+    };
+    // SAFETY: window handles only; a stale one makes the calls fail, nothing else.
+    unsafe {
+        let top = match window {
+            Some(h) => h as _,
+            None => GetAncestor(WindowFromPoint(POINT { x, y }), GA_ROOT),
+        };
+        if top.is_null() {
+            return;
+        }
+        let mut pid = 0;
+        GetWindowThreadProcessId(top, &mut pid);
+        if pid != std::process::id() {
+            SetForegroundWindow(top);
+        }
+    }
+}
+
+/// Shows the bar; taking the keyboard only when `activate` (VID-011).
+fn show_bar(bar: &WebviewWindow, activate: bool) -> tauri::Result<()> {
+    #[cfg(windows)]
+    if !activate {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
+        let hwnd = bar.hwnd()?;
+        // SAFETY: the bar's own window handle.
+        unsafe { ShowWindow(hwnd.0 as _, SW_SHOWNOACTIVATE) };
+        return Ok(());
+    }
+    #[cfg(not(windows))]
+    let _ = activate;
+    bar.show()
+}
+
+/// The window that had the keyboard before the recording bar took it (VID-011).
+#[cfg(windows)]
+static BEFORE_BAR: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
+/// The recording bar takes the keyboard, without stopping anything (VID-011, VID-075),
+/// or gives it back to the app that had it (`back`). Whether there is a bar.
+pub fn focus_recording_bar(app: &AppHandle, back: bool) -> bool {
+    let Some(bar) = app.get_webview_window(RECBAR) else {
+        return false;
+    };
+    #[cfg(windows)]
+    {
+        use std::sync::atomic::Ordering;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow};
+        if back {
+            let before = BEFORE_BAR.swap(0, Ordering::Relaxed);
+            if before != 0 {
+                // SAFETY: a window handle; one that closed only makes the call fail.
+                unsafe { SetForegroundWindow(before as _) };
+            } else if let Some((window, x, y)) = *BAR_TARGET.lock().unwrap() {
+                give_keyboard_to(window, x, y);
+            }
+            return true;
+        }
+        if !bar.is_focused().unwrap_or(false) {
+            // SAFETY: no arguments.
+            let now = unsafe { GetForegroundWindow() } as isize;
+            BEFORE_BAR.store(now, Ordering::Relaxed);
+        }
+    }
+    #[cfg(not(windows))]
+    if back {
+        return true;
+    }
+    let _ = bar.set_focus();
+    let _ = tauri::Emitter::emit_to(app, RECBAR, "xs://recbar-focus", ());
+    true
+}
+
 pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri::Result<()> {
     let Some(state) = state else {
         // Moved by the user: remembered for the session (VID-016).
@@ -487,6 +572,8 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
             }
         }
         *LAST_AREA.lock().unwrap() = None;
+        *BAR_STATUS.lock().unwrap() = None;
+        *BAR_TARGET.lock().unwrap() = None;
         return Ok(());
     };
     // Narrated slides (VID-072): their own bar is in the editor; it hears the state.
@@ -538,6 +625,30 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
             }
         }
         *last = Some((x, y));
+    }
+    // A recording that starts gives the keyboard to what is recorded (VID-011): keys
+    // meant for that app never press the bar's buttons.
+    let target: Target = (
+        (state["source"]["type"] == "window")
+            .then(|| state["source"]["id"].as_i64())
+            .flatten()
+            .map(|id| id as isize),
+        (x + w / 2.0) as i32,
+        (y + h / 2.0) as i32,
+    );
+    *BAR_TARGET.lock().unwrap() = Some(target);
+    let status = state["status"].as_str().unwrap_or("").to_string();
+    let before = BAR_STATUS.lock().unwrap().replace(status.clone());
+    if status == "recording" && !matches!(before.as_deref(), Some("recording" | "paused")) {
+        let focused = app
+            .get_webview_window(RECBAR)
+            .is_some_and(|b| b.is_focused().unwrap_or(false));
+        #[cfg(windows)]
+        if focused {
+            give_keyboard_to(target.0, target.1, target.2);
+        }
+        #[cfg(not(windows))]
+        let _ = focused;
     }
     // Already there: it follows the area (changed while Ready, VID-003).
     if let Some(frame) = app.get_webview_window(RECFRAME).filter(|_| w > 0.0) {
@@ -634,13 +745,16 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
             .resizable(false)
             .always_on_top(true)
             .skip_taskbar(true)
+            // Ready, it takes the keyboard (Enter records, Esc cancels); a recording
+            // started at once leaves it where it was (VID-011).
+            .focused(status == "ready")
             .visible(false)
             .content_protected(true)
             .inner_size(bw, bh)
             .theme(theme(app))
             .build()?;
         bar.set_position(tauri::PhysicalPosition::new(px as i32, py as i32))?;
-        bar.show()?;
+        show_bar(&bar, status == "ready")?;
     }
     Ok(())
 }

@@ -420,6 +420,10 @@ impl Host for TauriHost {
             .map_err(internal)
     }
 
+    fn focus_recording_bar(&self, back: bool) -> bool {
+        windows::focus_recording_bar(&self.app, back)
+    }
+
     fn recording_bar(&self, state: Option<Value>) {
         let app = self.app.clone();
         let _ = self.app.run_on_main_thread(move || {

@@ -3,7 +3,7 @@
 // video, and it can be moved by its edge.
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { DurationField } from "../components/DurationField";
 import { Menu, type MenuItem } from "../components/Menu";
@@ -197,6 +197,46 @@ export function RecordBar() {
     });
     return () => void off.then((f) => f());
   }, []);
+  // The shortcut Recording bar gives it the keyboard (VID-011, VID-075): Tab and the
+  // arrows go through its controls, and Esc gives the keyboard back to the app that had
+  // it (provisional: spec/QUESTIONS.md, VID-011). Clicked on, Esc cancels (VID-014).
+  const byKeys = useRef(false);
+  useEffect(() => {
+    const off = listen("xs://recbar-focus", () => {
+      byKeys.current = true;
+      document.querySelector<HTMLElement>(".recbar button:not([disabled])")?.focus();
+    });
+    const lost = () => {
+      byKeys.current = false;
+    };
+    window.addEventListener("blur", lost);
+    return () => {
+      void off.then((f) => f());
+      window.removeEventListener("blur", lost);
+    };
+  }, []);
+  const keys = (e: KeyboardEvent<HTMLElement>): boolean => {
+    if (e.key === "Escape" && byKeys.current) {
+      e.preventDefault();
+      byKeys.current = false;
+      void run("record.focus_bar", { back: true }).catch(() => undefined);
+      return true;
+    }
+    if (
+      (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+      e.target instanceof HTMLButtonElement
+    ) {
+      const all = [...e.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled])")];
+      const at = all.indexOf(e.target);
+      const next = all[(at + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length];
+      if (next) {
+        e.preventDefault();
+        next.focus();
+      }
+      return true;
+    }
+    return false;
+  };
   // Losing up to 10 s needs no question (VID-014).
   const drop = (what: "cancel" | "restart" | "image") => {
     if (elapsed > 10) {
@@ -370,7 +410,7 @@ export function RecordBar() {
         role="toolbar"
         aria-label={t("ui.recbar.title")}
         onKeyDown={(e) => {
-          if (e.key !== "Escape") return;
+          if (keys(e) || e.key !== "Escape") return;
           e.preventDefault();
           drop("cancel");
         }}
@@ -469,6 +509,7 @@ export function RecordBar() {
       onKeyDown={(e) => {
         // Esc on the bar: cancels when Ready, asks while recording (VID-014). Esc in
         // the app being recorded never reaches here.
+        if (keys(e)) return;
         // I: an image of the area instead (VID-010).
         if ((e.key === "i" || e.key === "I") && (ready || recording || paused)) {
           e.preventDefault();

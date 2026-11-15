@@ -1671,6 +1671,14 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .assignable()
             .mutates()
             .result(json!({"type": "object"})),
+        B::new("record.focus_bar", &["VID-011", "VID-075"])
+            .scopes(ALL)
+            .assignable()
+            .params(params(
+                json!({"back": {"type": "boolean", "default": false, "description": "Give the keyboard back to the app that had it before"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"focused": {"type": "boolean", "description": "Whether there was a recording bar"}}})),
         B::new("record.sound_settings", &["VID-039", "VID-019"])
             .mutates()
             .result(json!({"type": "object", "properties": {"uri": {"type": "string"}}})),

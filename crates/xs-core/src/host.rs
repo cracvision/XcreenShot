@@ -219,6 +219,11 @@ pub trait Host: Send + Sync {
     /// The recording bar and the border of the area (VID-011, VID-020): shown for
     /// `Some(state)` (`status`, `area`, `elapsed`, `width`, `height`), closed for `None`.
     fn recording_bar(&self, state: Option<Value>) {}
+    /// The recording bar takes the keyboard, without stopping anything (VID-011,
+    /// VID-075); `back` gives it back to the app that had it. Whether there is a bar.
+    fn focus_recording_bar(&self, back: bool) -> bool {
+        false
+    }
     /// Live drawing (VID-048 to VID-051): its overlay over the monitor that holds
     /// `area` (x, y, width, height in physical pixels of the virtual screen) and its
     /// toolbar; neither with `None`. The overlay shows in captures and videos; clicks go

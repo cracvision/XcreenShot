@@ -1386,7 +1386,7 @@ mod tests {
         .unwrap();
         // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X, which
         // Trim edges gives up (EDT-051); video capture has none there, and Record and
-        // Stop move to Shift+F9 and Shift+F10 (VID-075).
+        // Stop move to Shift+F9 and Shift+F10, and Switch the camera view has none (VID-075).
         let changed: Vec<&str> = preview["changes"]
             .as_array()
             .unwrap()
@@ -1400,6 +1400,7 @@ mod tests {
                 "record.video",
                 "record.toggle",
                 "record.stop",
+                "record.camera_swap",
                 "app.quit",
                 "editor.trim"
             ]

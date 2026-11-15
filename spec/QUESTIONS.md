@@ -421,6 +421,7 @@ Carlos aceptó las cinco propuestas de IDEA-005 el 2026-11-14. Lo de abajo son l
 | VID-025 | Tasa de bits | Proporcional a píxeles × fps (0,08 bits por píxel y fotograma en Alta: unos 5 Mbps a 1080p30 si todo cambia); con la frecuencia variable, una pantalla quieta ocupa casi nada | Provisional |
 | VID-002 | La pantalla se congela al elegir el área | Por ahora sí: se usa la misma selección que las imágenes. El spec pide que no se congele; queda para la entrega de la pestaña Video | Provisional |
 | VID-003 | Áreas que cruzan monitores | Por ahora la grabación se queda en el monitor que tiene más área; cruzar monitores necesita juntar dos duplicaciones | Provisional |
+| VID-011 / VID-014 | `Esc` en la barra: VID-011 dice que devuelve el foco a la app de antes; VID-014, que con la barra enfocada equivale a Cancelar | Si la barra recibió el foco con el atajo **Barra de grabación**, el primer `Esc` devuelve el teclado a la app de antes y la grabación sigue. Si se hizo clic en la barra, `Esc` es Cancelar con su confirmación | Provisional |
 | VID-011 | La barra de esta entrega | Solo tiempo, tamaño, Grabar, Pausar/Reanudar, Detener y Cancelar (con confirmación al grabar). Lo demás llega con su función | Provisional |
 | VID-054 | ¿Dónde va el video? | A la carpeta del mes de la biblioteca, "Video AAAA-MM-DD HH.MM.SS.mp4". La biblioteca todavía no lista videos (llega con el reproductor, VID-056) | Provisional |
 

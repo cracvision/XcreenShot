@@ -1115,6 +1115,10 @@
       "title": "Cambiar vista de cámara",
       "description": "Imagen en imagen o cámara a pantalla completa, también durante la grabación."
     },
+    "record_focus_bar": {
+      "title": "Barra de grabación",
+      "description": "Lleva el teclado a la barra de grabación sin detener la grabación; Esc lo devuelve."
+    },
     "slides_start": {
       "title": "Diapositivas narradas",
       "description": "Las imágenes se convierten en diapositivas para narrar, grabadas en lugar de la pantalla."
