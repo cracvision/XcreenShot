@@ -34,7 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Versión publicada:** 0.2.4 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Versión publicada:** 0.2.5 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
 - **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.4 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
@@ -65,7 +65,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 - **2026-11-15 (noche): Jarvis ejecutará el OQ.** Carlos decidió que las pruebas las ejecute **Jarvis**, su agente personal en este equipo (CRAC_BEAST). Guía para Jarvis: [`docs/jarvis/LEEME-JARVIS.md`](jarvis/LEEME-JARVIS.md): qué leer, cómo manejar la app (ventana, CLI y MCP), cómo rellenar el OQ sobre una copia con evidencia fuera del proyecto, las reglas de seguridad (Dibujo en vivo y Multicaptura con `XS_INPUT_RELEASE_SECS` y sin Carlos al equipo, sus atajos `Ctrl+Alt` que chocan con los de XcreenShot, qué necesita permiso de Carlos) y el Sandbox. Paquete con toda la documentación: `powershell -File scripts/make-jarvis-kit.ps1` → `target\jarvis\XcreenShot_Jarvis_Kit.zip`. Los FAIL de Jarvis llegan como desviaciones del Excel; Claude Code los corrige.
 
-- **2026-11-15 (noche): cámaras virtuales (VID-031).** La GoPro de Carlos (app GoPro Webcam) y la cámara de NVIDIA Broadcast solo se registran con DirectShow, y XcreenShot solo listaba las de Media Foundation. Ahora salen las dos (`crates/xs-video/src/camera_ds.rs`): grafo de captura con el capturador de muestras del sistema (`qedit.dll`). Probada la GoPro en el equipo de Carlos: 1280×720 y video en vivo tras unos segundos con la pantalla de espera de GoPro (es de su app). **0.2.5** compilada (`d02d5d3`) y probada en Windows Sandbox (instalación limpia); la app empaquetada lista las dos cámaras. Pendiente: el sí de Carlos para publicarla y sus pruebas de cámara (`tests/manual/VID-031.md`). Ojo: sin elegir dispositivo, la cámara por defecto es la primera de la lista (NVIDIA Broadcast).
+- **2026-11-15 (noche): cámaras virtuales (VID-031).** La GoPro de Carlos (app GoPro Webcam) y la cámara de NVIDIA Broadcast solo se registran con DirectShow, y XcreenShot solo listaba las de Media Foundation. Ahora salen las dos (`crates/xs-video/src/camera_ds.rs`): grafo de captura con el capturador de muestras del sistema (`qedit.dll`). Probada la GoPro en el equipo de Carlos: 1280×720 y video en vivo tras unos segundos con la pantalla de espera de GoPro (es de su app). **0.2.5** compilada (`d02d5d3`) y probada en Windows Sandbox (instalación limpia); la app empaquetada lista las dos cámaras. **Publicada** (con el sí de Carlos). Pendiente: las pruebas de cámara (`tests/manual/VID-031.md`). Ojo: sin elegir dispositivo, la cámara por defecto es la primera de la lista (NVIDIA Broadcast).
 
 - **2026-11-15 (tarde, quinta parte): listos para la prueba de punta a punta.**
   - Multicaptura protegida como Dibujo en vivo (ver abajo) y las dos comprobadas con sus ganchos reales dentro de Windows Sandbox.
@@ -764,7 +764,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.4 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
 
 1. Instalador anterior (2026-11-15), compilación `e3343c4`: la 0.2.0 más los destinos estándar de Compartir.
-1. **Versión publicada (2026-11-15): XcreenShot 0.2.4**, compilación `8bbb93f`, en https://github.com/cracvision/xcreenshot-releases. Es la que hay que instalar.
+1. **Versión publicada (2026-11-15): XcreenShot 0.2.5**, compilación `d02d5d3`, en https://github.com/cracvision/xcreenshot-releases: las cámaras virtuales (GoPro). Es la que hay que instalar.
+1. Versión publicada anterior: 0.2.4 (`8bbb93f`, la multicaptura protegida).
 1. Versiones publicadas anteriores: 0.2.3 (`b179f37`, el CLI sin Visual C++ y el aviso tras actualizar), 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
