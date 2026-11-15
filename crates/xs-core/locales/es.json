@@ -5254,7 +5254,9 @@
         "orientation": "Orientación",
         "portrait": "Vertical",
         "landscape": "Horizontal"
-      }
+      },
+      "description": "Descripción",
+      "description_hint": "Opcional: bajo el título, en todos los formatos"
     },
     "features": {
       "title": "Funciones inteligentes",

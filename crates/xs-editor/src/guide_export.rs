@@ -117,6 +117,7 @@ pub fn content_of(snap: &store::Snapshot, lang: Lang) -> Result<Guide, String> {
     let mut items = Vec::new();
     let mut n = 0;
     let mut date = String::new();
+    let mut description = String::new();
     for (s, top) in templates::bands(&t) {
         let zone = doc
             .objects
@@ -129,7 +130,10 @@ pub fn content_of(snap: &store::Snapshot, lang: Lang) -> Result<Guide, String> {
                 .and_then(|r| picture_of(snap, top, s.height, r))
         };
         match s.kind.as_str() {
-            "guideHeader" => date = text_of(doc, &format!("date:{}", s.id)),
+            "guideHeader" => {
+                date = text_of(doc, &format!("date:{}", s.id));
+                description = text_of(doc, &format!("description:{}", s.id));
+            }
             "guideStep" => {
                 let text = text_of(doc, &format!("caption:{}:0", s.id));
                 let pic = pic();
@@ -168,6 +172,7 @@ pub fn content_of(snap: &store::Snapshot, lang: Lang) -> Result<Guide, String> {
         of: tr(lang, "steps.export.of", &[]),
         step: tr(lang, "steps.export.step", &[]),
         lang: lang.code().to_string(),
+        description,
     })
 }
 

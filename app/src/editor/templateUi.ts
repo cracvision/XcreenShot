@@ -22,6 +22,8 @@ export interface TemplateSettings {
   theme: string | null;
   /** A guide's pictures, % of their size (SMT-029). */
   imageScale?: number;
+  /** A guide's description under its title (SMT-028). */
+  description?: string;
 }
 
 export interface TemplateSection {

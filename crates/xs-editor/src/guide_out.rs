@@ -40,6 +40,8 @@ pub struct Guide {
     pub step: String,
     /// The guide's language (`es`, `en`), for the PDF's readers (SMT-033).
     pub lang: String,
+    /// Under the title and date, if any (SMT-028).
+    pub description: String,
 }
 
 /// A text in pieces, each bold or not (`**…**`, SMT-025).
@@ -92,6 +94,9 @@ pub fn markdown(g: &Guide, names: &[String]) -> String {
             .collect::<String>()
     };
     let mut out = format!("# {}\n\n{}\n\n", g.title.replace('\n', " "), g.date);
+    if !g.description.trim().is_empty() {
+        out.push_str(&format!("{}\n\n", g.description.trim()));
+    }
     let mut names = names.iter();
     for item in &g.items {
         match item {
@@ -180,9 +185,14 @@ pub fn html(g: &Guide, srcs: &[String], lang: &str) -> String {
         body.push_str("</ol>\n");
     }
     format!(
-        "<!doctype html>\n<html lang=\"{lang}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{title}</title>\n<style>\nbody {{ max-width: 960px; margin: 0 auto; padding: 24px 16px; font: 16px/1.5 system-ui, sans-serif; color: #1f2430; background: #fff; }}\nh1 {{ font-size: 28px; margin: 0 0 4px; }}\n.date {{ color: #5b6270; margin: 0 0 24px; }}\nol {{ padding-left: 1.6em; }}\nli {{ margin: 0 0 28px; }}\nimg {{ display: block; max-width: 100%; height: auto; margin-top: 8px; border: 1px solid #d8dbe2; border-radius: 6px; }}\nfooter {{ margin-top: 32px; color: #5b6270; font-style: italic; }}\n@media (prefers-color-scheme: dark) {{ body {{ color: #e6e8ee; background: #16181d; }} .date, footer {{ color: #a3a9b6; }} img {{ border-color: #3a3f4b; }} }}\n</style>\n</head>\n<body>\n<h1>{title}</h1>\n<p class=\"date\">{date}</p>\n{body}<footer>{footer}</footer>\n</body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"{lang}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{title}</title>\n<style>\nbody {{ max-width: 960px; margin: 0 auto; padding: 24px 16px; font: 16px/1.5 system-ui, sans-serif; color: #1f2430; background: #fff; }}\nh1 {{ font-size: 28px; margin: 0 0 4px; }}\n.date {{ color: #5b6270; margin: 0 0 24px; }}\nol {{ padding-left: 1.6em; }}\nli {{ margin: 0 0 28px; }}\nimg {{ display: block; max-width: 100%; height: auto; margin-top: 8px; border: 1px solid #d8dbe2; border-radius: 6px; }}\nfooter {{ margin-top: 32px; color: #5b6270; font-style: italic; }}\n@media (prefers-color-scheme: dark) {{ body {{ color: #e6e8ee; background: #16181d; }} .date, footer {{ color: #a3a9b6; }} img {{ border-color: #3a3f4b; }} }}\n</style>\n</head>\n<body>\n<h1>{title}</h1>\n<p class=\"date\">{date}</p>\n{description}{body}<footer>{footer}</footer>\n</body>\n</html>\n",
         title = xml(&g.title),
         date = xml(&g.date),
+        description = if g.description.trim().is_empty() {
+            String::new()
+        } else {
+            format!("<p>{}</p>\n", xml(g.description.trim()).replace('\n', "<br>"))
+        },
         footer = xml(&g.footer),
     )
 }
@@ -190,6 +200,9 @@ pub fn html(g: &Guide, srcs: &[String], lang: &str) -> String {
 /// `pasos.txt` (SMT-034): one numbered line per step.
 pub fn text(g: &Guide) -> String {
     let mut out = format!("{}\n\n", g.title);
+    if !g.description.trim().is_empty() {
+        out.push_str(&format!("{}\n\n", plain(g.description.trim())));
+    }
     for item in &g.items {
         match item {
             Item::Step { n, text, .. } => out.push_str(&format!("{n}. {}\n", plain(text).replace('\n', " "))),
@@ -243,6 +256,9 @@ pub fn docx(g: &Guide) -> Result<Vec<u8>, String> {
         w_runs(&g.title)
     ));
     body.push_str(&format!("<w:p>{}</w:p>", w_runs(&g.date)));
+    for line in g.description.trim().lines().filter(|l| !l.trim().is_empty()) {
+        body.push_str(&format!("<w:p>{}</w:p>", w_runs(line)));
+    }
     let mut media: Vec<(String, Vec<u8>)> = Vec::new();
     let mut rels = String::new();
     let picture = |pic: &Pic, alt: &str, media: &mut Vec<(String, Vec<u8>)>, rels: &mut String| -> String {
@@ -370,6 +386,7 @@ pub fn pptx(g: &Guide) -> Result<Vec<u8>, String> {
             &[
                 a_runs(&format!("**{}**", g.title.replace("**", "")), 4000),
                 a_runs(&g.date, 1800),
+                a_runs(g.description.trim(), 1600),
                 a_runs(&g.footer, 1600),
             ],
         )),
@@ -615,6 +632,16 @@ pub fn pdf(g: &Guide, page: (f64, f64), measure: Measure) -> Result<Vec<u8>, Str
         mark: None,
         alt: String::new(),
     });
+    // The description, under the date (SMT-028).
+    if !g.description.trim().is_empty() {
+        blocks.push(Block {
+            lines: wrap(g.description.trim(), 12.0, aw, measure),
+            size: 12.0,
+            pic: None,
+            mark: None,
+            alt: String::new(),
+        });
+    }
     let fit = |p: &Pic, room: f64| {
         let (w, h) = (p.width as f64 * 0.75, p.height as f64 * 0.75);
         let k = (aw / w).min(room / h).min(1.0);
@@ -934,6 +961,7 @@ mod tests {
             of: "de".into(),
             step: "Paso".into(),
             lang: "es".into(),
+            description: String::new(),
         }
     }
 

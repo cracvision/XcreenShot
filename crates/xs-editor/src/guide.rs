@@ -880,6 +880,77 @@ Pulsa **Guardar**"
         assert_eq!(wrong.code, xs_core::ErrorCode::InvalidParams);
     }
 
+    /// SMT-028: a description goes under the title and date, the header grows for it,
+    /// the exports have it; emptied, it goes.
+    #[test]
+    fn a_guide_with_a_description() {
+        let library = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        editor(&core).set_folders(library.path().to_path_buf(), library.path().join("rec"));
+        let step = |n: u32| GuideStep {
+            text: format!("Clic en **Botón {n}**"),
+            png: png(300, 200),
+            size: [300, 200],
+            frame: [0.0, 0.0, 300.0, 200.0],
+            at: [10.0, 10.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, _) = create_guide(
+            &core,
+            Lang::Es,
+            GuideIn {
+                title: "Pedido".into(),
+                steps: (1..=2).map(step).collect(),
+                meta: json!({"source": "steps"}),
+            },
+        )
+        .unwrap();
+        let call = |cmd: &str, p: Value| core.call(xs_core::Source::Cli, cmd, p, Some(Lang::Es)).unwrap();
+        let height = || {
+            editor(&core)
+                .store
+                .with(&id, |d| d.document.canvas.height)
+                .unwrap()
+        };
+        let described = || {
+            editor(&core)
+                .store
+                .with(&id, |d| {
+                    d.document.objects.iter().any(|o| {
+                        o.props
+                            .get("slot")
+                            .and_then(Value::as_str)
+                            .is_some_and(|s| s.starts_with("description:"))
+                    })
+                })
+                .unwrap()
+        };
+        let before = height();
+        assert!(!described());
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "settings", "settings": {"description": "Cómo dar de alta un pedido nuevo."}}),
+        );
+        assert!(described());
+        assert!(height() > before, "the header grows");
+        let out = library.path().join("md");
+        let r = call(
+            "smart.guide_export",
+            json!({"documentId": id, "format": "md", "out": out}),
+        );
+        let md = std::fs::read_to_string(r["paths"][0].as_str().unwrap()).unwrap();
+        assert!(md.contains("Cómo dar de alta un pedido nuevo."), "{md}");
+        call(
+            "document.template",
+            json!({"documentId": id, "action": "settings", "settings": {"description": ""}}),
+        );
+        assert!(!described());
+        assert_eq!(height(), before);
+    }
+
     /// SMT-035: a guide in the library is of the type Guide, with its steps, and the
     /// search finds it by the text of one of its steps; it exports from its file.
     #[test]

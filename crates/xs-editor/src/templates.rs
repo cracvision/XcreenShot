@@ -44,6 +44,9 @@ pub struct Settings {
     pub theme: Option<String>,
     /// A guide's pictures, % of their size (SMT-029): 100 = as captured.
     pub image_scale: f64,
+    /// A guide's description under its title and date (SMT-028); empty: none.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub description: String,
 }
 
 impl Default for Settings {
@@ -64,6 +67,7 @@ impl Default for Settings {
             reversed: false,
             theme: None,
             image_scale: 100.0,
+            description: String::new(),
         }
     }
 }
@@ -585,6 +589,24 @@ impl Layout<'_> {
                     &date,
                     (15.0, false, "left"),
                 );
+                // Its description, when it has one (SMT-028).
+                let slot = format!("description:{sid}");
+                let text = self
+                    .texts
+                    .get(&slot)
+                    .cloned()
+                    .unwrap_or_else(|| self.settings.description.clone());
+                if !text.trim().is_empty() {
+                    let mut style = json!({"size": GUIDE_TEXT_SIZE, "color": self.look.text, "align": "left", "markup": true});
+                    if let Some(f) = &self.look.font {
+                        style["font"] = json!(f);
+                    }
+                    self.push(
+                        slot,
+                        sid,
+                        json!({"type": "text", "at": [m, top + 132.0], "width": inner, "text": text, "style": style}),
+                    );
+                }
             }
             "guideStep" => {
                 let slot = format!("caption:{sid}:0");
@@ -840,7 +862,19 @@ pub fn layout(
                 s.picture = Some(guide_picture([n[0] * scale, n[1] * scale]));
             }
             match s.kind.as_str() {
-                "guideHeader" => s.height = 140.0,
+                "guideHeader" => {
+                    // Taller with its description (SMT-028).
+                    let text = texts
+                        .get(&format!("description:{}", s.id))
+                        .cloned()
+                        .unwrap_or_else(|| grown.settings.description.clone());
+                    s.height = if text.trim().is_empty() {
+                        140.0
+                    } else {
+                        let h = text_height(&text, WIDTH - 2.0 * MARGIN, look.font.as_deref(), doc.dpi);
+                        (148.0 + h).ceil()
+                    };
+                }
                 "footer" => s.height = 70.0,
                 "guideStep" => {
                     let text = texts

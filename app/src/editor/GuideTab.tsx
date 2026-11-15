@@ -245,6 +245,22 @@ export function GuideTab({ themes }: { themes: { id: string; name: string }[] })
         />
       </div>
 
+      {/* Under the title and date, if any (SMT-028). */}
+      <label className="prop-field">
+        <span>{t("ui.guide.description")}</span>
+        <textarea
+          key={s.description ?? ""}
+          className="guide-description"
+          rows={3}
+          defaultValue={s.description ?? ""}
+          placeholder={t("ui.guide.description_hint")}
+          onBlur={(e) => {
+            const description = e.target.value.trim();
+            if (description !== (s.description ?? "")) void setTemplate({ description });
+          }}
+        />
+      </label>
+
       <h3 className="side-subtitle">{t("ui.guide.layout")}</h3>
       <NumberField
         label={t("ui.guide.scale")}

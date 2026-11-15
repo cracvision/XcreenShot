@@ -648,6 +648,15 @@ pub(crate) fn template_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> Co
                 || new.text_color != t.settings.text_color
                 || new.number_color != t.settings.number_color
                 || new.number_shape != t.settings.number_shape;
+            // A new description replaces the one written on the canvas (SMT-028).
+            if changes.get("description").is_some() {
+                next.objects.retain(|o| {
+                    !o.props
+                        .get("slot")
+                        .and_then(Value::as_str)
+                        .is_some_and(|s| s.starts_with("description:"))
+                });
+            }
             t.settings = new;
             "history.template_settings"
         }

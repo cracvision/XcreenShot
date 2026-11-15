@@ -5254,7 +5254,9 @@
         "orientation": "Orientation",
         "portrait": "Portrait",
         "landscape": "Landscape"
-      }
+      },
+      "description": "Description",
+      "description_hint": "Optional: under the title, in every format"
     },
     "features": {
       "title": "Smart features",
