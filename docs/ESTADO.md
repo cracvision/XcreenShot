@@ -62,6 +62,10 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (tarde): destinos estándar de Compartir.** Va en el **instalador `e3343c4`** (local; la versión publicada sigue siendo la 0.2.0: publicar la 0.2.1 se pregunta antes a Carlos).
+  - Compartir en el editor y **Compartir en** del clic derecho de la biblioteca: **Correo** (la app de correo, por MAPI o con un borrador `.eml`; aviso por encima de 20 MB), **Otra aplicación…** (elige un `.exe` y lo recuerda), **Imprimir…**, **Word**, **PowerPoint**, **Excel** (automatización de Office por PowerShell, probada con PowerPoint y Excel ocultos; Word no se probó porque Carlos lo tenía abierto) y **Compartir de Windows…** (la ventana Compartir del sistema, con Uso compartido en proximidad: lo más parecido a AirDrop en Windows). `share.destinations` y `share.send`. Guía: [`tests/manual/SHR-020-026.md`](../tests/manual/SHR-020-026.md).
+  - **ARM64:** la app aún no compila porque `ring` necesita Clang para ARM64; se instala el componente "Clang" de Visual Studio con Carlos aceptando el aviso de administrador.
+
 - **2026-11-15 (mediodía, segunda parte): primera versión publicada.**
   - **XcreenShot 0.2.0 publicada** en https://github.com/cracvision/xcreenshot-releases (repositorio público solo de versiones, creado con el permiso de Carlos): instalador firmado para las actualizaciones, `.zip` portable, y `stable.json` y `deferred.json` en la versión `updates`. La app de release (compilación `7035804`) la consulta y dice que tiene la última. Para publicar la siguiente: subir la versión en `app/package.json`, escribir `release-notes/<versión>.json` y `npm run release -- --publish` en `app/`.
   - **Decisiones de Carlos:** compartir con colegas cercanos solo por la misma red, sin Bluetooth (la cola ya cubre "cuando esté al alcance"); de los destinos de Compartir, construir los estándar (correo, aplicación, impresora, Word, PowerPoint, Excel, Compartir del sistema); los de la nube y el Enlace, después.
@@ -724,7 +728,9 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
-1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `81f669a`.** El `f7e51d4` más las actualizaciones (APP-036; sin servidor todavía, Buscar actualizaciones dice que no pudo consultarlo). Es el que hay que usar para las pruebas de punta a punta. Sustituye al `f7e51d4`.
+1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `e3343c4`.** La 0.2.0 publicada más los destinos estándar de Compartir (SHR-020 a SHR-026 y SHR-037). Es el que hay que usar para las pruebas de punta a punta.
+1. Versión publicada (2026-11-15): XcreenShot 0.2.0, compilación `7035804`, en https://github.com/cracvision/xcreenshot-releases.
+1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
 1. Instalador anterior (2026-11-14, noche), compilación `dc6ef49`: el `309fb47` más VID-073 (Dibujo en vivo en las diapositivas).
