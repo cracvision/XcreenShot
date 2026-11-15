@@ -94,22 +94,26 @@ fn text(a: &IMFActivate, key: &windows::core::GUID) -> String {
     }
 }
 
-/// The cameras that are plugged in.
+/// The cameras that are plugged in: Media Foundation's, then the DirectShow ones it
+/// does not list (virtual cameras such as GoPro Webcam or NVIDIA Broadcast).
 pub fn cameras() -> Result<Vec<CameraInfo>, String> {
     let list = devices().map_err(|e| format!("cameras: {}", e.message()))?;
-    Ok(list
+    let mut out: Vec<CameraInfo> = list
         .iter()
         .map(|a| CameraInfo {
             id: text(a, &MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK),
             name: text(a, &MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME),
         })
-        .collect())
+        .collect();
+    let more = crate::camera_ds::cameras(&out);
+    out.extend(more);
+    Ok(out)
 }
 
-struct Shared {
-    stop: AtomicBool,
-    latest: Mutex<Option<Arc<Frame>>>,
-    trouble: Mutex<Option<Trouble>>,
+pub(crate) struct Shared {
+    pub(crate) stop: AtomicBool,
+    pub(crate) latest: Mutex<Option<Arc<Frame>>>,
+    pub(crate) trouble: Mutex<Option<Trouble>>,
 }
 
 /// A camera being read. Dropping it lets the camera go.
@@ -123,7 +127,7 @@ pub struct Camera {
 
 /// The picture size asked of the camera: enough for a corner and for the whole
 /// video, without the cost of more.
-const WANT: (u32, u32) = (1280, 720);
+pub(crate) const WANT: (u32, u32) = (1280, 720);
 
 /// Opens the camera `id` (or the first one) and starts reading it; returns once its
 /// size is known, or why it cannot be read.
@@ -223,6 +227,14 @@ unsafe fn best_native_in(reader: &IMFSourceReader, stream: u32) -> Option<IMFMed
 }
 
 fn read(s: &Shared, id: Option<&str>, ready: std::sync::mpsc::Sender<Result<(u32, u32), Trouble>>) {
+    // A DirectShow camera, or the first camera when Media Foundation has none.
+    let directshow = match id {
+        Some(i) => i.starts_with(crate::camera_ds::PREFIX),
+        None => devices().map(|l| l.is_empty()).unwrap_or(true),
+    };
+    if directshow {
+        return crate::camera_ds::read(s, id, ready);
+    }
     start_mf();
     // SAFETY: Media Foundation calls on this thread's reader; each buffer is unlocked
     // after its rows are copied, within the pitch and size it reports.
@@ -347,13 +359,14 @@ mod tests {
         println!("{:?}", super::cameras());
     }
 
-    /// Opens the first camera for 2 s and says what it gives (by hand: its light goes
-    /// on; nothing is kept).
+    /// Opens the first camera (or `XS_CAMERA_ID`, an id from `lists_the_cameras`) for
+    /// 2 s and says what it gives (by hand: its light goes on; nothing is kept).
     #[test]
     #[ignore]
     fn reads_the_camera() {
         let started = std::time::Instant::now();
-        match super::open(None) {
+        let id = std::env::var("XS_CAMERA_ID").ok();
+        match super::open(id.as_deref()) {
             Ok(c) => {
                 println!("opened {}×{} in {:?}", c.width, c.height, started.elapsed());
                 let mut frames = 0;
@@ -369,6 +382,11 @@ mod tests {
                     std::thread::sleep(std::time::Duration::from_millis(5));
                 }
                 let f = c.latest().unwrap();
+                // XS_CAMERA_DUMP=<file>: the last frame as raw BGRA, to look at by hand.
+                if let Ok(path) = std::env::var("XS_CAMERA_DUMP") {
+                    let _ = std::fs::write(&path, &f.bgra);
+                    println!("dumped {}×{} to {path}", f.width, f.height);
+                }
                 let mean = f.bgra.chunks(4).map(|p| p[1] as u64).sum::<u64>() / (f.bgra.len() as u64 / 4);
                 println!(
                     "{frames} frames in 2 s, mean green {mean}, trouble {:?}",

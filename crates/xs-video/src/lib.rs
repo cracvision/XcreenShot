@@ -47,6 +47,8 @@ pub fn input_muted(_device: Option<&str>) -> Option<bool> {
 #[cfg(windows)]
 pub mod camera;
 #[cfg(windows)]
+mod camera_ds;
+#[cfg(windows)]
 pub mod campreview;
 #[cfg(windows)]
 mod meter;
