@@ -157,6 +157,8 @@ export function CustomBar({ hide = 0 }: { hide?: number }) {
   });
 
   const qrOn = useFeature("qr");
+  const extractOn = useFeature("extractText");
+  const removeBgOn = useFeature("removeBackground");
   const more: MenuItem[] = [
     ...TOOL_GROUPS.map((g) => ({
       id: `more-${g.key}`,
@@ -181,6 +183,25 @@ export function CustomBar({ hide = 0 }: { hide?: number }) {
                 id: "more-insert_qr",
                 label: t("menu.insert_qr"),
                 onSelect: () => performAction("insert_qr"),
+              },
+            ]
+          : []),
+        // Extract text (SMT-007) and Remove background (SMT-020) of the image.
+        ...(g.key === "image" && extractOn
+          ? [
+              {
+                id: "more-extract_text",
+                label: t("menu.extract_text_image"),
+                onSelect: () => performAction("extract_text"),
+              },
+            ]
+          : []),
+        ...(g.key === "image" && removeBgOn
+          ? [
+              {
+                id: "more-remove_background",
+                label: t("menu.remove_background"),
+                onSelect: () => performAction("remove_background"),
               },
             ]
           : []),

@@ -328,6 +328,58 @@ fn id_of(p: &Value) -> String {
 /// `smart.extract_text` (SMT-005): from the screen (a zone the user selects, or `rect`)
 /// or from an image file.
 fn extract_command(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
+    let format = p.get("format").and_then(Value::as_str).unwrap_or("plain");
+    extract_source(core, ctx, p).map(|r| formatted(r, format))
+}
+
+/// The result as asked (SMT-007): `plain` as it is; `formatted`, the text as HTML;
+/// `json`, also each line with its rectangle and confidence, for scripts and agents.
+fn formatted(mut r: Value, format: &str) -> Value {
+    match format {
+        "formatted" => {
+            if let Some(html) = r.get("html").cloned() {
+                r["text"] = html;
+            }
+        }
+        "json" => {
+            // The blocks stay with the kept result (not in the answer as plain).
+            let blocks = r.get("blocks").cloned().or_else(|| {
+                let id = r["id"].as_str()?;
+                KEPT.lock()
+                    .unwrap()
+                    .as_ref()?
+                    .get(id)
+                    .map(|k| k.result["blocks"].clone())
+            });
+            let lines: Vec<Value> = blocks
+                .as_ref()
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .flat_map(|b| b["lines"].as_array().cloned().unwrap_or_default())
+                .map(|l| {
+                    let words = l["words"].as_array().cloned().unwrap_or_default();
+                    let confidence = if words.is_empty() {
+                        1.0
+                    } else {
+                        words.iter().filter_map(|w| w["confidence"].as_f64()).sum::<f64>()
+                            / words.len() as f64
+                    };
+                    json!({
+                        "text": l["text"],
+                        "rect": l["rect"],
+                        "confidence": (confidence * 1000.0).round() / 1000.0,
+                    })
+                })
+                .collect();
+            r["lines"] = json!(lines);
+        }
+        _ => {}
+    }
+    r
+}
+
+fn extract_source(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     let lang = ctx.lang;
     let copy = p.get("copy").and_then(Value::as_bool).unwrap_or(true);
     let show = p.get("show").and_then(Value::as_bool);
@@ -556,6 +608,25 @@ mod tests {
         assert!(core
             .call(Source::Ui, "smart.text_result", json!({"id": id}), None)
             .is_err());
+        // SMT-007: as JSON, each line with its rectangle and confidence.
+        let j = call(
+            "smart.extract_text",
+            json!({"source": "file", "path": path, "copy": false, "language": "es", "format": "json"}),
+        )
+        .unwrap();
+        let lines = j["lines"].as_array().unwrap();
+        assert!(!lines.is_empty());
+        let first = &lines[0];
+        assert!(first["text"].as_str().unwrap().contains("Primer"), "{first}");
+        assert_eq!(first["rect"].as_array().unwrap().len(), 4);
+        assert!(first["confidence"].as_f64().unwrap() > 0.0);
+        // As formatted text: HTML.
+        let f = call(
+            "smart.extract_text",
+            json!({"source": "file", "path": path, "copy": false, "language": "es", "format": "formatted"}),
+        )
+        .unwrap();
+        assert!(f["text"].as_str().unwrap().contains("<p"));
     }
 
     /// SMT-004: the required languages say whether this computer has them, and where

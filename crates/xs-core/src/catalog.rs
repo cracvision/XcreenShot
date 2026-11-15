@@ -560,6 +560,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "language": {"type": ["string", "array"], "items": {"type": "string"}, "description": "auto, or up to 3 languages (es, en, pt, fr, de, ja, zh-Hans…); default: the setting"},
                     "copy": {"type": "boolean", "description": "Copy the text (default: yes from the app; no from the CLI)"},
                     "show": {"type": "boolean", "description": "Open the results window (default: the setting; no from the CLI)"},
+                    "format": {"type": "string", "enum": ["plain", "formatted", "json"], "default": "plain", "description": "formatted: text as HTML; json: also `lines`, each with its text, rectangle and confidence (SMT-007)"},
                     "delay": {"type": "number", "minimum": 0, "maximum": 60}
                 }),
                 &[],
