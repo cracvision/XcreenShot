@@ -27,6 +27,8 @@ const TICK: Duration = Duration::from_millis(500);
 const SAME_WINDOW: Duration = Duration::from_secs(15);
 /// Image files the system tool saves.
 const IMAGE_FILES: [&str; 3] = ["png", "jpg", "jpeg"];
+/// The system tool's screen recordings (CAP-042).
+const VIDEO_FILES: [&str; 1] = ["mp4"];
 
 /// A capture that arrived: its pixels' fingerprint, to know it again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +86,11 @@ pub fn is_system_tool(process: &str) -> bool {
 
 /// New image files in `folder` modified after `since` and not seen yet.
 fn new_files(folder: &Path, since: SystemTime, seen: &mut Vec<PathBuf>) -> Vec<PathBuf> {
+    new_of(folder, since, seen, &IMAGE_FILES)
+}
+
+/// New files of `kinds` in `folder` since `since`, oldest first; each once.
+fn new_of(folder: &Path, since: SystemTime, seen: &mut Vec<PathBuf>, kinds: &[&str]) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(folder) else {
         return Vec::new();
     };
@@ -92,7 +99,7 @@ fn new_files(folder: &Path, since: SystemTime, seen: &mut Vec<PathBuf>) -> Vec<P
         .filter_map(|e| {
             let path = e.path();
             let ext = path.extension()?.to_string_lossy().to_lowercase();
-            if !IMAGE_FILES.contains(&ext.as_str()) {
+            if !kinds.contains(&ext.as_str()) {
                 return None;
             }
             let modified = e.metadata().ok()?.modified().ok()?;
@@ -117,10 +124,21 @@ fn screenshots_folder() -> Option<PathBuf> {
         .or_else(imp::screenshots_folder)
 }
 
+/// The folder where the system tool saves its screen recordings (Videos\Screen
+/// Recordings). A test instance can point it elsewhere with
+/// `XCREENSHOT_SCREEN_RECORDINGS_DIR`.
+fn recordings_folder() -> Option<PathBuf> {
+    std::env::var_os("XCREENSHOT_SCREEN_RECORDINGS_DIR")
+        .map(PathBuf::from)
+        .or_else(imp::recordings_folder)
+}
+
 /// Something that arrived from the system tool.
 enum Arrival {
     Clipboard(RgbaImage),
     File(PathBuf),
+    /// A screen recording, once it stopped growing (CAP-042).
+    Video(PathBuf),
 }
 
 /// Starts watching, for as long as the app runs (from the extension). It does
@@ -141,6 +159,9 @@ fn watch(weak: Weak<Core>) {
     let mut seen_files: Vec<PathBuf> = Vec::new();
     let mut recent = Recent::default();
     let mut waiting: VecDeque<Arrival> = VecDeque::new();
+    let mut seen_videos: Vec<PathBuf> = Vec::new();
+    // Recordings seen, with their last size: taken once it stays the same.
+    let mut growing: Vec<(PathBuf, u64)> = Vec::new();
     loop {
         std::thread::sleep(TICK);
         let Some(core) = weak.upgrade() else { return };
@@ -153,6 +174,8 @@ fn watch(weak: Weak<Core>) {
         let since = *on_since.get_or_insert_with(|| {
             clip_seq = imp::clipboard_sequence();
             seen_files.clear();
+            seen_videos.clear();
+            growing.clear();
             SystemTime::now()
         });
         let seq = imp::clipboard_sequence();
@@ -168,6 +191,21 @@ fn watch(weak: Weak<Core>) {
             for path in new_files(&folder, since, &mut seen_files) {
                 waiting.push_back(Arrival::File(path));
             }
+        }
+        // Its screen recordings, once written whole (CAP-042).
+        if let Some(folder) = recordings_folder() {
+            for path in new_of(&folder, since, &mut seen_videos, &VIDEO_FILES) {
+                growing.push((path, u64::MAX));
+            }
+            growing.retain_mut(|(path, last)| {
+                let size = std::fs::metadata(&*path).map(|m| m.len()).unwrap_or(0);
+                if size > 0 && size == *last {
+                    waiting.push_back(Arrival::Video(path.clone()));
+                    return false;
+                }
+                *last = size;
+                true
+            });
         }
         // One at a time, and not while XcreenShot captures (then they wait).
         while let Some(next) = waiting.pop_front() {
@@ -203,12 +241,53 @@ fn read_file(path: &Path) -> Option<RgbaImage> {
 }
 
 /// Imports one arrival; gives it back if a capture is under way.
+/// A system screen recording into the library, as a video (CAP-042, VID-055); not
+/// while XcreenShot records. With Keep the original file off, the original goes.
+fn import_video(core: &Core, path: PathBuf) -> Result<(), Arrival> {
+    if crate::record::running(core) {
+        return Err(Arrival::Video(path));
+    }
+    let lang = core.lang();
+    let imported = core.call(
+        Source::Scheduled,
+        "library.import",
+        json!({ "paths": [path], "tagFolders": false }),
+        Some(lang),
+    );
+    match imported {
+        Ok(r) => {
+            if let Some(copy) = r["imported"][0]["path"].as_str() {
+                let when = std::fs::metadata(&path)
+                    .and_then(|m| m.modified())
+                    .ok()
+                    .map(|t| chrono::DateTime::<chrono::Local>::from(t).to_rfc3339());
+                let details = json!({ "source": "system", "file": path, "capturedAt": when });
+                if let Err(e) = xs_library::xmeta::set_capture(Path::new(copy), details) {
+                    tracing::warn!(error = %e, "system recording: its details were not kept");
+                }
+                xs_library::library(core).reread(Path::new(copy));
+            }
+            if !core.settings.get_bool("capture.systemCaptures.keepOriginal") {
+                if let Err(e) = std::fs::remove_file(&path) {
+                    tracing::warn!(error = %e, "system recording: the original file stays");
+                }
+            }
+        }
+        Err(e) => tracing::warn!(error = %e.message, "system recording: not imported"),
+    }
+    Ok(())
+}
+
 fn import(core: &Core, arrival: Arrival, recent: &mut Recent) -> Result<(), Arrival> {
+    if let Arrival::Video(path) = arrival {
+        return import_video(core, path);
+    }
     let Ok(_busy) = crate::Busy::take(core.lang()) else {
         return Err(arrival);
     };
     let keep = core.settings.get_bool("capture.systemCaptures.keepOriginal");
     let (image, file) = match arrival {
+        Arrival::Video(_) => return Ok(()),
         Arrival::Clipboard(image) => (image, None),
         Arrival::File(path) => match read_file(&path) {
             Some(image) => (image, Some(path)),
@@ -320,6 +399,32 @@ mod imp {
         }
     }
 
+    /// Where the system tool saves its screen recordings: Videos\Screen Recordings.
+    pub fn recordings_folder() -> Option<PathBuf> {
+        known(&windows_sys::Win32::UI::Shell::FOLDERID_Videos).map(|v| v.join("Screen Recordings"))
+    }
+
+    /// A known folder's path.
+    fn known(id: &windows_sys::core::GUID) -> Option<PathBuf> {
+        use windows_sys::Win32::System::Com::CoTaskMemFree;
+        use windows_sys::Win32::UI::Shell::{SHGetKnownFolderPath, KF_FLAG_DEFAULT};
+        // SAFETY: the path is freed with CoTaskMemFree, as the API asks.
+        unsafe {
+            let mut raw: windows_sys::core::PWSTR = std::ptr::null_mut();
+            let hr = SHGetKnownFolderPath(id, KF_FLAG_DEFAULT as _, std::ptr::null_mut(), &mut raw);
+            if hr != 0 || raw.is_null() {
+                return None;
+            }
+            let mut n = 0;
+            while *raw.add(n) != 0 {
+                n += 1;
+            }
+            let path = String::from_utf16_lossy(std::slice::from_raw_parts(raw, n));
+            CoTaskMemFree(raw as _);
+            Some(PathBuf::from(path))
+        }
+    }
+
     /// The system's Screenshots folder (Pictures\Screenshots unless moved).
     pub fn screenshots_folder() -> Option<PathBuf> {
         use windows_sys::Win32::System::Com::CoTaskMemFree;
@@ -362,6 +467,10 @@ mod imp {
     pub fn screenshots_folder() -> Option<PathBuf> {
         None
     }
+
+    pub fn recordings_folder() -> Option<PathBuf> {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -392,6 +501,37 @@ mod tests {
         assert!(recent.first_time(Print::of(&a), t + Duration::from_secs(60)));
     }
 
+    /// CAP-042: a screen recording of the system tool comes into the library as a
+    /// video, with "system" as its source.
+    #[test]
+    fn a_system_recording_becomes_a_video() {
+        let dir = tempfile::tempdir().unwrap();
+        let lib = dir.path().join("lib");
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![
+                crate::extension(),
+                xs_editor::extension(),
+                xs_library::extension_with(Some(lib.clone())),
+            ],
+        );
+        xs_editor::editor(&core).set_folders(lib.clone(), dir.path().join("rec"));
+        let sample =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+        let video = dir.path().join("Grabación de pantalla.mp4");
+        std::fs::copy(&sample, &video).unwrap();
+        // Only new recordings.
+        let mut seen = Vec::new();
+        let found = new_of(dir.path(), SystemTime::UNIX_EPOCH, &mut seen, &VIDEO_FILES);
+        assert_eq!(found, vec![video.clone()]);
+        assert!(import_video(&core, video.clone()).is_ok());
+        let items = xs_library::library(&core).list();
+        let item = items.iter().find(|i| i.format == "mp4").expect("in the library");
+        let copy = xs_library::library(&core).abs(&item.path);
+        assert_eq!(xs_library::xmeta::capture(&copy).unwrap()["source"], "system");
+    }
+
+    /// CAP-042: only image files that came after the option was turned on.
     #[test]
     fn only_new_image_files() {
         let dir = std::env::temp_dir().join(format!("xs-sys-{}", std::process::id()));
