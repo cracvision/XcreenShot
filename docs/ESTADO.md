@@ -71,7 +71,9 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
     - `XS_LIVEDRAW_RELEASE_SECS` lo quita a los N segundos (para una prueba supervisada);
     - en una copia aislada (`XCREENSHOT_DATA_DIR`) no hay gancho: solo dibuja `record.draw_shape` (`XS_LIVEDRAW_HOOK=1` lo permite).
     - Pruebas automáticas sin gancho real. Sin causa raíz confirmada: el registro termina justo al activarlo. Guía: [`tests/manual/VID-048.md`](../tests/manual/VID-048.md).
-  - **Hasta instalar una versión con el arreglo, Carlos no debe usar Dibujo en vivo** (ni al grabar). `video.liveDrawAnytime` quedó en `false` en su perfil.
+  - **XcreenShot 0.2.2 publicada** (con el permiso de Carlos), compilación `bca1f70`: el arreglo, más **Esc** a la vista en la barra de Dibujo en vivo. La app 0.2.1 de Carlos la detecta en Buscar actualizaciones (primera vez que se comprueba con una versión más nueva; la caché de GitHub tardó unos minutos en servir el `stable.json` nuevo). Carlos aclaró que nunca pulsó `Esc`: lo más probable es que el modo hiciera lo previsto (quedarse con clics y teclas) sin decir cómo salir.
+  - **Hasta instalar la 0.2.2, Carlos no debe usar Dibujo en vivo** (ni al grabar). `video.liveDrawAnytime` quedó en `false` en su perfil.
+  - **Atajo de Dibujo en vivo de Carlos: `Ctrl+Shift+F11`** (en su perfil; el de fábrica sigue siendo `Ctrl+Alt+Shift+D`), porque su Jarvis usa las combinaciones con `Ctrl+Alt`. Visto de paso: en su perfil `app.ping` tiene el atajo global `Ctrl+P` (le quita Imprimir a las demás apps); se le preguntó si se quita.
   - Revisar después con el mismo criterio la multicaptura (CAP-067), que también se queda clics y teclas.
 
 - **2026-11-15 (tarde, segunda parte): XcreenShot 0.2.1 publicada.** Con los destinos estándar de Compartir; Carlos vio la ventana Compartir de Windows. Publicada en https://github.com/cracvision/xcreenshot-releases (con su permiso). Las copias con la 0.2.0 la reciben por Buscar actualizaciones; las anteriores a la 0.2.0 (sin actualizador) se instalan a mano una vez. Carlos guarda una copia de `updater.key`. Clang de Visual Studio instalado: **la app ya compila como ARM64 nativo** (`cargo build --release --target aarch64-pc-windows-msvc` con `VC\Tools\Llvmdin` en el PATH); falta el instalador ARM64 y un equipo ARM para probarla. GoPro cargando para probarla como webcam (falta saber el modelo y la app GoPro Webcam).
@@ -743,7 +745,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
 1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `e3343c4`.** La 0.2.0 publicada más los destinos estándar de Compartir (SHR-020 a SHR-026 y SHR-037). Es el que hay que usar para las pruebas de punta a punta.
-1. **Versión publicada (2026-11-15): XcreenShot 0.2.1**, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
+1. **Versión publicada (2026-11-15): XcreenShot 0.2.2**, compilación `bca1f70`, en https://github.com/cracvision/xcreenshot-releases: el arreglo de Dibujo en vivo. Es la que hay que instalar.
+1. Versión publicada anterior: XcreenShot 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
