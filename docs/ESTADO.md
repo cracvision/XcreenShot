@@ -34,7 +34,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Hito actual:** M1 · Captura y edición básicas. Versión 0.2.0.
+- **Versión publicada:** 0.2.3 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.3 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
 - **M1, entrega 4 (editor):** rama `m1-editor`, que sale de `m1-capture`. Su PR apunta a `m1-capture` hasta que se fusione el PR #2; después, a `main`.
@@ -61,6 +62,11 @@ Plan aprobado por Carlos el 2026-10-24: la entrega 4 en tres partes (A: adelanta
 macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continue-on-error`). Las pruebas en Mac empiezan cuando Carlos lo diga. Hasta entonces, ningún ID pasa de `Win` a `Hecho` en `PARITY.md`.
 
 ## Cambios de la última sesión
+
+- **2026-11-15 (tarde, quinta parte): listos para la prueba de punta a punta.**
+  - Multicaptura protegida como Dibujo en vivo (ver abajo) y las dos comprobadas con sus ganchos reales dentro de Windows Sandbox.
+  - Quitar un atajo con `""` fallaba desde Windows PowerShell 5.1, que descarta los argumentos vacíos (no era el CLI): anotado en `AGENTS.md`. `Ctrl+P` de `app.ping` quitado del perfil de Carlos.
+  - **Guía única de la prueba de punta a punta:** [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md), tres sesiones, con enlaces a las guías detalladas, lo que necesita aparatos u otra persona, y lo que no entra.
 
 - **2026-11-15 (tarde, cuarta parte): Windows Sandbox y la 0.2.3.**
   - **Windows Sandbox activado** por Carlos (Windows 11 Pro): un Windows limpio y desechable para probar instaladores, actualizaciones y lo que toma el ratón o el teclado, sin tocar su equipo. `scripts/dev/sandbox.ps1` con las pruebas de `scripts/dev/sandbox/` (`fresh.ps1`, `update.ps1`); se apaga solo al terminar. **No cerrarlo a la fuerza mientras arranca**: deja la sesión colgada y la prueba no corre.
@@ -744,14 +750,14 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 5. **Multicaptura (CAP-067):** hecha; Carlos tiene dos tandas en [`tests/manual/CAP-067.md`](../tests/manual/CAP-067.md). Las decisiones provisionales (arrastres que no llegan a la app, `Esc` deja el panel, dónde se insertan, sin portapapeles ni aviso) están en `spec/QUESTIONS.md`.
 6. **IA en la nube (SMT-039 a SMT-043):** hecha. Carlos tiene dos tandas en [`tests/manual/SMT-039-043.md`](../tests/manual/SMT-039-043.md): la A necesita su propia clave de la API (platform.claude.com) y la B, Claude Desktop o Claude Code. Las decisiones provisionales están en `spec/QUESTIONS.md` (filas SMT-039 a SMT-043, APP-028 y APP-029). Tanda B: PASS (2026-11-01). Su configuración de Claude Desktop ya tiene la entrada `xcreenshot` (copia de seguridad en `%APPDATA%\Claude\claude_desktop_config.backup-2026-11-01.json`). Propuesta pendiente de su visto bueno: IDEA-004, el botón **Añadir a Claude Desktop**, porque el bloque copiado no sirve si ya hay otros servidores.
 7. **Reabrir los documentos al iniciar (EDT-120):** hecha; Carlos tiene una tanda en [`tests/manual/EDT-120.md`](../tests/manual/EDT-120.md). Necesita el instalador nuevo.
-8. **Aspecto nuevo (Snap con el logo):** hecho; Carlos tiene una tanda en [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md). El PR #4 está cerrado y la carpeta `XcreenShot-snap` borrada (2026-11-10).
+8. **Aspecto nuevo (Snap con el logo):** sustituido por Cristal (2026-11-12); la tanda de [`tests/manual/APP-012-snap.md`](../tests/manual/APP-012-snap.md) ya no aplica. El PR #4 está cerrado y la carpeta `XcreenShot-snap` borrada (2026-11-10).
 9. **Propuesta, pendiente de aprobar:** cuando Carlos confirme la entrega 3, fusionar el PR #2 (antes, cambiarle el título, que dice "capture engine"). Después, el [PR #3](https://github.com/cracvision/XcreenShot/pull/3) (entregas 4a, 4b y 4c) pasa a apuntar a `main` y se puede fusionar cuando Carlos lo apruebe (la 4c ya está probada).
 
 ## Siguiente paso
 
-**M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
+**Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.3 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
 
-1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `e3343c4`.** La 0.2.0 publicada más los destinos estándar de Compartir (SHR-020 a SHR-026 y SHR-037). Es el que hay que usar para las pruebas de punta a punta.
+1. Instalador anterior (2026-11-15), compilación `e3343c4`: la 0.2.0 más los destinos estándar de Compartir.
 1. **Versión publicada (2026-11-15): XcreenShot 0.2.3**, compilación `b179f37`, en https://github.com/cracvision/xcreenshot-releases: el CLI sin Visual C++ y el aviso tras actualizar. Es la que hay que instalar.
 1. Versiones publicadas anteriores: 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
@@ -800,7 +806,7 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 1. Instalador anterior (2026-11-12, 5:50), compilación `2afe45c`. Igual que el `f94b691` más las columnas de la lista, el espacio libre y Reintentar al mover la biblioteca, el aviso de descarga de la nube y, sobre todo, **un arreglo de memoria**: abrir una captura de 10.000 × 30.000 px con 200 flechas llegaba a más de 100 GB (cada sombra descodificaba la imagen por su cuenta); ahora son unos 1,6 GB. Medido con la compilación empaquetada (`tests/manual/APP-050.md`). Sustituye al `f94b691`.
 1. Instalador anterior (2026-11-12, 4:52), compilación `f94b691` (M2.7 casi completa: Detalles, vista rápida, exportar e importar, la bandeja entera, ajustes, hoja de atajos y MCP). Probada la compilación empaquetada en una instancia aislada: importar una carpeta con su etiqueta, fijar y duplicar en la bandeja, exportar ajustes y simular su importación, la hoja de atajos en PDF, exportar toda la biblioteca con `metadatos.csv`, el MCP (recursos, imagen con `include_image`, evento por suscripción), y en la ventana: miniaturas, vista rápida (19 ms), Detalles y la hoja con `Ctrl+/`; cerró con `app quit --force`. Sustituye al `a41e82b`.
 1. Instalador anterior (2026-11-12, 3:20), compilación `a41e82b` (M1 completo, M2.1 a M2.6 y casi toda la parte Must de M2.7). Probada la compilación empaquetada en una instancia aislada: crear una plantilla de pasos con dos imágenes, `library search --type image`, las carpetas sincronizadas detectadas (OneDrive, iCloud y Google Drive en este equipo), abrir una imagen de 10.000 × 30.000 px y exportarla en 4,4 s, y cerrar con `app quit --force`. Sustituye al `1158f3e`.
-1. **Caminata de Carlos** con el instalador nuevo y la guía [`docs/caminata-M1.md`](caminata-M1.md); lo de M2 se prueba con `tests/manual/EDT-047-048.md`, `EDT-043-046.md`, `EDT-015-021.md` y `EDT-069-077.md`. Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
+1. (Sustituida por `tests/manual/E2E-windows.md`.) **Caminata de Carlos** con el instalador nuevo y la guía [`docs/caminata-M1.md`](caminata-M1.md); lo de M2 se prueba con `tests/manual/EDT-047-048.md`, `EDT-043-046.md`, `EDT-015-021.md` y `EDT-069-077.md`. Incluye las tandas viejas pendientes (CAP-panel, 4c tanda 4, CAP-067, SMT tanda A, EDT-120, APP-012-snap, APP-028).
 2. Corregir lo que encuentre. Después, **un único guion de pruebas** de M1 en `tests/manual/` y marcar en `PARITY.md` como `Win` lo que pase.
 3. Preguntas abiertas para Carlos (`spec/QUESTIONS.md`): destino de **Enviar comentarios** (APP-015), tamaño mínimo del texto (APP-045), memoria en reposo sin el editor y caché de GPU (APP-051).
 4. **M3 (captura avanzada): terminado en Windows** salvo **HDR (CAP-022)** y **cámara web (CAP-038)**. Plan en [`docs/plan-M3.md`](plan-M3.md), provisional hasta que Carlos lo apruebe. Flecos anotados en `spec/PARITY.md`: soltar una dirección arrastrada desde el navegador (CAP-037), el texto de las páginas de un PDF (CAP-041), agrupar una serie en la biblioteca (CAP-049, falta su ID `LIB-`), `policy.presets` (CAP-063, llega con la configuración administrada), `.xstamps` y `.xsettings` con doble clic (APP-001) y todo lo de macOS. **Pregunta pendiente:** el atajo de Captura de menú (CAP-031) choca con Exportar del editor.
