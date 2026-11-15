@@ -36,7 +36,7 @@ Fecha de esta guía: 2026-11-15. El estado al día está siempre en `C:\Projects
 ## 2. Qué leer y en qué orden
 
 1. **Este archivo.**
-2. **El protocolo que vas a ejecutar:** `C:\Projects\XcreenShot\tests\manual\XcreenShot_OQ_Windows_v1_1.xlsx`.
+2. **El protocolo que vas a ejecutar:** `C:\Projects\XcreenShot\tests\manual\XcreenShot_OQ_Windows_v1_2.xlsx`.
    - Hoja **Portada**: objetivo, alcance, prerrequisitos, criterios de aceptación y las pruebas que necesitan algo especial.
    - Hoja **Pruebas**: 174 casos con acción y resultado esperado.
    - Hojas **Resumen** (se calcula sola) y **Desviaciones**.
@@ -70,8 +70,8 @@ Las rutas de las secciones 1, 3, 4 y 6 son las del equipo, no las del paquete. S
 
 ## 3. Cómo ejecutar el OQ
 
-1. **Trabaja sobre una copia.** Copia el Excel a `%USERPROFILE%\Documents\XcreenShot-OQ\XcreenShot_OQ_Windows_v1_1_ejecucion_<AAAA-MM-DD>.xlsx` y rellena esa. El original del proyecto se queda como plantilla.
-2. **Guarda la evidencia** (capturas, videos) en `%USERPROFILE%\Documents\XcreenShot-OQ\evidencia\`, con el ID del caso en el nombre (`1.4.2.png`). No la guardes dentro de `C:\Projects\XcreenShot`: contiene la pantalla de Carlos.
+1. **Trabaja sobre una copia.** Copia el Excel a `%USERPROFILE%\Documents\XcreenShot-OQ\XcreenShot_OQ_Windows_v1_2_ejecucion_<AAAA-MM-DD>.xlsx` y rellena esa. El original del proyecto se queda como plantilla.
+2. **Guarda la evidencia** en `%USERPROFILE%\Documents\XcreenShot-OQ\evidencia\`. No la guardes dentro de `C:\Projects\XcreenShot`: contiene la pantalla de Carlos. Las reglas están en "Evidencia", más abajo.
 3. Ejecuta los casos **en orden**, una sesión cada vez. En cada fila rellena solo las columnas amarillas:
    - **Resultado obtenido**;
    - **Resultado**: PASS, FAIL o N/A;
@@ -83,6 +83,33 @@ Las rutas de las secciones 1, 3, 4 y 6 son las del equipo, no las del paquete. S
 4. **PASS** solo si lo obtenido coincide con el resultado esperado. **FAIL** si no. **N/A** si el caso no aplica, con el motivo en Comentarios (por ejemplo: "requiere dos monitores").
 5. **Todo FAIL abre una desviación** en la hoja Desviaciones (DEV-001, DEV-002…) con la descripción, la severidad y la evidencia. No intentes arreglar el fallo tú: lo corrige Claude Code (la sesión de desarrollo en `C:\Projects\XcreenShot`) a partir de tu registro.
 6. Al terminar cada sesión, guarda el Excel y dile a Carlos cuántos PASS, FAIL y N/A hubo, y las desviaciones abiertas.
+7. **Bitácora:** tras cada caso, `log_progress` (caso, resultado, nota, siguiente) en la bitácora "XcreenShot OQ"; al retomar, `read_progress`. El Excel sigue siendo el registro formal.
+
+### Evidencia
+
+1. **Con qué se captura:** con tu propia herramienta, `save_screenshot`. **Nunca captures XcreenShot con XcreenShot**: es la app bajo prueba y no puede ser testigo de su propio resultado. `take_screenshot` es solo para mirar; no deja evidencia.
+2. **Evidencia y resultado no son lo mismo.** Si el caso consiste en que XcreenShot produzca un archivo (una captura, un video, un GIF, una exportación), ese archivo **es el resultado**: anota su ruta en **Resultado obtenido** y en **Evidencia**. Lo que se vio en pantalla se demuestra con `save_screenshot`.
+3. **Cuándo capturar:**
+   - en todo **FAIL**, siempre;
+   - en un **PASS**, solo si la columna **Evidencia requerida** del caso dice **Captura**;
+   - en un **N/A**, nunca.
+
+   Esa columna también dice **Archivo** (anota la ruta de lo que produjo XcreenShot) o **Registro** (anota la salida del comando o del MCP que lo confirma, en Resultado obtenido).
+4. **Nombres**, a partir del ID del caso, sin espacios ni acentos:
+   - una captura: `OQ_1.1.2.png`;
+   - varias del mismo caso: `OQ_1.1.2_2.png`, `OQ_1.1.2_3.png`;
+   - un fallo: `OQ_3.4.1_FAIL.png`;
+   - la repetición tras una corrección: `OQ_3.4.1_R1.png`, `OQ_3.4.1_R2.png`.
+
+   Una captura guardada **nunca se reemplaza**: si hace falta otra, lleva el sufijo siguiente.
+5. **Lo que nunca sale en una captura, por diseño (VID-017).** Algunos controles de XcreenShot se excluyen de toda captura de pantalla, para que no aparezcan en los videos:
+   - la barra de grabación, con sus menús y avisos, y el resumen **Listo para grabar**;
+   - la cuenta atrás y el borde del área;
+   - la barra de **Dibujo en vivo**;
+   - el marco y el panel de **Multicaptura**;
+   - las notificaciones de XcreenShot.
+
+   Tu `save_screenshot` tampoco los verá: **no es un fallo**. Para esos casos, describe en Resultado obtenido lo que viste en pantalla y confírmalo con el CLI o el MCP (`record status`, `record draw --params '{"query":true}'`, `capture multi-state`). Si el caso pide Captura, guárdala igualmente y anota en Comentarios "control excluido de las capturas por diseño (VID-017)".
 
 ### Cómo comprobar resultados sin depender de la vista
 
@@ -164,7 +191,7 @@ Windows Sandbox está activado en este equipo: es un Windows limpio y desechable
 - Script: `C:\Projects\XcreenShot\scripts\dev\sandbox.ps1 -Inside <prueba.ps1> -Files <instalador.exe>`. Instala XcreenShot dentro, corre la prueba, guarda un registro y se apaga solo. Pruebas de ejemplo en `scripts\dev\sandbox\` (`fresh.ps1`, `input.ps1`, `update.ps1`).
 - **Solo un Sandbox a la vez.** No lo cierres a la fuerza mientras arranca: la prueba no correría.
 - El Sandbox no tiene cámara ni micrófono.
-- Las capturas de pantalla hechas con la API clásica de Windows (GDI) no muestran las ventanas de XcreenShot. Para ver lo que muestra la app, pregúntale a la app (CLI o MCP).
+- Dentro del Sandbox, igual que fuera, las capturas de pantalla no muestran los controles que XcreenShot excluye por diseño (sección 3, "Evidencia", punto 5). Además, los trazos de Dibujo en vivo no salieron en las capturas hechas con la API clásica de Windows (GDI). Para confirmar lo que muestra la app, pregúntale a la app (CLI o MCP).
 
 ---
 

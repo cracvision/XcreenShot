@@ -23,12 +23,15 @@ data = json.load(open(SRC, encoding="utf-8"))
 VERSION = "0.2.5"
 BUILD = "d02d5d3"
 # The protocol's own version and its history (Portada).
-PROTOCOL = "1.1"
+PROTOCOL = "1.2"
 HISTORY = [
     ("1.0", "2026-11-15", "Primera versión: 174 casos, a partir de tests/manual/E2E-windows.md."),
     ("1.1", "2026-11-15", "Versión bajo prueba 0.2.5 (cámaras virtuales). Los casos ya no fijan un número de versión: comparan con la versión bajo prueba de esta Portada."),
+    ("1.2", "2026-11-15", "Columna Evidencia requerida (Captura, Archivo o Registro) en cada caso, y reglas de evidencia en las instrucciones. Pedido por Carlos; la lista de casos es una propuesta pendiente de su aprobación."),
 ]
 DOC_ID = "XS-OQ-WIN-001"
+# What a PASS needs as evidence (FAIL: always a screenshot; N/A: none).
+EVIDENCE = {"captura": "Captura", "archivo": "Archivo", "registro": "Registro"}
 DATE = "2026-11-15"
 
 # Carlos's spreadsheet style: Arial, green theme.
@@ -92,7 +95,7 @@ meta = [
     ("Responsable", "Carlos Acevedo"),
     ("Preparado por", "Claude (asistente de desarrollo), a partir de tests/manual/E2E-windows.md"),
     ("Fecha", DATE),
-    ("Estado", "Listo para ejecución"),
+    ("Estado", "Listo para ejecución (la columna Evidencia requerida, pendiente de aprobación de Carlos)"),
     ("Clasificación", "Confidencial"),
 ]
 for k, v in meta:
@@ -165,7 +168,8 @@ bullets(
         "Ejecutado por, Fecha, Evidencia, Desviación y Comentarios.",
         "Resultado: PASS si lo obtenido coincide con lo esperado; FAIL si no; N/A si el caso no "
         "aplica (por ejemplo, requiere hardware que no hay). Un N/A lleva su motivo en Comentarios.",
-        "Evidencia: nombre del archivo de la captura o del video (recomendada en todo FAIL).",
+        "Evidencia: en todo FAIL, captura de pantalla. En un PASS, lo que pide la columna Evidencia requerida: Captura (captura de pantalla), Archivo (ruta de la captura, el video o la exportación que produjo XcreenShot) o Registro (salida del comando o del MCP que lo confirma, en Resultado obtenido). En un N/A, ninguna.",
+        "Las capturas de evidencia se hacen con una herramienta ajena a XcreenShot (la app bajo prueba no es testigo de sí misma) y se nombran con el ID del caso: OQ_1.1.2.png; varias, OQ_1.1.2_2.png; un fallo, OQ_3.4.1_FAIL.png; tras una corrección, OQ_3.4.1_R1.png. Nunca se reemplaza una captura guardada.",
         "Todo FAIL abre una desviación en la hoja Desviaciones (DEV-001, DEV-002…) y se anota su ID "
         "en la columna Desviación.",
         "La columna Condición indica casos que solo se ejecutan si se cumple (hardware, clave, "
@@ -243,6 +247,7 @@ cols = [
     ("Acción", 48),
     ("Resultado esperado", 48),
     ("Condición", 16),
+    ("Evidencia requerida", 12),
     ("Resultado obtenido", 34),
     ("Resultado", 11),
     ("Ejecutado por", 11),
@@ -254,11 +259,11 @@ cols = [
 ]
 for i, (_, w) in enumerate(cols, 1):
     ws.column_dimensions[get_column_letter(i)].width = w
-ws.column_dimensions["M"].hidden = True
+ws.column_dimensions["N"].hidden = True
 NCOL = len(cols)
 
 ws.cell(1, 1, f"{DOC_ID} · Casos de prueba · XcreenShot {VERSION}").font = font(14, True, DARK)
-ws.cell(2, 1, "Rellena solo las columnas amarillas. Resultado: elige PASS, FAIL o N/A. Todo FAIL lleva su desviación (hoja Desviaciones).").font = font(9, color="555555")
+ws.cell(2, 1, "Rellena solo las columnas amarillas. Resultado: elige PASS, FAIL o N/A. Todo FAIL lleva captura y su desviación (hoja Desviaciones). Evidencia requerida en un PASS: Captura = captura de pantalla; Archivo = ruta de lo que produjo XcreenShot; Registro = salida del comando que lo confirma.").font = font(9, color="555555")
 HROW = 4
 for i, (h, _) in enumerate(cols, 1):
     c = ws.cell(HROW, i, h)
@@ -307,6 +312,7 @@ for s in data["sessions"]:
                 st["action"],
                 st["expected"],
                 st.get("conditional", ""),
+                EVIDENCE[st["evidence"]],
                 "",
                 "",
                 "",
@@ -318,23 +324,25 @@ for s in data["sessions"]:
             ]
             pre = st.get("prefilled", "")
             if pre.startswith("PASS"):
-                values[5] = "Volvió con su ventana y el aviso \"XcreenShot se actualizó\"."
-                values[6] = "PASS"
-                values[7] = "CA"
-                values[8] = pre.split(" ", 1)[1] if " " in pre else ""
-                values[11] = "Ejecutado al actualizar de la 0.2.3 a la 0.2.4."
+                values[6] = "Volvió con su ventana y el aviso \"XcreenShot se actualizó\"."
+                values[7] = "PASS"
+                values[8] = "CA"
+                values[9] = pre.split(" ", 1)[1] if " " in pre else ""
+                values[12] = "Ejecutado al actualizar de la 0.2.3 a la 0.2.4."
             for i, v in enumerate(values, 1):
                 c = ws.cell(row, i, v)
                 c.font = font(10, bold=(i == 1))
-                c.alignment = CENTER if i in (1, 7, 8, 9, 11) else WRAP
+                c.alignment = CENTER if i in (1, 6, 8, 9, 10, 12) else WRAP
                 c.border = BOX
-                if 6 <= i <= 12:
+                if 7 <= i <= 13:
                     c.fill = fill(INPUT)
-            dv.add(ws.cell(row, 7))
+                if i == 6 and v == "Captura":
+                    c.font = font(10, bold=True)
+            dv.add(ws.cell(row, 8))
             step_rows.append(row)
             row += 1
 last = row - 1
-rng = f"G{HROW + 1}:G{last}"
+rng = f"H{HROW + 1}:H{last}"
 ws.conditional_formatting.add(rng, CellIsRule(operator="equal", formula=['"PASS"'], font=Font(name=F, bold=True, color="00B050", size=11)))
 ws.conditional_formatting.add(rng, CellIsRule(operator="equal", formula=['"FAIL"'], font=Font(name=F, bold=True, color="FF0000", size=11)))
 ws.conditional_formatting.add(rng, CellIsRule(operator="equal", formula=['"N/A"'], font=Font(name=F, bold=True, color="808080", size=11)))
@@ -353,8 +361,8 @@ for i, (h, w) in enumerate(heads, 1):
     c.fill = fill(HEAD)
     c.border = BOX
     c.alignment = CENTER
-P = f"Pruebas!$M${HROW + 1}:$M${last}"
-G = f"Pruebas!$G${HROW + 1}:$G${last}"
+P = f"Pruebas!$N${HROW + 1}:$N${last}"
+G = f"Pruebas!$H${HROW + 1}:$H${last}"
 rr = 5
 for bid, title, sid in blocks_index:
     vals = [

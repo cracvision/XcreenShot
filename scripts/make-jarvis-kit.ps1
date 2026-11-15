@@ -20,11 +20,11 @@ function Put($from, $to) {
 }
 
 Put 'docs\jarvis\LEEME-JARVIS.md' '00-LEEME-JARVIS.md'
-Put 'tests\manual\XcreenShot_OQ_Windows_v1_1.xlsx' '01-OQ\XcreenShot_OQ_Windows_v1_1.xlsx'
+Put 'tests\manual\XcreenShot_OQ_Windows_v1_2.xlsx' '01-OQ\XcreenShot_OQ_Windows_v1_2.xlsx'
 Put 'tests\manual\E2E-windows.md' '01-OQ\E2E-windows.md'
 Put 'AGENTS.md' '02-AGENTS.md'
 Put 'tests\manual' '03-guias'
-Remove-Item (Join-Path $stage '03-guias\XcreenShot_OQ_Windows_v1_1.xlsx') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $stage '03-guias\XcreenShot_OQ_Windows_v1_2.xlsx') -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force (Join-Path $stage '04-spec') | Out-Null
 Get-ChildItem (Join-Path $root 'spec') -File -Filter *.md | Where-Object { $_.Name -ne 'IDEAS.md' } |
   ForEach-Object { Copy-Item $_.FullName (Join-Path $stage "04-spec\$($_.Name)") }
