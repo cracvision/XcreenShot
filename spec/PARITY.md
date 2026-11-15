@@ -74,7 +74,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | CAP-064 | Presets incorporados | M3 | Should | En curso (Windows: Región al portapapeles y Extraer texto, sin atajo y con el nombre en el idioma de la app hasta que se renombra; Restaurar presets incorporados pregunta por los cambiados; uno nuevo de una versión futura se añade al final. desde M3.3 también **Desplazamiento** (automático, vertical, desde el principio; Abrir en = Editor). El Grabador de pasos llega con su función) |
 | CAP-065 | Acciones de captura y atajos por defecto | M1 | Must | En curso |
 | CAP-066 | Perfil de compatibilidad | M1 | Should | En curso |
-| CAP-067 | Multicaptura (función propia, adelantada) | M1 | Should | En curso Seguridad (2026-11-15): `Esc` suelta el gancho en su propio hilo; se quita solo si el trabajador deja de responder 3 s; comprobado en Windows Sandbox. |
+| CAP-067 | Multicaptura (función propia, adelantada) | M1 | Should | En curso (seguridad, 2026-11-15: `Esc` suelta el gancho en su propio hilo, el gancho nunca espera un bloqueo, se quita solo si el trabajador deja de responder 3 s o con `XS_INPUT_RELEASE_SECS` y no se instala en copias aisladas; comprobado con los ganchos reales en Windows Sandbox. Faltan las tandas de Carlos) |
 
 ## 02-editor.md
 
