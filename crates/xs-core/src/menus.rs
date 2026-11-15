@@ -290,6 +290,8 @@ fn editor_menus() -> Vec<MenuEntry> {
                     "menu.save_as_template",
                     "save_as_template",
                 ),
+                // EDT-032.
+                action("editor.save_as_stamp", "menu.save_as_stamp", "save_as_stamp"),
                 action("editor.export", "menu.export", "export"),
                 action("editor.batch_export", "menu.batch_export", "batch_export"),
                 action("editor.print", "menu.print", "print"),
@@ -314,6 +316,8 @@ fn editor_menus() -> Vec<MenuEntry> {
                             "menu.import_template",
                             "import_template",
                         ),
+                        // EDT-034.
+                        action("editor.import_stamps", "menu.import_stamps", "import_stamps"),
                     ],
                 },
                 Separator,

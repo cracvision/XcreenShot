@@ -79,7 +79,14 @@ const js = [...found.values()];
 
 const byName = (a, b) =>
   a.name.localeCompare(b.name) || a.version.localeCompare(b.version);
-const out = { rust: rust.sort(byName), js: js.sort(byName) };
+// Data inside the app that is not code: the Emoji stamps (EDT-033,
+// scripts/make-emoji.py).
+const data = [
+  { name: "Noto Emoji (images)", version: "2D/png/128", license: "Apache-2.0" },
+  { name: "region-flags (Noto Emoji)", version: "png", license: "Public domain" },
+  { name: "Unicode CLDR annotations", version: "main", license: "Unicode-3.0" },
+];
+const out = { rust: rust.sort(byName), js: js.sort(byName), data };
 writeFileSync(
   join(root, "app", "src", "help", "licenses.json"),
   JSON.stringify(out, null, 1) + "\n",

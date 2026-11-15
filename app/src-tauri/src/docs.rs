@@ -133,13 +133,9 @@ pub fn serve(app: &AppHandle, request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             xs_editor::sample_png(&core, tool, which).map(|png| (std::sync::Arc::new(png), "image/png"))
         }
         // A stamp of the collection (EDT-031), in the app's language.
+        // Own stamps and emoji too (EDT-032, EDT-033).
         ["stamp", id] => {
-            let lang = if core.lang() == xs_core::Lang::Es {
-                xs_image::stamps::Lang::Es
-            } else {
-                xs_image::stamps::Lang::En
-            };
-            xs_image::stamps::thumbnail(id, lang, 96).and_then(|img| {
+            xs_editor::own_stamps::thumbnail(&core, &unescape(id), core.lang(), 96).and_then(|img| {
                 xs_image::encode::png(&img, 0.0, true)
                     .ok()
                     .map(|png| (std::sync::Arc::new(png), "image/png"))

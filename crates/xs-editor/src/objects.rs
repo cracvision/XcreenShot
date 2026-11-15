@@ -296,7 +296,10 @@ impl StampStyle {
             }
         }
         let s: StampStyle = serde_json::from_value(v).map_err(|e| e.to_string())?;
-        if xs_image::stamps::find(&s.stamp).is_none() {
+        // Own stamps and emoji (EDT-032, EDT-033) are checked when placed.
+        let picture =
+            s.stamp.starts_with(crate::own_stamps::OWN) || s.stamp.starts_with(crate::own_stamps::EMOJI);
+        if !picture && xs_image::stamps::find(&s.stamp).is_none() {
             return Err(format!("there is no stamp \"{}\"", s.stamp));
         }
         Ok(s)
@@ -694,10 +697,23 @@ pub fn stamp_props(
     } else {
         xs_image::stamps::Lang::En
     };
+    stamp_props_with(input, id, st.art(l), st.ink, st.aspect(), canvas)
+}
+
+/// [`stamp_props`] for any stamp (EDT-032, EDT-033): its drawing, its own color (none
+/// for a picture) and its proportion already known.
+pub fn stamp_props_with(
+    input: &Map<String, Value>,
+    id: &str,
+    art: Value,
+    ink: Option<&str>,
+    aspect: f64,
+    canvas: (f64, f64),
+) -> Result<Map<String, Value>, String> {
     let mut out = input.clone();
     out.insert("stamp".into(), json!(id));
-    out.insert("art".into(), st.art(l));
-    out.insert("ink".into(), json!(st.ink.unwrap_or("#3A3F4B")));
+    out.insert("art".into(), art);
+    out.insert("ink".into(), json!(ink.unwrap_or("#3A3F4B")));
     let at = input
         .get("at")
         .and_then(Value::as_array)
@@ -707,11 +723,11 @@ pub fn stamp_props(
         Some(r) => {
             let n = |k: &str| r.get(k).and_then(Value::as_f64).unwrap_or(0.0);
             let h = n("h").max(1.0);
-            json!({"x": n("x"), "y": n("y"), "w": (h * st.aspect()).max(1.0), "h": h})
+            json!({"x": n("x"), "y": n("y"), "w": (h * aspect).max(1.0), "h": h})
         }
         None => {
             let h = 96f64.min(canvas.0.min(canvas.1) * 0.25).max(16.0);
-            let w = h * st.aspect();
+            let w = h * aspect;
             let c = at.unwrap_or([canvas.0 / 2.0, canvas.1 / 2.0]);
             json!({"x": c[0] - w / 2.0, "y": c[1] - h / 2.0, "w": w, "h": h})
         }

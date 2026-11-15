@@ -986,7 +986,7 @@ impl Stamp {
 }
 
 /// Without accents, so "informacion" finds "información".
-fn fold(s: &str) -> String {
+pub fn fold(s: &str) -> String {
     s.chars()
         .map(|c| match c {
             'á' | 'à' | 'ä' => 'a',
@@ -1104,8 +1104,28 @@ impl StampObject {
     }
 }
 
-/// Draws a stamp's drawing stretched over its box and turned.
-pub fn draw(pm: &mut Pixmap, s: &StampObject, dpi: f64) {
+/// The drawing of a stamp that is a picture (EDT-032 to EDT-034: own stamps, packs and
+/// emoji): the picture `image` of the document's `images/`, `w` × `h` px.
+pub fn picture_art(image: &str, w: u32, h: u32) -> Value {
+    json!({"w": w, "h": h, "shapes": [{"k": "picture", "image": image}]})
+}
+
+/// The pictures a stamp's drawing uses (`images/` of its document).
+pub fn pictures_of(art: &Value) -> Vec<String> {
+    art["shapes"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter(|s| s["k"] == "picture")
+                .filter_map(|s| s["image"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Draws a stamp's drawing stretched over its box and turned; its pictures come from
+/// `images`.
+pub fn draw(pm: &mut Pixmap, s: &StampObject, dpi: f64, images: &crate::pictures::Pictures) {
     let ink = s
         .color
         .as_deref()
@@ -1127,6 +1147,21 @@ pub fn draw(pm: &mut Pixmap, s: &StampObject, dpi: f64) {
             let fill = color_of(sh.get("fill"), ink);
             let stroke = color_of(sh.get("stroke"), ink);
             let sw = n("sw");
+            // A picture (EDT-032): over the whole drawing, smoothly scaled.
+            if sh["k"] == "picture" {
+                if let Some(picture) = sh["image"].as_str().and_then(|name| images.get(name)) {
+                    let at = to.pre_scale(
+                        aw as f32 / picture.width() as f32,
+                        ah as f32 / picture.height() as f32,
+                    );
+                    let p = PixmapPaint {
+                        quality: tiny_skia::FilterQuality::Bicubic,
+                        ..PixmapPaint::default()
+                    };
+                    pm.draw_pixmap(0, 0, picture.as_ref().as_ref(), &p, at, None);
+                }
+                continue;
+            }
             let path = match sh["k"].as_str() {
                 Some("circle") => PathBuilder::from_circle(n("cx"), n("cy"), n("r").max(0.01)),
                 Some("rect") => {
@@ -1229,7 +1264,7 @@ pub fn thumbnail(id: &str, lang: Lang, size: u32) -> Option<image::RgbaImage> {
         opacity: 100.0,
     };
     let mut pm = Pixmap::new(size, size)?;
-    draw(&mut pm, &obj, 96.0);
+    draw(&mut pm, &obj, 96.0, &crate::pictures::Pictures::default());
     let mut out = Vec::with_capacity(pm.data().len());
     for px in pm.pixels() {
         let c = px.demultiply();

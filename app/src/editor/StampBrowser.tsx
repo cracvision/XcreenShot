@@ -5,18 +5,16 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { run } from "../lib/commands";
 import { fail } from "./actions";
+import { organizeStamps, useStampsUi, type StampsFound as Found } from "./stampActions";
 import { stampUrl, useEditor } from "./state";
-
-interface Found {
-  categories: { id: string; name: string }[];
-  stamps: { id: string; category: string; name: string }[];
-}
 
 export function StampBrowser() {
   const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [found, setFound] = useState<Found | null>(null);
+  // Own stamps added, changed or imported (EDT-032, EDT-034).
+  const version = useStampsUi((s) => s.version);
   const current = useEditor((s) => s.styles?.stamp.stamp);
   const selected = useEditor((s) => {
     const one =
@@ -31,7 +29,7 @@ export function StampBrowser() {
     return () => {
       alive = false;
     };
-  }, [query, category, i18n.language]);
+  }, [query, category, i18n.language, version]);
   const pick = (id: string) => {
     const { active } = useEditor.getState();
     if (selected && active)
@@ -67,7 +65,22 @@ export function StampBrowser() {
           </option>
         ))}
       </select>
-      <div className="stamp-grid" role="listbox" aria-label={t("ui.editor.stamps.title")}>
+      <div className="stamp-own">
+        <button
+          type="button"
+          className="btn small"
+          onClick={() => organizeStamps(category.startsWith("own:") ? category : "own:mine")}
+        >
+          {t("ui.editor.stamps.organize_menu")}
+        </button>
+      </div>
+      {/* Emoji are many: they show when searching or in their category (EDT-033). */}
+      <div
+        className="stamp-grid"
+        role="listbox"
+        aria-label={t("ui.editor.stamps.title")}
+        title={t("ui.editor.stamps.drop_hint")}
+      >
         {found?.stamps.map((s) => (
           <button
             key={s.id}
@@ -78,7 +91,7 @@ export function StampBrowser() {
             title={s.name}
             onClick={() => pick(s.id)}
           >
-            <img src={stampUrl(s.id)} alt={s.name} draggable={false} />
+            <img src={stampUrl(s.id)} alt={s.name} loading="lazy" draggable={false} />
           </button>
         ))}
         {found && found.stamps.length === 0 && (

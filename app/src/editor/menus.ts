@@ -591,6 +591,10 @@ export function useMenuBar(): void {
     enabled["editor.apply_template"] = hasDoc && !inLibrary;
     enabled["editor.save_as_template"] = hasDoc && !inLibrary;
     enabled["editor.import_template"] = true;
+    // Own stamps (EDT-032, EDT-034).
+    enabled["editor.save_as_stamp"] = hasDoc && !inLibrary && !isVideo;
+    enabled["editor.import_stamps"] = true;
+    enabled["editor.organize_stamps"] = true;
     enabled["editor.show_in_library"] = hasDoc && libraryDoc;
     enabled["editor.new_from_clipboard"] = hasClip;
     enabled["editor.flip_objects_horizontal"] = selected;

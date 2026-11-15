@@ -726,7 +726,7 @@ fn draw_object(pm: &mut Pixmap, object: &Object, dpi: f64, images: &crate::pictu
         }
         "stamp" => {
             if let Ok(s) = StampObject::from_props(&object.props) {
-                stamps::draw(pm, &s, dpi);
+                stamps::draw(pm, &s, dpi, images);
             }
         }
         "simplify" => {

@@ -16,6 +16,7 @@ pub mod guide_out;
 pub mod image_ops;
 pub mod library_export;
 pub mod objects;
+pub mod own_stamps;
 pub mod pixels;
 pub mod quick_view;
 pub mod recovery;
@@ -3968,16 +3969,25 @@ pub fn extension() -> Extension {
                     .and_then(Value::as_str)
                     .map(str::to_string)
                     .unwrap_or_else(|| styles.stamp.stamp.clone());
-                let filled =
-                    objects::stamp_props(input.as_object().unwrap_or(&Map::new()), &sid, ctx.lang, canvas)
-                        .map_err(|reason| {
-                            let index = (i + 1).to_string();
-                            invalid(tr(
-                                ctx.lang,
-                                "errors.invalid_object",
-                                &[("index", &index), ("reason", &reason)],
-                            ))
-                        })?;
+                let filled = own_stamps::stamp_art(&core, Some(&id), &sid, ctx.lang)
+                    .and_then(|(art, ink, aspect)| {
+                        objects::stamp_props_with(
+                            input.as_object().unwrap_or(&Map::new()),
+                            &sid,
+                            art,
+                            ink.as_deref(),
+                            aspect,
+                            canvas,
+                        )
+                    })
+                    .map_err(|reason| {
+                        let index = (i + 1).to_string();
+                        invalid(tr(
+                            ctx.lang,
+                            "errors.invalid_object",
+                            &[("index", &index), ("reason", &reason)],
+                        ))
+                    })?;
                 *input = Value::Object(filled);
             }
             let mut objects = Vec::new();
@@ -4118,21 +4128,32 @@ pub fn extension() -> Extension {
             Ok(view)
         });
         // The stamp collection (EDT-031): categories and stamps, found by words.
-        on!("editor.stamps", |_core, ctx, p| {
-            let query = p.get("query").and_then(Value::as_str).unwrap_or_default();
-            let category = p.get("category").and_then(Value::as_str);
-            let es = ctx.lang == Lang::Es;
-            let stamps: Vec<Value> = xs_image::stamps::collection()
-                .iter()
-                .filter(|s| category.is_none_or(|c| c == s.category) && s.matches(query))
-                .map(|s| json!({"id": s.id, "category": s.category, "name": if es { s.es } else { s.en }}))
-                .collect();
-            let categories: Vec<Value> = xs_image::stamps::CATEGORIES
-                .iter()
-                .map(|c| json!({"id": c, "name": tr(ctx.lang, &format!("stamps.{c}"), &[])}))
-                .collect();
-            Ok(json!({ "categories": categories, "stamps": stamps }))
-        });
+        on!("editor.stamps", |core, ctx, p| own_stamps::stamps_command(
+            &core, ctx, &p
+        ));
+        // Own stamps and packs (EDT-032, EDT-034).
+        on!("stamps.add", |core, ctx, p| own_stamps::add_command(
+            &core, ctx, &p
+        ));
+        on!("stamps.update", |core, ctx, p| own_stamps::update_command(
+            &core, ctx, &p
+        ));
+        on!("stamps.delete", |core, ctx, p| own_stamps::delete_command(
+            &core, ctx, &p
+        ));
+        on!("stamps.category", |core, ctx, p| own_stamps::category_command(
+            &core, ctx, &p
+        ));
+        on!("stamps.import", |core, ctx, p| own_stamps::import_command(
+            &core, ctx, &p
+        ));
+        on!("stamps.export", |core, ctx, p| own_stamps::export_command(
+            &core, ctx, &p
+        ));
+        on!(
+            "document.save_as_stamp",
+            |core, ctx, p| own_stamps::save_as_stamp(&core, ctx, &p)
+        );
         // Step sequence (EDT-035): Restart sequence and Renumber.
         on!("document.steps", |core, ctx, p| {
             let id = resolve(&core, ctx.lang, &p)?;
@@ -4194,13 +4215,17 @@ pub fn extension() -> Extension {
                 if let Some(rect) = rect {
                     let mut input = set.clone();
                     input.insert("rect".into(), rect);
-                    set = objects::stamp_props(&input, &sid, ctx.lang, (0.0, 0.0)).map_err(|r| {
-                        invalid(tr(
-                            ctx.lang,
-                            "errors.invalid_param",
-                            &[("param", "set"), ("reason", &r)],
-                        ))
-                    })?;
+                    set = own_stamps::stamp_art(&core, Some(&id), &sid, ctx.lang)
+                        .and_then(|(art, ink, aspect)| {
+                            objects::stamp_props_with(&input, &sid, art, ink.as_deref(), aspect, (0.0, 0.0))
+                        })
+                        .map_err(|r| {
+                            invalid(tr(
+                                ctx.lang,
+                                "errors.invalid_param",
+                                &[("param", "set"), ("reason", &r)],
+                            ))
+                        })?;
                 }
             }
             // Several objects moved together, each from where it is (EDT-079, EDT-087).
@@ -4904,10 +4929,23 @@ pub fn extension() -> Extension {
                     CommandError::new(ErrorCode::Internal, tr(ctx.lang, "errors.copy_failed", &[]))
                 })?;
             }
+            // Floating images' pictures, and stamps' (EDT-032).
             let images = objects
                 .iter()
-                .filter_map(|o| o.props.get("image").and_then(Value::as_str))
-                .filter_map(|name| Some((name.to_string(), snap.images.get(name)?.clone())))
+                .flat_map(|o| {
+                    let mut names: Vec<String> = o
+                        .props
+                        .get("image")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .into_iter()
+                        .collect();
+                    if let Some(art) = o.props.get("art") {
+                        names.extend(xs_image::stamps::pictures_of(art));
+                    }
+                    names
+                })
+                .filter_map(|name| Some((name.clone(), snap.images.get(&name)?.clone())))
                 .collect();
             *ed.copied.lock().unwrap() = Some(Copied {
                 objects,

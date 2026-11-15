@@ -5670,3 +5670,66 @@ fn remove_background() {
     .unwrap_err();
     assert_eq!(err.code, xs_core::ErrorCode::NotFound);
 }
+
+/// EDT-032 and EDT-033: an own stamp from a file and an emoji are placed, drawn, saved
+/// with their pictures and show the same when the file is opened again.
+#[test]
+fn own_stamps_and_emoji_travel_with_the_document() {
+    let e = env();
+    let (doc, path) = capture(&e);
+    let png = e.outside.path().join("rojo.png");
+    let red = image::RgbaImage::from_fn(40, 20, |x, _| {
+        if x < 20 {
+            image::Rgba([255, 0, 0, 255])
+        } else {
+            image::Rgba([0, 0, 0, 0])
+        }
+    });
+    red.save(&png).unwrap();
+    let added = cli(&e.core, "stamps.add", json!({"files": [png.to_string_lossy()]}));
+    let own = added["added"][0]["id"].as_str().unwrap().to_string();
+    assert!(own.starts_with("own:"));
+    cli(
+        &e.core,
+        "stamps.update",
+        json!({"id": own, "keywords": "zafiro rubí"}),
+    );
+    let found = cli(&e.core, "editor.stamps", json!({"query": "rubi"}));
+    assert_eq!(found["stamps"][0]["id"], own.as_str());
+    let up = cli(&e.core, "editor.stamps", json!({"query": "pulgar"}));
+    assert!(up["stamps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|s| s["id"] == "emoji:1f44d"));
+    cli(
+        &e.core,
+        "document.annotate",
+        json!({"documentId": doc, "objects": [
+            {"type": "stamp", "stamp": own, "rect": {"x": 10, "y": 10, "w": 0, "h": 40}},
+            {"type": "stamp", "stamp": "emoji:1f44d", "at": [300, 100]}
+        ]}),
+    );
+    let info = cli(&e.core, "document.info", json!({"documentId": doc}));
+    assert_eq!(info["objects"][0]["rect"]["w"], json!(80.0), "its proportion");
+    let img = final_image(&e.core, &doc).unwrap();
+    // Scaled 1.5 (the capture's DPI is not used here): the left half red, the right
+    // half transparent over white.
+    assert_eq!(img.get_pixel(30, 30).0, [255, 0, 0, 255]);
+    assert_eq!(img.get_pixel(80, 30).0, [255, 255, 255, 255]);
+    assert_ne!(
+        img.get_pixel(300, 100).0,
+        [255, 255, 255, 255],
+        "the emoji is there"
+    );
+    cli(&e.core, "document.save", json!({"documentId": doc}));
+    let file = Xshot::read(&path).unwrap();
+    assert_eq!(file.images.keys().filter(|n| n.starts_with("stamp-")).count(), 2);
+    // Opened again, as on a computer without those stamps.
+    cli(&e.core, "document.close", json!({"documentId": doc}));
+    let again = cli(&e.core, "document.open", json!({"path": path}));
+    let id = again["documentId"].as_str().unwrap();
+    let img = final_image(&e.core, id).unwrap();
+    assert_eq!(img.get_pixel(30, 30).0, [255, 0, 0, 255]);
+    assert_ne!(img.get_pixel(300, 100).0, [255, 255, 255, 255]);
+}

@@ -10,6 +10,7 @@ import { BatchExportDialog } from "./BatchExportDialog";
 import { PrintDialog } from "./PrintDialog";
 import { FileDialogs } from "../library/FileDialogs";
 import { ThemeConflict } from "./StylesTab";
+import { StampDialogs } from "./StampDialogs";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
 import { clock } from "../windows/recClock";
@@ -303,6 +304,7 @@ export function Dialogs() {
       <ExportDialog />
       <BatchExportDialog />
       <PrintDialog />
+      <StampDialogs />
     </>
   );
 }

@@ -72,7 +72,7 @@ interface AboutInfo {
   managed: string;
 }
 
-const LICENSED = [...licenses.rust, ...licenses.js];
+const LICENSED = [...licenses.rust, ...licenses.js, ...(licenses.data ?? [])];
 
 function About() {
   const { t } = useTranslation();

@@ -45,6 +45,7 @@ import { printFiles, usePrintDialog } from "./printState";
 import { useToolbar } from "./toolbarLayout";
 import { toggleFullscreen } from "./fullscreen";
 import { applyTemplate, askSaveTemplate, importTemplate, pickTemplate } from "./templateActions";
+import { askSaveAsStamp, importStampPack, organizeStamps } from "./stampActions";
 import { useZones } from "./templateUi";
 import { useVideoExport, videoAction } from "./videoState";
 import { startSlides } from "./slidesState";
@@ -115,7 +116,8 @@ export async function openFiles(paths?: string[]): Promise<void> {
     // A theme or template file is imported (EDT-018, EDT-101); the rest are opened.
     for (const path of all.filter((p) => /\.xtheme$/i.test(p))) await importTheme(path);
     for (const path of all.filter((p) => /\.xtemplate$/i.test(p))) await importTemplate(path);
-    const docs = all.filter((p) => !/\.(xtheme|xtemplate)$/i.test(p));
+    for (const path of all.filter((p) => /\.xstamps$/i.test(p))) await importStampPack(path);
+    const docs = all.filter((p) => !/\.(xtheme|xtemplate|xstamps)$/i.test(p));
     if (docs.length === 0) return;
     // All are opened; the last one is shown (EDT-105), in the Editor view.
     for (const path of docs) {
@@ -794,6 +796,17 @@ export function performAction(action: string): boolean {
       return true;
     case "import_template":
       void importTemplate();
+      return true;
+    // EDT-032, EDT-034.
+    case "save_as_stamp":
+      if (!doc || doc.video) return false;
+      askSaveAsStamp();
+      return true;
+    case "import_stamps":
+      void importStampPack();
+      return true;
+    case "organize_stamps":
+      organizeStamps();
       return true;
     case "new_from_template":
       // EDT-095: with images selected in the Library view, Combine in template.

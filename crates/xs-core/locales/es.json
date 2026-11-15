@@ -415,6 +415,34 @@
       "title": "Localizar el archivo de un documento",
       "description": "Enlaza un documento abierto con su archivo después de moverlo fuera de XcreenShot."
     },
+    "stamps_add": {
+      "title": "Añadir sellos",
+      "description": "Añade imágenes de archivos como sellos propios."
+    },
+    "stamps_update": {
+      "title": "Cambiar un sello",
+      "description": "Cambia el nombre de uno de tus sellos, sus palabras clave, su categoría o su lugar."
+    },
+    "stamps_delete": {
+      "title": "Eliminar sellos",
+      "description": "Elimina sellos propios."
+    },
+    "stamps_category": {
+      "title": "Categoría de sellos",
+      "description": "Crea, cambia de nombre o elimina una de tus categorías de sellos."
+    },
+    "stamps_import": {
+      "title": "Importar sellos",
+      "description": "Añade un paquete de sellos (.xstamps) como categoría."
+    },
+    "stamps_export": {
+      "title": "Exportar sellos",
+      "description": "Guarda una de tus categorías de sellos como paquete (.xstamps)."
+    },
+    "document_save_as_stamp": {
+      "title": "Guardar como sello",
+      "description": "Convierte la selección, o toda la imagen, en un sello propio."
+    },
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
@@ -1997,6 +2025,8 @@
     "library_undo_expired": "Ya es tarde para deshacer esa eliminación.",
     "fill_stopped": "Se detuvo el relleno; no cambió nada.",
     "theme_newer": "Este archivo de tema lo hizo una versión más nueva de XcreenShot. Actualiza la app para importarlo.",
+    "stamp_not_found": "No hay ningún sello {{id}}.",
+    "stamp_pack": "No se pudo importar {{name}}: {{reason}}.",
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
@@ -2226,6 +2256,9 @@
       "editor_new_from_template": "Nuevo desde plantilla",
       "editor_apply_template": "Aplicar plantilla",
       "editor_save_as_template": "Guardar como plantilla",
+      "editor_save_as_stamp": "Guardar como sello",
+      "editor_import_stamps": "Importar sellos",
+      "editor_organize_stamps": "Organizar sellos",
       "editor_import_template": "Importar plantilla",
       "editor_show_in_library": "Mostrar en la biblioteca",
       "editor_pin_item": "Fijar o desfijar en la bandeja",
@@ -2408,6 +2441,8 @@
     "new_from_template": "Nuevo desde plantilla…",
     "apply_template": "Aplicar plantilla…",
     "save_as_template": "Guardar como plantilla…",
+    "save_as_stamp": "Guardar como sello…",
+    "import_stamps": "Sellos…",
     "import_template": "Plantilla…",
     "combine_template": "Combinar en plantilla…",
     "tags_item": "Etiquetas…",
@@ -3491,7 +3526,49 @@
         "category": "Categoría",
         "all": "Todas",
         "none": "Ningún sello coincide.",
-        "own_color": "Color propio"
+        "own_color": "Color propio",
+        "organize": "Organizar sellos",
+        "organize_menu": "Organizar sellos…",
+        "saved": "Se guardó «{{name}}» en tus sellos.",
+        "pictures": "Imágenes",
+        "add_failed": "No se pudo añadir {{name}}: {{reason}}",
+        "added_one": "Se añadió {{count}} sello.",
+        "added_other": "Se añadieron {{count}} sellos.",
+        "pack_file": "Paquete de sellos",
+        "imported_one": "Se importó {{count}} sello.",
+        "imported_other": "Se importaron {{count}} sellos.",
+        "updated_one": "Paquete actualizado: {{count}} sello.",
+        "updated_other": "Paquete actualizado: {{count}} sellos.",
+        "exported_one": "Se exportó {{count}} sello.",
+        "exported_other": "Se exportaron {{count}} sellos.",
+        "pack_label": "{{name}} (paquete {{version}})",
+        "new_category": "Nueva categoría",
+        "rename_category": "Cambiar nombre",
+        "remove_pack": "Quitar paquete",
+        "delete_category": "Eliminar categoría",
+        "category_name": "Nombre de la categoría",
+        "name": "Nombre",
+        "keywords": "Palabras clave",
+        "move_to": "Categoría",
+        "move_up": "Subir",
+        "move_down": "Bajar",
+        "delete": "Eliminar",
+        "empty": "Aquí aún no hay sellos. Añade imágenes, o suéltalas sobre la colección de sellos.",
+        "add": "Añadir sellos…",
+        "import": "Importar sellos…",
+        "export": "Exportar categoría…",
+        "pack_name": "Nombre del paquete",
+        "pack_author": "Autor",
+        "pack_license": "Licencia",
+        "save_title": "Guardar como sello",
+        "save_selection": "La selección se convierte en sello, con su forma: fuera de ella queda transparente.",
+        "save_image": "Toda la imagen, con sus anotaciones, se convierte en sello.",
+        "conflict_title": "Este paquete ya está",
+        "keep_both": "Conservar ambos",
+        "update": "Actualizar",
+        "conflict_newer": "Tienes {{name}} {{installed}}. ¿Lo actualizas a {{version}} o conservas ambos?",
+        "conflict_same": "Ya tienes {{name}} {{installed}} (este es {{version}}). ¿Conservas ambos?",
+        "drop_hint": "Suelta imágenes aquí para añadirlas a Mis sellos"
       },
       "simple_kind": {
         "block": "Bloque",
@@ -5648,7 +5725,9 @@
     "devices": "Dispositivos",
     "interface": "Interfaz",
     "labels": "Etiquetas",
-    "arrows": "Flechas"
+    "arrows": "Flechas",
+    "emoji": "Emoji",
+    "mine": "Mis sellos"
   },
   "presets": {
     "builtin": {

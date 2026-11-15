@@ -70,6 +70,14 @@
         "name": "XcreenShot.Settings",
         "description": "XcreenShot settings",
         "role": "Viewer"
+      },
+      {
+        "ext": [
+          "xstamps"
+        ],
+        "name": "XcreenShot.Stamps",
+        "description": "XcreenShot stamp pack",
+        "role": "Viewer"
       }
     ]
   }

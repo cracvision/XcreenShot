@@ -99,6 +99,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &[
     "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video", "slides",
+    "stamps",
 ];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
@@ -1933,15 +1934,113 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 &[],
             ))
             .result(json!({"type": "object", "properties": {"showOriginal": {"type": "boolean"}, "opacity": {"type": "number"}}})),
-        B::new("editor.stamps", &["EDT-031"])
+        B::new("editor.stamps", &["EDT-031", "EDT-032", "EDT-033", "EDT-034"])
             .params(params(
                 json!({
                     "query": {"type": "string", "description": "Words of its name or keywords, in English or Spanish"},
-                    "category": {"type": "string", "enum": ["indicators", "cursors", "keys", "devices", "interface", "labels", "arrows"]}
+                    "category": {"type": "string", "description": "indicators, cursors, keys, devices, interface, labels, arrows, emoji, or an own category (own:<id>, own:mine)"}
                 }),
                 &[],
             ))
-            .result(json!({"type": "object", "properties": {"categories": {"type": "array"}, "stamps": {"type": "array"}}})),
+            .result(json!({"type": "object", "properties": {
+                "categories": {"type": "array", "description": "id, name; own ones also own, count and pack (name, version, author, license)"},
+                "stamps": {"type": "array", "description": "id, category, name; own ones also keywords and own. Emoji are listed when searching or in their category"}
+            }})),
+        B::new("stamps.add", &["EDT-032"])
+            .mutates()
+            .positional(&["files"])
+            .params(params(
+                json!({
+                    "files": {"type": ["string", "array"], "items": {"type": "string"}, "description": "PNG, JPG, GIF (first frame), WebP or SVG files"},
+                    "category": {"type": "string", "description": "An own category (own:<id>); default: My stamps"},
+                    "newCategory": {"type": "string", "description": "A new own category with this name"}
+                }),
+                &["files"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "added": {"type": "array", "description": "id, name"},
+                "failed": {"type": "array", "description": "file, reason"},
+                "category": {"type": "string"}
+            }})),
+        B::new("stamps.update", &["EDT-032"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string", "description": "An own stamp (own:<id>)"},
+                    "name": {"type": "string"},
+                    "keywords": {"type": "string", "description": "Words to find it by"},
+                    "category": {"type": "string", "description": "Another own category"},
+                    "before": {"type": ["string", "null"], "description": "Put it before this own stamp; null: last"}
+                }),
+                &["id"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}}})),
+        B::new("stamps.delete", &["EDT-032"])
+            .mutates()
+            .positional(&["ids"])
+            .params(params(
+                json!({"ids": {"type": "array", "items": {"type": "string"}, "description": "Own stamps; placed ones stay in their documents"}}),
+                &["ids"],
+            ))
+            .result(json!({"type": "object", "properties": {"deleted": {"type": "integer"}}})),
+        B::new("stamps.category", &["EDT-032", "EDT-034"])
+            .mutates()
+            .positional(&["action"])
+            .params(params(
+                json!({
+                    "action": {"type": "string", "enum": ["create", "rename", "delete"], "description": "delete also removes a pack and its stamps"},
+                    "id": {"type": "string", "description": "The own category (own:<id>), for rename and delete"},
+                    "name": {"type": "string"}
+                }),
+                &["action"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}, "deleted": {"type": "integer"}}})),
+        B::new("stamps.import", &["EDT-034"])
+            .mutates()
+            .positional(&["path"])
+            .params(params(
+                json!({
+                    "path": {"type": "string", "description": "A .xstamps file"},
+                    "existing": {"type": "string", "enum": ["update", "both"], "description": "When a pack of that name is here: update it (newer version only) or keep both"}
+                }),
+                &["path"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["imported", "updated", "exists"], "description": "exists: nothing done; see version, installed, canUpdate"},
+                "category": {"type": "string"},
+                "count": {"type": "integer"},
+                "version": {"type": "string"},
+                "installed": {"type": "string"},
+                "canUpdate": {"type": "boolean"}
+            }})),
+        B::new("stamps.export", &["EDT-034"])
+            .positional(&["category", "path"])
+            .params(params(
+                json!({
+                    "category": {"type": "string", "description": "An own category (own:<id>, own:mine)"},
+                    "path": {"type": "string", "description": "The .xstamps file to write"},
+                    "name": {"type": "string", "description": "The pack's name; default: the category's"},
+                    "author": {"type": "string"},
+                    "license": {"type": "string"},
+                    "version": {"type": "string", "default": "1.0"}
+                }),
+                &["category", "path"],
+            ))
+            .result(json!({"type": "object", "properties": {"path": {"type": "string"}, "count": {"type": "integer"}}})),
+        B::new("document.save_as_stamp", &["EDT-032"])
+            .mutates()
+            .params(params(
+                json!({
+                    "documentId": document_id(),
+                    "name": {"type": "string", "description": "Default: the document's name"},
+                    "keywords": {"type": "string"},
+                    "category": {"type": "string", "description": "An own category (own:<id>); default: My stamps"},
+                    "newCategory": {"type": "string"}
+                }),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "width": {"type": "integer"}, "height": {"type": "integer"}}})),
         B::new("document.steps", &["EDT-035"])
             .mutates()
             .positional(&["action"])
@@ -3243,7 +3342,7 @@ pub const TOOLS: [&str; 22] = [
 
 /// What `editor.action` can do in the editor window: the entries of its menus and
 /// shortcuts that act on what the window shows (EDT-002, EDT-116).
-pub const EDITOR_ACTIONS: [&str; 125] = [
+pub const EDITOR_ACTIONS: [&str; 128] = [
     "open",
     "save",
     "save_as",
@@ -3337,6 +3436,10 @@ pub const EDITOR_ACTIONS: [&str; 125] = [
     "apply_template",
     "save_as_template",
     "import_template",
+    // File > Save as stamp, Import > Stamps, Organize stamps (EDT-032, EDT-034).
+    "save_as_stamp",
+    "import_stamps",
+    "organize_stamps",
     // File > Batch export (EDT-113).
     "batch_export",
     // File > Print (EDT-114).

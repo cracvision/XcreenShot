@@ -684,6 +684,22 @@ pub fn slots() -> Vec<Slot> {
             "editor.action",
             r#"{"action":"import_template"}"#,
         ),
+        // Own stamps (EDT-032, EDT-034).
+        editor(
+            "editor.save_as_stamp",
+            "editor.action",
+            r#"{"action":"save_as_stamp"}"#,
+        ),
+        editor(
+            "editor.import_stamps",
+            "editor.action",
+            r#"{"action":"import_stamps"}"#,
+        ),
+        editor(
+            "editor.organize_stamps",
+            "editor.action",
+            r#"{"action":"organize_stamps"}"#,
+        ),
         editor(
             "editor.batch_export",
             "editor.action",

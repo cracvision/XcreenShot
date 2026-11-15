@@ -4094,6 +4094,70 @@ html.launcher-root #root {
   object-fit: contain;
 }
 
+/* Own stamps (EDT-032): Organize stamps under the collection. */
+.stamp-own {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Organize stamps (EDT-032, EDT-034). */
+.backdrop .dialog:has(.stamps-organize) {
+  width: min(760px, 94vw);
+}
+
+.stamps-organize {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.stamps-organize-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stamps-organize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.stamps-organize-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1.2fr) auto auto auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.stamps-organize-row img {
+  object-fit: contain;
+}
+
+.stamps-organize-row input,
+.stamps-organize-row select {
+  min-width: 0;
+}
+
+.stamps-export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 .stamp-cell:hover {
   border-color: var(--control-line);
 }

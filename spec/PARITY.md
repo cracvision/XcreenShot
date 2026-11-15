@@ -111,9 +111,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | EDT-029 | Forma: rectángulo y elipse | M1 | Must | Win |
 | EDT-030 | Forma: rectángulo redondeado, polígono y otras formas | M2 | Should | En curso |
 | EDT-031 | Sello | M2 | Should | En curso |
-| EDT-032 | Sellos propios y Guardar como sello | M2 | Should | — |
-| EDT-033 | Emoji | M2 | Could | — |
-| EDT-034 | Paquetes de sellos `.xstamps` | M2 | Should | — |
+| EDT-032 | Sellos propios y Guardar como sello | M2 | Should | En curso (Windows, 2026-11-15: **Organizar sellos…** (botón de la colección y menú ⋯ de Estilos con Sello) con categorías propias (crear, renombrar, eliminar), nombre, palabras clave, mover de categoría, subir y bajar, eliminar; **Añadir sellos…** desde PNG, JPG, GIF (primer fotograma), WebP o SVG (con `resvg`, dibujado una vez a 1024 px); soltar imágenes sobre la colección las añade a Mis sellos; **Archivo > Guardar como sello…** con la selección (su forma, fuera transparente) o la imagen aplanada; el sello colocado lleva su imagen en el `.xshot`. Comandos `stamps.*` y `document.save_as_stamp`. Guía: `tests/manual/EDT-032-034.md`) |
+| EDT-033 | Emoji | M2 | Could | En curso (Windows, 2026-11-15: categoría **Emoji** con 1.926 emoji de Noto Emoji (Apache 2.0) dentro de la app, iguales en Windows y macOS, buscables por los nombres de Unicode CLDR en inglés y español ("pulgar", "thumbs up"); sin variantes de tono de piel. Falta: soltar un emoji desde el selector del sistema (`Win`+`.`) sobre el lienzo, porque la ventana solo recibe archivos al soltar (como CAP-037)) |
+| EDT-034 | Paquetes de sellos `.xstamps` | M2 | Should | En curso (Windows, 2026-11-15: **Importar** desde Archivo > Importar > Sellos…, Organizar sellos, doble clic (el instalador registra `.xstamps`) o soltándolo en la ventana; si el paquete ya está, **Actualizar** (solo a una versión mayor) o **Conservar ambos**; rechaza más de 100 MB o archivos que no son imágenes; **Exportar categoría…** con nombre, autor y licencia; **Quitar paquete**. Formato de `pack.json` en `spec/QUESTIONS.md`) |
 | EDT-035 | Paso | M2 | Must | En curso |
 | EDT-036 | Resaltador | M2 | Should | En curso |
 | EDT-037 | Lápiz | M2 | Should | En curso |
@@ -348,7 +348,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 
 | ID | Función | Hito | Prioridad | Estado |
 |---|---|---|---|---|
-| APP-001 | Proceso en segundo plano e instancia única | M0 | Must | En curso (Windows: una instancia; abrirla otra vez muestra la ventana principal; abrir archivos con XcreenShot (doble clic, "Abrir con", línea de comandos) los entrega a la instancia en marcha: `.xshot`, PNG y JPG al editor, `.xtheme` y `.xtemplate` a su importación en el editor y `.xpreset` al panel de captura; el instalador registra `.xshot`, `.xpreset`, `.xtheme` y `.xtemplate` (nunca PNG ni JPG); `app.open_files`. `.xsettings` abre Preferencias > Avanzado con su importación y el instalador lo registra; MP4 y GIF abiertos con XcreenShot van al editor (2026-11-14). Faltan `.xstamps` (EDT-034, espera a Carlos), dos usuarios a la vez y macOS) |
+| APP-001 | Proceso en segundo plano e instancia única | M0 | Must | En curso (Windows: una instancia; abrirla otra vez muestra la ventana principal; abrir archivos con XcreenShot (doble clic, "Abrir con", línea de comandos) los entrega a la instancia en marcha: `.xshot`, PNG y JPG al editor, `.xtheme` y `.xtemplate` a su importación en el editor y `.xpreset` al panel de captura; el instalador registra `.xshot`, `.xpreset`, `.xtheme` y `.xtemplate` (nunca PNG ni JPG); `app.open_files`. `.xsettings` abre Preferencias > Avanzado con su importación y el instalador lo registra; MP4 y GIF abiertos con XcreenShot van al editor (2026-11-14). `.xstamps` a su importación en el editor y registrado por el instalador (2026-11-15). Faltan dos usuarios a la vez y macOS) |
 | APP-002 | Ícono de XcreenShot y menú rápido | M0 | Must | En curso |
 | APP-003 | Iniciar al iniciar sesión | M0 | Must | Win |
 | APP-004 | Cerrar ventanas y salir | M0 | Must | En curso (Windows: salir pregunta solo si hay algo en curso: documentos sin guardar, capturas por intervalo y, desde 2026-11-14, una grabación (**Detener y guardar**). Cerrar sesión o apagar hace una salida forzada sin bloquear: documentos a Recuperar trabajo y la grabación guardada) |

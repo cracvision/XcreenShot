@@ -39,7 +39,7 @@ pub fn kind(path: &str) -> Option<Kind> {
     match ext.as_str() {
         // Videos and GIF play in the editor (VID-056, ADR 0008).
         "xshot" | "png" | "jpg" | "jpeg" | "mp4" | "gif" => Some(Kind::Document),
-        "xtheme" | "xtemplate" => Some(Kind::EditorImport),
+        "xtheme" | "xtemplate" | "xstamps" => Some(Kind::EditorImport),
         "xpreset" => Some(Kind::Presets),
         "xsettings" => Some(Kind::Settings),
         "pdf" => Some(Kind::Pdf),
@@ -164,6 +164,7 @@ mod tests {
         assert_eq!(kind("demo.MP4"), Some(Kind::Document));
         assert_eq!(kind("loop.gif"), Some(Kind::Document));
         assert_eq!(kind("work.xsettings"), Some(Kind::Settings));
+        assert_eq!(kind("icons.XSTAMPS"), Some(Kind::EditorImport));
         assert_eq!(kind("Informe.PDF"), Some(Kind::Pdf));
         assert_eq!(kind("notes.txt"), None);
         assert_eq!(kind("no_extension"), None);

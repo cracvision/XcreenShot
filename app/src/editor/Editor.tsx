@@ -1,5 +1,6 @@
 // Main window (EDT-001): the Editor view and the Library view (LIB-001), switched at
 // the top; the menu bar, dialogs and notices are shared by both.
+import { dropOnStamps } from "./stampActions";
 import { RedactBatch } from "./RedactBatch";
 import { ShortcutSheet } from "./ShortcutSheet";
 import { MoveComputer } from "../library/MoveComputer";
@@ -169,6 +170,8 @@ export function Editor() {
           }
           // On a template's zone, an image fills it (EDT-098).
           if (dropOnZone(e.payload.paths, e.payload.position)) return;
+          // On the stamp collection, pictures become own stamps (EDT-032).
+          if (dropOnStamps(e.payload.paths, e.payload.position)) return;
           void openFiles(e.payload.paths);
         }
       })

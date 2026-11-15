@@ -1,6 +1,7 @@
 // Styles tab (EDT-015 to EDT-018): the active theme and its menu, the saved styles of
 // the active tool (with a temporary sample of the current style and its +), the
 // Favorites, and the theme editor. Everything runs `editor.style` / `editor.theme`.
+import { importStampPack, organizeStamps } from "./stampActions";
 import { save } from "@tauri-apps/plugin-dialog";
 import i18next from "i18next";
 import { useEffect, useState, type DragEvent, type MouseEvent } from "react";
@@ -185,6 +186,22 @@ export function StylesTab() {
       disabled: !styled,
       onSelect: () => setAsk({ kind: "reset", tool }),
     },
+    // EDT-032, EDT-034: with the Stamp tool.
+    ...(tool === "stamp"
+      ? [
+          {
+            id: "stamps-organize",
+            label: t("ui.editor.stamps.organize_menu"),
+            separator: true,
+            onSelect: () => organizeStamps(),
+          },
+          {
+            id: "stamps-import",
+            label: t("ui.editor.stamps.import"),
+            onSelect: () => void importStampPack(),
+          },
+        ]
+      : []),
   ];
 
   // The selected objects of this tool take a style clicked (EDT-015).

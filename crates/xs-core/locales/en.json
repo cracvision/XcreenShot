@@ -415,6 +415,34 @@
       "title": "Locate document file",
       "description": "Links an open document to its file after it was moved outside XcreenShot."
     },
+    "stamps_add": {
+      "title": "Add stamps",
+      "description": "Adds pictures from files as your own stamps."
+    },
+    "stamps_update": {
+      "title": "Change a stamp",
+      "description": "Renames one of your stamps, changes its keywords, category or place."
+    },
+    "stamps_delete": {
+      "title": "Delete stamps",
+      "description": "Deletes some of your own stamps."
+    },
+    "stamps_category": {
+      "title": "Stamp category",
+      "description": "Creates, renames or deletes one of your stamp categories."
+    },
+    "stamps_import": {
+      "title": "Import stamps",
+      "description": "Adds a stamp pack (.xstamps) as a category."
+    },
+    "stamps_export": {
+      "title": "Export stamps",
+      "description": "Saves one of your stamp categories as a pack (.xstamps)."
+    },
+    "document_save_as_stamp": {
+      "title": "Save as stamp",
+      "description": "Turns the selection, or the whole image, into one of your stamps."
+    },
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
@@ -1997,6 +2025,8 @@
     "library_undo_expired": "It is too late to undo that delete.",
     "fill_stopped": "The fill was stopped; nothing changed.",
     "theme_newer": "This theme file was made by a newer version of XcreenShot. Update the app to import it.",
+    "stamp_not_found": "There is no stamp {{id}}.",
+    "stamp_pack": "{{name}} could not be imported: {{reason}}.",
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
@@ -2226,6 +2256,9 @@
       "editor_new_from_template": "New from template",
       "editor_apply_template": "Apply template",
       "editor_save_as_template": "Save as template",
+      "editor_save_as_stamp": "Save as stamp",
+      "editor_import_stamps": "Import stamps",
+      "editor_organize_stamps": "Organize stamps",
       "editor_import_template": "Import template",
       "editor_show_in_library": "Show in library",
       "editor_pin_item": "Pin or unpin in the tray",
@@ -2408,6 +2441,8 @@
     "new_from_template": "New from template…",
     "apply_template": "Apply template…",
     "save_as_template": "Save as template…",
+    "save_as_stamp": "Save as stamp…",
+    "import_stamps": "Stamps…",
     "import_template": "Template…",
     "combine_template": "Combine in template…",
     "tags_item": "Tags…",
@@ -3491,7 +3526,49 @@
         "category": "Category",
         "all": "All",
         "none": "No stamp matches.",
-        "own_color": "Own color"
+        "own_color": "Own color",
+        "organize": "Organize stamps",
+        "organize_menu": "Organize stamps…",
+        "saved": "Saved \"{{name}}\" in your stamps.",
+        "pictures": "Pictures",
+        "add_failed": "{{name}} could not be added: {{reason}}",
+        "added_one": "Added {{count}} stamp.",
+        "added_other": "Added {{count}} stamps.",
+        "pack_file": "Stamp pack",
+        "imported_one": "Imported {{count}} stamp.",
+        "imported_other": "Imported {{count}} stamps.",
+        "updated_one": "Updated the pack: {{count}} stamp.",
+        "updated_other": "Updated the pack: {{count}} stamps.",
+        "exported_one": "Exported {{count}} stamp.",
+        "exported_other": "Exported {{count}} stamps.",
+        "pack_label": "{{name}} (pack {{version}})",
+        "new_category": "New category",
+        "rename_category": "Rename",
+        "remove_pack": "Remove pack",
+        "delete_category": "Delete category",
+        "category_name": "Category name",
+        "name": "Name",
+        "keywords": "Keywords",
+        "move_to": "Category",
+        "move_up": "Move up",
+        "move_down": "Move down",
+        "delete": "Delete",
+        "empty": "No stamps here yet. Add pictures, or drop them on the stamp collection.",
+        "add": "Add stamps…",
+        "import": "Import stamps…",
+        "export": "Export category…",
+        "pack_name": "Pack name",
+        "pack_author": "Author",
+        "pack_license": "License",
+        "save_title": "Save as stamp",
+        "save_selection": "The selection becomes a stamp, with its shape: outside it stays transparent.",
+        "save_image": "The whole image, with its annotations, becomes a stamp.",
+        "conflict_title": "This pack is already here",
+        "keep_both": "Keep both",
+        "update": "Update",
+        "conflict_newer": "You have {{name}} {{installed}}. Update it to {{version}}, or keep both?",
+        "conflict_same": "You already have {{name}} {{installed}} (this one is {{version}}). Keep both?",
+        "drop_hint": "Drop pictures here to add them to My stamps"
       },
       "simple_kind": {
         "block": "Block",
@@ -5648,7 +5725,9 @@
     "devices": "Devices",
     "interface": "Interface",
     "labels": "Labels",
-    "arrows": "Arrows"
+    "arrows": "Arrows",
+    "emoji": "Emoji",
+    "mine": "My stamps"
   },
   "presets": {
     "builtin": {
