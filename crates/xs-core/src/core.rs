@@ -321,6 +321,33 @@ impl Core {
         }
     }
 
+    /// At start, after an update (APP-036): when the version changed since the last
+    /// start, a notification says so. Returns whether the window should show even when
+    /// started in the background: the update was installed from the window ("Install and
+    /// restart"), and the installer brings the app back the way it had started.
+    pub fn note_version(&self) -> bool {
+        let last = self
+            .recall("app.lastVersion")
+            .and_then(|v| v.as_str().map(str::to_string));
+        let reopen = self.recall("updates.reopen").is_some();
+        self.forget("updates.reopen");
+        if last.as_deref() == Some(platform::VERSION) {
+            return false;
+        }
+        self.remember("app.lastVersion", json!(platform::VERSION));
+        // The first start ever (or of a version from before this note) says nothing.
+        if last.is_none() {
+            return false;
+        }
+        let lang = self.lang();
+        self.host().notify(
+            "updates",
+            &tr(lang, "notify.updated_title", &[]),
+            &tr(lang, "notify.updated", &[("version", platform::VERSION)]),
+        );
+        reopen
+    }
+
     /// The warnings answered with "Don't ask again" and the hints already seen (APP-010,
     /// APP-014): what "Show warnings and hints again" brings back.
     pub fn hidden_warnings(&self) -> Vec<Hidden> {
@@ -789,6 +816,11 @@ fn build_registry(core: &Arc<Core>) -> Registry {
                     ErrorCode::Busy,
                     tr(ctx.lang, "errors.update_busy", &[]),
                 ));
+            }
+            // Installed from the window: the window comes back after the update, even
+            // if the app had started in the background (see `note_version`).
+            if ctx.source == Source::Ui {
+                core.remember("updates.reopen", json!(true));
             }
         }
         core.host().install_update(when)
@@ -1269,6 +1301,27 @@ mod tests {
         assert!(update_endpoint(&core).is_none());
         let e = call(&core, Source::Cli, "app.check_update", json!({})).unwrap_err();
         assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+    }
+
+    /// APP-036: after an update the start notes the new version, and the window comes
+    /// back only when the update was installed from it.
+    #[test]
+    fn a_start_after_an_update_is_noted() {
+        let core = Core::for_tests(Platform::Windows);
+        // The first start says nothing and keeps the version.
+        assert!(!core.note_version());
+        assert_eq!(core.recall("app.lastVersion"), Some(json!(platform::VERSION)));
+        // Another version, installed from the window.
+        core.remember("app.lastVersion", json!("0.0.1"));
+        core.remember("updates.reopen", json!(true));
+        assert!(core.note_version());
+        assert_eq!(core.recall("updates.reopen"), None);
+        // The next start is a plain one.
+        assert!(!core.note_version());
+        // Installed by itself at quit: a notice, no window.
+        core.remember("app.lastVersion", json!("0.0.1"));
+        assert!(!core.note_version());
+        assert_eq!(core.recall("app.lastVersion"), Some(json!(platform::VERSION)));
     }
 
     /// APP-035: a locked setting cannot change, a default starts the value, and the

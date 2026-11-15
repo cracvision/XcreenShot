@@ -2602,6 +2602,8 @@
     "remove_background": "Remove background"
   },
   "notify": {
+    "updated_title": "XcreenShot was updated",
+    "updated": "You now have version {{version}}.",
     "update_title": "XcreenShot {{version}} is available",
     "update": "Open it to see what is new and install it.",
     "lan_pair_title": "Pairing request",

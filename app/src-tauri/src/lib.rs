@@ -521,12 +521,15 @@ pub fn run() {
                 elapsed_ms = started.elapsed().as_millis() as u64,
                 "ready: icon and shortcuts active"
             );
+            // After an update, a notice; the window comes back if the update was
+            // installed from it, even when started in the background (APP-036).
+            let reopen = core.note_version();
             // The first time, the welcome instead of the editor (APP-005); never when
             // started in the background or by automation.
             // APP-035: an administrator may skip it.
             if !background && first_run && !core.policy("skipFirstRun") {
                 windows::open_welcome(&handle)?;
-            } else if !background {
+            } else if !background || reopen {
                 windows::show_main(&handle)?;
             }
             // The files it was opened with, once the commands are there (APP-001).

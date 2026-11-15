@@ -2602,6 +2602,8 @@
     "remove_background": "Quitar fondo"
   },
   "notify": {
+    "updated_title": "XcreenShot se actualizó",
+    "updated": "Ya tienes la versión {{version}}.",
     "update_title": "Está disponible XcreenShot {{version}}",
     "update": "Ábrelo para ver las novedades e instalarla.",
     "lan_pair_title": "Petición de contacto",
