@@ -10,6 +10,7 @@ import { AdvancedExtras, ExperimentalSection } from "../prefs/AdvancedExtras";
 import { SettingsTransfer } from "../prefs/SettingsTransfer";
 import { AiSection } from "../prefs/AiSection";
 import { LibraryLocation } from "../prefs/LibraryLocation";
+import { LanSection } from "../prefs/LanSection";
 import { FolderSetting } from "../prefs/FolderSetting";
 import { OcrLanguages } from "../prefs/OcrLanguages";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
@@ -222,6 +223,8 @@ export function Preferences() {
             <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
           ),
         )}
+        {/* The local network (SHR-042 to SHR-044), after its switch and name. */}
+        {section === "share" && <LanSection />}
         {smart.length > 0 && (
           <>
             <h2>{t("ui.features.title")}</h2>

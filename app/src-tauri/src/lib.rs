@@ -344,6 +344,7 @@ pub fn run() {
             xs_editor::extension(),
             xs_library::extension(),
             xs_ai::extension(),
+            xs_share::extension(),
         ],
     );
     #[cfg(windows)]

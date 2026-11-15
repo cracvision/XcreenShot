@@ -19,6 +19,7 @@ xs-capture = { path = "../../crates/xs-capture" }
 xs-editor = { path = "../../crates/xs-editor" }
 xs-library = { path = "../../crates/xs-library" }
 xs-ai = { path = "../../crates/xs-ai" }
+xs-share = { path = "../../crates/xs-share" }
 xs-image = { path = "../../crates/xs-image" }
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png"] }

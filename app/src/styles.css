@@ -4094,6 +4094,81 @@ html.launcher-root #root {
   object-fit: contain;
 }
 
+/* The local network (SHR-042 to SHR-044). */
+.lan-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.lan-section h4 {
+  margin: 8px 0 0;
+}
+
+.lan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.lan-who {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lan-online {
+  color: var(--brand-ink);
+}
+
+/* The pairing code (SHR-043): big, spaced, the same on both screens. */
+.lan-code {
+  margin: 8px 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.lan-pairing {
+  padding: 8px 12px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+}
+
+.lan-files {
+  max-height: 160px;
+  margin: 0;
+  overflow: auto;
+}
+
+.lan-choose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 /* Own stamps (EDT-032): Organize stamps under the collection. */
 .stamp-own {
   display: flex;

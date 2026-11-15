@@ -7,6 +7,7 @@
 // bar gets compact by steps (`useFit`): first the tools' names go, then the secondary
 // labels, then Capture's and the view switch's; then the language and Preferences fold
 // into ⋯, then Open and Save; at last the items at the end of the bar go to More.
+import { sendActiveOnLan } from "../share/lanSend";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { fitClasses, useFit } from "../components/fit";
@@ -169,6 +170,12 @@ export function Toolbar() {
               id: "clipboard",
               label: t("ui.editor.share_clipboard"),
               onSelect: () => void copyAll(),
+            },
+            // SHR-044: to contacts on the local network.
+            {
+              id: "lan",
+              label: t("ui.lan.share_menu"),
+              onSelect: () => void sendActiveOnLan(),
             },
             {
               id: "save_as",

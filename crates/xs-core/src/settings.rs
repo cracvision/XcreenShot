@@ -195,6 +195,16 @@ pub fn definitions() -> Vec<SettingDef> {
             "LIB-020",
         ),
         def("library.ocrIndex", "library", boolean(), json!(true), "LIB-008"),
+        // The local network (SHR-042, SHR-044): off, nothing is announced or listened.
+        def("share.lan", "share", boolean(), json!(false), "SHR-042"),
+        def(
+            "share.lanName",
+            "share",
+            json!({"type": "string", "maxLength": 60}),
+            json!(""),
+            "SHR-042",
+        ),
+        def("share.lanAutomation", "share", boolean(), json!(false), "SHR-044"),
         def(
             "library.keepEditableCopy",
             "library",

@@ -16,6 +16,7 @@ pub mod features;
 pub mod host;
 pub mod i18n;
 pub mod ipc;
+pub mod keychain;
 pub mod logging;
 pub mod menus;
 pub mod opening;

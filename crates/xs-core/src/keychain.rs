@@ -1,5 +1,6 @@
-//! The API key lives only in the system keychain (SMT-039, SMT-042): the Windows
-//! Credential Manager or the macOS Keychain. Never in a file or a log.
+//! Secrets live only in the system keychain: the Windows Credential Manager or the
+//! macOS Keychain, never in a file or a log. The cloud AI's API key (SMT-039, SMT-042)
+//! and the local network's identity key (SHR-042).
 
 use std::sync::Mutex;
 
@@ -17,10 +18,16 @@ pub struct SystemVault {
 }
 
 impl SystemVault {
+    /// The cloud AI's API key (SMT-039).
     pub fn new(instance: Option<&str>) -> SystemVault {
+        SystemVault::named("anthropic-api-key", instance)
+    }
+
+    /// The entry `XcreenShot/<name>` of this instance.
+    pub fn named(name: &str, instance: Option<&str>) -> SystemVault {
         let target = match instance {
-            Some(scope) => format!("XcreenShot/anthropic-api-key/{:016x}", fnv(scope)),
-            None => "XcreenShot/anthropic-api-key".to_string(),
+            Some(scope) => format!("XcreenShot/{name}/{:016x}", fnv(scope)),
+            None => format!("XcreenShot/{name}"),
         };
         SystemVault { target }
     }

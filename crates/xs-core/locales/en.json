@@ -443,6 +443,50 @@
       "title": "Save as stamp",
       "description": "Turns the selection, or the whole image, into one of your stamps."
     },
+    "share_lan_status": {
+      "title": "Local network status",
+      "description": "Whether sharing on the local network is on, and how this computer shows to others."
+    },
+    "share_lan_people": {
+      "title": "People on the network",
+      "description": "Lists the XcreenShot users on the local network and your contacts."
+    },
+    "share_lan_pair": {
+      "title": "Pair",
+      "description": "Asks someone on the network to become a contact, with a code you both check."
+    },
+    "share_lan_pairings": {
+      "title": "Pairings",
+      "description": "Lists the pairings waiting for an answer."
+    },
+    "share_lan_pair_answer": {
+      "title": "Answer a pairing",
+      "description": "Accepts or declines a pairing, once the codes match."
+    },
+    "share_lan_contact": {
+      "title": "Change a contact",
+      "description": "Renames, removes or blocks a contact, or accepts their sends always."
+    },
+    "share_lan_send": {
+      "title": "Send on the local network",
+      "description": "Sends items to contacts, now or when they are online."
+    },
+    "share_lan_sends": {
+      "title": "Sends",
+      "description": "Lists the sends on the local network and their state."
+    },
+    "share_lan_cancel": {
+      "title": "Cancel a send",
+      "description": "Cancels a send or a reception in progress."
+    },
+    "share_lan_incoming": {
+      "title": "Received",
+      "description": "Lists what others want to send you."
+    },
+    "share_lan_answer": {
+      "title": "Answer a send",
+      "description": "Accepts or rejects what someone sends you."
+    },
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
@@ -1823,6 +1867,18 @@
       "label": "Detect QR codes when capturing",
       "description": "A capture opened in the editor with QR codes says so and lets you read them."
     },
+    "share_lan": {
+      "label": "Share on the local network",
+      "description": "Send captures to other XcreenShot users on this network, and receive theirs. Off, XcreenShot announces nothing and opens no port."
+    },
+    "share_lanName": {
+      "label": "Visible name",
+      "description": "How others see you on the network. Empty: your user name."
+    },
+    "share_lanAutomation": {
+      "label": "Allow automation",
+      "description": "The command line and agents may accept pairings and sends for you."
+    },
     "library_ocrIndex": {
       "label": "Recognize the text of images for the search",
       "description": "In the background, on this computer: the search also finds the words that show inside captures. Off, the text read leaves the index."
@@ -2027,6 +2083,11 @@
     "theme_newer": "This theme file was made by a newer version of XcreenShot. Update the app to import it.",
     "stamp_not_found": "There is no stamp {{id}}.",
     "stamp_pack": "{{name}} could not be imported: {{reason}}.",
+    "lan_off": "Sharing on the local network is off: turn it on in Preferences > Share.",
+    "lan_not_found": "There is nothing with the id {{id}} on the local network.",
+    "lan_offline": "That person is not on the network now.",
+    "lan_failed": "The other computer could not be reached: {{reason}}.",
+    "lan_automation": "Accepting from the command line or an agent needs \"Allow automation\" in Preferences > Share.",
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
@@ -2490,6 +2551,14 @@
     "remove_background": "Remove background"
   },
   "notify": {
+    "lan_pair_title": "Pairing request",
+    "lan_pair": "{{name}} ({{device}}) wants to add you as a contact.",
+    "lan_offer_title": "Someone is sending you captures",
+    "lan_offer": "{{name}} is sending you {{count}} items ({{size}}).",
+    "lan_received_title": "Received",
+    "lan_received": "{{count}} items from {{name}} are in your library.",
+    "lan_expired_title": "A send expired",
+    "lan_expired": "A send of {{count}} items did not go in 7 days.",
     "ping_title": "XcreenShot is working",
     "ping_body": "The test command ran from {{source}}.",
     "shortcuts_failed_title": "Some shortcuts could not be activated",
@@ -2576,6 +2645,63 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "lan": {
+      "title": "Local network",
+      "firewall": "Turn on \"Share on the local network\" to send captures to other XcreenShot users on this network. The first time, Windows may ask whether XcreenShot can use the network: allow it on private networks (home, office), so others can reach this computer.",
+      "me": "You are {{name}} ({{device}}). Your key: {{fingerprint}}.",
+      "not_running": "The local network could not start: {{reason}}",
+      "people": "People on the network",
+      "nobody": "Nobody else with XcreenShot on this network right now.",
+      "pair": "Pair",
+      "block": "Block",
+      "unblock": "Unblock",
+      "blocked": "Blocked",
+      "remove": "Remove",
+      "contacts": "Contacts",
+      "no_contacts": "No contacts yet: pair with someone on the network.",
+      "contact_name": "Contact name",
+      "always_accept": "Always accept their sends",
+      "online": "online",
+      "offline": "offline",
+      "last_seen": "last seen {{when}}",
+      "pair_in_title": "Pairing request",
+      "pair_out_title": "Pairing",
+      "pair_in": "{{name}} ({{device}}) wants to add you as a contact.",
+      "pair_out": "Pairing with {{name}} ({{device}}).",
+      "pair_check": "Accept only if both computers show the same code.",
+      "code_label": "Code {{code}}",
+      "codes_match": "The codes match",
+      "codes_differ": "They are different",
+      "decline": "Decline",
+      "incoming_title": "Someone is sending you captures",
+      "incoming_one": "{{name}} is sending you {{count}} item ({{size}}).",
+      "incoming_other": "{{name}} is sending you {{count}} items ({{size}}).",
+      "incoming_where": "What you accept goes to your library, tagged with their name.",
+      "accept": "Accept",
+      "reject": "Reject",
+      "send_title_one": "Send {{count}} item on the local network",
+      "send_title_other": "Send {{count}} items on the local network",
+      "send": "Send",
+      "sent_one": "Sent to {{count}} contact.",
+      "sent_other": "Sent to {{count}} contacts.",
+      "send_later": "If someone is offline, it goes when they are back on the network, while XcreenShot is open (up to 7 days).",
+      "share_menu": "Local network…",
+      "send_menu": "Send on the local network…",
+      "sends": "Sends",
+      "no_sends": "Nothing sent yet.",
+      "send_line_one": "{{count}} item to {{name}} ({{size}})",
+      "send_line_other": "{{count}} items to {{name}} ({{size}})",
+      "status": {
+        "pending": "Pending",
+        "sending": "Sending",
+        "delivered": "Delivered",
+        "rejected": "Rejected",
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "failed": "Failed"
+      },
+      "save_first": "Save the document first to send it."
+    },
     "hints": {
       "got_it": "Got it",
       "no_more": "Don't show more hints",
@@ -5728,6 +5854,9 @@
     "arrows": "Arrows",
     "emoji": "Emoji",
     "mine": "My stamps"
+  },
+  "share": {
+    "lan_from": "From: {{name}}"
   },
   "presets": {
     "builtin": {

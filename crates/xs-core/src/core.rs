@@ -147,10 +147,13 @@ impl Core {
         // Each test core has its own data folder: tests run side by side.
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // Empty at start: a process id is reused, and a folder of an old run may be left.
+        let root = std::env::temp_dir().join(format!("xs-test-{}-{n}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
         let core = Arc::new(Core {
             settings: SettingsStore::in_memory(),
             shortcuts: ShortcutStore::in_memory(platform),
-            paths: Paths::rooted(&std::env::temp_dir().join(format!("xs-test-{}-{n}", std::process::id()))),
+            paths: Paths::rooted(&root),
             host: RwLock::new(Arc::new(NullHost)),
             log: None,
             state: RwLock::new(AppState::default()),

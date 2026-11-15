@@ -8,7 +8,7 @@
 //! - logs keep the model, tokens, time and outcome, never the image, the text or the key.
 
 pub mod client;
-pub mod keychain;
+pub use xs_core::keychain;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};

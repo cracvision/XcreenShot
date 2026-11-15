@@ -411,6 +411,22 @@ xcreenshot app ping --json
 | `editor.recovery_restore` | `xcreenshot editor recovery-restore --ids '["<id>"]'` | `ids` array (required) | Opens recoverable documents with their changes, linked to their original files and still unsaved. A recording cut short becomes an MP4 in the library where it would have been saved (another name if taken) and opens if its Open in said so. _Changes data. Not an MCP tool._ |
 | `editor.recovery_discard` | `xcreenshot editor recovery-discard --ids '["<id>"]' --yes` | `ids` array (required) | Deletes recovery copies for good. _Destructive: the CLI needs `--yes`. Not an MCP tool._ |
 
+### share
+
+| ID | Example | Parameters | What it does |
+|---|---|---|---|
+| `share.lan_status` | `xcreenshot share lan-status` | — | The local network (SHR-042): whether the preference `share.lan` is on and running, the visible name, the computer, this computer's key fingerprint and port. Off, XcreenShot announces nothing and opens no port. _Changes no data._ |
+| `share.lan_people` | `xcreenshot share lan-people` | — | XcreenShot users on the same network (found by mDNS) and your contacts, with `online`, `contact`, `alwaysAccept` and `lastSeen`. _Changes no data._ |
+| `share.lan_pair` | `xcreenshot share lan-pair <fingerprint>` | `fingerprint` string (required, positional) | Starts pairing (SHR-043): returns the 6-digit `code` both computers show. Each person accepts with `share.lan_pair_answer` only if the codes match; only then are both contacts. _Changes data._ |
+| `share.lan_pairings` | `xcreenshot share lan-pairings` | — | Pairings waiting for an answer, incoming (`direction: "in"`) or started here (`"out"`). _Changes no data._ |
+| `share.lan_pair_answer` | `xcreenshot share lan-pair-answer <id> --accept true` | `id` string (required, positional); `accept` boolean (required) | Accepts or declines a pairing. From the CLI or MCP it needs the preference `share.lanAutomation` (off by default): otherwise `permission_denied`. _Changes data._ |
+| `share.lan_contact` | `xcreenshot share lan-contact <fingerprint> alwaysAccept --value true` · `rename --value "Ana"` · `remove` · `block` · `unblock` | `fingerprint` string (required, positional); `action` `rename` \| `alwaysAccept` \| `remove` \| `block` \| `unblock` (required, positional); `value` | Contacts (SHR-043). Removing forgets their key (pair again to send); blocking ignores their requests and sends without a word. _Changes data._ |
+| `share.lan_send` | `xcreenshot share lan-send --params '{"to":["<fingerprint>"],"paths":["C:/…/captura.xshot"]}'` | `to` string or array (required); `paths` string or array (required) | Sends files to contacts (SHR-044), directly and encrypted (TLS 1.3 with the keys from pairing). One send per contact, `pending` until the contact is online and XcreenShot is open (up to 7 days). _Changes data._ |
+| `share.lan_sends` | `xcreenshot share lan-sends` | — | The sends, newest first: `pending`, `sending`, `delivered`, `rejected`, `expired`, `cancelled` or `failed`. _Changes no data._ |
+| `share.lan_cancel` | `xcreenshot share lan-cancel <id>` | `id` string (required, positional) | Cancels a send, or a reception in progress (nothing half-received stays). _Changes data._ |
+| `share.lan_incoming` | `xcreenshot share lan-incoming` | — | What contacts want to send you: who, the files and their size. _Changes no data._ |
+| `share.lan_answer` | `xcreenshot share lan-answer <id> --accept true` | `id` string (required, positional); `accept` boolean (required) | Accepts (into the library, tagged "From: <name>") or rejects (nothing stays). From the CLI or MCP it needs `share.lanAutomation`. _Changes data._ |
+
 ### stamps
 
 | ID | Example | Parameters | What it does |

@@ -99,7 +99,7 @@ pub const SETTING_SECTIONS: [&str; 10] = [
 /// Command areas whose handlers another crate registers through `Core::with_extensions`.
 pub const EXTERNAL_AREAS: &[&str] = &[
     "capture", "document", "editor", "ai", "library", "tray", "preset", "smart", "record", "video", "slides",
-    "stamps",
+    "stamps", "share",
 ];
 
 /// Options shared by every capture command (CAP-008), plus the mode's own.
@@ -1946,6 +1946,87 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "categories": {"type": "array", "description": "id, name; own ones also own, count and pack (name, version, author, license)"},
                 "stamps": {"type": "array", "description": "id, category, name; own ones also keywords and own. Emoji are listed when searching or in their category"}
             }})),
+        // The local network (SHR-042 to SHR-044).
+        B::new("share.lan_status", &["SHR-042"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "enabled": {"type": "boolean", "description": "The preference share.lan"},
+                "running": {"type": "boolean"},
+                "name": {"type": "string", "description": "The visible name"},
+                "device": {"type": "string"},
+                "fingerprint": {"type": ["string", "null"], "description": "This computer's key, as others see it"},
+                "port": {"type": ["integer", "null"]},
+                "error": {"type": ["string", "null"]}
+            }})),
+        B::new("share.lan_people", &["SHR-042", "SHR-043"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"people": {"type": "array", "description": "fingerprint, name, device, online, contact, alwaysAccept, blocked, lastSeen"}}})),
+        B::new("share.lan_pair", &["SHR-043"])
+            .mutates()
+            .positional(&["fingerprint"])
+            .params(params(
+                json!({"fingerprint": {"type": "string", "description": "Someone on the network (share.lan_people)"}}),
+                &["fingerprint"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "id": {"type": "string", "description": "The pairing, for share.lan_pair_answer"},
+                "code": {"type": "string", "description": "The 6 digits both people must see"}
+            }})),
+        B::new("share.lan_pairings", &["SHR-043"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"pairings": {"type": "array", "description": "id, fingerprint, name, device, code, direction (in, out), answered"}}})),
+        B::new("share.lan_pair_answer", &["SHR-043", "SHR-044"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({
+                    "id": {"type": "string"},
+                    "accept": {"type": "boolean", "description": "Only if the code is the same on both computers"}
+                }),
+                &["id", "accept"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}}})),
+        B::new("share.lan_contact", &["SHR-043"])
+            .mutates()
+            .positional(&["fingerprint", "action"])
+            .params(params(
+                json!({
+                    "fingerprint": {"type": "string"},
+                    "action": {"type": "string", "enum": ["rename", "alwaysAccept", "remove", "block", "unblock"]},
+                    "value": {"description": "rename: the name (empty: theirs); alwaysAccept: true or false"}
+                }),
+                &["fingerprint", "action"],
+            ))
+            .result(json!({"type": "object", "properties": {"fingerprint": {"type": "string"}}})),
+        B::new("share.lan_send", &["SHR-044"])
+            .mutates()
+            .params(params(
+                json!({
+                    "to": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Contacts' fingerprints"},
+                    "paths": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Files: .xshot, images, videos, GIF"}
+                }),
+                &["to", "paths"],
+            ))
+            .result(json!({"type": "object", "properties": {"sends": {"type": "array", "description": "id, to: one send per contact, pending until it goes"}}})),
+        B::new("share.lan_sends", &["SHR-044"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"sends": {"type": "array", "description": "Newest first: id, to, toName, items, created, updated, status (pending, sending, delivered, rejected, expired, cancelled, failed), reason"}}})),
+        B::new("share.lan_cancel", &["SHR-044"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(json!({"id": {"type": "string", "description": "A send, or a reception in progress"}}), &["id"]))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}}})),
+        B::new("share.lan_incoming", &["SHR-044"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"incoming": {"type": "array", "description": "id, fingerprint, name, items (name, size), total, receiving"}}})),
+        B::new("share.lan_answer", &["SHR-044"])
+            .mutates()
+            .positional(&["id"])
+            .params(params(
+                json!({"id": {"type": "string"}, "accept": {"type": "boolean"}}),
+                &["id", "accept"],
+            ))
+            .result(json!({"type": "object", "properties": {"id": {"type": "string"}}})),
         B::new("stamps.add", &["EDT-032"])
             .mutates()
             .positional(&["files"])

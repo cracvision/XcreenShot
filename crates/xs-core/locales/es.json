@@ -443,6 +443,50 @@
       "title": "Guardar como sello",
       "description": "Convierte la selección, o toda la imagen, en un sello propio."
     },
+    "share_lan_status": {
+      "title": "Estado de la red local",
+      "description": "Si compartir en la red local está activado y cómo ven los demás este equipo."
+    },
+    "share_lan_people": {
+      "title": "Personas en la red",
+      "description": "Lista los usuarios de XcreenShot en la red local y tus contactos."
+    },
+    "share_lan_pair": {
+      "title": "Emparejar",
+      "description": "Pide a alguien de la red que sea tu contacto, con un código que los dos comprueban."
+    },
+    "share_lan_pairings": {
+      "title": "Emparejamientos",
+      "description": "Lista los emparejamientos que esperan respuesta."
+    },
+    "share_lan_pair_answer": {
+      "title": "Responder a un emparejamiento",
+      "description": "Acepta o rechaza un emparejamiento, cuando los códigos coinciden."
+    },
+    "share_lan_contact": {
+      "title": "Cambiar un contacto",
+      "description": "Cambia el nombre de un contacto, lo quita o lo bloquea, o acepta siempre sus envíos."
+    },
+    "share_lan_send": {
+      "title": "Enviar por la red local",
+      "description": "Envía elementos a contactos, ahora o cuando estén en línea."
+    },
+    "share_lan_sends": {
+      "title": "Envíos",
+      "description": "Lista los envíos por la red local y su estado."
+    },
+    "share_lan_cancel": {
+      "title": "Cancelar un envío",
+      "description": "Cancela un envío o una recepción en curso."
+    },
+    "share_lan_incoming": {
+      "title": "Recibidos",
+      "description": "Lista lo que otros quieren enviarte."
+    },
+    "share_lan_answer": {
+      "title": "Responder a un envío",
+      "description": "Acepta o rechaza lo que alguien te envía."
+    },
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
@@ -1823,6 +1867,18 @@
       "label": "Detectar códigos QR al capturar",
       "description": "Una captura que se abre en el editor con códigos QR lo dice y deja leerlos."
     },
+    "share_lan": {
+      "label": "Compartir en la red local",
+      "description": "Envía capturas a otros usuarios de XcreenShot en esta red y recibe las suyas. Desactivado, XcreenShot no anuncia nada ni abre ningún puerto."
+    },
+    "share_lanName": {
+      "label": "Nombre visible",
+      "description": "Cómo te ven los demás en la red. Vacío: tu nombre de usuario."
+    },
+    "share_lanAutomation": {
+      "label": "Permitir por automatización",
+      "description": "La línea de comandos y los agentes pueden aceptar emparejamientos y envíos por ti."
+    },
     "library_ocrIndex": {
       "label": "Reconocer el texto de las imágenes para la búsqueda",
       "description": "En segundo plano y en este equipo: la búsqueda encuentra también las palabras que se ven dentro de las capturas. Desactivado, el texto leído sale del índice."
@@ -2027,6 +2083,11 @@
     "theme_newer": "Este archivo de tema lo hizo una versión más nueva de XcreenShot. Actualiza la app para importarlo.",
     "stamp_not_found": "No hay ningún sello {{id}}.",
     "stamp_pack": "No se pudo importar {{name}}: {{reason}}.",
+    "lan_off": "Compartir en la red local está desactivado: actívalo en Preferencias > Compartir.",
+    "lan_not_found": "No hay nada con el id {{id}} en la red local.",
+    "lan_offline": "Esa persona no está ahora en la red.",
+    "lan_failed": "No se pudo llegar al otro equipo: {{reason}}.",
+    "lan_automation": "Aceptar desde la línea de comandos o un agente necesita \"Permitir por automatización\" en Preferencias > Compartir.",
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
@@ -2490,6 +2551,14 @@
     "remove_background": "Quitar fondo"
   },
   "notify": {
+    "lan_pair_title": "Petición de contacto",
+    "lan_pair": "{{name}} ({{device}}) quiere añadirte como contacto.",
+    "lan_offer_title": "Te envían capturas",
+    "lan_offer": "{{name}} te envía {{count}} elementos ({{size}}).",
+    "lan_received_title": "Recibido",
+    "lan_received": "{{count}} elementos de {{name}} están en tu biblioteca.",
+    "lan_expired_title": "Un envío caducó",
+    "lan_expired": "Un envío de {{count}} elementos no salió en 7 días.",
     "ping_title": "XcreenShot funciona",
     "ping_body": "El comando de prueba se ejecutó desde {{source}}.",
     "shortcuts_failed_title": "Algunos atajos no se pudieron activar",
@@ -2576,6 +2645,63 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "lan": {
+      "title": "Red local",
+      "firewall": "Activa \"Compartir en la red local\" para enviar capturas a otros usuarios de XcreenShot en esta red. La primera vez, Windows puede preguntar si XcreenShot puede usar la red: permítelo en redes privadas (casa, oficina), para que los demás puedan llegar a este equipo.",
+      "me": "Eres {{name}} ({{device}}). Tu clave: {{fingerprint}}.",
+      "not_running": "La red local no pudo arrancar: {{reason}}",
+      "people": "Personas en la red",
+      "nobody": "Ahora no hay nadie más con XcreenShot en esta red.",
+      "pair": "Emparejar",
+      "block": "Bloquear",
+      "unblock": "Desbloquear",
+      "blocked": "Bloqueados",
+      "remove": "Quitar",
+      "contacts": "Contactos",
+      "no_contacts": "Aún no hay contactos: empareja con alguien de la red.",
+      "contact_name": "Nombre del contacto",
+      "always_accept": "Aceptar siempre sus envíos",
+      "online": "en línea",
+      "offline": "sin conexión",
+      "last_seen": "visto por última vez {{when}}",
+      "pair_in_title": "Petición de contacto",
+      "pair_out_title": "Emparejar",
+      "pair_in": "{{name}} ({{device}}) quiere añadirte como contacto.",
+      "pair_out": "Emparejando con {{name}} ({{device}}).",
+      "pair_check": "Acepta solo si los dos equipos muestran el mismo código.",
+      "code_label": "Código {{code}}",
+      "codes_match": "Los códigos coinciden",
+      "codes_differ": "Son distintos",
+      "decline": "Rechazar",
+      "incoming_title": "Te envían capturas",
+      "incoming_one": "{{name}} te envía {{count}} elemento ({{size}}).",
+      "incoming_other": "{{name}} te envía {{count}} elementos ({{size}}).",
+      "incoming_where": "Lo que aceptes llega a tu biblioteca, con una etiqueta con su nombre.",
+      "accept": "Aceptar",
+      "reject": "Rechazar",
+      "send_title_one": "Enviar {{count}} elemento por la red local",
+      "send_title_other": "Enviar {{count}} elementos por la red local",
+      "send": "Enviar",
+      "sent_one": "Enviado a {{count}} contacto.",
+      "sent_other": "Enviado a {{count}} contactos.",
+      "send_later": "Si alguien no está en línea, se envía cuando vuelva a la red, mientras XcreenShot esté abierto (hasta 7 días).",
+      "share_menu": "Red local…",
+      "send_menu": "Enviar por la red local…",
+      "sends": "Envíos",
+      "no_sends": "Aún no has enviado nada.",
+      "send_line_one": "{{count}} elemento a {{name}} ({{size}})",
+      "send_line_other": "{{count}} elementos a {{name}} ({{size}})",
+      "status": {
+        "pending": "Pendiente",
+        "sending": "Enviando",
+        "delivered": "Entregado",
+        "rejected": "Rechazado",
+        "expired": "Caducado",
+        "cancelled": "Cancelado",
+        "failed": "Falló"
+      },
+      "save_first": "Guarda el documento antes de enviarlo."
+    },
     "hints": {
       "got_it": "Entendido",
       "no_more": "No mostrar más pistas",
@@ -5728,6 +5854,9 @@
     "arrows": "Flechas",
     "emoji": "Emoji",
     "mine": "Mis sellos"
+  },
+  "share": {
+    "lan_from": "De: {{name}}"
   },
   "presets": {
     "builtin": {

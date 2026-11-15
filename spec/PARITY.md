@@ -340,9 +340,9 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | TRY-017 | Comandos de la bandeja (CLI y MCP) | M2 | Should | En curso (Windows: `tray.list`, `tray.open`, `tray.activate`, `tray.pin`, `tray.unpin`, `tray.move`, `tray.close`) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |
-| SHR-042 | Red local: activar y ver quién está | M6 | Should | — (IDEA-005, aprobada el 2026-11-14) |
-| SHR-043 | Red local: emparejar y contactos | M6 | Should | — |
-| SHR-044 | Red local: enviar, pendientes y recibir | M6 | Should | — |
+| SHR-042 | Red local: activar y ver quién está | M6 | Should | En curso (Windows, 2026-11-15: Preferencias > Compartir > **Compartir en la red local** (desactivado por defecto: sin anuncio ni puerto), **Nombre visible**, la clave Ed25519 en el llavero, descubrimiento mDNS `_xcreenshot._tcp`, Personas en la red, sin conexión en menos de 30 s (comprobación cada 10 s). Probado entre dos instancias del mismo equipo; falta entre dos equipos y con un Mac. Guía: `tests/manual/SHR-042-044.md`) |
+| SHR-043 | Red local: emparejar y contactos | M6 | Should | En curso (Windows, 2026-11-15: **Emparejar** con un código de 6 dígitos que ven los dos; si uno no acepta, ninguno queda como contacto; contactos con nombre propio, **Aceptar siempre sus envíos**, Quitar y Bloquear; una clave distinta nunca se acepta: hay que emparejar de nuevo) |
+| SHR-044 | Red local: enviar, pendientes y recibir | M6 | Should | En curso (Windows, 2026-11-15: **Compartir > Red local…** en el editor y **Enviar por la red local…** en la biblioteca; TLS 1.3 con las claves del emparejamiento, sin servidor; pendiente hasta que el otro esté en línea (7 días); Aceptar o Rechazar, o sin preguntar con Aceptar siempre; llega a la biblioteca con la etiqueta "De: <nombre>" comprobado por SHA-256; estados en Preferencias > Compartir > Envíos; cancelar en los dos lados; `share.lan_*`, aceptar por automatización solo con su preferencia. Falta: enviar como PNG en vez de `.xshot`) |
 
 ## 05-app.md
 
