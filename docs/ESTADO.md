@@ -34,8 +34,8 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Versión publicada:** 0.2.3 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
-- **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.3 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
+- **Versión publicada:** 0.2.4 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.4 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
 - **M1, entrega 4 (editor):** rama `m1-editor`, que sale de `m1-capture`. Su PR apunta a `m1-capture` hasta que se fusione el PR #2; después, a `main`.
@@ -66,6 +66,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 - **2026-11-15 (tarde, quinta parte): listos para la prueba de punta a punta.**
   - Multicaptura protegida como Dibujo en vivo (ver abajo) y las dos comprobadas con sus ganchos reales dentro de Windows Sandbox.
   - Quitar un atajo con `""` fallaba desde Windows PowerShell 5.1, que descarta los argumentos vacíos (no era el CLI): anotado en `AGENTS.md`. `Ctrl+P` de `app.ping` quitado del perfil de Carlos.
+  - **XcreenShot 0.2.4 publicada** (con el sí de Carlos), compilación `8bbb93f`: la multicaptura protegida y la barra de Dibujo en vivo con Esc. Probada antes en Windows Sandbox (instalación limpia, ventana tras actualizar, y dibujar, capturar y salir con `Esc` con los ganchos reales). Es la versión de la prueba de punta a punta; su primer punto es actualizar desde la 0.2.3 y ver la ventana y el aviso.
   - **Guía única de la prueba de punta a punta:** [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md), tres sesiones, con enlaces a las guías detalladas, lo que necesita aparatos u otra persona, y lo que no entra.
 
 - **2026-11-15 (tarde, cuarta parte): Windows Sandbox y la 0.2.3.**
@@ -755,11 +756,11 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 
 ## Siguiente paso
 
-**Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.3 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
+**Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.4 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
 
 1. Instalador anterior (2026-11-15), compilación `e3343c4`: la 0.2.0 más los destinos estándar de Compartir.
-1. **Versión publicada (2026-11-15): XcreenShot 0.2.3**, compilación `b179f37`, en https://github.com/cracvision/xcreenshot-releases: el CLI sin Visual C++ y el aviso tras actualizar. Es la que hay que instalar.
-1. Versiones publicadas anteriores: 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
+1. **Versión publicada (2026-11-15): XcreenShot 0.2.4**, compilación `8bbb93f`, en https://github.com/cracvision/xcreenshot-releases. Es la que hay que instalar.
+1. Versiones publicadas anteriores: 0.2.3 (`b179f37`, el CLI sin Visual C++ y el aviso tras actualizar), 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
