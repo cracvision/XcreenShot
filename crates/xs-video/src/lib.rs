@@ -533,6 +533,10 @@ pub struct Summary {
     pub low_disk: bool,
     /// It stopped because the window it followed closed (VID-005).
     pub window_closed: bool,
+    /// It stopped by itself because the timer ran out (VID-015).
+    pub time_up: bool,
+    /// It stopped because the monitor recorded was disconnected (VID-004).
+    pub monitor_gone: bool,
     /// The microphone is in it (VID-039).
     pub microphone: bool,
     /// The system's sound is in it: an output was there to listen to (VID-040).

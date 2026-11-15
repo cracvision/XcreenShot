@@ -19,22 +19,29 @@ function Decision() {
   const { t } = useTranslation();
   const decision = useEditor((s) => s.decision);
   if (!decision) return null;
-  const docs = decision.pending.filter((p) => p.kind !== "series");
+  const docs = decision.pending.filter((p) => p.kind !== "series" && p.kind !== "recording");
   const series = decision.pending.filter((p) => p.kind === "series");
+  const recording = decision.pending.find((p) => p.kind === "recording");
   const one = docs.length === 1 ? docs[0] : undefined;
-  // Quitting stops the interval captures (CAP-049, APP-004).
-  const seriesNote = series.length > 0 && (
-    <p>{t("ui.editor.series_quit", { names: series.map((s) => s.name).join(", ") })}</p>
+  // Quitting stops the interval captures (CAP-049, APP-004), and stops and saves a
+  // recording (VID-013).
+  const seriesNote = (
+    <>
+      {recording && <p>{t("ui.editor.recording_quit", { name: recording.name })}</p>}
+      {series.length > 0 && (
+        <p>{t("ui.editor.series_quit", { names: series.map((s) => s.name).join(", ") })}</p>
+      )}
+    </>
   );
   if (docs.length === 0)
     return (
       <Dialog
-        title={t("ui.editor.series_quit_title")}
+        title={t(recording ? "ui.editor.recording_quit_title" : "ui.editor.series_quit_title")}
         onCancel={() => void decide("cancel")}
         actions={
           <>
             <button type="button" className="btn primary" onClick={() => void decide("discard")}>
-              {t("ui.editor.quit")}
+              {t(recording ? "ui.editor.stop_and_save" : "ui.editor.quit")}
             </button>
             <button type="button" className="btn" onClick={() => void decide("cancel")}>
               {t("ui.editor.cancel")}

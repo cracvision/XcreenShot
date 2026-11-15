@@ -65,6 +65,24 @@ fn find_output(area: Area) -> Result<(IDXGIAdapter1, IDXGIOutput1, RECT), String
     Err("no monitor shows the area".into())
 }
 
+/// The monitor of `out` is no longer there (unplugged): Windows has forgotten it.
+fn output_gone(out: &IDXGIOutput1) -> bool {
+    use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MONITORINFO};
+    // SAFETY: the description of an output still referenced, and a plain question about
+    // the monitor it names.
+    unsafe {
+        let Ok(desc) = out.GetDesc() else { return true };
+        if !desc.AttachedToDesktop.as_bool() {
+            return true;
+        }
+        let mut info = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        !GetMonitorInfoW(desc.Monitor, &mut info).as_bool()
+    }
+}
+
 struct Gpu {
     device: ID3D11Device,
     context: ID3D11DeviceContext,
@@ -1299,6 +1317,11 @@ pub(crate) fn record(
     // A followed window (VID-005): where it was, and whether it closed or hides.
     let mut window_at: Option<RECT> = None;
     let mut window_closed = false;
+    let mut time_up = false;
+    let mut monitor_gone = false;
+    // Since when the screen could not be read again (a mode change, the secure desktop,
+    // or a monitor unplugged).
+    let mut lost_since: Option<Instant> = None;
     let mut hold = false;
     // VID-030: when the first frame was written, since when a change waits, and the
     // frame turns changes missed.
@@ -1372,6 +1395,7 @@ pub(crate) fn record(
             .unwrap()
             .is_some_and(|l| now_recorded() >= l.as_secs_f64())
         {
+            time_up = true;
             break;
         }
         if let Some(hwnd) = options.window {
@@ -1483,8 +1507,19 @@ pub(crate) fn record(
                         Ok(d) => {
                             dup = Some(d);
                             dirty = true;
+                            lost_since = None;
                         }
-                        Err(_) => continue,
+                        Err(_) => {
+                            // The secure desktop passes; a monitor unplugged does not
+                            // come back: stop and keep what was recorded (VID-004).
+                            let since = *lost_since.get_or_insert_with(Instant::now);
+                            if since.elapsed() > Duration::from_secs(1) && output_gone(out) {
+                                tracing::info!("video: the monitor recorded is gone, stopping");
+                                monitor_gone = true;
+                                break;
+                            }
+                            continue;
+                        }
                     }
                 }
                 Err(e) => {
@@ -1795,6 +1830,8 @@ pub(crate) fn record(
             audio: false,
             low_disk: false,
             window_closed: false,
+            time_up: false,
+            monitor_gone: false,
             microphone: false,
             system_audio: false,
             cancelled: true,
@@ -1903,6 +1940,8 @@ pub(crate) fn record(
         audio: audio_rate.is_some(),
         low_disk,
         window_closed,
+        time_up,
+        monitor_gone,
         microphone: had_mic,
         system_audio: had_system,
         cancelled: false,

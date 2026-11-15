@@ -11,6 +11,8 @@ mod host;
 mod launcher;
 mod overlay;
 mod permissions;
+#[cfg(windows)]
+mod session_end;
 mod tray;
 mod webpage;
 mod windows;
@@ -454,6 +456,10 @@ pub fn run() {
             if let Err(e) = serve_ipc(core.clone()) {
                 tracing::error!(error = %e, "could not open the local automation channel");
             }
+            // Signing out or shutting down: documents recoverable, a recording saved
+            // (APP-004, VID-013).
+            #[cfg(windows)]
+            session_end::watch(core.clone());
 
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
             let first_run = !first_run_marker.exists();

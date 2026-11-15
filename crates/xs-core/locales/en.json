@@ -2474,7 +2474,11 @@
     "recording_window_closed": "The window closed: the recording stopped and was saved.",
     "steps_disk_full": "The disk is full: recording steps paused. The steps so far are kept.",
     "recording_slept": "The recording was paused because the computer went to sleep. Resume or stop it from its bar.",
-    "recording_no_mic": "No voice was recorded: no microphone was connected."
+    "recording_no_mic": "No voice was recorded: no microphone was connected.",
+    "recording_time_up": "It stopped when the timer ran out.",
+    "recording_monitor_gone": "It stopped because the monitor being recorded was disconnected.",
+    "recording_too_short_title": "Recording too short",
+    "recording_too_short_body": "Less than a second was recorded, so no video was made."
   },
   "source": {
     "ui": "the interface",
@@ -4208,7 +4212,11 @@
       "pending_share": "Waiting to send to: {{destinations}}",
       "send": "Send",
       "dont_send": "Don’t send",
-      "recover_video": "video, {{length}}"
+      "recover_video": "video, {{length}}",
+      "recording_quit_name": "The recording in progress ({{time}})",
+      "recording_quit_title": "A recording is in progress",
+      "recording_quit": "{{name}} stops and is saved in the library.",
+      "stop_and_save": "Stop and save"
     },
     "multi": {
       "title": "Multi-capture",

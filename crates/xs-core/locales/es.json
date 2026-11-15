@@ -2474,7 +2474,11 @@
     "recording_window_closed": "La ventana se cerró: la grabación se detuvo y se guardó.",
     "steps_disk_full": "El disco está lleno: la grabación de pasos se pausó. Los pasos grabados se conservan.",
     "recording_slept": "La grabación se pausó porque el equipo se suspendió. Reanúdala o detenla desde su barra.",
-    "recording_no_mic": "No se grabó la voz: no había ningún micrófono conectado."
+    "recording_no_mic": "No se grabó la voz: no había ningún micrófono conectado.",
+    "recording_time_up": "Se detuvo al terminar el temporizador.",
+    "recording_monitor_gone": "Se detuvo porque se desconectó el monitor que se grababa.",
+    "recording_too_short_title": "Grabación demasiado corta",
+    "recording_too_short_body": "Se grabó menos de un segundo, así que no se creó el video."
   },
   "source": {
     "ui": "la interfaz",
@@ -4208,7 +4212,11 @@
       "pending_share": "Pendiente de enviar a: {{destinations}}",
       "send": "Enviar",
       "dont_send": "No enviar",
-      "recover_video": "video, {{length}}"
+      "recover_video": "video, {{length}}",
+      "recording_quit_name": "La grabación en curso ({{time}})",
+      "recording_quit_title": "Hay una grabación en curso",
+      "recording_quit": "{{name}} se detiene y se guarda en la biblioteca.",
+      "stop_and_save": "Detener y guardar"
     },
     "multi": {
       "title": "Multicaptura",

@@ -711,9 +711,9 @@ export interface VideoInfo {
 }
 
 export interface Pending {
-  /** `document` (unsaved changes) or `series` (an interval capture that quitting stops,
-   * CAP-049). */
-  kind?: "document" | "series";
+  /** `document` (unsaved changes), `series` (an interval capture that quitting stops,
+   * CAP-049) or `recording` (a video that quitting stops and saves, VID-013). */
+  kind?: "document" | "series" | "recording";
   documentId: string;
   name: string;
   path: string | null;

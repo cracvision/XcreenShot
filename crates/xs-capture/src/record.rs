@@ -1527,6 +1527,18 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
             tell(core, source, "record.cancelled", json!({ "status": "cancelled" }));
             return Ok(json!({ "status": "cancelled" }));
         }
+        // Under 1 s: no video, and a notice (VID-013).
+        Ok(s) if !cancel && s.duration < MIN_SECONDS => {
+            let _ = std::fs::remove_file(&s.path);
+            core.host().notify(
+                "captures",
+                &tr(lang, "notify.recording_too_short_title", &[]),
+                &tr(lang, "notify.recording_too_short_body", &[]),
+            );
+            let value = json!({ "status": "too_short", "duration": (s.duration * 100.0).round() / 100.0 });
+            tell(core, source, "record.stopped", value.clone());
+            return Ok(value);
+        }
         Ok(s) => s,
         Err(e) => {
             tell(
@@ -1573,6 +1585,14 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
     if result.low_disk {
         // It stopped by itself: less than 1 GB was left (VID-023).
         warnings.push(tr(lang, "notify.recording_low_disk", &[]));
+    }
+    if result.time_up {
+        // The timer ran out (VID-015).
+        warnings.push(tr(lang, "notify.recording_time_up", &[]));
+    }
+    if result.monitor_gone {
+        // The monitor recorded was unplugged (VID-004).
+        warnings.push(tr(lang, "notify.recording_monitor_gone", &[]));
     }
     if wants_audio && !result.system_audio {
         // Asked for and missing: no sound output was on (VID-040, VID-043).
@@ -1635,6 +1655,52 @@ fn take(core: &Core, lang: Lang) -> Result<Running, CommandError> {
         .unwrap()
         .take()
         .ok_or_else(|| not_recording(lang))
+}
+
+/// Less than this recorded makes no video (VID-013).
+const MIN_SECONDS: f64 = 1.0;
+
+/// Quitting during a recording (APP-004, VID-013): the quit dialog names it, and its
+/// yes (Stop and save) leaves the video in the library; the session ending does the
+/// same. Ready, with nothing recorded yet, just ends.
+pub(crate) struct RecordQuitGuard(pub(crate) std::sync::Weak<Core>);
+
+impl xs_core::core::QuitGuard for RecordQuitGuard {
+    fn pending(&self, lang: Lang) -> Vec<Value> {
+        let Some(core) = self.0.upgrade() else {
+            return Vec::new();
+        };
+        let rec = service(&core);
+        let current = rec.current.lock().unwrap();
+        current
+            .iter()
+            .map(|r| {
+                let time = clock_text(r.recorder.recorded().as_secs_f64());
+                json!({
+                    "kind": "recording",
+                    "name": tr(lang, "ui.editor.recording_quit_name", &[("time", &time)]),
+                })
+            })
+            .collect()
+    }
+
+    fn before_quit(&self) {
+        let Some(core) = self.0.upgrade() else { return };
+        if service(&core).ready.lock().unwrap().take().is_some() {
+            service(&core).meter.lock().unwrap().take();
+            restore_icons(&core);
+            bar(&core, None);
+        }
+        let running = service(&core).current.lock().unwrap().take();
+        if let Some(mut r) = running {
+            // Into the library; no editor opens while quitting.
+            r.open = false;
+            let lang = core.lang();
+            if let Err(e) = finish(&core, Source::Ui, r, false, lang) {
+                tracing::warn!(error = %e.message, "the recording could not be saved on quitting");
+            }
+        }
+    }
 }
 
 /// `record.stop`: waits for the file.
@@ -1794,6 +1860,53 @@ mod tests {
         let last = core.recall(crate::LAST_KEY).unwrap();
         assert_eq!(last["command"], "record.video");
         assert!(last["params"].get("area").is_none());
+    }
+
+    /// VID-013, APP-004: Ready has nothing to lose and just ends on quitting; stopped
+    /// under 1 s, no video; quitting while recording names it and, forced, stops and
+    /// saves it. Records a small corner of the screen, into a temporary folder.
+    #[test]
+    fn stops_short_and_on_quitting() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(xs_core::platform::Platform::Windows, vec![crate::extension()]);
+        let call = |id: &str, p: Value| core.call(Source::Cli, id, p, Some(Lang::En));
+        call("settings.set", json!({"key": "video.camera", "value": false})).unwrap();
+        call(
+            "record.video",
+            json!({"area": {"x": 0, "y": 0, "width": 320, "height": 240}}),
+        )
+        .unwrap();
+        assert!(core.quit_pending(Lang::En).is_empty());
+        call("app.quit", json!({"force": true})).unwrap();
+        assert_eq!(call("record.status", json!({})).unwrap()["status"], "idle");
+
+        let start = |path: &Path| {
+            call(
+                "record.start",
+                json!({"source": "region", "x": 0, "y": 0, "width": 320, "height": 240,
+                    "systemAudio": false, "microphone": false, "countdown": 0, "open": "none",
+                    "path": path}),
+            )
+        };
+        let short = dir.path().join("short.mp4");
+        if let Err(e) = start(&short) {
+            eprintln!("no recording on this computer: {}", e.message);
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(300));
+        let r = call("record.stop", json!({})).unwrap();
+        assert_eq!(r["status"], "too_short", "{r}");
+        assert!(!short.exists());
+
+        let kept = dir.path().join("kept.mp4");
+        start(&kept).unwrap();
+        std::thread::sleep(Duration::from_millis(1500));
+        let pending = core.quit_pending(Lang::En);
+        assert_eq!(pending.len(), 1, "{pending:?}");
+        assert_eq!(pending[0]["kind"], "recording");
+        call("app.quit", json!({"force": true})).unwrap();
+        assert!(std::fs::metadata(&kept).is_ok_and(|m| m.len() > 0));
+        assert_eq!(call("record.status", json!({})).unwrap()["status"], "idle");
     }
 
     /// VID-015: the timer needs a recording ready or under way, from 5 s to 12 h.
