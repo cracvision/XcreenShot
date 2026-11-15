@@ -862,6 +862,12 @@ fn start_at_once(core: &Arc<Core>, ctx: &Context, ready: Value) -> CommandResult
     if !core.settings.get_bool("video.startAtOnce") {
         return Ok(ready);
     }
+    // Not by itself when it could not record well (VID-007): with the disk almost full
+    // (less than a minute fits) it stays Ready, with its warning on the bar. (A too
+    // small area never gets to Ready; Windows asks no screen permission.)
+    if ready["minutesFree"].as_u64().is_some_and(|m| m < 1) {
+        return Ok(ready);
+    }
     start(core, ctx, &json!({}))
 }
 
