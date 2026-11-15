@@ -1925,6 +1925,10 @@
       "label": "Show the area's border while recording",
       "description": "A line around the area: dashed in the accent color when ready, red while recording, amber with a pause sign when paused. It never shows in the video."
     },
+    "video_readySummary": {
+      "label": "Show the Ready to record summary",
+      "description": "Before recording, what is about to be recorded: size, sound, camera, effects, timer, where it opens and the space left. Its warnings stay on the bar."
+    },
     "video_minimizeControls": {
       "label": "Minimize the controls when recording a whole screen with one monitor",
       "description": "A small pill with the time, Pause, Stop and Live drawing; a click on the time shows the whole bar."
@@ -4847,6 +4851,26 @@
       "skip": "No text"
     },
     "recbar": {
+      "ready_title": "Ready to record",
+      "ready_on": "on",
+      "ready_off": "off",
+      "ready_video": "Video",
+      "ready_size_reduced": "{{width}} × {{height}} (area {{areaWidth}} × {{areaHeight}}, reduced)",
+      "ready_sound": "Sound",
+      "ready_sound_value": "microphone {{mic}} · system sound {{system}}",
+      "ready_camera": "Camera",
+      "ready_effects": "Pointer and keys",
+      "ready_highlight": "highlight",
+      "ready_keys": "keys pressed",
+      "ready_draw": "Live drawing button",
+      "ready_none": "none",
+      "ready_open": "When it stops",
+      "ready_open_editor": "opens in the editor",
+      "ready_open_library": "goes to the library",
+      "ready_disk": "Space",
+      "ready_disk_minutes": "about {{minutes}} min fit on the disk",
+      "ready_disk_hours": "about {{hours}} h fit on the disk",
+      "ready_hide": "Don't show again",
       "title": "Recording",
       "record": "Record",
       "pause": "Pause",

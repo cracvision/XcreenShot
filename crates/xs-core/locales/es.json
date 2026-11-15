@@ -1925,6 +1925,10 @@
       "label": "Mostrar el borde del área al grabar",
       "description": "Una línea alrededor del área: discontinua del color de acento en Lista, roja grabando y ámbar con el símbolo de pausa en pausa. Nunca sale en el video."
     },
+    "video_readySummary": {
+      "label": "Mostrar el resumen Listo para grabar",
+      "description": "Antes de grabar, lo que se va a grabar: tamaño, sonido, cámara, efectos, temporizador, dónde se abre y el espacio que queda. Sus avisos siguen en la barra."
+    },
     "video_minimizeControls": {
       "label": "Minimizar los controles al grabar a pantalla completa con un solo monitor",
       "description": "Una pastilla pequeña con el tiempo, Pausar, Detener y Dibujo en vivo; un clic en el tiempo muestra la barra completa."
@@ -4847,6 +4851,26 @@
       "skip": "Sin texto"
     },
     "recbar": {
+      "ready_title": "Listo para grabar",
+      "ready_on": "sí",
+      "ready_off": "no",
+      "ready_video": "Video",
+      "ready_size_reduced": "{{width}} × {{height}} (área de {{areaWidth}} × {{areaHeight}}, reducido)",
+      "ready_sound": "Sonido",
+      "ready_sound_value": "micrófono {{mic}} · sonido del sistema {{system}}",
+      "ready_camera": "Cámara",
+      "ready_effects": "Puntero y teclas",
+      "ready_highlight": "resaltado",
+      "ready_keys": "teclas pulsadas",
+      "ready_draw": "botón Dibujo en vivo",
+      "ready_none": "ninguno",
+      "ready_open": "Al detener",
+      "ready_open_editor": "se abre en el editor",
+      "ready_open_library": "va a la biblioteca",
+      "ready_disk": "Espacio",
+      "ready_disk_minutes": "caben unos {{minutes}} min en el disco",
+      "ready_disk_hours": "caben unas {{hours}} h en el disco",
+      "ready_hide": "No volver a mostrar",
       "title": "Grabación",
       "record": "Grabar",
       "pause": "Pausar",

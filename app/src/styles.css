@@ -2807,6 +2807,60 @@ html.launcher-root #root {
   font-size: 12px;
 }
 
+/* The Ready summary (VID-006), under or over the bar. */
+.recbar-summary {
+  position: relative;
+  flex: none;
+  height: 214px;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.recbar-summary dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 3px;
+}
+
+.recbar-summary dl > div {
+  display: contents;
+}
+
+.recbar-summary dt {
+  color: var(--ink-muted);
+}
+
+.recbar-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recbar-summary .low dd {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.recbar-summary-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recbar-summary-foot .grow {
+  flex: 1;
+}
+
 .recbar-strip-dot {
   width: 8px;
   height: 8px;
@@ -4865,7 +4919,8 @@ html.launcher-root #root {
 .hint-bubble,
 .pending-share,
 .recbar,
-.recbar-strip {
+.recbar-strip,
+.recbar-summary {
   border: 1px solid var(--glass-edge);
   background: transparent;
   box-shadow:
@@ -4884,7 +4939,8 @@ html.launcher-root #root {
 .hint-bubble::before,
 .pending-share::before,
 .recbar::before,
-.recbar-strip::before {
+.recbar-strip::before,
+.recbar-summary::before {
   content: "";
   position: absolute;
   inset: 0;

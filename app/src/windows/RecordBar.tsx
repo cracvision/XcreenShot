@@ -13,6 +13,7 @@ import { useSetting } from "../store";
 import { clock, longHint, timeLeft, TIMER_CHOICES } from "./recClock";
 import { CameraControl } from "./RecordCamera";
 import { MicControl, SoundStrip, SystemAudioControl } from "./RecordSound";
+import { ReadySummary, SUMMARY_H } from "./ReadySummary";
 import { barWarning, DISMISS_MS, useLevels } from "./recSound";
 
 /** The bar's height, a warning's under it and a menu entry's, in CSS px. */
@@ -143,7 +144,16 @@ export function RecordBar() {
   const raw = barWarning(levels, alerts);
   const closedAt = raw ? dismissed[raw] : undefined;
   const warning = raw && !(closedAt !== undefined && now - closedAt < DISMISS_MS) ? raw : null;
-  const height = BAR_H + (warning ? STRIP_H : 0) + (menuRows ? menuRows * ROW_H + 24 : 0);
+  // The Ready summary beside the bar (VID-006), unless the preference hides it; a menu,
+  // a question or the timer's fields take its place.
+  const readySummary = useSetting("video.readySummary", true);
+  const summaryOn =
+    state.status === "ready" && readySummary && menuRows === 0 && !asking && timing === null;
+  const height =
+    BAR_H +
+    (warning ? STRIP_H : 0) +
+    (menuRows ? menuRows * ROW_H + 24 : 0) +
+    (summaryOn ? SUMMARY_H + 6 : 0);
   // The pill (VID-016): a whole monitor and only one, while recording.
   const pill =
     !!state.compact && !expanded && (state.status === "recording" || state.status === "paused");
@@ -352,6 +362,14 @@ export function RecordBar() {
     <div className={`recbar-stack${up ? " up" : ""}`}>
       {bar}
       {strip}
+      {summaryOn && (
+        <ReadySummary
+          state={state}
+          onRecord={() => act("record.start")}
+          onImage={() => act("record.image")}
+          onCancel={() => act("record.cancel")}
+        />
+      )}
     </div>
   );
 

@@ -595,6 +595,8 @@ pub fn definitions() -> Vec<SettingDef> {
             json!(true),
             "VID-016",
         ),
+        // The summary beside the bar while Ready (VID-006).
+        def("video.readySummary", "video", boolean(), json!(true), "VID-006"),
         def("video.highlight", "video", boolean(), json!(false), "VID-045"),
         def(
             "video.highlightColor",
