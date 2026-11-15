@@ -2097,6 +2097,15 @@ export function Canvas({ doc, insets }: Props) {
       const [sx, sy] = toScreen(d.start);
       if (Math.hypot(s.x - sx, s.y - sy) < DRAG_THRESHOLD) return;
     }
+    // A floating image let go over a template's zone goes into it (EDT-098).
+    if (d.kind === "move" && d.moved && !d.copy && d.ids.length === 1) {
+      const dragged = doc.objects.find((o) => o.id === d.ids[0]);
+      const zone = dragged?.type === "image" ? zoneAt(doc.objects, toCanvas(local(e))) : null;
+      if (dragged && zone) {
+        void templateCommand("fill_zone", { zone: zone.id, fromObject: dragged.id });
+        return;
+      }
+    }
     void finish(d);
   };
 
