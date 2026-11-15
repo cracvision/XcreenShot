@@ -30,10 +30,12 @@ const version = JSON.parse(
 ).version;
 const out = join(root, "target", "release", "updates");
 const args = new Set(process.argv.slice(2));
+// Only npx needs a shell on Windows; through one, arguments with spaces (a title,
+// the notes) would be split.
 const run = (cmd, a, opts = {}) =>
   execFileSync(cmd, a, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: process.platform === "win32" && cmd === "npx",
     ...opts,
   });
 
