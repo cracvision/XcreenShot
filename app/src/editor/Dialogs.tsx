@@ -1,5 +1,6 @@
 // Editor dialogs: unsaved changes (EDT-108, APP-004), flattening a PNG or JPG
 // (EDT-107), Recover work (APP-047) and errors.
+import { ShareDialogs } from "../share/ShareDialogs";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
@@ -309,6 +310,7 @@ export function Dialogs() {
       <StampDialogs />
       <LanDialogs />
       <UpdateDialog />
+      <ShareDialogs />
     </>
   );
 }

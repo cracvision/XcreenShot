@@ -1,3 +1,4 @@
+import { destinationItems } from "../share/destinations";
 import { destinationOff, managedNow } from "../lib/managed";
 // The right-click menu of the Library view's selection (LIB-002).
 import { askSend } from "../share/lanState";
@@ -93,6 +94,14 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
             onSelect: () => void askSend(items.map((i) => i.path)),
           },
         ]),
+    // SHR-020 to SHR-026: email, another app, the printer, Office.
+    {
+      id: "share_to",
+      label: t("ui.share.menu"),
+      disabled: items.some((i) => i.cloud),
+      onSelect: () => undefined,
+      submenu: destinationItems(() => ({ paths: items.map((i) => i.path) }), t),
+    },
     // LIB-009, LIB-011.
     {
       id: "tags",

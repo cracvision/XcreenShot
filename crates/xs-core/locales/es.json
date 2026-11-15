@@ -499,6 +499,14 @@
       "title": "Instalar la actualización",
       "description": "Instala la versión encontrada, ahora (XcreenShot se reinicia) o al cerrarse."
     },
+    "share_destinations": {
+      "title": "Destinos de compartir",
+      "description": "Lista correo, otra aplicación, la impresora, Word, PowerPoint y Excel, y si cada uno se puede usar aquí."
+    },
+    "share_send": {
+      "title": "Compartir",
+      "description": "Entrega capturas al correo, a otra aplicación, a la impresora, a Word, a PowerPoint o a Excel."
+    },
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
@@ -2122,6 +2130,13 @@
     "update_busy": "XcreenShot está grabando: la actualización se instalará al cerrarse.",
     "update_failed": "No se pudo buscar o instalar la actualización: {{reason}}.",
     "update_none": "No hay ninguna actualización que instalar: busca actualizaciones primero.",
+    "share_failed": "No se pudo compartir: {{reason}}.",
+    "share_not_installed": "{{destination}} no está instalado en este equipo.",
+    "share_not_supported": "{{destination}} aún no está disponible en este sistema.",
+    "share_unknown": "No hay ningún destino {{destination}}.",
+    "share_disabled": "{{destination}} lo desactivó tu administrador.",
+    "share_nothing": "Abre o elige primero algo que compartir.",
+    "share_app_missing": "La aplicación ya no está: elígela de nuevo.",
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
@@ -2682,6 +2697,22 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "share": {
+      "menu": "Compartir en",
+      "email": "Correo",
+      "app": "Otra aplicación…",
+      "printer": "Imprimir…",
+      "word": "Word",
+      "powerpoint": "PowerPoint",
+      "excel": "Excel",
+      "opened": "Abierto en {{name}}.",
+      "inserted": "Insertado en {{name}}.",
+      "too_large_title": "Adjunto grande",
+      "too_large": "Lo que envías ocupa {{size}}: muchos servidores de correo rechazan mensajes de más de 20 MB. ¿Abrir el mensaje igualmente?",
+      "send_anyway": "Abrir igualmente",
+      "pick_app": "Elegir una aplicación",
+      "apps": "Programas"
+    },
     "update": {
       "title": "Actualización",
       "available": "Está disponible XcreenShot {{version}}. Tienes la {{current}}.",
@@ -5919,6 +5950,12 @@
     "mine": "Mis sellos"
   },
   "share": {
+    "dest_email": "Correo",
+    "dest_app": "Otra aplicación",
+    "dest_printer": "Impresora",
+    "dest_word": "Word",
+    "dest_powerpoint": "PowerPoint",
+    "dest_excel": "Excel",
     "lan_from": "De: {{name}}"
   },
   "presets": {

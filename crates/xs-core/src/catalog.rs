@@ -1979,6 +1979,28 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "categories": {"type": "array", "description": "id, name; own ones also own, count and pack (name, version, author, license)"},
                 "stamps": {"type": "array", "description": "id, category, name; own ones also keywords and own. Emoji are listed when searching or in their category"}
             }})),
+        // The standard destinations (SHR-020 to SHR-026).
+        B::new("share.destinations", &["SHR-002", "SHR-003"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {"destinations": {"type": "array", "description": "id (email, app, printer, word, powerpoint, excel), name, available, reason (not_installed…)"}}})),
+        B::new("share.send", &["SHR-020", "SHR-021", "SHR-022", "SHR-024", "SHR-025", "SHR-026"])
+            .mutates()
+            .positional(&["destination"])
+            .params(params(
+                json!({
+                    "destination": {"type": "string", "enum": ["email", "app", "printer", "word", "powerpoint", "excel"]},
+                    "documentId": document_id(),
+                    "documentIds": {"type": "array", "items": {"type": "string"}},
+                    "paths": {"type": ["string", "array"], "items": {"type": "string"}, "description": "Files instead of open documents: .xshot (with its annotations), images, videos, GIF"},
+                    "options": {"type": "object", "description": "email: to, subject, body, force (over 20 MB); app: program (an .exe), params ({file}, {files}); word, powerpoint, excel: where (current, new; powerpoint also after)"}
+                }),
+                &["destination"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["opened", "inserted", "too_large"], "description": "too_large: email over 20 MB, nothing opened; send again with options.force"},
+                "files": {"type": "array", "items": {"type": "string"}, "description": "What was handed over"},
+                "how": {"type": "string", "description": "email: mail_app or draft (.eml)"}
+            }})),
         // The local network (SHR-042 to SHR-044).
         B::new("share.lan_status", &["SHR-042"])
             .params(params(json!({}), &[]))

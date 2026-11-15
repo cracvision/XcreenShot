@@ -357,13 +357,13 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | SHR-017 | Comandos de compartir (CLI y MCP) | M6 | Should | — (borrador del spec, pendiente de aprobación) |
 | SHR-018 | Archivo | M1 | Must | En curso |
 | SHR-019 | Portapapeles | M1 | Must | En curso |
-| SHR-020 | Correo | M6 | Must | — (borrador del spec, pendiente de aprobación) |
-| SHR-021 | Aplicación | M6 | Should | — (borrador del spec, pendiente de aprobación) |
-| SHR-022 | Impresora | M6 | Should | — (borrador del spec, pendiente de aprobación) |
+| SHR-020 | Correo | M6 | Must | En curso (Windows, 2026-11-15: Compartir > Correo abre un mensaje nuevo en la app de correo con lo compartido adjunto, por la interfaz de correo del sistema (MAPI) o, si la app no la tiene, con un borrador `.eml`; por encima de 20 MB pregunta antes. Faltan: las opciones de Para, Asunto y Cuerpo en la interfaz, "dentro del mensaje" y probarlo con el Outlook nuevo) |
+| SHR-021 | Aplicación | M6 | Should | En curso (Windows, 2026-11-15: Compartir > Otra aplicación… elige un `.exe` y lo recuerda; abre lo compartido con `{file}`/`{files}` o al final; probado. Faltan las instancias con nombre de SHR-004) |
+| SHR-022 | Impresora | M6 | Should | En curso (Windows, 2026-11-15: Compartir > Imprimir… abre la vista previa de EDT-114. Falta Imprimir sin preguntar) |
 | SHR-023 | FTP y SFTP | M6 | Could | — (borrador del spec, pendiente de aprobación) |
-| SHR-024 | Word | M6 | Should | — (borrador del spec, pendiente de aprobación) |
-| SHR-025 | PowerPoint | M6 | Should | — (borrador del spec, pendiente de aprobación) |
-| SHR-026 | Excel | M6 | Could | — (borrador del spec, pendiente de aprobación) |
+| SHR-024 | Word | M6 | Should | En curso (Windows, 2026-11-15: inserta en el documento actual en el cursor (o en uno nuevo), al ancho del texto como mucho y con texto alternativo; una guía va como el documento de SMT-030. Sin probar en vivo: Word estaba abierto con documentos de Carlos) |
+| SHR-025 | PowerPoint | M6 | Should | En curso (Windows, 2026-11-15: una diapositiva nueva por imagen o video, centrada y ajustada; una guía como su presentación; probado con PowerPoint oculto) |
+| SHR-026 | Excel | M6 | Could | En curso (Windows, 2026-11-15: la imagen en la celda activa, una debajo de otra; probado con Excel oculto) |
 | SHR-027 | OneNote | M6 | Could | — (borrador del spec, pendiente de aprobación) |
 | SHR-028 | Evernote | M6 | Could | — (borrador del spec, pendiente de aprobación) |
 | SHR-029 | OneDrive y SharePoint | M6 | Should | — (borrador del spec, pendiente de aprobación) |

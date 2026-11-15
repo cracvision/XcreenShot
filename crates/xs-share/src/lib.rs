@@ -2,6 +2,7 @@
 //! SHR-044, IDEA-005). Nothing leaves the local network, and nothing listens or is
 //! announced while the preference is off (APP-054).
 
+pub mod destinations;
 pub mod discovery;
 pub mod identity;
 pub mod lan;
@@ -89,6 +90,33 @@ pub fn extension() -> Extension {
                 });
             }};
         }
+        // The standard destinations (SHR-020 to SHR-026).
+        on!("share.destinations", |core, ctx, _p| {
+            let off: Vec<String> = core
+                .managed()
+                .policy
+                .get("disabledDestinations")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            let list: Vec<Value> = destinations::IDS
+                .iter()
+                .filter(|id| !off.iter().any(|o| o == *id))
+                .map(|id| {
+                    let state = destinations::available(id);
+                    json!({
+                        "id": id,
+                        "name": tr(ctx.lang, &format!("share.dest_{id}"), &[]),
+                        "available": state.is_ok(),
+                        "reason": state.err(),
+                    })
+                })
+                .collect();
+            Ok(json!({ "destinations": list }))
+        });
+        on!("share.send", |core, ctx, p| destinations::send(
+            &core, ctx.lang, &p
+        ));
         on!("share.lan_status", |core, _ctx, _p| Ok(lan(&core).status()));
         on!("share.lan_people", |core, _ctx, _p| Ok(
             json!({ "people": lan(&core).people() })

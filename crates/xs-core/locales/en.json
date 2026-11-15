@@ -499,6 +499,14 @@
       "title": "Install the update",
       "description": "Installs the version found, now (XcreenShot restarts) or when it closes."
     },
+    "share_destinations": {
+      "title": "Sharing destinations",
+      "description": "Lists email, another app, the printer, Word, PowerPoint and Excel, and whether each can be used here."
+    },
+    "share_send": {
+      "title": "Share",
+      "description": "Hands captures to email, another app, the printer, Word, PowerPoint or Excel."
+    },
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
@@ -2122,6 +2130,13 @@
     "update_busy": "XcreenShot is recording: the update will install when it closes.",
     "update_failed": "The update could not be checked or installed: {{reason}}.",
     "update_none": "There is no update to install: check for updates first.",
+    "share_failed": "It could not be shared: {{reason}}.",
+    "share_not_installed": "{{destination}} is not installed on this computer.",
+    "share_not_supported": "{{destination}} is not available on this system yet.",
+    "share_unknown": "There is no destination {{destination}}.",
+    "share_disabled": "{{destination}} is turned off by your administrator.",
+    "share_nothing": "Open or choose something to share first.",
+    "share_app_missing": "The app is no longer there: choose it again.",
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
@@ -2682,6 +2697,22 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "share": {
+      "menu": "Share to",
+      "email": "Email",
+      "app": "Another app…",
+      "printer": "Print…",
+      "word": "Word",
+      "powerpoint": "PowerPoint",
+      "excel": "Excel",
+      "opened": "Opened in {{name}}.",
+      "inserted": "Inserted in {{name}}.",
+      "too_large_title": "Large attachment",
+      "too_large": "What you are sending takes {{size}}: many mail servers refuse messages over 20 MB. Open the message anyway?",
+      "send_anyway": "Open anyway",
+      "pick_app": "Choose an app",
+      "apps": "Programs"
+    },
     "update": {
       "title": "Update",
       "available": "XcreenShot {{version}} is available. You have {{current}}.",
@@ -5919,6 +5950,12 @@
     "mine": "My stamps"
   },
   "share": {
+    "dest_email": "Email",
+    "dest_app": "Another app",
+    "dest_printer": "Printer",
+    "dest_word": "Word",
+    "dest_powerpoint": "PowerPoint",
+    "dest_excel": "Excel",
     "lan_from": "From: {{name}}"
   },
   "presets": {

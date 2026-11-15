@@ -7,6 +7,7 @@
 // bar gets compact by steps (`useFit`): first the tools' names go, then the secondary
 // labels, then Capture's and the view switch's; then the language and Preferences fold
 // into ⋯, then Open and Save; at last the items at the end of the bar go to More.
+import { destinationItems, useShare } from "../share/destinations";
 import { destinationOff, useManaged } from "../lib/managed";
 import { sendActiveOnLan } from "../share/lanSend";
 import { useRef } from "react";
@@ -44,6 +45,8 @@ export function Toolbar() {
   const { t, i18n } = useTranslation();
   const doc = useEditor((s) => s.doc);
   const managed = useManaged();
+  // The destinations arrive once: the Share menu redraws with them (SHR-002).
+  useShare((s) => s.dests);
   const hasDoc = doc !== null;
   const labels = useSetting("editor.toolbarLabels", true);
   const items = useToolbar((s) => s.data?.items ?? EMPTY);
@@ -196,6 +199,11 @@ export function Toolbar() {
                     onSelect: () => void sendActiveOnLan(),
                   },
                 ]),
+            // SHR-020 to SHR-026: email, another app, the printer, Office.
+            ...destinationItems(() => {
+              const id = useEditor.getState().active;
+              return id ? { documentId: id } : null;
+            }, t).map((item, i) => (i === 0 ? { ...item, separator: true } : item)),
             {
               id: "save_as",
               label: t("ui.editor.save_as"),

@@ -19,6 +19,10 @@ mdns-sd = { version = "0.21", default-features = false }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging"] }
 ring = "0.17"
 
+[target.'cfg(windows)'.dependencies]
+# Email through the system's mail interface and opening a draft (SHR-020).
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Mapi", "Win32_System_LibraryLoader", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
 [dev-dependencies]
 tempfile = "3"
 xs-library = { path = "../xs-library" }
