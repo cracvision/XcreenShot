@@ -1131,7 +1131,7 @@ pub(crate) fn drawing_monitor(core: &Core) -> Option<(Rect, f64)> {
     let svc = service(core);
     // Narrated slides (VID-073): the monitor where the editor shows them.
     if let Some(r) = crate::slides_mode::frame_rect(core) {
-        return monitor_of(r);
+        return monitor_of(r).or_else(|| most_of(r));
     }
     let current = svc.current.lock().unwrap().as_ref().map(|r| r.rect);
     let rect = current.or_else(|| svc.ready.lock().unwrap().as_ref().map(|r| r.rect))?;
@@ -1147,6 +1147,20 @@ pub(crate) fn pointer_monitor() -> Option<(Rect, f64)> {
         .map(|(_, i)| i)
         .find(|i| i.rect.contains(x, y))
         .map(|i| (i.rect, i.scale as f64))
+}
+
+/// The monitor showing most of `r` (its middle may be off every monitor).
+fn most_of(r: Rect) -> Option<(Rect, f64)> {
+    monitors()
+        .ok()?
+        .into_iter()
+        .map(|(_, i)| i)
+        .filter_map(|i| {
+            let seen = i.rect.intersect(&r)?;
+            Some((seen.width as u64 * seen.height as u64, i))
+        })
+        .max_by_key(|(area, _)| *area)
+        .map(|(_, i)| (i.rect, i.scale as f64))
 }
 
 /// The monitor holding the middle of `r`: its place and scale.
