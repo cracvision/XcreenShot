@@ -570,9 +570,10 @@ pub fn finish(core: &Core, ctx: &Context, shot: Shot, opts: &Options) -> Command
     let started = std::time::Instant::now();
     let host = core.host();
     let mut warnings = shot.warnings.clone();
-    // The moment of the capture: its sound and flash (CAP-055).
+    // The moment of the capture: its sound and flash (CAP-055). Not while a video
+    // records: XcreenShot's own sounds never go in it (VID-040).
     let sound = core.settings.get_str("capture.sound");
-    if sound != "none" {
+    if sound != "none" && !record::running(core) && !steps_rec::running(core) {
         feedback::play(&sound);
     }
     if core.settings.get_bool("capture.flash") {
