@@ -14,6 +14,9 @@ param(
   [int] $TimeoutSec = 600
 )
 $ErrorActionPreference = 'Stop'
+# One Sandbox at a time: a previous one may still be shutting down.
+$t = 0
+while ((Get-Process WindowsSandbox, WindowsSandboxServer -ErrorAction SilentlyContinue) -and $t -lt 120) { Start-Sleep 3; $t += 3 }
 if (Get-Process WindowsSandbox, WindowsSandboxServer -ErrorAction SilentlyContinue) {
   throw 'A Sandbox is already running: wait for it to end.'
 }

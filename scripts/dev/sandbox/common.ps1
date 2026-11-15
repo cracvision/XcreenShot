@@ -10,13 +10,27 @@ function Log($m) { "$(Get-Date -Format HH:mm:ss.fff) $m" | Out-File -Append -Enc
 # The output of a command, into the log.
 function LogRun([scriptblock] $b) { (& $b 2>&1 | Out-String).Trim() | Out-File -Append -Encoding utf8 "$out\log.txt" }
 
+# BitBlt with CAPTUREBLT (Graphics.CopyFromScreen refuses that flag). XcreenShot's own
+# windows are WebView2, composed by DirectComposition: a GDI copy does not see them
+# (live drawing's shapes included). To check what is on screen, ask the app instead.
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class Gdi {
+  [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr h);
+  [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr h, IntPtr dc);
+  [DllImport("gdi32.dll")] public static extern bool BitBlt(IntPtr d, int x, int y, int w, int h, IntPtr s, int sx, int sy, int op);
+}
+"@
 function Shot($name) {
   try {
     $r = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
     $bmp = New-Object System.Drawing.Bitmap $r.Width, $r.Height
     $g = [System.Drawing.Graphics]::FromImage($bmp)
-    # CaptureBlt: with the layered (transparent) windows, such as live drawing's overlay.
-    $g.CopyFromScreen($r.Location, [System.Drawing.Point]::Empty, $r.Size, [System.Drawing.CopyPixelOperation]'SourceCopy, CaptureBlt')
+    $dst = $g.GetHdc(); $src = [Gdi]::GetDC([IntPtr]::Zero)
+    # SRCCOPY | CAPTUREBLT
+    [void][Gdi]::BitBlt($dst, 0, 0, $r.Width, $r.Height, $src, $r.X, $r.Y, 0x40CC0020)
+    [void][Gdi]::ReleaseDC([IntPtr]::Zero, $src); $g.ReleaseHdc($dst)
     $bmp.Save("$out\$name.png", [System.Drawing.Imaging.ImageFormat]::Png)
     $g.Dispose(); $bmp.Dispose()
   } catch { Log "shot failed: $_" }
