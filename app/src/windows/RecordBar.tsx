@@ -47,7 +47,13 @@ interface RecState {
   limit?: number | null;
   /** What is recorded: `region`, `window`, `screen`, `slides` (VID-003). */
   source?: { type?: string };
+  /** A whole monitor and only one: a pill while recording (VID-016). */
+  compact?: boolean;
 }
+
+/** The pill's width and the whole bar's, in CSS px (VID-016). */
+const PILL_W = 380;
+const BAR_W = 960;
 
 /** While Ready (VID-003): the area's width and height, written, and Adjust area to move
  * or resize it on screen. The sizes shown are the even ones the video will have. */
@@ -105,6 +111,8 @@ export function RecordBar() {
   const [state, setState] = useState<RecState>({ status: "ready" });
   // Restart or Cancel waiting for a yes, after 10 s recorded (VID-014).
   const [asking, setAsking] = useState<"cancel" | "restart" | "image" | null>(null);
+  // The pill opened into the whole bar (VID-016).
+  const [expanded, setExpanded] = useState(false);
   // A timer of one's own being written (VID-015): its seconds, and why it cannot be.
   const [timing, setTiming] = useState<number | null>(null);
   const [timingError, setTimingError] = useState<string | null>(null);
@@ -136,9 +144,13 @@ export function RecordBar() {
   const closedAt = raw ? dismissed[raw] : undefined;
   const warning = raw && !(closedAt !== undefined && now - closedAt < DISMISS_MS) ? raw : null;
   const height = BAR_H + (warning ? STRIP_H : 0) + (menuRows ? menuRows * ROW_H + 24 : 0);
+  // The pill (VID-016): a whole monitor and only one, while recording.
+  const pill =
+    !!state.compact && !expanded && (state.status === "recording" || state.status === "paused");
+  const width = pill ? PILL_W : BAR_W;
   useEffect(() => {
-    void invoke("xs_recbar_fit", { height, up }).catch(() => undefined);
-  }, [height, up]);
+    void invoke("xs_recbar_fit", { height, up, width }).catch(() => undefined);
+  }, [height, up, width]);
 
   useEffect(() => {
     document.documentElement.classList.add("launcher-root");
@@ -351,6 +363,70 @@ export function RecordBar() {
     );
   }
 
+  if (pill && !asking && timing === null)
+    return stack(
+      <div
+        className="recbar glass recbar-pill"
+        role="toolbar"
+        aria-label={t("ui.recbar.title")}
+        onKeyDown={(e) => {
+          if (e.key !== "Escape") return;
+          e.preventDefault();
+          drop("cancel");
+        }}
+      >
+        <span className="recbar-grip" data-tauri-drag-region aria-hidden="true">
+          ⋮⋮
+        </span>
+        <span
+          className={`recbar-dot${recording ? " on" : ""}`}
+          role="img"
+          aria-label={t(`ui.recbar.${paused ? "paused" : "recording"}`)}
+        />
+        <button
+          type="button"
+          className="btn small recbar-time"
+          title={t("ui.recbar.expand")}
+          aria-expanded={false}
+          onClick={() => setExpanded(true)}
+        >
+          {clock(elapsed)}
+        </button>
+        <span className="recbar-fill" data-tauri-drag-region />
+        <button
+          type="button"
+          className="btn small"
+          title={`${t(paused ? "ui.recbar.resume" : "ui.recbar.pause")} (Ctrl+Shift+F9)`}
+          onClick={() => act(paused ? "record.resume" : "record.pause")}
+        >
+          {t(paused ? "ui.recbar.resume" : "ui.recbar.pause")}
+        </button>
+        <button
+          type="button"
+          className="btn small primary"
+          title={`${t("ui.recbar.stop")} (Ctrl+Shift+F10)`}
+          onClick={() => act("record.stop")}
+        >
+          {t("ui.recbar.stop")}
+        </button>
+        {liveDraw && (
+          <button
+            type="button"
+            className="btn small recbar-toggle"
+            aria-pressed={drawing}
+            title={t("ui.livedraw.title")}
+            onClick={() =>
+              void run<{ on: boolean }>("record.draw", { on: !drawing })
+                .then((r) => setDrawing(r.on))
+                .catch(() => undefined)
+            }
+          >
+            {t("ui.livedraw.button")}
+          </button>
+        )}
+      </div>,
+    );
+
   if (asking) {
     const question = t(
       asking === "cancel"
@@ -414,9 +490,22 @@ export function RecordBar() {
         role="img"
         aria-label={t(`ui.recbar.${ready ? "ready" : paused ? "paused" : "recording"}`)}
       />
-      <span className="recbar-time" aria-live="off">
-        {clock(elapsed)}
-      </span>
+      {state.compact && (recording || paused) ? (
+        // The whole bar opened from the pill: a click makes it small again (VID-016).
+        <button
+          type="button"
+          className="btn small recbar-time"
+          title={t("ui.recbar.collapse")}
+          aria-expanded={true}
+          onClick={() => setExpanded(false)}
+        >
+          {clock(elapsed)}
+        </button>
+      ) : (
+        <span className="recbar-time" aria-live="off">
+          {clock(elapsed)}
+        </span>
+      )}
       {left !== null && (recording || paused) && (
         // The time left, the last 10 s marked (VID-015).
         <span className={`recbar-left${left <= 10 ? " last" : ""}`} aria-live="off">

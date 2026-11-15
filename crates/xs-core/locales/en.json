@@ -1920,6 +1920,10 @@
     "video_showBorder": {
       "label": "Show the area's border while recording",
       "description": "A line around the area: dashed in the accent color when ready, red while recording, amber with a pause sign when paused. It never shows in the video."
+    },
+    "video_minimizeControls": {
+      "label": "Minimize the controls when recording a whole screen with one monitor",
+      "description": "A small pill with the time, Pause, Stop and Live drawing; a click on the time shows the whole bar."
     }
   },
   "errors": {
@@ -4920,7 +4924,9 @@
       "width": "Width",
       "height": "Height",
       "adjust_area": "Adjust area",
-      "adjust_area_help": "Move or resize the area on screen"
+      "adjust_area_help": "Move or resize the area on screen",
+      "expand": "Show the whole bar",
+      "collapse": "Make the bar small"
     },
     "video": {
       "silent_suffix": "silent",

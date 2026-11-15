@@ -925,6 +925,16 @@ fn inside(r: Rect, m: Rect) -> Rect {
     Rect { x, y, width, height }
 }
 
+/// The bar becomes a small pill while recording (VID-016): the area is the whole monitor,
+/// there is no other one to put the bar on, and the preference says so.
+fn compact(core: &Core, rect: Rect) -> bool {
+    if !core.settings.get_bool("video.minimizeControls") {
+        return false;
+    }
+    let Ok(list) = monitors() else { return false };
+    list.len() == 1 && list.iter().any(|(_, i)| i.rect == rect)
+}
+
 fn ready_state(core: &Core, r: &Ready) -> Value {
     let (width, height) = planned(core, r.rect, r.scale);
     // The summary (VID-006): frames, codec and how long fits on the disk (VID-023),
@@ -959,6 +969,7 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
         "microphone": core.settings.get_bool("video.microphone"),
         "audio": true,
         "limit": r.limit.map(|l| l.as_secs_f64()),
+        "compact": compact(core, r.rect),
     })
 }
 
@@ -1245,6 +1256,13 @@ fn status_of(r: &Running) -> Value {
     })
 }
 
+/// [`status_of`] with what depends on the core: the pill (VID-016).
+fn status_with(core: &Core, r: &Running) -> Value {
+    let mut v = status_of(r);
+    v["compact"] = json!(compact(core, r.rect));
+    v
+}
+
 /// The shortest and the longest timer (VID-015).
 const TIMER_RANGE: std::ops::RangeInclusive<f64> = 5.0..=12.0 * 3600.0;
 
@@ -1278,7 +1296,7 @@ pub fn timer(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             ));
         }
         r.recorder.set_limit(limit);
-        let state = status_of(r);
+        let state = status_with(core, r);
         drop(current);
         bar(core, Some(state.clone()));
         return Ok(state);
@@ -1545,7 +1563,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         started_at: chrono::Local::now(),
         apps: crate::rec_apps::AppWatch::start(),
     };
-    let status = status_of(&running);
+    let status = status_with(core, &running);
     {
         let mut current = svc.current.lock().unwrap();
         if current.is_some() {
@@ -1937,7 +1955,7 @@ pub fn pause(core: &Core, ctx: &Context, pause: bool) -> CommandResult {
     } else {
         r.recorder.resume();
     }
-    let status = status_of(r);
+    let status = status_with(core, r);
     drop(current);
     bar(core, Some(status.clone()));
     tell(
@@ -1953,7 +1971,7 @@ pub fn pause(core: &Core, ctx: &Context, pause: bool) -> CommandResult {
 pub fn status(core: &Core) -> Value {
     let svc = service(core);
     if let Some(r) = svc.current.lock().unwrap().as_ref() {
-        return status_of(r);
+        return status_with(core, r);
     }
     if svc.counting.load(std::sync::atomic::Ordering::Relaxed) {
         return json!({ "status": "countdown" });

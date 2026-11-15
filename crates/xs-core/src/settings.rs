@@ -587,6 +587,14 @@ pub fn definitions() -> Vec<SettingDef> {
         def("video.startAtOnce", "video", boolean(), json!(false), "VID-007"),
         // The line around the area while recording (VID-020).
         def("video.showBorder", "video", boolean(), json!(true), "VID-020"),
+        // A small pill instead of the bar: a whole monitor, and only one (VID-016).
+        def(
+            "video.minimizeControls",
+            "video",
+            boolean(),
+            json!(true),
+            "VID-016",
+        ),
         def("video.highlight", "video", boolean(), json!(false), "VID-045"),
         def(
             "video.highlightColor",

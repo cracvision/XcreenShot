@@ -168,8 +168,8 @@ async fn xs_drag_start(
 
 /// The recording bar grows for a warning or a menu and shrinks back (VID-011, VID-019).
 #[tauri::command]
-fn xs_recbar_fit(app: AppHandle, height: f64, up: bool) {
-    let _ = windows::fit_recording_bar(&app, height, up);
+fn xs_recbar_fit(app: AppHandle, height: f64, up: bool, width: Option<f64>) {
+    let _ = windows::fit_recording_bar(&app, height, up, width);
 }
 
 /// The capture panel fits its content (CAP-001).

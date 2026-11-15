@@ -429,12 +429,23 @@ pub fn live_draw(app: &AppHandle, area: Option<(i32, i32, u32, u32)>) -> tauri::
 /// The recording bar's height in CSS px, for a warning under it or a menu (VID-011,
 /// VID-019): it grows down from its top edge, or up from its bottom edge when it sits
 /// low on its monitor (`up`), and shrinks back the same way.
-pub fn fit_recording_bar(app: &AppHandle, height: f64, up: bool) -> tauri::Result<()> {
+pub fn fit_recording_bar(app: &AppHandle, height: f64, up: bool, width: Option<f64>) -> tauri::Result<()> {
     let Some(bar) = app.get_webview_window(RECBAR) else {
         return Ok(());
     };
     let scale = bar.scale_factor()?;
-    let (pos, size) = (bar.outer_position()?, bar.outer_size()?);
+    let (mut pos, mut size) = (bar.outer_position()?, bar.outer_size()?);
+    // The pill and the whole bar (VID-016): another width, the same center.
+    if let Some(w) = width {
+        let new_w = (w.clamp(200.0, 1200.0) * scale).round() as u32;
+        if new_w != size.width {
+            let x = pos.x + (size.width as i32 - new_w as i32) / 2;
+            bar.set_position(tauri::PhysicalPosition::new(x, pos.y))?;
+            bar.set_size(tauri::PhysicalSize::new(new_w, size.height))?;
+            pos.x = x;
+            size.width = new_w;
+        }
+    }
     let new_h = (height.clamp(40.0, 600.0) * scale).round() as u32;
     if new_h == size.height {
         return Ok(());
