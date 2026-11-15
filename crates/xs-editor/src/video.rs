@@ -754,6 +754,8 @@ pub fn gif(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
     };
     std::fs::create_dir_all(&dir).map_err(|e| failed(lang, &o.name, e))?;
     crate::write_file(&dst, &bytes).map_err(|e| failed(lang, &o.name, e))?;
+    // The video's recording details go with it (VID-068).
+    keep_details(&o.path, &dst, json!({ "gifOf": o.name }));
     xs_library::library(core).scan();
     let open = p.get("open").and_then(Value::as_str).unwrap_or("editor") == "editor";
     let id = if open {

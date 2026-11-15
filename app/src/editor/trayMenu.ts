@@ -13,6 +13,7 @@ import {
 import { exportItems } from "../library/exportState";
 import { showQuickView } from "../library/quickViewState";
 import { run } from "../lib/commands";
+import { useVideo } from "./videoState";
 import { exportGuideFile, GUIDE_FORMATS } from "./guideExport";
 import { openPicker } from "./templateUi";
 import {
@@ -112,8 +113,16 @@ export function trayMenu(
       onSelect: () => void exportItems(docs.map((d) => ({ name: d.name, path: d.path ?? "" }))),
     },
   ];
-  // A video: a copy without its sound (VID-063).
+  // A video: an animated GIF of it (VID-068), and a copy without its sound (VID-063).
   if (!several && (doc.format === "mp4" || doc.format === "m4v" || doc.format === "mov")) {
+    common.push({
+      id: "video_gif",
+      label: t("menu.video_gif"),
+      onSelect: () =>
+        void run("editor.show", { documentId: doc.documentId })
+          .then(() => useVideo.setState({ gifDialog: true, playing: false }))
+          .catch(() => undefined),
+    });
     common.push({
       id: "video_silent_copy",
       label: t("menu.video_silent_copy"),
@@ -136,10 +145,27 @@ export function trayMenu(
       })),
     });
   }
+  // Several videos: combined into one (VID-067).
+  const videos = docs.filter((d) => d.format === "mp4" || d.format === "m4v" || d.format === "mov");
+  const combineVideos: MenuItem[] =
+    several && videos.length >= 2
+      ? [
+          {
+            id: "combine_videos",
+            label: t("menu.video_combine"),
+            onSelect: () =>
+              useVideo.setState({
+                combineDialog: true,
+                combineWith: videos.map((d) => ({ path: d.path ?? "", name: d.name })),
+              }),
+          },
+        ]
+      : [];
   if (several) {
     return [
       pin,
       ...common,
+      ...combineVideos,
       // EDT-095: the selected items, in the tray's order, into a template.
       {
         id: "combine",

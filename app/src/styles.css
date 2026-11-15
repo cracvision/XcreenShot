@@ -8993,3 +8993,8 @@ button.lc-head:hover,
   color: var(--rec);
   font-weight: 600;
 }
+
+/* Being dragged to another place in the order (VID-067). */
+.combine-strip li.dragging {
+  opacity: 0.5;
+}

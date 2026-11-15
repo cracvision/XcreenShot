@@ -13,6 +13,9 @@ import { useEditor } from "./state";
 import { useVideo } from "./videoState";
 import { formatTime } from "./videoTimeline";
 
+/** What a library's video carries when dragged into the order (VID-067). */
+const VIDEO_DRAG = "application/x-xcreenshot-video";
+
 type Sort = "modified" | "captured" | "name" | "size";
 
 interface Quick {
@@ -111,6 +114,24 @@ function CombineForm() {
       return next;
     });
   const remove = (i: number) => setChosen((cur) => cur.filter((_, k) => k !== i));
+  // Dragging (VID-067): a chosen video to another place, or a library's video in.
+  const [dragged, setDragged] = useState<number | null>(null);
+  const dropAt = (to: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const fromLibrary = e.dataTransfer.getData(VIDEO_DRAG);
+    if (fromLibrary) {
+      const item = JSON.parse(fromLibrary) as Chosen;
+      setChosen((cur) => [...cur.slice(0, to), item, ...cur.slice(to)]);
+    } else if (dragged !== null && dragged !== to) {
+      setChosen((cur) => {
+        const next = [...cur];
+        const [moved] = next.splice(dragged, 1);
+        if (moved) next.splice(to, 0, moved);
+        return next;
+      });
+    }
+    setDragged(null);
+  };
   const known = chosen.map((c) => quick[c.path]).filter((q): q is Quick => !!q);
   const total = known.reduce((s, q) => s + q.duration, 0);
   const width = Math.max(0, ...known.map((q) => q.width));
@@ -198,6 +219,14 @@ function CombineForm() {
                 className="combine-item"
                 title={t("ui.video.combine.add")}
                 disabled={busy}
+                draggable={!busy}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(
+                    VIDEO_DRAG,
+                    JSON.stringify({ path: item.path, name: item.name }),
+                  );
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
                 onClick={() => add(item)}
               >
                 <img src={libraryThumb(item)} alt="" draggable={false} />
@@ -211,11 +240,27 @@ function CombineForm() {
           {items.length === 0 && <li className="muted">{t("ui.video.combine.none")}</li>}
         </ul>
         <h3 className="side-subtitle">{t("ui.video.combine.order")}</h3>
-        <ol className="combine-strip">
+        <ol
+          className="combine-strip"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => dropAt(chosen.length, e)}
+        >
           {chosen.map((c, i) => (
             <li
               key={`${c.path}-${i}`}
               tabIndex={0}
+              draggable={!busy}
+              className={dragged === i ? "dragging" : undefined}
+              onDragStart={(e) => {
+                setDragged(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragEnd={() => setDragged(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.stopPropagation();
+                dropAt(i, e);
+              }}
               onKeyDown={(e) => {
                 // Ctrl+arrows move it (VID-067).
                 if (e.ctrlKey && e.key === "ArrowLeft") move(i, -1);
