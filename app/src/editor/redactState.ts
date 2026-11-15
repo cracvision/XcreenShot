@@ -36,6 +36,8 @@ export interface RedactStyle {
   type: RedactType;
   color: string;
   margin: number;
+  /** Rounded corners, 4 px (SMT-013). */
+  rounded: boolean;
 }
 
 export interface RedactItem {
@@ -105,7 +107,7 @@ export const useRedact = create<RedactState>(() => ({
   result: null,
   categories: DEFAULT_ON,
   terms: [],
-  style: { type: "solid", color: "#000000", margin: 2 },
+  style: { type: "solid", color: "#000000", margin: 2, rounded: true },
   index: -1,
   reminder: false,
   error: null,
@@ -133,6 +135,7 @@ function remembered(): Pick<RedactState, "categories" | "terms" | "style"> {
       type: type === "blur" || type === "pixelate" ? type : "solid",
       color: typeof style?.color === "string" ? style.color : "#000000",
       margin: typeof style?.margin === "number" ? style.margin : 2,
+      rounded: style?.rounded !== false,
     },
   };
 }

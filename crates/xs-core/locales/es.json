@@ -5132,7 +5132,8 @@
       "undo": "Deshacer",
       "to_terms": "Añadir a Mis términos",
       "dismiss": "Cerrar el mensaje",
-      "remove_current": "Quitar la redacción mostrada"
+      "remove_current": "Quitar la redacción mostrada",
+      "rounded": "Esquinas redondeadas"
     },
     "redact_batch": {
       "open": "Redacción automática…",

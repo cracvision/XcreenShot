@@ -5132,7 +5132,8 @@
       "undo": "Undo",
       "to_terms": "Add to My terms",
       "dismiss": "Close message",
-      "remove_current": "Remove the redaction shown"
+      "remove_current": "Remove the redaction shown",
+      "rounded": "Rounded corners"
     },
     "redact_batch": {
       "open": "Auto redact…",

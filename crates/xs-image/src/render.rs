@@ -239,6 +239,28 @@ fn outline_path(kind: ShapeKind, r: Rect) -> Option<tiny_skia::Path> {
     }
 }
 
+/// A rectangle with rounded corners of `radius` (a plain one without), filling `r`.
+fn rounded_path(r: Rect, radius: f64) -> Option<tiny_skia::Path> {
+    let (x, y, w, h) = (r.x as f32, r.y as f32, r.w.max(0.01) as f32, r.h.max(0.01) as f32);
+    let q = (radius as f32).clamp(0.0, w.min(h) / 2.0);
+    if q <= 0.0 {
+        return outline_path(ShapeKind::Rectangle, r);
+    }
+    let k = 0.552_284_8 * q;
+    let mut pb = PathBuilder::new();
+    pb.move_to(x + q, y);
+    pb.line_to(x + w - q, y);
+    pb.cubic_to(x + w - q + k, y, x + w, y + q - k, x + w, y + q);
+    pb.line_to(x + w, y + h - q);
+    pb.cubic_to(x + w, y + h - q + k, x + w - q + k, y + h, x + w - q, y + h);
+    pb.line_to(x + q, y + h);
+    pb.cubic_to(x + q - k, y + h, x, y + h - q + k, x, y + h - q);
+    pb.line_to(x, y + q);
+    pb.cubic_to(x, y + q - k, x + q - k, y, x + q, y);
+    pb.close();
+    pb.finish()
+}
+
 /// A shape's path filling `r` (its box, or the box its outline runs along), before
 /// rotation (EDT-029, EDT-030). `radius` is a rounded rectangle's, for that box.
 fn shape_path(s: &ShapeObject, r: Rect, radius: f64) -> Option<tiny_skia::Path> {
@@ -257,25 +279,7 @@ fn shape_path(s: &ShapeObject, r: Rect, radius: f64) -> Option<tiny_skia::Path> 
     };
     match s.style.shape_type {
         ShapeKind::Rectangle | ShapeKind::Ellipse => outline_path(s.style.shape_type, r),
-        ShapeKind::RoundedRectangle => {
-            let q = (radius as f32).clamp(0.0, w.min(h) / 2.0);
-            if q <= 0.0 {
-                return outline_path(ShapeKind::Rectangle, r);
-            }
-            let k = 0.552_284_8 * q;
-            let mut pb = PathBuilder::new();
-            pb.move_to(x + q, y);
-            pb.line_to(x + w - q, y);
-            pb.cubic_to(x + w - q + k, y, x + w, y + q - k, x + w, y + q);
-            pb.line_to(x + w, y + h - q);
-            pb.cubic_to(x + w, y + h - q + k, x + w - q + k, y + h, x + w - q, y + h);
-            pb.line_to(x + q, y + h);
-            pb.cubic_to(x + q - k, y + h, x, y + h - q + k, x, y + h - q);
-            pb.line_to(x, y + q);
-            pb.cubic_to(x, y + q - k, x + q - k, y, x + q, y);
-            pb.close();
-            pb.finish()
-        }
+        ShapeKind::RoundedRectangle => rounded_path(r, radius),
         ShapeKind::Triangle => poly(&[(x + w / 2.0, y), (x + w, y + h), (x, y + h)]),
         ShapeKind::Diamond => poly(&[
             (x + w / 2.0, y),
@@ -530,7 +534,11 @@ fn blur_patch(below: &Pixmap, b: &BlurObject) -> Option<(Pixmap, i32, i32)> {
     let [x, y, w, h] = pixel_bounds(b.rect, b.rotation, below.width(), below.height())?;
     let (x, y, w, h) = (x as i32, y as i32, w as u32, h as u32);
     let mut mask = Mask::new(w, h)?;
-    let path = outline_path(b.style.shape_type, b.rect)?;
+    // A rectangle may have rounded corners (SMT-013).
+    let path = match b.style.shape_type {
+        ShapeKind::Rectangle if b.style.corner_radius > 0.0 => rounded_path(b.rect, b.style.corner_radius)?,
+        kind => outline_path(kind, b.rect)?,
+    };
     let t = turned(b.rect, b.rotation).post_translate(-x as f32, -y as f32);
     mask.fill_path(&path, FillRule::Winding, true, t);
     let mut out = Pixmap::new(w, h)?;
@@ -1596,6 +1604,22 @@ mod tests {
             }
         }
         assert_eq!(img.get_pixel(50, 20).0, [255, 255, 255, 255]);
+    }
+
+    /// SMT-013: rounded corners leave the very corner uncovered and the rest covered.
+    #[test]
+    fn a_blur_with_rounded_corners() {
+        let base = striped();
+        let mut doc = Document::new(300, 150, 96.0);
+        doc.objects.push(object(
+            "blur",
+            json!({"rect": {"x": 90, "y": 40, "w": 120, "h": 60}, "style": {"blurType": "solid", "color": "#FF0000", "cornerRadius": 12}}),
+        ));
+        let img = render(&doc, &base);
+        assert_eq!(img.get_pixel(150, 70).0, [255, 0, 0, 255], "the middle");
+        assert_eq!(img.get_pixel(150, 41).0, [255, 0, 0, 255], "the top edge");
+        assert_ne!(img.get_pixel(91, 41).0, [255, 0, 0, 255], "the very corner");
+        assert_ne!(img.get_pixel(208, 98).0, [255, 0, 0, 255], "the opposite corner");
     }
 
     #[test]

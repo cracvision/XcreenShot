@@ -213,6 +213,9 @@ pub struct BlurStyle {
     /// Only the text inside the area, one band per line (SMT-021).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub text_only: bool,
+    /// A rectangle's rounded corners, in pixels: 0 to 50 (SMT-013).
+    #[serde(skip_serializing_if = "is_zero")]
+    pub corner_radius: f64,
 }
 
 impl Default for BlurStyle {
@@ -223,6 +226,7 @@ impl Default for BlurStyle {
             intensity: 60.0,
             shape_type: ShapeKind::Rectangle,
             text_only: false,
+            corner_radius: 0.0,
         }
     }
 }
@@ -233,6 +237,9 @@ impl BlurStyle {
         check_color("color", &s.color)?;
         if !(1.0..=100.0).contains(&s.intensity) {
             return Err("intensity must be between 1 and 100".to_string());
+        }
+        if !(0.0..=50.0).contains(&s.corner_radius) {
+            return Err("cornerRadius must be between 0 and 50".to_string());
         }
         Ok(s)
     }

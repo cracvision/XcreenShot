@@ -101,7 +101,14 @@ fn style(v: &Value) -> (Map<String, Value>, f64) {
         .and_then(Value::as_f64)
         .unwrap_or(2.0)
         .clamp(0.0, 10.0);
-    let style = json!({"blurType": kind, "color": color, "intensity": intensity});
+    // Rounded corners, 4 px, unless switched off (SMT-013).
+    let rounded = v.get("rounded").and_then(Value::as_bool).unwrap_or(true);
+    let style = json!({
+        "blurType": kind,
+        "color": color,
+        "intensity": intensity,
+        "cornerRadius": if rounded { 4.0 } else { 0.0 },
+    });
     (style.as_object().cloned().unwrap_or_default(), margin)
 }
 

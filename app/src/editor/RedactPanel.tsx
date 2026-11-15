@@ -239,6 +239,14 @@ function StyleRows() {
         unit="px"
         onCommit={(margin) => void setStyle({ margin })}
       />
+      <label className="panel-check">
+        <input
+          type="checkbox"
+          checked={style.rounded}
+          onChange={(e) => void setStyle({ rounded: e.target.checked })}
+        />
+        {t("ui.redact.rounded")}
+      </label>
     </>
   );
 }

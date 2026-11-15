@@ -400,7 +400,7 @@ export function BlurShape(props: {
         <Outline
           ellipse={style.shapeType === "ellipse"}
           box={{ x: -rect.w / 2, y: -rect.h / 2, w: rect.w, h: rect.h }}
-          extra={{ fill: style.color }}
+          extra={{ fill: style.color, cornerRadius: style.cornerRadius ?? 0 }}
         />
       </Group>
     );

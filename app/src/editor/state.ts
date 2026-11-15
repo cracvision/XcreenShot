@@ -466,6 +466,8 @@ export interface BlurStyle {
   shapeType: ShapeKind;
   /** Only the text inside the area (SMT-021). */
   textOnly?: boolean;
+  /** A rectangle's rounded corners, in pixels (SMT-013). */
+  cornerRadius?: number;
 }
 
 export interface BlurObject {
