@@ -30,7 +30,7 @@ Una sola guía para recorrer XcreenShot de principio a fin, como se usa de verda
 Que la app instalada arranque bien y viva en la bandeja.
 **IDs:** APP-001 a APP-005, APP-013, APP-036 · **Guías:** [APP-001.md](APP-001.md), [APP-002.md](APP-002.md), [APP-004.md](APP-004.md), [APP-013.md](APP-013.md) (APP-005 y APP-036 no tienen guía: bastan los puntos de abajo)
 
-- [ ] Desde la 0.2.3: **Ayuda > Buscar actualizaciones… > Instalar y reiniciar**. XcreenShot vuelve solo **con su ventana** y avisa "XcreenShot se actualizó".
+- [x] Desde la 0.2.3: **Ayuda > Buscar actualizaciones… > Instalar y reiniciar**. XcreenShot vuelve solo **con su ventana** y avisa "XcreenShot se actualizó". (PASS el 2026-11-15)
 - [ ] **Ayuda > Acerca de** dice 0.2.4; **Ayuda > Buscar actualizaciones…** dice que tienes la última.
 - [ ] Cierra todas las ventanas: el ícono sigue en la bandeja y tu atajo de captura funciona.
 - [ ] Abre XcreenShot otra vez desde el menú Inicio: no sale un segundo ícono; se muestra la ventana que ya había.
