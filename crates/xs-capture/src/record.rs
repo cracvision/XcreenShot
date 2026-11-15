@@ -1281,33 +1281,43 @@ fn follow_window(core: &Arc<Core>, id: u32) {
     let weak = Arc::downgrade(core);
     let started = std::thread::Builder::new()
         .name("rec-follow".into())
-        .spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(300));
-            let Some(core) = weak.upgrade() else { return };
-            // Minimized, it is far off screen: the border stays where it was.
-            let Some(b) = crate::steps_win::window_rect(id as isize).filter(|b| b[0] > -10_000.0) else {
-                continue;
-            };
-            let rect = Rect {
-                x: b[0].round() as i32,
-                y: b[1].round() as i32,
-                width: b[2].round().max(1.0) as u32,
-                height: b[3].round().max(1.0) as u32,
-            };
-            let state = {
-                let rec = service(&core);
-                let mut current = rec.current.lock().unwrap();
-                let Some(r) = current.as_mut() else { return };
-                if r.source["id"].as_u64() != Some(id as u64) {
-                    return;
-                }
-                if r.rect == rect {
+        .spawn(move || {
+            // The monitor it started on: the border stays inside it, as the area did.
+            let mut screen: Option<Rect> = None;
+            loop {
+                std::thread::sleep(Duration::from_millis(300));
+                let Some(core) = weak.upgrade() else { return };
+                // Minimized, it is far off screen: the border stays where it was.
+                let Some(b) = crate::steps_win::window_rect(id as isize).filter(|b| b[0] > -10_000.0) else {
                     continue;
-                }
-                r.rect = rect;
-                status_with(&core, r)
-            };
-            bar(&core, Some(state));
+                };
+                let rect = Rect {
+                    x: b[0].round() as i32,
+                    y: b[1].round() as i32,
+                    width: b[2].round().max(1.0) as u32,
+                    height: b[3].round().max(1.0) as u32,
+                };
+                let state = {
+                    let rec = service(&core);
+                    let mut current = rec.current.lock().unwrap();
+                    let Some(r) = current.as_mut() else { return };
+                    if r.source["id"].as_u64() != Some(id as u64) {
+                        return;
+                    }
+                    let start = r.rect;
+                    let mon = *screen.get_or_insert_with(|| monitor_of(start).map_or(start, |m| m.0));
+                    // Wholly off its monitor, the border stays where it was.
+                    let Some(rect) = rect.intersect(&mon) else {
+                        continue;
+                    };
+                    if r.rect == rect {
+                        continue;
+                    }
+                    r.rect = rect;
+                    status_with(&core, r)
+                };
+                bar(&core, Some(state));
+            }
         });
     if let Err(e) = started {
         tracing::warn!(error = %e, "the recorded window is not followed");
