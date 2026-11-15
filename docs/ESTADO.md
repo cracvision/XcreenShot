@@ -63,6 +63,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (noche): cámaras virtuales (VID-031).** La GoPro de Carlos (app GoPro Webcam) y la cámara de NVIDIA Broadcast solo se registran con DirectShow, y XcreenShot solo listaba las de Media Foundation. Ahora salen las dos (`crates/xs-video/src/camera_ds.rs`): grafo de captura con el capturador de muestras del sistema (`qedit.dll`). Probada la GoPro en el equipo de Carlos: 1280×720 y video en vivo tras unos segundos con la pantalla de espera de GoPro (es de su app). **0.2.5** compilada (`d02d5d3`) y probada en Windows Sandbox (instalación limpia); la app empaquetada lista las dos cámaras. Pendiente: el sí de Carlos para publicarla y sus pruebas de cámara (`tests/manual/VID-031.md`). Ojo: sin elegir dispositivo, la cámara por defecto es la primera de la lista (NVIDIA Broadcast).
+
 - **2026-11-15 (tarde, quinta parte): listos para la prueba de punta a punta.**
   - Multicaptura protegida como Dibujo en vivo (ver abajo) y las dos comprobadas con sus ganchos reales dentro de Windows Sandbox.
   - Quitar un atajo con `""` fallaba desde Windows PowerShell 5.1, que descarta los argumentos vacíos (no era el CLI): anotado en `AGENTS.md`. `Ctrl+P` de `app.ping` quitado del perfil de Carlos.
