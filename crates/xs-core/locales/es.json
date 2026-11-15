@@ -2065,7 +2065,8 @@
     "slides_recording": "Detén o cancela antes la grabación.",
     "no_subject": "No se encontró un sujeto claro: el fondo no es lo bastante uniforme. No se cambió nada. Para un fondo de un solo color, la Varita mágica lo selecciona con precisión.",
     "timer_range": "El temporizador va de 5 segundos a 12 horas.",
-    "timer_too_short": "Ya hay {{recorded}} grabados: elige un tiempo mayor."
+    "timer_too_short": "Ya hay {{recorded}} grabados: elige un tiempo mayor.",
+    "guide_exists": "{{name}} ya existe."
   },
   "shortcuts": {
     "in_use": "Esta combinación ya la usa \"{{command}}\".",
@@ -5186,7 +5187,11 @@
         "clipboard": "Copiar al portapapeles"
       },
       "merge": "Unir con el siguiente",
-      "split": "Dividir en dos"
+      "split": "Dividir en dos",
+      "exists_title": "Ya existe",
+      "exists_body": "{{name}} ya existe. ¿Reemplazarlo o crear otro al lado?",
+      "exists_new": "Crear otra",
+      "exists_replace": "Reemplazar"
     },
     "features": {
       "title": "Funciones inteligentes",

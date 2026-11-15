@@ -636,7 +636,7 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "imageFormat": {"type": "string", "enum": ["png", "jpg"], "default": "png"},
                     "withText": {"type": "boolean", "default": false, "description": "images: also a text file with each step"},
                     "paper": {"type": "string", "enum": ["auto", "a4", "letter"], "default": "auto", "description": "pdf: auto is the system's"},
-                    "onConflict": {"type": "string", "enum": ["new", "replace"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced"}
+                    "onConflict": {"type": "string", "enum": ["new", "replace", "ask"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced; ask: fails with details.conflict (its path) so the user chooses"}
                 }),
                 &["format"],
             ))

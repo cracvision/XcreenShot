@@ -831,6 +831,21 @@ Pulsa **Guardar**"
         // Again: another folder, -2 (SMT-032).
         let again = export(json!({"format": "md", "out": out}));
         assert!(again["paths"][0].as_str().unwrap().contains("Alta de cliente-2"));
+        // Asked first: the folder there is said, nothing is written (SMT-032).
+        let asked = core
+            .call(
+                xs_core::Source::Cli,
+                "smart.guide_export",
+                json!({"documentId": id, "format": "md", "out": out, "onConflict": "ask"}),
+                Some(Lang::Es),
+            )
+            .unwrap_err();
+        let taken = asked.details.as_ref().unwrap()["conflict"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(taken.ends_with("Alta de cliente"), "{taken}");
+        assert!(!out.join("Alta de cliente-3").exists());
         let r = export(json!({"format": "html", "out": out, "singleFile": true}));
         let page = std::fs::read_to_string(r["paths"][0].as_str().unwrap()).unwrap();
         assert_eq!(page.matches("src=\"data:image/png;base64,").count(), 3);

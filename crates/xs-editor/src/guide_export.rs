@@ -335,6 +335,25 @@ pub fn export_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResu
             .and_then(|n| xs_library::file_name(&n))
             .unwrap_or_else(|| "Guide".into());
         let replace = p.get("onConflict").and_then(Value::as_str) == Some("replace");
+        // Asked first (SMT-032): a folder or page of that name already there is said,
+        // and the user chooses Replace or Create another.
+        if p.get("onConflict").and_then(Value::as_str) == Some("ask") {
+            let single = p.get("singleFile").and_then(Value::as_bool) == Some(true);
+            let taken = match format {
+                "md" => Some(out.join(&name)),
+                "html" if single => Some(out.join(format!("{name}.html"))),
+                "html" => Some(out.join(&name)),
+                _ => None,
+            }
+            .filter(|t| t.exists());
+            if let Some(t) = taken {
+                return Err(CommandError::new(
+                    ErrorCode::InvalidParams,
+                    tr(lang, "errors.guide_exists", &[("name", &t.display().to_string())]),
+                )
+                .with_details(json!({ "conflict": t })));
+            }
+        }
         let jpg = p.get("imageFormat").and_then(Value::as_str) == Some("jpg");
         let g = || content(core, &id, lang).map_err(fail);
         let write = |path: &Path, bytes: &[u8]| -> Result<(), CommandError> {

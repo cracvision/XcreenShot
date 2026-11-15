@@ -2065,7 +2065,8 @@
     "slides_recording": "Stop or cancel the recording first.",
     "no_subject": "No clear subject was found: the background is not plain enough. Nothing changed. For a background of one color, the Magic wand selects it precisely.",
     "timer_range": "The timer goes from 5 seconds to 12 hours.",
-    "timer_too_short": "{{recorded}} are already recorded: choose a longer time."
+    "timer_too_short": "{{recorded}} are already recorded: choose a longer time.",
+    "guide_exists": "{{name}} already exists."
   },
   "shortcuts": {
     "in_use": "This combination is already used by \"{{command}}\".",
@@ -5186,7 +5187,11 @@
         "clipboard": "Copy to the clipboard"
       },
       "merge": "Merge with the next",
-      "split": "Split in two"
+      "split": "Split in two",
+      "exists_title": "It already exists",
+      "exists_body": "{{name}} already exists. Replace it, or create another one beside it?",
+      "exists_new": "Create another",
+      "exists_replace": "Replace"
     },
     "features": {
       "title": "Smart features",
