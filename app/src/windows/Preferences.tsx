@@ -15,8 +15,9 @@ import { OcrLanguages } from "../prefs/OcrLanguages";
 import { PermissionsBlock } from "../prefs/PermissionsBlock";
 import { ResetAll, ResetSection, ShowWarningsAgain } from "../prefs/ResetBlock";
 import { SettingRow } from "../prefs/SettingRow";
+import { EffectPreview } from "./EffectPreview";
 import { ShortcutsSection } from "../prefs/ShortcutsSection";
-import { useApp } from "../store";
+import { useApp, useSetting } from "../store";
 import { arrowFocus } from "../components/arrowFocus";
 import { FEATURE_SETTINGS } from "../features";
 
@@ -51,6 +52,19 @@ interface Navigation {
 function editedElsewhere(key: string): boolean {
   // Its switch is here, with the other smart features (SMT-002).
   return key.startsWith("smart.autoRedact.") && key !== "smart.autoRedact.enabled";
+}
+
+/** The pointer's effects as they look now (VID-045, VID-046). */
+function EffectsPreviewRow() {
+  const { t } = useTranslation();
+  const highlight = useSetting("video.highlight", false);
+  const clicks = useSetting("video.clicks", false);
+  return (
+    <div className="effect-preview-row prefs-preview">
+      <EffectPreview highlight={highlight} clicks={clicks} />
+      <span className="muted">{t("ui.panel.video_effects_hint")}</span>
+    </div>
+  );
 }
 
 export function Preferences() {
@@ -198,6 +212,12 @@ export function Preferences() {
               value={Array.isArray(s.value) ? (s.value as string[]) : ["auto"]}
               highlighted={highlight === s.key}
             />
+          ) : s.key === "video.highlight" ? (
+            // The pointer's effects with their preview (VID-045, VID-046).
+            <div key={s.key}>
+              <EffectsPreviewRow />
+              <SettingRow setting={s} highlighted={highlight === s.key} />
+            </div>
           ) : (
             <SettingRow key={s.key} setting={s} highlighted={highlight === s.key} />
           ),

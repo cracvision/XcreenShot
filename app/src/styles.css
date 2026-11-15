@@ -2807,6 +2807,28 @@ html.launcher-root #root {
   font-size: 12px;
 }
 
+/* The pointer's effects as they look (VID-045, VID-046). */
+.effect-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 6px 26px;
+}
+
+.effect-preview-row.prefs-preview {
+  margin: 8px 0;
+}
+
+.effect-preview-bg {
+  fill: var(--surface-sunken);
+  stroke: var(--line);
+}
+
+.effect-preview-pointer {
+  fill: var(--surface);
+  stroke: var(--ink);
+}
+
 /* The Ready summary (VID-006), under or over the bar. */
 .recbar-summary {
   position: relative;

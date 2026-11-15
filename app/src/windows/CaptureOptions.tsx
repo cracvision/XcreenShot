@@ -22,6 +22,7 @@ import { DEFAULTS as FX_DEFAULTS } from "../editor/effects";
 import { useSetting, useStringSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
 import { DurationField } from "../components/DurationField";
+import { EffectPreview } from "./EffectPreview";
 import { shortDuration, timerProblem } from "../lib/duration";
 import { TIMER_CHOICES } from "./recClock";
 import { captureModes } from "../features";
@@ -363,6 +364,24 @@ export function VideoOptions({
         />
         {t("ui.panel.video_clicks")}
       </label>
+      {cursor && (highlight || clicks) && (
+        // What the effects look like now, and their options (VID-045, VID-046).
+        <div className="effect-preview-row">
+          <EffectPreview highlight={highlight} clicks={clicks} />
+          <button
+            type="button"
+            className="btn link small"
+            onClick={() =>
+              void run("settings.open", {
+                section: "video",
+                key: highlight ? "video.highlightColor" : "video.clickColor",
+              }).catch(() => undefined)
+            }
+          >
+            {t("ui.panel.video_effects_options")}
+          </button>
+        </div>
+      )}
       <label className="panel-check">
         <input type="checkbox" checked={keys} onChange={(e) => effect("keys", e.target.checked)} />
         {t("ui.panel.video_keys")}
