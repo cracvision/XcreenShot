@@ -20,8 +20,14 @@ from openpyxl.worksheet.datavalidation import DataValidation
 SRC, OUT = sys.argv[1], sys.argv[2]
 data = json.load(open(SRC, encoding="utf-8"))
 
-VERSION = "0.2.4"
-BUILD = "8bbb93f"
+VERSION = "0.2.5"
+BUILD = "d02d5d3"
+# The protocol's own version and its history (Portada).
+PROTOCOL = "1.1"
+HISTORY = [
+    ("1.0", "2026-11-15", "Primera versión: 174 casos, a partir de tests/manual/E2E-windows.md."),
+    ("1.1", "2026-11-15", "Versión bajo prueba 0.2.5 (cámaras virtuales). Los casos ya no fijan un número de versión: comparan con la versión bajo prueba de esta Portada."),
+]
 DOC_ID = "XS-OQ-WIN-001"
 DATE = "2026-11-15"
 
@@ -54,7 +60,7 @@ def footer(ws, landscape=True):
     ws.oddFooter.left.font = F
     ws.oddFooter.right.text = "Página &P de &N"
     ws.oddFooter.right.font = F
-    ws.oddHeader.right.text = f"XcreenShot | {DOC_ID} v1.0"
+    ws.oddHeader.right.text = f"XcreenShot | {DOC_ID} v{PROTOCOL}"
     ws.oddHeader.right.font = F
     ws.page_setup.orientation = "landscape" if landscape else "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
@@ -79,9 +85,9 @@ r += 2
 
 meta = [
     ("Documento", DOC_ID),
-    ("Versión del protocolo", "1.0"),
+    ("Versión del protocolo", PROTOCOL),
     ("Sistema", "XcreenShot para Windows (captura, anotación y grabación de pantalla)"),
-    ("Versión del software", f"{VERSION} (compilación {BUILD})"),
+    ("Versión del software (bajo prueba)", f"{VERSION} (compilación {BUILD})"),
     ("Plataforma", "Windows 11 (x64)"),
     ("Responsable", "Carlos Acevedo"),
     ("Preparado por", "Claude (asistente de desarrollo), a partir de tests/manual/E2E-windows.md"),
@@ -193,7 +199,23 @@ for s in data.get("special", []):
         ws.cell(r, col).border = BOX
     r += 1
 r += 1
-section("9. Aprobaciones")
+section("9. Historial de cambios")
+for i, h in enumerate(["Versión", "Fecha / cambio"], 1):
+    c = ws.cell(r, i, h)
+    c.font = font(10, True)
+    c.fill = fill(HEAD)
+    c.border = BOX
+r += 1
+for v, d, what in HISTORY:
+    ws.cell(r, 1, v).font = font(10, True)
+    c = ws.cell(r, 2, f"{d}: {what}")
+    c.font = font(10)
+    c.alignment = WRAP
+    for col in (1, 2):
+        ws.cell(r, col).border = BOX
+    r += 1
+r += 1
+section("10. Aprobaciones")
 ws.column_dimensions["C"].width = 22
 ws.column_dimensions["D"].width = 16
 for i, h in enumerate(["Rol", "Nombre", "Firma", "Fecha"], 1):
@@ -300,6 +322,7 @@ for s in data["sessions"]:
                 values[6] = "PASS"
                 values[7] = "CA"
                 values[8] = pre.split(" ", 1)[1] if " " in pre else ""
+                values[11] = "Ejecutado al actualizar de la 0.2.3 a la 0.2.4."
             for i, v in enumerate(values, 1):
                 c = ws.cell(row, i, v)
                 c.font = font(10, bold=(i == 1))

@@ -36,7 +36,7 @@ Fecha de esta guía: 2026-11-15. El estado al día está siempre en `C:\Projects
 ## 2. Qué leer y en qué orden
 
 1. **Este archivo.**
-2. **El protocolo que vas a ejecutar:** `C:\Projects\XcreenShot\tests\manual\XcreenShot_OQ_Windows_v1_0.xlsx`.
+2. **El protocolo que vas a ejecutar:** `C:\Projects\XcreenShot\tests\manual\XcreenShot_OQ_Windows_v1_1.xlsx`.
    - Hoja **Portada**: objetivo, alcance, prerrequisitos, criterios de aceptación y las pruebas que necesitan algo especial.
    - Hoja **Pruebas**: 174 casos con acción y resultado esperado.
    - Hojas **Resumen** (se calcula sola) y **Desviaciones**.
@@ -70,7 +70,7 @@ Las rutas de las secciones 1, 3, 4 y 6 son las del equipo, no las del paquete. S
 
 ## 3. Cómo ejecutar el OQ
 
-1. **Trabaja sobre una copia.** Copia el Excel a `%USERPROFILE%\Documents\XcreenShot-OQ\XcreenShot_OQ_Windows_v1_0_ejecucion_<AAAA-MM-DD>.xlsx` y rellena esa. El original del proyecto se queda como plantilla.
+1. **Trabaja sobre una copia.** Copia el Excel a `%USERPROFILE%\Documents\XcreenShot-OQ\XcreenShot_OQ_Windows_v1_1_ejecucion_<AAAA-MM-DD>.xlsx` y rellena esa. El original del proyecto se queda como plantilla.
 2. **Guarda la evidencia** (capturas, videos) en `%USERPROFILE%\Documents\XcreenShot-OQ\evidencia\`, con el ID del caso en el nombre (`1.4.2.png`). No la guardes dentro de `C:\Projects\XcreenShot`: contiene la pantalla de Carlos.
 3. Ejecuta los casos **en orden**, una sesión cada vez. En cada fila rellena solo las columnas amarillas:
    - **Resultado obtenido**;

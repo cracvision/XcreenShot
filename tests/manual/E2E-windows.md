@@ -2,8 +2,8 @@
 
 Una sola guía para recorrer XcreenShot de principio a fin, como se usa de verdad, en tres sesiones. Cada bloque dice qué comprobar y enlaza la guía detallada: ábrela solo si algo falla o si te sobra tiempo.
 
-- **Versión:** 0.2.4 (o posterior). Si tienes otra: **Ayuda > Buscar actualizaciones…**, o descarga el instalador de https://github.com/cracvision/xcreenshot-releases. **Ayuda > Acerca de** debe decir 0.2.4.
-- **Registro oficial:** el protocolo OQ en Excel [`XcreenShot_OQ_Windows_v1_0.xlsx`](XcreenShot_OQ_Windows_v1_0.xlsx) (mismos casos, con acción, resultado esperado, PASS/FAIL/N/A, evidencia y desviaciones). Se regenera con `python scripts/make-oq.py tests/manual/E2E-windows-steps.json <salida.xlsx>`. Esta guía queda como versión de lectura.
+- **Versión:** la versión bajo prueba que indica la Portada del OQ (hoy, 0.2.5) o posterior. Si tienes otra: **Ayuda > Buscar actualizaciones…**, o descarga el instalador de https://github.com/cracvision/xcreenshot-releases.
+- **Registro oficial:** el protocolo OQ en Excel [`XcreenShot_OQ_Windows_v1_1.xlsx`](XcreenShot_OQ_Windows_v1_1.xlsx) (mismos casos, con acción, resultado esperado, PASS/FAIL/N/A, evidencia y desviaciones). Se regenera con `python scripts/make-oq.py tests/manual/E2E-windows-steps.json <salida.xlsx>`. Esta guía queda como versión de lectura.
 - **Cómo marcar:** `[x]` si pasa. Si falla, deja `[ ]` y escribe debajo **FALLA:** qué pasó, con una captura si ayuda.
 
 > **Seguridad: Esc siempre devuelve el ratón y el teclado**
@@ -32,7 +32,7 @@ Que la app instalada arranque bien y viva en la bandeja.
 **IDs:** APP-001 a APP-005, APP-013, APP-036 · **Guías:** [APP-001.md](APP-001.md), [APP-002.md](APP-002.md), [APP-004.md](APP-004.md), [APP-013.md](APP-013.md) (APP-005 y APP-036 no tienen guía: bastan los puntos de abajo)
 
 - [x] Desde la 0.2.3: **Ayuda > Buscar actualizaciones… > Instalar y reiniciar**. XcreenShot vuelve solo **con su ventana** y avisa "XcreenShot se actualizó". (PASS el 2026-11-15)
-- [ ] **Ayuda > Acerca de** dice 0.2.4; **Ayuda > Buscar actualizaciones…** dice que tienes la última.
+- [ ] **Ayuda > Acerca de** dice la versión bajo prueba; **Ayuda > Buscar actualizaciones…** dice que tienes la última.
 - [ ] Cierra todas las ventanas: el ícono sigue en la bandeja y tu atajo de captura funciona.
 - [ ] Abre XcreenShot otra vez desde el menú Inicio: no sale un segundo ícono; se muestra la ventana que ya había.
 - [ ] Clic derecho en el ícono: las capturas con sus atajos, Recientes, Preferencias, Ayuda y Salir.
@@ -340,7 +340,7 @@ Mandar una captura a otra app. Carlos decidió el 2026-11-14 que Compartir podí
 Usar XcreenShot desde una terminal o desde Claude.
 **IDs:** APP-027 a APP-033, SMT-039 a SMT-043 · **Guías:** [APP-029.md](APP-029.md), [APP-033.md](APP-033.md), [APP-028.md](APP-028.md), [APP-032.md](APP-032.md), [SMT-039-043.md](SMT-039-043.md) (tanda B ya PASS el 2026-11-01)
 
-- [ ] En una terminal nueva, `xcreenshot --version` responde 0.2.4.
+- [ ] En una terminal nueva, `xcreenshot --version` responde la versión bajo prueba.
 - [ ] `xcreenshot library search --type image --json` lista tus capturas.
 - [ ] En Claude Desktop: "Haz una captura de pantalla completa con XcreenShot y dime qué ves": la hace y la describe.
 - [ ] "¿Cuáles son mis últimas capturas en XcreenShot?": las lista.
@@ -353,7 +353,7 @@ Lo que usarán un administrador o un colega con otro equipo.
 **IDs:** APP-035, APP-037, APP-038, APP-042 a APP-046, APP-050, APP-054 · **Guías:** [APP-035.md](APP-035.md), [APP-038.md](APP-038.md), [APP-037-042.md](APP-037-042.md), [APP-045.md](APP-045.md), [APP-046.md](APP-046.md), [APP-050.md](APP-050.md), [APP-054.md](APP-054.md)
 
 - [ ] El `managed.json` de la guía quita Video y Funciones en prueba; **Avanzado > Configuración administrada > Ver** lo muestra. Al borrarlo, todo vuelve.
-- [ ] El `.zip` portable de la 0.2.4, en una carpeta (con la instalada cerrada): el título dice "(portable)" y no toca `%APPDATA%\XcreenShot`.
+- [ ] El `.zip` portable de la versión bajo prueba, en una carpeta (con la instalada cerrada): el título dice "(portable)" y no toca `%APPDATA%\XcreenShot`.
 - [ ] Desinstala sin marcar **Borrar también ajustes y datos** y reinstala: ajustes, atajos y biblioteca intactos.
 - [ ] **Ayuda > Copiar información de diagnóstico** no incluye rutas de la biblioteca.
 - [ ] Con el Narrador (`Ctrl+Win+Enter`), `Tab` en el lienzo anuncia cada objeto. A 200 % de escala nada se corta.
@@ -384,7 +384,7 @@ Pruebas que no caben en las sesiones porque piden un aparato, otra persona o má
 |---|---|---|
 | Una webcam (o una GoPro como webcam) | Cámara en el video: esquina, forma, borde, espejo, **⇄**, ocupada, tapada y desconectada (VID-031 a VID-036, VID-038); `Ctrl+Alt+Mayús+F` (VID-075) | [VID-031.md](VID-031.md), [VID-075.md](VID-075.md) punto 5 |
 | Un segundo monitor | Lanzador en otro monitor (CAP-004), región entre monitores (CAP-021), grabar un monitor y desconectarlo (VID-004, VID-013) | [CAP-004.md](CAP-004.md), [CAP-capture-engine.md](CAP-capture-engine.md), [VID-013.md](VID-013.md) punto 5 |
-| Otro PC en la misma red con XcreenShot 0.2.4, y un colega | Red local: verse, emparejar con código, enviar, aceptar, rechazar, pendientes (SHR-042 a SHR-044); Uso compartido en proximidad (SHR-037) | [SHR-042-044.md](SHR-042-044.md), [SHR-020-026.md](SHR-020-026.md) punto 9 |
+| Otro PC en la misma red con la misma versión de XcreenShot, y un colega | Red local: verse, emparejar con código, enviar, aceptar, rechazar, pendientes (SHR-042 a SHR-044); Uso compartido en proximidad (SHR-037) | [SHR-042-044.md](SHR-042-044.md), [SHR-020-026.md](SHR-020-026.md) punto 9 |
 | Una clave de la API de Anthropic con saldo | IA dentro de la app, tanda A (SMT-039 a SMT-043) | [SMT-039-043.md](SMT-039-043.md) |
 | Word, PowerPoint, Excel y Outlook | Compartir en Office y Correo (SHR-020, SHR-024 a SHR-026); guías a Word y PowerPoint (SMT-030) | [SHR-020-026.md](SHR-020-026.md), [SMT-M5-5cd.md](SMT-M5-5cd.md) |
 | Una impresora (o Microsoft Print to PDF) | Imprimir desde el editor, la biblioteca, Compartir y la hoja de atajos (EDT-114, LIB-017, SHR-022, APP-023) | [EDT-114.md](EDT-114.md), [APP-023.md](APP-023.md) |
