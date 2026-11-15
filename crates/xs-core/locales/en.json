@@ -2501,6 +2501,7 @@
     "recording_no_mic": "No voice was recorded: no microphone was connected.",
     "recording_time_up": "It stopped when the timer ran out.",
     "recording_monitor_gone": "It stopped because the monitor being recorded was disconnected.",
+    "recording_black": "The video came out black. Some apps protect what they show; if it happens with any app, try Preferences > Video > Always use software encoding.",
     "recording_too_short_title": "Recording too short",
     "recording_too_short_body": "Less than a second was recorded, so no video was made."
   },

@@ -1865,6 +1865,12 @@ fn finish(core: &Core, source: Source, r: Running, cancel: bool, lang: Lang) -> 
         // Asked for and never there: no microphone was plugged in (VID-043).
         warnings.push(tr(lang, "notify.recording_no_mic", &[]));
     }
+    // The screen came out black (VID-029): protected content, or a graphics driver
+    // the capture does not get along with. Slides are drawn here: never.
+    if source_kind != "slides" && xs_video::all_black(&result.path, result.duration) {
+        warnings.push(tr(lang, "notify.recording_black", &[]));
+        value["black"] = json!(true);
+    }
     if !warnings.is_empty() {
         value["warnings"] = json!(warnings);
     }

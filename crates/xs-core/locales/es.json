@@ -2501,6 +2501,7 @@
     "recording_no_mic": "No se grabó la voz: no había ningún micrófono conectado.",
     "recording_time_up": "Se detuvo al terminar el temporizador.",
     "recording_monitor_gone": "Se detuvo porque se desconectó el monitor que se grababa.",
+    "recording_black": "El video salió en negro. Algunas apps protegen lo que muestran; si pasa con cualquier app, prueba Preferencias > Video > Usar siempre codificación por software.",
     "recording_too_short_title": "Grabación demasiado corta",
     "recording_too_short_body": "Se grabó menos de un segundo, así que no se creó el video."
   },

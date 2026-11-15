@@ -139,6 +139,21 @@ pub fn facts(_path: &std::path::Path) -> Result<Facts, String> {
     Err("not available on this platform yet".into())
 }
 
+/// Whether a video came out black (VID-029): its frames at a quarter, half and three
+/// quarters of `duration` are all black. False when none could be read.
+pub fn all_black(path: &std::path::Path, duration: f64) -> bool {
+    let mut seen = false;
+    for k in [0.25, 0.5, 0.75] {
+        if let Ok((_, _, px)) = frame_at(path, duration * k) {
+            seen = true;
+            if px.as_chunks::<4>().0.iter().any(|p| p[0] > 12 || p[1] > 12 || p[2] > 12) {
+                return false;
+            }
+        }
+    }
+    seen
+}
+
 /// The frame at a moment of a video (not available on this platform yet).
 #[cfg(not(windows))]
 pub fn frame_at(_path: &std::path::Path, _seconds: f64) -> Result<(u32, u32, Vec<u8>), String> {
