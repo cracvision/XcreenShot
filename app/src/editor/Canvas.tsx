@@ -540,6 +540,8 @@ export function Canvas({ doc, insets }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [space, setSpace] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
+  /** A piece of Separate elements under the pointer: outlined, dashed (SMT-018). */
+  const [hoverPiece, setHoverPiece] = useState<string | null>(null);
   /** A polygon being drawn, a corner per click (EDT-030). Another tool or document
    * drops it. */
   const [polyDraft, setPolyDraft] = useState<{ doc: string; points: Point[] } | null>(null);
@@ -1738,11 +1740,13 @@ export function Canvas({ doc, insets }: Props) {
                   ? "anchor"
                   : h.handle
         : null;
+      const over = cropRect ? null : hitObject(p);
+      setHoverPiece(!h && over?.type === "image" && over.separated ? over.id : null);
       setHover(
         handleName ??
           (cropRect
             ? null
-            : hitObject(p)
+            : over
               ? "object"
               : hitObject(p, true)
                 ? "locked"
@@ -2598,8 +2602,26 @@ export function Canvas({ doc, insets }: Props) {
       />
     );
   };
+  // The piece of Separate elements under the pointer, unless it is selected (it has its
+  // handles then) or being dragged (SMT-018).
+  const piece =
+    hoverPiece && !drag && !selection.includes(hoverPiece)
+      ? shown.find((o) => o.id === hoverPiece)
+      : undefined;
   const previews = (
     <>
+      {piece?.type === "image" && (
+        <Rect
+          x={piece.rect.x}
+          y={piece.rect.y}
+          width={piece.rect.w}
+          height={piece.rect.h}
+          stroke={ACCENT}
+          strokeWidth={1.5 / scale}
+          dash={[6 / scale, 4 / scale]}
+          listening={false}
+        />
+      )}
       {drawing && styles && (drawing.tool === "arrow" || drawing.tool === "line") && (
         <ArrowShape
           g={arrowGeometry(drawing.from, drawing.to, styles[drawing.tool])}
@@ -2844,7 +2866,10 @@ export function Canvas({ doc, insets }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={() => setDrag(null)}
-          onPointerLeave={() => usePointer.setState({ point: null, screen: null })}
+          onPointerLeave={() => {
+            usePointer.setState({ point: null, screen: null });
+            setHoverPiece(null);
+          }}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
           onWheel={onWheel}
