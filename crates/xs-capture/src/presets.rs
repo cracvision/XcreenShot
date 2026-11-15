@@ -260,6 +260,24 @@ pub fn proposed_name(kind: &str, settings: &Value, lang: Lang) -> String {
     base
 }
 
+/// A timer's length, briefly (VID-015): 30 s, 5 min, 1 h, 1 h 30 min, or 1:02:05.
+fn short_duration(seconds: u64) -> String {
+    let (h, m, s) = (seconds / 3600, seconds % 3600 / 60, seconds % 60);
+    if s > 0 && (h > 0 || m > 0) {
+        return format!("{h}:{m:02}:{s:02}");
+    }
+    let parts: Vec<String> = [(h, "h"), (m, "min"), (s, "s")]
+        .iter()
+        .filter(|(n, _)| *n > 0)
+        .map(|(n, unit)| format!("{n} {unit}"))
+        .collect();
+    if parts.is_empty() {
+        "0 s".into()
+    } else {
+        parts.join(" ")
+    }
+}
+
 /// The short summary of a row (CAP-058): "Región · Editor · Portapapeles · 5 s".
 pub fn summary(p: &Preset, lang: Lang) -> String {
     let s = &p.settings;
@@ -271,7 +289,7 @@ pub fn summary(p: &Preset, lang: Lang) -> String {
             parts.push(tr(
                 lang,
                 "presets.summary.limit",
-                &[("minutes", &(limit / 60).max(1).to_string())],
+                &[("time", &short_duration(limit))],
             ));
         }
         return parts.join(" · ");
@@ -508,6 +526,10 @@ mod tests {
         assert_eq!(params["selection"], "window");
         assert_eq!(params["open"], "editor");
         assert_eq!(summary(&p, Lang::Es), "Video · Ventana · 5 min");
+        assert_eq!(
+            [30, 3600, 5400, 3725].map(short_duration),
+            ["30 s", "1 h", "1 h 30 min", "1:02:05"]
+        );
     }
 
     #[test]

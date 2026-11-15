@@ -3084,7 +3084,6 @@
       "video_sound": "Record the system sound",
       "video_limit": "Timer",
       "video_limit_none": "No limit",
-      "video_limit_min": "{{n}} min",
       "video_quality_hint": "Quality and size: Preferences > Video.",
       "video_selection_window": "Window",
       "video_highlight": "Highlight cursor",
@@ -3105,7 +3104,8 @@
       "video_sound_settings": "System sound settings…",
       "video_camera": "Camera",
       "video_camera_device": "Camera",
-      "video_mic_denoise": "Reduce background noise"
+      "video_mic_denoise": "Reduce background noise",
+      "video_limit_own": "Custom…"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -4888,7 +4888,9 @@
       "timer": "Timer",
       "timer_none": "No limit",
       "timer_left": "{{time}} left",
-      "timer_short": "Already recorded: longer than this"
+      "timer_short": "Already recorded: longer than this",
+      "timer_own": "Custom…",
+      "timer_apply": "Set"
     },
     "video": {
       "silent_suffix": "silent",
@@ -5318,6 +5320,14 @@
       "invert": "Invert",
       "floating": "As a floating image",
       "menu_object": "Remove background"
+    },
+    "duration": {
+      "h": "h",
+      "m": "min",
+      "s": "s",
+      "h_long": "Hours",
+      "m_long": "Minutes",
+      "s_long": "Seconds"
     }
   },
   "history": {
@@ -5549,7 +5559,7 @@
       "clipboard": "Clipboard",
       "cursor": "Cursor",
       "delay": "{{seconds}} s",
-      "limit": "{{minutes}} min"
+      "limit": "{{time}}"
     },
     "copy_name": "{{name}} (copy)",
     "warning_settings": "Some of its settings do not exist in this version. Edit it.",

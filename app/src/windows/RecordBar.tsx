@@ -5,8 +5,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DurationField } from "../components/DurationField";
 import { Menu, type MenuItem } from "../components/Menu";
-import { run } from "../lib/commands";
+import { isCommandError, run } from "../lib/commands";
+import { timerProblem } from "../lib/duration";
 import { useSetting } from "../store";
 import { clock, longHint, timeLeft, TIMER_CHOICES } from "./recClock";
 import { CameraControl } from "./RecordCamera";
@@ -50,6 +52,9 @@ export function RecordBar() {
   const [state, setState] = useState<RecState>({ status: "ready" });
   // Restart or Cancel waiting for a yes, after 10 s recorded (VID-014).
   const [asking, setAsking] = useState<"cancel" | "restart" | "image" | null>(null);
+  // A timer of one's own being written (VID-015): its seconds, and why it cannot be.
+  const [timing, setTiming] = useState<number | null>(null);
+  const [timingError, setTimingError] = useState<string | null>(null);
   // Live drawing (VID-048): its button, when the Video tab allows it (VID-051).
   const liveDraw = useSetting("video.liveDraw", true);
   const [drawing, setDrawing] = useState(false);
@@ -113,8 +118,11 @@ export function RecordBar() {
   const ready = state.status === "ready";
   // Losing up to 10 s needs no question (VID-014).
   const drop = (what: "cancel" | "restart" | "image") => {
-    if (elapsed > 10) setAsking(what);
-    else act(`record.${what}`);
+    if (elapsed > 10) {
+      // The menu gives way to the question without saying it closed.
+      setMenuRows(0);
+      setAsking(what);
+    } else act(`record.${what}`);
   };
   const fits = (m: number) => (m >= 120 ? `${Math.floor(m / 60)} h` : `${m} min`);
   // The Ready summary (VID-006): it gives way first when the bar is short of room.
@@ -148,7 +156,34 @@ export function RecordBar() {
         onSelect: () => act("record.timer", { seconds: s }),
       };
     }),
+    {
+      id: "own",
+      label: t("ui.recbar.timer_own"),
+      separator: true,
+      checked: !!state.limit && !TIMER_CHOICES.includes(state.limit),
+      onSelect: () => {
+        // The menu gives way to the fields without saying it closed.
+        setMenuRows(0);
+        setTimingError(null);
+        setTiming(state.limit || 300);
+      },
+    },
   ];
+  const applyTiming = () => {
+    if (timing === null) return;
+    const problem = timerProblem(timing, recording || paused ? elapsed : 0);
+    if (problem) {
+      setTimingError(
+        problem === "range"
+          ? t("errors.timer_range")
+          : t("errors.timer_too_short", { recorded: clock(elapsed) }),
+      );
+      return;
+    }
+    void run("record.timer", { seconds: timing })
+      .then(() => setTiming(null))
+      .catch((e: unknown) => setTimingError(isCommandError(e) ? e.message : String(e)));
+  };
 
   // The bar's More menu (VID-011).
   const cleanDesktop = useSetting("video.hideDesktopIcons", false);
@@ -198,6 +233,54 @@ export function RecordBar() {
       {strip}
     </div>
   );
+
+  if (timing !== null) {
+    return stack(
+      <div
+        className="recbar glass"
+        role="dialog"
+        aria-label={t("ui.recbar.timer")}
+        onKeyDown={(e) => {
+          if (e.key !== "Escape") return;
+          e.preventDefault();
+          setTiming(null);
+        }}
+      >
+        <span className="recbar-grip" data-tauri-drag-region aria-hidden="true">
+          ⋮⋮
+        </span>
+        {(recording || paused) && (
+          <span className="recbar-time" aria-live="off">
+            {clock(elapsed)}
+          </span>
+        )}
+        <span className="recbar-ask recbar-timing">
+          <span>{t("ui.recbar.timer")}</span>
+          <DurationField
+            value={timing}
+            label={t("ui.recbar.timer")}
+            autoFocus
+            onEnter={applyTiming}
+            onChange={(v) => {
+              setTiming(v);
+              setTimingError(null);
+            }}
+          />
+          {timingError && (
+            <span className="recbar-timing-error" role="alert">
+              {timingError}
+            </span>
+          )}
+        </span>
+        <button type="button" className="btn small primary" onClick={applyTiming}>
+          {t("ui.recbar.timer_apply")}
+        </button>
+        <button type="button" className="btn small" onClick={() => setTiming(null)}>
+          {t("ui.common.cancel")}
+        </button>
+      </div>,
+    );
+  }
 
   if (asking) {
     const question = t(

@@ -388,8 +388,9 @@ impl PanelSettings {
             &["region", "window", "fullscreen"],
         )?;
         one_of("video.open", &self.video.open, &["editor", "none"])?;
-        if self.video.limit > 4 * 3600 {
-            return Err("video.limit: at most 4 hours".into());
+        // No limit (0), or 5 s to 12 h, as the bar's timer (VID-015).
+        if self.video.limit != 0 && !(5..=12 * 3600).contains(&self.video.limit) {
+            return Err("video.limit: 0 (no limit), or 5 to 43200 seconds".into());
         }
         one_of("universal.selection", &self.universal.selection, &SELECTIONS)?;
         one_of(

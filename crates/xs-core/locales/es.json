@@ -3084,7 +3084,6 @@
       "video_sound": "Grabar el audio del sistema",
       "video_limit": "Temporizador",
       "video_limit_none": "Sin límite",
-      "video_limit_min": "{{n}} min",
       "video_quality_hint": "Calidad y tamaño: Preferencias > Video.",
       "video_selection_window": "Ventana",
       "video_highlight": "Resaltar cursor",
@@ -3105,7 +3104,8 @@
       "video_sound_settings": "Ajustes de sonido del sistema…",
       "video_camera": "Cámara",
       "video_camera_device": "Cámara",
-      "video_mic_denoise": "Reducir ruido de fondo"
+      "video_mic_denoise": "Reducir ruido de fondo",
+      "video_limit_own": "A medida…"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -4888,7 +4888,9 @@
       "timer": "Temporizador",
       "timer_none": "Sin límite",
       "timer_left": "quedan {{time}}",
-      "timer_short": "Ya se grabó más que esto"
+      "timer_short": "Ya se grabó más que esto",
+      "timer_own": "A medida…",
+      "timer_apply": "Aplicar"
     },
     "video": {
       "silent_suffix": "sin sonido",
@@ -5318,6 +5320,14 @@
       "invert": "Invertir",
       "floating": "Como imagen flotante",
       "menu_object": "Quitar fondo"
+    },
+    "duration": {
+      "h": "h",
+      "m": "min",
+      "s": "s",
+      "h_long": "Horas",
+      "m_long": "Minutos",
+      "s_long": "Segundos"
     }
   },
   "history": {
@@ -5549,7 +5559,7 @@
       "clipboard": "Portapapeles",
       "cursor": "Cursor",
       "delay": "{{seconds}} s",
-      "limit": "{{minutes}} min"
+      "limit": "{{time}}"
     },
     "copy_name": "{{name}} (copia)",
     "warning_settings": "Algunos de sus ajustes no existen en esta versión. Edítalo.",

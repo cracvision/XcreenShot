@@ -2901,6 +2901,40 @@ html.launcher-root #root {
   padding-left: 8px;
 }
 
+/* A timer of one's own (VID-015): hours, minutes and seconds in the bar. */
+.recbar-timing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.recbar-timing-error {
+  color: var(--danger);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duration-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-muted);
+}
+
+.duration-part input {
+  width: 52px;
+  text-align: right;
+}
+
 .recbar-dot {
   width: 10px;
   height: 10px;

@@ -21,6 +21,9 @@ import { FIELDS } from "../editor/effectOptions";
 import { DEFAULTS as FX_DEFAULTS } from "../editor/effects";
 import { useSetting, useStringSetting } from "../store";
 import { tenStep } from "../lib/numberKeys";
+import { DurationField } from "../components/DurationField";
+import { shortDuration, timerProblem } from "../lib/duration";
+import { TIMER_CHOICES } from "./recClock";
 import { captureModes } from "../features";
 import { useApp } from "../store";
 
@@ -201,7 +204,11 @@ export function VideoOptions({
   // A pointer effect switches the pointer on (VID-044): the command does it.
   const effect = (name: "highlight" | "clicks" | "keys", v: boolean) =>
     void run("record.effects", { [name]: v }).catch(() => undefined);
-  const minutes = [1, 5, 10, 30, 60];
+  // The timer (VID-015): no limit, a quick choice or a length of one's own, 5 s to 12 h.
+  const [ownLimit, setOwnLimit] = useState<number | null>(null);
+  const own = ownLimit !== null || (value.limit !== 0 && !TIMER_CHOICES.includes(value.limit));
+  const ownValue = ownLimit ?? value.limit;
+  const ownProblem = own && timerProblem(ownValue) !== null;
   return (
     <>
       <label className="panel-field" htmlFor={`${id}-vsel`}>
@@ -340,17 +347,43 @@ export function VideoOptions({
         <span>{t("ui.panel.video_limit")}</span>
         <select
           id={`${id}-vlim`}
-          value={String(value.limit)}
-          onChange={(e) => onChange({ limit: Number(e.target.value) })}
+          value={own ? "own" : String(value.limit)}
+          onChange={(e) => {
+            if (e.target.value === "own") {
+              setOwnLimit(value.limit || 300);
+              return;
+            }
+            setOwnLimit(null);
+            onChange({ limit: Number(e.target.value) });
+          }}
         >
           <option value="0">{t("ui.panel.video_limit_none")}</option>
-          {minutes.map((m) => (
-            <option key={m} value={String(m * 60)}>
-              {t("ui.panel.video_limit_min", { n: m })}
+          {TIMER_CHOICES.map((s) => (
+            <option key={s} value={String(s)}>
+              {shortDuration(s)}
             </option>
           ))}
+          <option value="own">{t("ui.panel.video_limit_own")}</option>
         </select>
       </label>
+      {own && (
+        <div className="panel-field">
+          <span aria-hidden="true" />
+          <DurationField
+            value={ownValue}
+            label={t("ui.panel.video_limit")}
+            onChange={(v) => {
+              setOwnLimit(v);
+              if (timerProblem(v) === null) onChange({ limit: v });
+            }}
+          />
+        </div>
+      )}
+      {ownProblem && (
+        <p className="panel-note" role="alert">
+          {t("errors.timer_range")}
+        </p>
+      )}
       {/* Open in (VID-052): the editor, or only the library and the tray. */}
       <label className="panel-field" htmlFor={`${id}-vopen`}>
         <span>{t("ui.panel.open_in")}</span>
