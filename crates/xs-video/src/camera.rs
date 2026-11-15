@@ -371,7 +371,12 @@ mod tests {
                 println!("opened {}×{} in {:?}", c.width, c.height, started.elapsed());
                 let mut frames = 0;
                 let mut last = None;
-                let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                // XS_CAMERA_SECS: how long to read (virtual cameras may take a while to start).
+                let secs = std::env::var("XS_CAMERA_SECS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(2);
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(secs);
                 while std::time::Instant::now() < until {
                     if let Some(f) = c.latest() {
                         if last.is_none_or(|l| l != f.at) {
@@ -389,7 +394,7 @@ mod tests {
                 }
                 let mean = f.bgra.chunks(4).map(|p| p[1] as u64).sum::<u64>() / (f.bgra.len() as u64 / 4);
                 println!(
-                    "{frames} frames in 2 s, mean green {mean}, trouble {:?}",
+                    "{frames} frames in {secs} s, mean green {mean}, trouble {:?}",
                     c.trouble()
                 );
             }
