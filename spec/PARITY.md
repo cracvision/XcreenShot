@@ -355,7 +355,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-005 | Primer arranque | M1 | Should | En curso (M2: el paso Inicio y biblioteca ofrece Usar una biblioteca existente… e Importar ajustes…, APP-055) |
 | APP-006 | Ventana de Preferencias | M0 | Must | En curso |
 | APP-007 | Sección General | M0 | Must | En curso |
-| APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | — |
+| APP-008 | Secciones Captura, Video, Editor, Biblioteca y Compartir | M1 | Must | En curso (Windows: Preferencias tiene las cinco secciones; Captura, Video, Editor y Biblioteca con sus ajustes; Compartir sale vacía hasta los destinos de M6) |
 | APP-009 | Sección Avanzado | M1 | Should | En curso |
 | APP-010 | Restablecer ajustes y avisos | M1 | Should | En curso |
 | APP-011 | Exportar e importar ajustes | M2 | Should | En curso (Windows: Preferencias > Avanzado > Archivo de ajustes, `.xsettings` con preferencias, atajos y perfil, temas, favoritos y efectos guardados, y la barra; resumen previo por grupo; conversión de atajos Windows ↔ macOS; mismos nombres con Reemplazar, Conservar ambos u Omitir; `settings.export` y `settings.import`. Los presets de captura viajan con sus atajos desde M3.1; los destinos de compartir se añaden con M6) |
