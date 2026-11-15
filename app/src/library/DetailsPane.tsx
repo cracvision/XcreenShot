@@ -9,6 +9,7 @@ import { run } from "../lib/commands";
 import { useEditor } from "../editor/state";
 import { useDraft } from "../editor/useDraft";
 import { fileSize, when } from "./format";
+import { formatTime } from "../editor/videoTimeline";
 import { editTags, toggleFavorite } from "./marks";
 import { useLibrary, type LibraryItem } from "./state";
 
@@ -142,6 +143,19 @@ function One({ item }: { item: LibraryItem }) {
       alive = false;
     };
   }, [item.id, item.modified]);
+  // A video's length and frame rate, from its header (LIB-012, VID-054).
+  const [info, setInfo] = useState<{ id: string; duration: number; fps: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (item.kind === "video" && !item.cloud)
+      run<{ duration: number; fps: number }>("video.info", { path: item.path, quick: true })
+        .then((r) => alive && setInfo({ id: item.id, duration: r.duration, fps: r.fps }))
+        .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [item.id, item.kind, item.path, item.cloud]);
+  const video = info && info.id === item.id ? info : null;
   const dash = (v: string | null | undefined) => (v ? v : "—");
   const dims =
     item.width && item.height
@@ -158,6 +172,21 @@ function One({ item }: { item: LibraryItem }) {
           value={t(`ui.library.type_${item.format === "jpeg" ? "jpg" : item.format}`)}
         />
         <Field label={t("ui.library.details.dimensions")} value={dims} />
+        {video && (
+          <>
+            <Field label={t("ui.library.details.duration")} value={formatTime(video.duration)} />
+            <Field
+              label={t("ui.library.details.fps")}
+              value={t("ui.video.fps", { fps: Math.round(video.fps) })}
+            />
+          </>
+        )}
+        {item.kind === "guide" && item.steps != null && (
+          <Field
+            label={t("ui.library.details.steps")}
+            value={t("ui.library.steps_badge", { count: item.steps })}
+          />
+        )}
         <Field label={t("ui.library.details.size")} value={fileSize(item.size, lang)} />
         <Field label={t("ui.library.details.location")} value={item.path}>
           <span className="details-path" title={item.path}>

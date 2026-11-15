@@ -4509,7 +4509,10 @@
         "count_one": "{{count}} item selected",
         "count_other": "{{count}} items selected",
         "dates": "Captured between",
-        "common_tags": "Shared tags"
+        "common_tags": "Shared tags",
+        "duration": "Duration",
+        "fps": "Frame rate",
+        "steps": "Steps"
       },
       "quick": {
         "title": "Quick view of {{name}}",

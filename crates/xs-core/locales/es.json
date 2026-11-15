@@ -4509,7 +4509,10 @@
         "count_one": "{{count}} elemento seleccionado",
         "count_other": "{{count}} elementos seleccionados",
         "dates": "Capturados entre",
-        "common_tags": "Etiquetas en común"
+        "common_tags": "Etiquetas en común",
+        "duration": "Duración",
+        "fps": "Fotogramas por segundo",
+        "steps": "Pasos"
       },
       "quick": {
         "title": "Vista rápida de {{name}}",
