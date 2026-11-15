@@ -146,7 +146,12 @@ pub fn all_black(path: &std::path::Path, duration: f64) -> bool {
     for k in [0.25, 0.5, 0.75] {
         if let Ok((_, _, px)) = frame_at(path, duration * k) {
             seen = true;
-            if px.as_chunks::<4>().0.iter().any(|p| p[0] > 12 || p[1] > 12 || p[2] > 12) {
+            if px
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|p| p[0] > 12 || p[1] > 12 || p[2] > 12)
+            {
                 return false;
             }
         }
