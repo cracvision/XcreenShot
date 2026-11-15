@@ -501,7 +501,7 @@ fn give_keyboard_to(window: Option<isize>, x: i32, y: i32) {
     }
 }
 
-/// Shows the bar; taking the keyboard only when `activate` (VID-011).
+/// Shows the bar (or the border); taking the keyboard only when `activate` (VID-011).
 fn show_bar(bar: &WebviewWindow, activate: bool) -> tauri::Result<()> {
     #[cfg(windows)]
     if !activate {
@@ -679,7 +679,8 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
             (h + 2.0 * edge) as u32,
         ))?;
         let _ = frame.set_ignore_cursor_events(true);
-        frame.show()?;
+        // Never with the keyboard, even when XcreenShot had it (VID-011).
+        show_bar(&frame, false)?;
     }
     if app.get_webview_window(RECBAR).is_none() {
         // Wide enough for the sound's switches and meters (VID-011).

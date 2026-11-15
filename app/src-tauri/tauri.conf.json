@@ -62,6 +62,14 @@
         "name": "XcreenShot.Template",
         "description": "XcreenShot template",
         "role": "Viewer"
+      },
+      {
+        "ext": [
+          "xsettings"
+        ],
+        "name": "XcreenShot.Settings",
+        "description": "XcreenShot settings",
+        "role": "Viewer"
       }
     ]
   }

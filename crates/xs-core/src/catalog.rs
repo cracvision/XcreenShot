@@ -221,7 +221,7 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("app.open_files", &["APP-001", "CAP-063"])
             .mutates()
             .params(params(
-                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG and JPG open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel"}}),
+                json!({"paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Files to open: .xshot, PNG, JPG, MP4 and GIF open in the editor; .xtheme and .xtemplate start their import in the editor; .xpreset in the capture panel; .xsettings in Preferences > Advanced"}}),
                 &["paths"],
             ))
             .result(json!({"type": "object", "properties": {
@@ -232,7 +232,7 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("app.take_opening", &["APP-001"])
             .mutates()
             .params(params(
-                json!({"kind": {"type": "string", "enum": ["editor", "presets"]}}),
+                json!({"kind": {"type": "string", "enum": ["editor", "presets", "settings"]}}),
                 &["kind"],
             ))
             .result(json!({"type": "object", "properties": {"paths": {"type": "array", "items": {"type": "string"}}}})),

@@ -2,7 +2,8 @@
 // .xsettings file with the chosen groups; importing shows first what each group
 // changes, and lets groups be left out.
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { run } from "../lib/commands";
@@ -84,6 +85,7 @@ export function SettingsTransfer() {
             {tt("export")}
           </button>
           <ImportSettingsButton
+            takesOpened
             onStatus={(text) => {
               setError("");
               setStatus(text);
@@ -128,6 +130,8 @@ export function SettingsTransfer() {
 export function ImportSettingsButton(props: {
   onStatus: (text: string) => void;
   onError: (text: string) => void;
+  /** An .xsettings opened with XcreenShot (double click, APP-001) asks here. */
+  takesOpened?: boolean;
 }) {
   const { t } = useTranslation();
   const tt = (k: string) => t(`ui.prefs.transfer.${k}`);
@@ -137,6 +141,9 @@ export function ImportSettingsButton(props: {
     props.onError("");
     const path = await open({ filters: [{ name: tt("file_type"), extensions: ["xsettings"] }] });
     if (typeof path !== "string") return;
+    await preview(path);
+  };
+  const preview = async (path: string) => {
     try {
       const preview = await run<Preview>("settings.import", { path, dryRun: true });
       setChosen(GROUPS.filter((g) => preview.groups[g] !== undefined));
@@ -145,6 +152,20 @@ export function ImportSettingsButton(props: {
       props.onError(String((e as { message?: string }).message ?? e));
     }
   };
+  const { takesOpened } = props;
+  useEffect(() => {
+    if (!takesOpened) return;
+    const take = () =>
+      void run<{ paths: string[] }>("app.take_opening", { kind: "settings" })
+        .then((r) => (r.paths[0] ? preview(r.paths[0]) : undefined))
+        .catch(() => undefined);
+    take();
+    const off = listen<{ kind: string; payload?: { kind?: string } }>("xs://editor", (e) => {
+      if (e.payload.kind === "opening" && e.payload.payload?.kind === "settings") take();
+    });
+    return () => void off.then((f) => f());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per window
+  }, [takesOpened]);
   return (
     <>
       <button type="button" className="btn" onClick={() => void pick()}>

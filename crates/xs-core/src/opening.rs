@@ -1,7 +1,8 @@
 //! Files opened with XcreenShot (APP-001): double click, "Open with" or the command
-//! line, also when XcreenShot is already running. Captures and images open in the
-//! editor; `.xtheme` and `.xtemplate` start their import in the editor (EDT-018,
-//! EDT-101); `.xpreset` starts the presets import in the capture panel (CAP-063).
+//! line, also when XcreenShot is already running. Captures, images, videos and GIF open
+//! in the editor; `.xtheme` and `.xtemplate` start their import in the editor (EDT-018,
+//! EDT-101); `.xpreset` starts the presets import in the capture panel (CAP-063);
+//! `.xsettings` starts the settings import in Preferences > Advanced (APP-011).
 //! Imports need their window's dialog, so their paths wait here until the window
 //! takes them (`app.take_opening`).
 
@@ -22,8 +23,8 @@ pub enum Kind {
     EditorImport,
     /// Its import starts in the capture panel.
     Presets,
-    /// A video: the system's player, until the editor plays videos (VID-056).
-    Video,
+    /// Its import starts in Preferences > Advanced (APP-011).
+    Settings,
 }
 
 /// The kind of `path`, by its extension; `None`: XcreenShot does not open it.
@@ -33,10 +34,11 @@ pub fn kind(path: &str) -> Option<Kind> {
         .and_then(|e| e.to_str())
         .map(str::to_ascii_lowercase)?;
     match ext.as_str() {
-        "xshot" | "png" | "jpg" | "jpeg" => Some(Kind::Document),
+        // Videos and GIF play in the editor (VID-056, ADR 0008).
+        "xshot" | "png" | "jpg" | "jpeg" | "mp4" | "gif" => Some(Kind::Document),
         "xtheme" | "xtemplate" => Some(Kind::EditorImport),
         "xpreset" => Some(Kind::Presets),
-        "mp4" => Some(Kind::Video),
+        "xsettings" => Some(Kind::Settings),
         _ => None,
     }
 }
@@ -45,6 +47,7 @@ pub fn kind(path: &str) -> Option<Kind> {
 struct Opening {
     editor: Mutex<Vec<String>>,
     presets: Mutex<Vec<String>>,
+    settings: Mutex<Vec<String>>,
 }
 
 fn service(core: &Core) -> Arc<Opening> {
@@ -63,7 +66,7 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
     }
     let mut opened = Vec::new();
     let mut skipped = Vec::new();
-    let (mut editor, mut presets) = (Vec::new(), Vec::new());
+    let (mut editor, mut presets, mut settings) = (Vec::new(), Vec::new(), Vec::new());
     for path in paths {
         if !Path::new(&path).is_file() {
             skipped.push(json!({
@@ -86,17 +89,14 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
             }
             Some(Kind::EditorImport) => editor.push(path),
             Some(Kind::Presets) => presets.push(path),
-            Some(Kind::Video) => match with_system(&path) {
-                Ok(()) => opened.push(json!(path)),
-                Err(e) => skipped.push(json!({ "path": path, "reason": e.to_string() })),
-            },
+            Some(Kind::Settings) => settings.push(path),
             None => skipped.push(json!({
                 "path": path,
                 "reason": tr(ctx.lang, "errors.cannot_open_file", &[]),
             })),
         }
     }
-    let imports = editor.len() + presets.len();
+    let imports = editor.len() + presets.len() + settings.len();
     let host = core.host();
     if !editor.is_empty() {
         service(core).editor.lock().unwrap().extend(editor);
@@ -113,18 +113,14 @@ pub fn open_files(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         )?;
         host.editor_event("opening", json!({ "kind": "presets" }));
     }
+    if !settings.is_empty() {
+        // One settings file at a time: the last one opened.
+        let last = settings.pop();
+        *service(core).settings.lock().unwrap() = last.into_iter().collect();
+        host.open_settings(Some("advanced"), None)?;
+        host.editor_event("opening", json!({ "kind": "settings" }));
+    }
     Ok(json!({ "opened": opened, "imports": imports, "skipped": skipped }))
-}
-
-/// Opens a file with the system's app for its type.
-fn with_system(path: &str) -> std::io::Result<()> {
-    #[cfg(windows)]
-    let program = "explorer.exe";
-    #[cfg(target_os = "macos")]
-    let program = "open";
-    #[cfg(not(any(windows, target_os = "macos")))]
-    let program = "xdg-open";
-    std::process::Command::new(program).arg(path).spawn().map(|_| ())
 }
 
 /// `app.take_opening`: the files waiting for `kind`'s window (`editor` or `presets`),
@@ -134,6 +130,7 @@ pub fn take(core: &Core, p: &Value) -> CommandResult {
     let list = match p.get("kind").and_then(Value::as_str) {
         Some("editor") => &svc.editor,
         Some("presets") => &svc.presets,
+        Some("settings") => &svc.settings,
         _ => return Err(CommandError::new(ErrorCode::InvalidParams, "kind")),
     };
     let paths = std::mem::take(&mut *list.lock().unwrap());
@@ -151,7 +148,9 @@ mod tests {
         assert_eq!(kind("dark.xtheme"), Some(Kind::EditorImport));
         assert_eq!(kind("steps.xtemplate"), Some(Kind::EditorImport));
         assert_eq!(kind("mine.XPRESET"), Some(Kind::Presets));
-        assert_eq!(kind("demo.MP4"), Some(Kind::Video));
+        assert_eq!(kind("demo.MP4"), Some(Kind::Document));
+        assert_eq!(kind("loop.gif"), Some(Kind::Document));
+        assert_eq!(kind("work.xsettings"), Some(Kind::Settings));
         assert_eq!(kind("notes.txt"), None);
         assert_eq!(kind("no_extension"), None);
     }
