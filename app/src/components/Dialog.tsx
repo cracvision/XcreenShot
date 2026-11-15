@@ -21,7 +21,8 @@ export function Dialog({ title, children, actions, onCancel }: Props) {
     // A field marked data-autofocus (what the dialog asks for), else the first button.
     ref.current?.querySelector<HTMLElement>("[data-autofocus], button")?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      // Esc in a quick view over the dialog closes only the view (VID-067).
+      if (e.key === "Escape" && !(e.target as Element | null)?.closest?.(".quick-view")) {
         e.stopPropagation();
         cancel.current();
       }

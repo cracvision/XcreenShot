@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "../components/Dialog";
 import { isCommandError, run } from "../lib/commands";
-import { libraryThumb } from "../library/quickViewState";
+import { libraryEntries, libraryThumb, showQuickView } from "../library/quickViewState";
 import type { LibraryItem } from "../library/state";
 import { useEditor } from "./state";
 import { useVideo } from "./videoState";
@@ -212,13 +212,34 @@ function CombineForm() {
           </select>
         </div>
         <ul className="combine-list" aria-label={t("ui.video.combine.library")}>
-          {items.map((item) => (
+          {items.map((item, index) => (
             <li key={item.id}>
               <button
                 type="button"
                 className="combine-item"
+                data-combine-id={item.id}
                 title={t("ui.video.combine.add")}
                 disabled={busy}
+                onKeyDown={(e) => {
+                  // Space: a preview of it (VID-067); Enter there adds it.
+                  if (e.key !== " ") return;
+                  e.preventDefault();
+                  showQuickView({
+                    entries: libraryEntries(items),
+                    at: index,
+                    open: (id) => {
+                      const it = items.find((i) => i.id === id);
+                      if (it) add(it);
+                    },
+                    done: (id) =>
+                      document
+                        .querySelector<HTMLElement>(`[data-combine-id="${CSS.escape(id)}"]`)
+                        ?.focus(),
+                  });
+                }}
+                onKeyUp={(e) => {
+                  if (e.key === " ") e.preventDefault();
+                }}
                 draggable={!busy}
                 onDragStart={(e) => {
                   e.dataTransfer.setData(
