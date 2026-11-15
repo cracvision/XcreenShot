@@ -19,6 +19,8 @@ export interface Filters {
   sites: string[];
   tags: string[];
   favorites: boolean;
+  /** Only the captures of this interval series (CAP-049). */
+  series?: string | undefined;
 }
 
 export type FilterSection = "types" | "dates" | "apps" | "sites" | "tags";
@@ -71,7 +73,8 @@ export function hasFilters(f: Filters): boolean {
     f.dates.length > 0 ||
     f.apps.length > 0 ||
     f.sites.length > 0 ||
-    f.tags.length > 0
+    f.tags.length > 0 ||
+    !!f.series
   );
 }
 

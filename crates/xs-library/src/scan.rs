@@ -42,6 +42,8 @@ pub struct Info {
     pub text: String,
     /// A guide of steps: how many (SMT-035).
     pub steps: Option<u32>,
+    /// The interval series it belongs to (CAP-049).
+    pub series: Option<crate::index::Series>,
 }
 
 /// The format of an item file, or `None` for anything else (`.xmeta`, the index,
@@ -145,6 +147,17 @@ pub fn walk(root: &Path) -> Vec<Found> {
 /// Reads what the library shows about a file: name, size of the image, and for a
 /// `.xshot` its capture metadata (CAP-056). A loose file's capture time is its EXIF
 /// date, else the file's own.
+/// The interval series in a capture's metadata (CAP-049): `{id, index, name}`.
+pub fn series_of(meta: &serde_json::Value) -> Option<crate::index::Series> {
+    let s = &meta["series"];
+    let id = s["id"].as_str().filter(|id| !id.is_empty())?;
+    Some(crate::index::Series {
+        id: id.to_string(),
+        index: s["index"].as_u64().unwrap_or(0) as u32,
+        name: s["name"].as_str().unwrap_or_default().to_string(),
+    })
+}
+
 pub fn info(found: &Found) -> Info {
     let format = format_of(&found.abs).unwrap_or("png").to_string();
     let name = found
@@ -180,6 +193,7 @@ pub fn info(found: &Found) -> Info {
                 .map(str::to_string);
             info.url = text("url");
             info.steps = summary.guide_steps;
+            info.series = series_of(&summary.meta);
             info.text = summary.texts.join(
                 "
 ",

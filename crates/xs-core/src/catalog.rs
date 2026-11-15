@@ -2774,7 +2774,7 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(json!({"key": {"type": "string", "minLength": 1}}), &["key"]))
             .result(ai_key_status()),
         // The library (LIB-); the rest of the area arrives with M2 (LIB-034).
-        B::new("library.list", &["LIB-001", "LIB-002", "LIB-004", "LIB-005", "LIB-006", "LIB-007", "LIB-022", "LIB-034"])
+        B::new("library.list", &["LIB-001", "LIB-002", "LIB-004", "LIB-005", "LIB-006", "LIB-007", "LIB-022", "LIB-034", "CAP-049"])
             .params(params(
                 json!({
                     "sort": {"type": "string", "enum": ["modified", "captured", "name", "size", "type", "app"], "default": "modified"},
@@ -2786,8 +2786,10 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                         "apps": {"type": "array", "items": {"type": "string"}},
                         "sites": {"type": "array", "items": {"type": "string"}},
                         "tags": {"type": "array", "items": {"type": "string"}},
-                        "favorites": {"type": "boolean"}
+                        "favorites": {"type": "boolean"},
+                        "series": {"type": "string", "description": "Only the captures of this interval series (CAP-049), in their order unless sort is given"}
                     }},
+                    "groupSeries": {"type": "boolean", "default": false, "description": "Each interval series as one item, its last capture, with seriesCount (CAP-049)"},
                     "offset": {"type": "integer", "minimum": 0, "default": 0},
                     "limit": {"type": "integer", "minimum": 1, "description": "Default: all"}
                 }),
@@ -3399,7 +3401,9 @@ fn library_item() -> Value {
             "width": {"type": ["integer", "null"]},
             "height": {"type": ["integer", "null"]},
             "app": {"type": ["string", "null"]},
-            "size": {"type": "integer"}
+            "size": {"type": "integer"},
+            "series": {"type": ["object", "null"], "description": "The interval series it belongs to: id, index, name (CAP-049)"},
+            "seriesCount": {"type": "integer", "description": "With groupSeries: the captures this item stands for"}
         }
     })
 }

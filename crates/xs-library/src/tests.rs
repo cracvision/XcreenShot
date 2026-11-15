@@ -1194,3 +1194,75 @@ fn a_network_library_deletes_for_good_and_indexes_locally() {
         assert!(index.starts_with(data.path()), "{index:?}");
     }
 }
+
+/// CAP-049: an interval series shows as one item with its count; filtered, its
+/// captures in their order.
+#[test]
+fn interval_series_are_grouped() {
+    let e = env();
+    for (k, t) in ["10:00:00", "10:00:05", "10:00:10"].iter().enumerate() {
+        let x = Xshot {
+            manifest: Manifest::current(),
+            document: Document::new(40, 30, 96.0),
+            base_png: png(40, 30),
+            meta: json!({
+                "capturedAt": format!("2026-11-15T{t}+00:00"),
+                "series": {"id": "20261115T100000-s1", "index": k + 1, "name": "Panel"}
+            }),
+            thumb_png: png(4, 3),
+            images: BTreeMap::new(),
+        };
+        x.write(&e.path(&format!("2026-11/s{}.xshot", k + 1))).unwrap();
+    }
+    write_xshot(&e.path("2026-11/other.xshot"), "A", "2026-11-01T00:00:00+00:00");
+    let core = Core::for_tests_with(
+        Platform::Windows,
+        vec![extension_with(Some(e.root.path().to_path_buf()))],
+    );
+    library(&core).scan();
+    let cli = |p: Value| core.call(Source::Cli, "library.list", p, Some(Lang::En)).unwrap();
+    assert_eq!(cli(json!({}))["count"], 4);
+    let grouped = cli(json!({"groupSeries": true, "sort": "captured"}));
+    assert_eq!(grouped["count"], 2);
+    assert_eq!(grouped["items"][0]["name"], "s3");
+    assert_eq!(grouped["items"][0]["seriesCount"], 3);
+    assert_eq!(grouped["items"][0]["series"]["name"], "Panel");
+    assert!(grouped["items"][1]["series"].is_null());
+    let one = cli(json!({"filters": {"series": "20261115T100000-s1"}, "groupSeries": true}));
+    let names: Vec<&str> = one["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["s1", "s2", "s3"]);
+}
+
+/// An index of version 4 gains the series columns without losing what it had, and
+/// reads its images again (CAP-049).
+#[test]
+fn index_of_version_4_gains_the_series() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    {
+        let db = rusqlite::Connection::open(&path).unwrap();
+        db.execute_batch(
+            "CREATE TABLE items (id TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+               format TEXT NOT NULL, size INTEGER NOT NULL, modified INTEGER NOT NULL, captured INTEGER NOT NULL,
+               width INTEGER, height INTEGER, app TEXT, url TEXT, favorite INTEGER NOT NULL DEFAULT 0,
+               tags TEXT NOT NULL DEFAULT '[]', text TEXT NOT NULL DEFAULT '', cloud INTEGER NOT NULL DEFAULT 0,
+               steps INTEGER);
+             INSERT INTO items (id, path, name, format, size, modified, captured, favorite, tags)
+               VALUES ('x', 'a.xshot', 'a', 'xshot', 1, 5, 5, 1, '[\"t\"]');
+             PRAGMA user_version = 4;",
+        )
+        .unwrap();
+    }
+    let index = index::Index::open(&path).unwrap();
+    let items = index.all().unwrap();
+    assert_eq!(items.len(), 1);
+    assert!(items[0].favorite);
+    assert_eq!(items[0].tags, vec!["t".to_string()]);
+    assert_eq!(items[0].modified, -1);
+    assert_eq!(items[0].series, None);
+}

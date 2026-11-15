@@ -35,6 +35,10 @@ export interface LibraryItem {
   cloud?: boolean;
   /** A guide of steps: how many (SMT-035). */
   steps?: number | null;
+  /** The interval series it belongs to (CAP-049). */
+  series?: { id: string; index: number; name: string } | null;
+  /** Grouped: the captures of its series it stands for (CAP-049). */
+  seriesCount?: number;
   /** Found only by the text read in its image (LIB-008). */
   inImage?: boolean;
   /** A copy a sync service made beside its original (LIB-029). */
@@ -128,6 +132,8 @@ export interface LibraryShape {
   /** Widths the user gave the list's columns, in px, and those hidden (LIB-004). */
   widths?: Record<string, number>;
   hidden?: string[];
+  /** Each interval series as one item (CAP-049); on unless turned off. */
+  groupSeries?: boolean;
 }
 
 const SHAPE_KEY = "xs.library.view";
@@ -158,6 +164,8 @@ interface LibraryState {
   reveal: string | null;
   /** The filters were cleared to show it. */
   revealNotice: boolean;
+  /** The name of the series shown alone (CAP-049), for its chip. */
+  seriesName: string;
   setShape: (shape: Partial<LibraryShape>) => void;
   setFilters: (filters: Filters) => void;
   setQuery: (query: string) => void;
@@ -189,6 +197,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   query: "",
   reveal: null,
   revealNotice: false,
+  seriesName: "",
   setShape: (change) => {
     const shape = { ...get().shape, ...change };
     // A new sort starts in its own direction unless one is given.
@@ -196,7 +205,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       shape.order = defaultOrder(change.sort);
     set({ shape });
     keep(SHAPE_KEY, shape);
-    if (change.sort || change.order)
+    if (change.sort || change.order || change.groupSeries !== undefined)
       void get()
         .load()
         .catch(() => undefined);
@@ -231,6 +240,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
         order: shape.order,
         filters,
         query,
+        groupSeries: shape.groupSeries !== false,
       });
       const ids = new Set(r.items.map((i) => i.id));
       const { selection, focus, anchor } = get();
@@ -275,6 +285,19 @@ export async function revealInLibrary(id: string): Promise<void> {
   }
   useLibrary.getState().select([id], id, id);
   useLibrary.setState({ reveal: id });
+}
+
+/** Opens items (LIB-002); a grouped interval series shows its captures instead
+ * (CAP-049). */
+export function openOrEnter(items: LibraryItem[], open: (items: LibraryItem[]) => void): void {
+  const [first] = items;
+  const { filters, setFilters } = useLibrary.getState();
+  if (items.length === 1 && first?.series && (first.seriesCount ?? 1) > 1 && !filters.series) {
+    useLibrary.setState({ seriesName: first.series.name });
+    setFilters({ ...filters, series: first.series.id });
+    return;
+  }
+  open(items);
 }
 
 /** The items selected, in the order of the grid. */

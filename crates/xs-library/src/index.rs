@@ -10,8 +10,9 @@ use serde_json::{json, Value};
 /// Bumped when the schema changes; an index of another version is rebuilt.
 /// 2: the text of annotations (LIB-007), and the app's name read from CAP-056's
 /// `{name, version, id}`. 3: whether the file is only in the cloud (LIB-029).
-/// 4: the steps of a guide (SMT-035).
-const VERSION: i64 = 4;
+/// 4: the steps of a guide (SMT-035). 5: the interval series a capture belongs to
+/// (CAP-049).
+const VERSION: i64 = 5;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS items (
@@ -30,7 +31,10 @@ CREATE TABLE IF NOT EXISTS items (
     tags TEXT NOT NULL DEFAULT '[]',
     text TEXT NOT NULL DEFAULT '',
     cloud INTEGER NOT NULL DEFAULT 0,
-    steps INTEGER
+    steps INTEGER,
+    series TEXT,
+    series_index INTEGER,
+    series_name TEXT
 );
 CREATE INDEX IF NOT EXISTS items_captured ON items (captured DESC);
 CREATE TABLE IF NOT EXISTS seen (
@@ -65,6 +69,17 @@ pub struct Item {
     pub cloud: bool,
     /// A guide of steps: how many (SMT-035).
     pub steps: Option<u32>,
+    /// The interval series it belongs to (CAP-049).
+    pub series: Option<Series>,
+}
+
+/// A capture's interval series (CAP-049, CAP-056): its id (unique also between
+/// restarts), the capture's number in it and the series' name.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Series {
+    pub id: String,
+    pub index: u32,
+    pub name: String,
 }
 
 impl Item {
@@ -87,6 +102,14 @@ impl Item {
             text: r.get("text")?,
             cloud: r.get::<_, i64>("cloud")? != 0,
             steps: r.get::<_, Option<i64>>("steps")?.map(|n| n.max(0) as u32),
+            series: match r.get::<_, Option<String>>("series")? {
+                Some(id) => Some(Series {
+                    id,
+                    index: r.get::<_, Option<i64>>("series_index")?.unwrap_or(0).max(0) as u32,
+                    name: r.get::<_, Option<String>>("series_name")?.unwrap_or_default(),
+                }),
+                None => None,
+            },
         })
     }
 
@@ -115,6 +138,7 @@ impl Item {
             "tags": self.tags,
             "cloud": self.cloud,
             "steps": self.steps,
+            "series": self.series.as_ref().map(|s| json!({"id": s.id, "index": s.index, "name": s.name})),
         })
     }
 }
@@ -154,6 +178,16 @@ impl Index {
         }
         if version == 2 || version == 3 {
             db.execute_batch("ALTER TABLE items ADD COLUMN steps INTEGER")?;
+        }
+        if (2..=4).contains(&version) {
+            // The series (CAP-049): images are read again at the next scan, which
+            // finds a changed date; everything else they had stays.
+            db.execute_batch(
+                "ALTER TABLE items ADD COLUMN series TEXT;
+                 ALTER TABLE items ADD COLUMN series_index INTEGER;
+                 ALTER TABLE items ADD COLUMN series_name TEXT;
+                 UPDATE items SET modified = -1 WHERE format = 'xshot';",
+            )?;
         } else if version != 0 && version != VERSION {
             return Err(rusqlite::Error::InvalidQuery);
         }
@@ -172,11 +206,11 @@ impl Index {
 
     pub fn upsert(&self, item: &Item) -> rusqlite::Result<()> {
         self.db.execute(
-            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text, cloud, steps)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+            "INSERT INTO items (id, path, name, format, size, modified, captured, width, height, app, url, favorite, tags, text, cloud, steps, series, series_index, series_name)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
              ON CONFLICT(id) DO UPDATE SET path = ?2, name = ?3, format = ?4, size = ?5, modified = ?6,
                captured = ?7, width = ?8, height = ?9, app = ?10, url = ?11, favorite = ?12, tags = ?13, text = ?14,
-               cloud = ?15, steps = ?16",
+               cloud = ?15, steps = ?16, series = ?17, series_index = ?18, series_name = ?19",
             params![
                 item.id,
                 item.path,
@@ -194,6 +228,9 @@ impl Index {
                 item.text,
                 item.cloud as i64,
                 item.steps.map(|n| n as i64),
+                item.series.as_ref().map(|s| s.id.clone()),
+                item.series.as_ref().map(|s| s.index as i64),
+                item.series.as_ref().map(|s| s.name.clone()),
             ],
         )?;
         Ok(())

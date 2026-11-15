@@ -45,6 +45,8 @@ pub struct Filters {
     /// A range of capture days, `YYYY-MM-DD`, both included (LIB-034).
     pub from: Option<String>,
     pub to: Option<String>,
+    /// Only the captures of this interval series (CAP-049), in their order.
+    pub series: Option<String>,
 }
 
 impl Filters {
@@ -55,7 +57,33 @@ impl Filters {
             && self.sites.is_empty()
             && self.tags.is_empty()
             && !self.favorites
+            && self.series.is_none()
     }
+}
+
+/// CAP-049: each interval series as one item, the one captured last of those that
+/// passed, with how many it stands for; items of no series stay as they are.
+pub fn group_series<'a>(items: &[&'a Item]) -> (Vec<&'a Item>, HashMap<String, usize>) {
+    let mut last: HashMap<&str, &Item> = HashMap::new();
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for i in items {
+        if let Some(s) = &i.series {
+            *counts.entry(s.id.clone()).or_default() += 1;
+            let best = last.entry(s.id.as_str()).or_insert(i);
+            if (i.captured, s.index) > (best.captured, best.series.as_ref().map_or(0, |b| b.index)) {
+                *best = i;
+            }
+        }
+    }
+    let kept = items
+        .iter()
+        .filter(|i| match &i.series {
+            Some(s) => last.get(s.id.as_str()).is_some_and(|b| b.id == i.id),
+            None => true,
+        })
+        .copied()
+        .collect();
+    (kept, counts)
 }
 
 /// Lower case, without accents: "Camión" and "camion" are the same (LIB-007).
@@ -281,6 +309,12 @@ impl Checked<'_> {
     fn passes(&self, item: &Item, fields: &Fields, skip: Option<Section>) -> bool {
         let f = self.filters;
         let on = |s: Section| skip != Some(s);
+        // One interval series (CAP-049): not a section of the pane, always applied.
+        if let Some(id) = &f.series {
+            if item.series.as_ref().is_none_or(|s| &s.id != id) {
+                return false;
+            }
+        }
         if on(Section::Types) && !f.types.is_empty() && !f.types.iter().any(|t| t == kind(item)) {
             return false;
         }
@@ -570,7 +604,34 @@ mod tests {
             text: String::new(),
             cloud: false,
             steps: None,
+            series: None,
         }
+    }
+
+    /// CAP-049: a series shows once, as its last capture, with its count; filtered,
+    /// only its captures.
+    #[test]
+    fn series_are_grouped() {
+        let mut items: Vec<Item> = ["a", "b", "c", "d"].iter().map(|n| item(n, 1)).collect();
+        for (k, i) in items.iter_mut().take(3).enumerate() {
+            i.series = Some(crate::index::Series {
+                id: "s1".into(),
+                index: k as u32 + 1,
+                name: "Serie".into(),
+            });
+            i.captured += k as i64 * 1000;
+        }
+        let found = run(&items, &Filters::default(), "", Sort::Name, false, today());
+        let (kept, counts) = group_series(&found.items);
+        let names: Vec<&str> = kept.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, vec!["c", "d"]);
+        assert_eq!(counts["s1"], 3);
+        let only = Filters {
+            series: Some("s1".into()),
+            ..Filters::default()
+        };
+        let found = run(&items, &only, "", Sort::Name, false, today());
+        assert_eq!(found.items.len(), 3);
     }
 
     fn ids(found: &Found) -> Vec<String> {

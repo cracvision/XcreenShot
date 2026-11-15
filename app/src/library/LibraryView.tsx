@@ -54,7 +54,7 @@ import { languageItems } from "../components/languageItems";
 import { watchDrag } from "./dragOut";
 import { itemMenu } from "./itemMenu";
 import { boxOf, clickSelection, moveFocus, overlaps, range } from "./selection";
-import { selectedItems, useLibrary, useMainView, type LibraryItem } from "./state";
+import { openOrEnter, selectedItems, useLibrary, useMainView, type LibraryItem } from "./state";
 import { ViewSwitch } from "./ViewSwitch";
 import { columnsFor, scrollToRow, visibleSpan } from "./virtual";
 
@@ -389,11 +389,22 @@ function LibraryToolbar() {
         align="end"
         items={[
           ...foldedItems(level, t),
+          // CAP-049: each interval series as one item.
+          {
+            id: "group_series",
+            label: t("ui.library.group_series"),
+            checked: useLibrary.getState().shape.groupSeries !== false,
+            separator: level >= FOLD_ACTIONS,
+            onSelect: () =>
+              useLibrary.getState().setShape({
+                groupSeries: useLibrary.getState().shape.groupSeries === false,
+              }),
+          },
           // LIB-024.
           {
             id: "import_files",
             label: t("ui.library.import.files"),
-            separator: level >= FOLD_ACTIONS,
+            separator: true,
             onSelect: () => void importFiles(),
           },
           {
@@ -521,6 +532,12 @@ function Item({
             {item.name}
             {/* Found by the words inside it (LIB-008). */}
             {item.inImage && <span className="lib-in-image">{t("ui.library.in_image")}</span>}
+            {/* An interval series as one item (CAP-049). */}
+            {item.seriesCount != null && item.seriesCount > 1 && (
+              <span className="lib-in-image">
+                {t("ui.library.series_badge", { count: item.seriesCount })}
+              </span>
+            )}
             {item.cloud && <CloudBadge />}
             {item.conflict && <ConflictBadge />}
           </span>
@@ -548,6 +565,12 @@ function Item({
             )}
             {/* Found by the words inside it (LIB-008). */}
             {item.inImage && <span className="lib-badge in-image">{t("ui.library.in_image")}</span>}
+            {/* An interval series as one item (CAP-049). */}
+            {item.seriesCount != null && item.seriesCount > 1 && (
+              <span className="lib-badge guide series">
+                {t("ui.library.series_badge", { count: item.seriesCount })}
+              </span>
+            )}
             {/* A guide of steps: how many (SMT-035). */}
             {item.kind === "guide" && item.steps != null && (
               <span className="lib-badge guide">
@@ -881,7 +904,7 @@ function Grid() {
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      void openItems(selectedItems());
+      openOrEnter(selectedItems(), (items) => void openItems(items));
       return;
     }
     if (e.key === " " && !primary && !e.altKey && !e.shiftKey) {
@@ -989,7 +1012,7 @@ function Grid() {
               selected={chosen.has(item.id)}
               focusable={item.id === firstFocusable}
               onPick={pick}
-              onOpen={(i) => void openItems([i])}
+              onOpen={(i) => openOrEnter([i], (items) => void openItems(items))}
               onMenu={menu}
               onPress={press}
             />
@@ -1021,8 +1044,10 @@ function Chips() {
   const count = useLibrary((s) => s.count);
   const setFilters = useLibrary((s) => s.setFilters);
   const setQuery = useLibrary((s) => s.setQuery);
+  const seriesName = useLibrary((s) => s.seriesName);
   const active = chips(filters);
-  if (active.length === 0 && !query) return null;
+  if (active.length === 0 && !query && !filters.series) return null;
+  const series = t("ui.library.series_chip", { name: seriesName || t("interval.name") });
   const label = (section: string, value: string) => {
     if (section === "favorites") return t("ui.library.filter.favorites");
     if (section === "types") return t(`ui.library.filter.type_${value}`, value);
@@ -1037,6 +1062,22 @@ function Chips() {
       <span className="lib-results" role="status" aria-live="polite">
         {t("ui.library.results", { count })}
       </span>
+      {/* One interval series (CAP-049): ✕ goes back to the whole library. */}
+      {filters.series && (
+        <span className="lib-chip">
+          {series}
+          <button
+            type="button"
+            className="tag-x"
+            aria-label={t("ui.library.filter.remove", { name: series })}
+            onClick={() => {
+              setFilters({ ...filters, series: undefined });
+            }}
+          >
+            ✕
+          </button>
+        </span>
+      )}
       {active.map((c) => (
         <span key={`${c.section}:${c.value}`} className="lib-chip">
           {label(c.section, c.value)}

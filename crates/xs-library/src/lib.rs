@@ -314,7 +314,20 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
     } else {
         std::collections::HashMap::new()
     };
-    let found = query::run_with(&all, &seen, &filters, search, sort, descending, query::today());
+    let mut found = query::run_with(&all, &seen, &filters, search, sort, descending, query::today());
+    // One series (CAP-049): in the order it was captured.
+    if filters.series.is_some() && p.get("sort").is_none() {
+        found
+            .items
+            .sort_by_key(|i| i.series.as_ref().map_or(0, |s| s.index));
+    }
+    // Each series as one item (CAP-049), unless only one series is shown.
+    let mut counts = std::collections::HashMap::new();
+    if p["groupSeries"].as_bool() == Some(true) && filters.series.is_none() {
+        let (kept, n) = query::group_series(&found.items);
+        found.items = kept;
+        counts = n;
+    }
     let offset = p["offset"].as_u64().unwrap_or(0) as usize;
     let limit = p["limit"].as_u64().map(|l| l as usize).unwrap_or(usize::MAX);
     let conflicts = conflicts_of(&all);
@@ -327,6 +340,9 @@ fn list(core: &Core, ctx: &Context, p: &Value) -> Result<Value, CommandError> {
             let mut v = with_conflict(i.to_json(lib.root()), &conflicts, &i.id);
             if found.in_image.contains(&i.id) {
                 v["inImage"] = json!(true);
+            }
+            if let Some(n) = i.series.as_ref().and_then(|s| counts.get(&s.id)) {
+                v["seriesCount"] = json!(n);
             }
             v
         })

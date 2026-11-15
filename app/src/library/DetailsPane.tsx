@@ -207,6 +207,16 @@ function One({ item }: { item: LibraryItem }) {
         <Field label={t("ui.library.details.created")} value={when(d?.created, lang)} />
         <Field label={t("ui.library.details.modified")} value={when(item.modified, lang)} />
         <Field label={t("ui.library.details.app")} value={dash(app)} />
+        {/* CAP-049: the interval series and the capture's number in it. */}
+        {item.series && (
+          <Field
+            label={t("ui.library.details.series")}
+            value={t("ui.library.details.series_value", {
+              name: item.series.name,
+              index: item.series.index,
+            })}
+          />
+        )}
         <Field label={t("ui.library.details.site")} value={dash(url)}>
           {url ? (
             <button
