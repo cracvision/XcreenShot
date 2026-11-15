@@ -67,7 +67,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
   - **Encontrado en el Sandbox: el CLI no arrancaba en un Windows sin Visual C++** (`vcruntime140.dll`, salida 0xC0000135): fallaban sin aviso el comando `xcreenshot`, el servidor MCP y el paso del PATH del instalador. En el equipo de Carlos no se veía (tiene las herramientas de desarrollo). Arreglado: `crates/xs-cli/build.rs` enlaza vcruntime estático, como la app.
   - **Actualización de punta a punta comprobada en el Sandbox** (0.2.1 → 0.2.2): el instalador corre con `/P /UPDATE /R` y la app vuelve en 2 s. A Carlos le pareció que no volvía porque había arrancado con Windows (en segundo plano) y volvió igual, solo como ícono; la ventana "Installation Complete" era, casi seguro, del instalador bajado a mano.
   - **Arreglo (APP-036):** al arrancar tras una actualización, aviso "XcreenShot se actualizó"; si se instaló desde la ventana, la ventana vuelve aunque arranque en segundo plano. Comprobado en el Sandbox. Funciona a partir de las actualizaciones desde la 0.2.3 (la 0.2.2 no guarda su versión).
-  - **0.2.3 compilada** (`b179f37`), con los dos arreglos, y probada en el Sandbox con una instalación nueva. Pendiente: el sí de Carlos para publicarla.
+  - **XcreenShot 0.2.3 publicada** (con el sí de Carlos), compilación `b179f37`, con los dos arreglos; probada antes en el Sandbox con una instalación nueva. Corregidos los acentos de la descripción de la 0.2.2 en GitHub (al publicarla a mano, PowerShell leyó las notas sin UTF-8; publicar a mano: `Get-Content -Encoding UTF8`).
 
 - **2026-11-15 (tarde, tercera parte): edición de la Microsoft Store y arreglo de seguridad de Dibujo en vivo.**
   - **Microsoft Store (APP-003, APP-036):** Carlos eligió vender en Windows por la Store (firma gratis de Microsoft). `npm run msix` en `app/` hace el paquete MSIX con identidad de prueba (`XcreenShot.Test`; la real sale de Partner Center). Probado en el equipo de Carlos con el Modo de desarrollador: About dice `store: true`, el alias `xcreenshot` funciona, Buscar actualizaciones remite a la Store, la tarea de inicio aparece en el Administrador de tareas y la captura funciona. Paquete de prueba desinstalado después. Pendiente de Carlos: decidir si vende como persona o empresa (y país), abrir la cuenta de Partner Center, reservar el nombre y la página de privacidad (Claude redacta el texto).
@@ -752,8 +752,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **M1 está terminado en Windows** (entregas 1 a 7). Lo que sigue:
 
 1. **Instalador nuevo (2026-11-15): `target\release\bundle\nsis\XcreenShot_0.2.0_x64-setup.exe`, compilación `e3343c4`.** La 0.2.0 publicada más los destinos estándar de Compartir (SHR-020 a SHR-026 y SHR-037). Es el que hay que usar para las pruebas de punta a punta.
-1. **Versión publicada (2026-11-15): XcreenShot 0.2.2**, compilación `bca1f70`, en https://github.com/cracvision/xcreenshot-releases: el arreglo de Dibujo en vivo. Es la que hay que instalar.
-1. Versión publicada anterior: XcreenShot 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
+1. **Versión publicada (2026-11-15): XcreenShot 0.2.3**, compilación `b179f37`, en https://github.com/cracvision/xcreenshot-releases: el CLI sin Visual C++ y el aviso tras actualizar. Es la que hay que instalar.
+1. Versiones publicadas anteriores: 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
 1. Instalador anterior (2026-11-15), compilación `f7e51d4`: red local, configuración administrada, modo portable y PATH del instalador.
 1. Instalador anterior (2026-11-15), compilación `fab4041`: series en la biblioteca, sellos propios, emoji y paquetes.
