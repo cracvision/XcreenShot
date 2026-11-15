@@ -612,8 +612,10 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "cursor": {"type": "boolean", "default": false, "description": "The pointer as an object in each step (CAP-047)"},
                     "delay": {"type": "number", "minimum": 0, "maximum": 60, "description": "A countdown first (CAP-048)"},
                     "effects": {"type": "array", "description": "Capture effects (CAP-051): Scale image applies to every step's picture"},
-                    "open": {"type": "string", "enum": ["editor", "none"], "default": "editor", "description": "Open the guide when it is done"},
+                    "open": {"type": "string", "enum": ["editor", "none", "quick"], "default": "editor", "description": "Open the guide when it is done (quick annotation does not apply to a guide: as editor)"},
                     "copy": {"type": "boolean", "default": false},
+                    "share": {"type": "array", "items": {"type": "string", "enum": ["file"]}, "description": "Destinations the guide also goes to when it is done (CAP-052): file"},
+                    "file": {"type": "object", "description": "The File destination (CAP-053), as capture.region's; eachStep: each step as an image of its own (SMT-034)"},
                     "into": {"type": "object", "description": "{documentId, after}: the steps go into this open guide, after this section (SMT-029)"}
                 }),
                 &[],
@@ -635,6 +637,9 @@ fn specs_2(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                     "singleFile": {"type": "boolean", "default": false, "description": "html: the pictures inside the page"},
                     "imageFormat": {"type": "string", "enum": ["png", "jpg"], "default": "png"},
                     "withText": {"type": "boolean", "default": false, "description": "images: also a text file with each step"},
+                    "scale": {"type": "number", "minimum": 25, "maximum": 400, "default": 100, "description": "images: their size, in percent (as document.batch_export)"},
+                    "effects": {"type": ["string", "array", "null"], "description": "images: a saved effect's id (EDT-054) or a stack, on each picture"},
+                    "naming": {"type": "object", "description": "images: {base, start (1), digits, prefix, suffix} as document.batch_export; default <guide>_01, _02…"},
                     "paper": {"type": "string", "enum": ["auto", "a4", "letter"], "default": "auto", "description": "pdf: auto is the system's"},
                     "onConflict": {"type": "string", "enum": ["new", "replace", "ask"], "default": "new", "description": "md, html: a folder that exists gets -2, -3… or is replaced; ask: fails with details.conflict (its path) so the user chooses"}
                 }),

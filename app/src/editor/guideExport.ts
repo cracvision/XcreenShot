@@ -59,6 +59,11 @@ async function exportTo(
       ed.showToast(t("ui.guide.copied"));
       return;
     }
+    // Pictures one by one: their options first (SMT-034).
+    if (format === "images") {
+      useGuideImages.setState({ ask: { target, name } });
+      return;
+    }
     const ext = FILE_EXT[format];
     if (ext) {
       const path = await save({
@@ -79,6 +84,50 @@ async function exportTo(
     // A folder or page of that name: the user chooses (SMT-032).
     if (format === "md" || format === "html" || format === "html1") params.onConflict = "ask";
     await finishExport(params);
+  } catch (e) {
+    ed.showError(e);
+  }
+}
+
+/** The options of a guide's pictures one by one (SMT-034). */
+export interface GuideImagesOptions {
+  imageFormat: "png" | "jpg";
+  /** 25 to 400 %. */
+  scale: number;
+  /** A saved effect's id, or none. */
+  effects: string;
+  /** The names: `<base>_01.png`… from `start`. */
+  base: string;
+  start: number;
+  /** Also `pasos.txt` with each step's text. */
+  withText: boolean;
+}
+
+/** A guide waiting for the options of its pictures one by one (SMT-034). */
+export const useGuideImages = create<{
+  ask: { target: { documentId: string } | { path: string }; name: string } | null;
+}>(() => ({ ask: null }));
+
+/** Exports the pictures with `o`, asking for the folder. */
+export async function exportGuideImages(o: GuideImagesOptions): Promise<void> {
+  const ask = useGuideImages.getState().ask;
+  if (!ask) return;
+  const ed = useEditor.getState();
+  const t = i18next.t.bind(i18next);
+  try {
+    const dir = await open({ directory: true, title: t("ui.guide.export.images") });
+    if (typeof dir !== "string") return;
+    useGuideImages.setState({ ask: null });
+    await finishExport({
+      ...ask.target,
+      format: "images",
+      out: dir,
+      imageFormat: o.imageFormat,
+      scale: o.scale,
+      withText: o.withText,
+      ...(o.effects ? { effects: o.effects } : {}),
+      naming: { base: o.base.trim() || ask.name, start: o.start },
+    });
   } catch (e) {
     ed.showError(e);
   }

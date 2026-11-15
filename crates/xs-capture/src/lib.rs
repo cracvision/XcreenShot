@@ -1351,8 +1351,9 @@ fn capture_with_tab(core: &Core, ctx: &Context, tab: &str, p: &Value) -> Command
         }
         return start_interval(core, ctx, &params, None, Some(PANEL_SERIES.into()));
     }
-    // The Video tab (VID-001): a recording, not a capture.
-    if command.starts_with("record.") {
+    // The Video tab (VID-001): a recording, not a capture; and the step recorder
+    // (SMT-022), a command of its own.
+    if command.starts_with("record.") || command.starts_with("smart.") {
         return core.call(ctx.source, command, params, Some(ctx.lang));
     }
     // Scheduled (CAP-050): Schedule; again, Cancel schedule.

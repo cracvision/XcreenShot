@@ -3109,7 +3109,8 @@
       "video_camera": "Camera",
       "video_camera_device": "Camera",
       "video_mic_denoise": "Reduce background noise",
-      "video_limit_own": "Custom…"
+      "video_limit_own": "Custom…",
+      "file_each_step": "Save each step as an image"
     },
     "countdown": {
       "label": "Capture in {{seconds}} s",
@@ -5201,7 +5202,20 @@
       "exists_title": "It already exists",
       "exists_body": "{{name}} already exists. Replace it, or create another one beside it?",
       "exists_new": "Create another",
-      "exists_replace": "Replace"
+      "exists_replace": "Replace",
+      "images": {
+        "title": "Images one by one",
+        "format": "Format",
+        "scale": "Size (%)",
+        "scale_range": "The size goes from 25 to 400 %.",
+        "effects": "Effects",
+        "no_effects": "None",
+        "name": "Name",
+        "start": "Start at",
+        "example": "For example: {{name}}",
+        "with_text": "Also include the text (steps.txt)",
+        "export": "Export…"
+      }
     },
     "features": {
       "title": "Smart features",

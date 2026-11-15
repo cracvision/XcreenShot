@@ -116,6 +116,8 @@ export interface FileDest {
   ask: boolean;
   /** Write the capture's metadata in the file (CAP-053). */
   metadata: boolean;
+  /** A guide of steps: each step as an image of its own (SMT-034). */
+  eachStep?: boolean;
 }
 
 /** The properties of Selection = Region (CAP-026). */

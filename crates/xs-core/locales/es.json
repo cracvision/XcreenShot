@@ -3109,7 +3109,8 @@
       "video_camera": "Cámara",
       "video_camera_device": "Cámara",
       "video_mic_denoise": "Reducir ruido de fondo",
-      "video_limit_own": "A medida…"
+      "video_limit_own": "A medida…",
+      "file_each_step": "Guardar cada paso como una imagen"
     },
     "countdown": {
       "label": "Captura en {{seconds}} s",
@@ -5201,7 +5202,20 @@
       "exists_title": "Ya existe",
       "exists_body": "{{name}} ya existe. ¿Reemplazarlo o crear otro al lado?",
       "exists_new": "Crear otra",
-      "exists_replace": "Reemplazar"
+      "exists_replace": "Reemplazar",
+      "images": {
+        "title": "Imágenes por separado",
+        "format": "Formato",
+        "scale": "Tamaño (%)",
+        "scale_range": "El tamaño va del 25 al 400 %.",
+        "effects": "Efectos",
+        "no_effects": "Ninguno",
+        "name": "Nombre",
+        "start": "Empezar en",
+        "example": "Por ejemplo: {{name}}",
+        "with_text": "Incluir también el texto (pasos.txt)",
+        "export": "Exportar…"
+      }
     },
     "features": {
       "title": "Funciones inteligentes",

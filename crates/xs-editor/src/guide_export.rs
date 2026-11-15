@@ -251,6 +251,68 @@ fn pictures(g: &Guide, folder: &Path, stem: &str, jpg: bool) -> Result<Vec<Strin
     Ok(names)
 }
 
+/// The guide's pictures one by one (SMT-034), as the batch export makes them (EDT-113):
+/// `scale` (25–400 %), `effects` (a saved effect's id or a stack) and `naming` (by
+/// default `<guide>_01.png`, the digits as many as the number of pictures needs).
+fn loose_pictures(
+    core: &Core,
+    g: &Guide,
+    out: &Path,
+    name: &str,
+    jpg: bool,
+    p: &Value,
+) -> Result<Vec<PathBuf>, String> {
+    use xs_image::export::{Kind, Options, Page};
+    let scale = p.get("scale").and_then(Value::as_f64).unwrap_or(100.0);
+    if !(25.0..=400.0).contains(&scale) {
+        return Err("scale goes from 25 to 400".into());
+    }
+    let extra = effects_param(core, p.get("effects"))?;
+    let pics: Vec<&Pic> = g
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Step { pic, .. } => pic.as_ref(),
+            Item::Picture(p) => Some(p),
+            Item::Text(_) => None,
+        })
+        .collect();
+    let mut naming =
+        json!({"mode": "base", "base": name, "start": 1, "digits": pics.len().to_string().len().max(2)});
+    if let Some(given) = p.get("naming").and_then(Value::as_object) {
+        for (k, v) in given {
+            naming[k] = v.clone();
+        }
+    }
+    let kind = if jpg { Kind::Jpg } else { Kind::Png };
+    let opts = Options {
+        scale,
+        ..Options::default()
+    };
+    let background = flatten_background(core);
+    let none = |_: &str| None;
+    let meta = json!({});
+    let ctx = xs_image::fx::Ctx {
+        canvas_color: None,
+        dpi: 96.0,
+        meta: &meta,
+        picture: &none,
+    };
+    std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
+    let mut written = Vec::new();
+    for (i, pic) in pics.iter().enumerate() {
+        let mut image = xs_image::encode::decode(&pic.png)?;
+        if !extra.is_empty() {
+            image = xs_image::fx::apply(&extra, image, &ctx).image;
+        }
+        let bytes = xs_image::export::encode(&[Page { image, dpi: 96.0 }], kind, &opts, background)?;
+        let file = out.join(format!("{}.{}", batch_name(&naming, name, i), kind.ext()));
+        write_file(&file, &bytes).map_err(|e| e.to_string())?;
+        written.push(file);
+    }
+    Ok(written)
+}
+
 /// The guide on the clipboard with its format (text and pictures) and as plain text
 /// for apps that take no format (SMT-034).
 pub fn copy(core: &Core, id: &str, lang: Lang) -> Result<(), String> {
@@ -428,8 +490,8 @@ pub fn export_command(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResu
             }
             "images" => {
                 let g = g()?;
-                let names = pictures(&g, &out, &name.replace(' ', "_"), jpg).map_err(fail)?;
-                let mut written: Vec<PathBuf> = names.iter().map(|n| out.join(n)).collect();
+                let mut written =
+                    loose_pictures(core, &g, &out, &name, jpg, p).map_err(|e| bad("images", &e))?;
                 if p.get("withText").and_then(Value::as_bool) == Some(true) {
                     let file = out.join(tr(lang, "steps.export.text_file", &[]));
                     write(&file, guide_out::text(&g).as_bytes())?;

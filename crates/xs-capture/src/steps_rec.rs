@@ -69,6 +69,8 @@ pub(crate) struct Session {
     pub keyboard: bool,
     pub open: String,
     pub copy: bool,
+    /// The File destination, when Share includes it (CAP-052, CAP-053, SMT-034).
+    pub file: Option<crate::filedest::FileDest>,
     pub title: Option<String>,
     /// "Record more steps here": the open guide and the section they go after (SMT-029).
     pub into: Option<(String, Option<String>)>,
@@ -254,6 +256,7 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
                 _ => "editor".into(),
             },
             copy: bool_or(p, "copy", false),
+            file: crate::Options::from_params(p, ctx.source).file,
             title,
             into: p.get("into").and_then(|i| {
                 Some((
@@ -459,10 +462,65 @@ pub fn stop(core: &Arc<Core>, ctx: &Context) -> CommandResult {
             Some(ctx.lang),
         );
     }
+    // Share (CAP-052): the File destination gets the guide, whole or one picture per
+    // step (SMT-034).
+    if let Some(dest) = &s.file {
+        deliver_file(core, ctx.lang, &id, Path::new(&path), dest);
+    }
     let result = json!({"status": "done", "documentId": id, "steps": steps.len(), "path": path});
     core.events.publish("steps.done", s.source, result.clone());
     tracing::info!(steps = steps.len(), "step recording made a guide");
     Ok(result)
+}
+
+/// The File destination (CAP-053) of a finished guide: the whole guide in its format,
+/// or each step as an image (SMT-034). A folder that cannot be used is said; the guide
+/// stays in the library either way.
+fn deliver_file(core: &Arc<Core>, lang: Lang, id: &str, xshot: &Path, dest: &crate::filedest::FileDest) {
+    let written: Result<(), String> = if dest.each_step {
+        let format = if dest.format == "jpg" { "jpg" } else { "png" };
+        core.call(
+            Source::Ui,
+            "smart.guide_export",
+            json!({"documentId": id, "format": "images", "out": dest.folder(), "imageFormat": format}),
+            Some(lang),
+        )
+        .map(|_| ())
+        .map_err(|e| e.message)
+    } else {
+        xs_editor::final_image(core, id).and_then(|image| {
+            let values = crate::filename::Values {
+                prefix: dest.prefix.clone(),
+                app: None,
+                title: xshot.file_stem().map(|s| s.to_string_lossy().into_owned()),
+                site: None,
+                mode: "steps".into(),
+                width: image.width(),
+                height: image.height(),
+                user: crate::platform::user_and_machine().0,
+            };
+            let host = core.host();
+            let choose = move |p: &Path| host.pick_save(p);
+            crate::filedest::write(core, dest, &image, xshot, &values, 96.0, None, &choose).map(|_| ())
+        })
+    };
+    match written {
+        Ok(()) => {}
+        // Cancelled in the Save dialog: the guide stays in the library only.
+        Err(e) if e == "cancelled" => {}
+        Err(e) => {
+            tracing::warn!(error = %e, "file destination: the guide was not written");
+            core.host().notify(
+                "problems",
+                &tr(lang, "app.name", &[]),
+                &tr(
+                    lang,
+                    "notify.file_destination_failed",
+                    &[("folder", &dest.folder().to_string_lossy())],
+                ),
+            );
+        }
+    }
 }
 
 /// The application most used in the steps: the default title (SMT-028).
@@ -862,6 +920,79 @@ mod tests {
             .unwrap();
         let t = xs_editor::templates::Template::of(&doc).unwrap();
         assert_eq!(t.sections.iter().filter(|s| s.kind == "guideStep").count(), 2);
+    }
+
+    /// SMT-034, CAP-053, SMT-022: a finished guide goes to the File destination whole
+    /// (one picture named by its pattern) or one picture per step; the panel's Capture
+    /// with Selection = Step recorder runs the step recorder's own command (here
+    /// switched off, so it says so instead of failing).
+    #[test]
+    fn a_guide_to_the_file_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![crate::extension(), xs_editor::extension()],
+        );
+        xs_editor::editor(&core).set_folders(dir.path().join("lib"), dir.path().join("rec"));
+        let img = image::RgbaImage::from_pixel(320, 200, image::Rgba([230, 230, 240, 255]));
+        let png = xs_image::encode::png(&img, 0.0, true).unwrap();
+        let step = |n: u32| xs_editor::guide::GuideStep {
+            text: format!("Clic en **Paso {n}**"),
+            png: png.clone(),
+            size: [320, 200],
+            frame: [0.0, 0.0, 320.0, 200.0],
+            at: [10.0, 10.0],
+            to: None,
+            right: false,
+            ring: true,
+            pointer: None,
+        };
+        let (id, path) = xs_editor::guide::create_guide(
+            &core,
+            Lang::Es,
+            xs_editor::guide::GuideIn {
+                title: "Alta".into(),
+                steps: (1..=3).map(step).collect(),
+                meta: json!({"source": "steps"}),
+            },
+        )
+        .unwrap();
+        let folder = |name: &str| dir.path().join(name).to_string_lossy().into_owned();
+        let whole = crate::filedest::FileDest {
+            folder: folder("entera"),
+            pattern: "guia".into(),
+            ..Default::default()
+        };
+        deliver_file(&core, Lang::Es, &id, &path, &whole);
+        assert!(dir.path().join("entera").join("guia.png").exists());
+        let each = crate::filedest::FileDest {
+            folder: folder("pasos"),
+            format: "jpg".into(),
+            each_step: true,
+            ..Default::default()
+        };
+        deliver_file(&core, Lang::Es, &id, &path, &each);
+        let mut names: Vec<String> = std::fs::read_dir(dir.path().join("pasos"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["Alta_01.jpg", "Alta_02.jpg", "Alta_03.jpg"]);
+
+        core.call(
+            Source::Cli,
+            "settings.set",
+            json!({"key": "smart.steps.enabled", "value": false}),
+            None,
+        )
+        .unwrap();
+        let mut panel = crate::panel::load(&core);
+        panel.image.selection = "steps".into();
+        crate::panel::save(&core, &panel);
+        let e = core
+            .call(Source::Cli, "capture.image", json!({}), Some(Lang::En))
+            .unwrap_err();
+        assert_eq!(e.code, ErrorCode::FeatureDisabled, "{}", e.message);
     }
 
     #[test]

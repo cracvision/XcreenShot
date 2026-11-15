@@ -5654,6 +5654,25 @@ pub fn batch_name(naming: &Value, original: &str, index: usize) -> String {
         .unwrap_or_else(|| "image".to_string())
 }
 
+/// An `effects` parameter (EDT-113, SMT-034): a saved effect's id (EDT-054) or a stack,
+/// each effect checked.
+pub(crate) fn effects_param(core: &Core, v: Option<&Value>) -> Result<Vec<Value>, String> {
+    let stack = match v {
+        None | Some(Value::Null) => Vec::new(),
+        Some(Value::String(id)) => saved_effects(core)
+            .into_iter()
+            .find(|e| e["id"] == json!(id))
+            .and_then(|e| e["stack"].as_array().cloned())
+            .ok_or("no saved effect has that id")?,
+        Some(Value::Array(stack)) => stack.clone(),
+        Some(_) => return Err("a saved effect's id or a stack".into()),
+    };
+    for e in &stack {
+        xs_image::fx::check(e)?;
+    }
+    Ok(stack)
+}
+
 /// `document.batch_export` (EDT-113): files (or folders of them) to one format, with a
 /// saved effect or a stack added, into a folder or next to each original; names kept
 /// or numbered. The sources do not change. Stops with `editor.cancel`; a file that
@@ -5700,19 +5719,7 @@ fn batch_export(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         return Err(bad("paths", "give files or folders with images"));
     }
     // Effects added to each one's own: a saved effect (EDT-054) or a stack.
-    let extra: Vec<Value> = match p.get("effects") {
-        None | Some(Value::Null) => Vec::new(),
-        Some(Value::String(id)) => saved_effects(core)
-            .into_iter()
-            .find(|e| e["id"] == json!(id))
-            .and_then(|e| e["stack"].as_array().cloned())
-            .ok_or_else(|| bad("effects", "no saved effect has that id"))?,
-        Some(Value::Array(stack)) => stack.clone(),
-        Some(_) => return Err(bad("effects", "a saved effect's id or a stack")),
-    };
-    for e in &extra {
-        xs_image::fx::check(e).map_err(|r| bad("effects", &r))?;
-    }
+    let extra = effects_param(core, p.get("effects")).map_err(|r| bad("effects", &r))?;
     let folder = p.get("folder").and_then(Value::as_str).map(PathBuf::from);
     let next_to = p.get("nextToOriginal").and_then(Value::as_bool).unwrap_or(false);
     if folder.is_none() && !next_to {

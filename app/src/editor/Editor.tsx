@@ -35,6 +35,7 @@ import { UndoNotice } from "./UndoNotice";
 import { Workspace } from "./Workspace";
 import { VideoStage } from "./VideoStage";
 import { GuideConflictDialog } from "./GuideConflict";
+import { GuideImagesDialog } from "./GuideImages";
 import { NarrationNotice, SlidesMode } from "./SlidesMode";
 import { followSlides, useSlides } from "./slidesState";
 import { GifDialog } from "./GifDialog";
@@ -224,6 +225,7 @@ export function Editor() {
       <CombineDialog />
       <NarrationNotice />
       <GuideConflictDialog />
+      <GuideImagesDialog />
       <TemplateDialogs />
       <QuickView />
       <TagDialogs />

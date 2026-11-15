@@ -38,6 +38,9 @@ pub struct FileDest {
     pub ask: bool,
     /// Write the capture's metadata (CAP-056) in the file's own fields (PNG).
     pub metadata: bool,
+    /// A guide of steps (SMT-034): each step as an image of its own, `<guide>_01.png`…,
+    /// instead of the whole guide.
+    pub each_step: bool,
 }
 
 impl Default for FileDest {
@@ -51,6 +54,7 @@ impl Default for FileDest {
             on_exists: "number".into(),
             ask: false,
             metadata: false,
+            each_step: false,
         }
     }
 }

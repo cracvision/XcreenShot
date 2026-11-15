@@ -857,8 +857,27 @@ Pulsa **Guardar**"
             .map(|v| v.as_str().unwrap())
             .collect();
         assert_eq!(paths.len(), 4);
-        assert!(paths[0].ends_with("Alta_de_cliente-01.png"), "{paths:?}");
+        assert!(paths[0].ends_with("Alta de cliente_01.png"), "{paths:?}");
         assert!(paths[3].ends_with("pasos.txt"));
+        // As the batch export (EDT-113): half the size, JPG and names of one's own.
+        let size = |p: &str| image::image_dimensions(p).unwrap();
+        let full = size(paths[0]);
+        let r = export(
+            json!({"format": "images", "out": out.join("mitad"), "imageFormat": "jpg",
+            "scale": 50, "naming": {"base": "paso", "digits": 3}}),
+        );
+        let first = r["paths"][0].as_str().unwrap();
+        assert!(first.ends_with("paso_001.jpg"), "{r}");
+        assert_eq!(size(first), (full.0 / 2, full.1 / 2));
+        let wrong = core
+            .call(
+                xs_core::Source::Cli,
+                "smart.guide_export",
+                json!({"documentId": id, "format": "images", "out": out, "effects": "nope"}),
+                Some(Lang::Es),
+            )
+            .unwrap_err();
+        assert_eq!(wrong.code, xs_core::ErrorCode::InvalidParams);
     }
 
     /// SMT-035: a guide in the library is of the type Guide, with its steps, and the

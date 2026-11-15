@@ -342,8 +342,8 @@ fn run(core: &Core, ctx: &Context, p: &Value) -> CommandResult {
         let name = presets::display_name(preset, lang);
         return crate::start_schedule(core, ctx, &params, Some(name), Some(preset.id.clone()));
     }
-    // A video preset records (VID-009).
-    if command.starts_with("record.") {
+    // A video preset records (VID-009); a step recorder preset records steps (SMT-022).
+    if command.starts_with("record.") || command.starts_with("smart.") {
         return core.call(ctx.source, command, params, Some(lang));
     }
     crate::dispatch(core, ctx, command, &params, extra)

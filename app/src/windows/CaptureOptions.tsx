@@ -590,7 +590,12 @@ export function ImageOptions({
       {value.selection !== "text" && (
         <>
           <EffectsOptions value={value.effects} onChange={(effects) => onChange({ effects })} />
-          <ShareOptions share={value.share} file={value.file} onChange={onChange} />
+          <ShareOptions
+            share={value.share}
+            file={value.file}
+            guide={value.selection === "steps"}
+            onChange={onChange}
+          />
         </>
       )}
     </>
@@ -1229,10 +1234,13 @@ function AreasOptions({
 function ShareOptions({
   share,
   file,
+  guide = false,
   onChange,
 }: {
   share: "file"[];
   file: FileDest;
+  /** The step recorder: a guide goes, whole or a picture per step (SMT-034). */
+  guide?: boolean;
   onChange: (patch: { share?: "file"[]; file?: FileDest }) => void;
 }) {
   const { t } = useTranslation();
@@ -1416,6 +1424,16 @@ function ShareOptions({
             />
             {t("ui.panel.file_metadata")}
           </label>
+          {guide && (
+            <label className="panel-check">
+              <input
+                type="checkbox"
+                checked={file.eachStep === true}
+                onChange={(e) => patch({ eachStep: e.target.checked })}
+              />
+              {t("ui.panel.file_each_step")}
+            </label>
+          )}
           {info?.counter && (
             <label className="panel-field narrow" htmlFor={`${id}-next`}>
               <span>{t("ui.panel.file_next")}</span>
