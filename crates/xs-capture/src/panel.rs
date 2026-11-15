@@ -314,6 +314,9 @@ pub struct VideoTab {
     pub selection: String,
     /// Seconds after which it stops by itself; 0: no limit (VID-015).
     pub limit: u32,
+    /// Full screen's monitor (VID-004): `pointer` (the one under the pointer), `primary`
+    /// or a monitor's name (`capture.monitors`).
+    pub monitor: String,
     /// Open in (VID-052): `editor` or `none` (only the library and the tray).
     pub open: String,
     /// A preset's own recording settings (VID-009): pointer, effects, keys, live
@@ -370,6 +373,7 @@ impl Default for VideoTab {
         VideoTab {
             selection: "region".into(),
             limit: 0,
+            monitor: "pointer".into(),
             open: "editor".into(),
             with: serde_json::Map::new(),
         }
@@ -436,6 +440,9 @@ impl PanelSettings {
             &["region", "window", "fullscreen"],
         )?;
         one_of("video.open", &self.video.open, &["editor", "none"])?;
+        if self.video.monitor.trim().is_empty() {
+            return Err("video.monitor: pointer, primary or a monitor's name".into());
+        }
         // No limit (0), or 5 s to 12 h, as the bar's timer (VID-015).
         if self.video.limit != 0 && !(5..=12 * 3600).contains(&self.video.limit) {
             return Err("video.limit: 0 (no limit), or 5 to 43200 seconds".into());
@@ -558,11 +565,12 @@ impl PanelSettings {
     fn plan_once(&self, tab: &str) -> (&'static str, Value, Value) {
         // Video capture (VID-001, VID-002): the area, then the bar waits Ready.
         if tab == "video" {
-            return (
-                "record.video",
-                json!({ "selection": self.video.selection, "limit": self.video.limit, "open": self.video.open }),
-                json!({}),
-            );
+            let mut params = json!({ "selection": self.video.selection, "limit": self.video.limit, "open": self.video.open });
+            // Full screen of the monitor it says (VID-004).
+            if self.video.selection == "fullscreen" && self.video.monitor != "pointer" {
+                params["monitor"] = json!(self.video.monitor);
+            }
+            return ("record.video", params, json!({}));
         }
         if tab == "universal" {
             let u = &self.universal;
@@ -765,6 +773,15 @@ mod tests {
         let (command, params, _) = p.plan("video");
         assert_eq!(command, "record.video");
         assert_eq!(params["selection"], "fullscreen");
+        // Under the pointer, the default: no monitor sent (VID-004).
+        assert!(params.get("monitor").is_none());
+        let s = PanelSettings::default()
+            .patched(&json!({"tab": "video", "video": {"selection": "fullscreen", "monitor": "primary"}}))
+            .unwrap();
+        assert_eq!(s.plan("video").1["monitor"], "primary");
+        assert!(PanelSettings::default()
+            .patched(&json!({"video": {"monitor": ""}}))
+            .is_err());
         assert_eq!(params["limit"], 600);
         assert!(s.patched(&json!({"video": {"selection": "camera"}})).is_err());
     }

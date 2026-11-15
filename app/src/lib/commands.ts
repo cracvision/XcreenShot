@@ -191,6 +191,8 @@ export interface PanelSettings {
   video: {
     selection: "region" | "window" | "fullscreen";
     limit: number;
+    /** Full screen's monitor (VID-004): `pointer`, `primary` or a monitor's name. */
+    monitor: string;
     /** Open in (VID-052). */
     open: "editor" | "none";
   };

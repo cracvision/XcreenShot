@@ -514,7 +514,10 @@ mod tests {
         assert!(checked_settings("camera", &json!({})).is_err());
         // Video presets (VID-009): the Video tab's settings, defaults filled in.
         let v = checked_settings("video", &json!({"selection": "window", "limit": 300})).unwrap();
-        assert_eq!(v, json!({"selection": "window", "limit": 300, "open": "editor"}));
+        assert_eq!(
+            v,
+            json!({"selection": "window", "limit": 300, "monitor": "pointer", "open": "editor"})
+        );
         assert!(checked_settings("video", &json!({"selection": "camera"})).is_err());
         // Open in (VID-052): editor or none.
         assert!(checked_settings("video", &json!({"open": "quick"})).is_err());

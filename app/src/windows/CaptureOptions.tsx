@@ -184,6 +184,15 @@ export function VideoOptions({
   const id = useId();
   const cursor = useSetting("video.cursor", true);
   const sound = useSetting("video.systemAudio", false);
+  // Full screen's monitor (VID-004): under the pointer, the main one or one by name.
+  const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
+  const fullscreen = value.selection === "fullscreen";
+  useEffect(() => {
+    if (!fullscreen) return;
+    void run<MonitorInfo[]>("capture.monitors")
+      .then(setMonitors)
+      .catch(() => undefined);
+  }, [fullscreen]);
   // The camera (VID-031): when videos may use it, on with the first camera.
   const camAllowed = useSetting("video.cameraEnabled", true);
   const cam = useSetting("video.camera", true);
@@ -225,6 +234,29 @@ export function VideoOptions({
           <option value="fullscreen">{t("ui.panel.video_selection_fullscreen")}</option>
         </select>
       </label>
+      {fullscreen && (
+        <label className="panel-field" htmlFor={`${id}-vmon`}>
+          <span>{t("ui.panel.video_monitor")}</span>
+          <select
+            id={`${id}-vmon`}
+            value={value.monitor}
+            onChange={(e) => onChange({ monitor: e.target.value })}
+          >
+            <option value="pointer">{t("ui.panel.video_monitor_pointer")}</option>
+            <option value="primary">{t("ui.panel.video_monitor_primary")}</option>
+            {value.monitor !== "pointer" &&
+              value.monitor !== "primary" &&
+              !monitors.some((m) => m.name === value.monitor) && (
+                <option value={value.monitor}>{value.monitor}</option>
+              )}
+            {monitors.map((m) => (
+              <option key={m.name} value={m.name}>
+                {`${m.name} (${m.rect.width} × ${m.rect.height})`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className="panel-check">
         <input
           type="checkbox"

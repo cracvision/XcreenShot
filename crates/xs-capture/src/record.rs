@@ -411,7 +411,9 @@ pub fn video(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         return start_at_once(core, ctx, state);
     }
     if p.get("selection").and_then(Value::as_str) == Some("fullscreen") {
-        let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": "pointer" }), ctx.lang)?;
+        // The Video tab's Monitor (VID-004): under the pointer unless it says another.
+        let monitor = p.get("monitor").cloned().unwrap_or(json!("pointer"));
+        let (rect, scale, source) = area(&json!({ "source": "screen", "monitor": monitor }), ctx.lang)?;
         let r = Ready {
             rect,
             scale,
@@ -1150,7 +1152,13 @@ fn area(p: &Value, lang: Lang) -> Result<(Rect, f64, Value), CommandError> {
                     list.iter().find(|(_, i)| i.rect.contains(x, y))
                 }
                 Value::String(s) if s == "primary" => list.iter().find(|(_, i)| i.primary),
-                _ => return Err(bad("monitor: primary, pointer or a monitor's number")),
+                // By its name (the Video tab's Monitor, VID-004); one that is gone: the
+                // one under the pointer.
+                Value::String(s) if !s.is_empty() => list.iter().find(|(_, i)| i.name == *s).or_else(|| {
+                    let (x, y) = platform::cursor_position().unwrap_or((0, 0));
+                    list.iter().find(|(_, i)| i.rect.contains(x, y))
+                }),
+                _ => return Err(bad("monitor: primary, pointer, a monitor's number or its name")),
             }
             .or_else(|| list.first())
             .map(|(_, i)| i.clone())

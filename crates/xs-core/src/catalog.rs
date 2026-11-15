@@ -1207,7 +1207,8 @@ fn specs_3(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "area": {"type": "object", "description": "An area already chosen, {x, y, width, height} in physical pixels of the virtual screen: Ready at once, without choosing on screen (the universal capture's Video, VID-002)"},
-                    "selection": {"type": "string", "enum": ["region", "window", "fullscreen"], "default": "region", "description": "region: chosen on screen; window: a window chosen on screen, followed when it moves (VID-005); fullscreen: the monitor under the pointer"},
+                    "selection": {"type": "string", "enum": ["region", "window", "fullscreen"], "default": "region", "description": "region: chosen on screen; window: a window chosen on screen, followed when it moves (VID-005); fullscreen: a whole monitor (monitor)"},
+                    "monitor": {"description": "fullscreen (VID-004): pointer (default, the one under the pointer), primary, a monitor's number or its name (capture.monitors); one that is gone: the one under the pointer"},
                     "limit": {"type": "number", "minimum": 0, "description": "Stop by itself after this many seconds (VID-015)"},
                     "open": {"type": "string", "enum": ["editor", "none"], "description": "When it stops: open it in the editor, or only the library and the tray (VID-052). Default: the Video tab's Open in; from the CLI and MCP, none"}
                 }),
