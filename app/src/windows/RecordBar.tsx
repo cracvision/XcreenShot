@@ -116,6 +116,22 @@ export function RecordBar() {
   const recording = state.status === "recording";
   const paused = state.status === "paused";
   const ready = state.status === "ready";
+  // Restart and Cancel from the icon's menu come here, to be asked the same way
+  // (VID-020, VID-014).
+  useEffect(() => {
+    const off = listen<"cancel" | "restart">("xs://recbar-ask", (e) => {
+      const what = e.payload;
+      void run<RecState>("record.status")
+        .then((s) => {
+          if ((s.elapsed ?? 0) > 10) {
+            setMenuRows(0);
+            setAsking(what);
+          } else void run(`record.${what}`).catch(() => undefined);
+        })
+        .catch(() => undefined);
+    });
+    return () => void off.then((f) => f());
+  }, []);
   // Losing up to 10 s needs no question (VID-014).
   const drop = (what: "cancel" | "restart" | "image") => {
     if (elapsed > 10) {

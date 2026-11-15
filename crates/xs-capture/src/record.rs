@@ -946,15 +946,57 @@ pub fn menu_items(core: &Core) -> Vec<(String, String, &'static str)> {
     } else {
         tr(lang, "tray.pause_recording", &[])
     };
-    vec![
+    let mut items = vec![
+        // "Recording · 0:03:12": the shell brings the bar forward when it is chosen.
+        (
+            "recording-status".into(),
+            status_text(core).unwrap_or_default(),
+            "record.status",
+        ),
+        ("recording-pause".into(), pause, "record.toggle"),
         (
             "recording".into(),
             tr(lang, "tray.stop_recording", &[]),
             "record.stop",
         ),
-        ("recording-pause".into(), pause, "record.toggle"),
+        // Restart and Cancel: the bar asks first after 10 s, as from the bar (VID-014).
+        (
+            "recording-restart".into(),
+            tr(lang, "tray.restart_recording", &[]),
+            "record.restart",
+        ),
+        (
+            "recording-cancel".into(),
+            tr(lang, "tray.cancel_recording", &[]),
+            "record.cancel",
+        ),
         ("clean-desktop".into(), clean, "record.clean_desktop"),
-    ]
+    ];
+    // Live drawing (VID-048), when the Video tab allows it (VID-051).
+    if core.settings.get_bool("video.liveDraw") {
+        let label = if crate::livedraw::is_on(core) {
+            "tray.live_draw_off"
+        } else {
+            "tray.live_draw"
+        };
+        items.push(("recording-draw".into(), tr(lang, label, &[]), "record.draw"));
+    }
+    items
+}
+
+/// The recording's state line for the icon's menu: "Recording · 0:03:12" or "Paused ·
+/// 0:03:12" (VID-020); none without a recording.
+pub fn status_text(core: &Core) -> Option<String> {
+    let rec = service(core);
+    let current = rec.current.lock().unwrap();
+    let r = current.as_ref()?;
+    let time = clock_text(r.recorder.recorded().as_secs_f64());
+    let key = if r.recorder.state() == State::Paused {
+        "tray.paused_status"
+    } else {
+        "tray.recording_status"
+    };
+    Some(tr(core.lang(), key, &[("time", &time)]))
 }
 
 /// `record.clean_desktop` (VID-018): the desktop's icons hidden or shown, now if a

@@ -2996,21 +2996,38 @@ html.launcher-root #root {
   background: currentColor;
 }
 
+/* The area's border (VID-020): dashed in the accent color while Ready, solid red while
+   recording, dashed amber with a pause sign in a corner while paused. Never in the
+   video (the window is kept out of captures). */
 .rec-frame {
   position: fixed;
   inset: 0;
   box-sizing: border-box;
-  border: 3px solid var(--brand);
+  border: 3px dashed var(--brand);
   pointer-events: none;
 }
 
 .rec-frame.recording {
+  border-style: solid;
   border-color: var(--rec);
 }
 
 .rec-frame.paused {
   border-style: dashed;
-  border-color: var(--rec);
+  border-color: var(--warning);
+}
+
+/* The pause sign: two bars inside the top-left corner. */
+.rec-frame.paused::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 4px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--warning);
+  box-shadow: 7px 0 0 var(--warning);
 }
 
 /* The web address box (CAP-037). */

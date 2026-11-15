@@ -1912,6 +1912,10 @@
     "smart_removeBackground_enabled": {
       "label": "Quitar fondo",
       "description": "Imagen > Quitar fondo vuelve transparente un fondo liso o en degradado."
+    },
+    "video_showBorder": {
+      "label": "Mostrar el borde del área al grabar",
+      "description": "Una línea alrededor del área: discontinua del color de acento en Lista, roja grabando y ámbar con el símbolo de pausa en pausa. Nunca sale en el video."
     }
   },
   "errors": {
@@ -2255,7 +2259,13 @@
     "hide_desktop_icons": "Ocultar los íconos del escritorio",
     "show_desktop_icons": "Mostrar los íconos del escritorio",
     "pause_recording": "Pausar la grabación",
-    "resume_recording": "Reanudar la grabación"
+    "resume_recording": "Reanudar la grabación",
+    "recording_status": "Grabando · {{time}}",
+    "paused_status": "En pausa · {{time}}",
+    "restart_recording": "Reiniciar la grabación",
+    "cancel_recording": "Cancelar la grabación",
+    "live_draw": "Dibujo en vivo",
+    "live_draw_off": "Terminar el dibujo en vivo"
   },
   "menu": {
     "flatten": "A&planar",

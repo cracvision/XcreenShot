@@ -528,7 +528,26 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             let state = app.state::<AppState>();
-            let action = state.actions.lock().unwrap().get(event.id().as_ref()).cloned();
+            // The recording's entries of the icon's menu (VID-020): its state line brings
+            // the bar forward; Restart and Cancel go through the bar, which asks first
+            // after 10 s recorded (VID-014).
+            let id = event.id().as_ref();
+            if let Some(what) = match id {
+                "stop.recording-status" => Some(""),
+                "stop.recording-restart" => Some("restart"),
+                "stop.recording-cancel" => Some("cancel"),
+                _ => None,
+            } {
+                if let Some(bar) = app.get_webview_window(windows::RECBAR) {
+                    let _ = bar.show();
+                    let _ = bar.set_focus();
+                    if !what.is_empty() {
+                        let _ = tauri::Emitter::emit_to(app, windows::RECBAR, "xs://recbar-ask", what);
+                    }
+                    return;
+                }
+            }
+            let action = state.actions.lock().unwrap().get(id).cloned();
             if let Some((command, params)) = action {
                 let core = state.core.clone();
                 std::thread::spawn(move || {

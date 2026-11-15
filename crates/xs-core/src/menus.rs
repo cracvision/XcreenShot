@@ -79,6 +79,20 @@ pub struct TrayState {
     pub stops: Vec<(String, String, &'static str)>,
 }
 
+/// Whether `command` takes the `id` of what it acts on.
+fn takes_id(command: &str) -> bool {
+    static WITH_ID: std::sync::OnceLock<Vec<&'static str>> = std::sync::OnceLock::new();
+    WITH_ID
+        .get_or_init(|| {
+            crate::catalog::specs()
+                .into_iter()
+                .filter(|s| s.params["properties"].get("id").is_some())
+                .map(|s| s.id)
+                .collect()
+        })
+        .contains(&command)
+}
+
 /// The tray menu; while a scrolling capture runs it starts with Finish scrolling, for
 /// when its panel is covered (CAP-034).
 pub fn tray_menu_with(presets: &[(String, String)], state: &TrayState) -> Vec<MenuEntry> {
@@ -112,7 +126,13 @@ pub fn tray_menu_with(presets: &[(String, String)], state: &TrayState) -> Vec<Me
                 id: format!("stop.{id}"),
                 text: text.clone(),
                 command,
-                params: json!({ "id": id }),
+                // Only the commands that take it get the `id` (a series, a schedule, the
+                // recording): the others refuse an unknown parameter.
+                params: if takes_id(command) {
+                    json!({ "id": id })
+                } else {
+                    json!({})
+                },
             })
             .collect();
         stops.push(MenuEntry::Separator);
@@ -859,6 +879,30 @@ mod tests {
             }
             _ => panic!("the first entry stops the series"),
         }
+    }
+
+    /// VID-020: the recording's entries pass `id` only to the commands that take it
+    /// (Pause and the clean desktop refused it, and did nothing).
+    #[test]
+    fn only_commands_that_take_an_id_get_one() {
+        let state = TrayState {
+            stops: vec![
+                ("recording".into(), "Stop".into(), "record.stop"),
+                ("recording-pause".into(), "Pause".into(), "record.toggle"),
+                ("clean-desktop".into(), "Hide".into(), "record.clean_desktop"),
+            ],
+            ..TrayState::default()
+        };
+        let menu = tray_menu_with(&[], &state);
+        let params: Vec<Value> = menu
+            .iter()
+            .filter_map(|e| match e {
+                MenuEntry::Named { params, .. } => Some(params.clone()),
+                _ => None,
+            })
+            .take(3)
+            .collect();
+        assert_eq!(params, [json!({"id": "recording"}), json!({}), json!({})]);
     }
 
     #[test]

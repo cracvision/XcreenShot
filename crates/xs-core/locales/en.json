@@ -1912,6 +1912,10 @@
     "smart_removeBackground_enabled": {
       "label": "Remove background",
       "description": "Image > Remove background makes a plain or gradient background transparent."
+    },
+    "video_showBorder": {
+      "label": "Show the area's border while recording",
+      "description": "A line around the area: dashed in the accent color when ready, red while recording, amber with a pause sign when paused. It never shows in the video."
     }
   },
   "errors": {
@@ -2255,7 +2259,13 @@
     "hide_desktop_icons": "Hide desktop icons",
     "show_desktop_icons": "Show desktop icons",
     "pause_recording": "Pause recording",
-    "resume_recording": "Resume recording"
+    "resume_recording": "Resume recording",
+    "recording_status": "Recording · {{time}}",
+    "paused_status": "Paused · {{time}}",
+    "restart_recording": "Restart the recording",
+    "cancel_recording": "Cancel the recording",
+    "live_draw": "Live drawing",
+    "live_draw_off": "Stop live drawing"
   },
   "menu": {
     "flatten": "Fla&tten",

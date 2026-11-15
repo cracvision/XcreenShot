@@ -490,9 +490,22 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         .flatten()
         .or_else(|| app.primary_monitor().ok().flatten());
     let scale = monitor.as_ref().map(|m| m.scale_factor()).unwrap_or(1.0);
-    // The border: 3 px around the area, outside it.
-    let edge = (3.0 * scale).round();
-    if app.get_webview_window(RECFRAME).is_none() && w > 0.0 {
+    // The border: 3 px around the area, outside it; a whole monitor has it along its
+    // edges, inside (VID-020). It never shows in the video. Switched off, none.
+    let whole = monitor.as_ref().is_some_and(|m| {
+        let (p, s) = (m.position(), m.size());
+        (p.x as f64 - x).abs() < 1.0
+            && (p.y as f64 - y).abs() < 1.0
+            && (s.width as f64 - w).abs() < 1.0
+            && (s.height as f64 - h).abs() < 1.0
+    });
+    let edge = if whole { 0.0 } else { (3.0 * scale).round() };
+    let show_border = app
+        .state::<crate::AppState>()
+        .core
+        .settings
+        .get_bool("video.showBorder");
+    if show_border && app.get_webview_window(RECFRAME).is_none() && w > 0.0 {
         let frame = WebviewWindowBuilder::new(app, RECFRAME, WebviewUrl::App("index.html".into()))
             .title("XcreenShot")
             .decorations(false)

@@ -585,6 +585,8 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         // Start recording without waiting (VID-007).
         def("video.startAtOnce", "video", boolean(), json!(false), "VID-007"),
+        // The line around the area while recording (VID-020).
+        def("video.showBorder", "video", boolean(), json!(true), "VID-020"),
         def("video.highlight", "video", boolean(), json!(false), "VID-045"),
         def(
             "video.highlightColor",

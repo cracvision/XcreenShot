@@ -17,6 +17,33 @@ use crate::AppState;
 pub const TRAY_ID: &str = "xcreenshot";
 const BASE_ICON: &[u8] = include_bytes!("../icons/tray.png");
 
+/// The recording's state line in the icon's menu, kept to update its time (VID-020).
+static STATUS: std::sync::Mutex<Option<MenuItem<Wry>>> = std::sync::Mutex::new(None);
+/// The time of that line moves on once a second while a recording runs.
+static TICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Updates the state line's time each second until the recording ends.
+fn tick_status(app: &AppHandle) {
+    use std::sync::atomic::Ordering;
+    if TICKING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let core = app.state::<AppState>().core.clone();
+        let Some(text) = xs_capture::record::status_text(&core) else {
+            TICKING.store(false, Ordering::SeqCst);
+            break;
+        };
+        let _ = app.run_on_main_thread(move || {
+            if let Some(item) = STATUS.lock().unwrap().as_ref() {
+                let _ = item.set_text(text);
+            }
+        });
+    });
+}
+
 /// Visual state of the icon. Every state differs by shape, not only color.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Visual {
@@ -287,13 +314,11 @@ pub fn build_items(
                         .map(|a| a.to_string()),
                     Shortcuts::None => None,
                 };
-                items.push(Box::new(MenuItem::with_id(
-                    app,
-                    id.as_str(),
-                    text,
-                    true,
-                    accel.as_deref(),
-                )?));
+                let item = MenuItem::with_id(app, id.as_str(), text, true, accel.as_deref())?;
+                if id == "stop.recording-status" {
+                    *STATUS.lock().unwrap() = Some(item.clone());
+                }
+                items.push(Box::new(item));
             }
             MenuEntry::Placeholder { label } => {
                 items.push(Box::new(MenuItem::new(
@@ -421,6 +446,7 @@ pub fn refresh(app: &AppHandle) {
     let _ = tray.set_tooltip(Some(tooltip(core, visual)));
     let _ = tray.set_visible(core.settings.get_bool("general.showIcon"));
     let mut actions = state.actions.lock().unwrap();
+    *STATUS.lock().unwrap() = None;
     if let Ok(menu) = build_menu(
         app,
         core,
@@ -432,6 +458,9 @@ pub fn refresh(app: &AppHandle) {
         &mut actions,
     ) {
         let _ = tray.set_menu(Some(menu));
+    }
+    if xs_capture::record::running(core) {
+        tick_status(app);
     }
 }
 
