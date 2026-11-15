@@ -18,6 +18,7 @@ pub mod i18n;
 pub mod ipc;
 pub mod keychain;
 pub mod logging;
+pub mod managed;
 pub mod menus;
 pub mod opening;
 pub mod paths;

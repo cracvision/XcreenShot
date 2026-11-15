@@ -496,7 +496,8 @@ pub fn run() {
             );
             // The first time, the welcome instead of the editor (APP-005); never when
             // started in the background or by automation.
-            if !background && first_run {
+            // APP-035: an administrator may skip it.
+            if !background && first_run && !core.policy("skipFirstRun") {
                 windows::open_welcome(&handle)?;
             } else if !background {
                 windows::show_main(&handle)?;

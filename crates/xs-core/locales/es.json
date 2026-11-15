@@ -487,6 +487,10 @@
       "title": "Responder a un envío",
       "description": "Acepta o rechaza lo que alguien te envía."
     },
+    "app_managed": {
+      "title": "Configuración administrada",
+      "description": "Lo que el administrador fijó para este equipo: ajustes bloqueados, valores iniciales y directivas."
+    },
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
@@ -2088,6 +2092,8 @@
     "lan_offline": "Esa persona no está ahora en la red.",
     "lan_failed": "No se pudo llegar al otro equipo: {{reason}}.",
     "lan_automation": "Aceptar desde la línea de comandos o un agente necesita \"Permitir por automatización\" en Preferencias > Compartir.",
+    "setting_locked": "El ajuste \"{{key}}\" lo fija tu administrador.",
+    "video_by_policy": "La grabación de video la desactivó tu administrador.",
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
@@ -2645,6 +2651,19 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "managed": {
+      "title": "Configuración administrada",
+      "status_inactive": "Sin administrar: no hay ningún managed.json.",
+      "status_active": "Tu administrador fijó algunas opciones de XcreenShot en este equipo.",
+      "status_errors": "Tu administrador fijó algunas opciones, pero el archivo tiene errores: se aplica lo que es válido.",
+      "view": "Ver",
+      "file": "Archivo: {{path}}",
+      "locked": "Bloqueados (no los puedes cambiar)",
+      "defaults": "Valores iniciales (los puedes cambiar)",
+      "policy": "Directivas",
+      "errors": "Ignorado",
+      "restart": "Los cambios en el archivo se aplican la próxima vez que se abra XcreenShot."
+    },
     "lan": {
       "title": "Red local",
       "firewall": "Activa \"Compartir en la red local\" para enviar capturas a otros usuarios de XcreenShot en esta red. La primera vez, Windows puede preguntar si XcreenShot puede usar la red: permítelo en redes privadas (casa, oficina), para que los demás puedan llegar a este equipo.",

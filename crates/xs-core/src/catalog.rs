@@ -269,6 +269,17 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 json!({"topic": {"type": "string", "enum": ["start", "capture", "editor", "library", "shortcuts", "permissions", "automation", "video", "share", "about"]}}),
                 &[],
             )),
+        B::new("app.managed", &["APP-035"])
+            .params(params(json!({}), &[]))
+            .result(json!({"type": "object", "properties": {
+                "status": {"type": "string", "enum": ["inactive", "active", "errors"]},
+                "path": {"type": "string", "description": "Where the file is looked for"},
+                "modified": {"type": ["string", "null"]},
+                "errors": {"type": "array", "items": {"type": "string"}, "description": "What was ignored, and why"},
+                "defaults": {"type": "object", "description": "Settings with the administrator's starting value"},
+                "locked": {"type": "object", "description": "Settings fixed by the administrator"},
+                "policy": {"type": "object"}
+            }})),
         B::new("app.about", &["APP-015"])
             .params(params(
                 json!({"open": {"type": "boolean", "default": false, "description": "Also show it, in the Help window"}}),

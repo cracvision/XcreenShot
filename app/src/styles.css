@@ -4094,6 +4094,27 @@ html.launcher-root #root {
   object-fit: contain;
 }
 
+/* Advanced > Managed configuration (APP-035). */
+.managed-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.managed-details {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
+.managed-errors {
+  color: var(--danger);
+}
+
 /* The local network (SHR-042 to SHR-044). */
 .lan-section {
   display: flex;

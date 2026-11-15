@@ -1,3 +1,4 @@
+import { destinationOff, managedNow } from "../lib/managed";
 // The right-click menu of the Library view's selection (LIB-002).
 import { askSend } from "../share/lanState";
 import { createItems, printItems } from "./create";
@@ -80,14 +81,18 @@ export function itemMenu(items: LibraryItem[], t: (key: string) => string): Menu
           },
         ]
       : []),
-    // SHR-044: to contacts on the local network.
-    {
-      id: "lan",
-      label: t("ui.lan.send_menu"),
-      separator: true,
-      disabled: items.some((i) => i.cloud),
-      onSelect: () => void askSend(items.map((i) => i.path)),
-    },
+    // SHR-044: to contacts on the local network (unless turned off, APP-035).
+    ...(destinationOff(managedNow(), "lan")
+      ? []
+      : [
+          {
+            id: "lan",
+            label: t("ui.lan.send_menu"),
+            separator: true,
+            disabled: items.some((i) => i.cloud),
+            onSelect: () => void askSend(items.map((i) => i.path)),
+          },
+        ]),
     // LIB-009, LIB-011.
     {
       id: "tags",

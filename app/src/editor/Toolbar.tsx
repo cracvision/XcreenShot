@@ -7,6 +7,7 @@
 // bar gets compact by steps (`useFit`): first the tools' names go, then the secondary
 // labels, then Capture's and the view switch's; then the language and Preferences fold
 // into ⋯, then Open and Save; at last the items at the end of the bar go to More.
+import { destinationOff, useManaged } from "../lib/managed";
 import { sendActiveOnLan } from "../share/lanSend";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -42,6 +43,7 @@ const FIT_FILES = 5;
 export function Toolbar() {
   const { t, i18n } = useTranslation();
   const doc = useEditor((s) => s.doc);
+  const managed = useManaged();
   const hasDoc = doc !== null;
   const labels = useSetting("editor.toolbarLabels", true);
   const items = useToolbar((s) => s.data?.items ?? EMPTY);
@@ -165,18 +167,35 @@ export function Toolbar() {
             </>
           }
           items={[
-            { id: "file", label: t("ui.editor.share_file"), onSelect: () => void exportImage() },
-            {
-              id: "clipboard",
-              label: t("ui.editor.share_clipboard"),
-              onSelect: () => void copyAll(),
-            },
+            // APP-035: the destinations the administrator turned off do not show.
+            ...(destinationOff(managed, "file")
+              ? []
+              : [
+                  {
+                    id: "file",
+                    label: t("ui.editor.share_file"),
+                    onSelect: () => void exportImage(),
+                  },
+                ]),
+            ...(destinationOff(managed, "clipboard")
+              ? []
+              : [
+                  {
+                    id: "clipboard",
+                    label: t("ui.editor.share_clipboard"),
+                    onSelect: () => void copyAll(),
+                  },
+                ]),
             // SHR-044: to contacts on the local network.
-            {
-              id: "lan",
-              label: t("ui.lan.share_menu"),
-              onSelect: () => void sendActiveOnLan(),
-            },
+            ...(destinationOff(managed, "lan")
+              ? []
+              : [
+                  {
+                    id: "lan",
+                    label: t("ui.lan.share_menu"),
+                    onSelect: () => void sendActiveOnLan(),
+                  },
+                ]),
             {
               id: "save_as",
               label: t("ui.editor.save_as"),

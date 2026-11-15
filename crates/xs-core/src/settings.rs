@@ -1002,6 +1002,8 @@ pub struct SettingsStore {
     defs: Vec<SettingDef>,
     values: RwLock<BTreeMap<String, Value>>,
     platform: Platform,
+    /// The managed configuration's starting values and fixed values (APP-035).
+    managed: RwLock<(BTreeMap<String, Value>, BTreeMap<String, Value>)>,
 }
 
 impl SettingsStore {
@@ -1015,6 +1017,7 @@ impl SettingsStore {
             defs: definitions(),
             values: RwLock::new(BTreeMap::new()),
             platform: Platform::current(),
+            managed: RwLock::new(Default::default()),
         };
         // Drop unknown or invalid values instead of failing to start.
         let mut clean = BTreeMap::new();
@@ -1035,7 +1038,31 @@ impl SettingsStore {
             defs: definitions(),
             values: RwLock::new(BTreeMap::new()),
             platform: Platform::current(),
+            managed: RwLock::new(Default::default()),
         }
+    }
+
+    /// The managed configuration (APP-035): `defaults` replace the app's own, `locked`
+    /// fix a value the user cannot change.
+    pub fn apply_managed(&self, defaults: BTreeMap<String, Value>, locked: BTreeMap<String, Value>) {
+        *self.managed.write().unwrap() = (defaults, locked);
+    }
+
+    /// Fixed by the managed configuration (APP-035).
+    pub fn is_locked(&self, key: &str) -> bool {
+        self.managed.read().unwrap().1.contains_key(key)
+    }
+
+    /// The value a setting has when the user has not chosen one: the managed
+    /// configuration's, or the app's.
+    fn default_of(&self, d: &SettingDef) -> Value {
+        self.managed
+            .read()
+            .unwrap()
+            .0
+            .get(d.key)
+            .cloned()
+            .unwrap_or_else(|| d.default.clone())
     }
 
     pub fn defs(&self) -> &[SettingDef] {
@@ -1059,13 +1086,16 @@ impl SettingsStore {
 
     pub fn get(&self, key: &str) -> Option<Value> {
         let d = self.def(key)?;
+        if let Some(v) = self.managed.read().unwrap().1.get(key) {
+            return Some(v.clone());
+        }
         Some(
             self.values
                 .read()
                 .unwrap()
                 .get(key)
                 .cloned()
-                .unwrap_or_else(|| d.default.clone()),
+                .unwrap_or_else(|| self.default_of(d)),
         )
     }
 
@@ -1093,6 +1123,12 @@ impl SettingsStore {
                 tr(lang, "errors.setting_other_platform", &[("key", key)]),
             ));
         }
+        if self.is_locked(key) {
+            return Err(CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(lang, "errors.setting_locked", &[("key", key)]),
+            ));
+        }
         if source.is_automation() && !d.automation_writable {
             return Err(CommandError::new(
                 ErrorCode::PermissionDenied,
@@ -1109,10 +1145,11 @@ impl SettingsStore {
                 ),
             )
         })?;
+        let default = self.default_of(d);
         let changed = {
             let mut values = self.values.write().unwrap();
-            let old = values.get(key).cloned().unwrap_or_else(|| d.default.clone());
-            if value == d.default {
+            let old = values.get(key).cloned().unwrap_or_else(|| default.clone());
+            if value == default {
                 values.remove(key);
             } else {
                 values.insert(key.to_string(), value.clone());
@@ -1133,11 +1170,16 @@ impl SettingsStore {
         {
             let mut values = self.values.write().unwrap();
             for d in &self.defs {
-                if section.is_some_and(|s| s != d.section) || !self.available(d) || keep.contains(&d.key) {
+                if section.is_some_and(|s| s != d.section)
+                    || !self.available(d)
+                    || keep.contains(&d.key)
+                    || self.is_locked(d.key)
+                {
                     continue;
                 }
-                if values.remove(d.key).is_some_and(|old| old != d.default) {
-                    changed.push((d.key.to_string(), d.default.clone()));
+                let default = self.default_of(d);
+                if values.remove(d.key).is_some_and(|old| old != default) {
+                    changed.push((d.key.to_string(), default));
                 }
             }
         }
@@ -1186,9 +1228,9 @@ impl SettingsStore {
                     "label": tr(lang, &format!("{base}.label"), &[]),
                     "description": tr(lang, &format!("{base}.description"), &[]),
                     "schema": d.schema,
-                    "default": d.default,
+                    "default": self.default_of(d),
                     "value": self.get(d.key),
-                    "locked": false,
+                    "locked": self.is_locked(d.key),
                     "automationWritable": d.automation_writable,
                     "specId": d.spec_id,
                 })

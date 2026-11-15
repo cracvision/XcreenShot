@@ -1,6 +1,7 @@
 // Capture panel (CAP-001, CAP-002, CAP-003, CAP-010): tabs, options, the Capture button,
 // its global shortcut and the More menu. Every change is a command; the panel only
 // shows what `capture.settings` returns.
+import { useManaged } from "../lib/managed";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -131,8 +132,11 @@ export function CapturePanel() {
     setSettings(await run<PanelSettings>("capture.reset_settings"));
   };
 
+  const managed = useManaged();
   if (!settings) return <div className="panel" ref={root} />;
-  const tab = settings.tab;
+  // APP-035: no Video tab when the administrator turned video off.
+  const noVideo = !!managed?.policy.disableVideoCapture;
+  const tab = noVideo && settings.tab === "video" ? "universal" : settings.tab;
   // Timing = Interval: Start, and Stop while its series runs (CAP-049).
   const interval = tab === "image" && settings.image.timing === "interval";
   // Timing = Scheduled: Schedule, and Cancel schedule while it waits (CAP-050).
@@ -150,7 +154,11 @@ export function CapturePanel() {
   return (
     <div className={`panel${dropping ? " dropping" : ""}`} ref={root}>
       <div className="panel-top">
-        <Tabs value={tab} onChange={(next) => void change({ tab: next })} />
+        <Tabs
+          value={tab}
+          tabs={noVideo ? TABS.filter((x) => x !== "video") : TABS}
+          onChange={(next) => void change({ tab: next })}
+        />
         <button
           type="button"
           className="btn icon"
@@ -267,7 +275,15 @@ function merge(s: PanelSettings, p: Patch): PanelSettings {
 }
 
 /** Tabs with arrow keys, Home and End (WAI-ARIA tabs, automatic activation). */
-function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
+function Tabs({
+  value,
+  tabs: TABS,
+  onChange,
+}: {
+  value: Tab;
+  tabs: Tab[];
+  onChange: (t: Tab) => void;
+}) {
   const { t } = useTranslation();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const list = useRef<HTMLDivElement>(null);

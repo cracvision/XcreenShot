@@ -382,7 +382,7 @@ Si un ID reparte su comportamiento entre hitos (el spec lo dice con "En M1: … 
 | APP-032 | Seguridad de la automatización | M0 | Must | En curso |
 | APP-033 | `AGENTS.md` | M2 | Should | En curso (Windows: se genera del registro de comandos más un texto escrito a mano; `xcreenshot agents-md`, recurso MCP `xcreenshot://agents` y en la carpeta de instalación; una prueba falla si el del repositorio no está al día; faltan las recetas de grabar y extraer texto, que llegan con `VID-` y `SMT-`) |
 | APP-034 | Funciones en prueba | M1 | Should | En curso |
-| APP-035 | Configuración administrada | M6 | Should | — |
+| APP-035 | Configuración administrada | M6 | Should | En curso (Windows, 2026-11-15: `managed.json` en `%ProgramData%\XcreenShot`, leído al arrancar; `defaults` y `locked` sobre cualquier ajuste (Preferencias con candado; `settings set` falla con `disabled_by_policy`, código 6); directivas aplicadas: `disableVideoCapture` (sin pestaña Video, sin sección Video, `record.*` rechazados), `hideExperimental`, `disabledDestinations` (Archivo, Portapapeles y Red local), `automation.enabled`, `skipFirstRun`; un archivo con errores aplica lo válido y Avanzado > **Configuración administrada** > Ver lo muestra; `app.managed`. Faltan las directivas de lo que aún no existe: actualizaciones, Enlace para compartir, `presets` y `themes` al primer arranque y `feedback`. Guía: `tests/manual/APP-035.md`) |
 | APP-036 | Actualizaciones | M6 | Must | — |
 | APP-037 | Instalador de Windows | M6 | Must | — |
 | APP-038 | Modo portable (Windows) | M6 | Could | — |

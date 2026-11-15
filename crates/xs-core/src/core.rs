@@ -92,6 +92,8 @@ pub struct Core {
     memory_hooks: RwLock<Vec<SettingHook>>,
     /// What scripts and agents can follow (APP-031).
     pub events: crate::events::Events,
+    /// The managed configuration read at start (APP-035).
+    managed: RwLock<crate::managed::Managed>,
 }
 
 /// Told the key and the new value of each setting that changes.
@@ -125,7 +127,11 @@ impl Core {
             setting_hooks: RwLock::new(Vec::new()),
             memory_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
+            managed: RwLock::new(crate::managed::Managed::inactive(Default::default())),
         });
+        // Before anything reads a setting (APP-035).
+        let managed = crate::managed::load(&crate::managed::location(None), core.settings.defs());
+        core.set_managed(managed);
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
@@ -163,6 +169,7 @@ impl Core {
             setting_hooks: RwLock::new(Vec::new()),
             memory_hooks: RwLock::new(Vec::new()),
             events: Default::default(),
+            managed: RwLock::new(crate::managed::Managed::inactive(Default::default())),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -224,6 +231,22 @@ impl Core {
         for hook in hooks {
             hook(key, &value);
         }
+    }
+
+    /// The managed configuration (APP-035).
+    pub fn managed(&self) -> crate::managed::Managed {
+        self.managed.read().unwrap().clone()
+    }
+
+    /// Applies a managed configuration: at start, or in tests.
+    pub fn set_managed(&self, m: crate::managed::Managed) {
+        self.settings.apply_managed(m.defaults.clone(), m.locked.clone());
+        *self.managed.write().unwrap() = m;
+    }
+
+    /// A policy of the managed configuration that is on (APP-035).
+    pub fn policy(&self, name: &str) -> bool {
+        self.managed.read().unwrap().flag(name)
     }
 
     /// A setting changed outside `settings.set` (an import, APP-011): the same effects.
@@ -692,6 +715,8 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_help(str_param(&p, "topic"))?;
         Ok(json!({}))
     });
+    // Advanced > Managed configuration > View (APP-035).
+    on!("app.managed", |core, _ctx, _p| Ok(core.managed().to_json()));
     // Help > About XcreenShot (APP-015).
     on!("app.about", |core, ctx, p| {
         if p.get("open").and_then(Value::as_bool).unwrap_or(false) {
@@ -706,8 +731,8 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         "channel": if cfg!(debug_assertions) { "development" } else { "stable" },
         "dataDir": core.paths.local_dir,
         "configDir": core.paths.config_dir,
-        // Managed configuration arrives with APP-035 (M6).
-        "managed": "inactive",
+        // Managed configuration (APP-035): inactive, active or errors.
+        "managed": core.managed().status_str(),
         // The only network connections the app makes (APP-054).
         "network": ["share", "updates", "cloud_ai"],
         }))
@@ -1072,6 +1097,13 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         let Some(core) = weak_gate.upgrade() else {
             return Ok(());
         };
+        // APP-035: no video by policy.
+        if core.policy("disableVideoCapture") && spec.id.starts_with("record.") {
+            return Err(CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.video_by_policy", &[]),
+            ));
+        }
         if ctx.source.is_automation()
             && spec.id != "app.ping"
             && !core.settings.get_bool("automation.enabled")
@@ -1119,6 +1151,54 @@ mod tests {
 
     fn call(core: &Core, source: Source, id: &str, p: Value) -> CommandResult {
         core.call(source, id, p, Some(Lang::En))
+    }
+
+    /// APP-035: a locked setting cannot change, a default starts the value, and the
+    /// video policy turns record.* off.
+    #[test]
+    fn managed_configuration_applies() {
+        let core = Core::for_tests(Platform::Windows);
+        let m = crate::managed::parse(
+            br#"{"version": 1, "defaults": {"general.language": "es"},
+                "locked": {"capture.autoDetect": false}, "policy": {"disableVideoCapture": true}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert_eq!(core.settings.get_str("general.language"), "es");
+        assert_eq!(core.settings.get("capture.autoDetect"), Some(json!(false)));
+        let e = call(
+            &core,
+            Source::Cli,
+            "settings.set",
+            json!({"key": "capture.autoDetect", "value": true}),
+        )
+        .unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+        assert_eq!(e.code.exit_code(), 6);
+        let list = call(&core, Source::Ui, "settings.list", json!({})).unwrap();
+        let row = list
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["key"] == "capture.autoDetect")
+            .cloned()
+            .unwrap();
+        assert_eq!(row["locked"], true);
+        let e = call(&core, Source::Cli, "record.status", json!({})).unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+        assert_eq!(
+            call(&core, Source::Ui, "app.managed", json!({})).unwrap()["status"],
+            "active"
+        );
+        // The user can still change a setting that only has a managed default.
+        call(
+            &core,
+            Source::Ui,
+            "settings.set",
+            json!({"key": "general.language", "value": "en"}),
+        )
+        .unwrap();
+        assert_eq!(core.settings.get_str("general.language"), "en");
     }
 
     #[test]

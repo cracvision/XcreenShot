@@ -1,4 +1,6 @@
 // Single Preferences window, same structure on Windows and macOS (APP-006).
+import { useManaged } from "../lib/managed";
+import { ManagedBlock } from "../prefs/ManagedBlock";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -69,6 +71,13 @@ function EffectsPreviewRow() {
 }
 
 export function Preferences() {
+  // APP-035: sections the administrator turned off.
+  const managed = useManaged();
+  const shown = SECTIONS.filter(
+    (s) =>
+      !(s === "video" && managed?.policy.disableVideoCapture) &&
+      !(s === "experimental" && managed?.policy.hideExperimental),
+  );
   const { t } = useTranslation();
   useAppShortcuts();
   const settings = useApp((s) => s.settings);
@@ -252,6 +261,7 @@ export function Preferences() {
               </button>
             </div>
             <AdvancedExtras />
+            <ManagedBlock />
             <SettingsTransfer />
             <ResetAll />
           </>
@@ -274,7 +284,7 @@ export function Preferences() {
         />
         <div className="nav-list" ref={navList} onKeyDown={arrowFocus("vertical")}>
           <span className="nav-indicator" ref={indicator} aria-hidden="true" />
-          {SECTIONS.map((s) => (
+          {shown.map((s) => (
             <button
               key={s}
               aria-current={current === s ? "page" : undefined}

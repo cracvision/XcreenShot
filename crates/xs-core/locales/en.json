@@ -487,6 +487,10 @@
       "title": "Answer a send",
       "description": "Accepts or rejects what someone sends you."
     },
+    "app_managed": {
+      "title": "Managed configuration",
+      "description": "What the administrator set for this computer: fixed settings, starting values and policies."
+    },
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
@@ -2088,6 +2092,8 @@
     "lan_offline": "That person is not on the network now.",
     "lan_failed": "The other computer could not be reached: {{reason}}.",
     "lan_automation": "Accepting from the command line or an agent needs \"Allow automation\" in Preferences > Share.",
+    "setting_locked": "The setting \"{{key}}\" is set by your administrator.",
+    "video_by_policy": "Video recording is turned off by your administrator.",
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
@@ -2645,6 +2651,19 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "managed": {
+      "title": "Managed configuration",
+      "status_inactive": "Not managed: there is no managed.json.",
+      "status_active": "Your administrator set some options of XcreenShot on this computer.",
+      "status_errors": "Your administrator set some options, but the file has errors: what is valid applies.",
+      "view": "View",
+      "file": "File: {{path}}",
+      "locked": "Fixed (you cannot change them)",
+      "defaults": "Starting values (you can change them)",
+      "policy": "Policies",
+      "errors": "Ignored",
+      "restart": "Changes to the file apply the next time XcreenShot starts."
+    },
     "lan": {
       "title": "Local network",
       "firewall": "Turn on \"Share on the local network\" to send captures to other XcreenShot users on this network. The first time, Windows may ask whether XcreenShot can use the network: allow it on private networks (home, office), so others can reach this computer.",
