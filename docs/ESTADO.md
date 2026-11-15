@@ -62,6 +62,12 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
+- **2026-11-15 (mediodía, segunda parte): primera versión publicada.**
+  - **XcreenShot 0.2.0 publicada** en https://github.com/cracvision/xcreenshot-releases (repositorio público solo de versiones, creado con el permiso de Carlos): instalador firmado para las actualizaciones, `.zip` portable, y `stable.json` y `deferred.json` en la versión `updates`. La app de release (compilación `7035804`) la consulta y dice que tiene la última. Para publicar la siguiente: subir la versión en `app/package.json`, escribir `release-notes/<versión>.json` y `npm run release -- --publish` en `app/`.
+  - **Decisiones de Carlos:** compartir con colegas cercanos solo por la misma red, sin Bluetooth (la cola ya cubre "cuando esté al alcance"); de los destinos de Compartir, construir los estándar (correo, aplicación, impresora, Word, PowerPoint, Excel, Compartir del sistema); los de la nube y el Enlace, después.
+  - **ARM64:** instaladas las herramientas (objetivo de Rust y C++ de ARM64 de Visual Studio, con Carlos aceptando el aviso de administrador); la CLI ya compila para ARM64.
+  - Carlos guarda una copia de `%USERPROFILE%\.xcreenshot-release\updater.key` (se le explicó para qué es).
+
 - **2026-11-15 (mediodía): actualizaciones y borrador de Compartir.** Va en el **instalador `81f669a`**.
   - **Decisiones de Carlos (2026-11-15):** que el equipo redacte las fichas de Compartir para que él las apruebe; las versiones se publican en un repositorio público solo de versiones; sí a instalar las herramientas ARM64.
   - **Actualizaciones** (APP-036): ajustes en Preferencias > General, Ayuda > Buscar actualizaciones…, ventana con novedades y Instalar y reiniciar / Instalar al salir / Ahora no, firma comprobada, nunca durante una grabación, `app.check_update` y `app.install_update`, `npm run release` (con `--publish` y `--promote`). La clave privada está en `%USERPROFILE%\.xcreenshot-release\updater.key` (fuera del repositorio): **Carlos debe guardar una copia**. Falta crear `cracvision/xcreenshot-releases` y publicar (con su permiso explícito).

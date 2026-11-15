@@ -89,7 +89,7 @@ run(
     "--config",
     "src-tauri/tauri.bundle.json",
     "--config",
-    JSON.stringify({ bundle: { createUpdaterArtifacts: true } }),
+    "src-tauri/tauri.release.json",
   ],
   {
     cwd: app,
