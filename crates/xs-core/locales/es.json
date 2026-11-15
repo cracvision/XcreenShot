@@ -4926,7 +4926,9 @@
       "adjust_area": "Ajustar área",
       "adjust_area_help": "Mover o cambiar el tamaño del área en pantalla",
       "expand": "Mostrar la barra completa",
-      "collapse": "Hacer pequeña la barra"
+      "collapse": "Hacer pequeña la barra",
+      "record_now": "Grabar ya",
+      "record_now_help": "Saltar la cuenta atrás"
     },
     "video": {
       "silent_suffix": "sin sonido",

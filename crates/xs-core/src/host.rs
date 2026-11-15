@@ -183,6 +183,15 @@ pub trait Host: Send + Sync {
         std::thread::sleep(std::time::Duration::from_secs_f64(seconds.max(0.0)));
         true
     }
+    /// A recording's countdown (VID-008): large numbers centered on `center` (physical
+    /// pixels of the virtual screen). As [`Host::countdown`] otherwise.
+    fn countdown_at(&self, seconds: f64, center: (i32, i32)) -> bool {
+        let _ = center;
+        self.countdown(seconds)
+    }
+    /// Ends the countdown running now as if its time were up (Record pressed again,
+    /// VID-008).
+    fn countdown_skip(&self) {}
     /// Shows, hides or (with `None`) toggles the capture panel (CAP-001, CAP-065).
     /// Returns whether it is visible afterwards.
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {

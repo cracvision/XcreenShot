@@ -4926,7 +4926,9 @@
       "adjust_area": "Adjust area",
       "adjust_area_help": "Move or resize the area on screen",
       "expand": "Show the whole bar",
-      "collapse": "Make the bar small"
+      "collapse": "Make the bar small",
+      "record_now": "Record now",
+      "record_now_help": "Skip the countdown"
     },
     "video": {
       "silent_suffix": "silent",

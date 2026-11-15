@@ -606,9 +606,20 @@ export function RecordBar() {
       {active && <SystemAudioControl levels={levels} />}
       {active && <MicControl levels={levels} up={up} onMenu={setMenuRows} />}
       {state.status === "countdown" && (
-        <span className="recbar-size" role="status">
-          {t("ui.recbar.countdown")}
-        </span>
+        <>
+          <span className="recbar-size" role="status">
+            {t("ui.recbar.countdown")}
+          </span>
+          {/* Record again: the countdown ends now (VID-008). */}
+          <button
+            type="button"
+            className="btn small primary rec"
+            title={t("ui.recbar.record_now_help")}
+            onClick={() => act("record.toggle")}
+          >
+            {t("ui.recbar.record_now")}
+          </button>
+        </>
       )}
       {ready && (
         <button

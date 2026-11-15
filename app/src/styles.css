@@ -5557,6 +5557,23 @@ html.launcher-root #root {
   animation: tick var(--dur-slow) var(--ease-spring) backwards;
 }
 
+/* A recording's countdown (VID-008): large numbers in the middle of the area. */
+.countdown.big {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.countdown.big .countdown-number {
+  font-size: 120px;
+}
+
+.countdown-hint {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
 @keyframes tick {
   from {
     opacity: 0;

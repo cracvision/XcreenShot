@@ -18,10 +18,13 @@ pub const LABEL: &str = "countdown";
 const WIDTH: f64 = 248.0;
 const HEIGHT: f64 = 76.0;
 const MARGIN: f64 = 16.0;
+/// A recording's countdown (VID-008): large numbers in the middle of the area.
+const BIG: f64 = 220.0;
 
 #[derive(Default)]
 pub struct Countdown {
-    cancel: Mutex<Option<mpsc::Sender<()>>>,
+    /// `false` cancels; `true` ends it now, as if its time were up (VID-008).
+    cancel: Mutex<Option<mpsc::Sender<bool>>>,
     /// What the window shows: `{ "seconds", "endsAt" }` while running.
     current: Mutex<Option<Value>>,
 }
@@ -73,13 +76,33 @@ fn now_millis() -> u64 {
         .unwrap_or(0)
 }
 
-/// Shows the countdown and blocks until it ends. `true` = time is up, `false` = cancelled.
-pub fn run(app: &AppHandle, seconds: f64) -> bool {
+/// The large counter centered on `center` (VID-008).
+fn place_big(app: &AppHandle, center: (i32, i32)) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+    let monitor = app
+        .monitor_from_point(center.0 as f64, center.1 as f64)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten())?;
+    let side = (BIG * monitor.scale_factor()) as u32;
+    let half = side as i32 / 2;
+    Some((
+        PhysicalPosition::new(center.0 - half, center.1 - half),
+        PhysicalSize::new(side, side),
+    ))
+}
+
+/// Shows the countdown and blocks until it ends. `true` = time is up (or ended at once,
+/// VID-008), `false` = cancelled. With `center`, a recording's: large, there.
+pub fn run(app: &AppHandle, seconds: f64, center: Option<(i32, i32)>) -> bool {
     let seconds = seconds.max(0.0);
     let state = app.state::<AppState>();
-    let (tx, rx) = mpsc::channel::<()>();
+    let (tx, rx) = mpsc::channel::<bool>();
     *state.countdown.cancel.lock().unwrap() = Some(tx.clone());
-    let info = json!({ "seconds": seconds, "endsAt": now_millis() + (seconds * 1000.0) as u64 });
+    let info = json!({
+        "seconds": seconds,
+        "endsAt": now_millis() + (seconds * 1000.0) as u64,
+        "big": center.is_some(),
+    });
     *state.countdown.current.lock().unwrap() = Some(info.clone());
 
     let handle = app.clone();
@@ -88,7 +111,11 @@ pub fn run(app: &AppHandle, seconds: f64) -> bool {
         let Some(w) = handle.get_webview_window(LABEL) else {
             return;
         };
-        if let Some((pos, size)) = place(&handle) {
+        let placed = match center {
+            Some(c) => place_big(&handle, c),
+            None => place(&handle),
+        };
+        if let Some((pos, size)) = placed {
             // Position first: moving to a monitor with another scale resizes the window.
             let _ = w.set_position(pos);
             let _ = w.set_size(size);
@@ -102,7 +129,7 @@ pub fn run(app: &AppHandle, seconds: f64) -> bool {
         let cancel = tx.clone();
         let registered = app.global_shortcut().on_shortcut(esc, move |_, _, event| {
             if event.state() == ShortcutState::Pressed {
-                let _ = cancel.send(());
+                let _ = cancel.send(false);
             }
         });
         if let Err(e) = registered {
@@ -110,7 +137,8 @@ pub fn run(app: &AppHandle, seconds: f64) -> bool {
         }
     }
 
-    let finished = rx.recv_timeout(Duration::from_secs_f64(seconds)).is_err();
+    // Time up, or ended at once (true) or cancelled (false).
+    let finished = rx.recv_timeout(Duration::from_secs_f64(seconds)).unwrap_or(true);
 
     *state.countdown.cancel.lock().unwrap() = None;
     *state.countdown.current.lock().unwrap() = None;
@@ -141,6 +169,13 @@ pub fn current(app: &AppHandle) -> Option<Value> {
 /// Cancel button of the counter, or the icon menu.
 pub fn cancel(app: &AppHandle) {
     if let Some(tx) = app.state::<AppState>().countdown.cancel.lock().unwrap().as_ref() {
-        let _ = tx.send(());
+        let _ = tx.send(false);
+    }
+}
+
+/// Ends the countdown now, as if its time were up (Record pressed again, VID-008).
+pub fn skip(app: &AppHandle) {
+    if let Some(tx) = app.state::<AppState>().countdown.cancel.lock().unwrap().as_ref() {
+        let _ = tx.send(true);
     }
 }

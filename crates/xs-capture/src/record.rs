@@ -976,6 +976,11 @@ fn ready_state(core: &Core, r: &Ready) -> Value {
 /// `record.toggle` (VID-012, VID-075): Record when Ready, Pause while recording,
 /// Resume when paused; with nothing going on, Video capture.
 pub fn toggle(core: &Arc<Core>, ctx: &Context) -> CommandResult {
+    // Record pressed again during the countdown: it ends now (VID-008).
+    if service(core).counting.load(std::sync::atomic::Ordering::Relaxed) {
+        core.host().countdown_skip();
+        return Ok(json!({ "status": "countdown", "skipped": true }));
+    }
     let state = service(core)
         .current
         .lock()
@@ -1390,7 +1395,25 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         }
         use std::sync::atomic::Ordering;
         svc.counting.store(true, Ordering::Relaxed);
-        let done = core.host().countdown(countdown);
+        // Large, in the middle of the area; of its monitor when the area is small
+        // (VID-008).
+        let done = match ready.as_ref().map(|r| r.rect) {
+            Some(rect) => {
+                let middle = if rect.width < 320 || rect.height < 240 {
+                    monitor_of(rect).map_or(rect, |(m, _)| m)
+                } else {
+                    rect
+                };
+                core.host().countdown_at(
+                    countdown,
+                    (
+                        middle.x + middle.width as i32 / 2,
+                        middle.y + middle.height as i32 / 2,
+                    ),
+                )
+            }
+            None => core.host().countdown(countdown),
+        };
         svc.counting.store(false, Ordering::Relaxed);
         if !done {
             if let Some(r) = ready {

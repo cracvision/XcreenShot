@@ -283,7 +283,15 @@ impl Host for TauriHost {
     }
 
     fn countdown(&self, seconds: f64) -> bool {
-        crate::countdown::run(&self.app, seconds)
+        crate::countdown::run(&self.app, seconds, None)
+    }
+
+    fn countdown_at(&self, seconds: f64, center: (i32, i32)) -> bool {
+        crate::countdown::run(&self.app, seconds, Some(center))
+    }
+
+    fn countdown_skip(&self) {
+        crate::countdown::skip(&self.app);
     }
 
     fn multicapture_panel(&self, show: bool) {
