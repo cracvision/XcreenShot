@@ -1560,8 +1560,12 @@ pub fn extension() -> Extension {
             xs_editor::add_recovery_preparer(&core, steps_rec::recover_leftovers);
             // And a video recording (VID-022).
             xs_editor::add_recovery_preparer(&core, record::recover_leftovers);
-            // Quitting during a recording: Stop and save (APP-004, VID-013).
+            // Quitting during a recording or a step recording: Stop and save (APP-004,
+            // VID-013, SMT-023).
             core.add_quit_guard(std::sync::Arc::new(record::RecordQuitGuard(
+                std::sync::Arc::downgrade(&core),
+            )));
+            core.add_quit_guard(std::sync::Arc::new(steps_rec::StepsQuitGuard(
                 std::sync::Arc::downgrade(&core),
             )));
             // A recording pauses when the computer goes to sleep (VID-021).

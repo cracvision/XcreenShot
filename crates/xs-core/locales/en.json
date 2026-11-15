@@ -4217,7 +4217,8 @@
       "recording_quit_name": "The recording in progress ({{time}})",
       "recording_quit_title": "A recording is in progress",
       "recording_quit": "{{name}} stops and is saved in the library.",
-      "stop_and_save": "Stop and save"
+      "stop_and_save": "Stop and save",
+      "steps_quit_name": "The step recording in progress ({{count}} steps)"
     },
     "multi": {
       "title": "Multi-capture",

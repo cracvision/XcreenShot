@@ -101,6 +101,47 @@ pub fn running(core: &Core) -> bool {
     session(core).is_some()
 }
 
+/// Quitting: the guide is made and saved, no window opens (APP-004).
+static QUITTING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Quitting during a step recording (APP-004, SMT-023): the quit dialog names it, and
+/// its yes (Stop and save) makes the guide, into the library; the session ending does
+/// the same.
+pub(crate) struct StepsQuitGuard(pub(crate) Weak<Core>);
+
+impl xs_core::core::QuitGuard for StepsQuitGuard {
+    fn pending(&self, lang: Lang) -> Vec<Value> {
+        let Some(core) = self.0.upgrade() else {
+            return Vec::new();
+        };
+        session(&core)
+            .map(|s| {
+                let n = s.shared.lock().unwrap().steps.len();
+                json!({
+                    "kind": "recording",
+                    "name": tr(lang, "ui.editor.steps_quit_name", &[("count", &n.to_string())]),
+                })
+            })
+            .into_iter()
+            .collect()
+    }
+
+    fn before_quit(&self) {
+        let Some(core) = self.0.upgrade() else { return };
+        if session(&core).is_none() {
+            return;
+        }
+        QUITTING.store(true, std::sync::atomic::Ordering::Relaxed);
+        let ctx = Context {
+            source: Source::Ui,
+            lang: core.lang(),
+        };
+        if let Err(e) = stop(&core, &ctx) {
+            tracing::warn!(error = %e.message, "the steps could not be saved on quitting");
+        }
+    }
+}
+
 fn not_recording(lang: Lang) -> CommandError {
     CommandError::new(ErrorCode::NotRunning, tr(lang, "errors.steps_not_recording", &[]))
 }
@@ -445,7 +486,7 @@ pub fn stop(core: &Arc<Core>, ctx: &Context) -> CommandResult {
     let _ = std::fs::remove_dir_all(&s.folder);
     let (id, path) = made;
     xs_library::library(core).scan();
-    if s.open == "editor" {
+    if s.open == "editor" && !QUITTING.load(std::sync::atomic::Ordering::Relaxed) {
         let _ = core.call(
             Source::Ui,
             "editor.show",
@@ -849,6 +890,10 @@ mod tests {
         }
         undo(&core, &ctx).unwrap();
         assert_eq!(status(&core)["steps"], 4);
+        // Quitting asks first, naming it (APP-004, SMT-023).
+        let pending = core.quit_pending(Lang::Es);
+        assert_eq!(pending[0]["kind"], "recording", "{pending:?}");
+        assert!(pending[0]["name"].as_str().unwrap().contains("4 pasos"));
         let folder = s.folder.clone();
         drop(s);
         let done = stop(&core, &ctx).unwrap();

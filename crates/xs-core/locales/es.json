@@ -4217,7 +4217,8 @@
       "recording_quit_name": "La grabación en curso ({{time}})",
       "recording_quit_title": "Hay una grabación en curso",
       "recording_quit": "{{name}} se detiene y se guarda en la biblioteca.",
-      "stop_and_save": "Detener y guardar"
+      "stop_and_save": "Detener y guardar",
+      "steps_quit_name": "La grabación de pasos en curso ({{count}} pasos)"
     },
     "multi": {
       "title": "Multicaptura",
