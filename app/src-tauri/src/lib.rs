@@ -557,6 +557,9 @@ pub fn run() {
                 });
             }
         })
+        // A window opened while XcreenShot steps aside (a recording, CAP-023) stays out
+        // of the video too (VID-017).
+        .on_page_load(|webview, _payload| windows::exclude_if_stepping_aside(&webview.window()))
         .on_window_event(|window, event| {
             let app = window.app_handle();
             match event {

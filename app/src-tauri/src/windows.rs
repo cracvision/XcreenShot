@@ -1042,7 +1042,24 @@ pub fn restore_capture_panel(app: &AppHandle) {
 /// our windows out of it (Windows display affinity, macOS sharing type), without
 /// hiding them on screen. Only during the capture, so screen sharing in meeting apps
 /// still shows XcreenShot.
+/// XcreenShot steps aside now (CAP-023, VID-017): a window opened meanwhile (the
+/// editor during a recording) is kept out of captures too.
+static EXCLUDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// A window that loads while XcreenShot steps aside stays out of captures (VID-017).
+pub fn exclude_if_stepping_aside(window: &tauri::Window) {
+    // Live drawing's shapes are always in the video (VID-048); the others of that list
+    // are always out already.
+    if window.label() == LIVEDRAW {
+        return;
+    }
+    if EXCLUDING.load(std::sync::atomic::Ordering::Relaxed) {
+        let _ = window.set_content_protected(true);
+    }
+}
+
 pub fn exclude_from_capture(app: &AppHandle, exclude: bool) {
+    EXCLUDING.store(exclude, std::sync::atomic::Ordering::Relaxed);
     for w in app.webview_windows().values() {
         // Selection windows, the countdown, the recording bar and its border, and the
         // working sign are always excluded; live drawing's shapes are always in, and its
