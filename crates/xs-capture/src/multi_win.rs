@@ -8,9 +8,15 @@
 //!   appear in a capture (`WDA_EXCLUDEFROMCAPTURE`).
 //! - A worker thread takes the captures and gives the clicks back, in order, and
 //!   keeps the list of windows under the pointer up to date; another one saves.
+//! - The hook can never keep the mouse: `Esc` removes it at once on its own thread,
+//!   without waiting for the worker; it never waits for a lock; and when the worker
+//!   stops answering for 3 s (a capture hangs), the hook removes itself and the session
+//!   ends. `XS_INPUT_RELEASE_SECS` also removes it after that many seconds. In an
+//!   isolated test copy there is no hook (`crate::takes_input`).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -34,14 +40,15 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, EnumWindows,
     GetClassNameW, GetMessageW, GetSystemMetrics, GetWindowLongPtrW, GetWindowRect, GetWindowTextW,
-    GetWindowThreadProcessId, IsIconic, IsWindowVisible, PostThreadMessageW, RegisterClassExW,
-    SetLayeredWindowAttributes, SetWindowDisplayAffinity, SetWindowPos, SetWindowsHookExW, ShowWindow,
-    TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE, HC_ACTION, HHOOK, HWND_TOPMOST, KBDLLHOOKSTRUCT,
-    LLKHF_ALTDOWN, LWA_ALPHA, MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK, SM_CXVIRTUALSCREEN, SM_CYDOUBLECLK,
-    SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_HIDE,
-    WDA_EXCLUDEFROMCAPTURE, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEMOVE, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
+    GetWindowThreadProcessId, IsIconic, IsWindowVisible, KillTimer, PostQuitMessage, PostThreadMessageW,
+    RegisterClassExW, SetLayeredWindowAttributes, SetTimer, SetWindowDisplayAffinity, SetWindowPos,
+    SetWindowsHookExW, ShowWindow, TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE, HC_ACTION, HHOOK,
+    HWND_TOPMOST, KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, LWA_ALPHA, MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK,
+    SM_CXVIRTUALSCREEN, SM_CYDOUBLECLK, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
+    SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_HIDE, WDA_EXCLUDEFROMCAPTURE, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN,
+    WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER,
+    WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
+    WS_POPUP,
 };
 use xs_core::Core;
 
@@ -91,9 +98,17 @@ enum Job {
     Quit,
 }
 
-/// A running session: its hook thread and its worker.
+/// Without news from the worker for this long, the hook removes itself.
+const STALE_MS: u64 = 3000;
+
+/// Milliseconds since `clock`.
+fn ms(clock: Instant) -> u64 {
+    clock.elapsed().as_millis() as u64
+}
+
+/// A running session: its hook thread (none in an isolated test copy) and its worker.
 pub struct Session {
-    hook_thread: u32,
+    hook_thread: Option<u32>,
     jobs: Sender<Job>,
 }
 
@@ -105,28 +120,43 @@ impl Session {
         let ours = integrity(unsafe { GetCurrentProcessId() }).unwrap_or(0x2000);
         *stack.lock().unwrap() = list_stack(&mut levels, ours);
 
-        let (ready_tx, ready_rx) = mpsc::channel();
-        let hook_jobs = jobs.clone();
-        let hook_stack = stack.clone();
-        std::thread::Builder::new()
-            .name("multicapture-hook".into())
-            .spawn(move || hook_thread(hook_jobs, hook_stack, ready_tx))
-            .map_err(|e| e.to_string())?;
-        let hook_thread = ready_rx
-            .recv_timeout(Duration::from_secs(3))
-            .map_err(|_| "the input hook did not start".to_string())??;
+        let clock = Instant::now();
+        let alive = Arc::new(AtomicU64::new(0));
+        let hook_thread = if crate::takes_input() {
+            let (ready_tx, ready_rx) = mpsc::channel();
+            let watch = Watch {
+                clock,
+                alive: alive.clone(),
+                limit: crate::release_limit(),
+            };
+            let hook_jobs = jobs.clone();
+            let hook_stack = stack.clone();
+            std::thread::Builder::new()
+                .name("multicapture-hook".into())
+                .spawn(move || hook_thread(hook_jobs, hook_stack, watch, ready_tx))
+                .map_err(|e| e.to_string())?;
+            Some(
+                ready_rx
+                    .recv_timeout(Duration::from_secs(3))
+                    .map_err(|_| "the input hook did not start".to_string())??,
+            )
+        } else {
+            None
+        };
 
         std::thread::Builder::new()
             .name("multicapture-worker".into())
-            .spawn(move || worker(core, inbox, stack, levels, ours))
+            .spawn(move || worker(core, inbox, stack, levels, ours, clock, alive))
             .map_err(|e| e.to_string())?;
         Ok(Session { hook_thread, jobs })
     }
 
     /// Ends the hook and the worker; captures already taken are still saved.
     pub fn stop(self) {
-        // SAFETY: posting to a thread id; harmless if that thread already ended.
-        unsafe { PostThreadMessageW(self.hook_thread, WM_QUIT, 0, 0) };
+        if let Some(thread) = self.hook_thread {
+            // SAFETY: posting to a thread id; harmless if that thread already ended.
+            unsafe { PostThreadMessageW(thread, WM_QUIT, 0, 0) };
+        }
         let _ = self.jobs.send(Job::Quit);
     }
 }
@@ -134,8 +164,30 @@ impl Session {
 // ---------------------------------------------------------------------------
 // The hook thread
 
+/// What tells the hook to let go: the worker's last sign of life and the time limit.
+struct Watch {
+    clock: Instant,
+    /// When the worker last showed it is alive (ms of `clock`).
+    alive: Arc<AtomicU64>,
+    /// Seconds after which the hook removes itself.
+    limit: Option<f64>,
+}
+
+impl Watch {
+    fn expired(&self) -> bool {
+        ms(self.clock).saturating_sub(self.alive.load(Ordering::Relaxed)) > STALE_MS
+            || self
+                .limit
+                .is_some_and(|l| self.clock.elapsed().as_secs_f64() >= l)
+    }
+}
+
 struct HookState {
     gesture: Gesture,
+    watch: Watch,
+    /// The hook gave the input back (`Esc`, the worker hung, the time limit): every
+    /// event passes until it is gone, and the session ends.
+    released: bool,
     jobs: Sender<Job>,
     stack: Arc<Mutex<Vec<Entry>>>,
     frame: Frame,
@@ -149,7 +201,12 @@ thread_local! {
     static STATE: RefCell<Option<HookState>> = const { RefCell::new(None) };
 }
 
-fn hook_thread(jobs: Sender<Job>, stack: Arc<Mutex<Vec<Entry>>>, ready: Sender<Result<u32, String>>) {
+fn hook_thread(
+    jobs: Sender<Job>,
+    stack: Arc<Mutex<Vec<Entry>>>,
+    watch: Watch,
+    ready: Sender<Result<u32, String>>,
+) {
     // SAFETY: plain Win32 calls on this thread; the hooks are removed before it ends.
     unsafe {
         let double = (GetSystemMetrics(SM_CXDOUBLECLK), GetSystemMetrics(SM_CYDOUBLECLK));
@@ -157,6 +214,8 @@ fn hook_thread(jobs: Sender<Job>, stack: Arc<Mutex<Vec<Entry>>>, ready: Sender<R
         STATE.with(|s| {
             *s.borrow_mut() = Some(HookState {
                 gesture: Gesture::new(GetDoubleClickTime(), double),
+                watch,
+                released: false,
                 jobs,
                 stack,
                 frame,
@@ -175,13 +234,32 @@ fn hook_thread(jobs: Sender<Job>, stack: Arc<Mutex<Vec<Entry>>>, ready: Sender<R
             return;
         }
         let _ = ready.send(Ok(GetCurrentThreadId()));
+        // A beat to notice, even without input, that the worker stopped answering.
+        let timer = SetTimer(std::ptr::null_mut(), 0, 250, None);
         let mut msg: MSG = std::mem::zeroed();
         while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+            if msg.message == WM_TIMER {
+                if with_state(|s| s.released || s.watch.expired()).unwrap_or(false) {
+                    with_state(|s| s.released = true);
+                    break;
+                }
+                continue;
+            }
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
+        // The input goes back to the apps before anything else.
         unhook(mouse);
         unhook(keys);
+        if timer != 0 {
+            KillTimer(std::ptr::null_mut(), timer);
+        }
+        // Gone on its own: the session ends too (captures taken are kept).
+        if with_state(|s| s.released).unwrap_or(false) {
+            with_state(|s| {
+                let _ = s.jobs.send(Job::Stop);
+            });
+        }
         end_state();
     }
 }
@@ -229,9 +307,10 @@ unsafe extern "system" fn key_proc(code: i32, wparam: WPARAM, lparam: LPARAM) ->
 }
 
 impl HookState {
-    /// The topmost window or monitor under the point.
+    /// The topmost window or monitor under the point; none while the worker updates
+    /// the list (the hook never waits).
     fn entry_at(&self, x: i32, y: i32) -> Option<Entry> {
-        let stack = self.stack.lock().ok()?;
+        let stack = self.stack.try_lock().ok()?;
         stack.iter().find(|e| e.rect.contains(x, y)).cloned()
     }
 
@@ -246,8 +325,23 @@ impl HookState {
         self.shown = rect;
     }
 
+    /// Gives the mouse and keyboard back at once: the hook's loop ends and removes the
+    /// hooks; until then every event passes.
+    fn release(&mut self) {
+        if !self.released {
+            self.released = true;
+            self.highlight(None);
+            // SAFETY: ends this thread's message loop.
+            unsafe { PostQuitMessage(0) };
+        }
+    }
+
     /// Returns whether the event is kept from the app.
     fn mouse(&mut self, message: u32, info: &MSLLHOOKSTRUCT) -> bool {
+        if self.released || self.watch.expired() {
+            self.release();
+            return false;
+        }
         let (x, y) = (info.pt.x, info.pt.y);
         let input = match message {
             WM_MOUSEMOVE => Input::Move(x, y),
@@ -293,6 +387,10 @@ impl HookState {
 
     /// `Esc` alone ends the session and never reaches the app.
     fn key(&mut self, message: u32, info: &KBDLLHOOKSTRUCT) -> bool {
+        if self.released || self.watch.expired() {
+            self.release();
+            return false;
+        }
         if info.vkCode != VK_ESCAPE as u32 {
             return false;
         }
@@ -305,10 +403,10 @@ impl HookState {
                 if modified {
                     return false;
                 }
-                if !self.esc_down {
-                    self.esc_down = true;
-                    let _ = self.jobs.send(Job::Stop);
-                }
+                // Out at once, here: the worker may be busy (the session ends when
+                // the hook's loop does).
+                self.esc_down = true;
+                self.release();
                 true
             }
             WM_KEYUP | WM_SYSKEYUP if self.esc_down => {
@@ -627,6 +725,8 @@ fn worker(
     stack: Arc<Mutex<Vec<Entry>>>,
     mut levels: HashMap<u32, bool>,
     ours: u32,
+    clock: Instant,
+    alive: Arc<AtomicU64>,
 ) {
     // Saving (PNG, thumbnail, library) never delays the next click.
     let (save, saved) = mpsc::channel::<Shot>();
@@ -641,6 +741,8 @@ fn worker(
     let mut pending: HashMap<u64, Shot> = HashMap::new();
     let mut next_refresh = Instant::now() + REFRESH;
     loop {
+        // The hook's sign that the worker still answers.
+        alive.store(ms(clock), Ordering::Relaxed);
         let wait = next_refresh.saturating_duration_since(Instant::now());
         match inbox.recv_timeout(wait) {
             Ok(Job::Shoot { seq, entry }) => {
@@ -687,5 +789,92 @@ fn worker(
                 next_refresh = Instant::now() + REFRESH;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A hook's state without the hook or its frame: nothing here listens to the input.
+    fn state(watch: Watch) -> (HookState, Receiver<Job>) {
+        let (jobs, inbox) = mpsc::channel();
+        let s = HookState {
+            gesture: Gesture::new(500, (4, 4)),
+            watch,
+            released: false,
+            jobs,
+            stack: Arc::new(Mutex::new(Vec::new())),
+            frame: Frame {
+                sides: [std::ptr::null_mut(); 4],
+            },
+            shown: None,
+            esc_down: false,
+        };
+        (s, inbox)
+    }
+
+    fn watch(clock: Instant, alive_ms: u64, limit: Option<f64>) -> Watch {
+        Watch {
+            clock,
+            alive: Arc::new(AtomicU64::new(alive_ms)),
+            limit,
+        }
+    }
+
+    fn key(vk: u16) -> KBDLLHOOKSTRUCT {
+        KBDLLHOOKSTRUCT {
+            vkCode: vk as u32,
+            scanCode: 0,
+            flags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        }
+    }
+
+    fn mouse_at(x: i32, y: i32) -> MSLLHOOKSTRUCT {
+        MSLLHOOKSTRUCT {
+            pt: windows_sys::Win32::Foundation::POINT { x, y },
+            mouseData: 0,
+            flags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        }
+    }
+
+    /// `Esc` gives the input back at once, without the worker; after it clicks pass.
+    #[test]
+    fn escape_releases_without_the_worker() {
+        let now = Instant::now();
+        let (mut s, inbox) = state(watch(now, ms(now), None));
+        assert!(s.key(WM_KEYDOWN, &key(VK_ESCAPE)));
+        assert!(s.released);
+        assert!(!s.mouse(WM_LBUTTONDOWN, &mouse_at(10, 10)));
+        // Nothing waited on the worker.
+        assert!(inbox.try_recv().is_err());
+    }
+
+    /// A worker that stopped answering, or the time limit, lets the clicks through.
+    #[test]
+    fn a_hung_worker_or_the_limit_releases() {
+        let started = Instant::now() - Duration::from_secs(10);
+        let (mut s, _inbox) = state(watch(started, 0, None));
+        assert!(s.watch.expired());
+        assert!(!s.mouse(WM_LBUTTONDOWN, &mouse_at(10, 10)));
+        assert!(s.released);
+
+        let alive = ms(started);
+        assert!(!watch(started, alive, None).expired());
+        assert!(watch(started, alive, Some(5.0)).expired());
+    }
+
+    /// The list of windows being updated never makes the hook wait.
+    #[test]
+    fn a_busy_list_does_not_block() {
+        let now = Instant::now();
+        let (s, _inbox) = state(watch(now, ms(now), None));
+        let stack = s.stack.clone();
+        let _busy = stack.lock().unwrap();
+        assert!(s.entry_at(10, 10).is_none());
     }
 }

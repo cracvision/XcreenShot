@@ -11,7 +11,7 @@
 //! - The hook can never keep the mouse and keyboard: `Esc` removes it at once on its own
 //!   thread, without waiting for the rest of the app; it never waits for a lock (a busy
 //!   model lets the event through); and when the worker stops answering for 2 s (the app
-//!   hangs), the hook removes itself. `XS_LIVEDRAW_RELEASE_SECS` also removes it after
+//!   hangs), the hook removes itself. `XS_INPUT_RELEASE_SECS` also removes it after
 //!   that many seconds (supervised tests).
 
 use std::cell::RefCell;
@@ -82,10 +82,7 @@ impl Session {
         let hook_thread = if hook {
             let (ready_tx, ready_rx) = mpsc::channel();
             let (hook_model, hook_notes, hook_alive) = (model.clone(), notes.clone(), alive.clone());
-            let limit = std::env::var("XS_LIVEDRAW_RELEASE_SECS")
-                .ok()
-                .and_then(|v| v.parse::<f64>().ok())
-                .filter(|s| *s > 0.0);
+            let limit = crate::release_limit();
             std::thread::Builder::new()
                 .name("livedraw-hook".into())
                 .spawn(move || {
@@ -191,7 +188,7 @@ struct HookState {
     notes: Sender<Note>,
     /// When the worker last showed it is alive (ms of `clock`).
     alive: Arc<AtomicU64>,
-    /// Seconds after which the hook removes itself (`XS_LIVEDRAW_RELEASE_SECS`).
+    /// Seconds after which the hook removes itself (`XS_INPUT_RELEASE_SECS`).
     limit: Option<f64>,
     /// The hook gave the mouse and keyboard back: every event passes until it is gone.
     released: bool,

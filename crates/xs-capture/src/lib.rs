@@ -23,6 +23,24 @@ pub mod interval;
 #[cfg(windows)]
 mod lens_win;
 pub mod livedraw;
+
+/// Whether the modes that hold the mouse or keyboard (live drawing, multi-capture)
+/// install their system-wide hooks. Never in an isolated test copy
+/// (`XCREENSHOT_DATA_DIR`), so that a test never holds the input of the person at the
+/// computer; `XS_INPUT_HOOKS=1` allows it there (inside Windows Sandbox, say).
+pub(crate) fn takes_input() -> bool {
+    !xs_core::paths::isolated() || std::env::var("XS_INPUT_HOOKS").as_deref() == Ok("1")
+}
+
+/// Seconds after which those hooks let go by themselves (`XS_INPUT_RELEASE_SECS`), for
+/// supervised tests; none by default.
+#[cfg(windows)]
+pub(crate) fn release_limit() -> Option<f64> {
+    std::env::var("XS_INPUT_RELEASE_SECS")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|s| *s > 0.0)
+}
 #[cfg(windows)]
 mod livedraw_win;
 pub mod menus;

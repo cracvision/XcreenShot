@@ -75,8 +75,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
     - `Esc` suelta el ratón y el teclado al instante, en el propio hilo del gancho, sin esperar al resto de la app;
     - el gancho nunca espera un bloqueo (si el modelo está ocupado, el evento llega a la app);
     - si la app deja de responder 2 s, el gancho se quita solo;
-    - `XS_LIVEDRAW_RELEASE_SECS` lo quita a los N segundos (para una prueba supervisada);
-    - en una copia aislada (`XCREENSHOT_DATA_DIR`) no hay gancho: solo dibuja `record.draw_shape` (`XS_LIVEDRAW_HOOK=1` lo permite).
+    - `XS_INPUT_RELEASE_SECS` lo quita a los N segundos (para una prueba supervisada);
+    - en una copia aislada (`XCREENSHOT_DATA_DIR`) no hay gancho: solo dibuja `record.draw_shape` (`XS_INPUT_HOOKS=1` lo permite).
     - Pruebas automáticas sin gancho real. Sin causa raíz confirmada: el registro termina justo al activarlo. Guía: [`tests/manual/VID-048.md`](../tests/manual/VID-048.md).
   - **XcreenShot 0.2.2 publicada** (con el permiso de Carlos), compilación `bca1f70`: el arreglo, más **Esc** a la vista en la barra de Dibujo en vivo. La app 0.2.1 de Carlos la detecta en Buscar actualizaciones (primera vez que se comprueba con una versión más nueva; la caché de GitHub tardó unos minutos en servir el `stable.json` nuevo). Carlos aclaró que nunca pulsó `Esc`: lo más probable es que el modo hiciera lo previsto (quedarse con clics y teclas) sin decir cómo salir.
   - **Hasta instalar la 0.2.2, Carlos no debe usar Dibujo en vivo** (ni al grabar). `video.liveDrawAnytime` quedó en `false` en su perfil.
