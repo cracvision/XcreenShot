@@ -47,6 +47,13 @@ fn fingerprint(path: &Path) -> Option<String> {
 }
 
 /// The files of the folder that could become captures (not its subfolders).
+/// A video XcreenShot keeps in its library (VID-055): it comes in as it is.
+fn is_video(path: &Path) -> bool {
+    path.extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .is_some_and(|e| matches!(e.as_str(), "mp4" | "m4v" | "mov"))
+}
+
 fn candidates(folder: &Path) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(folder) else {
         return Vec::new();
@@ -54,7 +61,7 @@ fn candidates(folder: &Path) -> Vec<PathBuf> {
     let mut list: Vec<PathBuf> = entries
         .filter_map(Result::ok)
         .map(|e| e.path())
-        .filter(|p| p.is_file() && matches!(kind_of(p), Kind::Image | Kind::Pdf))
+        .filter(|p| p.is_file() && (matches!(kind_of(p), Kind::Image | Kind::Pdf) || is_video(p)))
         .collect();
     list.sort();
     list
@@ -202,6 +209,28 @@ fn import(core: &Core, path: &Path) {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     let result = match kind_of(path) {
+        // A video: copied into the library as it is, and opened if asked (CAP-043,
+        // VID-055).
+        _ if is_video(path) => core
+            .call(
+                Source::Scheduled,
+                "library.import",
+                json!({ "paths": [path], "tagFolders": false }),
+                Some(lang),
+            )
+            .map(|r| {
+                if open {
+                    if let Some(copy) = r["imported"][0]["path"].as_str() {
+                        let _ = core.call(
+                            Source::Ui,
+                            "document.open",
+                            json!({ "path": copy, "show": true }),
+                            Some(lang),
+                        );
+                    }
+                }
+                json!({ "count": r["imported"].as_array().map_or(0, Vec::len) })
+            }),
         // All pages at 150 dpi, without asking (CAP-043).
         Kind::Pdf => crate::pdf::import(core, &ctx, &opts, &json!({ "path": path, "dpi": 150 })),
         _ => crate::filesource::run(core, &ctx, &opts, &[path.to_path_buf()]),
@@ -244,16 +273,49 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("xs-inbox-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        for name in ["a.png", "b.pdf", "notes.txt"] {
+        for name in ["a.png", "b.pdf", "c.mp4", "notes.txt"] {
             std::fs::write(dir.join(name), b"x").unwrap();
         }
         std::fs::create_dir_all(dir.join(DONE_FOLDER)).unwrap();
         std::fs::write(dir.join(DONE_FOLDER).join("a.png"), b"old").unwrap();
         let found = candidates(&dir);
-        assert_eq!(found, vec![dir.join("a.png"), dir.join("b.pdf")]);
+        assert_eq!(
+            found,
+            vec![dir.join("a.png"), dir.join("b.pdf"), dir.join("c.mp4")]
+        );
         let moved = move_done(&dir, &dir.join("a.png")).unwrap();
         assert_eq!(moved, dir.join(DONE_FOLDER).join("a (2).png"));
         assert!(!dir.join("a.png").exists());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// CAP-043, VID-055: a video in the receive folder comes into the library as it is.
+    #[test]
+    fn a_video_comes_into_the_library() {
+        let dir = tempfile::tempdir().unwrap();
+        let lib = dir.path().join("lib");
+        let core = Core::for_tests_with(
+            xs_core::platform::Platform::Windows,
+            vec![
+                crate::extension(),
+                xs_editor::extension(),
+                xs_library::extension_with(Some(lib.clone())),
+            ],
+        );
+        xs_editor::editor(&core).set_folders(lib.clone(), dir.path().join("rec"));
+        core.call(
+            Source::Cli,
+            "settings.set",
+            serde_json::json!({"key": "capture.inbox.open", "value": false}),
+            None,
+        )
+        .unwrap();
+        let sample =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/video/three-colors.mp4");
+        let video = dir.path().join("llegado.mp4");
+        std::fs::copy(&sample, &video).unwrap();
+        import(&core, &video);
+        let items = xs_library::library(&core).list();
+        assert!(items.iter().any(|i| i.format == "mp4"), "{items:?}");
     }
 }
