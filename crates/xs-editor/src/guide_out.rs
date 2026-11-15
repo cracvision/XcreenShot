@@ -1048,7 +1048,7 @@ mod tests {
         let bytes = pdf(&g, paper("a4"), &measure).unwrap();
         let text = String::from_utf8_lossy(&bytes);
         assert!(text.contains("/Helvetica-Oblique") && text.contains("/F3 12.0 Tf"));
-        assert_eq!(plain(&"*luego* [ayuda](https://x.y)".to_string()), "luego ayuda");
+        assert_eq!(plain("*luego* [ayuda](https://x.y)"), "luego ayuda");
     }
 
     fn unzip(bytes: &[u8]) -> std::collections::BTreeMap<String, String> {
