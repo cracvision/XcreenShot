@@ -342,6 +342,9 @@ pub fn ask_text(app: &AppHandle, open: bool) -> tauri::Result<()> {
 /// A place on the virtual screen, physical pixels.
 type Place = Option<(i32, i32)>;
 static BAR_PLACE: std::sync::Mutex<(Place, Place)> = std::sync::Mutex::new((None, None));
+/// Where the recorded area was last told to be: when it moves (a window followed), the
+/// bar goes with it, unless the user moved the bar (VID-016).
+static LAST_AREA: std::sync::Mutex<Option<(f64, f64)>> = std::sync::Mutex::new(None);
 
 /// The recording bar and the border around the recorded area (VID-011, VID-020):
 /// both stay out of the video (content protection) and the border lets clicks
@@ -483,6 +486,7 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
                 w.destroy()?;
             }
         }
+        *LAST_AREA.lock().unwrap() = None;
         return Ok(());
     };
     // Narrated slides (VID-072): their own bar is in the editor; it hears the state.
@@ -516,6 +520,25 @@ pub fn recording_bar(app: &AppHandle, state: Option<serde_json::Value>) -> tauri
         .core
         .settings
         .get_bool("video.showBorder");
+    // The area moved (a window followed): the bar goes with it, unless the user put the
+    // bar somewhere else (VID-016).
+    {
+        let mut last = LAST_AREA.lock().unwrap();
+        if let (Some((lx, ly)), Some(bar)) = (*last, app.get_webview_window(RECBAR)) {
+            let (dx, dy) = ((x - lx) as i32, (y - ly) as i32);
+            if (dx, dy) != (0, 0) {
+                if let Ok(pos) = bar.outer_position() {
+                    let mut place = BAR_PLACE.lock().unwrap();
+                    if place.0 == Some((pos.x, pos.y)) {
+                        let to = (pos.x + dx, pos.y + dy);
+                        let _ = bar.set_position(tauri::PhysicalPosition::new(to.0, to.1));
+                        place.0 = Some(to);
+                    }
+                }
+            }
+        }
+        *last = Some((x, y));
+    }
     // Already there: it follows the area (changed while Ready, VID-003).
     if let Some(frame) = app.get_webview_window(RECFRAME).filter(|_| w > 0.0) {
         let _ = frame.set_position(tauri::PhysicalPosition::new((x - edge) as i32, (y - edge) as i32));

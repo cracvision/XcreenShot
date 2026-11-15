@@ -1274,6 +1274,46 @@ fn status_with(core: &Core, r: &Running) -> Value {
     v
 }
 
+/// The border and the bar follow a recorded window that moves (VID-005, VID-016):
+/// where it is, asked a few times a second while its recording lasts.
+#[cfg(windows)]
+fn follow_window(core: &Arc<Core>, id: u32) {
+    let weak = Arc::downgrade(core);
+    let started = std::thread::Builder::new()
+        .name("rec-follow".into())
+        .spawn(move || loop {
+            std::thread::sleep(Duration::from_millis(300));
+            let Some(core) = weak.upgrade() else { return };
+            // Minimized, it is far off screen: the border stays where it was.
+            let Some(b) = crate::steps_win::window_rect(id as isize).filter(|b| b[0] > -10_000.0) else {
+                continue;
+            };
+            let rect = Rect {
+                x: b[0].round() as i32,
+                y: b[1].round() as i32,
+                width: b[2].round().max(1.0) as u32,
+                height: b[3].round().max(1.0) as u32,
+            };
+            let state = {
+                let rec = service(&core);
+                let mut current = rec.current.lock().unwrap();
+                let Some(r) = current.as_mut() else { return };
+                if r.source["id"].as_u64() != Some(id as u64) {
+                    return;
+                }
+                if r.rect == rect {
+                    continue;
+                }
+                r.rect = rect;
+                status_with(&core, r)
+            };
+            bar(&core, Some(state));
+        });
+    if let Err(e) = started {
+        tracing::warn!(error = %e, "the recorded window is not followed");
+    }
+}
+
 /// The shortest and the longest timer (VID-015).
 const TIMER_RANGE: std::ops::RangeInclusive<f64> = 5.0..=12.0 * 3600.0;
 
@@ -1607,6 +1647,11 @@ pub fn start(core: &Arc<Core>, ctx: &Context, p: &Value) -> CommandResult {
         *current = Some(running);
     }
     bar(core, Some(status.clone()));
+    // A window recorded: its border and bar follow it when it moves (VID-005, VID-016).
+    #[cfg(windows)]
+    if let Some(id) = window {
+        follow_window(core, id);
+    }
     tracing::info!(
         width = status["width"].as_u64(),
         height = status["height"].as_u64(),
