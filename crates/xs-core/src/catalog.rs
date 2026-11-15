@@ -269,6 +269,27 @@ fn specs_1(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 json!({"topic": {"type": "string", "enum": ["start", "capture", "editor", "library", "shortcuts", "permissions", "automation", "video", "share", "about"]}}),
                 &[],
             )),
+        B::new("app.check_update", &["APP-036"])
+            .params(params(
+                json!({"ui": {"type": "boolean", "default": false, "description": "Also show the answer in the main window"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "available": {"type": "boolean"},
+                "current": {"type": "string"},
+                "version": {"type": ["string", "null"]},
+                "notes": {"type": ["string", "null"], "description": "Release notes; a JSON object {en, es} when the release has both"},
+                "date": {"type": ["string", "null"]},
+                "channel": {"type": "string"}
+            }})),
+        B::new("app.install_update", &["APP-036"])
+            .mutates()
+            .positional(&["when"])
+            .params(params(
+                json!({"when": {"type": "string", "enum": ["now", "quit"], "default": "now", "description": "now: installs and restarts; quit: downloads now, installs when XcreenShot closes"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"status": {"type": "string", "enum": ["installing", "at_quit", "none"]}}})),
         B::new("app.managed", &["APP-035"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {

@@ -110,6 +110,18 @@ pub trait Host: Send + Sync {
     fn open_settings(&self, section: Option<&str>, key: Option<&str>) -> Result<(), CommandError> {
         Err(unsupported())
     }
+    /// Asks the update manifest at `endpoint` whether there is a newer version
+    /// (APP-036): `{available, current, version, notes, date}`.
+    fn check_update(&self, endpoint: &str) -> Result<Value, CommandError> {
+        let _ = endpoint;
+        Err(unsupported())
+    }
+    /// Installs the version found by the last check: `now` (the app restarts) or at
+    /// `quit` (downloaded now, installed when the app closes).
+    fn install_update(&self, when: &str) -> Result<Value, CommandError> {
+        let _ = when;
+        Err(unsupported())
+    }
     /// The welcome window of the first run (APP-005).
     fn open_welcome(&self) -> Result<(), CommandError> {
         Err(unsupported())

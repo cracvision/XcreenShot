@@ -14,6 +14,7 @@ mod permissions;
 #[cfg(windows)]
 mod session_end;
 mod tray;
+mod updates;
 mod webpage;
 mod windows;
 
@@ -379,6 +380,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updates::UpdateState::default())
         // Remembers size and position of normal windows (APP-004, APP-006). Selection
         // windows and the countdown are left out: the plugin shows any window it has no
         // saved state for, which made a hidden selection window appear at startup. So are
@@ -466,6 +469,8 @@ pub fn run() {
             // (APP-004, VID-013).
             #[cfg(windows)]
             session_end::watch(core.clone());
+            // Updates (APP-036).
+            updates::watch(handle.clone(), core.clone());
 
             // First run of a release build: propose starting at sign-in (APP-003, APP-005).
             let first_run = !first_run_marker.exists();

@@ -34,6 +34,9 @@ tauri-plugin-opener = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-dialog = "2"
+# Updates (APP-036), with the system's TLS and proxy like the cloud AI.
+tauri-plugin-updater = { version = "2", default-features = false, features = ["native-tls", "system-proxy"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 drag = "2.1.1"
 
 [target.'cfg(windows)'.dependencies]

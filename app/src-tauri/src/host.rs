@@ -154,8 +154,47 @@ impl Host for TauriHost {
         // Let the caller (e.g. the CLI) receive its answer first.
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(150));
+            // An update downloaded for the quit (APP-036).
+            crate::updates::install_pending(&app);
             app.exit(0);
         });
+    }
+
+    fn check_update(&self, endpoint: &str) -> Result<Value, CommandError> {
+        crate::updates::check(&self.app, endpoint).map_err(|reason| {
+            CommandError::new(
+                xs_core::ErrorCode::Internal,
+                xs_core::i18n::tr(
+                    self.app.state::<crate::AppState>().core.settings.lang(),
+                    "errors.update_failed",
+                    &[("reason", &reason)],
+                ),
+            )
+        })
+    }
+
+    fn install_update(&self, when: &str) -> Result<Value, CommandError> {
+        let r = crate::updates::install(&self.app, when).map_err(|reason| {
+            CommandError::new(
+                xs_core::ErrorCode::Internal,
+                xs_core::i18n::tr(
+                    self.app.state::<crate::AppState>().core.settings.lang(),
+                    "errors.update_failed",
+                    &[("reason", &reason)],
+                ),
+            )
+        })?;
+        if r["status"] == "none" {
+            return Err(CommandError::new(
+                xs_core::ErrorCode::NotFound,
+                xs_core::i18n::tr(
+                    self.app.state::<crate::AppState>().core.settings.lang(),
+                    "errors.update_none",
+                    &[],
+                ),
+            ));
+        }
+        Ok(r)
     }
 
     fn settings_changed(&self, key: &str, value: &Value) {

@@ -120,6 +120,29 @@ pub fn definitions() -> Vec<SettingDef> {
         ),
         // The "Cristal" look (Carlos, 2026-11-12): how see-through the floating panels are
         // (0 = solid) and the accent color.
+        // Updates (APP-036).
+        def("updates.autoCheck", "general", boolean(), json!(true), "APP-036"),
+        def(
+            "updates.frequency",
+            "general",
+            one_of(&["daily", "weekly"]),
+            json!("daily"),
+            "APP-036",
+        ),
+        def(
+            "updates.autoInstall",
+            "general",
+            boolean(),
+            json!(false),
+            "APP-036",
+        ),
+        def(
+            "updates.channel",
+            "general",
+            one_of(&["stable", "deferred"]),
+            json!("stable"),
+            "APP-036",
+        ),
         def(
             "general.glassIntensity",
             "general",

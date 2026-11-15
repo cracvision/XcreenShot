@@ -12,6 +12,7 @@ import { FileDialogs } from "../library/FileDialogs";
 import { ThemeConflict } from "./StylesTab";
 import { StampDialogs } from "./StampDialogs";
 import { LanDialogs } from "../share/LanDialogs";
+import { UpdateDialog } from "./UpdateDialog";
 import { decide, flattenNow, recover, saveActive, setStepValue } from "./actions";
 import { useEditor } from "./state";
 import { clock } from "../windows/recClock";
@@ -307,6 +308,7 @@ export function Dialogs() {
       <PrintDialog />
       <StampDialogs />
       <LanDialogs />
+      <UpdateDialog />
     </>
   );
 }

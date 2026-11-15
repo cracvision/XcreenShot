@@ -4094,6 +4094,13 @@ html.launcher-root #root {
   object-fit: contain;
 }
 
+/* The notes of a new version (APP-036). */
+.update-notes {
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 /* Advanced > Managed configuration (APP-035). */
 .managed-block {
   display: flex;

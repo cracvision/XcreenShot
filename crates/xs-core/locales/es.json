@@ -491,6 +491,14 @@
       "title": "Configuración administrada",
       "description": "Lo que el administrador fijó para este equipo: ajustes bloqueados, valores iniciales y directivas."
     },
+    "app_check_update": {
+      "title": "Buscar actualizaciones",
+      "description": "Pregunta si hay una versión nueva de XcreenShot en el canal elegido."
+    },
+    "app_install_update": {
+      "title": "Instalar la actualización",
+      "description": "Instala la versión encontrada, ahora (XcreenShot se reinicia) o al cerrarse."
+    },
     "editor_stamps": {
       "title": "Colección de sellos",
       "description": "Muestra los sellos que se pueden poner, por categoría o por palabras."
@@ -1883,6 +1891,22 @@
       "label": "Permitir por automatización",
       "description": "La línea de comandos y los agentes pueden aceptar emparejamientos y envíos por ti."
     },
+    "updates_autoCheck": {
+      "label": "Buscar actualizaciones automáticamente",
+      "description": "XcreenShot pregunta a la página de versiones si hay una más nueva. Solo envía su versión, el sistema, la arquitectura y el canal."
+    },
+    "updates_frequency": {
+      "label": "Frecuencia",
+      "description": "Cada cuánto busca."
+    },
+    "updates_autoInstall": {
+      "label": "Descargar e instalar automáticamente",
+      "description": "Descarga en segundo plano e instala al cerrar XcreenShot, nunca durante una captura, una grabación o una edición."
+    },
+    "updates_channel": {
+      "label": "Canal",
+      "description": "Estable recibe cada versión en cuanto se publica; Diferido, cuando lleva 30 días en Estable sin una corrección."
+    },
     "library_ocrIndex": {
       "label": "Reconocer el texto de las imágenes para la búsqueda",
       "description": "En segundo plano y en este equipo: la búsqueda encuentra también las palabras que se ven dentro de las capturas. Desactivado, el texto leído sale del índice."
@@ -2094,6 +2118,10 @@
     "lan_automation": "Aceptar desde la línea de comandos o un agente necesita \"Permitir por automatización\" en Preferencias > Compartir.",
     "setting_locked": "El ajuste \"{{key}}\" lo fija tu administrador.",
     "video_by_policy": "La grabación de video la desactivó tu administrador.",
+    "updates_disabled": "Las actualizaciones las desactivó tu administrador.",
+    "update_busy": "XcreenShot está grabando: la actualización se instalará al cerrarse.",
+    "update_failed": "No se pudo buscar o instalar la actualización: {{reason}}.",
+    "update_none": "No hay ninguna actualización que instalar: busca actualizaciones primero.",
     "template_not_found": "No hay ninguna plantilla {{id}}.",
     "not_a_template": "Este documento no es una plantilla.",
     "template_without_zones": "El documento no tiene zonas de imagen. Clic derecho en una imagen flotante > Convertir en zona de imagen.",
@@ -2510,6 +2538,7 @@
     "save_as_template": "Guardar como plantilla…",
     "save_as_stamp": "Guardar como sello…",
     "import_stamps": "Sellos…",
+    "check_update": "Buscar actualizaciones…",
     "import_template": "Plantilla…",
     "combine_template": "Combinar en plantilla…",
     "tags_item": "Etiquetas…",
@@ -2557,6 +2586,8 @@
     "remove_background": "Quitar fondo"
   },
   "notify": {
+    "update_title": "Está disponible XcreenShot {{version}}",
+    "update": "Ábrelo para ver las novedades e instalarla.",
     "lan_pair_title": "Petición de contacto",
     "lan_pair": "{{name}} ({{device}}) quiere añadirte como contacto.",
     "lan_offer_title": "Te envían capturas",
@@ -2651,6 +2682,18 @@
     "unsupported_windows": "XcreenShot necesita Windows 10 22H2 o posterior."
   },
   "ui": {
+    "update": {
+      "title": "Actualización",
+      "available": "Está disponible XcreenShot {{version}}. Tienes la {{current}}.",
+      "latest": "Tienes la última versión ({{current}}).",
+      "notes": "Novedades",
+      "install_now": "Instalar y reiniciar",
+      "install_quit": "Instalar al salir",
+      "later": "Ahora no",
+      "close": "Cerrar",
+      "at_quit": "Se instalará al cerrar XcreenShot.",
+      "failed": "No se pudo buscar la actualización: {{reason}}"
+    },
     "managed": {
       "title": "Configuración administrada",
       "status_inactive": "Sin administrar: no hay ningún managed.json.",

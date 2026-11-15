@@ -709,6 +709,14 @@ fn help_items() -> Vec<MenuEntry> {
         // APP-055.
         action("editor.move_computer", "menu.move_computer", "move_computer"),
         cmd("feedback", "menu.feedback", "app.feedback"),
+        // APP-036.
+        MenuEntry::Command {
+            id: "check_update",
+            label: "menu.check_update",
+            command: "app.check_update",
+            params: json!({ "ui": true }),
+            checked: None,
+        },
         MenuEntry::Command {
             id: "about",
             label: "menu.about",

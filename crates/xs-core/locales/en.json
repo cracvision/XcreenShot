@@ -491,6 +491,14 @@
       "title": "Managed configuration",
       "description": "What the administrator set for this computer: fixed settings, starting values and policies."
     },
+    "app_check_update": {
+      "title": "Check for updates",
+      "description": "Asks whether there is a newer version of XcreenShot in the chosen channel."
+    },
+    "app_install_update": {
+      "title": "Install the update",
+      "description": "Installs the version found, now (XcreenShot restarts) or when it closes."
+    },
     "editor_stamps": {
       "title": "Stamp collection",
       "description": "Lists the stamps you can place, by category or by words."
@@ -1883,6 +1891,22 @@
       "label": "Allow automation",
       "description": "The command line and agents may accept pairings and sends for you."
     },
+    "updates_autoCheck": {
+      "label": "Check for updates automatically",
+      "description": "XcreenShot asks the releases page whether there is a newer version. It sends only its version, system, architecture and channel."
+    },
+    "updates_frequency": {
+      "label": "Frequency",
+      "description": "How often it checks."
+    },
+    "updates_autoInstall": {
+      "label": "Download and install automatically",
+      "description": "It downloads in the background and installs when XcreenShot closes, never during a capture, recording or edit."
+    },
+    "updates_channel": {
+      "label": "Channel",
+      "description": "Stable gets each version when it is published; Deferred, once it has been 30 days in Stable without a fix."
+    },
     "library_ocrIndex": {
       "label": "Recognize the text of images for the search",
       "description": "In the background, on this computer: the search also finds the words that show inside captures. Off, the text read leaves the index."
@@ -2094,6 +2118,10 @@
     "lan_automation": "Accepting from the command line or an agent needs \"Allow automation\" in Preferences > Share.",
     "setting_locked": "The setting \"{{key}}\" is set by your administrator.",
     "video_by_policy": "Video recording is turned off by your administrator.",
+    "updates_disabled": "Updates are turned off by your administrator.",
+    "update_busy": "XcreenShot is recording: the update will install when it closes.",
+    "update_failed": "The update could not be checked or installed: {{reason}}.",
+    "update_none": "There is no update to install: check for updates first.",
     "template_not_found": "There is no template {{id}}.",
     "not_a_template": "This document is not a template.",
     "template_without_zones": "The document has no image zones. Right-click a floating image > Convert to image zone.",
@@ -2510,6 +2538,7 @@
     "save_as_template": "Save as template…",
     "save_as_stamp": "Save as stamp…",
     "import_stamps": "Stamps…",
+    "check_update": "Check for updates…",
     "import_template": "Template…",
     "combine_template": "Combine in template…",
     "tags_item": "Tags…",
@@ -2557,6 +2586,8 @@
     "remove_background": "Remove background"
   },
   "notify": {
+    "update_title": "XcreenShot {{version}} is available",
+    "update": "Open it to see what is new and install it.",
     "lan_pair_title": "Pairing request",
     "lan_pair": "{{name}} ({{device}}) wants to add you as a contact.",
     "lan_offer_title": "Someone is sending you captures",
@@ -2651,6 +2682,18 @@
     "unsupported_windows": "XcreenShot needs Windows 10 22H2 or later."
   },
   "ui": {
+    "update": {
+      "title": "Update",
+      "available": "XcreenShot {{version}} is available. You have {{current}}.",
+      "latest": "You have the latest version ({{current}}).",
+      "notes": "What is new",
+      "install_now": "Install and restart",
+      "install_quit": "Install when closing",
+      "later": "Not now",
+      "close": "Close",
+      "at_quit": "It will install when XcreenShot closes.",
+      "failed": "The update could not be checked: {{reason}}"
+    },
     "managed": {
       "title": "Managed configuration",
       "status_inactive": "Not managed: there is no managed.json.",

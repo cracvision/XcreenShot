@@ -96,6 +96,33 @@ pub struct Core {
     managed: RwLock<crate::managed::Managed>,
 }
 
+/// Where the update manifest of the chosen channel is (APP-036): the public releases
+/// repository, or the administrator's own source (APP-035). Err when updates are off
+/// by policy: none.
+pub fn update_endpoint(core: &Core) -> Option<String> {
+    if core.policy("disableUpdates") {
+        return None;
+    }
+    let channel = core.settings.get_str("updates.channel");
+    let channel = if channel == "deferred" {
+        "deferred"
+    } else {
+        "stable"
+    };
+    let source = core
+        .managed()
+        .policy
+        .get("updateSource")
+        .and_then(Value::as_str)
+        .map(|s| s.trim_end_matches('/').to_string())
+        .unwrap_or_else(|| UPDATES_URL.to_string());
+    Some(format!("{source}/{channel}.json"))
+}
+
+/// The public repository of releases (decided by Carlos on 2026-11-15): one release,
+/// `updates`, holds the manifest of each channel.
+pub const UPDATES_URL: &str = "https://github.com/cracvision/xcreenshot-releases/releases/download/updates";
+
 /// Told the key and the new value of each setting that changes.
 pub type SettingHook = Arc<dyn Fn(&str, &Value) + Send + Sync>;
 
@@ -718,6 +745,47 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_help(str_param(&p, "topic"))?;
         Ok(json!({}))
     });
+    // Help > Check for updates (APP-036).
+    on!("app.check_update", |core, ctx, p| {
+        let endpoint = update_endpoint(&core).ok_or_else(|| {
+            CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.updates_disabled", &[]),
+            )
+        })?;
+        let mut r = core.host().check_update(&endpoint)?;
+        r["channel"] = json!(core.settings.get_str("updates.channel"));
+        core.remember("updates.lastCheck", json!(chrono::Utc::now().to_rfc3339()));
+        // From the menu: the answer shows in the main window, also "you have the latest".
+        if p.get("ui").and_then(Value::as_bool) == Some(true) {
+            core.host().editor_event("update", r.clone());
+        }
+        Ok(r)
+    });
+    on!("app.install_update", |core, ctx, p| {
+        if core.policy("disableUpdates") {
+            return Err(CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.updates_disabled", &[]),
+            ));
+        }
+        let when = p.get("when").and_then(Value::as_str).unwrap_or("now");
+        // Never in the middle of a recording (APP-036): then, at quit.
+        if when == "now" {
+            let recording = core
+                .call(Source::Ui, "record.status", json!({}), Some(ctx.lang))
+                .ok()
+                .and_then(|s| s["status"].as_str().map(str::to_string))
+                .is_some_and(|s| s != "idle");
+            if recording {
+                return Err(CommandError::new(
+                    ErrorCode::Busy,
+                    tr(ctx.lang, "errors.update_busy", &[]),
+                ));
+            }
+        }
+        core.host().install_update(when)
+    });
     // Advanced > Managed configuration > View (APP-035).
     on!("app.managed", |core, _ctx, _p| Ok(core.managed().to_json()));
     // Help > About XcreenShot (APP-015).
@@ -1157,6 +1225,41 @@ mod tests {
 
     fn call(core: &Core, source: Source, id: &str, p: Value) -> CommandResult {
         core.call(source, id, p, Some(Lang::En))
+    }
+
+    /// APP-036: the manifest of the channel, the administrator's source, or none.
+    #[test]
+    fn update_endpoint_follows_channel_and_policy() {
+        let core = Core::for_tests(Platform::Windows);
+        assert_eq!(
+            update_endpoint(&core).unwrap(),
+            format!("{UPDATES_URL}/stable.json")
+        );
+        call(
+            &core,
+            Source::Ui,
+            "settings.set",
+            json!({"key": "updates.channel", "value": "deferred"}),
+        )
+        .unwrap();
+        assert!(update_endpoint(&core).unwrap().ends_with("/deferred.json"));
+        let m = crate::managed::parse(
+            br#"{"version": 1, "policy": {"updateSource": "https://intranet.example/xs/"}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert_eq!(
+            update_endpoint(&core).unwrap(),
+            "https://intranet.example/xs/deferred.json"
+        );
+        let m = crate::managed::parse(
+            br#"{"version": 1, "policy": {"disableUpdates": true}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert!(update_endpoint(&core).is_none());
+        let e = call(&core, Source::Cli, "app.check_update", json!({})).unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
     }
 
     /// APP-035: a locked setting cannot change, a default starts the value, and the
