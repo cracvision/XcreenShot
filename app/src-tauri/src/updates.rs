@@ -115,7 +115,10 @@ pub fn watch(app: AppHandle, core: std::sync::Arc<xs_core::Core>) {
 }
 
 fn due(core: &xs_core::Core) -> bool {
-    if !core.settings.get_bool("updates.autoCheck") || core.policy("disableUpdates") {
+    if !core.settings.get_bool("updates.autoCheck")
+        || core.policy("disableUpdates")
+        || xs_core::platform::store_edition()
+    {
         return false;
     }
     // Never from a development or isolated copy.

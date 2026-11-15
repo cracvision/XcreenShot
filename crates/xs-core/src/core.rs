@@ -100,7 +100,8 @@ pub struct Core {
 /// repository, or the administrator's own source (APP-035). Err when updates are off
 /// by policy: none.
 pub fn update_endpoint(core: &Core) -> Option<String> {
-    if core.policy("disableUpdates") {
+    // The Microsoft Store edition is updated by the store.
+    if core.policy("disableUpdates") || crate::platform::store_edition() {
         return None;
     }
     let channel = core.settings.get_str("updates.channel");
@@ -747,6 +748,12 @@ fn build_registry(core: &Arc<Core>) -> Registry {
     });
     // Help > Check for updates (APP-036).
     on!("app.check_update", |core, ctx, p| {
+        if crate::platform::store_edition() {
+            return Err(CommandError::new(
+                ErrorCode::FeatureDisabled,
+                tr(ctx.lang, "errors.updates_store", &[]),
+            ));
+        }
         let endpoint = update_endpoint(&core).ok_or_else(|| {
             CommandError::new(
                 ErrorCode::DisabledByPolicy,
@@ -802,6 +809,8 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         "channel": if cfg!(debug_assertions) { "development" } else { "stable" },
         "dataDir": core.paths.local_dir,
         "configDir": core.paths.config_dir,
+        // The Microsoft Store edition: the store updates it (APP-036).
+        "store": crate::platform::store_edition(),
         // Portable mode (APP-038), and on a read-only folder.
         "portable": crate::paths::portable_dir().is_some(),
         "portableReadOnly": crate::paths::portable_read_only(),

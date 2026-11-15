@@ -26,6 +26,27 @@ impl Platform {
     }
 }
 
+/// The Microsoft Store edition: XcreenShot runs from its MSIX package. The store then
+/// updates it and starts it with Windows (APP-036, APP-003).
+pub fn store_edition() -> bool {
+    #[cfg(windows)]
+    {
+        static STORE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *STORE.get_or_init(|| {
+            use windows_sys::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
+            let mut len = 0u32;
+            // SAFETY: a length query with no buffer; APPMODEL_ERROR_NO_PACKAGE (15700)
+            // means the app is not packaged.
+            let rc = unsafe { GetCurrentPackageFullName(&mut len, std::ptr::null_mut()) };
+            rc != 15700
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 pub fn arch() -> &'static str {
     std::env::consts::ARCH
 }

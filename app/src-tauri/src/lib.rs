@@ -13,6 +13,7 @@ mod overlay;
 mod permissions;
 #[cfg(windows)]
 mod session_end;
+mod startup_task;
 mod system_share;
 mod tray;
 mod updates;
@@ -490,7 +491,12 @@ pub fn run() {
                     && xs_core::paths::portable_dir().is_none()
                     && core.settings.get_bool("general.launchAtLogin")
                 {
-                    let _ = handle.autolaunch().enable();
+                    // The store edition starts through its package's startup task.
+                    if xs_core::platform::store_edition() {
+                        let _ = startup_task::set(true);
+                    } else {
+                        let _ = handle.autolaunch().enable();
+                    }
                 }
                 let _ = std::fs::create_dir_all(&core.paths.config_dir);
                 let _ = std::fs::write(&first_run_marker, b"");

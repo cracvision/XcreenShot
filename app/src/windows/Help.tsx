@@ -69,6 +69,8 @@ interface AboutInfo {
   channel: "development" | "stable";
   /** Portable mode (APP-038). */
   portable?: boolean;
+  /** The Microsoft Store edition: the store updates it. */
+  store?: boolean;
   dataDir: string;
   configDir: string;
   managed: string;
@@ -107,6 +109,7 @@ function About() {
           <dd>
             {info.version}
             {info.portable && ` (${t("ui.help.portable")})`}
+            {info.store && ` · ${t("ui.help.store")}`}
           </dd>
           <dt>{t("ui.help.build")}</dt>
           <dd>

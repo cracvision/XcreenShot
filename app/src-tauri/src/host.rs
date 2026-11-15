@@ -26,6 +26,10 @@ fn internal(e: impl std::fmt::Display) -> CommandError {
 /// Real state of the login item (APP-003): registered, and on Windows not turned off
 /// in Settings > Apps > Startup.
 pub fn login_item_enabled(app: &AppHandle) -> Option<bool> {
+    // The Microsoft Store edition: the package's startup task.
+    if xs_core::platform::store_edition() {
+        return crate::startup_task::enabled();
+    }
     let registered = app.autolaunch().is_enabled().ok()?;
     #[cfg(windows)]
     if registered && xs_core::winreg::login_item_turned_off(&app.package_info().name) {
@@ -233,6 +237,11 @@ impl Host for TauriHost {
             // A test copy never changes how the installed app starts.
             "general.launchAtLogin" if xs_core::paths::isolated() => {
                 tracing::info!("isolated instance: login item left alone");
+            }
+            "general.launchAtLogin" if xs_core::platform::store_edition() => {
+                if let Err(e) = crate::startup_task::set(value.as_bool().unwrap_or(false)) {
+                    tracing::error!(error = %e, "could not change the startup task");
+                }
             }
             "general.launchAtLogin" => {
                 let auto = self.app.autolaunch();
