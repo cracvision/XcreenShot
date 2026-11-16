@@ -1017,6 +1017,43 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
   - [ ] `tray close --all` vacía la bandeja sin borrar ningún archivo.
 - **Fuentes:** research/04-biblioteca-compartir.md §2; §8 (COM Server API) (ver 05-app.md, APP-027)
 
+### TRY-018 · Portapapeles de XcreenShot
+- **Hito:** M2 · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia: IDEA-006, aprobada por Carlos el 2026-11-16)
+- **Comportamiento:**
+  - El atajo global **Portapapeles de XcreenShot** abre un panel con las miniaturas de las capturas de la bandeja reciente (TRY-002), en su mismo orden. Por defecto `Win+Alt+V` (Windows) y `Ctrl+Option+Cmd+V` (macOS) (decisión de diseño, provisional). Se puede cambiar en Preferencias > Atajos (APP-017).
+  - Panel:
+    - pequeño, delante de todo, en el monitor del puntero;
+    - nunca sale en una captura (VID-017);
+    - cada miniatura lleva el nombre de la captura;
+    - un campo filtra por nombre.
+  - Se eligen una o varias capturas:
+    - clic, o `Espacio`, para marcar o desmarcar;
+    - `Ctrl`/`Mayús` + clic para varias;
+    - las flechas para moverse.
+  - El botón **Insertar** (o `Enter`) cierra el panel y pega las capturas elegidas en la app que estaba delante al abrirlo, en el orden de la bandeja.
+    - Se pega la **imagen original**, la de la captura, sin anotaciones ni efectos (decisión de Carlos).
+    - Varias capturas se pegan **una tras otra**, cada una en su propio pegado (decisión de diseño, provisional; Carlos lo decide "en la marcha").
+  - **Copiar** (o `Ctrl+C`) deja en el portapapeles la primera elegida, sin pegar.
+  - `Esc`, o hacer clic fuera, cierra sin hacer nada.
+  - Los videos y los GIF no se pueden pegar como imagen: aparecen desactivados, con un tooltip que lo explica.
+  - Sin capturas en la bandeja, el panel lo dice y ofrece **Capturar**.
+  - Pegar es una pulsación simulada de `Ctrl+V` (`Cmd+V` en macOS) en esa app. XcreenShot no se queda con el teclado ni con el ratón.
+  - Comandos:
+    - `tray.clipboard` abre o cierra el panel;
+    - `tray.insert` recibe los documentos (`documentIds`) y `paste`:
+      - con `paste: false`, solo copia la primera, sin pegar (por defecto en automatización, para no pegar en una terminal);
+      - con `paste: true`, pega todas en la ventana que estaba delante al abrir el panel.
+- **Criterios de aceptación:**
+  - [ ] Con Paint delante, el atajo, una captura e **Insertar** pegan esa imagen en el lienzo.
+  - [ ] Tres capturas elegidas e **Insertar** en Word dejan tres imágenes, en el orden de la bandeja.
+  - [ ] Una captura con una flecha se pega sin la flecha.
+  - [ ] `Esc` cierra el panel sin cambiar el portapapeles.
+  - [ ] Un video aparece desactivado.
+  - [ ] `xcreenshot tray insert <documentId> --json` deja la imagen original en el portapapeles y no pega.
+- **Fuentes:** IDEA-006 (`spec/IDEAS.md`)
+
 
 ## 9. Compartir: marco común
 

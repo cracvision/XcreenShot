@@ -174,7 +174,7 @@ Formato de cada idea:
 
 ## IDEA-006 · Portapapeles de XcreenShot: elegir capturas recientes para pegar (2026-11-16)
 
-> **Sin aprobar.** Carlos la propuso antes en una conversación fuera del proyecto (probablemente desde el coche) y la repitió el 2026-11-16. Pendiente de sus respuestas.
+> **Aprobada por Carlos el 2026-11-16:** es **TRY-018** en `04-biblioteca-compartir.md`. Respuestas: las capturas de la bandeja; se pega la imagen original, sin anotaciones; se eligen una o varias y un botón **Insertar** las pega; varias a la vez, "lo vemos en la marcha" (provisional: una tras otra); antes del OQ. El atajo no lo eligió: provisional `Win+Alt+V`.
 
 **Lo que propone Carlos:**
 - Como `Win+V` en Windows, pero con capturas.
