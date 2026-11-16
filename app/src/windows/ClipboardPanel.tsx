@@ -1,10 +1,12 @@
 // XcreenShot's clipboard (TRY-018): the recent tray's captures, to pick one or more and
-// paste them into the app that was in front. A click or Space picks; Shift+click picks a
-// range; Enter or Insert pastes the original images, in the tray's order; Ctrl+C only
-// copies the first; Esc or leaving the panel closes it. Never shows in a capture.
+// paste them into an open app. A click or Space picks; Shift+click picks a range;
+// "Insert into" lists the open windows (the one you were in first) and pastes the
+// original images there, in the tray's order; Enter pastes into the one you were in;
+// Ctrl+C only copies the first; Esc or leaving the panel closes it.
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Menu, type MenuItem } from "../components/Menu";
 import { run } from "../lib/commands";
 import { docUrl } from "../editor/state";
 import { pickRange, pickToggle, pickedInOrder } from "./clipboardPick";
@@ -15,6 +17,14 @@ interface Item {
   format: string;
   version: number;
   missing: boolean;
+}
+
+interface Target {
+  id: number;
+  app: string;
+  title: string;
+  minimized: boolean;
+  previous: boolean;
 }
 
 const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -28,13 +38,20 @@ export function ClipboardPanel() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [targets, setTargets] = useState<Target[]>([]);
   const busy = useRef(false);
   const grid = useRef<HTMLUListElement>(null);
 
   const close = () => void run("tray.clipboard", { open: false }).catch(() => undefined);
 
+  const loadTargets = () =>
+    void run<{ windows: Target[] }>("tray.targets")
+      .then((r) => setTargets(r.windows))
+      .catch(() => undefined);
+
   useEffect(() => {
     void run<{ items: Item[] }>("tray.list").then((r) => setItems(r.items));
+    loadTargets();
     // Clicking elsewhere closes it, like the system's clipboard.
     const un = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
       if (!focused && !busy.current) close();
@@ -68,12 +85,21 @@ export function ClipboardPanel() {
     return cur && pastable(cur) ? [cur.documentId] : [];
   };
 
-  const insert = async (paste: boolean, ids = chosen()) => {
+  const insert = async (paste: boolean, ids = chosen(), target?: number) => {
     if (ids.length === 0 || busy.current) return;
+    // Enter pastes where you were; when that was not another app, choose a window.
+    if (paste && target === undefined && !targets.some((w) => w.previous)) {
+      setError(t("ui.clipboard.pick_target"));
+      return;
+    }
     busy.current = true;
     setError("");
     try {
-      await run("tray.insert", { documentIds: ids, paste });
+      await run("tray.insert", {
+        documentIds: ids,
+        paste,
+        ...(target === undefined ? {} : { target }),
+      });
       if (!paste) close();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -91,6 +117,21 @@ export function ClipboardPanel() {
   };
 
   const n = chosen().length;
+  const windowItems: MenuItem[] =
+    targets.length === 0
+      ? [{ id: "none", label: t("ui.clipboard.no_targets"), disabled: true, onSelect: () => {} }]
+      : targets.map((w, k) => ({
+          id: String(w.id),
+          label: `${w.app} — ${w.title}`,
+          trailing:
+            w.previous || w.minimized ? (
+              <span className="muted">
+                {w.previous ? t("ui.clipboard.previous") : t("ui.clipboard.minimized")}
+              </span>
+            ) : undefined,
+          separator: k === 1 && targets[0]?.previous === true,
+          onSelect: () => void insert(true, chosen(), w.id),
+        }));
 
   return (
     <div
@@ -199,14 +240,15 @@ export function ClipboardPanel() {
         <button type="button" className="btn" disabled={n === 0} onClick={() => void insert(false)}>
           {t("ui.clipboard.copy")}
         </button>
-        <button
-          type="button"
-          className="btn primary"
+        <Menu
+          side="top"
+          align="end"
+          triggerClass="btn primary"
           disabled={n === 0}
-          onClick={() => void insert(true)}
-        >
-          {n > 1 ? t("ui.clipboard.insert_n", { n }) : t("ui.clipboard.insert")}
-        </button>
+          label={n > 1 ? t("ui.clipboard.insert_to_n", { n }) : t("ui.clipboard.insert_to")}
+          items={windowItems}
+          onShown={(shown) => shown && loadTargets()}
+        />
       </footer>
     </div>
   );

@@ -302,10 +302,17 @@ pub trait Host: Send + Sync {
     fn clipboard_panel(&self, open: Option<bool>) -> Result<bool, CommandError> {
         Err(unsupported())
     }
-    /// Pastes the clipboard into the window that was in front when the panel opened
-    /// (TRY-018): brings it forward and presses Ctrl+V (Cmd+V on macOS) once.
-    fn paste_into_target(&self) -> Result<(), CommandError> {
+    /// Pastes the clipboard into a window (TRY-018): `target` (an id from
+    /// `paste_targets`), else the one that was in front when the panel opened. Brings it
+    /// forward (restoring it if minimized) and presses Ctrl+V (Cmd+V on macOS) once.
+    /// Returns the window's app and title.
+    fn paste_into(&self, target: Option<u32>) -> Result<String, CommandError> {
         Err(unsupported())
+    }
+    /// The windows a paste can go to (TRY-018), `{id, app, title, minimized, previous}`,
+    /// the one that was in front when the panel opened first.
+    fn paste_targets(&self) -> Vec<Value> {
+        Vec::new()
     }
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels

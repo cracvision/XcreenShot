@@ -3158,14 +3158,20 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
             .params(params(
                 json!({
                     "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Tray documents, pasted in the tray's order"},
-                    "paste": {"type": "boolean", "default": false, "description": "false: only copies the first one's original image; true: pastes each into the window that was in front when the panel opened"}
+                    "paste": {"type": "boolean", "default": false, "description": "false: only copies the first one's original image; true: pastes each into `target`, or the window that was in front when the panel opened"},
+                    "target": {"type": "integer", "description": "A window from tray.targets to paste into"}
                 }),
                 &["documentIds"],
             ))
             .result(json!({"type": "object", "properties": {
                 "copied": {"type": "integer"},
                 "pasted": {"type": "integer"},
-                "skipped": {"type": "array", "items": {"type": "string"}, "description": "Videos and GIFs, which cannot be pasted as an image"}
+                "skipped": {"type": "array", "items": {"type": "string"}, "description": "Videos and GIFs, which cannot be pasted as an image"},
+                "into": {"type": "string", "description": "The title of the window pasted into"}
+            }})),
+        B::new("tray.targets", &["TRY-018"])
+            .result(json!({"type": "object", "properties": {
+                "windows": {"type": "array", "description": "{id, app, title, minimized, previous}: the open app windows a paste can go to, the one in front when the panel opened first"}
             }})),
         B::new("library.duplicate", &["TRY-010", "LIB-034"])
             .mutates()

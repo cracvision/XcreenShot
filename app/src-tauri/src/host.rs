@@ -576,8 +576,12 @@ impl Host for TauriHost {
             .map_err(CommandError::internal)
     }
 
-    fn paste_into_target(&self) -> Result<(), CommandError> {
-        crate::clip_panel::paste().map_err(CommandError::internal)
+    fn paste_into(&self, target: Option<u32>) -> Result<String, CommandError> {
+        crate::clip_panel::paste(target).map_err(CommandError::internal)
+    }
+
+    fn paste_targets(&self) -> Vec<Value> {
+        crate::clip_panel::targets()
     }
 
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {

@@ -1032,7 +1032,11 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
     - clic, o `Espacio`, para marcar o desmarcar;
     - `Ctrl`/`Mayús` + clic para varias;
     - las flechas para moverse.
-  - El botón **Insertar** (o `Enter`) cierra el panel y pega las capturas elegidas en la app que estaba delante al abrirlo, en el orden de la bandeja.
+  - El botón **Insertar en ▾** despliega las ventanas de apps abiertas (app y título; las minimizadas, marcadas) a las que se puede pegar, por ejemplo Outlook, Word o el chat de IA del navegador (pedido de Carlos, 2026-11-16).
+    - La primera es la ventana en la que estabas al abrir el panel, marcada como tal.
+    - Elegir una cierra el panel y pega en ella las capturas elegidas, en el orden de la bandeja. Si estaba minimizada, se restaura.
+    - `Enter` pega directamente en la ventana en la que estabas. Si no la había (por ejemplo, porque estaba delante XcreenShot), el panel pide elegirla en **Insertar en**.
+    - Si el pegado falla con el panel ya cerrado, una notificación lo dice.
     - Se pega la **imagen original**, la de la captura, sin anotaciones ni efectos (decisión de Carlos).
     - Varias capturas se pegan **una tras otra**, cada una en su propio pegado (decisión de diseño, provisional; Carlos lo decide "en la marcha").
   - **Copiar** (o `Ctrl+C`) deja en el portapapeles la primera elegida, sin pegar.
@@ -1042,12 +1046,14 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
   - Pegar es una pulsación simulada de `Ctrl+V` (`Cmd+V` en macOS) en esa app. XcreenShot no se queda con el teclado ni con el ratón.
   - Comandos:
     - `tray.clipboard` abre o cierra el panel;
-    - `tray.insert` recibe los documentos (`documentIds`) y `paste`:
+    - `tray.targets` lista las ventanas en las que se puede pegar;
+    - `tray.insert` recibe los documentos (`documentIds`), `paste` y `target`:
       - con `paste: false`, solo copia la primera, sin pegar (por defecto en automatización, para no pegar en una terminal);
-      - con `paste: true`, pega todas en la ventana que estaba delante al abrir el panel.
+      - con `paste: true`, pega todas en `target` (una ventana de `tray.targets`) o, sin él, en la que estaba delante al abrir el panel.
 - **Criterios de aceptación:**
-  - [ ] Con Paint delante, el atajo, una captura e **Insertar** pegan esa imagen en el lienzo.
-  - [ ] Tres capturas elegidas e **Insertar** en Word dejan tres imágenes, en el orden de la bandeja.
+  - [ ] Con Paint delante, el atajo, una captura y `Enter` pegan esa imagen en el lienzo.
+  - [ ] Con Word y Outlook abiertos, tres capturas elegidas e **Insertar en > Word** dejan tres imágenes en Word, en el orden de la bandeja, aunque el panel se abriera estando en Outlook.
+  - [ ] **Insertar en** lista Word y Outlook, y primero la ventana en la que estabas.
   - [ ] Una captura con una flecha se pega sin la flecha.
   - [ ] `Esc` cierra el panel sin cambiar el portapapeles.
   - [ ] Un video aparece desactivado.

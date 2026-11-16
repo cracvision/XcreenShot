@@ -87,26 +87,54 @@ fn remember_target() {
 #[cfg(not(windows))]
 fn remember_target() {}
 
-/// Brings the remembered window forward and presses Ctrl+V once.
+/// The windows a paste can go to, the one that was in front when the panel opened
+/// first and marked `previous`.
+pub fn targets() -> Vec<serde_json::Value> {
+    let previous = *TARGET.lock().unwrap() as u32;
+    let mut list: Vec<serde_json::Value> = xs_capture::picker::app_windows()
+        .into_iter()
+        .map(|w| {
+            serde_json::json!({
+                "id": w.id,
+                "app": w.app,
+                "title": w.title,
+                "minimized": w.minimized,
+                "previous": previous != 0 && w.id == previous,
+            })
+        })
+        .collect();
+    list.sort_by_key(|w| !w["previous"].as_bool().unwrap_or(false));
+    list
+}
+
+/// Brings a window forward (`target`, else the one that was in front when the panel
+/// opened), restoring it if minimized, and presses Ctrl+V once. Its title.
 #[cfg(windows)]
-pub fn paste() -> Result<(), String> {
+pub fn paste(target: Option<u32>) -> Result<String, String> {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_CONTROL, VK_V,
     };
-    use windows_sys::Win32::UI::WindowsAndMessaging::{IsWindow, SetForegroundWindow};
-    let target = *TARGET.lock().unwrap();
-    if target == 0 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetWindowTextW, IsIconic, IsWindow, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    };
+    let hwnd = target
+        .map(|t| t as isize)
+        .unwrap_or_else(|| *TARGET.lock().unwrap());
+    if hwnd == 0 {
         return Err("no window to paste into".into());
     }
-    // SAFETY: plain calls on a window handle, checked first; SendInput reads the array
-    // for the length of the call.
+    // SAFETY: plain calls on a window handle, checked first; the title buffer outlives
+    // its call; SendInput reads the array for the length of the call.
     unsafe {
-        let hwnd = target as windows_sys::Win32::Foundation::HWND;
+        let hwnd = hwnd as windows_sys::Win32::Foundation::HWND;
         if IsWindow(hwnd) == 0 {
             return Err("the window to paste into is gone".into());
         }
+        if IsIconic(hwnd) != 0 {
+            ShowWindow(hwnd, SW_RESTORE);
+        }
         SetForegroundWindow(hwnd);
-        std::thread::sleep(std::time::Duration::from_millis(120));
+        std::thread::sleep(std::time::Duration::from_millis(150));
         let key = |vk: u16, up: bool| INPUT {
             r#type: INPUT_KEYBOARD,
             Anonymous: INPUT_0 {
@@ -133,11 +161,13 @@ pub fn paste() -> Result<(), String> {
         if sent as usize != keys.len() {
             return Err("the paste keys could not be sent".into());
         }
+        let mut buf = [0u16; 256];
+        let n = GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
+        Ok(String::from_utf16_lossy(&buf[..n.max(0) as usize]))
     }
-    Ok(())
 }
 
 #[cfg(not(windows))]
-pub fn paste() -> Result<(), String> {
+pub fn paste(_target: Option<u32>) -> Result<String, String> {
     Err("not yet on this system".into())
 }

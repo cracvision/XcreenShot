@@ -5163,6 +5163,12 @@ pub fn extension() -> Extension {
             "tray.insert",
             &p
         ));
+        on!("tray.targets", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.targets",
+            &p
+        ));
         on!("tray.list", |core, ctx, p| tray::command(
             &core,
             ctx,

@@ -1087,7 +1087,7 @@
               "evidence_why": "Panel visible: aparición y orden de las miniaturas"
             },
             {
-              "action": "En el panel, elegir una captura que tenga una flecha (clic: sale una marca) y pulsar Insertar.",
+              "action": "En el panel, elegir una captura que tenga una flecha (clic: sale una marca) y pulsar Enter.",
               "expected": "El panel se cierra y en Paint aparece la captura original, sin la flecha.",
               "conditional": "",
               "prefilled": "",
@@ -1095,12 +1095,20 @@
               "evidence_why": "Resultado visible en otra app: imagen sin anotaciones"
             },
             {
-              "action": "Con Word delante, abrir el panel, elegir tres capturas y pulsar Insertar (3).",
-              "expected": "En Word quedan tres imágenes, en el orden de la bandeja.",
+              "action": "Con un correo nuevo de Outlook delante y Word abierto, abrir el panel, elegir tres capturas, abrir Insertar (3) en y elegir Word.",
+              "expected": "La lista muestra primero el correo de Outlook (en la que estabas) y también Word; en Word quedan tres imágenes, en el orden de la bandeja, y el correo no recibe nada.",
               "conditional": "",
               "prefilled": "",
               "evidence": "captura",
               "evidence_why": "Resultado visible en Word: tres imágenes en orden"
+            },
+            {
+              "action": "Con el chat de IA abierto en el navegador, abrir el panel desde otra app, elegir una captura y en Insertar en elegir la ventana del navegador.",
+              "expected": "La captura queda adjunta en el chat del navegador.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Resultado visible en el chat"
             },
             {
               "action": "Abrir el panel, elegir una captura, pulsar Copiar y pegar con Ctrl+V en Paint.",

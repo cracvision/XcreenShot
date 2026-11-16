@@ -719,6 +719,10 @@
       "title": "Insertar desde el portapapeles de XcreenShot",
       "description": "Copia la imagen original de capturas de la bandeja, sin anotaciones; con paste, pega cada una en la ventana que estaba delante al abrir el panel."
     },
+    "tray_targets": {
+      "title": "Ventanas donde pegar",
+      "description": "Las ventanas de apps abiertas en las que puede pegar el portapapeles de XcreenShot, primero la que estaba delante."
+    },
     "tray_list": {
       "title": "Listar la bandeja reciente",
       "description": "Los elementos de la bandeja reciente, de izquierda a derecha, con su ID de la biblioteca y si están fijados, sin guardar o a la vista."
@@ -2613,6 +2617,8 @@
   "notify": {
     "updated_title": "XcreenShot se actualizó",
     "updated": "Ya tienes la versión {{version}}.",
+    "clipboard_failed_title": "No se pudo pegar",
+    "clipboard_failed": "Portapapeles de XcreenShot: {{error}}. Prueba con Insertar en y elige la ventana.",
     "update_title": "Está disponible XcreenShot {{version}}",
     "update": "Ábrelo para ver las novedades e instalarla.",
     "lan_pair_title": "Petición de contacto",
@@ -5098,6 +5104,12 @@
       "hint": "Clic o Espacio para elegir, Enter para insertar (la imagen original, sin anotaciones), Esc para cerrar",
       "insert": "Insertar",
       "insert_n": "Insertar ({{n}})",
+      "insert_to": "Insertar en",
+      "insert_to_n": "Insertar ({{n}}) en",
+      "previous": "en la que estabas",
+      "minimized": "minimizada",
+      "no_targets": "No hay otras ventanas abiertas",
+      "pick_target": "Elige dónde pegar en Insertar en",
       "copy": "Copiar",
       "close": "Cerrar",
       "none": "Todavía no hay capturas en la bandeja reciente.",

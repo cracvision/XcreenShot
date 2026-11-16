@@ -229,17 +229,20 @@ pub fn command(core: &Arc<Core>, ctx: &Context, id: &str, p: &Value) -> CommandR
             Ok(json!({ "open": open }))
         }
         "tray.insert" => insert(core, lang, p),
+        "tray.targets" => Ok(json!({ "windows": core.host().paste_targets() })),
         _ => Err(CommandError::internal(format!("unknown tray command {id}"))),
     }
 }
 
 /// `tray.insert` (TRY-018): the original images of tray documents (as captured, without
 /// annotations), in the tray's order. Without `paste`, only the first is copied; with
-/// it, the panel closes and each is pasted into the window that was in front when the
-/// panel opened, one paste each. Videos and GIFs are skipped.
+/// it, the panel closes and each is pasted, one paste each, into `target` (a window from
+/// `tray.targets`) or, without it, the window that was in front when the panel opened.
+/// Videos and GIFs are skipped. A failure once the panel is gone shows as a notice.
 fn insert(core: &Arc<Core>, lang: Lang, p: &Value) -> CommandResult {
     let wanted = targets(core, lang, p)?;
     let paste = p.get("paste").and_then(Value::as_bool).unwrap_or(false);
+    let target = p.get("target").and_then(Value::as_u64).map(|t| t as u32);
     let ed = editor(core);
     let mut ids: Vec<String> = ed
         .store
@@ -282,17 +285,38 @@ fn insert(core: &Arc<Core>, lang: Lang, p: &Value) -> CommandResult {
         std::thread::sleep(Duration::from_millis(150));
     }
     let (mut copied, mut pasted) = (0, 0);
-    for bytes in images.iter().take(if paste { images.len() } else { 1 }) {
-        let image = xs_image::encode::decode(bytes).map_err(CommandError::internal)?;
-        crate::copy_image(&image).map_err(|e| CommandError::internal(e.to_string()))?;
-        copied += 1;
-        if paste {
-            core.host().paste_into_target()?;
-            pasted += 1;
-            // The app reads the clipboard after the keys: wait before the next image
-            // replaces it.
-            std::thread::sleep(Duration::from_millis(400));
+    let mut into = String::new();
+    let result = (|| -> Result<(), CommandError> {
+        for bytes in images.iter().take(if paste { images.len() } else { 1 }) {
+            let image = xs_image::encode::decode(bytes).map_err(CommandError::internal)?;
+            crate::copy_image(&image).map_err(|e| CommandError::internal(e.to_string()))?;
+            copied += 1;
+            if paste {
+                into = core.host().paste_into(target)?;
+                pasted += 1;
+                // The app reads the clipboard after the keys: wait before the next image
+                // replaces it.
+                std::thread::sleep(Duration::from_millis(400));
+            }
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => {
+            tracing::info!(copied, pasted, paste, "clipboard: inserted");
+            Ok(json!({ "copied": copied, "pasted": pasted, "skipped": skipped, "into": into }))
+        }
+        Err(e) => {
+            tracing::warn!(copied, pasted, error = %e.message, "clipboard: insert failed");
+            if paste {
+                // The panel is gone: say it where it can be seen.
+                core.host().notify(
+                    "problems",
+                    &tr(lang, "notify.clipboard_failed_title", &[]),
+                    &tr(lang, "notify.clipboard_failed", &[("error", &e.message)]),
+                );
+            }
+            Err(e)
         }
     }
-    Ok(json!({ "copied": copied, "pasted": pasted, "skipped": skipped }))
 }

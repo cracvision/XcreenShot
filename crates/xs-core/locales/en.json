@@ -719,6 +719,10 @@
       "title": "Insert from XcreenShot's clipboard",
       "description": "Copies the original image of tray captures, without annotations; with paste, pastes each into the window that was in front when the panel opened."
     },
+    "tray_targets": {
+      "title": "Windows to paste into",
+      "description": "The open app windows XcreenShot's clipboard can paste into, the one that was in front first."
+    },
     "tray_list": {
       "title": "List the recent tray",
       "description": "The items of the recent tray, left to right, with their library ID and whether each is pinned, unsaved or shown."
@@ -2613,6 +2617,8 @@
   "notify": {
     "updated_title": "XcreenShot was updated",
     "updated": "You now have version {{version}}.",
+    "clipboard_failed_title": "Could not paste",
+    "clipboard_failed": "XcreenShot's clipboard: {{error}}. Try Insert into and pick the window.",
     "update_title": "XcreenShot {{version}} is available",
     "update": "Open it to see what is new and install it.",
     "lan_pair_title": "Pairing request",
@@ -5098,6 +5104,12 @@
       "hint": "Click or Space to pick, Enter to insert (the original image, without annotations), Esc to close",
       "insert": "Insert",
       "insert_n": "Insert ({{n}})",
+      "insert_to": "Insert into",
+      "insert_to_n": "Insert ({{n}}) into",
+      "previous": "the one you were in",
+      "minimized": "minimized",
+      "no_targets": "No other windows are open",
+      "pick_target": "Choose where to paste in Insert into",
       "copy": "Copy",
       "close": "Close",
       "none": "There are no captures in the recent tray yet.",

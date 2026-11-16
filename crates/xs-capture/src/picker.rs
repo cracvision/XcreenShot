@@ -118,6 +118,12 @@ fn windows() -> Vec<(xcap::Window, Entry)> {
     list
 }
 
+/// The app windows a paste can go to (TRY-018), topmost first: the picker's list,
+/// without thumbnails.
+pub fn app_windows() -> Vec<Entry> {
+    windows().into_iter().map(|(_, e)| e).collect()
+}
+
 /// Opens the picker and blocks until a window is picked (and captured) or it is
 /// cancelled (CAP-030).
 pub fn run(core: &Core, ctx: &Context, opts: &Options) -> CommandResult {
