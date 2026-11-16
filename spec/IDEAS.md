@@ -169,3 +169,42 @@ Formato de cada idea:
 3. ¿Cómo se identifica a un usuario? *Propuesta:* nombre visible y equipo; la primera vez, los dos aceptan (como emparejar un dispositivo).
 4. ¿Hay que aceptar cada envío? *Propuesta:* sí, con un aviso; de un contacto de confianza, se puede aceptar siempre.
 5. ¿Hito? *Propuesta:* con compartir, en M6 o después.
+
+---
+
+## IDEA-006 · Portapapeles de XcreenShot: elegir capturas recientes para pegar (2026-11-16)
+
+> **Sin aprobar.** Carlos la propuso antes en una conversación fuera del proyecto (probablemente desde el coche) y la repitió el 2026-11-16. Pendiente de sus respuestas.
+
+**Lo que propone Carlos:**
+- Como `Win+V` en Windows, pero con capturas.
+- Un atajo abre un panel pequeño con las miniaturas de las capturas recientes.
+- Se elige una, o varias a la vez, y se pegan en la app en la que se estaba trabajando.
+
+**Relación con lo que ya existe:**
+- La **bandeja reciente** (`TRY-`): ya guarda las capturas recientes, pero solo dentro del editor y para abrirlas, no para pegarlas en otra app.
+- **Copiar todo** y el portapapeles del editor (EDT-089): copian la imagen final, con sus anotaciones.
+- El submenú **Recientes ▸** del ícono (APP-002): abre capturas, no las pega.
+- Los atajos globales (APP-017 a APP-019).
+- La **multicaptura** (CAP-067) tiene un panel de miniaturas parecido, del que se puede partir.
+
+**Qué choca o qué riesgos tiene:**
+- **Pegar en otra app:** XcreenShot tiene que devolver el foco a la app de antes y simular `Ctrl+V`. Eso es entrada simulada: va con las mismas precauciones que Dibujo en vivo y Multicaptura (nada de quedarse con el teclado).
+- **Varias imágenes a la vez:** casi todas las apps aceptan una sola imagen por pegado. Pegar varias exige pegarlas una tras otra, o entregarlas como archivos (como al copiar archivos en el Explorador), lo que solo aceptan algunas apps (chats, correo, carpetas).
+- **El atajo:** `Win+V` es de Windows y no se puede usar. Casi todo `Ctrl+Alt+Mayús+<letra>` choca con Jarvis en el equipo de Carlos. `Ctrl+Mayús+V` es "pegar sin formato" en muchas apps.
+- **Privacidad:** el panel muestra miniaturas de capturas de pantalla. Todo queda en el equipo, como la bandeja.
+
+**Preguntas pendientes, con una propuesta para cada una:**
+1. **¿Qué capturas salen en el panel?** *Propuesta:* las 20 más recientes de la biblioteca (las mismas de la bandeja), las más nuevas primero. Sobreviven al reinicio porque ya están guardadas.
+2. **¿Qué se pega: la captura original o con sus anotaciones?** *Propuesta:* la imagen final, con anotaciones y efectos, como Copiar todo.
+3. **Al elegir, ¿pega directamente o solo copia?** *Propuesta:* `Enter` o doble clic pegan en la app de antes; `Ctrl+C` solo copia, por si se quiere pegar en otro sitio.
+4. **¿Cómo se pegan varias?** *Propuesta:*
+   - si la app acepta archivos (Explorador, Teams, Slack, Outlook), como archivos en un solo pegado;
+   - si no, una tras otra, cada una en su propio pegado.
+5. **¿Qué atajo?** *Propuesta:* asignable en Preferencias > Atajos, y por defecto uno que no choque con Windows ni con Jarvis. Por ejemplo `Win+Alt+V`, si Windows lo deja libre; si no, `Ctrl+Mayús+F12`.
+6. **¿Cómo es el panel?** *Propuesta:* una ventanita de cristal junto al puntero, como la de `Win+V`:
+   - miniaturas con el nombre, la app de origen y la hora;
+   - un campo para buscar;
+   - se maneja con flechas, `Ctrl`/`Mayús` + clic para elegir varias, `Enter` pega y `Esc` cierra.
+7. **¿Vídeos y GIF?** *Propuesta:* también, pegados como archivo, porque como imagen no se pueden.
+8. **¿Hito?** *Propuesta:* después de la prueba de punta a punta (OQ), como función propia, con su ficha en `05-app.md` o `04-biblioteca-compartir.md`.
