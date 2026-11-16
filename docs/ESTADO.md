@@ -34,7 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Versión publicada:** 0.2.7 (2026-11-16). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Versión publicada:** 0.2.8 (2026-11-16). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
 - **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.4 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
