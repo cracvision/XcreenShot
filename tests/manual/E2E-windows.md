@@ -3,7 +3,7 @@
 Una sola guía para recorrer XcreenShot de principio a fin, como se usa de verdad, en tres sesiones. Cada bloque dice qué comprobar y enlaza la guía detallada: ábrela solo si algo falla o si te sobra tiempo.
 
 - **Versión:** la versión bajo prueba que indica la Portada del OQ (hoy, 0.2.5) o posterior. Si tienes otra: **Ayuda > Buscar actualizaciones…**, o descarga el instalador de https://github.com/cracvision/xcreenshot-releases.
-- **Registro oficial:** el protocolo OQ en Excel [`XcreenShot_OQ_Windows_v1_2.xlsx`](XcreenShot_OQ_Windows_v1_2.xlsx) (mismos casos, con acción, resultado esperado, PASS/FAIL/N/A, evidencia y desviaciones). Se regenera con `python scripts/make-oq.py tests/manual/E2E-windows-steps.json <salida.xlsx>`. Esta guía queda como versión de lectura.
+- **Registro oficial:** el protocolo OQ en Excel [`XcreenShot_OQ_Windows_v1_3.xlsx`](XcreenShot_OQ_Windows_v1_3.xlsx) (mismos casos, con acción, resultado esperado, PASS/FAIL/N/A, evidencia y desviaciones). Se regenera con `python scripts/make-oq.py tests/manual/E2E-windows-steps.json <salida.xlsx>`. Esta guía queda como versión de lectura.
 - **Evidencia:** cada casilla dice qué evidencia pide si pasa: *captura* (captura de pantalla hecha con una herramienta ajena a XcreenShot), *archivo* (la ruta de lo que produjo XcreenShot) o *registro* (la salida del comando que lo confirma). Todo fallo lleva captura. Detalle y nombres de archivo en [`docs/jarvis/LEEME-JARVIS.md`](../../docs/jarvis/LEEME-JARVIS.md), sección 3.
 - **Cómo marcar:** `[x]` si pasa. Si falla, deja `[ ]` y escribe debajo **FALLA:** qué pasó, con una captura si ayuda.
 
@@ -230,16 +230,23 @@ Encontrar, ordenar y sacar capturas.
 - [ ] Soltar una carpeta "Proyecto X" sobre la biblioteca propone esa etiqueta. · *Evidencia: captura*
 - [ ] Con tu biblioteca real, desplazarte rápido no la congela y la búsqueda responde mientras escribes. · *Evidencia: registro*
 
-### 2.8 Bandeja reciente (8 min)
+### 2.8 Bandeja reciente y Portapapeles de XcreenShot (15 min)
 
 La tira de capturas del editor.
-**IDs:** TRY-001 a TRY-017 · **Guías:** [TRY-003-007-017.md](TRY-003-007-017.md), [TRY-010-012-016.md](TRY-010-012-016.md), [TRY-014.md](TRY-014.md)
+**IDs:** TRY-001 a TRY-018 · **Guías:** [TRY-003-007-017.md](TRY-003-007-017.md), [TRY-010-012-016.md](TRY-010-012-016.md), [TRY-014.md](TRY-014.md), [TRY-018.md](TRY-018.md)
 
 - [ ] La chincheta fija un elemento a la izquierda; arrastrar dentro de la bandeja reordena; sigue así tras reiniciar. · *Evidencia: registro*
 - [ ] Preferencias > Biblioteca > **Elementos de la bandeja reciente** = 3: los antiguos salen de la bandeja pero siguen en la biblioteca. · *Evidencia: registro*
 - [ ] `Ctrl`+clic en varias y clic derecho: el menú actúa sobre todas. **Duplicar** (`Ctrl+Mayús+D`) crea "(copia)" con la flecha editable. · *Evidencia: registro*
 - [ ] Arrastrar una miniatura sobre el lienzo de otra captura la añade como imagen flotante; la original no cambia. · *Evidencia: registro*
 - [ ] Arrastrar una miniatura al escritorio entrega el archivo. · *Evidencia: archivo*
+- [ ] Con Paint delante, `Win+Alt+V`: se abre **Portapapeles de XcreenShot** con las miniaturas de la bandeja, en su orden. · *Evidencia: captura*
+- [ ] Elegir una captura con una flecha e **Insertar**: el panel se cierra y en Paint aparece la captura original, sin la flecha. · *Evidencia: captura*
+- [ ] Con Word delante, elegir tres e **Insertar (3)**: tres imágenes, en el orden de la bandeja. · *Evidencia: captura*
+- [ ] Elegir una, **Copiar** y `Ctrl+V` en Paint: se pega la original. · *Evidencia: captura*
+- [ ] `Esc`, y otra vez haciendo clic en otra ventana: el panel se cierra sin pegar nada. · *Evidencia: registro*
+- [ ] Con un video en la bandeja: aparece desactivado, con su tooltip. · *Evidencia: captura*
+- [ ] `xcreenshot --no-launch tray insert <documentId> --json`: `copied` 1, `pasted` 0 y la imagen original en el portapapeles. · *Evidencia: registro*
 
 ---
 

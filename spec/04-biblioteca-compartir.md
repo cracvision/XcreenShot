@@ -1025,7 +1025,7 @@ Este archivo especifica dónde viven las capturas de XcreenShot y cómo salen de
   - El atajo global **Portapapeles de XcreenShot** abre un panel con las miniaturas de las capturas de la bandeja reciente (TRY-002), en su mismo orden. Por defecto `Win+Alt+V` (Windows) y `Ctrl+Option+Cmd+V` (macOS) (decisión de diseño, provisional). Se puede cambiar en Preferencias > Atajos (APP-017).
   - Panel:
     - pequeño, delante de todo, en el monitor del puntero;
-    - nunca sale en una captura (VID-017);
+    - sale en las capturas de pantalla, como el portapapeles del sistema (decisión de diseño: así queda como evidencia de una prueba);
     - cada miniatura lleva el nombre de la captura;
     - un campo filtra por nombre.
   - Se eligen una o varias capturas:

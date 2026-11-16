@@ -20,14 +20,15 @@ from openpyxl.worksheet.datavalidation import DataValidation
 SRC, OUT = sys.argv[1], sys.argv[2]
 data = json.load(open(SRC, encoding="utf-8"))
 
-VERSION = "0.2.5"
-BUILD = "d02d5d3"
+VERSION = "0.2.6"
+BUILD = "pendiente"
 # The protocol's own version and its history (Portada).
-PROTOCOL = "1.2"
+PROTOCOL = "1.3"
 HISTORY = [
     ("1.0", "2026-11-15", "Primera versión: 174 casos, a partir de tests/manual/E2E-windows.md."),
     ("1.1", "2026-11-15", "Versión bajo prueba 0.2.5 (cámaras virtuales). Los casos ya no fijan un número de versión: comparan con la versión bajo prueba de esta Portada."),
     ("1.2", "2026-11-15", "Columna Evidencia requerida (Captura, Archivo o Registro) en cada caso, y reglas de evidencia en las instrucciones. Pedido por Carlos; la lista de casos es una propuesta pendiente de su aprobación."),
+    ("1.3", "2026-11-16", "Siete casos del Portapapeles de XcreenShot (TRY-018) en el bloque 2.8. Versión bajo prueba 0.2.6."),
 ]
 DOC_ID = "XS-OQ-WIN-001"
 # What a PASS needs as evidence (FAIL: always a screenshot; N/A: none).

@@ -1031,11 +1031,11 @@
         },
         {
           "id": "2.8",
-          "title": "Bandeja reciente",
-          "minutes": "8",
+          "title": "Bandeja reciente y Portapapeles de XcreenShot",
+          "minutes": "15",
           "purpose": "La tira de capturas del editor.",
-          "requirements": "TRY-001 a TRY-017",
-          "guides": "TRY-003-007-017.md, TRY-010-012-016.md, TRY-014.md",
+          "requirements": "TRY-001 a TRY-017, TRY-018",
+          "guides": "TRY-003-007-017.md, TRY-010-012-016.md, TRY-014.md, TRY-018.md",
           "note": "",
           "steps": [
             {
@@ -1077,6 +1077,62 @@
               "prefilled": "",
               "evidence": "archivo",
               "evidence_why": "El archivo en el escritorio es el resultado"
+            },
+            {
+              "action": "Con Paint delante, pulsar Win+Alt+V.",
+              "expected": "Se abre el panel Portapapeles de XcreenShot con las miniaturas de la bandeja, en el mismo orden.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Panel visible: aparición y orden de las miniaturas"
+            },
+            {
+              "action": "En el panel, elegir una captura que tenga una flecha (clic: sale una marca) y pulsar Insertar.",
+              "expected": "El panel se cierra y en Paint aparece la captura original, sin la flecha.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Resultado visible en otra app: imagen sin anotaciones"
+            },
+            {
+              "action": "Con Word delante, abrir el panel, elegir tres capturas y pulsar Insertar (3).",
+              "expected": "En Word quedan tres imágenes, en el orden de la bandeja.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Resultado visible en Word: tres imágenes en orden"
+            },
+            {
+              "action": "Abrir el panel, elegir una captura, pulsar Copiar y pegar con Ctrl+V en Paint.",
+              "expected": "Se pega la imagen original de esa captura.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Resultado visible en Paint"
+            },
+            {
+              "action": "Abrir el panel y pulsar Esc; después abrirlo y hacer clic en otra ventana.",
+              "expected": "Las dos veces el panel se cierra sin pegar nada ni cambiar el portapapeles.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "registro",
+              "evidence_why": "Cierre sin efectos, comprobable sin imagen"
+            },
+            {
+              "action": "Con un video en la bandeja, abrir el panel y pasar el puntero por encima del video.",
+              "expected": "El video aparece desactivado y su tooltip dice que no se puede pegar como imagen.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "captura",
+              "evidence_why": "Estado desactivado y tooltip visibles"
+            },
+            {
+              "action": "En una terminal, ejecutar xcreenshot --no-launch tray insert <documentId> --json con una captura de la bandeja.",
+              "expected": "Responde copied 1 y pasted 0, y el portapapeles tiene la imagen original.",
+              "conditional": "",
+              "prefilled": "",
+              "evidence": "registro",
+              "evidence_why": "Salida del comando"
             }
           ]
         }
