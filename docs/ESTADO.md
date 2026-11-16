@@ -34,7 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Versión publicada:** 0.2.5 (2026-11-15). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Versión publicada:** 0.2.6 (2026-11-16). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
 - **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.4 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
@@ -63,7 +63,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
-- **2026-11-16: Portapapeles de XcreenShot (TRY-018).** Idea de Carlos (IDEA-006, aprobada hoy, antes del OQ): `Win+Alt+V` abre un panel con las capturas de la bandeja; se eligen una o varias e **Insertar** pega las imágenes originales (sin anotaciones, decisión de Carlos) una tras otra en la app de antes, con un `Ctrl+V` simulado, sin ganchos. Provisionales en `spec/QUESTIONS.md`: el atajo, varias una tras otra, cómo se pega. Probado en Windows Sandbox (`scripts/dev/sandbox/clipboard.ps1`). OQ **v1.3** con siete casos nuevos en el bloque 2.8. Versión **0.2.6** (pendiente del sí de Carlos para publicarla).
+- **2026-11-16: Portapapeles de XcreenShot (TRY-018).** Idea de Carlos (IDEA-006, aprobada hoy, antes del OQ): `Win+Alt+V` abre un panel con las capturas de la bandeja; se eligen una o varias e **Insertar** pega las imágenes originales (sin anotaciones, decisión de Carlos) una tras otra en la app de antes, con un `Ctrl+V` simulado, sin ganchos. Provisionales en `spec/QUESTIONS.md`: el atajo, varias una tras otra, cómo se pega. Probado en Windows Sandbox (`scripts/dev/sandbox/clipboard.ps1`). OQ **v1.3** con siete casos nuevos en el bloque 2.8. Versión **0.2.6** publicada (con el sí de Carlos), compilación `8b3f3f5`; probada antes en Windows Sandbox (portapapeles e instalación limpia) y `Win+Alt+V` queda activo en el equipo de Carlos. Paquete de Jarvis regenerado; la sesión de Roamies estaba desconectada: Carlos le pide que lo recargue.
 
 - **2026-11-15 (noche): OQ v1.2 y reglas de evidencia** (pedido de Carlos, traído por la sesión de Roamies, que mantiene a Jarvis). Columna **Evidencia requerida** en cada caso: Captura 71, Registro 62, Archivo 41; **la lista es una propuesta pendiente de aprobación de Carlos**. Reglas en `docs/jarvis/LEEME-JARVIS.md` (sección 3, "Evidencia"): Jarvis captura con su `save_screenshot`, nunca con XcreenShot; si XcreenShot produce el archivo, ese archivo es el resultado; captura en todo FAIL y en los PASS marcados; nombres `OQ_<caso>.png`, `_2`, `_FAIL`, `_R1`, sin reemplazar nunca; los controles que XcreenShot excluye de las capturas (VID-017) no salen y no es un fallo. `tests/evidencias_OQ/` (la creó Jarvis) excluida de git; la guía mantiene la evidencia en `Documents\XcreenShot-OQ\evidencia\` (pendiente de que Carlos elija). Kit de Jarvis regenerado.
 
@@ -770,7 +770,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.4 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
 
 1. Instalador anterior (2026-11-15), compilación `e3343c4`: la 0.2.0 más los destinos estándar de Compartir.
-1. **Versión publicada (2026-11-15): XcreenShot 0.2.5**, compilación `d02d5d3`, en https://github.com/cracvision/xcreenshot-releases: las cámaras virtuales (GoPro). Es la que hay que instalar.
+1. **Versión publicada (2026-11-16): XcreenShot 0.2.6**, compilación `8b3f3f5`, en https://github.com/cracvision/xcreenshot-releases: el Portapapeles de XcreenShot (TRY-018). Es la que hay que instalar.
+1. Versión publicada anterior: 0.2.5 (`d02d5d3`, las cámaras virtuales).
 1. Versión publicada anterior: 0.2.4 (`8bbb93f`, la multicaptura protegida).
 1. Versiones publicadas anteriores: 0.2.3 (`b179f37`, el CLI sin Visual C++ y el aviso tras actualizar), 0.2.2 (`bca1f70`, el arreglo de Dibujo en vivo) y 0.2.1, compilación `5a060fa`, en https://github.com/cracvision/xcreenshot-releases (instalador y portable). La 0.2.0 sigue allí.
 1. Instalador anterior (2026-11-15), compilación `81f669a`: las actualizaciones.
