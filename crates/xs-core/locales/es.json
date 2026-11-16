@@ -3972,6 +3972,13 @@
         "target_document": "Efectos del documento",
         "target_image": "Efectos de la imagen flotante elegida",
         "remove_all": "Quitar todos",
+        "capture": {
+          "tag": "Al capturar",
+          "tag_help": "Se añade a cada captura nueva: panel de captura, pestaña Imagen, Efectos.",
+          "off": "{{names}} se sigue añadiendo a cada captura nueva (panel de captura, pestaña Imagen).",
+          "remove": "Quitar de las capturas nuevas",
+          "keep": "Dejarlo"
+        },
         "selection": "Aplicar a la selección:",
         "value": "valor",
         "remove": "Quitar de la pila",

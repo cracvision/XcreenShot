@@ -3972,6 +3972,13 @@
         "target_document": "Effects of the document",
         "target_image": "Effects of the selected floating image",
         "remove_all": "Remove all",
+        "capture": {
+          "tag": "On capture",
+          "tag_help": "Added to every new capture: capture panel, Image tab, Effects.",
+          "off": "{{names}} is still added to every new capture (capture panel, Image tab).",
+          "remove": "Remove from new captures",
+          "keep": "Keep"
+        },
         "selection": "Apply to the selection:",
         "value": "value",
         "remove": "Remove from the stack",

@@ -1202,11 +1202,13 @@ Este archivo especifica cómo se inicia una captura de imagen en XcreenShot, có
   - **Detalles de captura** puede tener la opción **Pedir texto al capturar**. Con ella, al terminar cada captura aparece un cuadro breve para escribir un texto que el efecto muestra junto a los metadatos (CAP-056). `Esc` deja el texto vacío y no cancela la captura.
   - Los modos que no producen una imagen (Extraer texto, `SMT-`) desactivan el control.
   - La pestaña Universal no tiene efectos (CAP-010).
+  - En la pestaña Efectos del editor, los efectos del documento que están en esta lista llevan la marca **Al capturar**. Al apagar o quitar uno de ellos (o con Quitar todos), el editor avisa de que se sigue añadiendo a cada captura nueva y ofrece **Quitar de las capturas nuevas**, que lo saca de esta lista, o **Dejarlo** (decisión provisional, 2026-11-16, a raíz de la caminata de Carlos: apagaba Perspectiva y volvía en cada captura).
 - **Criterios de aceptación:**
   - [ ] Con Borde (4 px, negro) y Sombra, la captura se abre en el editor con los dos efectos aplicados, y se puede quitar cualquiera de ellos.
   - [ ] Con Escalar imagen al 50 % sobre una captura de 3840×2160 px, la imagen del portapapeles mide 1920×1080 px.
   - [ ] Con Detalles de captura y Pedir texto al capturar, aparece el cuadro de texto, y lo escrito aparece en la imagen.
   - [ ] **Ninguno** vacía la lista, y la siguiente captura sale sin efectos.
+  - [ ] Con Perspectiva en la lista, en el editor lleva la marca Al capturar; al apagarla y elegir **Quitar de las capturas nuevas**, la siguiente captura sale sin Perspectiva y la lista del panel ya no la tiene.
 - **Mejora sobre Snagit:** cualquier efecto no interactivo, en el orden que elija el usuario y editable después.
 - **Fuentes:** research/01-captura.md §4.3, §12.2, §16 (punto 9); research/05-plataformas-versiones.md §1B (2025.2.1), §3 (Editor: esquinas redondeadas al capturar)
 

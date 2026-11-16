@@ -6460,6 +6460,31 @@ html.launcher-root #root {
   font-weight: 600;
 }
 
+/* An effect the capture panel adds to every capture (CAP-051). */
+.fx-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 11px;
+}
+
+.fx-capture {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  color: var(--ink);
+}
+
+.fx-capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .fx-options {
   display: grid;
   gap: 8px;

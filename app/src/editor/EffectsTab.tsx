@@ -14,6 +14,7 @@ import { sampleUrl } from "./themesUi";
 import { DEFAULTS, TYPES } from "./effects";
 import { EffectFields } from "./EffectFields";
 import { read, type Effect } from "./effectOptions";
+import { captureTypes, withoutTypes } from "./captureFx";
 
 interface SavedEffect {
   id: string;
@@ -182,6 +183,25 @@ export function EffectsTab() {
   const selection = useEditor((s) => s.selection);
   const [open_, setOpen] = useState<string | null>(null);
   const [dragged, setDragged] = useState<number | null>(null);
+  // Effects on capture (CAP-051): the capture panel's list, and the ones just turned off
+  // here that it still adds to every new capture.
+  const [onCapture, setOnCapture] = useState<Effect[]>([]);
+  const documentId = doc?.documentId;
+  const [asked, setAsked] = useState<{ doc: string | undefined; types: string[] }>({
+    doc: undefined,
+    types: [],
+  });
+  const ask = asked.doc === documentId ? asked.types : [];
+  const setAsk = (types: string[]) => setAsked({ doc: documentId, types });
+  useEffect(() => {
+    let alive = true;
+    void run<{ image: { effects: Effect[] } }>("capture.settings")
+      .then((r) => alive && setOnCapture(r.image.effects ?? []))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [documentId]);
   if (!doc) return <p className="muted">{t("ui.editor.no_document")}</p>;
   // A single floating image selected: its own stack (EDT-053).
   const image =
@@ -197,12 +217,31 @@ export function EffectsTab() {
     );
   const name = (k: string) => t(`ui.editor.fx.${k}.name`);
   const pixels = doc.pixelSelection;
+  // Only the document's own stack comes from the capture panel, not a floating image's.
+  const fromCapture = image ? new Set<string>() : captureTypes(onCapture);
+  // Turning off or removing one of those: offer to stop adding it to new captures.
+  const offered = (types: string[]) => {
+    const more = types.filter((type) => fromCapture.has(type) && !ask.includes(type));
+    if (more.length) setAsk([...ask, ...more]);
+  };
+  const stopOnCapture = () => {
+    const types = ask;
+    setAsk([]);
+    void run<{ image: { effects: Effect[] } }>("capture.configure", {
+      image: { effects: withoutTypes(onCapture, types) },
+    })
+      .then((r) => setOnCapture(r.image.effects ?? []))
+      .catch((e) => useEditor.getState().showError(e));
+  };
 
   const toggle = (type: string) => {
     const i = stack.findIndex((e) => e.type === type);
     const e = stack[i];
     if (!e) fx({ action: "add", effect: { type, ...DEFAULTS[type] } });
-    else fx({ action: "update", index: i, effect: { enabled: e.enabled === false } });
+    else {
+      if (e.enabled !== false) offered([type]);
+      fx({ action: "update", index: i, effect: { enabled: e.enabled === false } });
+    }
   };
   const update = (i: number, changes: Record<string, unknown>) =>
     fx({ action: "update", index: i, effect: changes });
@@ -231,11 +270,27 @@ export function EffectsTab() {
           type="button"
           className="btn small"
           disabled={!stack.some((e) => e.enabled !== false)}
-          onClick={() => fx({ action: "clear" })}
+          onClick={() => {
+            offered(stack.filter((e) => e.enabled !== false).map((e) => e.type));
+            fx({ action: "clear" });
+          }}
         >
           {t("ui.editor.fx.remove_all")}
         </button>
       </div>
+      {ask.length > 0 && (
+        <div className="fx-capture" role="status">
+          <span>{t("ui.editor.fx.capture.off", { names: ask.map(name).join(", ") })}</span>
+          <div className="fx-capture-actions">
+            <button type="button" className="btn small primary" onClick={stopOnCapture}>
+              {t("ui.editor.fx.capture.remove")}
+            </button>
+            <button type="button" className="btn small" onClick={() => setAsk([])}>
+              {t("ui.editor.fx.capture.keep")}
+            </button>
+          </div>
+        </div>
+      )}
       <SavedEffects target={target} />
       {pixels && (
         // Fixed into the selected pixels (EDT-053, EDT-065).
@@ -304,6 +359,11 @@ export function EffectsTab() {
                 >
                   {name(type)}
                 </button>
+                {fromCapture.has(type) && (
+                  <span className="fx-tag" title={t("ui.editor.fx.capture.tag_help")}>
+                    {t("ui.editor.fx.capture.tag")}
+                  </span>
+                )}
               </div>
               {expanded && index >= 0 && (
                 <div className="fx-options">
@@ -348,7 +408,10 @@ export function EffectsTab() {
                   <button
                     type="button"
                     className="btn small"
-                    onClick={() => fx({ action: "remove", index })}
+                    onClick={() => {
+                      if (on) offered([type]);
+                      fx({ action: "remove", index });
+                    }}
                   >
                     {t("ui.editor.fx.remove")}
                   </button>
