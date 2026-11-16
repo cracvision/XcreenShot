@@ -21,7 +21,7 @@ SRC, OUT = sys.argv[1], sys.argv[2]
 data = json.load(open(SRC, encoding="utf-8"))
 
 VERSION = "0.2.7"
-BUILD = "pendiente"
+BUILD = "14a98a5"
 # The protocol's own version and its history (Portada).
 PROTOCOL = "1.4"
 HISTORY = [

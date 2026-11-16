@@ -44,9 +44,12 @@ $f.Add_Shown({ $f.Activate(); $r.Focus(); $t.Start() })
 Set-Content C:\xs\target.ps1 $target -Encoding utf8
 Start-Process powershell.exe -ArgumentList '-ExecutionPolicy', 'Bypass', '-STA', '-File', 'C:\xs\target.ps1'
 Start-Sleep 4
-# Notepad in front: the window you were in is not the one we paste into ("Insert into").
-Start-Process notepad.exe
-Start-Sleep 3
+# Another window in front: the window you were in is not the one we paste into
+# ("Insert into"). It records the pictures it gets too: it must get none.
+$other = $target.Replace("'Paste target'", "'Other window'").Replace('C:\xs\out\target.txt', 'C:\xs\out\other.txt').Replace('$f.Width = 900', '$f.Width = 700')
+Set-Content C:\xs\other.ps1 $other -Encoding utf8
+Start-Process powershell.exe -ArgumentList '-ExecutionPolicy', 'Bypass', '-STA', '-File', 'C:\xs\other.ps1'
+Start-Sleep 4
 Log 'panel open'
 LogRun { & $cli --no-launch tray clipboard --open true --json }
 Start-Sleep 2
@@ -59,5 +62,6 @@ $p = (@{ documentIds = $ids; paste = $true; target = $target } | ConvertTo-Json 
 LogRun { & $cli --no-launch tray insert --params $p --json }
 Start-Sleep 25
 Log "target: $(Get-Content C:\xs\out\target.txt -ErrorAction SilentlyContinue)"
+Log "other (must be 0): $(Get-Content C:\xs\out\other.txt -ErrorAction SilentlyContinue)"
 Copy-Item "$xsDir\data\logs\*.log" $out -ErrorAction SilentlyContinue
 Done
