@@ -8,6 +8,7 @@ import { MultiCapture } from "./windows/MultiCapture";
 import { Preferences } from "./windows/Preferences";
 import { ScrollPanel } from "./windows/ScrollPanel";
 import { WindowPicker } from "./windows/WindowPicker";
+import { ClipboardPanel } from "./windows/ClipboardPanel";
 import { TextResult } from "./windows/TextResult";
 import { PdfImport } from "./windows/PdfImport";
 import { Launcher } from "./windows/Launcher";
@@ -64,6 +65,8 @@ export function App() {
       return <ScrollPanel />;
     case "picker":
       return <WindowPicker />;
+    case "clipboard":
+      return <ClipboardPanel />;
     case "launcher":
       return <Launcher />;
     case "webpage":

@@ -711,6 +711,14 @@
       "title": "Import to the library",
       "description": "Copies files and folders into the library, each in the folder of the month of its date; a folder's name can become a tag."
     },
+    "tray_clipboard": {
+      "title": "XcreenShot's clipboard",
+      "description": "Opens the panel with the recent captures, to pick one or more and paste them into the app you were in."
+    },
+    "tray_insert": {
+      "title": "Insert from XcreenShot's clipboard",
+      "description": "Copies the original image of tray captures, without annotations; with paste, pastes each into the window that was in front when the panel opened."
+    },
     "tray_list": {
       "title": "List the recent tray",
       "description": "The items of the recent tray, left to right, with their library ID and whether each is pinned, unsaved or shown."
@@ -2076,6 +2084,7 @@
     "clipboard_failed": "Could not copy the capture to the clipboard. It is still saved.",
     "capture_cancelled": "The capture was cancelled.",
     "no_document": "No document is open in the editor.",
+    "tray_insert_none": "None of those captures can be pasted as an image (videos and GIFs cannot).",
     "document_not_found": "Document \"{{id}}\" is not open.",
     "object_not_found": "There is no object \"{{id}}\" in this document.",
     "cannot_open": "Cannot open \"{{name}}\": {{reason}}.",
@@ -5082,6 +5091,20 @@
       "preview": "Joined image so far",
       "full": "Largest size reached",
       "finish_menu": "Finish scrolling"
+    },
+    "clipboard": {
+      "title": "XcreenShot's clipboard",
+      "filter": "Filter by name",
+      "hint": "Click or Space to pick, Enter to insert (the original image, without annotations), Esc to close",
+      "insert": "Insert",
+      "insert_n": "Insert ({{n}})",
+      "copy": "Copy",
+      "close": "Close",
+      "none": "There are no captures in the recent tray yet.",
+      "capture": "Capture",
+      "no_match": "No capture matches",
+      "video": "Videos and GIFs cannot be pasted as an image",
+      "picked": "Picked"
     },
     "picker": {
       "title": "Window picker",

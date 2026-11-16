@@ -465,6 +465,8 @@ pub fn slots() -> Vec<Slot> {
         // The open menu, without a countdown (CAP-031). No default yet: the spec's
         // Ctrl+Alt+Shift+E is the editor's Export (see spec/QUESTIONS.md).
         capture("capture.menu", "capture.menu", ""),
+        // XcreenShot's clipboard (TRY-018).
+        s("tray.clipboard", Global),
         s("app.ping", Global),
         s("app.show", Global),
         s("settings.open", Global),
@@ -852,6 +854,10 @@ pub fn default_for(slot: &Slot, profile: Profile, platform: Platform) -> Option<
         ("capture.window_picker", Global, Compatibility, Macos) => "Ctrl+Shift+KeyM",
         ("capture.window_picker", Global, _, _) => "Ctrl+Alt+Shift+KeyM",
         ("capture.quick_annotate", Global, _, _) => "Ctrl+Alt+Shift+KeyQ",
+        // TRY-018: Win+V is Windows' own; Ctrl+Alt combos clash with tools such as
+        // Carlos's assistant (provisional, spec/QUESTIONS.md).
+        ("tray.clipboard", Global, _, Windows) => "Alt+Super+KeyV",
+        ("tray.clipboard", Global, _, Macos) => "Ctrl+Alt+Super+KeyV",
         // VID-075.
         ("record.video", Global, Compatibility, Windows) => return None,
         ("record.video", Global, Compatibility, Macos) => "Ctrl+Shift+KeyV",

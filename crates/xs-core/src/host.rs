@@ -296,6 +296,17 @@ pub trait Host: Send + Sync {
     fn picker_window(&self, show: bool) {}
     /// The window picker's list changed (`{open, windows}`), e.g. a thumbnail is ready.
     fn picker_event(&self, state: Value) {}
+    /// XcreenShot's clipboard (TRY-018): opens the panel (remembering the window that
+    /// was in front, where an insert pastes), closes it, or (`None`) the other way.
+    /// Returns whether it is open now.
+    fn clipboard_panel(&self, open: Option<bool>) -> Result<bool, CommandError> {
+        Err(unsupported())
+    }
+    /// Pastes the clipboard into the window that was in front when the panel opened
+    /// (TRY-018): brings it forward and presses Ctrl+V (Cmd+V on macOS) once.
+    fn paste_into_target(&self) -> Result<(), CommandError> {
+        Err(unsupported())
+    }
     /// Shows the on-screen selection over the frozen `frames` (one per monitor, in
     /// the order of `request.monitors`) and blocks until the user finishes or cancels
     /// (CAP-009, CAP-013, CAP-025, CAP-027). Returns `{"kind": "rect", "rect": {…}}`,

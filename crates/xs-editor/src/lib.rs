@@ -5151,6 +5151,18 @@ pub fn extension() -> Extension {
             &core, ctx, &p
         ));
         on!("document.close", |core, ctx, p| close(&core, ctx, &p));
+        on!("tray.clipboard", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.clipboard",
+            &p
+        ));
+        on!("tray.insert", |core, ctx, p| tray::command(
+            &core,
+            ctx,
+            "tray.insert",
+            &p
+        ));
         on!("tray.list", |core, ctx, p| tray::command(
             &core,
             ctx,
@@ -6281,7 +6293,7 @@ fn extent(objects: &[Object]) -> Option<[f64; 4]> {
 }
 
 /// Copies an image to the clipboard, retrying while another app holds it (EDT-090).
-fn copy_image(image: &image::RgbaImage) -> Result<(), arboard::Error> {
+pub(crate) fn copy_image(image: &image::RgbaImage) -> Result<(), arboard::Error> {
     let _lock = xs_core::clipboard_lock();
     let data = arboard::ImageData {
         width: image.width() as usize,

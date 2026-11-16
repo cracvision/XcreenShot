@@ -5092,6 +5092,76 @@ html.launcher-root #root {
   margin: auto;
 }
 
+/* XcreenShot's clipboard (TRY-018): the window picker's grid, smaller, with picks. */
+.clip {
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.clip .picker-head h1 {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.clip-grid {
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.clip-card {
+  position: relative;
+  padding: var(--space-2);
+}
+
+.clip-card.picked {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.clip-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.clip-thumb {
+  position: relative;
+  height: 100px;
+}
+
+.clip-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.clip-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.clip-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.clip-foot .muted {
+  flex: 1;
+  font-size: 12.5px;
+}
+
 /* ---------- Glass (Cristal, general.glassIntensity) ---------- */
 /* Floating panels: a tint, blur and saturation of what is behind, a sheen at the top and a
    bright top edge. The tint and blur live on a layer behind the content (::before), so the

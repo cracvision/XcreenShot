@@ -1,6 +1,7 @@
 //! XcreenShot desktop shell (Tauri 2). Owns the background process, the icon,
 //! global shortcuts and the windows; every action goes through `xs_core`'s registry.
 
+mod clip_panel;
 mod countdown;
 mod docs;
 mod drag_out;

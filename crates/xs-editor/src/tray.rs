@@ -4,11 +4,13 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde_json::{json, Value};
 use xs_core::i18n::tr;
 use xs_core::{CommandError, CommandResult, Context, Core, ErrorCode, Lang};
 
+use crate::store::Format;
 use crate::{activate, editor, emit_list, open, recovery};
 
 /// How many items the tray keeps (TRY-003).
@@ -109,6 +111,9 @@ pub fn list(core: &Core) -> Value {
                     "dirty": d.dirty(),
                     "active": active.as_deref() == Some(d.id.as_str()),
                     "missing": d.path.as_ref().is_some_and(|p| !p.exists()),
+                    // TRY-018: videos and GIFs cannot be pasted as an image.
+                    "format": d.format.ext(),
+                    "version": d.version,
                 })
             })
         })
@@ -217,6 +222,77 @@ pub fn command(core: &Arc<Core>, ctx: &Context, id: &str, p: &Value) -> CommandR
             }
             crate::close(core, ctx, &params)
         }
+        "tray.clipboard" => {
+            let open = core
+                .host()
+                .clipboard_panel(p.get("open").and_then(Value::as_bool))?;
+            Ok(json!({ "open": open }))
+        }
+        "tray.insert" => insert(core, lang, p),
         _ => Err(CommandError::internal(format!("unknown tray command {id}"))),
     }
+}
+
+/// `tray.insert` (TRY-018): the original images of tray documents (as captured, without
+/// annotations), in the tray's order. Without `paste`, only the first is copied; with
+/// it, the panel closes and each is pasted into the window that was in front when the
+/// panel opened, one paste each. Videos and GIFs are skipped.
+fn insert(core: &Arc<Core>, lang: Lang, p: &Value) -> CommandResult {
+    let wanted = targets(core, lang, p)?;
+    let paste = p.get("paste").and_then(Value::as_bool).unwrap_or(false);
+    let ed = editor(core);
+    let mut ids: Vec<String> = ed
+        .store
+        .tray()
+        .into_iter()
+        .filter(|i| wanted.contains(i))
+        .collect();
+    ids.extend(
+        wanted
+            .iter()
+            .filter(|w| !ids.contains(w))
+            .cloned()
+            .collect::<Vec<_>>(),
+    );
+    let mut skipped = Vec::new();
+    let mut images = Vec::new();
+    for id in &ids {
+        let got = ed.store.with(id, |d| {
+            (
+                matches!(d.format, Format::Video | Format::Gif),
+                d.base_source.bytes.clone(),
+            )
+        });
+        match got {
+            Some((true, _)) => skipped.push(id.clone()),
+            Some((false, bytes)) => images.push(bytes),
+            None => {}
+        }
+    }
+    drop(ed);
+    if images.is_empty() {
+        return Err(CommandError::new(
+            ErrorCode::InvalidParams,
+            tr(lang, "errors.tray_insert_none", &[]),
+        ));
+    }
+    if paste {
+        // The panel goes first: the window behind it comes forward again.
+        let _ = core.host().clipboard_panel(Some(false));
+        std::thread::sleep(Duration::from_millis(150));
+    }
+    let (mut copied, mut pasted) = (0, 0);
+    for bytes in images.iter().take(if paste { images.len() } else { 1 }) {
+        let image = xs_image::encode::decode(bytes).map_err(CommandError::internal)?;
+        crate::copy_image(&image).map_err(|e| CommandError::internal(e.to_string()))?;
+        copied += 1;
+        if paste {
+            core.host().paste_into_target()?;
+            pasted += 1;
+            // The app reads the clipboard after the keys: wait before the next image
+            // replaces it.
+            std::thread::sleep(Duration::from_millis(400));
+        }
+    }
+    Ok(json!({ "copied": copied, "pasted": pasted, "skipped": skipped }))
 }

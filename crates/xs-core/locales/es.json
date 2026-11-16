@@ -711,6 +711,14 @@
       "title": "Importar a la biblioteca",
       "description": "Copia archivos y carpetas a la biblioteca, cada uno en la carpeta del mes de su fecha; el nombre de una carpeta puede ser una etiqueta."
     },
+    "tray_clipboard": {
+      "title": "Portapapeles de XcreenShot",
+      "description": "Abre el panel con las capturas recientes, para elegir una o varias y pegarlas en la app en la que estabas."
+    },
+    "tray_insert": {
+      "title": "Insertar desde el portapapeles de XcreenShot",
+      "description": "Copia la imagen original de capturas de la bandeja, sin anotaciones; con paste, pega cada una en la ventana que estaba delante al abrir el panel."
+    },
     "tray_list": {
       "title": "Listar la bandeja reciente",
       "description": "Los elementos de la bandeja reciente, de izquierda a derecha, con su ID de la biblioteca y si están fijados, sin guardar o a la vista."
@@ -2076,6 +2084,7 @@
     "clipboard_failed": "No se pudo copiar la captura al portapapeles. Sigue guardada.",
     "capture_cancelled": "La captura se canceló.",
     "no_document": "No hay ningún documento abierto en el editor.",
+    "tray_insert_none": "Ninguna de esas capturas se puede pegar como imagen (los videos y los GIF no).",
     "document_not_found": "El documento \"{{id}}\" no está abierto.",
     "object_not_found": "No hay ningún objeto \"{{id}}\" en este documento.",
     "cannot_open": "No se puede abrir \"{{name}}\": {{reason}}.",
@@ -5082,6 +5091,20 @@
       "preview": "Imagen unida hasta ahora",
       "full": "Tamaño máximo alcanzado",
       "finish_menu": "Terminar desplazamiento"
+    },
+    "clipboard": {
+      "title": "Portapapeles de XcreenShot",
+      "filter": "Filtrar por nombre",
+      "hint": "Clic o Espacio para elegir, Enter para insertar (la imagen original, sin anotaciones), Esc para cerrar",
+      "insert": "Insertar",
+      "insert_n": "Insertar ({{n}})",
+      "copy": "Copiar",
+      "close": "Cerrar",
+      "none": "Todavía no hay capturas en la bandeja reciente.",
+      "capture": "Capturar",
+      "no_match": "Ninguna captura coincide",
+      "video": "Los videos y los GIF no se pueden pegar como imagen",
+      "picked": "Elegida"
     },
     "picker": {
       "title": "Selector de ventanas",

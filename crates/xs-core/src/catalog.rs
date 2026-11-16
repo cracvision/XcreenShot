@@ -3079,7 +3079,7 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
         B::new("tray.list", &["TRY-017", "TRY-002"])
             .params(params(json!({}), &[]))
             .result(json!({"type": "object", "properties": {
-                "items": {"type": "array", "description": "{documentId, name, path, libraryId, pinned, dirty, active, missing}, left to right"},
+                "items": {"type": "array", "description": "{documentId, name, path, libraryId, pinned, dirty, active, missing, format, version}, left to right"},
                 "capacity": {"type": "integer"}
             }})),
         B::new("tray.open", &["TRY-017"])
@@ -3142,6 +3142,30 @@ fn specs_5(section: &Value, shortcut_scope: &Value) -> Vec<B> {
                 "status": {"type": "string", "enum": ["closed", "needs_decision"]},
                 "closed": {"type": "array", "items": {"type": "string"}},
                 "pending": {"type": "array"}
+            }})),
+        B::new("tray.clipboard", &["TRY-018"])
+            .scopes(ALL)
+            .assignable()
+            .interactive()
+            .params(params(
+                json!({"open": {"type": "boolean", "description": "true opens the panel, false closes it; without it, the other way"}}),
+                &[],
+            ))
+            .result(json!({"type": "object", "properties": {"open": {"type": "boolean"}}})),
+        B::new("tray.insert", &["TRY-018"])
+            .mutates()
+            .positional(&["documentIds"])
+            .params(params(
+                json!({
+                    "documentIds": {"type": "array", "items": {"type": "string"}, "description": "Tray documents, pasted in the tray's order"},
+                    "paste": {"type": "boolean", "default": false, "description": "false: only copies the first one's original image; true: pastes each into the window that was in front when the panel opened"}
+                }),
+                &["documentIds"],
+            ))
+            .result(json!({"type": "object", "properties": {
+                "copied": {"type": "integer"},
+                "pasted": {"type": "integer"},
+                "skipped": {"type": "array", "items": {"type": "string"}, "description": "Videos and GIFs, which cannot be pasted as an image"}
             }})),
         B::new("library.duplicate", &["TRY-010", "LIB-034"])
             .mutates()

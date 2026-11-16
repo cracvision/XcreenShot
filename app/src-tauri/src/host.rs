@@ -563,6 +563,23 @@ impl Host for TauriHost {
         let _ = self.app.emit("xs://picker", state);
     }
 
+    fn clipboard_panel(&self, open: Option<bool>) -> Result<bool, CommandError> {
+        let app = self.app.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.app
+            .run_on_main_thread(move || {
+                let _ = tx.send(crate::clip_panel::panel(&app, open).map_err(|e| e.to_string()));
+            })
+            .map_err(|e| CommandError::internal(e.to_string()))?;
+        rx.recv_timeout(Duration::from_secs(5))
+            .map_err(|_| CommandError::internal("clipboard panel: no answer"))?
+            .map_err(CommandError::internal)
+    }
+
+    fn paste_into_target(&self) -> Result<(), CommandError> {
+        crate::clip_panel::paste().map_err(CommandError::internal)
+    }
+
     fn show_capture_panel(&self, show: Option<bool>) -> Result<bool, CommandError> {
         let (tx, rx) = std::sync::mpsc::channel();
         let app = self.app.clone();
