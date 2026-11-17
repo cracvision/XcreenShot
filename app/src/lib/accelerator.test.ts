@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { display, fromEvent, releasedCombination } from "./accelerator";
+import { display, displayKeys, fromEvent, releasedCombination } from "./accelerator";
 
 const key = (
   code: string,
@@ -47,6 +47,12 @@ describe("display", () => {
     expect(display("Ctrl+Alt+Shift+KeyK", "windows")).toBe("Ctrl+Alt+Shift+K");
     expect(display("Ctrl+Alt+Shift+KeyK", "macos")).toBe("⌃⌥⇧K");
     expect(display("Ctrl+Shift+PrintScreen", "windows")).toBe("Ctrl+Shift+PrtScn");
+  });
+
+  it("splits a shortcut into one key cap per key", () => {
+    expect(displayKeys("Ctrl+Shift+PrintScreen", "windows")).toEqual(["Ctrl", "Shift", "PrtScn"]);
+    expect(displayKeys("Ctrl+Alt+Shift+KeyK", "macos")).toEqual(["⌃", "⌥", "⇧", "K"]);
+    expect(displayKeys("Super+Equal", "windows")).toEqual(["Win", "="]);
   });
 
   it("shows the character of the active layout for the same physical key", () => {

@@ -2,7 +2,7 @@
 
 **Archivo:** `06-inteligentes.md` · **Prefijo de IDs:** `SMT-` · **Versión:** 0.1 (borrador) · **Fecha:** 2026-10-12
 
-Este archivo especifica las funciones de XcreenShot que analizan el contenido de una imagen o de la pantalla para ahorrar trabajo al usuario: el reconocimiento de texto y sus usos (Extraer texto, Editar texto), la Redacción automática de datos sensibles, la edición inteligente (Separar elementos, Simplificar automático, Quitar fondo, Aplicar solo al texto), el Grabador de pasos con la guía que produce y sus salidas, y los códigos QR. Todas se ejecutan en el propio equipo, funcionan sin conexión y no envían nada a ningún servidor (SPEC §2.3). La captura (`CAP-`), el editor (`EDT-`), el video (`VID-`), la biblioteca, la bandeja reciente y compartir (`LIB-`, `TRY-`, `SHR-`) y la app (`APP-`) se definen en sus archivos; aquí se citan por ID cuando ya existe, o por prefijo y nombre, por ejemplo "EDT- (Desenfocar)". Salvo que una función diga otra cosa, todo vale igual en Windows y macOS (SPEC §2.1).
+Este archivo especifica las funciones de XcreenShot que analizan el contenido de una imagen o de la pantalla para ahorrar trabajo al usuario: el reconocimiento de texto y sus usos (Extraer texto, Editar texto), la Redacción automática de datos sensibles, la edición inteligente (Separar elementos, Simplificar automático, Quitar fondo, Aplicar solo al texto), el Grabador de pasos con la guía que produce y sus salidas, y los códigos QR. Todas se ejecutan en el propio equipo, funcionan sin conexión y no envían nada a ningún servidor (SPEC §2.3), salvo las funciones propias con IA en la nube de la sección 8, que solo envían una imagen cuando el usuario las activa y lo pide. La captura (`CAP-`), el editor (`EDT-`), el video (`VID-`), la biblioteca, la bandeja reciente y compartir (`LIB-`, `TRY-`, `SHR-`) y la app (`APP-`) se definen en sus archivos; aquí se citan por ID cuando ya existe, o por prefijo y nombre, por ejemplo "EDT- (Desenfocar)". Salvo que una función diga otra cosa, todo vale igual en Windows y macOS (SPEC §2.1).
 
 **Convenciones de este archivo**
 - **Teclas.** `Ctrl`/`Cmd` significa `Ctrl` en Windows y `Command` (⌘) en macOS; `Alt`/`Option` igual.
@@ -24,7 +24,8 @@ Este archivo especifica las funciones de XcreenShot que analizan el contenido de
 5. **Grabador de pasos** — SMT-022 Iniciar el Grabador de pasos · SMT-023 Barra del grabador · SMT-024 Qué crea un paso · SMT-025 Texto automático de cada paso · SMT-026 Imagen de cada paso · SMT-027 Límites, rendimiento, ventanas elevadas y recuperación
 6. **Guía de pasos y sus salidas** — SMT-028 Estructura y formato de la guía · SMT-029 Editar la guía · SMT-030 Guía a Word y PowerPoint · SMT-031 Guía a Pages y Keynote (macOS) · SMT-032 Guía a Markdown y HTML · SMT-033 Guía a PDF e impresión · SMT-034 Imágenes de la guía por separado y portapapeles · SMT-035 Guías en la biblioteca
 7. **Códigos QR** — SMT-036 Crear un código QR · SMT-037 Código QR de un enlace compartido · SMT-038 Leer códigos QR
-8. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
+8. **Funciones propias: IA en la nube** — SMT-039 Activar la IA en la nube: clave y modelos · SMT-040 Preguntar a la IA sobre una imagen · SMT-041 Sugerir nombre con IA · SMT-042 Privacidad y costos de la IA en la nube · SMT-043 IA desde un cliente MCP
+9. [Relacionado](#relacionado) · [Excluido](#excluido) · [Cobertura](#cobertura)
 
 ---
 
@@ -35,7 +36,7 @@ Este archivo especifica las funciones de XcreenShot que analizan el contenido de
 - **Plataformas:** Ambas
 - **Paridad con Snagit:** declaración de TechSmith de que sus modelos de IA se ejecutan en el dispositivo, no son generativos, no se usan para entrenar y funcionan sin internet
 - **Comportamiento:**
-  - Todas las funciones de este archivo analizan las imágenes **en el equipo**. Ninguna envía píxeles, texto reconocido ni resultados a un servidor, ni siquiera de forma anónima.
+  - Todas las funciones de este archivo, salvo las de la sección 8 (IA en la nube, SMT-039 a SMT-043), analizan las imágenes **en el equipo**. Ninguna envía píxeles, texto reconocido ni resultados a un servidor, ni siquiera de forma anónima.
   - Funcionan igual sin conexión de red. Los modelos y datos que necesitan van incluidos en la app o los aporta el sistema operativo, y nunca se descargan en segundo plano (APP-054). Si una función depende de un componente opcional del sistema (por ejemplo, un idioma de reconocimiento), lo indica y enlaza al ajuste del sistema; XcreenShot no lo descarga por su cuenta.
   - Ninguna función de este archivo es generativa: no inventan contenido; solo detectan, reconocen o reorganizan lo que ya está en la imagen.
   - El texto reconocido y las detecciones (rostros, datos sensibles, elementos) solo están en memoria mientras se usan. No se escriben en los registros (APP-046) ni en los eventos (APP-031), que solo llevan recuentos. Los archivos temporales de procesamiento se borran al terminar.
@@ -916,6 +917,130 @@ Otras funciones que en Snagit para Mac nacieron como experimentos junto a los c�
   - [ ] Con el ajuste desactivado, no aparecen ni el botón **QR** ni la pastilla, y **Leer códigos QR** sigue funcionando desde el menú contextual.
 - **Mejora sobre Snagit:** también en Windows, en el editor y en Extraer texto; apertura de enlaces siempre confirmada.
 - **Fuentes:** research/01-captura.md §12.4, §11.2; research/04-biblioteca-compartir.md §7; research/05-plataformas-versiones.md §5, §1B (2025.4.0)
+
+---
+
+## 8. Funciones propias: IA en la nube
+
+Estas funciones son la excepción a SMT-001. Envían una imagen a un servicio de IA en la nube (Claude, de Anthropic), y solo cuando el usuario las activa y lo pide sobre esa imagen. Carlos las aprobó el 2026-11-01 (IDEA-002 de `IDEAS.md`), con tres decisiones:
+- se cambia el principio "todo local" (SPEC §2.3) para ellas, con las salvaguardas de SMT-042;
+- se ofrecen las dos vías: dentro de la app con una clave de API (SMT-039 a SMT-042) y desde un cliente MCP (SMT-043);
+- cada colega pone su propia clave y paga su uso.
+
+Sus comandos son del área `ai`, no de `smart`, para que nunca se confundan con las funciones locales (decisión de diseño).
+
+### SMT-039 · Activar la IA en la nube: clave y modelos
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01) · **Prioridad:** Should
+- **Plataformas:** Ambas. Primero en Windows; el llavero de macOS llega con las pruebas en Mac.
+- **Paridad con Snagit:** — (función propia, IDEA-002 de `IDEAS.md`)
+- **Comportamiento:**
+  - Preferencias tiene una sección **IA**, entre Compartir y Atajos (propuesta para APP-006). Contiene:
+    - **Usar IA en la nube (Claude, de Anthropic)**, desactivado por defecto. Al activarlo aparece un aviso que explica:
+      - qué se envía: la imagen final del documento y el texto que escribes, solo cuando pulsas **Enviar** o **Sugerir nombre**;
+      - a quién: a Anthropic, por una conexión cifrada a `api.anthropic.com`, con tu propia clave;
+      - cuánto cuesta: cada envío consume saldo de tu cuenta de la API.
+      - Botones **Activar** y **Cancelar**. Solo la interfaz puede activarlo: el CLI y los agentes no (`ai.enabled` no se puede cambiar por automatización, APP-032).
+    - **Clave de API:** campo oculto con **Guardar**. Una vez guardada solo se ve "Guardada (termina en ····abcd)", con **Cambiar** y **Borrar**. La clave se guarda en el llavero del sistema (Administrador de credenciales en Windows, Llavero en macOS). Nunca en `settings.json`, en la exportación de ajustes (APP-011), en los registros, en los eventos ni en los diagnósticos.
+    - **Probar la clave:** comprueba la clave y el modelo con la API sin enviar ninguna imagen. Dice si funcionan o por qué no.
+    - **Modelo para preguntas** (`ai.model`): Claude Opus 5.5 (por defecto), Claude Sonnet 5.5 o Claude Haiku 5.5.
+    - **Modelo para nombres** (`ai.namingModel`): Claude Haiku 5.5 (por defecto, el más barato), Claude Sonnet 5.5 o Claude Opus 5.5.
+    - Un enlace **Cómo conseguir una clave**, que abre la consola de Anthropic en el navegador.
+  - Con la IA desactivada o sin clave, las entradas de IA del editor siguen visibles. Al usarlas explican qué falta y ofrecen **Abrir Preferencias > IA**. Los comandos `ai.ask` y `ai.suggest_name` fallan con el código `feature_disabled` (propuesto en SMT-002), cuyo mensaje nombra el ajuste o la clave que falta.
+  - La configuración administrada (APP-035) puede fijar `ai.enabled` en desactivado.
+  - Comandos: `ai.key_set` (solo la interfaz, porque la clave no debe pasar por el CLI ni por un agente), `ai.key_clear`, `ai.key_status` y `ai.key_test`.
+- **Criterios de aceptación:**
+  - [ ] En una instalación nueva la IA está desactivada, y ninguna entrada de IA envía nada.
+  - [ ] Al activarla aparece el aviso; con **Cancelar** sigue desactivada.
+  - [ ] La clave guardada no aparece en `settings.json`, en los registros (tampoco con el registro detallado), en los diagnósticos ni en la salida de `xcreenshot events watch`. Sí aparece en el Administrador de credenciales de Windows.
+  - [ ] **Probar la clave** con una clave inválida dice que la clave no es válida, sin enviar imágenes.
+  - [ ] `xcreenshot settings set ai.enabled true` falla: ese ajuste solo se cambia desde la interfaz.
+- **Fuentes:** `IDEAS.md` IDEA-002 y respuestas de Carlos del 2026-11-01
+
+### SMT-040 · Preguntar a la IA sobre una imagen
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01) · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia, IDEA-002)
+- **Comportamiento:**
+  - En el editor, menú **IA** > **Preguntar a la IA…**, con atajo asignable (sin atajo por defecto). Abre el diálogo **Preguntar a la IA** sobre el documento activo.
+  - El diálogo tiene:
+    - una línea que dice qué se enviará: "Se enviará la imagen de este documento (W × H px) y tu texto a Anthropic (modelo)";
+    - botones de peticiones rápidas que rellenan el texto, que después se puede editar: **Describir**, **Texto alternativo**, **Resumir el texto** y **Poema**;
+    - el campo "¿Qué quieres que haga la IA con esta imagen?". Ahí van la petición y los detalles que la imagen no muestra, por ejemplo "un poema para Ana y Luis, que cumplen 10 años de casados";
+    - **Enviar** (también `Ctrl+Enter`/`Cmd+Enter`).
+  - La respuesta aparece mientras se escribe, con **Detener**. Al terminar:
+    - **Copiar** la copia como texto;
+    - **Insertar en la imagen** la añade al documento como un objeto de Texto, centrado y editable, que se deshace con `Ctrl+Z`;
+    - **Preguntar algo más** mantiene la conversación: las preguntas y respuestas anteriores se envían como contexto, junto con la misma imagen;
+    - **Nueva conversación** la empieza de cero.
+  - El pie del diálogo muestra cuánto se usó (tokens de entrada y de salida), para que cada uno vea su gasto.
+  - **Qué imagen se envía:** la imagen final del documento, con sus anotaciones. Si mide más de 2576 px en el lado mayor, se reduce a ese tamaño, que es el máximo que la IA aprovecha (decisión de diseño).
+  - **La respuesta** está en el idioma de la interfaz, salvo que la petición pida otro. No se guarda en ningún sitio, salvo que el usuario la copie o la inserte.
+  - **Errores, en lenguaje claro y con qué hacer:** clave no válida, cuenta sin saldo, límite de uso alcanzado (esperar y reintentar), servicio saturado (reintentar), sin conexión, petición rechazada por las normas de uso, imagen demasiado grande.
+  - Comandos: `ai.ask` (documento, petición, conversación previa y modelo opcional; devuelve el texto, el modelo y el uso) y `ai.cancel`. La respuesta parcial se envía a la ventana del editor mientras llega.
+- **Criterios de aceptación:**
+  - [ ] Con la IA activada y una clave válida, **Describir** sobre una captura devuelve una descripción en el idioma de la interfaz.
+  - [ ] **Detener** corta la respuesta y deja lo recibido hasta ese momento.
+  - [ ] **Insertar en la imagen** añade un objeto de Texto con la respuesta; `Ctrl+Z` lo quita.
+  - [ ] Sin conexión de red, el diálogo dice que no hay conexión con el servicio y el editor sigue funcionando.
+  - [ ] Una imagen de 5000 px de ancho se envía reducida a 2576 px.
+- **Fuentes:** `IDEAS.md` IDEA-002 (ejemplo del poema de la pareja en la playa; usos con más valor)
+
+### SMT-041 · Sugerir nombre con IA
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01) · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** — (función propia, IDEA-002)
+- **Comportamiento:**
+  - **Nunca es automático** (respuesta c de IDEA-002, con a como complemento). Al capturar, el nombre del archivo sigue siendo el local: app y fecha, y más adelante los marcadores de CAP-053.
+  - En el editor, menú **IA** > **Sugerir nombre…**, con atajo asignable. Envía la imagen al modelo para nombres (`ai.namingModel`) y abre un diálogo con la sugerencia ya escrita y editable:
+    - **Renombrar** cambia el nombre del archivo del documento (`document.rename`);
+    - **Otra sugerencia** pide otra;
+    - **Cancelar** lo deja como estaba.
+  - La sugerencia es breve (de 3 a 8 palabras), está en el idioma de la interfaz, describe lo que se ve y no lleva fecha, extensión ni caracteres no válidos en nombres de archivo. Si la respuesta trae un carácter no válido, se sustituye.
+  - Renombrar mantiene la carpeta y la extensión. Si ya existe un archivo con ese nombre, lo dice y no cambia nada. Un documento que aún no tiene archivo no se puede renombrar: hay que guardarlo antes.
+  - Sugerir nombres para varias capturas a la vez (biblioteca, bandeja, panel de multicaptura) llegará con la entrega 5 de la biblioteca (`LIB-`, TRY-006).
+  - Comandos: `ai.suggest_name` y `document.rename`.
+- **Criterios de aceptación:**
+  - [ ] **Sugerir nombre** sobre una captura de una hoja de cálculo propone un nombre que la describe, sin fecha ni extensión.
+  - [ ] **Renombrar** cambia el nombre del archivo en su carpeta, y el editor muestra el nombre nuevo.
+  - [ ] Si ya existe un archivo con el nombre elegido, no se pisa: el diálogo lo dice.
+- **Fuentes:** `IDEAS.md` IDEA-002 (nombre automático, opciones a y c)
+
+### SMT-042 · Privacidad y costos de la IA en la nube
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01) · **Prioridad:** Must (si existe la IA en la nube)
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** —
+- **Comportamiento:**
+  - **Nada sale sin una acción del usuario sobre esa imagen:** pulsar **Enviar**, **Sugerir nombre** u **Otra sugerencia**. No hay envíos en segundo plano, ni al capturar, ni de varias imágenes a la vez.
+  - **Destino único:** `https://api.anthropic.com`. Se respeta el proxy del sistema. Ninguna otra parte de la app se conecta por esta función.
+  - **La clave** solo está en el llavero del sistema y en la cabecera de cada petición. No se escribe en ningún archivo ni registro.
+  - **Registros (APP-046):** de cada petición solo se apuntan el comando, el modelo, los tokens, la duración y el resultado (correcto o el código de error). Nunca la imagen, la petición, la respuesta ni la clave. Lo mismo vale para los eventos (APP-031).
+  - **Costos:** cada colega usa su propia clave y paga su uso según la tarifa de su cuenta. El diálogo muestra los tokens de cada respuesta. Por defecto, los nombres usan el modelo más barato.
+  - Acerca de (APP-015) y APP-054 incluyen esta conexión: "IA en la nube, solo si la activas".
+  - Todas las demás funciones siguen funcionando igual sin la IA y sin conexión.
+- **Criterios de aceptación:**
+  - [ ] Con la IA activada pero sin usarla, un monitor de red no registra ninguna conexión a `api.anthropic.com` durante una sesión de captura y edición.
+  - [ ] Tras **Describir** una captura que muestra un correo conocido, ni el correo ni la respuesta aparecen en los registros (con el registro detallado) ni en los eventos.
+- **Fuentes:** `IDEAS.md` IDEA-002 ("Cómo cambiarlo sin perder la privacidad")
+
+### SMT-043 · IA desde un cliente MCP
+- **Hito:** M1 (adelantada por Carlos, 2026-11-01; adelanta lo necesario de APP-029) · **Prioridad:** Should
+- **Plataformas:** Ambas
+- **Paridad con Snagit:** —
+- **Comportamiento:**
+  - Es la vía B de IDEA-002. Un cliente MCP (Claude Desktop, Claude Code u otro) se conecta a XcreenShot con `xcreenshot mcp` (APP-029). Con su propia cuenta de IA puede:
+    - ver los documentos abiertos (`document.list`) y abrir capturas (`document.open`);
+    - recibir la imagen final de un documento (`document.image`, como imagen MCP de 1568 px como máximo en el lado mayor, APP-029);
+    - describirla, escribir sobre ella o sugerir un nombre, con su propio modelo;
+    - renombrarla (`document.rename`) o anotarla (`document.annotate`).
+  - En esta vía XcreenShot no envía nada a la nube: la imagen va por la entrada y la salida estándar al cliente que el usuario eligió. Lo que el cliente haga con ella depende de él.
+  - No necesita la clave de SMT-039 ni que `ai.enabled` esté activado. Sí respeta `automation.enabled` (APP-032).
+  - Las herramientas `ai_*` no existen por MCP: un agente no puede hacer que XcreenShot envíe nada a la nube.
+  - Preferencias > IA tiene el bloque **Usar XcreenShot desde Claude Desktop o Claude Code**, con **Copiar la configuración** (el bloque JSON de APP-029) y **Copiar el comando para Claude Code** (`app.mcp_config`). El instalador incluye el CLI junto a la app.
+- **Criterios de aceptación:**
+  - [ ] Claude Desktop, configurado con el bloque de APP-029, lista las herramientas `document_image` y `document_rename`.
+  - [ ] Pedirle a Claude Desktop "describe la captura abierta en XcreenShot" devuelve una descripción, y XcreenShot no abre ninguna conexión de red.
+  - [ ] Pedirle "ponle un nombre descriptivo" renombra el archivo.
+- **Fuentes:** `IDEAS.md` IDEA-002 ("Otra vía, sin meter la IA en la app")
 
 ---
 

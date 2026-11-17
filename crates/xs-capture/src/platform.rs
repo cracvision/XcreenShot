@@ -21,6 +21,50 @@ pub struct OsInfo {
     pub build: String,
 }
 
+/// The name to show for an app: its description, unless it is a file name or a path
+/// (packaged apps such as Notepad say "Notepad.exe" or give their full path), then the
+/// name without folder or ".exe".
+pub fn app_name(description: Option<&str>, fallback: &str, path: Option<&str>) -> String {
+    let file_like = |s: &str| s.contains(['\\', '/']) || s.to_ascii_lowercase().ends_with(".exe");
+    let stem = |s: &str| {
+        let base = s.rsplit(['\\', '/']).next().unwrap_or(s);
+        match base.len().checked_sub(4) {
+            Some(cut) if base.to_ascii_lowercase().ends_with(".exe") => base[..cut].to_string(),
+            _ => base.to_string(),
+        }
+    };
+    for candidate in [description.unwrap_or(""), fallback] {
+        let candidate = candidate.trim();
+        if candidate.is_empty() {
+            continue;
+        }
+        return if file_like(candidate) {
+            stem(candidate)
+        } else {
+            candidate.to_string()
+        };
+    }
+    path.map(stem).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::app_name;
+
+    #[test]
+    fn packaged_apps_get_a_clean_name() {
+        let path = r"C:\Program Files\WindowsApps\Microsoft.WindowsNotepad_11.2609.11.0_x64__8wekyb3d8bbwe\Notepad\Notepad.exe";
+        // Notepad describes itself as its file name.
+        assert_eq!(app_name(Some("Notepad.exe"), "", Some(path)), "Notepad");
+        // Or gives its full path as the window's app name.
+        assert_eq!(app_name(None, path, Some(path)), "Notepad");
+        assert_eq!(app_name(Some("Google Chrome"), "chrome", None), "Google Chrome");
+        assert_eq!(app_name(Some("  "), "Paint", None), "Paint");
+        assert_eq!(app_name(None, "", Some(r"C:\Tools\thing.EXE")), "thing");
+        assert_eq!(app_name(None, "", None), "");
+    }
+}
+
 #[cfg(windows)]
 mod imp {
     use super::*;
@@ -48,6 +92,85 @@ mod imp {
         let mut p = POINT { x: 0, y: 0 };
         // SAFETY: out-parameter call.
         (unsafe { GetCursorPos(&mut p) } != 0).then_some((p.x, p.y))
+    }
+
+    /// A window hidden by the system: on another virtual desktop, or a suspended app
+    /// (CAP-030).
+    pub fn is_cloaked(id: u32) -> bool {
+        use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
+        let mut cloaked: u32 = 0;
+        // SAFETY: out-parameter of the right size; an invalid handle fails.
+        let ok = unsafe {
+            DwmGetWindowAttribute(
+                id as usize as _,
+                DWMWA_CLOAKED as u32,
+                &mut cloaked as *mut u32 as *mut _,
+                std::mem::size_of::<u32>() as u32,
+            )
+        } == 0;
+        ok && cloaked != 0
+    }
+
+    /// A window the task switcher would show: not owned by another one (a popup or a
+    /// helper of an app), unless it asks to be (CAP-030).
+    pub fn is_app_window(id: u32) -> bool {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindow, GW_OWNER, WS_EX_APPWINDOW};
+        let hwnd = id as usize as _;
+        // SAFETY: reading a window's owner and style; an invalid handle gives null and 0.
+        let (owner, ex) = unsafe {
+            (
+                GetWindow(hwnd, GW_OWNER),
+                GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32,
+            )
+        };
+        owner.is_null() || ex & WS_EX_APPWINDOW != 0
+    }
+
+    /// Restores a minimized window without activating it, or minimizes it again
+    /// (CAP-030).
+    /// The session is locked (or on the secure desktop): nothing to capture
+    /// (CAP-049, CAP-050).
+    pub fn session_locked() -> bool {
+        use windows_sys::Win32::System::StationsAndDesktops::{
+            CloseDesktop, OpenInputDesktop, DESKTOP_READOBJECTS,
+        };
+        // SAFETY: opens and closes a handle to the input desktop; it fails while the
+        // lock screen has it.
+        unsafe {
+            let desk = OpenInputDesktop(0, 0, DESKTOP_READOBJECTS);
+            if desk.is_null() {
+                return true;
+            }
+            CloseDesktop(desk);
+        }
+        false
+    }
+
+    pub fn show_window(id: u32, show: bool) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_MINIMIZE, SW_SHOWNOACTIVATE};
+        // SAFETY: a window handle; an invalid one does nothing.
+        unsafe {
+            ShowWindow(
+                id as usize as _,
+                if show { SW_SHOWNOACTIVATE } else { SW_MINIMIZE },
+            )
+        };
+    }
+
+    /// The process that put the clipboard's content there (CAP-039), if the system
+    /// knows it.
+    pub fn clipboard_owner_pid() -> Option<u32> {
+        use windows_sys::Win32::System::DataExchange::GetClipboardOwner;
+        // SAFETY: plain calls; no owner or a closed window yields nothing.
+        unsafe {
+            let hwnd = GetClipboardOwner();
+            if hwnd.is_null() {
+                return None;
+            }
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            (pid != 0).then_some(pid)
+        }
     }
 
     pub fn foreground_pid() -> Option<u32> {
@@ -142,16 +265,7 @@ mod imp {
     pub fn app_info(pid: u32, fallback_name: &str) -> AppInfo {
         let path = exe_path(pid);
         let (version, description) = path.as_deref().map(version_info).unwrap_or((None, None));
-        let name = description.unwrap_or_else(|| {
-            if fallback_name.is_empty() {
-                path.as_deref()
-                    .and_then(|p| std::path::Path::new(p).file_stem())
-                    .map(|s| s.to_string_lossy().into_owned())
-                    .unwrap_or_default()
-            } else {
-                fallback_name.to_string()
-            }
-        });
+        let name = super::app_name(description.as_deref(), fallback_name, path.as_deref());
         AppInfo {
             name,
             version,
@@ -184,6 +298,53 @@ mod imp {
             std::env::var("USERNAME").unwrap_or_default(),
             std::env::var("COMPUTERNAME").unwrap_or_default(),
         )
+    }
+
+    /// The desktop's icon list: the SysListView32 under SHELLDLL_DefView, in Progman or,
+    /// with a slideshow wallpaper, in a WorkerW.
+    fn desktop_list() -> Option<isize> {
+        use windows_sys::Win32::Foundation::{HWND, LPARAM};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{EnumWindows, FindWindowExW, FindWindowW};
+        let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+        let (defview, list) = (wide("SHELLDLL_DefView"), wide("SysListView32"));
+        // SAFETY: window lookups; the handles are only read.
+        unsafe {
+            let progman = FindWindowW(wide("Progman").as_ptr(), std::ptr::null());
+            let mut view = FindWindowExW(progman, std::ptr::null_mut(), defview.as_ptr(), std::ptr::null());
+            if view.is_null() {
+                unsafe extern "system" fn each(hwnd: HWND, found: LPARAM) -> i32 {
+                    let name: Vec<u16> = "SHELLDLL_DefView".encode_utf16().chain(Some(0)).collect();
+                    // SAFETY: a child lookup in a window EnumWindows gave.
+                    let v =
+                        unsafe { FindWindowExW(hwnd, std::ptr::null_mut(), name.as_ptr(), std::ptr::null()) };
+                    if v.is_null() {
+                        return 1;
+                    }
+                    // SAFETY: `found` points to the HWND being looked for.
+                    unsafe { *(found as *mut HWND) = v };
+                    0
+                }
+                EnumWindows(Some(each), &mut view as *mut HWND as LPARAM);
+            }
+            if view.is_null() {
+                return None;
+            }
+            let l = FindWindowExW(view, std::ptr::null_mut(), list.as_ptr(), std::ptr::null());
+            (!l.is_null()).then_some(l as isize)
+        }
+    }
+
+    /// Shows or hides the desktop's icons, where they are (VID-018); returns whether they
+    /// were showing, or `None` without a desktop.
+    pub fn desktop_icons(show: bool) -> Option<bool> {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOWNA};
+        let list = desktop_list()? as windows_sys::Win32::Foundation::HWND;
+        // SAFETY: showing or hiding the shell's icon list, which keeps the icons' places.
+        unsafe {
+            let was = IsWindowVisible(list) != 0;
+            ShowWindow(list, if show { SW_SHOWNA } else { SW_HIDE });
+            Some(was)
+        }
     }
 }
 
@@ -221,8 +382,32 @@ mod imp {
         true
     }
 
+    /// The desktop's icons (VID-018): not on this platform yet.
+    pub fn desktop_icons(_show: bool) -> Option<bool> {
+        None
+    }
+
+    pub fn is_cloaked(_id: u32) -> bool {
+        false
+    }
+
+    pub fn is_app_window(_id: u32) -> bool {
+        true
+    }
+
+    pub fn show_window(_id: u32, _show: bool) {}
+
+    pub fn session_locked() -> bool {
+        false
+    }
+
     pub fn foreground_pid() -> Option<u32> {
         // Frontmost-app lookup arrives with the macOS capture work (Windows first).
+        None
+    }
+
+    pub fn clipboard_owner_pid() -> Option<u32> {
+        // The pasteboard does not say who wrote it.
         None
     }
 
@@ -263,4 +448,35 @@ mod imp {
     }
 }
 
-pub use imp::{app_info, cursor_position, foreground_pid, is_regular_window, os_info, user_and_machine};
+pub use imp::{
+    app_info, clipboard_owner_pid, cursor_position, desktop_icons, foreground_pid, is_app_window, is_cloaked,
+    is_regular_window, os_info, session_locked, show_window, user_and_machine,
+};
+
+/// The app that copied what is on the clipboard (CAP-039), if the system says.
+pub fn clipboard_app() -> Option<AppInfo> {
+    clipboard_owner_pid()
+        .map(|pid| app_info(pid, ""))
+        .filter(|a| !a.name.is_empty())
+}
+
+#[cfg(all(test, windows))]
+mod icon_tests {
+    /// VID-018 on this computer: the desktop's icons hide and come back (run by hand,
+    /// `--ignored`: they blink).
+    #[test]
+    #[ignore]
+    fn icons_hide_and_come_back() {
+        let was = super::desktop_icons(false);
+        if was != Some(true) {
+            // No desktop, or icons the user hid: leave them as they were.
+            if was == Some(false) {
+                let _ = super::desktop_icons(false);
+            }
+            return;
+        }
+        // Hidden now; shown again, where they were.
+        assert_eq!(super::desktop_icons(true), Some(false));
+        assert_eq!(super::desktop_icons(true), Some(true));
+    }
+}

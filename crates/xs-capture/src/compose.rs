@@ -2,10 +2,10 @@
 //! they are tested without a screen.
 
 use image::RgbaImage;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Rectangle in physical pixels on the virtual desktop.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rect {
     pub x: i32,
     pub y: i32,

@@ -30,6 +30,50 @@ struct AppState {
     memory: std::collections::BTreeMap<String, Value>,
 }
 
+/// Something that must be settled before the app quits (APP-004): documents with
+/// unsaved changes, recordings… Contributed by other crates.
+pub trait QuitGuard: Send + Sync {
+    /// What would be lost by quitting now, one item per thing the user must decide on.
+    fn pending(&self, lang: Lang) -> Vec<Value>;
+    /// Last chance to save before the process ends (always runs, also when forced).
+    fn before_quit(&self);
+}
+
+/// Where Send feedback… leads (APP-015): a new issue of the project, unless the build
+/// names another page with `XCREENSHOT_FEEDBACK_URL`.
+const FEEDBACK_URL: &str = match option_env!("XCREENSHOT_FEEDBACK_URL") {
+    Some(url) => url,
+    None => "https://github.com/cracvision/XcreenShot/issues/new",
+};
+
+/// Text as a URL query value.
+fn percent_encode(text: &str) -> String {
+    text.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
+/// Settings that a "Don't ask again" box turns off, with the value that asks (APP-010).
+const DONT_ASK_SETTINGS: &[(&str, bool)] = &[
+    ("library.confirmDelete", true),
+    ("capture.confirmPresetDelete", true),
+];
+/// UI memory that holds a "Don't ask again" answer (the flattening warning, EDT-107).
+const DONT_ASK_STATE: &[&str] = &["editor.flattenWarningOff"];
+/// UI memory of the hints already seen: `hint.<id>` (APP-014).
+pub const HINT_PREFIX: &str = "hint.";
+
+/// Something the user asked not to see again (APP-010).
+pub enum Hidden {
+    Setting(&'static str, Value),
+    State(String),
+}
+
+type Services = std::collections::HashMap<std::any::TypeId, Arc<dyn std::any::Any + Send + Sync>>;
+
 pub struct Core {
     pub paths: Paths,
     pub settings: SettingsStore,
@@ -38,7 +82,50 @@ pub struct Core {
     log: Option<LogControl>,
     state: RwLock<AppState>,
     registry: RwLock<Option<Arc<Registry>>>,
+    /// Per-core state owned by other crates (open documents…), one per type.
+    services: RwLock<Services>,
+    quit_guards: RwLock<Vec<Arc<dyn QuitGuard>>>,
+    /// Other crates told about setting changes (the tray's capacity, TRY-003).
+    setting_hooks: RwLock<Vec<SettingHook>>,
+    /// Other crates told when something they keep in the core's memory changed under
+    /// them (an import of settings, APP-011).
+    memory_hooks: RwLock<Vec<SettingHook>>,
+    /// What scripts and agents can follow (APP-031).
+    pub events: crate::events::Events,
+    /// The managed configuration read at start (APP-035).
+    managed: RwLock<crate::managed::Managed>,
 }
+
+/// Where the update manifest of the chosen channel is (APP-036): the public releases
+/// repository, or the administrator's own source (APP-035). Err when updates are off
+/// by policy: none.
+pub fn update_endpoint(core: &Core) -> Option<String> {
+    // The Microsoft Store edition is updated by the store.
+    if core.policy("disableUpdates") || crate::platform::store_edition() {
+        return None;
+    }
+    let channel = core.settings.get_str("updates.channel");
+    let channel = if channel == "deferred" {
+        "deferred"
+    } else {
+        "stable"
+    };
+    let source = core
+        .managed()
+        .policy
+        .get("updateSource")
+        .and_then(Value::as_str)
+        .map(|s| s.trim_end_matches('/').to_string())
+        .unwrap_or_else(|| UPDATES_URL.to_string());
+    Some(format!("{source}/{channel}.json"))
+}
+
+/// The public repository of releases (decided by Carlos on 2026-11-15): one release,
+/// `updates`, holds the manifest of each channel.
+pub const UPDATES_URL: &str = "https://github.com/cracvision/xcreenshot-releases/releases/download/updates";
+
+/// Told the key and the new value of each setting that changes.
+pub type SettingHook = Arc<dyn Fn(&str, &Value) + Send + Sync>;
 
 /// Verbose logging switches itself off after this long (APP-046).
 const VERBOSE_FOR_HOURS: i64 = 24;
@@ -63,11 +150,24 @@ impl Core {
             log,
             state: RwLock::new(state),
             registry: RwLock::new(None),
+            services: RwLock::new(Services::new()),
+            quit_guards: RwLock::new(Vec::new()),
+            setting_hooks: RwLock::new(Vec::new()),
+            memory_hooks: RwLock::new(Vec::new()),
+            events: Default::default(),
+            managed: RwLock::new(crate::managed::Managed::inactive(Default::default())),
         });
+        // Before anything reads a setting (APP-035).
+        let managed = crate::managed::load(
+            &crate::managed::location(crate::paths::portable_dir().as_deref()),
+            core.settings.defs(),
+        );
+        core.set_managed(managed);
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
         *core.registry.write().unwrap() = Some(Arc::new(registry));
         core.expire_verbose();
+        core.shortcuts.set_trials(|key| core.settings.get_bool(key));
         if let Some(log) = &core.log {
             log.set_verbose(core.settings.get_bool("diagnostics.verbose"));
         }
@@ -81,14 +181,26 @@ impl Core {
 
     /// In-memory core for tests, with extensions.
     pub fn for_tests_with(platform: Platform, extensions: Vec<Extension>) -> Arc<Core> {
+        // Each test core has its own data folder: tests run side by side.
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // Empty at start: a process id is reused, and a folder of an old run may be left.
+        let root = std::env::temp_dir().join(format!("xs-test-{}-{n}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
         let core = Arc::new(Core {
             settings: SettingsStore::in_memory(),
             shortcuts: ShortcutStore::in_memory(platform),
-            paths: Paths::rooted(&std::env::temp_dir().join(format!("xs-test-{}", std::process::id()))),
+            paths: Paths::rooted(&root),
             host: RwLock::new(Arc::new(NullHost)),
             log: None,
             state: RwLock::new(AppState::default()),
             registry: RwLock::new(None),
+            services: RwLock::new(Services::new()),
+            quit_guards: RwLock::new(Vec::new()),
+            setting_hooks: RwLock::new(Vec::new()),
+            memory_hooks: RwLock::new(Vec::new()),
+            events: Default::default(),
+            managed: RwLock::new(crate::managed::Managed::inactive(Default::default())),
         });
         let registry = build_registry(&core);
         let registry = apply_extensions(registry, &core, extensions);
@@ -104,8 +216,93 @@ impl Core {
         self.host.read().unwrap().clone()
     }
 
+    /// The `T` service of this core, created on first use.
+    pub fn service<T: std::any::Any + Send + Sync>(&self, init: impl FnOnce() -> T) -> Arc<T> {
+        let id = std::any::TypeId::of::<T>();
+        if let Some(s) = self.services.read().unwrap().get(&id) {
+            return s.clone().downcast::<T>().expect("service type");
+        }
+        let mut services = self.services.write().unwrap();
+        services
+            .entry(id)
+            .or_insert_with(|| Arc::new(init()))
+            .clone()
+            .downcast::<T>()
+            .expect("service type")
+    }
+
+    /// Replaces the `T` service with `value` (the library moved, LIB-028). Holders of
+    /// the old one keep it until they let it go.
+    pub fn replace_service<T: std::any::Any + Send + Sync>(&self, value: T) -> Arc<T> {
+        let id = std::any::TypeId::of::<T>();
+        let new = Arc::new(value);
+        self.services.write().unwrap().insert(id, new.clone());
+        new
+    }
+
+    pub fn add_quit_guard(&self, guard: Arc<dyn QuitGuard>) {
+        self.quit_guards.write().unwrap().push(guard);
+    }
+
+    /// Runs `hook` after each setting change (from the UI, the CLI or a file).
+    pub fn on_setting(&self, hook: SettingHook) {
+        self.setting_hooks.write().unwrap().push(hook);
+    }
+
+    /// Runs `hook` when a key of the core's memory is replaced from outside its owner
+    /// (APP-011), with the key and its new value.
+    pub fn on_memory(&self, hook: SettingHook) {
+        self.memory_hooks.write().unwrap().push(hook);
+    }
+
+    /// Tells the owner of `key` that its memory changed (APP-011).
+    pub fn memory_changed(&self, key: &str) {
+        let value = self.recall(key).unwrap_or(Value::Null);
+        let hooks = self.memory_hooks.read().unwrap().clone();
+        for hook in hooks {
+            hook(key, &value);
+        }
+    }
+
+    /// The managed configuration (APP-035).
+    pub fn managed(&self) -> crate::managed::Managed {
+        self.managed.read().unwrap().clone()
+    }
+
+    /// Applies a managed configuration: at start, or in tests.
+    pub fn set_managed(&self, m: crate::managed::Managed) {
+        self.settings.apply_managed(m.defaults.clone(), m.locked.clone());
+        *self.managed.write().unwrap() = m;
+    }
+
+    /// A policy of the managed configuration that is on (APP-035).
+    pub fn policy(&self, name: &str) -> bool {
+        self.managed.read().unwrap().flag(name)
+    }
+
+    /// A setting changed outside `settings.set` (an import, APP-011): the same effects.
+    pub fn setting_changed(&self, key: &str, value: &Value) {
+        self.on_setting_changed(key, value);
+    }
+
+    /// The shortcuts changed outside `shortcuts.set` (an import, APP-011).
+    pub fn shortcuts_changed(&self) {
+        self.host().shortcuts_changed();
+    }
+
+    /// Everything that needs a decision before quitting (APP-004).
+    pub fn quit_pending(&self, lang: Lang) -> Vec<Value> {
+        let guards = self.quit_guards.read().unwrap().clone();
+        guards.iter().flat_map(|g| g.pending(lang)).collect()
+    }
+
     pub fn registry(&self) -> Arc<Registry> {
         self.registry.read().unwrap().clone().expect("registry built")
+    }
+
+    /// Whether the commands can be called yet (the registry is built at start).
+    pub fn is_ready(&self) -> bool {
+        self.registry.read().unwrap().is_some()
     }
 
     /// Remembers a small UI value across sessions (not a preference).
@@ -116,6 +313,57 @@ impl Core {
 
     pub fn recall(&self, key: &str) -> Option<Value> {
         self.state.read().unwrap().memory.get(key).cloned()
+    }
+
+    pub fn forget(&self, key: &str) {
+        if self.state.write().unwrap().memory.remove(key).is_some() {
+            self.save_state();
+        }
+    }
+
+    /// At start, after an update (APP-036): when the version changed since the last
+    /// start, a notification says so. Returns whether the window should show even when
+    /// started in the background: the update was installed from the window ("Install and
+    /// restart"), and the installer brings the app back the way it had started.
+    pub fn note_version(&self) -> bool {
+        let last = self
+            .recall("app.lastVersion")
+            .and_then(|v| v.as_str().map(str::to_string));
+        let reopen = self.recall("updates.reopen").is_some();
+        self.forget("updates.reopen");
+        if last.as_deref() == Some(platform::VERSION) {
+            return false;
+        }
+        self.remember("app.lastVersion", json!(platform::VERSION));
+        // The first start ever (or of a version from before this note) says nothing.
+        if last.is_none() {
+            return false;
+        }
+        let lang = self.lang();
+        self.host().notify(
+            "updates",
+            &tr(lang, "notify.updated_title", &[]),
+            &tr(lang, "notify.updated", &[("version", platform::VERSION)]),
+        );
+        reopen
+    }
+
+    /// The warnings answered with "Don't ask again" and the hints already seen (APP-010,
+    /// APP-014): what "Show warnings and hints again" brings back.
+    pub fn hidden_warnings(&self) -> Vec<Hidden> {
+        let mut hidden: Vec<Hidden> = DONT_ASK_SETTINGS
+            .iter()
+            .filter(|(key, ask)| self.settings.get(key) != Some(json!(ask)))
+            .map(|(key, ask)| Hidden::Setting(key, json!(ask)))
+            .collect();
+        let memory = &self.state.read().unwrap().memory;
+        hidden.extend(
+            memory
+                .keys()
+                .filter(|k| DONT_ASK_STATE.contains(&k.as_str()) || k.starts_with(HINT_PREFIX))
+                .map(|k| Hidden::State(k.clone())),
+        );
+        hidden
     }
 
     pub fn lang(&self) -> Lang {
@@ -132,7 +380,36 @@ impl Core {
             source,
             lang: lang.unwrap_or_else(|| self.lang()),
         };
-        self.registry().call(&ctx, id, params)
+        self.events.before(id, source);
+        let result = self.registry().call(&ctx, id, params);
+        self.events.after(id, source, &result);
+        result
+    }
+
+    /// `events.watch` (APP-031): sends `{"ok": true, "result": {"watching": true}}`, then
+    /// every event that passes the filter, one per `emit`, until `emit` fails (the
+    /// client left). Refused, like any automation, when automation is off (APP-032).
+    pub fn watch_events(&self, params: &Value, lang: Lang, emit: &mut dyn FnMut(&Value) -> bool) {
+        if !self.settings.get_bool("automation.enabled") {
+            let refused = CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(lang, "errors.automation_disabled", &[]),
+            );
+            emit(&json!({ "ok": false, "error": refused }));
+            return;
+        }
+        let filter = params["filter"].as_str().unwrap_or_default().to_string();
+        let rx = self.events.subscribe();
+        if !emit(&json!({ "ok": true, "result": { "watching": true } })) {
+            return;
+        }
+        tracing::info!(filter, "events watch started");
+        for event in rx {
+            if crate::events::matches(&filter, event["event"].as_str().unwrap_or_default()) && !emit(&event) {
+                break;
+            }
+        }
+        tracing::info!("events watch ended");
     }
 
     fn save_state(&self) {
@@ -186,12 +463,24 @@ impl Core {
         if key == "shortcuts.profile" {
             self.host().shortcuts_changed();
         }
+        // A trial feature's shortcut comes and goes with it (APP-034).
+        if key.starts_with("experimental.") && self.shortcuts.set_trials(|k| self.settings.get_bool(k)) {
+            self.host().shortcuts_changed();
+        }
         self.host().settings_changed(key, value);
+        let hooks = self.setting_hooks.read().unwrap().clone();
+        for hook in hooks {
+            hook(key, value);
+        }
     }
 
     /// Name of a shortcut row: its own when it runs a command with fixed parameters
     /// (CAP-065), otherwise the command's title.
     pub fn slot_title(&self, slot: &crate::shortcuts::Slot, lang: Lang) -> String {
+        // A preset's row is called like the preset (CAP-062).
+        if let Some(title) = self.shortcuts.extra_title(slot) {
+            return title;
+        }
         if slot.has_own_title() {
             return tr(
                 lang,
@@ -369,17 +658,11 @@ fn str_param<'a>(p: &'a Value, name: &str) -> Option<&'a str> {
 }
 
 fn resolve_slot(core: &Core, command: &str, scope: Option<&str>, lang: Lang) -> Result<Slot, CommandError> {
-    let scope = match scope {
-        Some("app") => Some(ShortcutScope::App),
-        Some("global") => Some(ShortcutScope::Global),
-        _ => None,
-    };
-    let found = match scope {
+    let found = match scope.and_then(ShortcutScope::parse) {
         Some(s) => core.shortcuts.find_slot(command, s),
-        None => core
-            .shortcuts
-            .find_slot(command, ShortcutScope::Global)
-            .or_else(|| core.shortcuts.find_slot(command, ShortcutScope::App)),
+        None => [ShortcutScope::Global, ShortcutScope::App, ShortcutScope::Editor]
+            .into_iter()
+            .find_map(|s| core.shortcuts.find_slot(command, s)),
     };
     found.ok_or_else(|| {
         CommandError::new(
@@ -440,13 +723,29 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         .host()
         .show_main_window()
         .map(|_| json!({})));
+    // Files opened with XcreenShot (APP-001, CAP-063).
+    on!("app.open_files", |core, ctx, p| crate::opening::open_files(
+        &core, ctx, &p
+    ));
+    on!("app.take_opening", |core, ctx, p| crate::opening::take(&core, &p));
     on!("app.close_window", |core, ctx, _p| core
         .host()
         .close_focused_window()
         .map(|_| json!({})));
-    on!("app.quit", |core, ctx, _p| {
+    on!("app.quit", |core, ctx, p| {
+        // APP-004: ask first about anything that would be lost, unless forced.
+        let force = p.get("force").and_then(Value::as_bool).unwrap_or(false);
+        let pending = core.quit_pending(ctx.lang);
+        if !force && !pending.is_empty() {
+            core.host().confirm_quit(&pending);
+            return Ok(json!({ "status": "needs_decision", "pending": pending }));
+        }
+        let guards = core.quit_guards.read().unwrap().clone();
+        for guard in guards {
+            guard.before_quit();
+        }
         core.host().quit();
-        Ok(json!({}))
+        Ok(json!({ "status": "quitting" }))
     });
     on!("app.diagnostics", |core, ctx, p| {
         let info = core.diagnostics();
@@ -461,6 +760,145 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         core.host().open_path(&dir)?;
         Ok(json!({ "path": dir }))
     });
+    // Streams over the CLI's connection; the IPC server handles it (APP-031).
+    on!("events.watch", |_core, ctx, _p| Err(CommandError::new(
+        ErrorCode::InvalidParams,
+        tr(ctx.lang, "errors.events_stream_only", &[]),
+    )));
+    on!("app.welcome", |core, ctx, _p| {
+        core.host().open_welcome()?;
+        Ok(json!({}))
+    });
+    on!("app.help", |core, ctx, p| {
+        core.host().open_help(str_param(&p, "topic"))?;
+        Ok(json!({}))
+    });
+    // Help > Check for updates (APP-036).
+    on!("app.check_update", |core, ctx, p| {
+        if crate::platform::store_edition() {
+            return Err(CommandError::new(
+                ErrorCode::FeatureDisabled,
+                tr(ctx.lang, "errors.updates_store", &[]),
+            ));
+        }
+        let endpoint = update_endpoint(&core).ok_or_else(|| {
+            CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.updates_disabled", &[]),
+            )
+        })?;
+        let mut r = core.host().check_update(&endpoint)?;
+        r["channel"] = json!(core.settings.get_str("updates.channel"));
+        core.remember("updates.lastCheck", json!(chrono::Utc::now().to_rfc3339()));
+        // From the menu: the answer shows in the main window, also "you have the latest".
+        if p.get("ui").and_then(Value::as_bool) == Some(true) {
+            core.host().editor_event("update", r.clone());
+        }
+        Ok(r)
+    });
+    on!("app.install_update", |core, ctx, p| {
+        if core.policy("disableUpdates") {
+            return Err(CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.updates_disabled", &[]),
+            ));
+        }
+        let when = p.get("when").and_then(Value::as_str).unwrap_or("now");
+        // Never in the middle of a recording (APP-036): then, at quit.
+        if when == "now" {
+            let recording = core
+                .call(Source::Ui, "record.status", json!({}), Some(ctx.lang))
+                .ok()
+                .and_then(|s| s["status"].as_str().map(str::to_string))
+                .is_some_and(|s| s != "idle");
+            if recording {
+                return Err(CommandError::new(
+                    ErrorCode::Busy,
+                    tr(ctx.lang, "errors.update_busy", &[]),
+                ));
+            }
+            // Installed from the window: the window comes back after the update, even
+            // if the app had started in the background (see `note_version`).
+            if ctx.source == Source::Ui {
+                core.remember("updates.reopen", json!(true));
+            }
+        }
+        core.host().install_update(when)
+    });
+    // Advanced > Managed configuration > View (APP-035).
+    on!("app.managed", |core, _ctx, _p| Ok(core.managed().to_json()));
+    // Help > About XcreenShot (APP-015).
+    on!("app.about", |core, ctx, p| {
+        if p.get("open").and_then(Value::as_bool).unwrap_or(false) {
+            core.host().open_help(Some("about"))?;
+        }
+        Ok(json!({
+        "version": platform::VERSION,
+        "build": platform::BUILD,
+        "date": platform::BUILD_DATE,
+        "platform": Platform::current(),
+        "arch": platform::arch(),
+        "channel": if cfg!(debug_assertions) { "development" } else { "stable" },
+        "dataDir": core.paths.local_dir,
+        "configDir": core.paths.config_dir,
+        // The Microsoft Store edition: the store updates it (APP-036).
+        "store": crate::platform::store_edition(),
+        // Portable mode (APP-038), and on a read-only folder.
+        "portable": crate::paths::portable_dir().is_some(),
+        "portableReadOnly": crate::paths::portable_read_only(),
+        // Managed configuration (APP-035): inactive, active or errors.
+        "managed": core.managed().status_str(),
+        // The only network connections the app makes (APP-054).
+        "network": ["share", "updates", "cloud_ai"],
+        }))
+    });
+    // Help > Send feedback… (APP-015): a draft the user reviews and sends, nothing more.
+    on!("app.feedback", |core, ctx, _p| {
+        let body = tr(
+            ctx.lang,
+            "ui.help.feedback_template",
+            &[
+                ("version", platform::VERSION_FULL),
+                (
+                    "system",
+                    &format!("{} {}", Platform::current().as_str(), platform::arch()),
+                ),
+            ],
+        );
+        let url = format!("{FEEDBACK_URL}?body={}", percent_encode(&body));
+        core.host().open_uri(&url)?;
+        Ok(json!({ "url": url }))
+    });
+    // Advanced > App data folder (APP-009): where the app keeps its data and settings.
+    on!("app.open_data_folder", |core, ctx, p| {
+        let data = core.paths.local_dir.clone();
+        if p.get("open").and_then(Value::as_bool).unwrap_or(true) {
+            std::fs::create_dir_all(&data).map_err(|e| CommandError::internal(e.to_string()))?;
+            core.host().open_path(&data)?;
+        }
+        Ok(json!({ "data": data, "config": core.paths.config_dir }))
+    });
+    // How an MCP client starts XcreenShot (APP-029): the CLI installed next to the app.
+    on!("app.mcp_config", |_core, ctx, _p| {
+        let exe = if cfg!(windows) {
+            "xcreenshot.exe"
+        } else {
+            "xcreenshot"
+        };
+        let cli = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join(exe)))
+            .filter(|p| p.exists())
+            .ok_or_else(|| CommandError::new(ErrorCode::NotFound, tr(ctx.lang, "errors.cli_missing", &[])))?;
+        let command = cli.to_string_lossy().into_owned();
+        let config = json!({"mcpServers": {"xcreenshot": {"command": command, "args": ["mcp"]}}});
+        Ok(json!({
+            "command": command,
+            "args": ["mcp"],
+            "config": serde_json::to_string_pretty(&config).unwrap_or_default(),
+            "claudeCode": format!("claude mcp add xcreenshot -- \"{command}\" mcp"),
+        }))
+    });
     on!("app.permissions", |core, ctx, _p| Ok(serde_json::to_value(
         core.host().permissions()
     )
@@ -474,13 +912,18 @@ fn build_registry(core: &Arc<Core>) -> Registry {
     on!("app.open_permission_settings", |core, ctx, p| {
         let perm = Permission::parse(str_param(&p, "permission").unwrap_or_default())
             .ok_or_else(|| CommandError::new(ErrorCode::InvalidParams, "permission"))?;
-        if Platform::current() != Platform::Macos {
-            return Err(CommandError::new(
+        let uri = if Platform::current() == Platform::Macos {
+            Some(perm.macos_settings_uri())
+        } else {
+            perm.windows_settings_uri()
+        };
+        let uri = uri.ok_or_else(|| {
+            CommandError::new(
                 ErrorCode::NotSupportedOnPlatform,
                 tr(ctx.lang, "errors.macos_only", &[]),
-            ));
-        }
-        core.host().open_uri(perm.macos_settings_uri())?;
+            )
+        })?;
+        core.host().open_uri(uri)?;
         Ok(json!({}))
     });
     on!("settings.open", |core, ctx, p| {
@@ -508,6 +951,125 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         }
         Ok(json!({ "key": key, "value": value, "changed": changed }))
     });
+    on!("settings.export", |core, ctx, p| {
+        let out = str_param(&p, "out").unwrap_or_default();
+        let groups: Vec<String> = p
+            .get("groups")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect();
+        let file = crate::settings_io::export(&core, &groups);
+        let bytes = serde_json::to_vec_pretty(&file).map_err(|e| CommandError::internal(e.to_string()))?;
+        crate::paths::write_atomic(std::path::Path::new(out), &bytes).map_err(|e| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "out"), ("reason", &e.to_string())],
+                ),
+            )
+        })?;
+        let written: Vec<&String> = file["groups"]
+            .as_object()
+            .map(|g| g.keys().collect())
+            .unwrap_or_default();
+        Ok(json!({ "path": out, "groups": written }))
+    });
+    on!("settings.import", |core, ctx, p| {
+        let path = str_param(&p, "path").unwrap_or_default();
+        let bad = |reason: &str| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "path"), ("reason", reason)],
+                ),
+            )
+        };
+        let bytes = std::fs::read(path).map_err(|e| bad(&e.to_string()))?;
+        let file: Value = serde_json::from_slice(&bytes).map_err(|e| bad(&e.to_string()))?;
+        let opts = crate::settings_io::ImportOptions {
+            groups: p
+                .get("groups")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect(),
+            convert_shortcuts: p.get("convertShortcuts").and_then(Value::as_bool).unwrap_or(true),
+            on_conflict: p
+                .get("onConflict")
+                .and_then(Value::as_str)
+                .and_then(crate::settings_io::OnConflict::parse)
+                .unwrap_or(crate::settings_io::OnConflict::KeepBoth),
+            dry_run: p.get("dryRun").and_then(Value::as_bool).unwrap_or(false),
+        };
+        let r = crate::settings_io::import(&core, &file, &opts, ctx.lang).map_err(|e| bad(&e))?;
+        if !opts.dry_run {
+            tracing::info!(source = ?ctx.source, "settings imported");
+        }
+        Ok(r)
+    });
+    on!("settings.reset", |core, ctx, p| {
+        let section = str_param(&p, "section");
+        // The Shortcuts section keeps its profile: its shortcuts go back to that profile's.
+        let keep: &[&str] = if section == Some("shortcuts") {
+            &["shortcuts.profile"]
+        } else {
+            &[]
+        };
+        let changed = core
+            .settings
+            .reset(section, keep)
+            .map_err(|e| CommandError::internal(format!("cannot save settings: {e}")))?;
+        for (key, value) in &changed {
+            tracing::info!(key, source = ?ctx.source, "setting reset");
+            core.on_setting_changed(key, value);
+        }
+        // All settings, or the Shortcuts section: the shortcuts of the profile too.
+        if section.is_none_or(|s| s == "shortcuts") {
+            core.shortcuts.reset(None);
+            core.host().shortcuts_changed();
+        }
+        Ok(json!({ "reset": changed.iter().map(|(k, _)| k).collect::<Vec<_>>() }))
+    });
+    // One-time hints (APP-014): which were seen, and marking one as seen.
+    on!("app.hints", |core, ctx, p| {
+        if let Some(id) = str_param(&p, "seen").filter(|id| !id.is_empty()) {
+            core.remember(&format!("{HINT_PREFIX}{id}"), json!(true));
+        }
+        let seen: Vec<String> = core
+            .state
+            .read()
+            .unwrap()
+            .memory
+            .keys()
+            .filter_map(|k| k.strip_prefix(HINT_PREFIX).map(String::from))
+            .collect();
+        Ok(json!({ "enabled": core.settings.get_bool("general.hints"), "seen": seen }))
+    });
+    on!("app.warnings", |core, ctx, p| {
+        let hidden = core.hidden_warnings();
+        let reset = p.get("reset").and_then(Value::as_bool).unwrap_or(false);
+        if !reset {
+            return Ok(json!({ "hidden": hidden.len() }));
+        }
+        for w in &hidden {
+            match w {
+                Hidden::Setting(key, value) => {
+                    if core.settings.sync_external(key, value.clone()) {
+                        core.on_setting_changed(key, value);
+                    }
+                }
+                Hidden::State(key) => core.forget(key),
+            }
+        }
+        Ok(json!({ "hidden": 0, "restored": hidden.len() }))
+    });
     on!("settings.list", |core, ctx, _p| {
         if let Some(v) = core.host().launch_at_login() {
             if core.settings.sync_external("general.launchAtLogin", json!(v)) {
@@ -521,6 +1083,33 @@ fn build_registry(core: &Arc<Core>) -> Registry {
     )
     .unwrap_or_default()));
     on!("shortcuts.list", |core, ctx, _p| Ok(core.shortcut_rows(ctx.lang)));
+    on!("shortcuts.export", |core, ctx, p| {
+        let sheet = crate::sheet::sheet(&core, ctx.lang);
+        let Some(out) = str_param(&p, "out") else {
+            return Ok(json!({ "path": null, "sheet": sheet }));
+        };
+        let bad = |reason: &str| {
+            CommandError::new(
+                ErrorCode::InvalidParams,
+                tr(
+                    ctx.lang,
+                    "errors.invalid_param",
+                    &[("param", "out"), ("reason", reason)],
+                ),
+            )
+        };
+        let bytes = match str_param(&p, "format").unwrap_or("pdf") {
+            "json" => serde_json::to_vec_pretty(&sheet).map_err(|e| bad(&e.to_string()))?,
+            "html" => crate::sheet::html(&sheet).into_bytes(),
+            _ => {
+                let pdf = core.service(|| crate::sheet::PdfSheet(None));
+                let draw = pdf.0.as_ref().ok_or_else(|| bad("PDF is not available here"))?;
+                draw(&sheet).map_err(|e| bad(&e))?
+            }
+        };
+        crate::paths::write_atomic(std::path::Path::new(out), &bytes).map_err(|e| bad(&e.to_string()))?;
+        Ok(json!({ "path": out, "sheet": sheet }))
+    });
     on!("shortcuts.set", |core, ctx, p| {
         let slot = resolve_slot(
             &core,
@@ -623,6 +1212,13 @@ fn build_registry(core: &Arc<Core>) -> Registry {
         let Some(core) = weak_gate.upgrade() else {
             return Ok(());
         };
+        // APP-035: no video by policy.
+        if core.policy("disableVideoCapture") && spec.id.starts_with("record.") {
+            return Err(CommandError::new(
+                ErrorCode::DisabledByPolicy,
+                tr(ctx.lang, "errors.video_by_policy", &[]),
+            ));
+        }
         if ctx.source.is_automation()
             && spec.id != "app.ping"
             && !core.settings.get_bool("automation.enabled")
@@ -631,6 +1227,19 @@ fn build_registry(core: &Arc<Core>) -> Registry {
                 ErrorCode::DisabledByPolicy,
                 tr(ctx.lang, "errors.automation_disabled", &[]),
             ));
+        }
+        // SMT-002: a smart feature switched off, named by its setting.
+        if let Some(f) = crate::features::blocks(&core.settings, spec.id) {
+            let feature = tr(ctx.lang, &format!("ui.features.{}", f.name), &[]);
+            return Err(CommandError::new(
+                ErrorCode::FeatureDisabled,
+                tr(
+                    ctx.lang,
+                    "errors.feature_disabled",
+                    &[("feature", &feature), ("setting", f.setting)],
+                ),
+            )
+            .with_details(json!({ "setting": f.setting })));
         }
         Ok(())
     }));
@@ -659,6 +1268,110 @@ mod tests {
         core.call(source, id, p, Some(Lang::En))
     }
 
+    /// APP-036: the manifest of the channel, the administrator's source, or none.
+    #[test]
+    fn update_endpoint_follows_channel_and_policy() {
+        let core = Core::for_tests(Platform::Windows);
+        assert_eq!(
+            update_endpoint(&core).unwrap(),
+            format!("{UPDATES_URL}/stable.json")
+        );
+        call(
+            &core,
+            Source::Ui,
+            "settings.set",
+            json!({"key": "updates.channel", "value": "deferred"}),
+        )
+        .unwrap();
+        assert!(update_endpoint(&core).unwrap().ends_with("/deferred.json"));
+        let m = crate::managed::parse(
+            br#"{"version": 1, "policy": {"updateSource": "https://intranet.example/xs/"}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert_eq!(
+            update_endpoint(&core).unwrap(),
+            "https://intranet.example/xs/deferred.json"
+        );
+        let m = crate::managed::parse(
+            br#"{"version": 1, "policy": {"disableUpdates": true}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert!(update_endpoint(&core).is_none());
+        let e = call(&core, Source::Cli, "app.check_update", json!({})).unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+    }
+
+    /// APP-036: after an update the start notes the new version, and the window comes
+    /// back only when the update was installed from it.
+    #[test]
+    fn a_start_after_an_update_is_noted() {
+        let core = Core::for_tests(Platform::Windows);
+        // The first start says nothing and keeps the version.
+        assert!(!core.note_version());
+        assert_eq!(core.recall("app.lastVersion"), Some(json!(platform::VERSION)));
+        // Another version, installed from the window.
+        core.remember("app.lastVersion", json!("0.0.1"));
+        core.remember("updates.reopen", json!(true));
+        assert!(core.note_version());
+        assert_eq!(core.recall("updates.reopen"), None);
+        // The next start is a plain one.
+        assert!(!core.note_version());
+        // Installed by itself at quit: a notice, no window.
+        core.remember("app.lastVersion", json!("0.0.1"));
+        assert!(!core.note_version());
+        assert_eq!(core.recall("app.lastVersion"), Some(json!(platform::VERSION)));
+    }
+
+    /// APP-035: a locked setting cannot change, a default starts the value, and the
+    /// video policy turns record.* off.
+    #[test]
+    fn managed_configuration_applies() {
+        let core = Core::for_tests(Platform::Windows);
+        let m = crate::managed::parse(
+            br#"{"version": 1, "defaults": {"general.language": "es"},
+                "locked": {"capture.autoDetect": false}, "policy": {"disableVideoCapture": true}}"#,
+            core.settings.defs(),
+        );
+        core.set_managed(m);
+        assert_eq!(core.settings.get_str("general.language"), "es");
+        assert_eq!(core.settings.get("capture.autoDetect"), Some(json!(false)));
+        let e = call(
+            &core,
+            Source::Cli,
+            "settings.set",
+            json!({"key": "capture.autoDetect", "value": true}),
+        )
+        .unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+        assert_eq!(e.code.exit_code(), 6);
+        let list = call(&core, Source::Ui, "settings.list", json!({})).unwrap();
+        let row = list
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["key"] == "capture.autoDetect")
+            .cloned()
+            .unwrap();
+        assert_eq!(row["locked"], true);
+        let e = call(&core, Source::Cli, "record.status", json!({})).unwrap_err();
+        assert_eq!(e.code, ErrorCode::DisabledByPolicy);
+        assert_eq!(
+            call(&core, Source::Ui, "app.managed", json!({})).unwrap()["status"],
+            "active"
+        );
+        // The user can still change a setting that only has a managed default.
+        call(
+            &core,
+            Source::Ui,
+            "settings.set",
+            json!({"key": "general.language", "value": "en"}),
+        )
+        .unwrap();
+        assert_eq!(core.settings.get_str("general.language"), "en");
+    }
+
     #[test]
     fn every_spec_has_a_handler_and_valid_schemas() {
         let core = Core::for_tests(Platform::Windows);
@@ -680,12 +1393,99 @@ mod tests {
         }
     }
 
+    /// APP-010: a section's reset leaves the other sections alone; warnings come back.
+    #[test]
+    fn reset_settings_and_warnings() {
+        let core = Core::for_tests(Platform::Windows);
+        let set = |k: &str, v: Value| {
+            call(&core, Source::Ui, "settings.set", json!({"key": k, "value": v})).unwrap()
+        };
+        set("capture.flash", json!(false));
+        set("capture.sound", json!("soft"));
+        set("editor.shrinkToFit", json!(false));
+        let r = call(&core, Source::Ui, "settings.reset", json!({"section": "capture"})).unwrap();
+        let mut keys: Vec<&str> = r["reset"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(Value::as_str)
+            .collect();
+        keys.sort();
+        assert_eq!(keys, ["capture.flash", "capture.sound"]);
+        assert_eq!(core.settings.get("capture.sound"), Some(json!("none")));
+        assert_eq!(core.settings.get("editor.shrinkToFit"), Some(json!(false)));
+        // From the CLI it needs --yes, like every destructive command.
+        assert!(core.registry().spec("settings.reset").unwrap().destructive);
+
+        set("library.confirmDelete", json!(false));
+        core.remember("editor.flattenWarningOff", json!(true));
+        core.remember("hint.first_editor", json!(true));
+        core.remember("capture.magnifierZoom", json!(4));
+        let r = call(&core, Source::Ui, "app.warnings", json!({})).unwrap();
+        assert_eq!(r["hidden"], 3);
+        let r = call(&core, Source::Ui, "app.warnings", json!({"reset": true})).unwrap();
+        assert_eq!(r["restored"], 3);
+        assert_eq!(core.settings.get("library.confirmDelete"), Some(json!(true)));
+        assert!(core.recall("hint.first_editor").is_none());
+        assert_eq!(
+            core.recall("capture.magnifierZoom"),
+            Some(json!(4)),
+            "other memory stays"
+        );
+    }
+
+    /// Every editor action a menu or a shortcut sends is one `editor.action` accepts.
+    #[test]
+    fn editor_actions_of_menus_and_shortcuts_are_accepted() {
+        let mut all = menus::app_menu(Platform::Windows);
+        all.extend(menus::app_menu(Platform::Macos));
+        let mut sent: Vec<String> = Vec::new();
+        fn walk(entries: &[menus::MenuEntry], sent: &mut Vec<String>) {
+            for e in entries {
+                match e {
+                    menus::MenuEntry::Command { command, params, .. } if *command == "editor.action" => {
+                        if let Some(a) = params["action"].as_str() {
+                            sent.push(a.to_string());
+                        }
+                    }
+                    menus::MenuEntry::Submenu { items, .. } => walk(items, sent),
+                    _ => {}
+                }
+            }
+        }
+        walk(&all, &mut sent);
+        let core = Core::for_tests(Platform::Windows);
+        for row in core.shortcut_rows(Lang::En)["rows"].as_array().unwrap() {
+            if row["runs"] == "editor.action" {
+                if let Some(a) = row["params"]["action"].as_str() {
+                    sent.push(a.to_string());
+                }
+            }
+        }
+        for a in sent {
+            assert!(
+                catalog::EDITOR_ACTIONS.contains(&a.as_str()),
+                "editor.action does not accept {a}"
+            );
+        }
+    }
+
     /// APP-027: every menu entry is bound to a registered command.
     #[test]
     fn menus_only_reference_registered_commands() {
         let core = Core::for_tests(Platform::Windows);
         let reg = core.registry();
-        let mut all = menus::tray_menu();
+        let mut all = menus::tray_menu_with(
+            &[],
+            &menus::TrayState {
+                scrolling: true,
+                quick: true,
+                stops: vec![
+                    ("s1".into(), "Stop".into(), "capture.interval_stop"),
+                    ("p1".into(), "Stop".into(), "capture.schedule_cancel"),
+                ],
+            },
+        );
         all.extend(menus::app_menu(Platform::Windows));
         all.extend(menus::app_menu(Platform::Macos));
         for id in menus::commands_in(&all) {
@@ -703,7 +1503,7 @@ mod tests {
             let core = Core::for_tests(platform);
             for slot in core.shortcuts.slots() {
                 for lang in [Lang::En, Lang::Es] {
-                    let title = core.slot_title(slot, lang);
+                    let title = core.slot_title(&slot, lang);
                     assert!(!title.starts_with("shortcuts.slot."), "{} has no name", slot.id);
                 }
             }
@@ -838,14 +1638,27 @@ mod tests {
             json!({"profile": "compatibility", "dryRun": true}),
         )
         .unwrap();
-        // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X.
+        // CAP-066 on Windows: Capture moves to PrtScn and Quit gets Ctrl+Shift+X, which
+        // Trim edges gives up (EDT-051); video capture has none there, and Record and
+        // Stop move to Shift+F9 and Shift+F10, and Switch the camera view has none (VID-075).
         let changed: Vec<&str> = preview["changes"]
             .as_array()
             .unwrap()
             .iter()
             .filter_map(|c| c["command"].as_str())
             .collect();
-        assert_eq!(changed, ["capture.capture", "app.quit"]);
+        assert_eq!(
+            changed,
+            [
+                "capture.capture",
+                "record.video",
+                "record.toggle",
+                "record.stop",
+                "record.camera_swap",
+                "app.quit",
+                "editor.trim"
+            ]
+        );
         assert_eq!(core.profile(), Profile::Coexistence);
         call(
             &core,

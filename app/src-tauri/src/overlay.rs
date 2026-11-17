@@ -131,6 +131,7 @@ pub fn select(app: &AppHandle, request: Value, frames: Vec<Frame>) -> Result<Val
     let (ready_tx, ready_rx) = mpsc::channel();
     let handle = app.clone();
     let req = request.clone();
+    let qr_monitors = monitors.clone();
     app.run_on_main_thread(move || {
         let ui_started = Instant::now();
         prewarm(&handle, monitors.len());
@@ -152,7 +153,9 @@ pub fn select(app: &AppHandle, request: Value, frames: Vec<Frame>) -> Result<Val
                 };
                 let width = r["width"].as_u64().unwrap_or(1) as u32;
                 let height = r["height"].as_u64().unwrap_or(1) as u32;
-                if let Some(pixels) = bgra.get_mut(index).and_then(Option::take) {
+                // Choosing a video's area, the screen stays live (VID-002).
+                let live = req["live"].as_bool() == Some(true);
+                if let Some(pixels) = bgra.get_mut(index).and_then(Option::take).filter(|_| !live) {
                     crate::freeze_win::show(index, rect, width, height, pixels);
                 }
             }
@@ -175,6 +178,44 @@ pub fn select(app: &AppHandle, request: Value, frames: Vec<Frame>) -> Result<Val
     })
     .map_err(|e| CommandError::internal(e.to_string()))?;
     let _ = ready_rx.recv();
+    // QR codes on the frozen screens, found in the background while the user selects
+    // (SMT-038); the overlays show them when the selection holds one.
+    if request["qr"].as_bool() == Some(true) {
+        let frames: Vec<Frame> = state
+            .overlays
+            .session
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|s| s.frames.clone())
+            .unwrap_or_default();
+        let handle = app.clone();
+        std::thread::spawn(move || {
+            let started = Instant::now();
+            let codes = xs_capture::qr_cmds::codes_on_screen(&frames, &qr_monitors);
+            tracing::debug!(
+                codes = codes.len(),
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                "QR codes looked for"
+            );
+            let current = handle
+                .state::<AppState>()
+                .overlays
+                .session
+                .lock()
+                .unwrap()
+                .as_ref()
+                .map(|s| s.seq);
+            if codes.is_empty() || current != Some(seq) {
+                return;
+            }
+            for i in 0..qr_monitors.len() {
+                if let Some(w) = handle.get_webview_window(&label(i)) {
+                    let _ = w.emit("xs://overlay-qr", json!({ "seq": seq, "codes": codes }));
+                }
+            }
+        });
+    }
 
     let outcome = rx.recv().unwrap_or_else(|_| json!({ "kind": "cancelled" }));
     end(app);

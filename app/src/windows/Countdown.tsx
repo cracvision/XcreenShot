@@ -9,6 +9,8 @@ interface Info {
   seconds: number;
   /** Epoch milliseconds when the capture happens. */
   endsAt: number;
+  /** A recording's: large numbers in the middle of the area (VID-008). */
+  big?: boolean;
 }
 
 export function Countdown() {
@@ -33,9 +35,24 @@ export function Countdown() {
 
   const left = info ? Math.max(0, Math.ceil((info.endsAt - now) / 1000)) : 0;
 
+  if (info?.big)
+    return (
+      <div
+        className="countdown big"
+        role="timer"
+        aria-live="off"
+        aria-label={t("ui.countdown.label", { seconds: left })}
+      >
+        <div className="countdown-number" aria-hidden="true" key={left}>
+          {left}
+        </div>
+        <div className="countdown-hint">{t("ui.countdown.hint")}</div>
+      </div>
+    );
+
   return (
     <div className="countdown" role="timer" aria-live="off">
-      <div className="countdown-number" aria-hidden="true">
+      <div className="countdown-number" aria-hidden="true" key={left}>
         {left}
       </div>
       <div className="countdown-text">

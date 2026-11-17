@@ -1,0 +1,18 @@
+{
+  "bundle": {
+    "externalBin": ["binaries/xcreenshot"],
+    "resources": {
+      "../../AGENTS.md": "AGENTS.md"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh",
+        "languages": ["English", "Spanish"],
+        "customLanguageFiles": {
+          "English": "nsis/English.nsh",
+          "Spanish": "nsis/Spanish.nsh"
+        }
+      }
+    }
+  }
+}

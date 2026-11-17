@@ -1,0 +1,4 @@
+{
+  "en": "The xcreenshot command (terminal, Claude Desktop) now works on every Windows, also without the Visual C++ libraries. After an update installed from the window, XcreenShot comes back with its window and says it was updated.",
+  "es": "El comando xcreenshot (terminal, Claude Desktop) ya funciona en cualquier Windows, también sin las librerías de Visual C++. Tras una actualización instalada desde la ventana, XcreenShot vuelve con su ventana y avisa de que se actualizó."
+}

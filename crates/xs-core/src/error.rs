@@ -14,6 +14,8 @@ pub enum ErrorCode {
     Cancelled,
     PermissionDenied,
     DisabledByPolicy,
+    /// A feature the user has turned off or not set up yet (SMT-002, SMT-039).
+    FeatureDisabled,
     NotSupportedOnPlatform,
     Timeout,
     NotRunning,
@@ -29,9 +31,10 @@ impl ErrorCode {
             ErrorCode::NotRunning => 3,
             ErrorCode::Cancelled => 4,
             ErrorCode::Busy => 5,
-            ErrorCode::PermissionDenied | ErrorCode::DisabledByPolicy | ErrorCode::NotSupportedOnPlatform => {
-                6
-            }
+            ErrorCode::PermissionDenied
+            | ErrorCode::DisabledByPolicy
+            | ErrorCode::FeatureDisabled
+            | ErrorCode::NotSupportedOnPlatform => 6,
             ErrorCode::NotFound => 7,
             ErrorCode::Timeout => 8,
         }
@@ -46,6 +49,7 @@ impl ErrorCode {
             ErrorCode::Cancelled => "cancelled",
             ErrorCode::PermissionDenied => "permission_denied",
             ErrorCode::DisabledByPolicy => "disabled_by_policy",
+            ErrorCode::FeatureDisabled => "feature_disabled",
             ErrorCode::NotSupportedOnPlatform => "not_supported_on_platform",
             ErrorCode::Timeout => "timeout",
             ErrorCode::NotRunning => "not_running",

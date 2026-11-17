@@ -129,8 +129,46 @@ pub fn print_screen_opens_system_capture() -> bool {
     }
 }
 
+const CONSENT: &str = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore";
+
+/// Whether Windows' privacy settings block a device for XcreenShot (VID-077):
+/// "Microphone access" (or "Camera access") off for the whole computer or for this
+/// user, or "Let desktop apps access…" off. `values` are those three settings' `Value`,
+/// "Allow" or "Deny" (missing: allowed).
+pub fn consent_denied(values: [Option<&str>; 3]) -> bool {
+    values
+        .iter()
+        .any(|v| v.is_some_and(|v| v.eq_ignore_ascii_case("Deny")))
+}
+
+/// `capability` is "microphone" or "webcam".
+pub fn device_access_denied(capability: &str) -> bool {
+    let key = format!(r"{CONSENT}\{capability}");
+    let desktop = format!(r"{key}\NonPackaged");
+    let (machine, user, apps) = (
+        read_string(HKLM, &key, "Value"),
+        read_string(HKCU, &key, "Value"),
+        read_string(HKCU, &desktop, "Value"),
+    );
+    consent_denied([machine.as_deref(), user.as_deref(), apps.as_deref()])
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn privacy_blocks_a_device() {
+        use super::consent_denied;
+        assert!(!consent_denied([None, None, None]));
+        assert!(!consent_denied([Some("Allow"), Some("Allow"), Some("Allow")]));
+        assert!(
+            consent_denied([Some("Deny"), Some("Allow"), None]),
+            "the whole computer"
+        );
+        assert!(consent_denied([None, None, Some("Deny")]), "desktop apps");
+        // This computer as it is: it can be read, whatever it says.
+        let _ = super::device_access_denied("microphone");
+    }
+
     #[test]
     fn startup_approved_flag() {
         use super::startup_entry_turned_off;

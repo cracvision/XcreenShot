@@ -3,11 +3,11 @@ resolver = "2"
 members = ["crates/*", "app/src-tauri"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.9"
 edition = "2021"
 license = "UNLICENSED"
 publish = false
-rust-version = "1.85"
+rust-version = "1.88"
 
 [workspace.dependencies]
 xs-core = { path = "crates/xs-core" }

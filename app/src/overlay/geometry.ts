@@ -60,12 +60,59 @@ export function lockAspect(a: Pt, b: Pt, ratio: number): Pt {
   return { x: a.x + sx * Math.round(Math.abs(dy) * ratio), y: b.y };
 }
 
-/** Aspect held by modifier keys (CAP-018): Shift 1:1, Alt 16:9, Alt+Shift 4:3. */
-export function ratioFromKeys(shift: boolean, alt: boolean): number | null {
-  if (alt && shift) return 4 / 3;
-  if (alt) return 16 / 9;
+/**
+ * Aspect held by modifier keys (CAP-018): Shift 1:1, Alt 16:9, Alt+Shift 4:3. With the
+ * compatibility profile on Windows (CAP-066): Ctrl 16:9 and Ctrl+Shift 4:3, and Alt
+ * holds nothing.
+ */
+export function ratioFromKeys(
+  shift: boolean,
+  alt: boolean,
+  ctrl = false,
+  compatibility = false,
+): number | null {
+  const wide = compatibility ? ctrl : alt;
+  if (wide && shift) return 4 / 3;
+  if (wide) return 16 / 9;
   if (shift) return 1;
   return null;
+}
+
+/** Standard sizes the guides show, in physical pixels (CAP-019). */
+export const GUIDE_SIZES: [number, number][] = [
+  [3840, 2160],
+  [2560, 1440],
+  [1920, 1080],
+  [1280, 720],
+  [1080, 1080],
+  [640, 480],
+  [320, 240],
+];
+
+/** How close, in pixels, a selection must be to a standard size to snap to it. */
+export const GUIDE_SNAP = 8;
+
+/**
+ * With the guides shown, a drag from `a` to `b` that ends within GUIDE_SNAP pixels of
+ * a standard size takes that exact size (CAP-019). Returns the new end point and the
+ * size, or null when no size is near.
+ */
+export function snapToGuides(a: Pt, b: Pt): { end: Pt; size: [number, number] } | null {
+  const w = Math.abs(b.x - a.x);
+  const h = Math.abs(b.y - a.y);
+  let best: [number, number] | null = null;
+  let bestGap = Infinity;
+  for (const size of GUIDE_SIZES) {
+    const gap = Math.max(Math.abs(w - size[0]), Math.abs(h - size[1]));
+    if (gap <= GUIDE_SNAP && gap < bestGap) {
+      best = size;
+      bestGap = gap;
+    }
+  }
+  if (!best) return null;
+  const sx = b.x < a.x ? -1 : 1;
+  const sy = b.y < a.y ? -1 : 1;
+  return { end: { x: a.x + sx * best[0], y: a.y + sy * best[1] }, size: best };
 }
 
 /** Keeps a rectangle inside `bounds` (same size if it fits). */

@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { display, fromEvent, releasedCombination, type LayoutMap } from "../lib/accelerator";
+import { Icon } from "../components/Icon";
+import { Keys } from "../components/Keys";
+import {
+  display,
+  displayKeys,
+  fromEvent,
+  releasedCombination,
+  type LayoutMap,
+} from "../lib/accelerator";
 import { run } from "../lib/commands";
 import { useApp } from "../store";
 
@@ -81,20 +89,31 @@ export function ShortcutRecorder({ value, platform, layout, conflict, label, onC
       ? display(value, platform, layout)
       : t("ui.shortcuts.none");
 
+  const keys = (accel: string) => <Keys keys={displayKeys(accel, platform, layout)} />;
+  const showConflict = conflict && !recording;
+
   return (
     <button
       type="button"
-      className={`recorder${recording ? " recording" : ""}${conflict ? " conflict" : ""}`}
+      className={`recorder${recording ? " recording" : ""}${showConflict ? " conflict" : ""}`}
       aria-label={`${label}: ${text}`}
       aria-describedby={recording ? "recorder-hint" : undefined}
       onClick={() => setRecording(true)}
     >
-      {recording ? text : <kbd>{text}</kbd>}
-      {recording && (
-        <span id="recorder-hint" className="muted" style={{ display: "block", fontSize: 12 }}>
-          {t("ui.shortcuts.record_hint")}
-        </span>
+      {recording ? (
+        <>
+          <span className="dot" aria-hidden="true" />
+          {preview ? keys(preview) : <span>{text}</span>}
+          <span id="recorder-hint" className="hint">
+            {t("ui.shortcuts.record_hint")}
+          </span>
+        </>
+      ) : value ? (
+        keys(value)
+      ) : (
+        <span className="muted">{text}</span>
       )}
+      {showConflict && <Icon name="alert" className="warn" />}
     </button>
   );
 }

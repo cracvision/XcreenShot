@@ -74,6 +74,13 @@ fn validate_at(schema: &Value, value: &Value, path: &str) -> Result<(), SchemaEr
             ));
         }
     }
+    // A colour as #RRGGBB.
+    if let (Some("color"), Some(text)) = (schema.get("format").and_then(Value::as_str), value.as_str()) {
+        let hex = text.strip_prefix('#').unwrap_or("");
+        if hex.len() != 6 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(err(path, "expected a colour as #RRGGBB"));
+        }
+    }
     if let Some(n) = value.as_f64() {
         if let Some(min) = schema.get("minimum").and_then(Value::as_f64) {
             if n < min {
@@ -140,6 +147,16 @@ mod tests {
     #[test]
     fn accepts_valid() {
         validate(&schema(), &json!({"section": "general", "count": 5})).unwrap();
+    }
+
+    #[test]
+    fn colours_are_hex() {
+        let s = json!({"type": "string", "format": "color"});
+        validate(&s, &json!("#FFD000")).unwrap();
+        validate(&s, &json!("#2f6fde")).unwrap();
+        for bad in ["FFD000", "#FFD00", "#GGGGGG", "yellow"] {
+            assert!(validate(&s, &json!(bad)).is_err(), "{bad}");
+        }
     }
 
     #[test]

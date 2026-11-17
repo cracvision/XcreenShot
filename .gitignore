@@ -2,7 +2,11 @@
 node_modules/
 /app/dist
 /app/src-tauri/gen/schemas
+/app/src-tauri/binaries
 *.log
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# OQ evidence: screenshots of Carlos's screen never go into the repository.
+/tests/evidencias_OQ/

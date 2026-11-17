@@ -42,7 +42,7 @@ Construir **XcreenShot**, una herramienta de captura de pantalla, anotación y g
 
 1. **Una app, un comportamiento.** El mismo código y el mismo comportamiento en Windows y macOS. Cuando Snagit ofrece algo en una sola plataforma, XcreenShot lo ofrece en ambas siempre que el sistema operativo lo permita. Si no lo permite, la función se marca con su plataforma y el motivo.
 2. **Todo es un comando.** Cada acción de la app es un comando registrado, con ID, parámetros y resultado. La UI, los atajos de teclado, el CLI y el servidor MCP llaman a los mismos comandos. Esto hace la app extensible y operable por agentes.
-3. **Local primero y privado.** Sin telemetría, sin cuenta obligatoria y sin enviar nada a la nube salvo que el usuario elija un destino de compartir. Todo el procesamiento inteligente (OCR, detección de rostros, etc.) ocurre en el dispositivo.
+3. **Local primero y privado.** Sin telemetría, sin cuenta obligatoria y sin enviar nada a la nube salvo que el usuario elija un destino de compartir. Todo el procesamiento inteligente (OCR, detección de rostros, etc.) ocurre en el dispositivo. **Excepción aprobada por Carlos (2026-11-01):** las funciones propias de IA en la nube (SMT-039 a SMT-043). Vienen desactivadas, usan la clave de cada usuario y solo envían una imagen cuando el usuario lo pide sobre ella (SMT-042).
 4. **Identidad propia.** Nombres, íconos, colores, textos de ayuda y diseño visual propios. La UI no usa marcas ni nombres distintivos de TechSmith (ver §8). Los nombres genéricos de herramientas (Flecha, Texto, Recortar, Desenfocar) sí se pueden usar.
 5. **Formatos propios y abiertos.** Documentos editables en ZIP con JSON y PNG (ver §7). **No hay compatibilidad con `.snagx`, `.snagtheme`, `.snagpresets` ni `.snag`**: son formatos propietarios y leerlos exigiría ingeniería inversa.
 6. **Mejorar donde Snagit tiene límites documentados.** Ejemplos: posición y tamaño numéricos de objetos; una biblioteca que no depende del indexador del sistema operativo; funciones que en Snagit son solo de una plataforma.
@@ -69,7 +69,7 @@ Todas las funciones de Snagit para Windows y Mac vigentes en octubre de 2026 que
 | Snagit Printer (impresora virtual) | Pendiente (D-03). Propuesta: importar PDF multipágina como captura |
 | Importar `.snagx`, `.snag`, `.snagproj`, `.snagtheme`, `.snagpresets`, `.snagarchive` | Fuera (formatos propietarios) |
 | Funciones que TechSmith ya retiró (TWAIN, Translate Text/XLIFF, banderas y perfiles legados, Knowmia, Panopto, X/Twitter, extensión de Chrome) | Fuera |
-| Funciones generativas de IA | Fuera (Snagit tampoco las tiene dentro de la app) |
+| Funciones generativas de IA | Fuera de la paridad (Snagit tampoco las tiene dentro de la app). Como función propia, preguntar a la IA sobre una imagen y sugerir nombres con la clave de cada usuario: SMT-039 a SMT-043 (Carlos, 2026-11-01) |
 | Menús y fondos de "marketing" de TechSmith (Learning Center, tours, encuestas) | Fuera. Hay ayuda propia y sencilla (`APP-`) |
 
 ---

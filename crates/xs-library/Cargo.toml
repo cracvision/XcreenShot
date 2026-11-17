@@ -4,8 +4,28 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
+description = "The library (LIB-): location, naming, its own index, thumbnails and the library commands"
 
 [dependencies]
+xs-core.workspace = true
+xs-image = { path = "../xs-image" }
+xs-video = { path = "../xs-video" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+directories = "6"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# The index (LIB-022); SQLite built in, nothing to install.
+rusqlite = { version = "0.37", features = ["bundled"] }
+# Changes made outside XcreenShot (LIB-022).
+notify-debouncer-mini = "0.7"
+# The system's trash (LIB-015).
+trash = "5"
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true

@@ -180,6 +180,24 @@ pub fn send(endpoint: &str, request: &Request, timeout: Option<Duration>) -> io:
     serde_json::from_str(&line).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
+/// Sends a request whose answer comes in many lines (`events.watch`) and hands each
+/// line to `on_line` until the app closes the connection or `on_line` returns `false`.
+pub fn stream(endpoint: &str, request: &Request, mut on_line: impl FnMut(Value) -> bool) -> io::Result<()> {
+    let mut stream = Stream::connect(name(endpoint)?)?;
+    let mut line = serde_json::to_string(request)?;
+    line.push('\n');
+    stream.write_all(line.as_bytes())?;
+    stream.flush()?;
+    for line in BufReader::new(stream).lines() {
+        let value: Value =
+            serde_json::from_str(&line?).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        if !on_line(value) {
+            break;
+        }
+    }
+    Ok(())
+}
+
 /// Whether an instance is listening on `endpoint`.
 pub fn is_running(endpoint: &str) -> bool {
     name(endpoint).and_then(Stream::connect).is_ok()
@@ -187,9 +205,23 @@ pub fn is_running(endpoint: &str) -> bool {
 
 pub type RequestHandler = Arc<dyn Fn(Request) -> Response + Send + Sync>;
 
+/// A request that answers with many lines (`events.watch`, APP-031): it calls `emit`
+/// for each line until `emit` fails because the client left. Returns `false` when
+/// the request is not one of these, so it gets one response as usual.
+pub type StreamHandler = Arc<dyn Fn(&Request, &mut dyn FnMut(&Value) -> bool) -> bool + Send + Sync>;
+
 /// Binds the endpoint and serves requests on background threads. Fails with
 /// `AddrInUse` if another instance already owns it (single instance, APP-001).
 pub fn serve(endpoint: &str, handler: RequestHandler) -> io::Result<JoinHandle<()>> {
+    serve_with_streams(endpoint, handler, None)
+}
+
+/// [`serve`], with requests that stream their answer.
+pub fn serve_with_streams(
+    endpoint: &str,
+    handler: RequestHandler,
+    streams: Option<StreamHandler>,
+) -> io::Result<JoinHandle<()>> {
     if is_running(endpoint) {
         return Err(io::Error::new(
             io::ErrorKind::AddrInUse,
@@ -217,12 +249,27 @@ pub fn serve(endpoint: &str, handler: RequestHandler) -> io::Result<JoinHandle<(
         for conn in listener.incoming() {
             let Ok(mut conn) = conn else { continue };
             let handler = handler.clone();
+            let streams = streams.clone();
             let _ = std::thread::Builder::new()
                 .name("xs-ipc-conn".into())
                 .spawn(move || {
-                    let response = match read_line(&mut conn)
-                        .and_then(|l| serde_json::from_str::<Request>(&l).map_err(io::Error::other))
-                    {
+                    let request = read_line(&mut conn)
+                        .and_then(|l| serde_json::from_str::<Request>(&l).map_err(io::Error::other));
+                    if let (Ok(req), Some(streams)) = (&request, &streams) {
+                        if req.v == PROTOCOL_VERSION {
+                            let mut emit = |v: &Value| {
+                                let Ok(mut line) = serde_json::to_string(v) else {
+                                    return false;
+                                };
+                                line.push('\n');
+                                conn.write_all(line.as_bytes()).and_then(|_| conn.flush()).is_ok()
+                            };
+                            if streams(req, &mut emit) {
+                                return;
+                            }
+                        }
+                    }
+                    let response = match request {
                         Ok(req) if req.v == PROTOCOL_VERSION => handler(req),
                         Ok(req) => Response::from(Err(CommandError::new(
                             crate::error::ErrorCode::InvalidParams,
@@ -267,6 +314,42 @@ mod tests {
         assert_eq!(resp.result.unwrap()["echo"], "app.ping");
         let second = serve(&endpoint, handler).unwrap_err();
         assert_eq!(second.kind(), io::ErrorKind::AddrInUse);
+    }
+
+    #[test]
+    fn streams_many_lines() {
+        let endpoint = format!("xcreenshot-test-stream-{}", std::process::id());
+        let handler: RequestHandler = Arc::new(|_req: Request| Response::from(Ok(json!({}))));
+        let streams: StreamHandler = Arc::new(|req: &Request, emit: &mut dyn FnMut(&Value) -> bool| {
+            if req.command != "events.watch" {
+                return false;
+            }
+            for i in 0..3 {
+                emit(&json!({ "event": "test", "n": i }));
+            }
+            true
+        });
+        let _server = serve_with_streams(&endpoint, handler, Some(streams)).unwrap();
+        let req = |command: &str| Request {
+            v: PROTOCOL_VERSION,
+            command: command.into(),
+            params: json!({}),
+            source: Source::Cli,
+            lang: None,
+        };
+        let mut got = Vec::new();
+        stream(&endpoint, &req("events.watch"), |v| {
+            got.push(v["n"].as_i64().unwrap());
+            true
+        })
+        .unwrap();
+        assert_eq!(got, [0, 1, 2]);
+        // Other requests still get one answer.
+        assert!(
+            send(&endpoint, &req("app.ping"), Some(Duration::from_secs(5)))
+                .unwrap()
+                .ok
+        );
     }
 
     #[test]
