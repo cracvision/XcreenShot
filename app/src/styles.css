@@ -4488,6 +4488,12 @@ html.launcher-root #root {
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+  /* Accept and Cancel stay in view when the popover has to scroll. */
+  position: sticky;
+  bottom: -10px;
+  margin: 0 -10px -10px;
+  padding: 8px 10px 10px;
+  background: var(--surface-raised);
 }
 
 .cp-actions .grow {

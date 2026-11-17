@@ -1,7 +1,7 @@
 // The color selector (EDT-019): theme colors, a palette of 40, a hue and saturation
 // area with a brightness bar, Hex, RGB and HSB fields, opacity, the eyedropper and,
 // where it makes sense, Transparent. Enter, OK or a click outside accepts; Esc cancels.
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { hsbToRgb, PALETTE, parseHex, rgbToHsb, THEME_COLORS, toHex, type Hsb } from "./color";
 import { tenStep } from "../lib/numberKeys";
@@ -66,6 +66,29 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
   const [hexDraft, setHexDraft] = useState<string | null>(null);
   // Fixed to the window, so the side panel's scrolling never cuts it.
   const [place, setPlace] = useState<CSSProperties>({});
+  // Under the button when it fits; else as low as it fits, its whole height inside the
+  // window (with Recent and My colors it is taller than a fixed guess). Measured after
+  // each change of size: the lists arrive after it opens.
+  const pop = useRef<HTMLDivElement>(null);
+  const below = useRef(0);
+  useLayoutEffect(() => {
+    const el = pop.current;
+    if (!open || !el) return;
+    const fit = () => {
+      const room = window.innerHeight - 16;
+      el.style.maxHeight = `${room}px`;
+      const h = el.offsetHeight;
+      el.style.top = `${Math.max(8, Math.min(below.current, window.innerHeight - 8 - h))}px`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    window.addEventListener("resize", fit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [open]);
 
   const rgb = hsbToRgb(hsb, alpha);
   const hex = toHex(rgb);
@@ -172,10 +195,8 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
             reset();
             const r = button.current?.getBoundingClientRect();
             if (r) {
-              setPlace({
-                top: Math.max(8, Math.min(r.bottom + 4, window.innerHeight - 540)),
-                right: Math.max(8, window.innerWidth - r.right),
-              });
+              below.current = r.bottom + 4;
+              setPlace({ right: Math.max(8, window.innerWidth - r.right) });
             }
             setOpen(true);
           }
@@ -190,6 +211,7 @@ export function ColorPicker({ label, value, allowTransparent, mixed, onCommit }:
       </button>
       {open && (
         <div
+          ref={pop}
           className="color-popover"
           style={place}
           role="dialog"
