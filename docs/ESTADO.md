@@ -34,7 +34,7 @@ Este archivo es el traspaso entre sesiones de Claude Code. Cada sesión nueva lo
 
 ## Dónde estamos
 
-- **Versión publicada:** 0.2.8 (2026-11-16). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
+- **Versión publicada:** 0.2.9 (2026-11-17). En Windows están construidos M1 a M5 y casi todo M6 (salvo los destinos de Compartir en la nube y el Enlace, en borrador sin aprobar). macOS, sin probar.
 - **Lo siguiente: la prueba de punta a punta de Carlos** con la 0.2.4 y la guía única [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md) (tres sesiones). Sustituye a la caminata de M1 y a las tandas sueltas.
 - **M0** está terminado y verificado en Windows ([PR #1](https://github.com/cracvision/XcreenShot/pull/1), fusionado).
 - **M1, entregas 1 a 3:** rama `m1-capture` ([PR #2](https://github.com/cracvision/XcreenShot/pull/2), abierto, CI en verde).
@@ -63,7 +63,7 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 
 ## Cambios de la última sesión
 
-- **2026-11-17: el selector de color se salía de la ventana (EDT-019).** Carlos lo vio en el panel de captura (Efectos > Borde > Color) y en otras pantallas: la parte de abajo, con Aceptar, quedaba fuera y no se podía pulsar. Causa: se colocaba suponiendo 540 px de alto, y con Mis colores y Recientes mide más. Ahora se mide su alto real: se abre bajo el botón si cabe, si no tan abajo como quepa; si la ventana es más baja que el selector, se desplaza y Aceptar y Cancelar quedan fijos abajo. Es un solo componente (`editor/ColorPicker.tsx`), así que vale para todas las pantallas. Probado en una página con las mismas reglas (cabe, sube, se desplaza). Versión **0.2.9** compilada; pendiente del sí de Carlos para publicarla.
+- **2026-11-17: el selector de color se salía de la ventana (EDT-019).** Carlos lo vio en el panel de captura (Efectos > Borde > Color) y en otras pantallas: la parte de abajo, con Aceptar, quedaba fuera y no se podía pulsar. Causa: se colocaba suponiendo 540 px de alto, y con Mis colores y Recientes mide más. Ahora se mide su alto real: se abre bajo el botón si cabe, si no tan abajo como quepa; si la ventana es más baja que el selector, se desplaza y Aceptar y Cancelar quedan fijos abajo. Es un solo componente (`editor/ColorPicker.tsx`), así que vale para todas las pantallas. Probado en una página con las mismas reglas (cabe, sube, se desplaza). Versión **0.2.9** publicada (con el sí de Carlos), compilación `58a8aac`.
 
 - **2026-11-16 (noche): la Perspectiva que volvía (CAP-051).** En su caminata, Carlos apagaba Perspectiva en la pestaña Efectos del editor y volvía en cada captura nueva. Causa: estaba en **Efectos al capturar** de la pestaña Imagen del panel de captura (por defecto vacío: la añadió él o Jarvis), y eso se aplica a cada captura; apagarla en el editor solo la quitaba de esa captura. Con su sí, quitada de su lista (`capture.configure`). Mejora (provisional, `spec/QUESTIONS.md`): en el editor, esos efectos llevan la marca **Al capturar** y, al apagarlos o quitarlos, se ofrece **Quitar de las capturas nuevas** o **Dejarlo**. Revisada su configuración: nada más raro (Abrir en = Ninguno en Imagen y Editor en Universal). Versión **0.2.8** publicada (con el sí de Carlos), compilación `aad43e5`.
 
@@ -128,7 +128,8 @@ macOS: el código compila en la CI, pero ese trabajo no bloquea los PR (`continu
 - **2026-11-15 (mañana, segunda parte): M6 empezado.** Va en el **instalador `f7e51d4`** (y en el `.zip` portable).
   - **Red local** (SHR-042 a SHR-044): Preferencias > Compartir > Compartir en la red local (desactivado por defecto), personas en la red (mDNS), emparejar con código de 6 dígitos, contactos (renombrar, Aceptar siempre, Quitar, Bloquear), enviar desde Compartir > Red local… y desde la biblioteca, cifrado TLS 1.3 con las claves del emparejamiento, pendientes 7 días, Aceptar o Rechazar, llega a la biblioteca con "De: <nombre>". Probado entre dos instancias de este equipo (con `XCREENSHOT_LAN_DIR`, sin abrir puertos a la red); falta entre dos equipos. La clave vive en el llavero; el módulo del llavero pasó a `xs-core`.
   - **Configuración administrada** (APP-035): `managed.json` en `%ProgramData%\XcreenShot`; ajustes bloqueados o con valor inicial; directivas sin video, sin funciones en prueba, destinos desactivados, sin automatización, sin bienvenida; Avanzado > Configuración administrada > Ver.
-  - **Modo portable** (APP-038): `portable.flag` junto al ejecutable; `npm run package` deja también `targeteleaseundle\portable\XcreenShot_0.2.0_x64-portable.zip`.
+  - **Modo portable** (APP-038): `portable.flag` junto al ejecutable; `npm run package` deja también `target
+eleaseundle\portable\XcreenShot_0.2.0_x64-portable.zip`.
   - **Instalador y desinstalación** (APP-037, APP-042): `xcreenshot` en el PATH (salvo `/nopath`, lo hace `xcreenshot setup`), `/nolaunchatlogin`, inglés o español; al desinstalar, la casilla borra ajustes y datos, nunca la biblioteca. No se pudo probar instalando (sería encima de la app de Carlos).
   - Guías: [`SHR-042-044`](../tests/manual/SHR-042-044.md), [`APP-035`](../tests/manual/APP-035.md), [`APP-038`](../tests/manual/APP-038.md), [`APP-037-042`](../tests/manual/APP-037-042.md).
   - **Para Carlos:** el spec no tiene las fichas de los destinos de Compartir (SHR-001 a SHR-041); las actualizaciones (APP-036) necesitan saber dónde se publican y quién guarda la clave de firma; la firma del instalador necesita el certificado (D-06); ARM64 necesita instalar sus herramientas de compilación.
@@ -776,8 +777,8 @@ Sesión "Lee docs/ESTADO.md y continúa" (2026-10-24 y 25). El detalle está en 
 **Lo que sigue: la prueba de punta a punta de Carlos** con la 0.2.4 y [`tests/manual/E2E-windows.md`](../tests/manual/E2E-windows.md); Claude corrige lo que encuentre y marca en `PARITY.md` como `Win` lo que pase. Las pruebas de riesgo (instaladores, ratón y teclado) van antes a Windows Sandbox (`scripts/dev/sandbox.ps1`).
 
 1. Instalador anterior (2026-11-15), compilación `e3343c4`: la 0.2.0 más los destinos estándar de Compartir.
-1. **Compilada (2026-11-17): XcreenShot 0.2.9**, sin publicar: el selector de color siempre cabe en su ventana (EDT-019). Se publica con el sí de Carlos.
-1. **Versión publicada (2026-11-16, noche): XcreenShot 0.2.8**, compilación `aad43e5`, en https://github.com/cracvision/xcreenshot-releases: la marca Al capturar en la pestaña Efectos del editor (CAP-051). Es la que hay que instalar.
+1. **Versión publicada (2026-11-17): XcreenShot 0.2.9**, compilación `58a8aac`, en https://github.com/cracvision/xcreenshot-releases: el selector de color siempre cabe en su ventana (EDT-019). Es la que hay que instalar.
+1. Versión publicada anterior: 0.2.8 (`aad43e5`, la marca Al capturar en la pestaña Efectos del editor, CAP-051).
 1. Versión publicada anterior: XcreenShot 0.2.7, compilación `14a98a5`, en https://github.com/cracvision/xcreenshot-releases: el Portapapeles de XcreenShot con **Insertar en** (TRY-018). Es la que hay que instalar.
 1. Versión publicada anterior: 0.2.6 (`8b3f3f5`, el Portapapeles de XcreenShot).
 1. Versión publicada anterior: 0.2.5 (`d02d5d3`, las cámaras virtuales).
